@@ -75,11 +75,19 @@ class CrashServerTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(CrashServerTest, Fails_OnError) {
-  SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::DEADLINE_EXCEEDED)});
+  SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::CONNECT)});
 
   std::string server_report_id;
   EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
             CrashServer::UploadStatus::kFailure);
+}
+
+TEST_F(CrashServerTest, Fails_OnTimeout) {
+  SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::DEADLINE_EXCEEDED)});
+
+  std::string server_report_id;
+  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
+            CrashServer::UploadStatus::kTimedOut);
 }
 
 TEST_F(CrashServerTest, Fails_StatusCodeBelow200) {

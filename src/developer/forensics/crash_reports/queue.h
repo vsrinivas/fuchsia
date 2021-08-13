@@ -75,7 +75,7 @@ class Queue {
   };
 
   // Why a report is being retired.
-  enum class RetireReason { kUpload, kDelete, kThrottled, kArchive, kGarbageCollected };
+  enum class RetireReason { kUpload, kDelete, kThrottled, kTimedOut, kArchive, kGarbageCollected };
 
   // Utility class for recording metrics about reports.
   class UploadMetrics {

@@ -23,7 +23,7 @@ namespace crash_reports {
 // |fuchsia.net.http.Loader| is expected to be in |services|.
 class CrashServer {
  public:
-  enum UploadStatus { kSuccess, kFailure, kThrottled };
+  enum UploadStatus { kSuccess, kFailure, kThrottled, kTimedOut };
 
   CrashServer(std::shared_ptr<sys::ServiceDirectory> services, const std::string& url,
               LogTags* tags);

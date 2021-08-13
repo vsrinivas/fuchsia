@@ -106,8 +106,12 @@ CrashServer::UploadStatus HTTPTransportService::Execute(std::string* response_bo
   }
 
   if (response.has_error()) {
-    FX_LOGST(WARNING, tags_) << "Experienced network error: " << response.error();
-    return CrashServer::UploadStatus::kFailure;
+    FX_LOGS(WARNING) << "Experienced network error: " << response.error();
+    if (response.error() == fuchsia::net::http::Error::DEADLINE_EXCEEDED) {
+      return CrashServer::UploadStatus::kTimedOut;
+    } else {
+      return CrashServer::UploadStatus::kFailure;
+    }
   }
 
   if (!response.has_status_code()) {

@@ -132,7 +132,6 @@ bool Queue::Upload(const Report& report) {
   const auto response = crash_server_->MakeRequest(
       report, snapshot_manager_->GetSnapshot(report.SnapshotUuid()), &server_report_id);
 
-  // Create a PendingReport for |report| if it needs to be retired.
   const PendingReport pending_report(report);
   switch (response) {
     case CrashServer::UploadStatus::kSuccess:
@@ -140,6 +139,9 @@ bool Queue::Upload(const Report& report) {
       return true;
     case CrashServer::UploadStatus::kThrottled:
       Retire(pending_report, RetireReason::kThrottled);
+      return true;
+    case CrashServer::UploadStatus::kTimedOut:
+      Retire(pending_report, RetireReason::kTimedOut);
       return true;
     case CrashServer::UploadStatus::kFailure:
       return false;
@@ -158,6 +160,15 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
     case RetireReason::kUpload:
       FX_LOGST(INFO, tags) << "Successfully uploaded report at https://crash.corp.google.com/"
                            << server_report_id;
+      break;
+    case RetireReason::kThrottled:
+      FX_LOGST(INFO, tags) << "Upload throttled by server";
+      break;
+    case RetireReason::kTimedOut:
+      FX_LOGST(INFO, tags) << "Upload timed out, not re-trying";
+      break;
+    case RetireReason::kDelete:
+      FX_LOGST(INFO, tags) << "Deleted local report";
       break;
     case RetireReason::kGarbageCollected:
       FX_LOGST(INFO, tags) << "Garbage collected local report";
@@ -298,6 +309,9 @@ void Queue::UploadMetrics::Retire(const ReportId report_id, const RetireReason r
       break;
     case RetireReason::kThrottled:
       info_.MarkReportAsThrottledByServer(upload_attempts_[report_id]);
+      break;
+    case RetireReason::kTimedOut:
+      info_.MarkReportAsTimedOut(upload_attempts_[report_id]);
       break;
     case RetireReason::kArchive:
       info_.MarkReportAsArchived();

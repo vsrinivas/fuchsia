@@ -26,6 +26,7 @@ struct QueueInfo {
   void MarkReportAsDeleted(uint64_t upload_attempts);
   void MarkReportAsGarbageCollected(uint64_t upload_attempts);
   void MarkReportAsThrottledByServer(uint64_t upload_attempts);
+  void MarkReportAsTimedOut(uint64_t upload_attempts);
 
  private:
   std::shared_ptr<InfoContext> context_;
