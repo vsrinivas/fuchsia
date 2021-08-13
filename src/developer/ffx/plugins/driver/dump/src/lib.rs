@@ -20,7 +20,7 @@ fn extract_name<'a>(topo_path: &'a str) -> &'a str {
     "driver_enabled",
     DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
 )]
-pub async fn dump(service: DriverDevelopmentProxy, _cmd: DriverDumpCommand) -> Result<()> {
+pub async fn dump(service: DriverDevelopmentProxy, cmd: DriverDumpCommand) -> Result<()> {
     let device_info = service
         .get_device_info(&mut [].iter().map(String::as_str))
         .await
@@ -56,24 +56,55 @@ pub async fn dump(service: DriverDevelopmentProxy, _cmd: DriverDumpCommand) -> R
 
     let mut stack = VecDeque::new();
     stack.push_front((platform_device, 0));
-
-    while let Some((device, tabs)) = stack.pop_front() {
-        println!(
-            "{:indent$}[{}] pid={} {}",
-            "",
-            extract_name(
-                &device.topological_path.as_ref().ok_or(format_err!("Missing topological path"))?
-            ),
-            device.driver_host_koid.as_ref().ok_or(format_err!("Missing driver host koid"))?,
-            device.bound_driver_libname.as_ref().ok_or(format_err!("Missing driver libname"))?,
-            indent = tabs * 3,
-        );
-        if let Some(child_ids) = &device.child_ids {
-            for id in child_ids.iter().rev() {
-                stack.push_front((device_map[&id], tabs + 1));
+    if cmd.graph {
+        println!("digraph {{");
+        for device in &device_info {
+            if let Some(child_ids) = &device.child_ids {
+                for id in child_ids.iter().rev() {
+                    let child = &device_map[&id];
+                    println!(
+                        "     \"{}\" -> \"{}\"",
+                        extract_name(
+                            &device
+                                .topological_path
+                                .as_ref()
+                                .ok_or(format_err!("Missing topological path"))?
+                        ),
+                        extract_name(
+                            &child
+                                .topological_path
+                                .as_ref()
+                                .ok_or(format_err!("Missing topological path"))?
+                        )
+                    );
+                }
+            }
+        }
+        println!("}}");
+    } else {
+        while let Some((device, tabs)) = stack.pop_front() {
+            println!(
+                "{:indent$}[{}] pid={} {}",
+                "",
+                extract_name(
+                    &device
+                        .topological_path
+                        .as_ref()
+                        .ok_or(format_err!("Missing topological path"))?
+                ),
+                device.driver_host_koid.as_ref().ok_or(format_err!("Missing driver host koid"))?,
+                device
+                    .bound_driver_libname
+                    .as_ref()
+                    .ok_or(format_err!("Missing driver libname"))?,
+                indent = tabs * 3,
+            );
+            if let Some(child_ids) = &device.child_ids {
+                for id in child_ids.iter().rev() {
+                    stack.push_front((device_map[&id], tabs + 1));
+                }
             }
         }
     }
-
     Ok(())
 }
