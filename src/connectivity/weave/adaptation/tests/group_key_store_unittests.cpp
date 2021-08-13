@@ -14,8 +14,9 @@
 #include "environment_config.h"
 #include "src/lib/files/file.h"
 
-namespace nl::Weave::DeviceLayer::Internal::testing {
+namespace weave::adaptation::testing {
 namespace {
+
 using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::Internal::EnvironmentConfig;
 using nl::Weave::DeviceLayer::Internal::GroupKeyStoreImpl;
@@ -27,12 +28,11 @@ constexpr uint8_t kMaxGroupKeys =
     nl::Weave::DeviceLayer::Internal::GroupKeyStoreImpl::kMaxGroupKeys;
 constexpr uint32_t kTestKeyId = WeaveKeyId::kFabricSecret + 1u;
 constexpr char kWeaveConfigStoreTestPath[] = "/data/environment.json";
+
 }  // namespace
 
 class GroupKeyStoreTest : public ::gtest::TestLoopFixture {
  public:
-  GroupKeyStoreTest() {}
-
   void SetUp() override {
     TestLoopFixture::SetUp();
     EXPECT_EQ(group_key_store_.Init(), WEAVE_NO_ERROR);
@@ -84,8 +84,8 @@ class GroupKeyStoreTest : public ::gtest::TestLoopFixture {
 };
 
 TEST_F(GroupKeyStoreTest, InitializeWithExistingStore) {
-  uint32_t key_ids[kMaxGroupKeys];
-  uint8_t key_count;
+  uint32_t key_ids[kMaxGroupKeys] = {};
+  uint8_t key_count = 0;
 
   // Sample valid key set.
   uint32_t test_key_ids[1] = {kTestKeyId};
@@ -164,8 +164,8 @@ TEST_F(GroupKeyStoreTest, EnumerateKeys) {
   EXPECT_EQ(group_key_store().StoreGroupKey(general_key), WEAVE_NO_ERROR);
   EXPECT_EQ(group_key_store().StoreGroupKey(rotating_key), WEAVE_NO_ERROR);
 
-  uint32_t key_ids[kMaxGroupKeys];
-  uint8_t key_count;
+  uint32_t key_ids[kMaxGroupKeys] = {};
+  uint8_t key_count = 0;
   // Verify that WeaveKeyId::kNone returns all keys.
   EXPECT_EQ(
       group_key_store().EnumerateGroupKeys(WeaveKeyId::kNone, key_ids, kMaxGroupKeys, key_count),
@@ -197,8 +197,8 @@ TEST_F(GroupKeyStoreTest, EnumerateKeysWithoutSpace) {
   const WeaveGroupKey test_key = CreateGroupKey(kTestKeyId, 0, kWeaveAppGroupKeySize);
   EXPECT_EQ(group_key_store().StoreGroupKey(test_key), WEAVE_NO_ERROR);
 
-  uint32_t key_ids[kMaxGroupKeys];
-  uint8_t key_count;
+  uint32_t key_ids[kMaxGroupKeys] = {};
+  uint8_t key_count = 0;
   EXPECT_EQ(group_key_store().EnumerateGroupKeys(WeaveKeyId::kNone, key_ids, 0, key_count),
             WEAVE_ERROR_BUFFER_TOO_SMALL);
   EXPECT_EQ(group_key_store().EnumerateGroupKeys(WeaveKeyId::kNone, key_ids, 1, key_count),
@@ -217,8 +217,8 @@ TEST_F(GroupKeyStoreTest, DeleteKeysOfType) {
   EXPECT_EQ(group_key_store().StoreGroupKey(general1_key), WEAVE_NO_ERROR);
   EXPECT_EQ(group_key_store().StoreGroupKey(general2_key), WEAVE_NO_ERROR);
 
-  uint32_t key_ids[kMaxGroupKeys];
-  uint8_t key_count;
+  uint32_t key_ids[kMaxGroupKeys] = {};
+  uint8_t key_count = 0;
   EXPECT_EQ(group_key_store().DeleteGroupKeysOfAType(WeaveKeyId::kType_General), WEAVE_NO_ERROR);
   EXPECT_EQ(
       group_key_store().EnumerateGroupKeys(WeaveKeyId::kNone, key_ids, kMaxGroupKeys, key_count),
@@ -236,8 +236,8 @@ TEST_F(GroupKeyStoreTest, ClearKeys) {
   EXPECT_EQ(group_key_store().StoreGroupKey(none_key), WEAVE_NO_ERROR);
   EXPECT_EQ(group_key_store().StoreGroupKey(general_key), WEAVE_NO_ERROR);
 
-  uint32_t key_ids[kMaxGroupKeys];
-  uint8_t key_count;
+  uint32_t key_ids[kMaxGroupKeys] = {};
+  uint8_t key_count = 0;
   EXPECT_EQ(group_key_store().Clear(), WEAVE_NO_ERROR);
   EXPECT_EQ(
       group_key_store().EnumerateGroupKeys(WeaveKeyId::kNone, key_ids, kMaxGroupKeys, key_count),
@@ -269,4 +269,4 @@ TEST_F(GroupKeyStoreTest, StoreLastUsedEpochKeyId) {
   EXPECT_EQ(ReadConfigStore(), "{\"last-used-epoch-key-id\":100}");
 }
 
-}  // namespace nl::Weave::DeviceLayer::Internal::testing
+}  // namespace weave::adaptation::testing

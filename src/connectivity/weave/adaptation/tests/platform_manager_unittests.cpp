@@ -11,7 +11,13 @@
 
 #include "src/connectivity/weave/adaptation/platform_manager_impl.h"
 
-namespace nl::Weave::DeviceLayer::Internal::testing {
+namespace weave::adaptation::testing {
+namespace {
+
+using nl::Weave::DeviceLayer::PlatformMgr;
+using nl::Weave::DeviceLayer::PlatformMgrImpl;
+
+}  // namespace
 
 class PlatformManagerTest : public ::gtest::TestLoopFixture {
  public:
@@ -32,4 +38,4 @@ TEST_F(PlatformManagerTest, ScheduleWork) {
   EXPECT_EQ(counter, 3U);
 }
 
-}  // namespace nl::Weave::DeviceLayer::Internal::testing
+}  // namespace weave::adaptation::testing
