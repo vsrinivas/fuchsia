@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/media/cpp/fidl.h>
+
 #include <gtest/gtest.h>
 
-#include "fuchsia/media/cpp/fidl.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/media/audio/lib/wav/wav_reader.h"

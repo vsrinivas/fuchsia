@@ -50,7 +50,7 @@ class VirtualAudioBus {
 
     // On successful Add, Devmgr takes ownership (relinquished on DdkRelease), so transfer our
     // ownership to a local var, and let it go out of scope.
-    auto __UNUSED temp_ref = control.release();
+    [[maybe_unused]] auto temp_ref = control.release();
 
     return ZX_OK;
   }

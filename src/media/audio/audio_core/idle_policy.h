@@ -32,7 +32,7 @@ class IdlePolicy : public AudioAdmin::ActiveStreamCountReporter {
   static constexpr bool kDebugActivityCounts = false;
   static constexpr bool kDebugIdleTimers = false;
   static constexpr bool kDebugSetActiveChannelsLogic = false;
-  static constexpr bool kLogSetActiveChannelsCalls = true;
+  static constexpr bool kLogSetActiveChannelsCalls = false;  // true;
 
   explicit IdlePolicy(Context* context = nullptr) : ActiveStreamCountReporter(), context_(context) {
     active_render_usages_.clear();

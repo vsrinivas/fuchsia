@@ -650,7 +650,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
       zxlogf(ERROR, "Could not create aml-g12-tdm driver");
       return ZX_ERR_NO_MEMORY;
     }
-    __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
+    [[maybe_unused]] auto unused = fbl::ExportToRawPtr(&stream);
   } else {
     auto stream = audio::SimpleAudioStream::Create<audio::aml_g12::AmlG12TdmStream>(
         device, false, ddk::PDev::FromFragment(device),
@@ -659,7 +659,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
       zxlogf(ERROR, "Could not create aml-g12-tdm driver");
       return ZX_ERR_NO_MEMORY;
     }
-    __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
+    [[maybe_unused]] auto unused = fbl::ExportToRawPtr(&stream);
   }
 
   return ZX_OK;

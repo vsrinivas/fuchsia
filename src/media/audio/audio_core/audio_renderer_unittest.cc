@@ -359,11 +359,10 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
   fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
 
   bool received_play_callback = false;
-  fidl_renderer_->Play(
-      fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
-      [&received_play_callback](int64_t __UNUSED ref_time, int64_t __UNUSED media_time) {
-        received_play_callback = true;
-      });
+  fidl_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                       [&received_play_callback](int64_t ref_time, int64_t media_time) {
+                         received_play_callback = true;
+                       });
 
   auto run_loop_count = 0;
   while (!received_play_callback && run_loop_count < 100) {
@@ -373,10 +372,9 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
   EXPECT_TRUE(context().audio_admin().IsActive(RenderUsage::SYSTEM_AGENT));
 
   bool received_pause_callback = false;
-  fidl_renderer_->Pause(
-      [&received_pause_callback](int64_t __UNUSED ref_time, int64_t __UNUSED media_time) {
-        received_pause_callback = true;
-      });
+  fidl_renderer_->Pause([&received_pause_callback](int64_t ref_time, int64_t media_time) {
+    received_pause_callback = true;
+  });
 
   run_loop_count = 0;
   while (!received_pause_callback && run_loop_count < 100) {

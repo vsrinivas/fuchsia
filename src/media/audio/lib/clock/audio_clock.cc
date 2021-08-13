@@ -22,8 +22,8 @@ namespace media::audio {
 // tuning once every 50 times, OR if source position error is 500ns or greater.
 constexpr bool kLogClockTuning = false;
 // Make these zx::durations, if/when operator-() is added to zx::duration.
-constexpr int64_t __UNUSED kPositionErrorLoggingThresholdNs = 500;
-constexpr int64_t __UNUSED kClockTuneLoggingStride = 50;
+constexpr int64_t kPositionErrorLoggingThresholdNs = 500;
+constexpr int64_t kClockTuneLoggingStride = 50;
 
 //
 // static methods

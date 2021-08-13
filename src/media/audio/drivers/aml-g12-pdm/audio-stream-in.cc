@@ -55,7 +55,7 @@ zx_status_t AudioStreamIn::Create(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "Could not create aml-g12-pdm driver");
     return ZX_ERR_NO_MEMORY;
   }
-  __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
+  [[maybe_unused]] auto unused = fbl::ExportToRawPtr(&stream);
   return ZX_OK;
 }
 

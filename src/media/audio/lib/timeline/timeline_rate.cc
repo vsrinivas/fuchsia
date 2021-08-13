@@ -113,7 +113,7 @@ TimelineRate TimelineRate::Product(TimelineRate a, TimelineRate b, bool exact) {
       reference_delta > std::numeric_limits<uint64_t>::max()) {
     ZX_ASSERT(!exact);
 
-    auto __UNUSED bits_lost = 0u;  // only used when kDebugPrecisionLoss is set to true
+    auto bits_lost = 0u;  // only used when kDebugPrecisionLoss is set to true
 
     do {
       subject_delta >>= 1;

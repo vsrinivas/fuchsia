@@ -229,7 +229,7 @@ zx_status_t Max98927Device::Create(void* ctx, zx_device_t* parent) {
   zx_status_t st = dev->Bind();
   if (st == ZX_OK) {
     // devmgr is now in charge of the memory for dev
-    __UNUSED auto ptr = dev.release();
+    [[maybe_unused]] auto ptr = dev.release();
     return st;
   }
 

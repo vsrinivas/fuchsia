@@ -40,7 +40,7 @@ zx_status_t UsbAudioDevice::DriverBind(zx_device_t* parent) {
   // recover it (someday) when the release hook is called.  Until then, we
   // need to deliberately leak our reference so that we do not destruct as we
   // exit this function.
-  __UNUSED UsbAudioDevice* leaked_ref;
+  UsbAudioDevice* leaked_ref;
   leaked_ref = fbl::ExportToRawPtr(&usb_device);
   return status;
 }

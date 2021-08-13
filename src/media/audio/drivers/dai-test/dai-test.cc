@@ -163,7 +163,7 @@ static zx_status_t daitest_bind(void* ctx, zx_device_t* device) {
     zxlogf(ERROR, "Could not add DAI driver to the DDK");
     return status;
   }
-  __UNUSED auto dummy = dai.release();
+  [[maybe_unused]] auto unused = dai.release();
   return ZX_OK;
 }
 

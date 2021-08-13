@@ -68,7 +68,7 @@ class GainControlTest : public HermeticAudioTest {
     AddErrorHandler(gain_control_2_,
                     RendererOrCapturerTraits<RendererOrCapturerT>::Name() + "::GainControl2");
 
-    // To ensure there is no crosstalk, we create a dummy renderer and capturer
+    // To ensure there is no crosstalk, we create an unused renderer and capturer
     // and a gain control for each, and verify those gain controls are not called.
     audio_core_->CreateAudioRenderer(unused_renderer_.NewRequest());
     audio_core_->CreateAudioCapturer(false, unused_capturer_.NewRequest());

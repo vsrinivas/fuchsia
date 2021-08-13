@@ -20,7 +20,8 @@ class ProfileProvider : public fuchsia::media::ProfileProvider {
 
   // fuchsia::media::ProfileProvider implementation.
   void RegisterHandlerWithCapacity(zx::thread thread_handle, std::string name, int64_t period,
-                                   float capacity, RegisterHandlerWithCapacityCallback callback) override;
+                                   float capacity,
+                                   RegisterHandlerWithCapacityCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::media::ProfileProvider, ProfileProvider*> bindings_;

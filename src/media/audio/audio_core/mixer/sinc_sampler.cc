@@ -176,7 +176,7 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
 
   if constexpr (ScaleType != ScalerType::MUTED) {
     Gain::AScale amplitude_scale;
-    __UNUSED int64_t dest_ramp_start;  // only used when ramping
+    int64_t dest_ramp_start;  // only used when ramping
     if constexpr (ScaleType != ScalerType::RAMPING) {
       amplitude_scale = info->gain.GetGainScale();
     } else {

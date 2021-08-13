@@ -602,7 +602,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
   if (res != ZX_OK) {
     // We failed to publish our device.  Release the manual reference we
     // just added.
-    __UNUSED bool should_destruct;
+    bool should_destruct;
     should_destruct = this->Release();
     ZX_DEBUG_ASSERT(!should_destruct);
     return res;

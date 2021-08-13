@@ -213,8 +213,7 @@ zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupp
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  __UNUSED bool convert_res =
-      DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
+  bool convert_res = DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
   FX_DCHECK(convert_res);
 
   *channels_inout = best_channels;
@@ -423,8 +422,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  __UNUSED bool convert_res =
-      DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
+  bool convert_res = DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
   FX_DCHECK(convert_res);
 
   *channels_inout = best_channels;

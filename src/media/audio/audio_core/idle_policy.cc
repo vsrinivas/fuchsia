@@ -44,7 +44,7 @@ void IdlePolicy::OnActiveRenderCountChanged(RenderUsage usage, uint32_t count) {
     }
 
     // this device's active-renderer count just became 0: start a cancellable countdown to disable
-    zx_status_t __UNUSED status =
+    zx_status_t status =
         (usage == RenderUsage::ULTRASOUND)
             ? dev->StartCountdownToDisableUltrasonic(IdlePolicy::kOutputIdlePowerDownTimeout)
             : dev->StartCountdownToDisableAudible(IdlePolicy::kOutputIdlePowerDownTimeout);
@@ -63,7 +63,7 @@ void IdlePolicy::OnActiveRenderCountChanged(RenderUsage usage, uint32_t count) {
     }
 
     // this device's active-renderer count just changed from 0 to >0: enable it
-    zx_status_t __UNUSED status =
+    zx_status_t status =
         (usage == RenderUsage::ULTRASOUND) ? dev->EnableUltrasonic() : dev->EnableAudible();
 
     if constexpr (IdlePolicy::kDebugActivityCounts) {

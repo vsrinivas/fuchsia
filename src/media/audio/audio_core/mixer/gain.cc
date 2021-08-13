@@ -11,7 +11,7 @@ namespace media::audio {
 // TODO(mpuryear): When we add ramping of another gain stage (dest, or a new
 // stage), refactor to accept a stage index or a pointer to a ramp-struct.
 void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
-                                 __UNUSED fuchsia::media::audio::RampType ramp_type) {
+                                 fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "Gain::SetSourceGainWithRamp");
   FX_DCHECK(source_gain_db <= kMaxGainDb) << "Ramp target source_gain (" << source_gain_db
                                           << " db) cannot exceed maximum (" << kMaxGainDb << " db)";
@@ -61,7 +61,7 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
 }
 
 void Gain::SetDestGainWithRamp(float dest_gain_db, zx::duration duration,
-                               __UNUSED fuchsia::media::audio::RampType ramp_type) {
+                               fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "Gain::SetDestGainWithRamp");
   FX_DCHECK(dest_gain_db <= kMaxGainDb) << "Ramp target dest_gain (" << dest_gain_db
                                         << " db) cannot exceed maximum (" << kMaxGainDb << " db)";
