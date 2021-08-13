@@ -37,4 +37,9 @@ protocol Device {
     GetFlashmapAddress() -> (struct {
         address uint64;
     }) error zx.status;
+
+    /// Get the nvdata version.
+    GetNvdataVersion() -> (struct {
+        version uint32;
+    }) error zx.status;
 };

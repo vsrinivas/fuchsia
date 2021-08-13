@@ -7,9 +7,11 @@
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
+#include "fuchsia/acpi/chromeos/llcpp/fidl.h"
 #include "src/devices/lib/acpi/mock/mock-acpi.h"
 #include "src/devices/misc/drivers/chromeos-acpi/chromeos_acpi.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "third_party/vboot_reference/firmware/include/vboot_struct.h"
 
 namespace chromeos_acpi {
 
@@ -54,6 +56,12 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
     MockDevice* dev = fake_root_->GetLatestChild();
     dev->InitOp();
     ASSERT_OK(dev->WaitUntilInitReplyCalled());
+
+    auto value = fidl::CreateEndpoints<fuchsia_acpi_chromeos::Device>();
+    ASSERT_OK(value.status_value());
+
+    fidl::BindServer(loop_.dispatcher(), std::move(value->server), GetDevice());
+    fidl_client_.client_end() = std::move(value->client);
   }
 
   ChromeosAcpi* GetDevice() {
@@ -73,6 +81,15 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
   facpi::Object MakeObject(uint64_t val) {
     facpi::Object ret;
     ret.set_integer_val(arena_, val);
+    return ret;
+  }
+
+  facpi::Object MakeObject(cpp20::span<uint8_t> buf) {
+    facpi::Object ret;
+    fidl::VectorView<uint8_t> data;
+    data.Allocate(arena_, buf.size());
+    memcpy(data.mutable_data(), buf.data(), buf.size());
+    ret.set_buffer_val(arena_, data);
     return ret;
   }
 
@@ -100,6 +117,7 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
   fidl::Arena<> arena_;
   std::unordered_map<std::string, facpi::Object> values_;
   async::Loop loop_;
+  fidl::WireSyncClient<fuchsia_acpi_chromeos::Device> fidl_client_;
 };
 
 TEST_F(ChromeosAcpiTest, NoMethodsTest) { ASSERT_NO_FATAL_FAILURES(CreateDevice()); }
@@ -159,4 +177,41 @@ TEST_F(ChromeosAcpiTest, FlashmapBaseTest) {
   CheckProperty(hierarchy().node(), "method-list", inspect::StringPropertyValue("FMAP"));
   CheckProperty(hierarchy().node(), "flashmap-addr", inspect::UintPropertyValue(*args.begin()));
 }
+
+TEST_F(ChromeosAcpiTest, NvdataVersionTestV2) {
+  VbSharedDataHeader data = {
+      .magic = VB_SHARED_DATA_MAGIC,
+      .struct_version = VB_SHARED_DATA_VERSION,
+      .struct_size = VB_SHARED_DATA_HEADER_SIZE_V2,
+      .flags = kVbootSharedDataNvdataV2,
+  };
+
+  std::vector<cpp20::span<uint8_t>> entries{
+      cpp20::span(reinterpret_cast<uint8_t*>(&data), sizeof(data))};
+  values_.emplace("VDAT", ToPackage(entries));
+  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+
+  auto result = fidl_client_.GetNvdataVersion();
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result->result.response().version, 2);
+}
+
+TEST_F(ChromeosAcpiTest, NvdataVersionTestV1) {
+  VbSharedDataHeader data = {
+      .magic = VB_SHARED_DATA_MAGIC,
+      .struct_version = VB_SHARED_DATA_VERSION,
+      .struct_size = VB_SHARED_DATA_HEADER_SIZE_V2,
+      .flags = 0,
+  };
+
+  std::vector<cpp20::span<uint8_t>> entries{
+      cpp20::span(reinterpret_cast<uint8_t*>(&data), sizeof(data))};
+  values_.emplace("VDAT", ToPackage(entries));
+  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+
+  auto result = fidl_client_.GetNvdataVersion();
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result->result.response().version, 1);
+}
+
 }  // namespace chromeos_acpi

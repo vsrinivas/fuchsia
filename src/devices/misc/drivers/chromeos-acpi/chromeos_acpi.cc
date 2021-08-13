@@ -123,6 +123,30 @@ void ChromeosAcpi::DdkInit(ddk::InitTxn txn) {
     });
   }
 
+  if (available_methods_.find(kVbootSharedDataMethodName) != available_methods_.end()) {
+    EvaluateObjectHelper(kVbootSharedDataMethodName, [this](const facpi::Object& object) {
+      if (!object.is_package_val() || object.package_val().value.count() != 1 ||
+          !object.package_val().value[0].is_buffer_val()) {
+        zxlogf(WARNING, "Bad vboot shared data - expected a buffer");
+        return;
+      }
+
+      auto buffer = object.package_val().value[0].buffer_val();
+      if (buffer.count() < VB_SHARED_DATA_HEADER_SIZE_V2) {
+        zxlogf(WARNING, "vboot shared data is the wrong size");
+        return;
+      }
+
+      const VbSharedDataHeader* header = reinterpret_cast<const VbSharedDataHeader*>(buffer.data());
+      if (header->magic != VB_SHARED_DATA_MAGIC ||
+          header->struct_version != VB_SHARED_DATA_VERSION) {
+        zxlogf(WARNING, "vboot shared data is invalid (bad magic or version)");
+        return;
+      }
+      shared_data_.emplace(*header);
+    });
+  }
+
   txn.Reply(ZX_OK);
 }
 
@@ -217,6 +241,15 @@ void ChromeosAcpi::GetFlashmapAddress(GetFlashmapAddressRequestView request,
                                       GetFlashmapAddressCompleter::Sync& completer) {
   if (flashmap_base_.has_value()) {
     completer.ReplySuccess(flashmap_base_.value());
+  } else {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+  }
+}
+
+void ChromeosAcpi::GetNvdataVersion(GetNvdataVersionRequestView request,
+                                    GetNvdataVersionCompleter::Sync& completer) {
+  if (shared_data_.has_value()) {
+    completer.ReplySuccess((shared_data_->flags & kVbootSharedDataNvdataV2) ? 2 : 1);
   } else {
     completer.ReplyError(ZX_ERR_NOT_FOUND);
   }
