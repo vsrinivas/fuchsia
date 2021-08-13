@@ -856,15 +856,31 @@ TEST(AmlG12Tdm, I2sOutCodecsChannelsActive) {
   EXPECT_FALSE(codec3->started());
 
   // We now use set active channels to disable.
-  auto active = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0x5);
-  ASSERT_OK(active.status());
+  auto active1 = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0x5);
+  ASSERT_OK(active1.status());
 
   auto start2 = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
   ASSERT_OK(start2.status());
 
-  EXPECT_FALSE(codec1->started());
-  EXPECT_FALSE(codec2->started());
-  EXPECT_FALSE(codec3->started());
+  EXPECT_FALSE(codec1->started());  // This codec is stopped due to channels_to_use_bitmask.
+  EXPECT_FALSE(codec2->started());  // Disabled via set active channels 0x05.
+  EXPECT_FALSE(codec3->started());  // This codec is stopped due to channels_to_use_bitmask.
+
+  // We update active channels while started.
+  auto active2 = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0x2);
+  ASSERT_OK(active2.status());
+
+  EXPECT_FALSE(codec1->started());  // This codec is stopped due to channels_to_use_bitmask.
+  EXPECT_TRUE(codec2->started());   // Re-enabled via set active channels 0x02.
+  EXPECT_FALSE(codec3->started());  // This codec is stopped due to channels_to_use_bitmask.
+
+  // We update active channels while started.
+  auto active3 = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0x0);
+  ASSERT_OK(active3.status());
+
+  EXPECT_FALSE(codec1->started());  // This codec is stopped due to channels_to_use_bitmask.
+  EXPECT_FALSE(codec2->started());  // Stopped via set active channels 0x00.
+  EXPECT_FALSE(codec3->started());  // This codec is stopped due to channels_to_use_bitmask.
 
   auto stop2 = fidl::WireCall<audio_fidl::RingBuffer>(local).Stop();
   ASSERT_OK(stop2.status());
@@ -1132,18 +1148,24 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   mock[0x530].ExpectWrite(0);  // TDMOUT MUTE1.
   mock[0x534].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x538].ExpectWrite(0);  // TDMOUT MUTE3.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = *std::move(endpoints);
+    fidl::Arena allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.number_of_channels = 4;
+    pcm_format.channels_to_use_bitmask = 0xf;
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  fidl::Arena allocator;
-  audio_fidl::wire::Format format(allocator);
-  audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
-  pcm_format.number_of_channels = 4;
-  pcm_format.channels_to_use_bitmask = 0xf;
-  format.set_pcm_format(allocator, std::move(pcm_format));
-  client.CreateRingBuffer(std::move(format), std::move(remote));
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   // 2nd case, disable the channel.
   // Clear all muting. EE_AUDIO_TDMOUT_A_MUTE.
@@ -1164,12 +1186,24 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   mock[0x530].ExpectWrite(0);  // TDMOUT MUTE1.
   mock[0x534].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x538].ExpectWrite(0);  // TDMOUT MUTE3.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-  auto active = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0x0);
-  ASSERT_OK(active.status());
+    fidl::Arena allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    // TODO(andresoportus): Make AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED != 0, so bitmask could be 0.
+    pcm_format.channels_to_use_bitmask = 0xe;
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  // SetActiveChannels is a sync call so all register writes would have been made.
-  // (The controller is single threaded, if we received a reply configuration is complete).
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();
@@ -1233,19 +1267,24 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = *std::move(endpoints);
+    fidl::Arena allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.number_of_channels = 4;
+    pcm_format.channels_to_use_bitmask = 0xf;
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  fidl::Arena allocator;
-  audio_fidl::wire::Format format(allocator);
-  audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
-  pcm_format.number_of_channels = 4;
-  pcm_format.channels_to_use_bitmask = 0xf;
-
-  format.set_pcm_format(allocator, std::move(pcm_format));
-  client.CreateRingBuffer(std::move(format), std::move(remote));
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   //
   // 2nd case configure and enable only one channel.
@@ -1266,9 +1305,23 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   mock[0x5b0].ExpectWrite(3);  // TDMOUT MUTE1.
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-  auto active1 = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0x1);
-  ASSERT_OK(active1.status());
+    fidl::Arena allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.channels_to_use_bitmask = 1;
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
+
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   //
   // 3rd case configure and enable 2 channels.
@@ -1289,12 +1342,23 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   mock[0x5b0].ExpectWrite(1);  // TDMOUT MUTE1.
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-  auto active2 = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0xa);
-  ASSERT_OK(active2.status());
+    fidl::Arena allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.channels_to_use_bitmask = 0xa;
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  // SetActiveChannels is a sync call so all register writes would have been made.
-  // (The controller is single threaded, if we received a reply configuration is complete).
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();
@@ -1345,18 +1409,24 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = *std::move(endpoints);
+    fidl::Arena allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.number_of_channels = 4;
+    pcm_format.channels_to_use_bitmask = 0xf;
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  fidl::Arena allocator;
-  audio_fidl::wire::Format format(allocator);
-  audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
-  pcm_format.number_of_channels = 4;
-  pcm_format.channels_to_use_bitmask = 0xf;
-  format.set_pcm_format(allocator, std::move(pcm_format));
-  client.CreateRingBuffer(std::move(format), std::move(remote));
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   //
   // 2nd case configure and enable only one channel.
@@ -1377,9 +1447,23 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   mock[0x5b0].ExpectWrite(0);    // TDMOUT MUTE1.
   mock[0x5b4].ExpectWrite(0);    // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);    // TDMOUT MUTE3.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-  auto active1 = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0x1);
-  ASSERT_OK(active1.status());
+    fidl::Arena allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.channels_to_use_bitmask = 1;
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
+
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   //
   // 3rd case configure and enable 2 channels.
@@ -1400,12 +1484,23 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
   mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
   mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
 
-  auto active2 = fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(0xa);
-  ASSERT_OK(active2.status());
+    fidl::Arena allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.channels_to_use_bitmask = 0xa;
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  // SetActiveChannels is a sync call so all register writes would have been made.
-  // (The controller is single threaded, if we received a reply configuration is complete).
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();
