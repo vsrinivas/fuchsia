@@ -149,10 +149,7 @@ func (t *DeviceTarget) SSHKey() string {
 
 // Start starts the device target.
 func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath, flashScript string) error {
-	// Initialize the tftp client if:
-	// 1. It is currently uninitialized.
-	// 2. The device cannot be accessed via fastboot.
-	if t.config.FastbootSernum == "" && t.tftp == nil {
+	if t.tftp == nil {
 		// Discover the node on the network and initialize a tftp client to
 		// talk to it.
 		addr, err := netutil.GetNodeAddress(ctx, t.Nodename())
