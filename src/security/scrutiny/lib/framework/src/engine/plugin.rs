@@ -19,6 +19,9 @@ impl PluginDescriptor {
     pub fn new(name: impl Into<String>) -> Self {
         Self { name: name.into() }
     }
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
 }
 
 impl fmt::Display for PluginDescriptor {

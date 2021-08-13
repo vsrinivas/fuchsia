@@ -209,7 +209,13 @@ impl Scrutiny {
 
     /// Utility function to register a plugin.
     pub fn plugin(&mut self, plugin: impl Plugin + 'static) -> Result<()> {
-        self.manager.lock().unwrap().register_and_load(Box::new(plugin))
+        let desc = plugin.descriptor().clone();
+        self.manager.lock().unwrap().register(Box::new(plugin))?;
+        // Only load plugins that are part of the loaded plugins set.
+        if self.config.runtime.plugin.plugins.contains(&desc.name()) {
+            self.manager.lock().unwrap().load(&desc)?;
+        }
+        Ok(())
     }
 
     /// Returns an arc to the dispatcher controller that can be exposed to

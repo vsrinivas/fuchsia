@@ -63,11 +63,12 @@ impl VerifyRoutes {
     /// all non-allowlisted errors.
     fn verify(&self) -> Result<()> {
         VerifyRoutes::generate_depfile(&self.stamp_path, &self.depfile_path)?;
-        let mut config = Config::run_command(
+        let mut config = Config::run_command_with_plugins(
             CommandBuilder::new("verify.capability_routes")
                 .param("capability_types", "directory protocol")
                 .param("response_level", "error")
                 .build(),
+            vec!["CorePlugin", "VerifyPlugin"],
         );
         config.runtime.model.build_path = env::current_dir()?;
         config.runtime.model.repository_path = env::current_dir()?.join(AMBER_PATH);

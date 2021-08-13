@@ -28,6 +28,16 @@ impl Config {
         Config { launch: LaunchConfig::default(), runtime: RuntimeConfig::default() }
     }
 
+    /// Often consumers of the Scrutiny framework will want to create a
+    /// default config with a limited subset of plugins. This allows the
+    /// consumer to specify the exact plugin list they want.
+    pub fn default_with_plugins<S: ToString>(plugins: Vec<S>) -> Config {
+        Config {
+            launch: LaunchConfig::default(),
+            runtime: RuntimeConfig::default_with_plugins(plugins),
+        }
+    }
+
     /// The minimal runtime configuration is intended for most integration use
     /// cases where the REST server is not required for instance. This can be
     /// used to launch the runtime for static analysis verification or for
@@ -37,6 +47,16 @@ impl Config {
         Config { launch: LaunchConfig::minimal(), runtime: RuntimeConfig::minimal() }
     }
 
+    /// Often consumers of the Scrutiny framework will want to create a
+    /// minimal config with a limited subset of plugins. This allows the
+    /// consumer to specify the exact plugin list they want.
+    pub fn minimal_with_plugins<S: ToString>(plugins: Vec<S>) -> Config {
+        Config {
+            launch: LaunchConfig::minimal(),
+            runtime: RuntimeConfig::minimal_with_plugins(plugins),
+        }
+    }
+
     /// Configures Scrutiny to run a single command in a minimal runtime
     /// environment. This is a helper utility configuration to simplify
     /// common configurations.
@@ -44,6 +64,15 @@ impl Config {
         Config {
             launch: LaunchConfig { command: Some(command), script_path: None },
             runtime: RuntimeConfig::minimal(),
+        }
+    }
+
+    /// Runs a command with a minimal config but also allows configuration of
+    /// the set of plugins that run.
+    pub fn run_command_with_plugins<S: ToString>(command: String, plugins: Vec<S>) -> Config {
+        Config {
+            launch: LaunchConfig { command: Some(command), script_path: None },
+            runtime: RuntimeConfig::minimal_with_plugins(plugins),
         }
     }
 
@@ -104,6 +133,13 @@ impl RuntimeConfig {
             server: Some(ServerConfig::default()),
         }
     }
+    /// Default configuration with a special plugin list.
+    pub fn default_with_plugins<S: ToString>(plugins: Vec<S>) -> RuntimeConfig {
+        let mut config = Self::default();
+        config.plugin.plugins = plugins.iter().map(|s| s.to_string()).collect();
+        config
+    }
+
     pub fn minimal() -> RuntimeConfig {
         RuntimeConfig {
             logging: LoggingConfig::minimal(),
@@ -112,6 +148,13 @@ impl RuntimeConfig {
             // The server feature is disabled runtime configuration.
             server: None,
         }
+    }
+
+    /// Minimal configuration with a special plugin list.
+    pub fn minimal_with_plugins<S: ToString>(plugins: Vec<S>) -> RuntimeConfig {
+        let mut config = Self::minimal();
+        config.plugin.plugins = plugins.iter().map(|s| s.to_string()).collect();
+        config
     }
 }
 
@@ -253,9 +296,9 @@ impl PluginConfig {
             ],
         }
     }
-    /// The minimal plugin configuration only contains the core plugin.
+    // TODO(benwright) - Make this a smaller set once API usages are cleaned up.
     pub fn minimal() -> PluginConfig {
-        PluginConfig { plugins: vec!["CorePlugin".to_string()] }
+        Self::default()
     }
 }
 
