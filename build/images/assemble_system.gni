@@ -126,10 +126,6 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   assembly_compress_blobs (default: true)
 #     [boolean] Whether the blobs added to the blobfs image should be compressed.
 #
-#   compress_blobs (default: true)
-#     DEPRECATED
-#     [boolean] Whether the blobs added to the blobfs image should be compressed.
-#
 #   assembly_blob_layout_format (default: "compact")
 #     [string] The format blobfs should store blobs in. The valid values are "deprecated_padded" and
 #     "compact". The deprecated padded format is supported only for Astro devices and will be
@@ -479,11 +475,6 @@ template("assemble_system") {
       compress_blobs = true
       if (defined(invoker.assembly_compress_blobs)) {
         compress_blobs = invoker.assembly_compress_blobs
-      } else
-      # TODO: Remove this once all clients have migrated to
-      # assembly_compress_blobs.
-      if (defined(invoker.compress_blobs)) {
-        compress_blobs = invoker.compress_blobs
       }
 
       if (defined(invoker.minfs)) {
