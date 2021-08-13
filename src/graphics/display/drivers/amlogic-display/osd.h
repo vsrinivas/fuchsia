@@ -276,6 +276,7 @@ class Osd {
   inspect::UintProperty rdma_base_channel_done_count_;
   inspect::UintProperty rdma_afbc_channel_done_count_;
   inspect::UintProperty rdma_stall_count_;
+  inspect::UintProperty last_rdma_stall_timestamp_ns_;
 };
 
 }  // namespace amlogic_display

@@ -1,0 +1,52 @@
+{
+    select: {
+        rdma_stalls: "INSPECT:bootstrap/driver_manager:root/amlogic-display/osd:rdma_stalls",
+        last_rdma_stall_timestamp: "INSPECT:bootstrap/driver_manager:root/amlogic-display/osd:last_rdma_stall_timestamp_ns",
+    },
+    eval: {
+        last_3_hours: "Fn([time], time > Now() - Hours(3))",
+    },
+    act: {
+        rdma_stalled_in_last_3_hours: {
+            type: "Snapshot",
+            trigger: "And(Apply(last_3_hours, [last_rdma_stall_timestamp]), rdma_stalls > 0)",
+            repeat: "Hours(3)",
+            signature: "amlogic-display-rdma-stalled",
+        },
+    },
+    test: {
+        no_stalls: {
+            yes: [],
+            no: [
+                "rdma_stalled_in_last_3_hours",
+            ],
+            now: "Minutes(1)",
+            values: {
+                rdma_stalls: 0,
+                last_rdma_stall_timestamp: 0,
+            },
+        },
+        stall_not_recent_enough: {
+            yes: [],
+            no: [
+                "rdma_stalled_in_last_3_hours",
+            ],
+            now: "Minutes(181)",
+            values: {
+                rdma_stalls: 1,
+                last_rdma_stall_timestamp: 0,
+            },
+        },
+        stall_one_hour_ago: {
+            yes: [
+                "rdma_stalled_in_last_3_hours",
+            ],
+            no: [],
+            now: "Minutes(179)",
+            values: {
+                rdma_stalls: 1,
+                last_rdma_stall_timestamp: 0,
+            },
+        },
+    },
+}
