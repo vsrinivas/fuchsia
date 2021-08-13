@@ -16,6 +16,7 @@ executable("fvm") {
     "//src/storage/volume_image/ftl:ftl-raw-nand-image-writer",
     "//src/storage/volume_image/ftl:raw-nand-image-utils",
     "//src/storage/volume_image/fvm:fvm-sparse-image",
+    "//src/storage/volume_image/fvm:fvm-unpack",
     "//src/storage/volume_image/utils:fd-io",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",

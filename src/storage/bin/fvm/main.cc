@@ -19,6 +19,7 @@
 #include <fbl/span.h>
 #include <safemath/checked_math.h>
 
+#include "fbl/unique_fd.h"
 #include "range/interval-tree.h"
 #include "src/storage/bin/fvm/mtd.h"
 #include "src/storage/blobfs/format.h"
@@ -37,6 +38,7 @@
 #include "src/storage/volume_image/ftl/raw_nand_image_utils.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image_reader.h"
+#include "src/storage/volume_image/fvm/fvm_unpack.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/decompressor.h"
 #include "src/storage/volume_image/utils/fd_reader.h"
@@ -85,6 +87,11 @@ int usage(void) {
           " decompress : Decompresses a compressed sparse/raw file. --sparse/lz4/default input "
           "path is required. If option is set to --default, the tool will attempt to detect the "
           "input format\n");
+  fprintf(stderr,
+          " unpack : Unpacks an input raw fvm image where the output path is used as a prefix for "
+          "output files for partitions by appending the partition name. Resulting output paths "
+          "will have dashes replaced with underscores, and duplicate names will get an additional "
+          "dash and numerical suffix.\n");
   fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
   fprintf(stderr,
           " --slice [bytes] - specify slice size - only valid on container creation.\n"
@@ -874,6 +881,22 @@ int main(int argc, char** argv) {
 
     if (auto result = storage::volume_image::Pave(pave_params_or.value()); result.is_error()) {
       std::cout << "Failed to pave. " << result.error() << std::endl;
+      return -1;
+    }
+  } else if (!strcmp(command, "unpack")) {
+    if (argc - i != 1) {
+      usage();
+      return -1;
+    }
+    auto reader_or = storage::volume_image::FdReader::Create(arguments[i]);
+    if (reader_or.is_error()) {
+      fprintf(stderr, "%s\n", reader_or.take_error().c_str());
+      return -1;
+    }
+    const auto& reader = reader_or.take_value();
+
+    if (auto result = storage::volume_image::UnpackRawFvm(reader, path); result.is_error()) {
+      fprintf(stderr, "Failed to unpack: %s\n", result.take_error().c_str());
       return -1;
     }
   } else {

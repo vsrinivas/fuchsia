@@ -24,6 +24,17 @@ source_set("fvm-descriptor") {
   deps = [ "//src/storage/volume_image/utils:block-utils" ]
 }
 
+source_set("fvm-metadata") {
+  sources = [ "fvm_metadata.cc" ]
+  public = [ "fvm_metadata.h" ]
+  public_deps = [
+    "//sdk/lib/fit-promise",
+    "//src/storage/fvm",
+    "//src/storage/volume_image/utils:io-interfaces",
+  ]
+  deps = [ "//zircon/public/lib/fbl" ]
+}
+
 source_set("fvm-image-extend") {
   sources = [ "fvm_image_extend.cc" ]
   public = [ "fvm_image_extend.h" ]
@@ -31,7 +42,7 @@ source_set("fvm-image-extend") {
     ":options",
     "//src/storage/volume_image/utils:io-interfaces",
   ]
-  deps = [ "//src/storage/fvm" ]
+  deps = [ ":fvm-metadata" ]
 }
 
 source_set("fvm-sparse-image") {
@@ -54,6 +65,21 @@ source_set("fvm-sparse-image") {
   ]
 }
 
+source_set("fvm-unpack") {
+  sources = [ "fvm_unpack.cc" ]
+  public = [ "fvm_unpack.h" ]
+  public_deps = [
+    "//sdk/lib/fit-promise",
+    "//src/storage/fvm",
+    "//src/storage/volume_image/utils:io-interfaces",
+  ]
+  deps = [
+    ":fvm-metadata",
+    "//src/storage/volume_image/utils:fd-io",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
 # This source set is included in the volume image test package in the directory above.
 source_set("fvm-test") {
   testonly = true
@@ -61,11 +87,13 @@ source_set("fvm-test") {
     "fvm_descriptor_test.cc",
     "fvm_image_extend_test.cc",
     "fvm_sparse_image_test.cc",
+    "fvm_unpack_test.cc",
   ]
   deps = [
     ":fvm-descriptor",
     ":fvm-image-extend",
     ":fvm-sparse-image",
+    ":fvm-unpack",
     "//sdk/lib/stdcompat",
     "//src/lib/json_parser",
     "//src/storage/fvm",

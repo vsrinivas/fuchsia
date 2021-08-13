@@ -7,88 +7,16 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <variant>
 #include <vector>
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/metadata.h"
-#include "src/storage/fvm/metadata_buffer.h"
+#include "src/storage/volume_image/fvm/fvm_metadata.h"
 
 namespace storage::volume_image {
-namespace {
-
-// Conforms to a the MetadataBuffer interface required, and allows to inject and unowned buffer if
-// necessary. Why is useful for testing.
-class MetadataBufferView final : public fvm::MetadataBuffer {
- public:
-  MetadataBufferView() : data_(std::vector<uint8_t>()) {}
-  explicit MetadataBufferView(fbl::Span<uint8_t> data) : data_(data) {}
-
-  std::unique_ptr<MetadataBuffer> Create(size_t size) const final {
-    auto view = std::make_unique<MetadataBufferView>();
-    std::get<std::vector<uint8_t>>(view->data_).resize(size);
-    return std::move(view);
-  }
-
-  void* data() const final {
-    return std::visit([](auto& a) { return static_cast<void*>(a.data()); }, data_);
-  }
-
-  size_t size() const final {
-    return std::visit([](auto& a) { return a.size(); }, data_);
-  }
-
- private:
-  mutable std::variant<fbl::Span<uint8_t>, std::vector<uint8_t>> data_;
-};
-
-fpromise::result<fvm::Metadata, std::string> GetMetadata(
-    const Reader& source_image, std::vector<uint8_t>& primary_metadata_buffer,
-    std::vector<uint8_t>& secondary_metadata_buffer) {
-  fvm::Header header = {};
-  auto header_view = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(fvm::Header));
-
-  if (auto header_read_result = source_image.Read(0, header_view); header_read_result.is_error()) {
-    return header_read_result.take_error_result();
-  }
-
-  if (header.magic != fvm::kMagic) {
-    return fpromise::error(
-        "|source_image| must be a valid FVM block image. FVM Magic mismatch, found " +
-        std::to_string(header.magic) + " expected " + std::to_string(fvm::kMagic));
-  }
-
-  primary_metadata_buffer.resize(header.GetMetadataAllocatedBytes());
-  if (auto primary_metadata_read_result = source_image.Read(
-          header.GetSuperblockOffset(fvm::SuperblockType::kPrimary), primary_metadata_buffer);
-      primary_metadata_read_result.is_error()) {
-    return primary_metadata_read_result.take_error_result();
-  }
-  auto primary_metadata = std::make_unique<MetadataBufferView>(primary_metadata_buffer);
-
-  secondary_metadata_buffer.resize(header.GetMetadataAllocatedBytes());
-  if (auto secondary_metadata_read_result = source_image.Read(
-          header.GetSuperblockOffset(fvm::SuperblockType::kPrimary), secondary_metadata_buffer);
-      secondary_metadata_read_result.is_error()) {
-    return secondary_metadata_read_result.take_error_result();
-  }
-  auto secondary_metadata = std::make_unique<MetadataBufferView>(secondary_metadata_buffer);
-
-  auto metadata = fvm::Metadata::Create(std::move(primary_metadata), std::move(secondary_metadata));
-  if (metadata.is_error()) {
-    return fpromise::error("Failed to create FVM Metadata from image. Error Code: " +
-                           std::to_string(metadata.error_value()));
-  }
-  return fpromise::ok(std::move(metadata.value()));
-}
-
-}  // namespace
 
 fpromise::result<uint64_t, std::string> FvmImageGetSize(const Reader& source_image) {
-  std::vector<uint8_t> primary_metadata_buffer;
-  std::vector<uint8_t> secondary_metadata_buffer;
-
-  auto metadata_or = GetMetadata(source_image, primary_metadata_buffer, secondary_metadata_buffer);
+  auto metadata_or = FvmGetMetadata(source_image);
   if (metadata_or.is_error()) {
     return metadata_or.take_error_result();
   }
@@ -99,10 +27,7 @@ fpromise::result<uint64_t, std::string> FvmImageGetSize(const Reader& source_ima
 fpromise::result<void, std::string> FvmImageExtend(const Reader& source_image,
                                                    const FvmOptions& options,
                                                    Writer& target_image) {
-  std::vector<uint8_t> primary_metadata_buffer;
-  std::vector<uint8_t> secondary_metadata_buffer;
-
-  auto metadata_or = GetMetadata(source_image, primary_metadata_buffer, secondary_metadata_buffer);
+  auto metadata_or = FvmGetMetadata(source_image);
   if (metadata_or.is_error()) {
     return metadata_or.take_error_result();
   }
@@ -193,10 +118,7 @@ fpromise::result<void, std::string> FvmImageExtend(const Reader& source_image,
 }
 
 fpromise::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image) {
-  std::vector<uint8_t> primary_metadata_buffer;
-  std::vector<uint8_t> secondary_metadata_buffer;
-
-  auto metadata_or = GetMetadata(source_image, primary_metadata_buffer, secondary_metadata_buffer);
+  auto metadata_or = FvmGetMetadata(source_image);
   if (metadata_or.is_error()) {
     return metadata_or.take_error_result();
   }
