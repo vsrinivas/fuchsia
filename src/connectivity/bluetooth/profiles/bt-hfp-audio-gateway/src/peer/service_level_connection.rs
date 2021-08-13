@@ -1049,16 +1049,11 @@ pub(crate) mod tests {
         // Bypass the SLCI procedure by setting the channel to initialized.
         slc.set_initialized();
 
-        // Receiving an AT command associated with the SLCI procedure thereafter should
+        // Receiving an AT command that can only be sent during the SLCI procedure thereafter should
         // be an error.
         let cmd1 = at::Command::Brsf { features: HfFeatures::empty().bits() as i64 };
         assert_matches!(
             slc.match_command_to_procedure(&cmd1.into()),
-            Err(ProcedureError::UnexpectedHf(_))
-        );
-        let cmd2 = at::Command::CindTest {};
-        assert_matches!(
-            slc.match_command_to_procedure(&cmd2.into()),
             Err(ProcedureError::UnexpectedHf(_))
         );
     }

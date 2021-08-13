@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use tracing::warn;
 use {at_commands as at, thiserror::Error};
 
 use crate::peer::{
@@ -73,8 +74,11 @@ pub mod initiate_call;
 /// Defines the Codec Support Procedure.
 pub mod codec_support;
 
-/// Defines the Indicator status read Procedure.
+/// Defines the AG Indicator status read Procedure.
 pub mod indicator_status;
+
+/// Defines the HF Indicator status test and read Procedure.
+pub mod hf_indicator_status;
 
 use answer::AnswerProcedure;
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
@@ -84,7 +88,8 @@ use codec_support::CodecSupportProcedure;
 use dtmf::DtmfProcedure;
 use extended_errors::ExtendedErrorsProcedure;
 use hang_up::HangUpProcedure;
-use hold::HoldProcedure;
+use hf_indicator_status::SupportedHfIndicatorsProcedure;
+use hold::{HoldProcedure, ThreeWaySupportProcedure};
 use indicator_status::IndicatorStatusProcedure;
 use indicators_activation::IndicatorsActivationProcedure;
 use initiate_call::InitiateCallProcedure;
@@ -210,6 +215,10 @@ pub enum ProcedureMarker {
     IndicatorStatus,
     /// The Codec Support procedure as defined in HFP v1.8 4.2.1.2.
     CodecSupport,
+    /// The Call Hold and Multiparty support procedure as defined in HFP v1.8 4.2.1.3
+    ThreeWaySupport,
+    /// The HF Indicators read procedure as defined in HFP v1.8 4.2.1.4
+    SupportedHfIndicators,
 }
 
 impl ProcedureMarker {
@@ -242,6 +251,27 @@ impl ProcedureMarker {
             Self::CodecConnectionSetup => Box::new(CodecConnectionSetupProcedure::new()),
             Self::IndicatorStatus => Box::new(IndicatorStatusProcedure::new()),
             Self::CodecSupport => Box::new(CodecSupportProcedure::new()),
+            Self::ThreeWaySupport => Box::new(ThreeWaySupportProcedure::new()),
+            Self::SupportedHfIndicators => Box::new(SupportedHfIndicatorsProcedure::new()),
+        }
+    }
+
+    /// Matches the HF `command` to the SLC Initialization procedure. Before initialization is
+    /// complete, all commands should be routed to the initialization procedure.
+    pub fn match_init_command(command: &at::Command) -> Result<Self, ProcedureError> {
+        match command {
+            at::Command::Brsf { .. }
+            | at::Command::CindTest { .. }
+            | at::Command::ChldTest { .. }
+            | at::Command::BindTest { .. }
+            | at::Command::BindRead { .. }
+            | at::Command::CindRead { .. }
+            | at::Command::Cmer { .. }
+            | at::Command::Bac { .. } => Ok(Self::SlcInitialization),
+            _ => {
+                warn!("Received unexpected HF command before SLC Initialization was complete");
+                Err(ProcedureError::NotImplemented)
+            }
         }
     }
 
@@ -250,39 +280,44 @@ impl ProcedureMarker {
     ///
     /// Returns an error if the command is unable to be matched.
     pub fn match_command(command: &at::Command, initialized: bool) -> Result<Self, ProcedureError> {
-        match command {
-            at::Command::Brsf { .. }
-            | at::Command::CindTest { .. }
-            | at::Command::ChldTest { .. }
-            | at::Command::BindTest { .. }
-            | at::Command::BindRead { .. } => Ok(Self::SlcInitialization),
-            at::Command::Bac { .. } if initialized => Ok(Self::CodecSupport),
-            at::Command::Bac { .. } => Ok(Self::SlcInitialization),
-            at::Command::CindRead { .. } if initialized => Ok(Self::IndicatorStatus),
-            at::Command::CindRead { .. } => Ok(Self::SlcInitialization),
-            at::Command::Cmer { .. } if initialized => Ok(Self::Indicators),
-            at::Command::Cmer { .. } => Ok(Self::SlcInitialization),
-            at::Command::Nrec { .. } => Ok(Self::Nrec),
-            at::Command::Cops { .. } | at::Command::CopsRead { .. } => {
-                Ok(Self::QueryOperatorSelection)
+        if !initialized {
+            return Self::match_init_command(command);
+        } else {
+            match command {
+                at::Command::Brsf { .. } => Ok(Self::SlcInitialization),
+                at::Command::BindTest { .. } | at::Command::BindRead { .. } => {
+                    Ok(Self::SupportedHfIndicators)
+                }
+                at::Command::Bac { .. } => Ok(Self::CodecSupport),
+                at::Command::CindTest { .. } | at::Command::CindRead { .. } => {
+                    Ok(Self::IndicatorStatus)
+                }
+                at::Command::Cmer { .. } => Ok(Self::Indicators),
+                at::Command::Nrec { .. } => Ok(Self::Nrec),
+                at::Command::Cops { .. } | at::Command::CopsRead { .. } => {
+                    Ok(Self::QueryOperatorSelection)
+                }
+                at::Command::Cmee { .. } => Ok(Self::ExtendedErrors),
+                at::Command::Ccwa { .. } => Ok(Self::CallWaitingNotifications),
+                at::Command::Clcc { .. } => Ok(Self::QueryCurrentCalls),
+                at::Command::Clip { .. } => Ok(Self::CallLineIdentNotifications),
+                at::Command::Cnum { .. } => Ok(Self::SubscriberNumberInformation),
+                at::Command::Vgs { .. } | at::Command::Vgm { .. } => {
+                    Ok(Self::VolumeSynchronization)
+                }
+                at::Command::Vts { .. } => Ok(Self::Dtmf),
+                at::Command::Answer { .. } => Ok(Self::Answer),
+                at::Command::Chup { .. } => Ok(Self::HangUp),
+                at::Command::Biev { .. } => Ok(Self::TransferHfIndicator),
+                at::Command::Bia { .. } => Ok(Self::Indicators),
+                at::Command::Chld { .. } => Ok(Self::Hold),
+                at::Command::ChldTest { .. } => Ok(Self::ThreeWaySupport),
+                at::Command::AtdNumber { .. }
+                | at::Command::AtdMemory { .. }
+                | at::Command::Bldn { .. } => Ok(Self::InitiateCall),
+                at::Command::Bcc { .. } | at::Command::Bcs { .. } => Ok(Self::CodecConnectionSetup),
+                _ => Err(ProcedureError::NotImplemented),
             }
-            at::Command::Cmee { .. } => Ok(Self::ExtendedErrors),
-            at::Command::Ccwa { .. } => Ok(Self::CallWaitingNotifications),
-            at::Command::Clcc { .. } => Ok(Self::QueryCurrentCalls),
-            at::Command::Clip { .. } => Ok(Self::CallLineIdentNotifications),
-            at::Command::Cnum { .. } => Ok(Self::SubscriberNumberInformation),
-            at::Command::Vgs { .. } | at::Command::Vgm { .. } => Ok(Self::VolumeSynchronization),
-            at::Command::Vts { .. } => Ok(Self::Dtmf),
-            at::Command::Answer { .. } => Ok(Self::Answer),
-            at::Command::Chup { .. } => Ok(Self::HangUp),
-            at::Command::Biev { .. } => Ok(Self::TransferHfIndicator),
-            at::Command::Bia { .. } => Ok(Self::Indicators),
-            at::Command::Chld { .. } => Ok(Self::Hold),
-            at::Command::AtdNumber { .. }
-            | at::Command::AtdMemory { .. }
-            | at::Command::Bldn { .. } => Ok(Self::InitiateCall),
-            at::Command::Bcc { .. } | at::Command::Bcs { .. } => Ok(Self::CodecConnectionSetup),
-            _ => Err(ProcedureError::NotImplemented),
         }
     }
 }
