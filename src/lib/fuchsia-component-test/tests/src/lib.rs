@@ -23,7 +23,7 @@ const V2_ECHO_SERVER_ABSOLUTE_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_server.cm";
 const V2_ECHO_SERVER_RELATIVE_URL: &'static str = "#meta/echo_server.cm";
 
-const DEFAULT_ECHO_STR: &'static str = "Hippos rule!";
+const DEFAULT_ECHO_STR: &'static str = "Hello Fuchsia!";
 
 #[fasync::run_singlethreaded(test)]
 async fn protocol_with_uncle_test() -> Result<(), Error> {

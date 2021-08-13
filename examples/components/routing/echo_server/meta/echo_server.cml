@@ -1,11 +1,27 @@
-// Component manifest for the `echo_server` example program, which hosts the Echo service used
-// by `echo_client`.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START example_snippet]
 {
-    include: [ "syslog/client.shard.cml" ],
+    // [START_EXCLUDE]
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run.
     program: {
+        // Use the built-in ELF runner.
         runner: "elf",
+
+        // The binary to run for this component.
         binary: "bin/echo_server",
     },
+
+    // [END_EXCLUDE]
+
+    // Capabilities provided by this component.
     capabilities: [
         { protocol: "fidl.examples.routing.echo.Echo" },
     ],
@@ -14,9 +30,15 @@
             protocol: "fidl.examples.routing.echo.Echo",
             from: "self",
         },
+
+        // [START_EXCLUDE]
         {
             directory: "hub",
             from: "framework",
         },
+
+        // [END_EXCLUDE]
     ],
 }
+
+// [END example_snippet]

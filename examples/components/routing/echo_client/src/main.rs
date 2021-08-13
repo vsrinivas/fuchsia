@@ -2,19 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol, std::env, tracing::info,
-};
+use anyhow;
+use fuchsia_async as fasync;
+use fuchsia_inspect::{component, health::Reporter};
+use tracing;
+// [START imports]
+use fidl_fidl_examples_routing_echo::EchoMarker;
+use fuchsia_component::client::connect_to_protocol;
+// [END imports]
 
 #[fasync::run_singlethreaded]
-#[fuchsia::component]
-async fn main() {
-    let mut args: Vec<String> = env::args().collect();
-    args.remove(0);
-    let echo_string = args.join(" ");
+// [START main_body]
+#[fuchsia::component(logging = true)]
+async fn main() -> Result<(), anyhow::Error> {
+    component::health().set_starting_up();
 
-    let echo = connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
-    let out = echo.echo_string(Some(&echo_string)).await.expect("echo_string failed");
-    info!("{}", out.as_ref().expect("echo_string got empty result"));
+    // Parse arguments, removing binary name
+    let mut args: Vec<String> = std::env::args().collect();
+    args.remove(0);
+    let message = args.join(" ");
+
+    // Connect to FIDL protocol
+    let echo = connect_to_protocol::<EchoMarker>().expect("error connecting to echo");
+
+    component::health().set_ok();
+    tracing::debug!("Initialized.");
+
+    // Send message over FIDL interface
+    let out = echo.echo_string(Some(&message)).await.expect("echo_string failed");
+    tracing::info!("Server response: {}", out.as_ref().expect("echo_string got empty result"));
+
+    Ok(())
 }
+// [END main_body]

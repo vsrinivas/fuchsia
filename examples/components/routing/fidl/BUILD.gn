@@ -2,13 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START fidl_echo]
 import("//build/fidl/fidl.gni")
-
 fidl("echo") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
-
   name = "fidl.examples.routing.echo"
 
   sources = [ "echo.fidl" ]
 }
+# [END fidl_echo]

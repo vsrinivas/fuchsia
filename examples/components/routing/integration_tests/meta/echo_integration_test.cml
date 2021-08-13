@@ -4,6 +4,7 @@
 
 // [START example_snippet]
 {
+    // [START_EXCLUDE]
     include: [
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
@@ -14,6 +15,8 @@
         // The binary to run for this component.
         binary: "bin/echo_integration_test",
     },
+
+    // [END_EXCLUDE]
 
     // Child components orchestrated by the integration test.
     children: [

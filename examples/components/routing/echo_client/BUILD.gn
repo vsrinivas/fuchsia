@@ -9,6 +9,8 @@ rustc_binary("echo_client") {
   edition = "2018"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -21,7 +23,7 @@ rustc_binary("echo_client") {
 }
 
 fuchsia_component("echo_client_component") {
-  manifest = "meta/echo_client.cml"
   component_name = "echo_client"
+  manifest = "meta/echo_client.cml"
   deps = [ ":echo_client" ]
 }

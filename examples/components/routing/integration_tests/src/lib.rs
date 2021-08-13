@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// [START example_snippet]
 use {
     anyhow::{self, Error},
     fidl_fidl_examples_routing_echo as fecho,
@@ -19,3 +20,4 @@ async fn echo_integration_test() -> Result<(), Error> {
     assert_eq!(ECHO_STRING, out.unwrap());
     Ok(())
 }
+// [END example_snippet]
