@@ -25,6 +25,9 @@ declare_args() {
 
   # Whether or not to launch OOBE workflow on startup.
   start_oobe = false
+
+  # Whether or not to launch screensaver.
+  ermine_start_screensaver = true
 }
 
 dart_library("lib") {
@@ -180,14 +183,27 @@ resource("app_launch_entries_resource") {
   visibility = [ ":*" ]
 }
 
+preferences_path = "${target_gen_dir}/preferences.json"
+
+generated_file("preferences") {
+  outputs = [ preferences_path ]
+  contents = {
+    screensaver = ermine_start_screensaver
+  }
+  output_conversion = "json"
+}
+
 resource("resources") {
   sources = [
     "config/keyboard_shortcuts.json",
+    rebase_path(preferences_path),
     rebase_path(tz_ids_path),
     rebase_path(
         "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),
   ]
   outputs = [ "data/{{source_file_part}}" ]
+
+  deps = [ ":preferences" ]
 }
 
 config_data("images") {

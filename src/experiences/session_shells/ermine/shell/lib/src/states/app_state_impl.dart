@@ -544,16 +544,18 @@ class AppStateImpl with Disposable implements AppState {
   }
 
   void _onIdle({required bool idle}) => runInAction(() {
-        if (idle) {
-          isIdle.value = idle;
-        } else {
-          // Wait for the screen saver to be visible and running before closing
-          // it.
-          if (views.isNotEmpty &&
-              topView.value.url == kScreenSaverUrl &&
-              topView.value.ready.value) {
-            closeView();
-            isIdle.value = false;
+        if (preferencesService.showScreensaver) {
+          if (idle) {
+            isIdle.value = idle;
+          } else {
+            // Wait for the screen saver to be visible and running before closing
+            // it.
+            if (views.isNotEmpty &&
+                topView.value.url == kScreenSaverUrl &&
+                topView.value.ready.value) {
+              closeView();
+              isIdle.value = false;
+            }
           }
         }
       });
