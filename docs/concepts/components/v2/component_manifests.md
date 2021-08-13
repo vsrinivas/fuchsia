@@ -341,7 +341,7 @@ properties:
 -   `name`: The name of the child component instance, which is a string of one
     or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
     identifies this component when used in a [reference](#references).
--   `url`: The component URL for the child component instance.
+-   `url`: The [component URL][component-url] for the child component instance.
 -   `startup` _(optional)_: The component instance's startup mode.
     -   `lazy` _(default)_: Start the component instance only if another
         component instance binds to it.
@@ -372,6 +372,10 @@ children: [
         url: "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cm",
         startup: "eager",
     },
+    {
+        name: "child",
+        url: "#meta/child.cm",
+    }
 ],
 ```
 
@@ -752,6 +756,7 @@ expect their facets to adhere to a particular schema.
 
 This section may be omitted.
 
+[component-url]: /docs/concepts/components/component_urls.md
 [doc-capabilities]: /docs/concepts/components/v2/capabilities/README.md
 [doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#collections
