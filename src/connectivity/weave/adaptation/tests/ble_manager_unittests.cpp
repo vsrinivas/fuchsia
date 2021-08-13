@@ -18,7 +18,7 @@
 
 #include "connectivity_manager_delegate_impl.h"
 #include "test_configuration_manager.h"
-#include "thread_stack_manager_delegate_impl.h"
+#include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal::testing {
@@ -27,6 +27,7 @@ using nl::Weave::DeviceLayer::ConnectivityManager;
 using nl::Weave::DeviceLayer::Internal::BLEManager;
 using nl::Weave::DeviceLayer::Internal::BLEManagerImpl;
 using weave::adaptation::testing::TestConfigurationManager;
+using weave::adaptation::testing::TestThreadStackManager;
 }  // namespace
 
 class FakeGATTLocalService : public fuchsia::bluetooth::gatt::testing::LocalService_TestBase {
@@ -141,7 +142,7 @@ class BLEManagerTest : public WeaveTestFixture<> {
     PlatformMgrImpl().SetDispatcher(event_loop_.dispatcher());
     PlatformMgrImpl().GetSystemLayer().Init(nullptr);
 
-    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
     EXPECT_EQ(ConfigurationMgrImpl().IsWoBLEEnabled(), true);

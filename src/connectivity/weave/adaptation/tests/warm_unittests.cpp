@@ -26,7 +26,7 @@
 // clang-format on
 
 #include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
-#include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
+#include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
 
 namespace nl {
@@ -36,6 +36,8 @@ namespace Platform {
 namespace testing {
 
 namespace {
+using weave::adaptation::testing::TestThreadStackManager;
+
 using fuchsia::lowpan::device::DeviceRoute;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Response;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
@@ -52,7 +54,6 @@ using DeviceLayer::ThreadStackMgrImpl;
 using DeviceLayer::Internal::testing::WeaveTestFixture;
 
 constexpr char kTunInterfaceName[] = "weav-tun0";
-constexpr char kThreadInterfaceName[] = "lowpan0";
 constexpr char kWiFiInterfaceName[] = "wlan0";
 
 constexpr uint32_t kRouteMetric_HighPriority = 0;
@@ -204,11 +205,13 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
  public:
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
-  void GetDevices(GetDevicesCallback callback) override { callback({kThreadInterfaceName}); }
+  void GetDevices(GetDevicesCallback callback) override {
+    callback({TestThreadStackManager::kThreadInterfaceName});
+  }
 
   void LookupDevice(std::string name, Protocols protocols, LookupDeviceCallback callback) override {
     Lookup_LookupDevice_Result result;
-    if (name != kThreadInterfaceName) {
+    if (name != TestThreadStackManager::kThreadInterfaceName) {
       result.set_err(ServiceError::DEVICE_NOT_FOUND);
       callback(std::move(result));
       return;
@@ -244,18 +247,6 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
 class FakeConnectivityManagerDelegate : public DeviceLayer::ConnectivityManagerDelegateImpl {
  public:
   std::optional<std::string> GetWiFiInterfaceName() override { return kWiFiInterfaceName; }
-};
-
-// Fake implementation of TSM delegate, only provides an interface name.
-class FakeThreadStackManagerDelegate : public DeviceLayer::ThreadStackManagerDelegateImpl {
- public:
-  WEAVE_ERROR InitThreadStack() override { return WEAVE_NO_ERROR; }
-  std::string GetInterfaceName() const override { return kThreadInterfaceName; }
-  bool IsThreadProvisioned() override { return is_thread_provisioned_; }
-
-  void set_is_thread_provisioned(bool provisioned) { is_thread_provisioned_ = provisioned; }
- private:
-  bool is_thread_provisioned_{true};
 };
 
 // Fake implementation of the fuchsia::netstack::Netstack that provides
@@ -468,15 +459,16 @@ class WarmTest : public testing::WeaveTestFixture<> {
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<FakeConnectivityManagerDelegate>());
-    auto tsm = std::make_unique<FakeThreadStackManagerDelegate>();
-    fake_thread_stack_manager_ = tsm.get();
-    ThreadStackMgrImpl().SetDelegate(std::move(tsm));
-    ThreadStackMgrImpl().InitThreadStack();
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
     Warm::Platform::Init(nullptr);
+
+    // Report that thread is provisioned by default, so that WARM does not
+    // always reject add-operations due to lack of provisioning.
+    thread_delegate().set_is_thread_provisioned(true);
 
     // Populate initial fake interfaces
     AddOwnedInterface(kTunInterfaceName);
-    AddOwnedInterface(kThreadInterfaceName);
+    AddOwnedInterface(TestThreadStackManager::kThreadInterfaceName);
     AddOwnedInterface(kWiFiInterfaceName);
 
     RunFixtureLoop();
@@ -494,7 +486,10 @@ class WarmTest : public testing::WeaveTestFixture<> {
   FakeNetInterfaces& fake_net_interfaces() { return fake_net_interfaces_; }
   FakeNetstack& fake_net_stack() { return fake_net_stack_; }
   FakeStack& fake_stack() { return fake_stack_; }
-  FakeThreadStackManagerDelegate& fake_thread_stack_manager() { return *fake_thread_stack_manager_; };
+
+  TestThreadStackManager& thread_delegate() {
+    return *reinterpret_cast<TestThreadStackManager*>(ThreadStackMgrImpl().GetDelegate());
+  }
 
   void AddOwnedInterface(std::string name) {
     fake_net_stack_.AddOwnedInterface(name);
@@ -507,7 +502,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
   }
 
   OwnedInterface& GetThreadInterface() {
-    return fake_net_stack_.GetInterfaceByName(kThreadInterfaceName);
+    return fake_net_stack_.GetInterfaceByName(TestThreadStackManager::kThreadInterfaceName);
   }
 
   uint32_t GetThreadInterfaceId() { return GetThreadInterface().id; }
@@ -530,7 +525,6 @@ class WarmTest : public testing::WeaveTestFixture<> {
   FakeNetInterfaces fake_net_interfaces_;
   FakeStack fake_stack_;
   sys::testing::ComponentContextProvider context_provider_;
-  FakeThreadStackManagerDelegate* fake_thread_stack_manager_;
 };
 
 TEST_F(WarmTest, AddRemoveAddressThread) {
@@ -567,7 +561,7 @@ TEST_F(WarmTest, AddAddressThreadUnprovisioned) {
   Inet::IPAddress addr;
 
   // Fake unprovisioned TSM.
-  fake_thread_stack_manager().set_is_thread_provisioned(false);
+  thread_delegate().set_is_thread_provisioned(false);
 
   // Sanity check - no addresses assigned.
   OwnedInterface& lowpan = GetThreadInterface();
@@ -695,7 +689,7 @@ TEST_F(WarmTest, AddAddressThreadNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveOwnedInterface(kThreadInterfaceName);
+  RemoveOwnedInterface(TestThreadStackManager::kThreadInterfaceName);
 
   // Attempt to add to the interface when there's no Thread interface. Expect failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -709,7 +703,7 @@ TEST_F(WarmTest, RemoveAddressThreadNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveOwnedInterface(kThreadInterfaceName);
+  RemoveOwnedInterface(TestThreadStackManager::kThreadInterfaceName);
 
   // Attempt to remove from the interface when there's no Thread interface. Expect success.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));

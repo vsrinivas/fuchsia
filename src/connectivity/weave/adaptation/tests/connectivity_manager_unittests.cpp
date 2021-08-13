@@ -20,8 +20,8 @@
 
 #include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/connectivity_manager_impl.h"
-#include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
 #include "test_configuration_manager.h"
+#include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal {
@@ -29,6 +29,7 @@ namespace testing {
 namespace {
 
 using weave::adaptation::testing::TestConfigurationManager;
+using weave::adaptation::testing::TestThreadStackManager;
 
 using nl::Weave::DeviceLayer::ConnectivityManager;
 using nl::Weave::DeviceLayer::ConnectivityManagerImpl;
@@ -170,7 +171,7 @@ class ConnectivityManagerTest : public WeaveTestFixture<> {
     // Use default ConfigurationManager and mock out tunnel invocation.
     ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<TestConnectivityManagerDelegateImpl>());
-    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
     // Perform initialization of delegate and run to complete FIDL connection.
     EXPECT_EQ(ConnectivityMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
     RunLoopUntilIdle();

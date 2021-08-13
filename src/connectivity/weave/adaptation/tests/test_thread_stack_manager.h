@@ -13,6 +13,8 @@ namespace weave::adaptation::testing {
 
 class TestThreadStackManager final : public nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl {
  public:
+  static constexpr char kThreadInterfaceName[] = "lowpan0";
+
   // Access underlying delegate implementation.
   using Impl = nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 
@@ -25,6 +27,9 @@ class TestThreadStackManager final : public nl::Weave::DeviceLayer::ThreadStackM
   bool IsThreadSupported() const override {
     return is_thread_supported_ ? is_thread_supported_.value() : Impl::IsThreadSupported();
   }
+
+  // Returns the thread interface name.
+  std::string GetInterfaceName() const override { return kThreadInterfaceName; }
 
   // Set whether thread is provisioned.
   TestThreadStackManager& set_is_thread_provisioned(std::optional<bool> is_thread_provisioned) {
