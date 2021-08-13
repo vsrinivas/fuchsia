@@ -230,7 +230,25 @@ func (t *terminalError) setLocked(err tcpip.Error) {
 	switch previous := t.setLockedInner(err); previous {
 	case nil, err:
 	default:
-		panic(fmt.Sprintf("previous=%#v err=%#v", previous, err))
+		switch previous.(type) {
+		case *tcpip.ErrNetworkUnreachable:
+		case *tcpip.ErrNoRoute:
+		// At the time of writing, these errors are triggered by inbound
+		// ICMP Destination Unreachable messages; if another error is to
+		// be set on the endpoint, treat that one as the true error
+		// because ICMP Destination Unreachable messages must not be
+		// treated as a hard error as required by RFC 1122:
+		//
+		// A Destination Unreachable message that is received with code
+		// 0 (Net), 1 (Host), or 5 (Bad Source Route) may result from a
+		// routing transient and MUST therefore be interpreted as only
+		// a hint, not proof, that the specified destination is
+		// unreachable [IP:11].
+		//
+		// https://datatracker.ietf.org/doc/html/rfc1122#page-40
+		default:
+			panic(fmt.Sprintf("previous=%#v err=%#v", previous, err))
+		}
 	}
 }
 
