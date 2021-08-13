@@ -21,7 +21,7 @@ import 'run_queries.dart';
 ParsedArgs parseArgs(List<String> args) {
   final parser = ArgParser(allowTrailingOptions: true)
     ..addSeparator('Core options:\n')
-    ..addFlag('help', help: 'Give this help.', negatable: false)
+    ..addFlag('help', abbr: 'h', help: 'Give this help.', negatable: false)
     // The `--[no-]cache` parameter is a tri-state:
     //
     // fx codesize --cache => Always use cached bloaty reports
