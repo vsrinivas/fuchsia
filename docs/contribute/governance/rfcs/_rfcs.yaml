@@ -1561,3 +1561,16 @@
   reviewers: ['cpu@google.com', 'geb@google.com', 'mkember@google.com', 'tamird@google.com', 'surajmalhotra@google.com']
   submitted: '2021-07-02'
   reviewed: '2021-08-04'
+
+- name: 'RFC-0121'
+  title: 'Component lifecycle events'
+  short_description: 'This RFC formalizes Component framework event capabilities.'
+  authors: ['miguelfrde@google.com']
+  file: '0121_component_events.md'
+  area: ['Component Framework']
+  issue: ['81980']
+  gerrit_change_id: ['535692']
+  status: 'Accepted'
+  reviewers: [ 'geb@google.com', 'abarth@google.com', 'jmatt@google.com', 'shayba@google.com', 'crjohns@google.com', 'fsamuel@google.com' ]
+  submitted: '2021-05-26'
+  reviewed: '2021-08-11'

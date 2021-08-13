@@ -253,3 +253,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0119_system_absolute_paths_considered_harmful.md
 - title: "RFC-0120: Standalone use of the FIDL wire format"
   path: /docs/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format.md
+- title: "RFC-0121: Component lifecycle events"
+  path: /docs/contribute/governance/rfcs/0121_component_events.md
