@@ -77,6 +77,7 @@ rustc_binary("bin") {
     "src/peer/procedure/dtmf.rs",
     "src/peer/procedure/extended_errors.rs",
     "src/peer/procedure/hang_up.rs",
+    "src/peer/procedure/hf_indicator_status.rs",
     "src/peer/procedure/hold.rs",
     "src/peer/procedure/indicator_status.rs",
     "src/peer/procedure/indicators_activation.rs",

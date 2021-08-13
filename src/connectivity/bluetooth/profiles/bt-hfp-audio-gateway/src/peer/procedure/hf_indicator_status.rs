@@ -7,38 +7,44 @@ use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
 use at_commands as at;
 
-/// The HF requests supported AG indicators via this procedure. See HFP v1.8, Section 4.2.1.3.
+/// The HF tests AG support for HF indicators and reads indicator enabled statuses via this
+/// Procedure. See HFP v1.8 Section 4.2.1.4.
 ///
 /// This procedure is implemented from the perspective of the AG. Namely, outgoing `requests`
 /// typically request information about the current state of the AG, to be sent to the remote
 /// peer acting as the HF.
-#[derive(Debug, Default)]
-pub struct IndicatorStatusProcedure {
-    /// The current state of the procedure
+#[derive(Debug)]
+pub struct SupportedHfIndicatorsProcedure {
     terminated: bool,
 }
 
-impl IndicatorStatusProcedure {
-    /// Create a new IndicatorStatus procedure in the Start state.
+impl Default for SupportedHfIndicatorsProcedure {
+    fn default() -> Self {
+        Self { terminated: false }
+    }
+}
+
+impl SupportedHfIndicatorsProcedure {
+    /// Create a new Transfer HF Indicator procedure in the Start state.
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Procedure for IndicatorStatusProcedure {
+impl Procedure for SupportedHfIndicatorsProcedure {
     fn marker(&self) -> ProcedureMarker {
-        ProcedureMarker::IndicatorStatus
+        ProcedureMarker::SupportedHfIndicators
     }
 
     fn hf_update(&mut self, update: at::Command, state: &mut SlcState) -> ProcedureRequest {
         match (self.terminated, update) {
-            (false, at::Command::CindTest {}) => {
+            (false, at::Command::BindTest {}) => {
                 self.terminated = true;
-                AgUpdate::Features(state.ag_features).into()
+                AgUpdate::SupportedHfIndicators { safety: true, battery: true }.into()
             }
-            (false, at::Command::CindRead {}) => {
+            (false, at::Command::BindRead {}) => {
                 self.terminated = true;
-                AgUpdate::IndicatorStatus(state.ag_indicator_status).into()
+                AgUpdate::SupportedHfIndicatorStatus(state.hf_indicators).into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
@@ -56,14 +62,14 @@ mod tests {
 
     #[test]
     fn correct_marker() {
-        let marker = IndicatorStatusProcedure::new().marker();
-        assert_eq!(marker, ProcedureMarker::IndicatorStatus);
+        let marker = SupportedHfIndicatorsProcedure::new().marker();
+        assert_eq!(marker, ProcedureMarker::SupportedHfIndicators);
     }
 
     #[test]
     fn procedure_handles_invalid_messages() {
-        let mut proc = IndicatorStatusProcedure::new();
-        let req = proc.hf_update(at::Command::CopsRead {}, &mut SlcState::default());
+        let mut proc = SupportedHfIndicatorsProcedure::new();
+        let req = proc.hf_update(at::Command::CindRead {}, &mut SlcState::default());
         assert_matches!(req, ProcedureRequest::Error(ProcedureError::UnexpectedHf(_)));
 
         let req = proc.ag_update(AgUpdate::ThreeWaySupport, &mut SlcState::default());
@@ -71,17 +77,19 @@ mod tests {
     }
 
     #[test]
-    fn procedure_test_with_ok_response() {
-        let mut proc = IndicatorStatusProcedure::new();
-        let req = proc.hf_update(at::Command::CindTest {}, &mut SlcState::default());
+    fn procedure_test_command_sends_messages() {
+        let mut proc = SupportedHfIndicatorsProcedure::new();
+        assert!(!proc.is_terminated());
+        let req = proc.hf_update(at::Command::BindTest {}, &mut SlcState::default());
         assert_matches!(req, ProcedureRequest::SendMessages(_));
         assert!(proc.is_terminated());
     }
 
     #[test]
-    fn procedure_read_with_ok_response() {
-        let mut proc = IndicatorStatusProcedure::new();
-        let req = proc.hf_update(at::Command::CindRead {}, &mut SlcState::default());
+    fn procedure_read_command_sends_messages() {
+        let mut proc = SupportedHfIndicatorsProcedure::new();
+        assert!(!proc.is_terminated());
+        let req = proc.hf_update(at::Command::BindRead {}, &mut SlcState::default());
         assert_matches!(req, ProcedureRequest::SendMessages(_));
         assert!(proc.is_terminated());
     }

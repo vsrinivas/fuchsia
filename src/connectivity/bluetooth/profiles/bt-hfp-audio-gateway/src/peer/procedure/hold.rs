@@ -128,6 +128,44 @@ impl Procedure for HoldProcedure {
     }
 }
 
+/// The HF retrieves the Call Hold and Multiparty support in the AG via this procedure. See HFP
+/// v1.8 Section 4.2.1.3
+///
+/// This procedure is implemented from the perspective of the AG. Namely, outgoing `requests`
+/// typically request information about the current state of the AG, to be sent to the remote
+/// peer acting as the HF.
+#[derive(Debug)]
+pub struct ThreeWaySupportProcedure {
+    terminated: bool,
+}
+
+impl ThreeWaySupportProcedure {
+    /// Create a new Hold procedure in the Start state.
+    pub fn new() -> Self {
+        Self { terminated: false }
+    }
+}
+
+impl Procedure for ThreeWaySupportProcedure {
+    fn marker(&self) -> ProcedureMarker {
+        ProcedureMarker::ThreeWaySupport
+    }
+
+    fn hf_update(&mut self, update: at::Command, _state: &mut SlcState) -> ProcedureRequest {
+        match (self.terminated, &update) {
+            (false, at::Command::ChldTest {}) => {
+                self.terminated = true;
+                AgUpdate::ThreeWaySupport.into()
+            }
+            _ => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
+        }
+    }
+
+    fn is_terminated(&self) -> bool {
+        self.terminated
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -287,5 +325,30 @@ mod tests {
                 if command == "invalid"
         );
         assert!(!proc.is_terminated());
+    }
+
+    #[test]
+    fn twc_correct_marker() {
+        let marker = ThreeWaySupportProcedure::new().marker();
+        assert_eq!(marker, ProcedureMarker::ThreeWaySupport);
+    }
+
+    #[test]
+    fn twc_procedure_handles_invalid_messages() {
+        let mut proc = ThreeWaySupportProcedure::new();
+        let req = proc.hf_update(at::Command::CindRead {}, &mut SlcState::default());
+        assert_matches!(req, ProcedureRequest::Error(ProcedureError::UnexpectedHf(_)));
+
+        let req = proc.ag_update(AgUpdate::ThreeWaySupport, &mut SlcState::default());
+        assert_matches!(req, ProcedureRequest::Error(ProcedureError::UnexpectedAg(_)));
+    }
+
+    #[test]
+    fn procedure_read_command_sends_messages() {
+        let mut proc = ThreeWaySupportProcedure::new();
+        assert!(!proc.is_terminated());
+        let req = proc.hf_update(at::Command::ChldTest {}, &mut SlcState::default());
+        assert_matches!(req, ProcedureRequest::SendMessages(_));
+        assert!(proc.is_terminated());
     }
 }
