@@ -8,17 +8,8 @@
 group("all") {
   testonly = true
   public_deps = [
-    "//garnet/packages/experimental:linux_runner",
     "//garnet/packages/experimental:network_settings_server",
     "//garnet/packages/experimental:sys",
-  ]
-}
-
-group("termina_guest") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:guest_runner",
-    "//src/virtualization/packages/termina_guest",
   ]
 }
 
@@ -32,13 +23,5 @@ group("sys") {
   public_deps = [
     "//src/devices/bin/driver_manager",
     "//src/sys/component_manager:component-manager",
-  ]
-}
-
-group("linux_runner") {
-  testonly = true
-  public_deps = [
-    ":termina_guest",
-    "//src/virtualization/bin/linux_runner",
   ]
 }

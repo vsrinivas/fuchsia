@@ -34,7 +34,6 @@ group("all") {
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:far",
-    "//garnet/packages/prod:guest_runner",
     "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:insntrace",
     "//garnet/packages/prod:network-speed-test",
@@ -230,26 +229,6 @@ group("far") {
 group("goldfish-vulkan-config") {
   public_deps =
       [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config" ]
-}
-
-group("guest_runner") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/config:network",
-    "//src/virtualization/bin/guest:guest",
-    "//src/virtualization/bin/guest_manager:guest_manager",
-    "//src/virtualization/bin/guest_runner:guest_runner",
-    "//src/virtualization/bin/vmm",
-    "//src/virtualization/bin/vmm/device:virtio_balloon",
-    "//src/virtualization/bin/vmm/device:virtio_block",
-    "//src/virtualization/bin/vmm/device:virtio_console",
-    "//src/virtualization/bin/vmm/device:virtio_gpu",
-    "//src/virtualization/bin/vmm/device:virtio_input",
-    "//src/virtualization/bin/vmm/device:virtio_magma",
-    "//src/virtualization/bin/vmm/device:virtio_net",
-    "//src/virtualization/bin/vmm/device:virtio_rng",
-    "//src/virtualization/bin/vmm/device:virtio_wl",
-  ]
 }
 
 group("hwstress") {
