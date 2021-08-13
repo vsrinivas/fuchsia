@@ -19,9 +19,8 @@ group("guest") {
     ":netemul",
 
     # The following packages are needed to run the netemul guest integration test.
-    "//garnet/packages/prod:guest_runner",
+    "//src/virtualization",
     "//src/virtualization/lib/guest_interaction",
-    "//src/virtualization/packages",
   ]
 }
 
