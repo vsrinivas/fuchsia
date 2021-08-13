@@ -13,7 +13,7 @@
 namespace media::audio {
 namespace {
 
-// TODO(fxbug.dev/55132): Remove this workaround.
+// TODO(fxbug.dev/55132): Remove this workaround. Just 64000 would still support the range needed.
 static constexpr int32_t kMinUltrasoundRate = 96000;
 
 bool DeviceConfigurationSupportsUsage(AudioDevice* device, StreamUsage usage) {
@@ -291,6 +291,23 @@ RouteGraph::Target RouteGraph::TargetForUsage(const StreamUsage& usage) const {
     return Target();
   }
   return targets_[HashStreamUsage(usage)];
+}
+
+// The API is formed to return more than one output as the target for a RenderUsage, but the current
+// audio_core implementation only routes to one output per usage.
+std::unordered_set<AudioDevice*> RouteGraph::TargetsForRenderUsage(const RenderUsage& usage) {
+  auto target = targets_[HashStreamUsage(StreamUsage::WithRenderUsage(usage))];
+  if (!target.is_linkable()) {
+    FX_LOGS(ERROR) << __FUNCTION__ << " (" << RenderUsageToString(usage)
+                   << ") target is not linkable";
+    return {};
+  }
+
+  if constexpr (IdlePolicy::kDebugActivityCounts) {
+    FX_LOGS(INFO) << __FUNCTION__ << " (" << RenderUsageToString(usage) << ") returning "
+                  << target.device;
+  }
+  return {target.device};
 }
 
 }  // namespace media::audio

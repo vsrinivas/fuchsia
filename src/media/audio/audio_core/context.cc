@@ -10,6 +10,7 @@
 #include "src/media/audio/audio_core/audio_impl.h"
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
 #include "src/media/audio/audio_core/effects_controller_impl.h"
+#include "src/media/audio/audio_core/idle_policy.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/route_graph.h"
@@ -44,8 +45,9 @@ class ContextImpl : public Context {
                         process_config_, clock_factory_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
                                process_config_.default_render_usage_volumes()),
-        audio_admin_(&stream_volume_manager_, &usage_reporter_, &activity_dispatcher_, nullptr,
-                     threading_model_->FidlDomain().dispatcher()),
+        idle_policy_(this),
+        audio_admin_(&stream_volume_manager_, &usage_reporter_, &activity_dispatcher_,
+                     &idle_policy_, threading_model_->FidlDomain().dispatcher()),
         vmar_manager_(
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
         usage_gain_reporter_(this),
@@ -111,14 +113,14 @@ class ContextImpl : public Context {
   // Router for volume changes.
   StreamVolumeManager stream_volume_manager_;
 
-  // AudioAdmin::ActiveStreamCountReporter active_stream_count_reporter_;
+  IdlePolicy idle_policy_;
 
   UsageReporterImpl usage_reporter_;
 
   // Dispatcher for audio activity.
   ActivityDispatcherImpl activity_dispatcher_;
 
-  // Audio usage manager
+  // Audio usage and output-idle policy manager
   AudioAdmin audio_admin_;
 
   // We allocate a sub-vmar to hold the audio renderer buffers. Keeping these in a sub-vmar allows

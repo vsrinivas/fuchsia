@@ -91,8 +91,6 @@ AudioDevice::AudioDevice(AudioObject::Type type, const std::string& name,
   FX_DCHECK(link_matrix);
 }
 
-AudioDevice::~AudioDevice() = default;
-
 std::optional<Format> AudioDevice::format() const {
   auto _driver = driver();
   if (!_driver) {
