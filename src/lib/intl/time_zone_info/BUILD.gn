@@ -1,0 +1,68 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("time_zone_info") {
+  testonly = true
+  deps = [ ":tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":time-zone-info-service-tests" ]
+}
+
+source_set("time_zone_info_service_lib") {
+  sources = [
+    "time_zone_info_service.cc",
+    "time_zone_info_service.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/service/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//src/lib/icu_data/cpp",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.intl",
+    "//third_party/icu",
+  ]
+}
+
+executable("time_zone_info_service_test_bin") {
+  testonly = true
+  output_name = "time-zone-info-service-test"
+  sources = [ "time_zone_info_service_test.cc" ]
+  deps = [
+    ":time_zone_info_service_lib",
+    "//garnet/bin/trace/tests:component_context",
+    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/sys/service/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_component("time-zone-info-service-test") {
+  deps = [ ":time_zone_info_service_test_bin" ]
+}
+
+fuchsia_test_package("time-zone-info-service-tests") {
+  test_components = [ ":time-zone-info-service-test" ]
+  deps = [ "//src/intl:icudtl" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "WARN"
+    }
+  }
+}

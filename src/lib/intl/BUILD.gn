@@ -9,6 +9,7 @@ group("intl") {
     "lookup",
     "model",
     "strings",
+    "time_zone_info",
     "unicode_utils",
   ]
 }
@@ -20,6 +21,7 @@ group("tests") {
     "lookup:tests",
     "model:tests",
     "strings:tests",
+    "time_zone_info:tests",
     "unicode_utils:tests",
   ]
 }
