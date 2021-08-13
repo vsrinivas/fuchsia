@@ -19,6 +19,8 @@ static_library("google_analytics") {
     "client.h",
     "event.cc",
     "event.h",
+    "exception.cc",
+    "exception.h",
     "general_parameters.cc",
     "general_parameters.h",
     "hit.cc",
@@ -39,6 +41,7 @@ test("unittests") {
   output_name = "analytics_cpp_google_analytics_unittests"
   sources = [
     "event_unittest.cc",
+    "exception_unittest.cc",
     "general_parameters_unittest.cc",
     "timing_unittest.cc",
   ]
