@@ -342,6 +342,58 @@ pub struct OfferEventDecl {
     pub mode: EventMode,
 }
 
+impl SourceName for OfferDecl {
+    fn source_name(&self) -> &CapabilityName {
+        match &self {
+            OfferDecl::Service(o) => o.source_name(),
+            OfferDecl::Protocol(o) => o.source_name(),
+            OfferDecl::Directory(o) => o.source_name(),
+            OfferDecl::Storage(o) => o.source_name(),
+            OfferDecl::Runner(o) => o.source_name(),
+            OfferDecl::Resolver(o) => o.source_name(),
+            OfferDecl::Event(o) => o.source_name(),
+        }
+    }
+}
+
+impl OfferDeclCommon for OfferDecl {
+    fn target_name(&self) -> &CapabilityName {
+        match &self {
+            OfferDecl::Service(o) => o.target_name(),
+            OfferDecl::Protocol(o) => o.target_name(),
+            OfferDecl::Directory(o) => o.target_name(),
+            OfferDecl::Storage(o) => o.target_name(),
+            OfferDecl::Runner(o) => o.target_name(),
+            OfferDecl::Resolver(o) => o.target_name(),
+            OfferDecl::Event(o) => o.target_name(),
+        }
+    }
+
+    fn target(&self) -> &OfferTarget {
+        match &self {
+            OfferDecl::Service(o) => o.target(),
+            OfferDecl::Protocol(o) => o.target(),
+            OfferDecl::Directory(o) => o.target(),
+            OfferDecl::Storage(o) => o.target(),
+            OfferDecl::Runner(o) => o.target(),
+            OfferDecl::Resolver(o) => o.target(),
+            OfferDecl::Event(o) => o.target(),
+        }
+    }
+
+    fn source(&self) -> &OfferSource {
+        match &self {
+            OfferDecl::Service(o) => o.source(),
+            OfferDecl::Protocol(o) => o.source(),
+            OfferDecl::Directory(o) => o.source(),
+            OfferDecl::Storage(o) => o.source(),
+            OfferDecl::Runner(o) => o.source(),
+            OfferDecl::Resolver(o) => o.source(),
+            OfferDecl::Event(o) => o.source(),
+        }
+    }
+}
+
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_union = "fsys::ExposeDecl")]
 pub enum ExposeDecl {

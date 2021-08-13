@@ -10,8 +10,10 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{
-        CapabilityDecl, CapabilityName, ComponentDecl, DependencyType, OfferDecl, OfferSource,
-        OfferTarget, RegistrationSource, StorageDirectorySource, UseDecl, UseSource,
+        CapabilityDecl, CapabilityName, ComponentDecl, DependencyType, OfferDecl, OfferDeclCommon,
+        OfferDirectoryDecl, OfferProtocolDecl, OfferSource, OfferTarget, RegistrationSource,
+        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
+        UseServiceDecl, UseSource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -381,55 +383,145 @@ pub fn process_component_dependencies(decl: &ComponentDecl) -> DependencyMap {
     dependency_map
 }
 
-/// Loops through all the use declarations to determine if parents depend on child capabilities, and vice-versa.
+/// Loops through all the use declarations to determine if parents depend on child capabilities,
+/// and vice-versa.
 fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
-    // - By default, all children are dependents of the parent (`decl`)
-    // - If parent (`decl`) uses from child, then child's dependent is parent instead.
-    let add_to_dependency_map = |dependency_map: &mut DependencyMap,
-                                 source: &UseSource,
-                                 dependency_type: &DependencyType| {
-        match source {
-            UseSource::Child(name) => {
-                match dependency_map.get_mut(&DependencyNode::Child(name.to_string())) {
-                    Some(targets) => {
-                        if dependency_type == &DependencyType::Strong {
-                            targets.insert(DependencyNode::Parent);
-                        }
-                    }
-                    _ => {
-                        panic!("A dependency went off the map!");
-                    }
-                }
-            }
-            // capabilities which are not `use` from child are not relevant.
-            _ => {}
-        }
-    };
+    // First, find all the children that the parent has a strong dependency on and add them to our
+    // dependency map
+    let mut children_the_parent_depends_on = HashSet::new();
     for use_ in &decl.uses {
+        let child_name = match use_ {
+            UseDecl::Service(UseServiceDecl { source: UseSource::Child(name), .. })
+            | UseDecl::Protocol(UseProtocolDecl { source: UseSource::Child(name), .. })
+            | UseDecl::Directory(UseDirectoryDecl { source: UseSource::Child(name), .. })
+            | UseDecl::Event(UseEventDecl { source: UseSource::Child(name), .. }) => name,
+            UseDecl::Service(_)
+            | UseDecl::Protocol(_)
+            | UseDecl::Directory(_)
+            | UseDecl::Event(_)
+            | UseDecl::Storage(_)
+            | UseDecl::EventStream(_) => {
+                // capabilities which cannot or are not used from a child can be ignored.
+                continue;
+            }
+        };
         match use_ {
-            UseDecl::Protocol(decl) => {
-                add_to_dependency_map(dependency_map, &decl.source, &decl.dependency_type)
+            UseDecl::Protocol(UseProtocolDecl { dependency_type, .. })
+            | UseDecl::Service(UseServiceDecl { dependency_type, .. })
+            | UseDecl::Directory(UseDirectoryDecl { dependency_type, .. })
+            | UseDecl::Event(UseEventDecl { dependency_type, .. })
+                if dependency_type == &DependencyType::Weak
+                    || dependency_type == &DependencyType::WeakForMigration =>
+            {
+                // Weak dependencies are ignored when determining shutdown ordering
+                continue;
             }
-            UseDecl::Service(decl) => {
-                add_to_dependency_map(dependency_map, &decl.source, &decl.dependency_type)
+            _ => {
+                // Any other capability type cannot be marked as weak, so we can proceed
             }
-            UseDecl::Directory(decl) => {
-                add_to_dependency_map(dependency_map, &decl.source, &decl.dependency_type)
+        }
+        children_the_parent_depends_on.insert(DependencyNode::Child(child_name.clone()));
+    }
+    for child_node in children_the_parent_depends_on.iter() {
+        match dependency_map.get_mut(&child_node) {
+            Some(targets) => {
+                targets.insert(DependencyNode::Parent);
             }
-            // storage doesn't have a `use` source; storage is always assumed to be from the parent.
-            UseDecl::Storage(_decl) => {}
-            UseDecl::Event(decl) => {
-                add_to_dependency_map(dependency_map, &decl.source, &decl.dependency_type)
+            _ => {
+                panic!("A dependency went off the map!");
             }
-            // event streams specify a `use` source.
-            UseDecl::EventStream(_decl) => {}
         }
     }
-    // Next, find all children/collections who don't provide for the parent, and make them the parent's dependents.
+
+    // TODO(82689): the rest of this function is likely unnecessary, as it deals with children that
+    // have no direct dependency links with their parent
+
+    // Next, we want to find any children that the parent transitively depends on through other
+    // children, as we'll need to keep those around. These dependencies will be added by the
+    // `get_dependencies_from_offers` function, so we don't need to add the dependencies here, but
+    // we do need to know which children to not add as dependents of the parent.
+    let mut children_the_parent_transitively_depends_on = children_the_parent_depends_on;
+    let mut last_loop_added_dependencies = true;
+    while last_loop_added_dependencies {
+        last_loop_added_dependencies = false;
+        for offer in &decl.offers {
+            match offer {
+                OfferDecl::Protocol(OfferProtocolDecl { dependency_type, .. })
+                | OfferDecl::Directory(OfferDirectoryDecl { dependency_type, .. })
+                    if dependency_type == &DependencyType::Weak
+                        || dependency_type == &DependencyType::WeakForMigration =>
+                {
+                    // Weak dependencies are ignored when determining shutdown ordering
+                    continue;
+                }
+                _ => {
+                    // Any other capability type cannot be marked as weak, so we can proceed
+                }
+            }
+            let offer_target_node = match offer.target() {
+                OfferTarget::Child(name) => DependencyNode::Child(name.clone()),
+                OfferTarget::Collection(name) => DependencyNode::Collection(name.clone()),
+            };
+            if children_the_parent_transitively_depends_on.contains(&offer_target_node) {
+                // The target for this is in our transitive dependency set, so we also
+                // transitively depend on the source
+                let offer_source_node = match offer.source() {
+                    OfferSource::Child(name) => DependencyNode::Child(name.clone()),
+                    OfferSource::Collection(name) => DependencyNode::Collection(name.clone()),
+                    OfferSource::Capability(name) => {
+                        // The only valid use for an OfferSource::Capability today is for a storage
+                        // capability declaration, and its presence should be enforced by manifest
+                        // validation. If we can't find it, that's a bug.
+                        let storage_decl = decl
+                            .find_storage_source(name)
+                            .expect("missing storage declaration in manifest");
+                        match &storage_decl.source {
+                            StorageDirectorySource::Parent => {
+                                // See comment for OfferSource::Parent
+                                continue;
+                            }
+                            StorageDirectorySource::Self_ => {
+                                // See comment for OfferSource::Self_
+                                panic!("dependency cycle detected when processing transitive child dependencies");
+                            }
+                            StorageDirectorySource::Child(name) => {
+                                DependencyNode::Child(name.clone())
+                            }
+                        }
+                    }
+                    OfferSource::Framework => {
+                        // The framework outlives all components, so it doesn't matter if we
+                        // transitively depend on it. Proceed to the next offer.
+                        continue;
+                    }
+                    OfferSource::Parent => {
+                        // It's irrelevant if we transitively depend on our parent (the child's
+                        // grand-parent). Shutdown ordering between us and our parent is handled in
+                        // the parent's shutdown ordering logic. Proceed to the next offer.
+                        continue;
+                    }
+                    OfferSource::Self_ => {
+                        // We have a strong transitive dependency on ourself, which means a
+                        // dependency cycle. This should be prevented by manifest validation,
+                        // so if we see this it's a bug
+                        panic!("dependency cycle detected when processing transitive child dependencies");
+                    }
+                };
+                last_loop_added_dependencies |=
+                    children_the_parent_transitively_depends_on.insert(offer_source_node);
+            }
+        }
+    }
+
+    // Finally, any children that the parent doesn't depend on either transitively or directly are
+    // made the parent's dependents.
     let mut parent_dependents = dependency_map
         .remove(&DependencyNode::Parent)
         .expect("Parent was not found in the dependency_map");
     for (source, targets) in dependency_map.iter() {
+        if children_the_parent_transitively_depends_on.contains(source) {
+            continue;
+        }
         if !targets.contains(&DependencyNode::Parent) {
             parent_dependents.insert(source.clone());
         }
@@ -675,8 +767,7 @@ mod tests {
         cm_rust::{
             CapabilityName, CapabilityPath, ChildDecl, DependencyType, ExposeDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
-            OfferResolverDecl, OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl,
-            UseSource,
+            OfferResolverDecl, OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseSource,
         },
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
@@ -1545,7 +1636,7 @@ mod tests {
                 source_name: "serviceParent".into(),
                 target_name: "serviceParent".into(),
                 target: OfferTarget::Child("childA".to_string()),
-                dependency_type: DependencyType::Strong,
+                dependency_type: DependencyType::Weak,
             })],
             children: vec![ChildDecl {
                 name: "childA".to_string(),
@@ -1577,7 +1668,7 @@ mod tests {
                 source_name: "serviceParent".into(),
                 target_name: "serviceParent".into(),
                 target: OfferTarget::Child("childA".to_string()),
-                dependency_type: DependencyType::Strong,
+                dependency_type: DependencyType::Weak,
             })],
             children: vec![
                 ChildDecl {
@@ -1653,7 +1744,7 @@ mod tests {
                 source_name: "serviceParent".into(),
                 target_name: "serviceParent".into(),
                 target: OfferTarget::Child("childA".to_string()),
-                dependency_type: DependencyType::Strong,
+                dependency_type: DependencyType::Weak,
             })],
             children: vec![
                 ChildDecl {
@@ -2821,6 +2912,115 @@ mod tests {
                 Lifecycle::Stop(vec!["a:0", "c:0"].into()),
                 Lifecycle::Stop(vec!["a:0"].into()),
                 Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+            ];
+            assert_eq!(events, expected);
+        }
+    }
+
+    /// Shut down `a`:
+    ///   a     (a use b, and b use c)
+    ///  / \
+    /// b    c
+    /// In this case, a shuts down first, then b, then c.
+    #[fuchsia::test]
+    async fn shutdown_use_from_child_that_uses_from_sibling() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .add_eager_child("c")
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Child("b".to_string()),
+                        source_name: "serviceB".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceB").unwrap(),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child("c".to_string()),
+                        source_name: "serviceC".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                        target_name: "serviceB".into(),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceB".into(),
+                        source_path: "/svc/serviceB".parse().unwrap(),
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceB".into(),
+                        target_name: "serviceB".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "serviceC".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceC".into(),
+                        source_path: "/svc/serviceC".parse().unwrap(),
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceC".into(),
+                        target_name: "serviceC".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "c:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "c:0"].into()),
             ];
             assert_eq!(events, expected);
         }
