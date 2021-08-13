@@ -71,6 +71,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   zx_status_t StartAllEnabledCodecs();
   zx_status_t UpdateHardwareSettings();
   virtual bool AllowNonContiguousRingBuffer() { return false; }
+  zx_status_t StartCodec(size_t index);
   int Thread();
 
   uint32_t us_per_notification_ = 0;
