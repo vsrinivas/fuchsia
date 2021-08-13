@@ -36,6 +36,7 @@ triage_files = [
 ]
 
 detect_files = [
+  "detect/amlogic-display-detect.triage",
   "detect/mali-detect.triage",
   "detect/omaha-client-detect.triage",
   "detect/sysmem-detect.triage",
