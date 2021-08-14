@@ -8,7 +8,9 @@ use {
     ffx_daemon_core::events::Queue,
     ffx_daemon_events::{DaemonEvent, TargetEvent},
     fidl::endpoints::Proxy,
-    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_diagnostics as diagnostics, selectors,
+    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
+    fidl_fuchsia_diagnostics as diagnostics, selectors,
     std::rc::Rc,
 };
 
@@ -21,6 +23,13 @@ pub trait DaemonServiceProvider {
         target_identifier: Option<String>,
         service_selector: diagnostics::Selector,
     ) -> Result<fidl::Channel>;
+
+    async fn open_remote_control(
+        &self,
+        _target_identifier: Option<String>,
+    ) -> Result<RemoteControlProxy> {
+        unimplemented!()
+    }
 
     /// Identical to open_target_proxy, but also returns a target info struct.
     async fn open_target_proxy_with_info(
@@ -93,5 +102,12 @@ impl Context {
 
     pub async fn daemon_event_queue(&self) -> Queue<DaemonEvent> {
         self.inner.daemon_event_queue().await
+    }
+
+    pub async fn open_remote_control(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<RemoteControlProxy> {
+        self.inner.open_remote_control(target_identifier).await
     }
 }

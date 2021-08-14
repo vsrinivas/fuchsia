@@ -6,7 +6,7 @@ use {
     crate::constants::{get_socket, CURRENT_EXE_HASH},
     crate::manual_targets,
     crate::target_control::TargetControl,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
     chrono::Utc,
@@ -33,7 +33,7 @@ use {
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, DiagnosticsData,
-        InlineData, RemoteControlMarker,
+        InlineData, RemoteControlMarker, RemoteControlProxy,
     },
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::NodeId,
@@ -202,18 +202,7 @@ impl DaemonServiceProvider for Daemon {
         target_identifier: Option<String>,
         service_selector: fidl_fuchsia_diagnostics::Selector,
     ) -> Result<(bridge::Target, fidl::Channel)> {
-        let target = self
-            .get_target(target_identifier)
-            .await
-            .map_err(|e| anyhow!("{:#?}", e))
-            .context("getting default target")?;
-        // Ensure auto-connect has at least started.
-        target.run_host_pipe();
-        target
-            .events
-            .wait_for(None, |e| e == TargetEvent::RcsActivated)
-            .await
-            .context("waiting for RCS activation")?;
+        let target = self.get_rcs_ready_target(target_identifier).await?;
         let rcs = target
             .rcs()
             .ok_or(anyhow!("rcs disconnected after event fired"))
@@ -228,6 +217,21 @@ impl DaemonServiceProvider for Daemon {
             .map_err(|e| anyhow!("{:#?}", e))
             .context("proxy connect")?;
         Ok((target.as_ref().into(), client))
+    }
+
+    async fn open_remote_control(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<RemoteControlProxy> {
+        let target = self.get_rcs_ready_target(target_identifier).await?;
+        // Ensure auto-connect has at least started.
+        let mut rcs = target
+            .rcs()
+            .ok_or(anyhow!("rcs disconnected after event fired"))
+            .context("getting rcs instance")?;
+        let (proxy, remote) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
+        rcs.copy_to_channel(remote.into_channel())?;
+        Ok(proxy)
     }
 
     async fn daemon_event_queue(&self) -> events::Queue<DaemonEvent> {
@@ -313,6 +317,31 @@ impl Daemon {
             .start(RepositoryRegistryMarker::PROTOCOL_NAME.to_string(), cx)
             .await?;
         Ok(())
+    }
+
+    /// Awaits a target that has RCS active.
+    async fn get_rcs_ready_target(&self, target_query: Option<String>) -> Result<Rc<Target>> {
+        let target = self
+            .get_target(target_query)
+            .await
+            .map_err(|e| anyhow!("{:#?}", e))
+            .context("getting default target")?;
+        if matches!(target.get_connection_state(), TargetConnectionState::Fastboot(_)) {
+            let nodename = target.nodename().unwrap_or("<No Nodename>".to_string());
+            bail!("Attempting to open RCS on a fastboot target: {}", nodename);
+        }
+        if matches!(target.get_connection_state(), TargetConnectionState::Zedboot(_)) {
+            let nodename = target.nodename().unwrap_or("<No Nodename>".to_string());
+            bail!("Attempting to connect to RCS on a zedboot target: {}", nodename);
+        }
+        // Ensure auto-connect has at least started.
+        target.run_host_pipe();
+        target
+            .events
+            .wait_for(None, |e| e == TargetEvent::RcsActivated)
+            .await
+            .context("waiting for RCS activation")?;
+        Ok(target)
     }
 
     /// Start all discovery tasks
@@ -1295,6 +1324,27 @@ mod test {
         let result = proxy.get_remote_control(None, server_end).await.unwrap();
 
         assert_matches!(result, Err(DaemonError::TargetInFastboot));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_open_rcs_on_fastboot_error() {
+        let (_proxy, daemon, _task) = spawn_test_daemon();
+        let target = Target::new_with_serial("abc");
+        daemon.target_collection.merge_insert(target);
+        let result = daemon.open_remote_control(None).await;
+        assert!(result.is_err());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_open_rcs_on_zedboot_error() {
+        let (_proxy, daemon, _task) = spawn_test_daemon();
+        let target = Target::new_with_netsvc_addrs(
+            Some("abc"),
+            BTreeSet::from_iter(vec![TargetAddr::new("[fe80::1%1]:22").unwrap()].into_iter()),
+        );
+        daemon.target_collection.merge_insert(target);
+        let result = daemon.open_remote_control(None).await;
+        assert!(result.is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
