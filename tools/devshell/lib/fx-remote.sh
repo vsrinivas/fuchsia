@@ -97,7 +97,7 @@ function fetch_or_build_tool {
 
   local tool="$(ssh "${host}" "cd ${remote_checkout} && .jiri_root/bin/fx list-build-artifacts --build --allow-empty --os ${HOST_OS} --cpu ${HOST_CPU}" --name ${tool_name} tools)"
   if [[ -n "${tool}" ]] ; then
-    fetch_remote_artifacts "${host}" "${remote_checkout}" "${local_dir}" "${tool}"
+    fetch_remote_artifacts "${host}" "${remote_checkout}" "${local_dir}" "${tool}" >&2
   else
     tool="$(fx-command-run list-build-artifacts --build --expect-one --name ${tool_name} tools)" || exit $?
     rm -f "${local_dir}/${tool}"
