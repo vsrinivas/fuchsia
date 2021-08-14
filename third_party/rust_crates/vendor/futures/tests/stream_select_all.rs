@@ -1,5 +1,5 @@
 use futures::channel::mpsc;
-use futures::executor::block_on_stream;
+use futures::executor::{block_on, block_on_stream};
 use futures::future::{self, FutureExt};
 use futures::stream::{self, select_all, FusedStream, SelectAll, StreamExt};
 use futures::task::Poll;
@@ -75,4 +75,123 @@ fn works_1() {
 
     drop((a_tx, b_tx, c_tx));
     assert_eq!(None, stream.next());
+}
+
+#[test]
+fn clear() {
+    let mut tasks =
+        select_all(vec![stream::iter(vec![1].into_iter()), stream::iter(vec![2].into_iter())]);
+
+    assert_eq!(block_on(tasks.next()), Some(1));
+    assert!(!tasks.is_empty());
+
+    tasks.clear();
+    assert!(tasks.is_empty());
+
+    tasks.push(stream::iter(vec![3].into_iter()));
+    assert!(!tasks.is_empty());
+
+    tasks.clear();
+    assert!(tasks.is_empty());
+
+    assert_eq!(block_on(tasks.next()), None);
+    assert!(tasks.is_terminated());
+    tasks.clear();
+    assert!(!tasks.is_terminated());
+}
+
+#[test]
+fn iter_mut() {
+    let mut stream =
+        vec![stream::pending::<()>(), stream::pending::<()>(), stream::pending::<()>()]
+            .into_iter()
+            .collect::<SelectAll<_>>();
+
+    let mut iter = stream.iter_mut();
+    assert_eq!(iter.len(), 3);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 2);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 1);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 0);
+    assert!(iter.next().is_none());
+
+    let mut stream = vec![stream::iter(vec![]), stream::iter(vec![1]), stream::iter(vec![2])]
+        .into_iter()
+        .collect::<SelectAll<_>>();
+
+    assert_eq!(stream.len(), 3);
+    assert_eq!(block_on(stream.next()), Some(1));
+    assert_eq!(stream.len(), 2);
+    let mut iter = stream.iter_mut();
+    assert_eq!(iter.len(), 2);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 1);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 0);
+    assert!(iter.next().is_none());
+
+    assert_eq!(block_on(stream.next()), Some(2));
+    assert_eq!(stream.len(), 2);
+    assert_eq!(block_on(stream.next()), None);
+    let mut iter = stream.iter_mut();
+    assert_eq!(iter.len(), 0);
+    assert!(iter.next().is_none());
+}
+
+#[test]
+fn iter() {
+    let stream = vec![stream::pending::<()>(), stream::pending::<()>(), stream::pending::<()>()]
+        .into_iter()
+        .collect::<SelectAll<_>>();
+
+    let mut iter = stream.iter();
+    assert_eq!(iter.len(), 3);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 2);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 1);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 0);
+    assert!(iter.next().is_none());
+
+    let mut stream = vec![stream::iter(vec![]), stream::iter(vec![1]), stream::iter(vec![2])]
+        .into_iter()
+        .collect::<SelectAll<_>>();
+
+    assert_eq!(stream.len(), 3);
+    assert_eq!(block_on(stream.next()), Some(1));
+    assert_eq!(stream.len(), 2);
+    let mut iter = stream.iter();
+    assert_eq!(iter.len(), 2);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 1);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 0);
+    assert!(iter.next().is_none());
+
+    assert_eq!(block_on(stream.next()), Some(2));
+    assert_eq!(stream.len(), 2);
+    assert_eq!(block_on(stream.next()), None);
+    let mut iter = stream.iter();
+    assert_eq!(iter.len(), 0);
+    assert!(iter.next().is_none());
+}
+
+#[test]
+fn into_iter() {
+    let stream = vec![stream::pending::<()>(), stream::pending::<()>(), stream::pending::<()>()]
+        .into_iter()
+        .collect::<SelectAll<_>>();
+
+    let mut iter = stream.into_iter();
+    assert_eq!(iter.len(), 3);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 2);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 1);
+    assert!(iter.next().is_some());
+    assert_eq!(iter.len(), 0);
+    assert!(iter.next().is_none());
 }

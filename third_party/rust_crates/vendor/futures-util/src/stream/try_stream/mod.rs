@@ -5,18 +5,19 @@
 
 #[cfg(feature = "compat")]
 use crate::compat::Compat;
+use crate::fns::{
+    inspect_err_fn, inspect_ok_fn, into_fn, map_err_fn, map_ok_fn, InspectErrFn, InspectOkFn,
+    IntoFn, MapErrFn, MapOkFn,
+};
+use crate::future::assert_future;
+use crate::stream::assert_stream;
+use crate::stream::{Inspect, Map};
 use core::pin::Pin;
 use futures_core::{
     future::{Future, TryFuture},
     stream::TryStream,
     task::{Context, Poll},
 };
-use crate::fns::{
-    InspectOkFn, inspect_ok_fn, InspectErrFn, inspect_err_fn, MapErrFn, map_err_fn, IntoFn, into_fn, MapOkFn, map_ok_fn,
-};
-use crate::future::assert_future;
-use crate::stream::{Map, Inspect};
-use crate::stream::assert_stream;
 
 mod and_then;
 #[allow(unreachable_pub)] // https://github.com/rust-lang/rust/issues/57411
@@ -515,7 +516,7 @@ pub trait TryStreamExt: TryStream {
     /// assert_eq!(Err(oneshot::Canceled), fut.await);
     /// # })
     /// ```
-    #[cfg_attr(feature = "cfg-target-has-atomic", cfg(target_has_atomic = "ptr"))]
+    #[cfg(not(futures_no_atomic_cas))]
     #[cfg(feature = "alloc")]
     fn try_for_each_concurrent<Fut, F>(
         self,
@@ -836,7 +837,7 @@ pub trait TryStreamExt: TryStream {
     /// assert_eq!(buffered.next().await, Some(Err("error in the stream")));
     /// # Ok::<(), Box<dyn std::error::Error>>(()) }).unwrap();
     /// ```
-    #[cfg_attr(feature = "cfg-target-has-atomic", cfg(target_has_atomic = "ptr"))]
+    #[cfg(not(futures_no_atomic_cas))]
     #[cfg(feature = "alloc")]
     fn try_buffer_unordered(self, n: usize) -> TryBufferUnordered<Self>
     where
@@ -912,14 +913,16 @@ pub trait TryStreamExt: TryStream {
     /// assert_eq!(buffered.next().await, Some(Err("error in the stream")));
     /// # Ok::<(), Box<dyn std::error::Error>>(()) }).unwrap();
     /// ```
-    #[cfg_attr(feature = "cfg-target-has-atomic", cfg(target_has_atomic = "ptr"))]
+    #[cfg(not(futures_no_atomic_cas))]
     #[cfg(feature = "alloc")]
     fn try_buffered(self, n: usize) -> TryBuffered<Self>
     where
         Self::Ok: TryFuture<Error = Self::Error>,
         Self: Sized,
     {
-        assert_stream::<Result<<Self::Ok as TryFuture>::Ok, Self::Error>, _>(TryBuffered::new(self, n))
+        assert_stream::<Result<<Self::Ok as TryFuture>::Ok, Self::Error>, _>(TryBuffered::new(
+            self, n,
+        ))
     }
 
     // TODO: false positive warning from rustdoc. Verify once #43466 settles
