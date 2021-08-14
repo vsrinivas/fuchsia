@@ -134,7 +134,7 @@ impl Heap {
 
     fn grow_heap(&mut self, requested_size: usize) -> Result<(), Error> {
         let mapping_size = self.mapping.len() as usize;
-        if self.current_size_bytes == mapping_size && requested_size > mapping_size {
+        if requested_size > mapping_size {
             return Err(Error::HeapMaxSizeReached);
         }
         let new_size = min(mapping_size, requested_size);
