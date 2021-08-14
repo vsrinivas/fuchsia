@@ -4,20 +4,25 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
-
-zx_library("abi_type_validator") {
-  kernel = true
-  static = true
-  sdk = "source"
-  sdk_headers = []
-  visibility = [
-    "//zircon/kernel/*",
-    "//zircon/system/utest/abi-type-validator/*",
-  ]
+# The kernel depends on this, so it gets compiled in the kernel environment.
+# Once successfully compiled, it's just an empty object file that contributes
+# nothing to the link.
+source_set("abi_type_validator") {
+  visibility = [ "//zircon/kernel/*" ]
   sources = [ "abi_type_validator.cc" ]
-  public_deps = [
+  deps = [
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/zircon-internal",
   ]
+
+  if (is_kernel) {
+    # Also make sure it gets built in the user environment for the same CPU,
+    # which is what the default toolchain builds.  This compiles to an empty
+    # object file as well but doesn't even contribute it to any link.
+    # data_deps merely translates into an order-only Ninja dependency that
+    # requires the user-environment instantiation of the target was fully up to
+    # date (i.e. just each of $sources compiled, for a source_set() target)
+    # before completing this one.
+    data_deps = [ ":$target_name($default_toolchain)" ]
+  }
 }
