@@ -17,6 +17,7 @@
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/inspector.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -43,6 +44,9 @@ constexpr auto kPreallocatedRequestCount = 7;
 
 // Maximum length of a control request.
 constexpr auto kMaxRequestLength = 32;
+
+// Hub Status Bit
+constexpr auto hubStatusBit = 1;
 
 template <typename T>
 struct VariableLengthDescriptor {
@@ -106,7 +110,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   zx::status<usb_port_status_t> GetPortStatus(PortNumber port);
   fpromise::promise<usb_port_status_t, zx_status_t> GetPortStatusAsync(PortNumber port);
 
-  void InterruptCallback(CallbackRequest request);
+  void InterruptCallback();
 
   // Updates the status of all ports on the hub
   zx_status_t GetPortStatus();
@@ -115,8 +119,8 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
   void HandlePortStatusChanged(PortNumber port) __TA_REQUIRES(async_execution_context_);
 
-  // Starts the interrupt loop. The only way to exit is by invoking CancelAll.
-  void StartInterruptLoop();
+  // Starts the interrupt loop
+  zx_status_t StartInterruptLoop();
 
   // Resets a port
   fpromise::promise<void, zx_status_t> ResetPort(PortNumber port);
@@ -231,7 +235,6 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   ~UsbHubDevice();
 
  private:
-  std::atomic_bool request_pending_ = false;
   std::atomic<bool> shutting_down_ = false;
   fbl::Array<PortStatus> port_status_ __TA_GUARDED(async_execution_context_);
   fbl::DoublyLinkedList<PortStatus*> pending_enumeration_list_
@@ -245,6 +248,8 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   ddk::UsbBusProtocolClient bus_;
   async::Loop loop_;
   std::unique_ptr<fpromise::executor> executor_;
+  thrd_t callback_thread_;
+  sync_completion_t xfer_done_;
 
   std::optional<ddk::InitTxn> txn_;
   // Executor for running blocking tasks. These tasks MUST NOT

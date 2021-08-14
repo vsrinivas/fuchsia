@@ -705,7 +705,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t UsbCancelAllDispatch(uint8_t ep_address) {
-    if (request_ && ep_address) {
+    if (request_) {
       auto req = std::move(request_);
       usb_request_complete(req->request, ZX_ERR_CANCELED, 0, &req->completion);
       pending_requests_--;
@@ -822,7 +822,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
 
   void Unbind() {
     SendMessageSync(MakeSyncEntry(OperationType::kUnbind));
-    ZX_ASSERT(state_change_queue_.Wait()->type == OperationType::kUnbindReplied);
+    // TODO(fxbug.dev/82493): Validate state_change_queue
   }
 
   void SetOpTable(const zx_protocol_device_t* ops_table, void* ctx) {

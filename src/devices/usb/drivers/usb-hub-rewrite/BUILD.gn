@@ -52,7 +52,10 @@ fuchsia_driver_component("usb-hub-rewrite") {
 }
 
 test("usb-hub-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [
     "usb-hub-test.cc",
     "usb-hub.cc",

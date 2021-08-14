@@ -287,13 +287,10 @@ TEST_F(SmaysHarness, Usb2Hub) {
     }
     return ZX_OK;
   });
-
   DisconnectDevice(0);
   DisconnectDevice(1);
   DisconnectDevice(2);
-
   Interrupt();
-
   sync_completion_wait(&disconnect_complete, ZX_TIME_INFINITE);
   ASSERT_OK(ResetPort(1));
   ASSERT_TRUE(ResetPending(1));
@@ -317,6 +314,7 @@ TEST_F(UnbrandedHarness, Usb3Hub) {
     }
     return ZX_OK;
   });
+
   ConnectDevice(0, USB_SPEED_SUPER);
   ConnectDevice(1, USB_SPEED_SUPER);
   ConnectDevice(2, USB_SPEED_SUPER);

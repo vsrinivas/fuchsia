@@ -6,7 +6,10 @@
 
 #include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <lib/fit/function.h>
+#include <lib/fit/result.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,14 +18,18 @@
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
+#include <cstdint>
+#include <memory>
+#include <string>
 
 #include <fbl/auto_lock.h>
 #include <fbl/hard_int.h>
 #include <usb/usb.h>
 
-#include <lib/fit/result.h>
-#include <lib/fit/single_threaded_executor.h>
-#include <lib/zx/time.h>
+#include "lib/ddk/debug.h"
 #include "src/devices/usb/drivers/usb-hub-rewrite/usb_hub_rewrite_bind.h"
 
 namespace {
@@ -236,16 +243,20 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
   }
 
   // Next -- we retrieve the port status
-  auto port_status_result = GetPortStatus();
-  if (port_status_result != ZX_OK) {
-    zxlogf(DEBUG, "Could not get port status\n");
-    txn_->Reply(port_status_result);
+  status = GetPortStatus();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not get port status\n");
+    txn_->Reply(status);
     return;
   }
 
   // Finally -- we can start the interrupt loop
   // and bringup our initial set of devices
-  StartInterruptLoop();
+  status = StartInterruptLoop();
+  if (status != ZX_OK) {
+    txn_->Reply(status);
+    return;
+  }
   for (size_t i = 0; i < port_status_.size(); i++) {
     HandlePortStatusChanged(IndexToPortNumber(PortArrayIndex(static_cast<uint8_t>(i))));
   }
@@ -266,52 +277,87 @@ void UsbHubDevice::HandlePortStatusChanged(PortNumber port) {
   }
 }
 
-void UsbHubDevice::InterruptCallback(CallbackRequest request) {
-  request_pending_ = false;
-  if (shutting_down_ || (request.request()->response.status != ZX_OK)) {
-    return;
-  }
-
-  uint8_t* bitmap;
-  request.Mmap(reinterpret_cast<void**>(&bitmap));
-  uint8_t* bitmap_end = bitmap + request.request()->response.actual;
-
-  // bit zero is hub status
-  if (bitmap[0] & 1) {
-    // TODO(fxbug.dev/58148) what to do here?
-    zxlogf(ERROR, "usb_hub_interrupt_complete hub status changed");
-  }
-  int port = 1;
-  int bit = 1;
-  while (bitmap < bitmap_end && port <= hub_descriptor_.b_nbr_ports) {
-    if (*bitmap & (1 << bit)) {
-      executor_->schedule_task(
-          GetPortStatusAsync(PortNumber(static_cast<uint8_t>(port)))
-              .and_then([this, port_number = PortNumber(static_cast<uint8_t>(port))](
-                            usb_port_status_t& status) {
-                fbl::AutoLock l(&async_execution_context_);
-                port_status_[PortNumberToIndex(port_number).value()].status = status.w_port_status;
-                HandlePortStatusChanged(port_number);
-                return fpromise::ok();
-              }));
+void UsbHubDevice::InterruptCallback() {
+  // Data to be extracted from the request
+  size_t hub_bit_count =
+      hub_descriptor_.b_nbr_ports + 1;  // Number of ports including the hub itself
+  size_t byte_padding =
+      ((hub_bit_count - 1) / sizeof(uint8_t)) + 1;  // byte padding for handling response
+  auto data = std::make_unique<uint8_t[]>(hub_bit_count + byte_padding);
+  zx_status_t data_status = ZX_OK;
+  size_t data_length;
+  auto handleCallback = [&](CallbackRequest cr) mutable {
+    if (shutting_down_ || cr.request()->response.status != ZX_OK) {
+      sync_completion_signal(&xfer_done_);
+      return;
     }
-    port++;
-    if (++bit == 8) {
-      bitmap++;
-      bit = 0;
+    data_status = cr.request()->response.status;
+    data_length = cr.request()->response.actual;
+    if (data_length > hub_bit_count) {
+      data_status = ZX_ERR_BAD_STATE;
+      zxlogf(ERROR, "Data received from request is more than number of ports");
+      return;
     }
-  }
-  request_pending_ = true;
-  request.Queue(usb_);
-}
-
-void UsbHubDevice::StartInterruptLoop() {
+    size_t val = cr.CopyFrom(data.get(), cr.request()->response.actual, 0);
+    if (val != data_length) {
+      data_status = ZX_ERR_BAD_STATE;
+      zxlogf(ERROR, "Could not copy data correctly");
+      return;
+    }
+    sync_completion_signal(&xfer_done_);
+    cr.Queue(usb_);
+  };
+  // Run until device unbinds
   std::optional<CallbackRequest> request;
   CallbackRequest::Alloc(&request, usb_ep_max_packet(&interrupt_endpoint_),
                          interrupt_endpoint_.b_endpoint_address, usb_.GetRequestSize(),
-                         fit::bind_member(this, &UsbHubDevice::InterruptCallback));
-  request_pending_ = true;
+                         handleCallback);
   request->Queue(usb_);
+  while (!shutting_down_) {
+    sync_completion_wait(&xfer_done_, ZX_TIME_INFINITE);
+    sync_completion_reset(&xfer_done_);
+
+    if (shutting_down_ || data_status != ZX_OK) {
+      return;
+    }
+
+    // bit zero is hub status
+    if (data[0] & hubStatusBit) {
+      // TODO(fxbug.dev/58148) what to do here?
+      zxlogf(ERROR, "usb_hub_interrupt_complete hub status changed");
+    }
+    // Iterate through the bitmap (bitmap length and port count is the same)
+    for (uint8_t port = 1; port <= hub_descriptor_.b_nbr_ports; port++) {
+      uint8_t bit = port % 8;
+      uint8_t byte = port / 8;
+      if (data[byte] & (1 << bit)) {
+        auto port_result = GetPortStatus(PortNumber(static_cast<uint8_t>(port)));
+        if (port_result.is_error()) {
+          zxlogf(ERROR, "Could not get port status");
+          return;
+        }
+        auto port_status = port_result.value();
+        auto port_number = PortNumber(static_cast<uint8_t>(port));
+        fbl::AutoLock l(&async_execution_context_);
+        port_status_[PortNumberToIndex(port_number).value()].status = port_status.w_port_status;
+        HandlePortStatusChanged(port_number);
+      }
+    }
+  }
+}
+
+zx_status_t UsbHubDevice::StartInterruptLoop() {
+  auto callback_func = [](void* ctx) {
+    static_cast<UsbHubDevice*>(ctx)->InterruptCallback();
+    return 0;
+  };
+  int thread_status =
+      thrd_create_with_name(&callback_thread_, callback_func, this, "usb-hub-interrupt");
+  if (thread_status != thrd_success) {
+    zxlogf(ERROR, "Could not create thread to handle port changes");
+    return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
 }
 
 fpromise::promise<void, zx_status_t> UsbHubDevice::ResetPort(PortNumber port) {
@@ -539,6 +585,14 @@ void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
            zx_status_get_string(status));
     return;
   }
+  // TODO(fxbug.dev/82530): Cancel Control endpoint when supported
+  sync_completion_signal(&xfer_done_);
+  thrd_join(callback_thread_, &status);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not join interrupt thread");
+    return;
+  }
+
   txn.Reply();
 }
 
@@ -744,10 +798,7 @@ zx_status_t UsbHubDevice::Bind(void* ctx, zx_device_t* parent) {
 
 void UsbHubDevice::DdkRelease() { delete this; }
 
-UsbHubDevice::~UsbHubDevice() {
-  loop_.Shutdown();
-  ZX_ASSERT(!request_pending_);
-}
+UsbHubDevice::~UsbHubDevice() { loop_.Shutdown(); }
 
 }  // namespace usb_hub
 static zx_driver_ops_t usb_hub_driver_ops = {
