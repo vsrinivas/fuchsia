@@ -21,6 +21,7 @@
 #include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/connectivity_manager_impl.h"
 #include "test_configuration_manager.h"
+#include "test_connectivity_manager.h"
 #include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
 
@@ -29,6 +30,7 @@ namespace testing {
 namespace {
 
 using weave::adaptation::testing::TestConfigurationManager;
+using weave::adaptation::testing::TestConnectivityManager;
 using weave::adaptation::testing::TestThreadStackManager;
 
 using nl::Weave::DeviceLayer::ConnectivityManager;
@@ -124,36 +126,6 @@ class FakeNetInterfaces : public fuchsia::net::interfaces::testing::State_TestBa
   fidl::Binding<fuchsia::net::interfaces::Watcher> watcher_binding_{this};
 };
 
-class TestWeaveTunnelAgent : public WeaveTunnelAgent {
- public:
-  WEAVE_ERROR StartServiceTunnel() override { return WEAVE_NO_ERROR; }
-
-  void StopServiceTunnel(WEAVE_ERROR error) override {
-    EXPECT_EQ(error, WEAVE_ERROR_TUNNEL_FORCE_ABORT);
-  }
-
-  bool IsTunnelRoutingRestricted() override { return true; }
-};
-
-class TestConnectivityManagerDelegateImpl : public ConnectivityManagerDelegateImpl {
- public:
-  WEAVE_ERROR InitServiceTunnelAgent() override {
-    // Reset the agent to its default state.
-    new (&Internal::ServiceTunnelAgent) TestWeaveTunnelAgent();
-    return WEAVE_NO_ERROR;
-  }
-
-  bool GetServiceTunnelStarted() { return GetFlag(flags_, kFlag_ServiceTunnelStarted); }
-
-  bool GetServiceTunnelUp() { return GetFlag(flags_, kFlag_ServiceTunnelUp); }
-
-  bool refreshed_end_points = false;
-  WEAVE_ERROR RefreshEndpoints() override {
-    refreshed_end_points = true;
-    return WEAVE_NO_ERROR;
-  }
-};
-
 class ConnectivityManagerTest : public WeaveTestFixture<> {
  public:
   ConnectivityManagerTest() {
@@ -170,10 +142,10 @@ class ConnectivityManagerTest : public WeaveTestFixture<> {
     PlatformMgrImpl().SetDispatcher(dispatcher());
     // Use default ConfigurationManager and mock out tunnel invocation.
     ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
-    ConnectivityMgrImpl().SetDelegate(std::make_unique<TestConnectivityManagerDelegateImpl>());
+    ConnectivityMgrImpl().SetDelegate(std::make_unique<TestConnectivityManager>());
     ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
     // Perform initialization of delegate and run to complete FIDL connection.
-    EXPECT_EQ(ConnectivityMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+    EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
     RunLoopUntilIdle();
   }
 
@@ -189,6 +161,10 @@ class ConnectivityManagerTest : public WeaveTestFixture<> {
  protected:
   FakeNetInterfaces fake_net_interfaces_;
   std::vector<WeaveDeviceEvent> application_events_;
+
+  TestConnectivityManager& delegate() {
+    return *reinterpret_cast<TestConnectivityManager*>(ConnectivityMgrImpl().GetDelegate());
+  }
 
   static void HandleApplicationEvent(const WeaveDeviceEvent* event, intptr_t arg) {
     ConnectivityManagerTest* instance = (ConnectivityManagerTest*)arg;
@@ -218,13 +194,8 @@ class ConnectivityManagerTest : public WeaveTestFixture<> {
     }
   }
 
-  TestConnectivityManagerDelegateImpl* Delegate() {
-    return static_cast<TestConnectivityManagerDelegateImpl*>(ConnectivityMgrImpl().GetDelegate());
-  }
-
  private:
   sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 TEST_F(ConnectivityManagerTest, Init) {
@@ -282,17 +253,17 @@ TEST_F(ConnectivityManagerTest, InterfacePropertiesChange) {
   fake_net_interfaces_.AddOnlineChangeEvent(kPrimaryIntfId, true);
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(Delegate()->refreshed_end_points);
-  Delegate()->refreshed_end_points = false;
+  EXPECT_TRUE(delegate().get_endpoints_refreshed());
+  delegate().set_endpoints_refreshed(false);
 
   fake_net_interfaces_.AddOnlineChangeEvent(kPrimaryIntfId, false);
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(Delegate()->refreshed_end_points);
-  Delegate()->refreshed_end_points = false;
+  EXPECT_TRUE(delegate().get_endpoints_refreshed());
+  delegate().set_endpoints_refreshed(false);
 
   fake_net_interfaces_.AddEmptyChangeEvent(kPrimaryIntfId);
-  EXPECT_FALSE(Delegate()->refreshed_end_points);
+  EXPECT_FALSE(delegate().get_endpoints_refreshed());
 }
 
 TEST_F(ConnectivityManagerTest, HandleServiceTunnelNotification) {
@@ -302,9 +273,9 @@ TEST_F(ConnectivityManagerTest, HandleServiceTunnelNotification) {
 
   // Enable unrestricted tunnel.
   ServiceTunnelAgent.OnServiceTunStatusNotify(WeaveTunnelConnectionMgr::kStatus_TunPrimaryUp,
-                                              WEAVE_NO_ERROR, Delegate());
+                                              WEAVE_NO_ERROR, &delegate());
   RunLoopUntilIdle();
-  EXPECT_TRUE(Delegate()->GetServiceTunnelUp());
+  EXPECT_TRUE(delegate().get_service_tunnel_up());
   EXPECT_EQ(application_events_.size(), 2UL);
   EXPECT_EQ(application_events_[0].Type, DeviceEventType::kServiceTunnelStateChange);
   EXPECT_EQ(application_events_[0].ServiceTunnelStateChange.Result, kConnectivity_Established);
@@ -320,9 +291,9 @@ TEST_F(ConnectivityManagerTest, HandleServiceTunnelNotification) {
 
   // Bring the tunnel down.
   ServiceTunnelAgent.OnServiceTunStatusNotify(WeaveTunnelConnectionMgr::kStatus_TunDown,
-                                              WEAVE_NO_ERROR, Delegate());
+                                              WEAVE_NO_ERROR, &delegate());
   RunLoopUntilIdle();
-  EXPECT_FALSE(Delegate()->GetServiceTunnelUp());
+  EXPECT_FALSE(delegate().get_service_tunnel_up());
   EXPECT_EQ(application_events_.size(), 2UL);
   EXPECT_EQ(application_events_[0].Type, DeviceEventType::kServiceTunnelStateChange);
   EXPECT_EQ(application_events_[0].ServiceTunnelStateChange.Result, kConnectivity_Lost);
@@ -336,9 +307,9 @@ TEST_F(ConnectivityManagerTest, HandleServiceTunnelNotification) {
 
   // Enable restricted tunnel.
   ServiceTunnelAgent.OnServiceTunStatusNotify(WeaveTunnelConnectionMgr::kStatus_TunPrimaryUp,
-                                              WEAVE_ERROR_TUNNEL_ROUTING_RESTRICTED, Delegate());
+                                              WEAVE_ERROR_TUNNEL_ROUTING_RESTRICTED, &delegate());
   RunLoopUntilIdle();
-  EXPECT_TRUE(Delegate()->GetServiceTunnelUp());
+  EXPECT_TRUE(delegate().get_service_tunnel_up());
   EXPECT_EQ(application_events_.size(), 1UL);
   EXPECT_EQ(application_events_[0].Type, DeviceEventType::kServiceTunnelStateChange);
   EXPECT_EQ(application_events_[0].ServiceTunnelStateChange.Result, kConnectivity_Established);
@@ -347,9 +318,9 @@ TEST_F(ConnectivityManagerTest, HandleServiceTunnelNotification) {
 
   // Simulate tunnel down due to error.
   ServiceTunnelAgent.OnServiceTunStatusNotify(WeaveTunnelConnectionMgr::kStatus_TunPrimaryConnError,
-                                              WEAVE_ERROR_TIMEOUT, Delegate());
+                                              WEAVE_ERROR_TIMEOUT, &delegate());
   RunLoopUntilIdle();
-  EXPECT_FALSE(Delegate()->GetServiceTunnelUp());
+  EXPECT_FALSE(delegate().get_service_tunnel_up());
   EXPECT_EQ(application_events_.size(), 2UL);
   EXPECT_EQ(application_events_[0].Type, DeviceEventType::kServiceTunnelStateChange);
   EXPECT_EQ(application_events_[0].ServiceTunnelStateChange.Result, kConnectivity_Lost);
@@ -371,7 +342,7 @@ TEST_F(ConnectivityManagerTest, OnPlatformEvent) {
   };
 
   // The tunnel should be down by default.
-  EXPECT_FALSE(Delegate()->GetServiceTunnelStarted());
+  EXPECT_FALSE(delegate().get_service_tunnel_started());
 
   // Enable IPv4 connectivity.
   fake_net_interfaces_.AddEvent(0, true, false);
@@ -381,33 +352,33 @@ TEST_F(ConnectivityManagerTest, OnPlatformEvent) {
   SetProvisionState(true);
 
   // Send fabric membership change event, which should trigger tunnel start.
-  Delegate()->OnPlatformEvent(&fabric_event);
-  EXPECT_TRUE(Delegate()->GetServiceTunnelStarted());
+  delegate().OnPlatformEvent(&fabric_event);
+  EXPECT_TRUE(delegate().get_service_tunnel_started());
 
   // Remove provisioning information.
   SetProvisionState(false);
 
   // Send provisioning change event, which should shut the tunnel down.
-  Delegate()->OnPlatformEvent(&provisioning_event);
-  EXPECT_FALSE(Delegate()->GetServiceTunnelStarted());
+  delegate().OnPlatformEvent(&provisioning_event);
+  EXPECT_FALSE(delegate().get_service_tunnel_started());
 
   // Setting provision infromation and adding account pairing should restart the
   // tunnel and leave it in the started state.
   SetProvisionState(true);
-  Delegate()->OnPlatformEvent(&provisioning_event);
-  EXPECT_TRUE(Delegate()->GetServiceTunnelStarted());
-  Delegate()->OnPlatformEvent(&account_pairing_event);
-  EXPECT_TRUE(Delegate()->GetServiceTunnelStarted());
+  delegate().OnPlatformEvent(&provisioning_event);
+  EXPECT_TRUE(delegate().get_service_tunnel_started());
+  delegate().OnPlatformEvent(&account_pairing_event);
+  EXPECT_TRUE(delegate().get_service_tunnel_started());
 
   // Sending an event when connectivity is down should bring the tunnel down.
   fake_net_interfaces_.AddEvent(0, false, false);
   RunLoopUntilIdle();
-  EXPECT_FALSE(Delegate()->GetServiceTunnelStarted());
+  EXPECT_FALSE(delegate().get_service_tunnel_started());
 
   // Sending an event that should disable the tunnel should retain its state.
   account_pairing_event.AccountPairingChange.IsPairedToAccount = false;
-  Delegate()->OnPlatformEvent(&account_pairing_event);
-  EXPECT_FALSE(Delegate()->GetServiceTunnelStarted());
+  delegate().OnPlatformEvent(&account_pairing_event);
+  EXPECT_FALSE(delegate().get_service_tunnel_started());
 }
 
 TEST_F(ConnectivityManagerTest, RequestShutdownOnFidlError) {

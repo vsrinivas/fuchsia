@@ -27,18 +27,16 @@ class TestConfigurationManager final
 
   // Returns whether the device is paired to an account.
   bool IsPairedToAccount() override {
-    return is_paired_to_account_ ? is_paired_to_account_.value() : Impl::IsPairedToAccount();
+    return is_paired_to_account_.value_or(Impl::IsPairedToAccount());
   }
 
   // Returns whether the device is a member of a fabric.
   bool IsMemberOfFabric() override {
-    return is_member_of_fabric_ ? is_member_of_fabric_.value() : Impl::IsMemberOfFabric();
+    return is_member_of_fabric_.value_or(Impl::IsMemberOfFabric());
   }
 
   // Returns whether the device is thread-enabled.
-  bool IsThreadEnabled() override {
-    return is_thread_enabled_ ? is_thread_enabled_.value() : Impl::IsThreadEnabled();
-  }
+  bool IsThreadEnabled() override { return is_thread_enabled_.value_or(Impl::IsThreadEnabled()); }
 
   // Returns the private key for signing.
   zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) override {

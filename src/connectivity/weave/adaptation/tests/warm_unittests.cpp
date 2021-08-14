@@ -25,7 +25,7 @@
 #include <Warm/Warm.h>
 // clang-format on
 
-#include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
+#include "test_connectivity_manager.h"
 #include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
 
@@ -36,6 +36,7 @@ namespace Platform {
 namespace testing {
 
 namespace {
+using weave::adaptation::testing::TestConnectivityManager;
 using weave::adaptation::testing::TestThreadStackManager;
 
 using fuchsia::lowpan::device::DeviceRoute;
@@ -54,7 +55,6 @@ using DeviceLayer::ThreadStackMgrImpl;
 using DeviceLayer::Internal::testing::WeaveTestFixture;
 
 constexpr char kTunInterfaceName[] = "weav-tun0";
-constexpr char kWiFiInterfaceName[] = "wlan0";
 
 constexpr uint32_t kRouteMetric_HighPriority = 0;
 constexpr uint32_t kRouteMetric_MediumPriority = 99;
@@ -241,12 +241,6 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
   fidl::BindingSet<DeviceRoute> device_route_bindings_;
   async_dispatcher_t* dispatcher_;
   fidl::Binding<Lookup> binding_{this};
-};
-
-// Fake implementation of CM delegate, only provides an interface name.
-class FakeConnectivityManagerDelegate : public DeviceLayer::ConnectivityManagerDelegateImpl {
- public:
-  std::optional<std::string> GetWiFiInterfaceName() override { return kWiFiInterfaceName; }
 };
 
 // Fake implementation of the fuchsia::netstack::Netstack that provides
@@ -458,7 +452,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
         fake_stack_.GetHandler(dispatcher()));
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
-    ConnectivityMgrImpl().SetDelegate(std::make_unique<FakeConnectivityManagerDelegate>());
+    ConnectivityMgrImpl().SetDelegate(std::make_unique<TestConnectivityManager>());
     ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
     Warm::Platform::Init(nullptr);
 
@@ -469,7 +463,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
     // Populate initial fake interfaces
     AddOwnedInterface(kTunInterfaceName);
     AddOwnedInterface(TestThreadStackManager::kThreadInterfaceName);
-    AddOwnedInterface(kWiFiInterfaceName);
+    AddOwnedInterface(TestConnectivityManager::kWiFiInterfaceName);
 
     RunFixtureLoop();
   }
@@ -514,7 +508,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
   uint32_t GetTunnelInterfaceId() { return GetTunnelInterface().id; }
 
   OwnedInterface& GetWiFiInterface() {
-    return fake_net_stack_.GetInterfaceByName(kWiFiInterfaceName);
+    return fake_net_stack_.GetInterfaceByName(TestConnectivityManager::kWiFiInterfaceName);
   }
 
   uint32_t GetWiFiInterfaceId() { return GetWiFiInterface().id; }
@@ -743,7 +737,7 @@ TEST_F(WarmTest, AddAddressWiFiNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveOwnedInterface(kWiFiInterfaceName);
+  RemoveOwnedInterface(TestConnectivityManager::kWiFiInterfaceName);
 
   // Attempt to add to the interface when there's no WiFi interface. Expect failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -756,7 +750,7 @@ TEST_F(WarmTest, RemoveAddressWiFiNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveOwnedInterface(kWiFiInterfaceName);
+  RemoveOwnedInterface(TestConnectivityManager::kWiFiInterfaceName);
 
   // Attempt to remove from the interface when there's no WiFi interface. Expect success.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));

@@ -20,12 +20,12 @@ class TestThreadStackManager final : public nl::Weave::DeviceLayer::ThreadStackM
 
   // Returns whether thread is provisioned.
   bool IsThreadProvisioned() override {
-    return is_thread_provisioned_ ? is_thread_provisioned_.value() : Impl::IsThreadProvisioned();
+    return is_thread_provisioned_.value_or(Impl::IsThreadProvisioned());
   }
 
   // Returns whether thread is supported.
   bool IsThreadSupported() const override {
-    return is_thread_supported_ ? is_thread_supported_.value() : Impl::IsThreadSupported();
+    return is_thread_supported_.value_or(Impl::IsThreadSupported());
   }
 
   // Returns the thread interface name.
