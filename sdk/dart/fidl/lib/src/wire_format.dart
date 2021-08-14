@@ -7,3 +7,6 @@ enum WireFormat {
   v2,
 }
 const WireFormat kWireFormatDefault = WireFormat.v1;
+
+const int kEnvelopeInlineMarker = 1;
+const int kEnvelopeOutOfLineMarker = 0;

@@ -953,21 +953,46 @@ int envelopeSize(WireFormat wireFormat) {
 
 void _encodeEnvelopePresent<T, I extends Iterable<T>>(
     Encoder encoder, int offset, int depth, T field, FidlType<T, I> fieldType) {
-  int numHandles = encoder.countHandles();
-  final fieldOffset =
-      encoder.alloc(fieldType.inlineSize(encoder.wireFormat), depth);
-  fieldType.encode(encoder, field, fieldOffset, depth + 1);
-  numHandles = encoder.countHandles() - numHandles;
-  final numBytes = encoder.nextOffset() - fieldOffset;
-
-  encoder
-    ..encodeUint32(numBytes, offset)
-    ..encodeUint32(numHandles, offset + 4)
-    ..encodeUint64(kAllocPresent, offset + 8);
+  int fieldSize = fieldType.inlineSize(encoder.wireFormat);
+  switch (encoder.wireFormat) {
+    case WireFormat.v1:
+      final initialNumHandles = encoder.countHandles();
+      final fieldOffset = encoder.alloc(fieldSize, depth);
+      fieldType.encode(encoder, field, fieldOffset, depth + 1);
+      final numHandles = encoder.countHandles() - initialNumHandles;
+      final numBytes = encoder.nextOffset() - fieldOffset;
+      encoder
+        ..encodeUint32(numBytes, offset)
+        ..encodeUint32(numHandles, offset + 4)
+        ..encodeUint64(kAllocPresent, offset + 8);
+      break;
+    case WireFormat.v2:
+      if (fieldSize <= 4) {
+        final initialNumHandles = encoder.countHandles();
+        fieldType.encode(encoder, field, offset, depth);
+        final numHandles = encoder.countHandles() - initialNumHandles;
+        encoder
+          ..encodeUint16(numHandles, offset + 4)
+          ..encodeUint16(kEnvelopeInlineMarker, offset + 6);
+      } else {
+        final initialNumHandles = encoder.countHandles();
+        final fieldOffset = encoder.alloc(fieldSize, depth);
+        fieldType.encode(encoder, field, fieldOffset, depth + 1);
+        final numHandles = encoder.countHandles() - initialNumHandles;
+        final numBytes = encoder.nextOffset() - fieldOffset;
+        encoder
+          ..encodeUint32(numBytes, offset)
+          ..encodeUint16(numHandles, offset + 4)
+          ..encodeUint16(kEnvelopeOutOfLineMarker, offset + 6);
+      }
+  }
 }
 
 void _encodeEnvelopeAbsent(Encoder encoder, int offset) {
-  encoder..encodeUint64(0, offset)..encodeUint64(kAllocAbsent, offset + 8);
+  encoder.encodeUint64(0, offset);
+  if (encoder.wireFormat == WireFormat.v1) {
+    encoder.encodeUint64(kAllocAbsent, offset + 8);
+  }
 }
 
 enum EnvelopeContentLocation {
@@ -1110,7 +1135,8 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
       if (fieldType != null) {
         if (decoder.wireFormat == WireFormat.v2 &&
             fieldType.inlineSize(decoder.wireFormat) <= 4) {
-          throw FidlError('envelope contents out-of-line when they should be inline',
+          throw FidlError(
+              'envelope contents out-of-line when they should be inline',
               FidlErrorCode.fidlInvalidInlineBitInEnvelope);
         }
 
