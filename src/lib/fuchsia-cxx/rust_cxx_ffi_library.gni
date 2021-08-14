@@ -180,9 +180,10 @@ template("rust_cxx_ffi_library") {
     deps = generation_targets + rust_deps
   }
 
+  crate_name = string_replace(package_name, "-", "_")
   generated_file(generated_rs_target) {
     outputs = [ "$source_gen_dir/staticlib_source_root.rs" ]
-    contents = "pub use " + package_name + "::*;"
+    contents = "pub use " + crate_name + "::*;"
   }
 
   # Create a staticlib from the rustc_library above. This uses a generated source_root that just
