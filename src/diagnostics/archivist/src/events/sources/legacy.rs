@@ -12,12 +12,31 @@ use {
     },
     fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, TryStreamExt},
-    std::convert::TryInto,
+    std::{convert::TryInto, ops::Deref},
     tracing::error,
 };
 
+pub struct ComponentEventProvider {
+    proxy: ComponentEventProviderProxy,
+    task: Option<fasync::Task<()>>,
+}
+
+impl From<ComponentEventProviderProxy> for ComponentEventProvider {
+    fn from(proxy: ComponentEventProviderProxy) -> Self {
+        Self { proxy, task: None }
+    }
+}
+
+impl Deref for ComponentEventProvider {
+    type Target = ComponentEventProviderProxy;
+
+    fn deref(&self) -> &Self::Target {
+        &self.proxy
+    }
+}
+
 #[async_trait]
-impl EventSource for ComponentEventProviderProxy {
+impl EventSource for ComponentEventProvider {
     /// Subscribe to component lifecycle events.
     /// |node| is the node where stats about events seen will be recorded.
     async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
@@ -25,7 +44,7 @@ impl EventSource for ComponentEventProviderProxy {
             fidl::endpoints::create_request_stream::<ComponentEventListenerMarker>()?;
         self.set_listener(events_client_end)
             .map_err(|e| EventError::Fidl("set component event provider listener", e))?;
-        EventListenerServer::new(sender).spawn(listener_request_stream);
+        self.task = Some(EventListenerServer::new(sender).spawn(listener_request_stream));
         Ok(())
     }
 }
@@ -39,13 +58,12 @@ impl EventListenerServer {
         Self { sender }
     }
 
-    fn spawn(self, stream: ComponentEventListenerRequestStream) {
+    fn spawn(self, stream: ComponentEventListenerRequestStream) -> fasync::Task<()> {
         fasync::Task::spawn(async move {
             self.handle_request_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!(?e, "failed to run v1 events processing server"));
         })
-        .detach();
     }
 
     async fn handle_request_stream(
@@ -228,7 +246,7 @@ mod tests {
     }
 
     fn spawn_fake_component_event_provider() -> (
-        ComponentEventProviderProxy,
+        ComponentEventProvider,
         oneshot::Receiver<fidl::endpoints::ClientEnd<ComponentEventListenerMarker>>,
     ) {
         let (provider, mut request_stream) =
@@ -246,6 +264,6 @@ mod tests {
             }
         })
         .detach();
-        (provider, receiver)
+        (provider.into(), receiver)
     }
 }

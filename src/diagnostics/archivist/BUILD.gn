@@ -90,6 +90,7 @@ rustc_library("lib") {
   sources = [
     "src/accessor.rs",
     "src/archivist.rs",
+    "src/component_lifecycle.rs",
     "src/configs.rs",
     "src/constants.rs",
     "src/container.rs",

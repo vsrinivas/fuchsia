@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        configs,
+        component_lifecycle, configs,
         container::ComponentIdentity,
         diagnostics,
         events::{
@@ -12,14 +12,11 @@ use {
             sources::{StaticEventStream, UnattributedLogSinkSource},
             types::{ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventSource},
         },
-        logs::{budget::BudgetManager, socket::LogMessageSocket},
+        logs::{budget::BudgetManager, socket::LogMessageSocket, KernelDebugLog},
         pipeline::Pipeline,
         repository::DataRepo,
     },
-    anyhow::Error,
-    fidl::{endpoints::RequestStream, AsyncChannel},
-    fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
-    fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
+    anyhow::{Context, Error},
     fidl_fuchsia_sys2::EventSourceMarker,
     fuchsia_async::{self as fasync, Task},
     fuchsia_component::{
@@ -27,7 +24,6 @@ use {
         server::{ServiceFs, ServiceObj},
     },
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
@@ -36,7 +32,7 @@ use {
     },
     parking_lot::RwLock,
     std::sync::Arc,
-    tracing::{debug, error, info, warn},
+    tracing::{debug, error, warn},
 };
 
 /// Options for ingesting logs.
@@ -46,7 +42,7 @@ pub struct LogOpts {
 }
 
 /// Responsible for initializing an `Archivist` instance. Supports multiple configurations by
-/// either calling or not calling methods on the builder like `install_controller_service`.
+/// either calling or not calling methods on the builder like `serve_test_controller_protocol`.
 pub struct Archivist {
     /// Archive state, including the diagnostics repo which currently stores all logs.
     archivist_state: ArchivistState,
@@ -80,6 +76,16 @@ pub struct Archivist {
 
     /// Recieve stop signal to kill this archivist.
     stop_recv: Option<mpsc::Receiver<()>>,
+
+    /// Listens for lifecycle requests, to handle Stop requests.
+    _lifecycle_task: Option<fasync::Task<()>>,
+
+    /// When the archivist is consuming its own logs, this task drains the archivist log stream
+    /// socket.
+    _consume_own_logs_task: Option<fasync::Task<()>>,
+
+    /// Tasks that drains klog.
+    _drain_klog_task: Option<fasync::Task<()>>,
 }
 
 impl Archivist {
@@ -131,6 +137,9 @@ impl Archivist {
             listen_sender,
             event_source_registry: EventSourceRegistry::new(events_node),
             stop_recv: None,
+            _consume_own_logs_task: None,
+            _lifecycle_task: None,
+            _drain_klog_task: None,
         })
     }
 
@@ -143,76 +152,36 @@ impl Archivist {
     }
 
     // TODO(fxbug.dev/72046) delete when netemul no longer using
-    pub fn consume_own_logs(&self, socket: zx::Socket) {
+    pub fn consume_own_logs(&mut self, socket: zx::Socket) {
         let container = self.data_repo().write().get_own_log_container();
-        fasync::Task::spawn(async move {
+        self._consume_own_logs_task = Some(fasync::Task::spawn(async move {
             let log_stream =
                 LogMessageSocket::new(socket, container.identity.clone(), container.stats.clone())
                     .expect("failed to create internal LogMessageSocket");
             container.drain_messages(log_stream).await;
             unreachable!();
-        })
-        .detach();
+        }));
     }
 
-    /// Install controller service.
-    pub fn install_controller_service(&mut self) -> &mut Self {
+    /// Install controller protocol.
+    pub fn serve_test_controller_protocol(&mut self) -> &mut Self {
         let (stop_sender, stop_recv) = mpsc::channel(0);
-        self.fs
-            .dir("svc")
-            .add_fidl_service(move |stream| Self::spawn_controller(stream, stop_sender.clone()));
+        self.fs.dir("svc").add_fidl_service(move |stream| {
+            fasync::Task::spawn(component_lifecycle::serve_test_controller(
+                stream,
+                stop_sender.clone(),
+            ))
+            .detach()
+        });
         self.stop_recv = Some(stop_recv);
         debug!("Controller services initialized.");
         self
     }
 
-    /// The spawned controller listens for the stop request and forwards that to the archivist stop
-    /// channel if received.
-    fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::Sender<()>) {
-        fasync::Task::spawn(
-            async move {
-                while let Some(ControllerRequest::Stop { .. }) = stream.try_next().await? {
-                    debug!("Stop request received.");
-                    stop_sender.send(()).await.ok();
-                    break;
-                }
-                Ok(())
-            }
-            .map(|o: Result<(), fidl::Error>| {
-                if let Err(e) = o {
-                    error!(%e, "error serving controller");
-                }
-            }),
-        )
-        .detach();
-    }
-
-    fn take_lifecycle_channel() -> LifecycleRequestStream {
-        let lifecycle_handle_info = HandleInfo::new(HandleType::Lifecycle, 0);
-        let lifecycle_handle = take_startup_handle(lifecycle_handle_info)
-            .expect("must have been provided a lifecycle channel in procargs");
-        let x: zx::Channel = lifecycle_handle.into();
-        let async_x = AsyncChannel::from(
-            fasync::Channel::from_channel(x).expect("Async channel conversion failed."),
-        );
-        LifecycleRequestStream::from_channel(async_x)
-    }
-
-    pub fn install_lifecycle_listener(&mut self) -> &mut Self {
-        let (mut stop_sender, stop_recv) = mpsc::channel(0);
-        let mut req_stream = Self::take_lifecycle_channel();
-
-        Task::spawn(async move {
-            debug!("Awaiting request to close");
-            while let Some(LifecycleRequest::Stop { .. }) =
-                req_stream.try_next().await.expect("Failure receiving lifecycle FIDL message")
-            {
-                info!("Initiating shutdown.");
-                stop_sender.send(()).await.unwrap();
-            }
-        })
-        .detach();
-
+    /// Listen for v2 lifecycle requests.
+    pub fn serve_lifecycle_protocol(&mut self) -> &mut Self {
+        let (task, stop_recv) = component_lifecycle::serve_v2();
+        self._lifecycle_task = Some(task);
         self.stop_recv = Some(stop_recv);
         debug!("Lifecycle listener initialized.");
         self
@@ -282,6 +251,14 @@ impl Archivist {
         self
     }
 
+    /// Spawns a task that will drain klog as another log source.
+    pub async fn start_draining_klog(&mut self) -> Result<(), Error> {
+        let debuglog = KernelDebugLog::new().await.context("Failed to read kernel logs")?;
+        self._drain_klog_task =
+            Some(fasync::Task::spawn(self.data_repo().clone().drain_debuglog(debuglog)));
+        Ok(())
+    }
+
     /// Run archivist to completion.
     /// # Arguments:
     /// * `outgoing_channel`- channel to serve outgoing directory on.
@@ -327,7 +304,7 @@ impl Archivist {
 
         let mut listen_sender = self.listen_sender;
         let mut log_sender = self.log_sender;
-        let event_source_registry = self.event_source_registry;
+        let mut event_source_registry = self.event_source_registry;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => async move {
                 stop_recv.into_future().await;
@@ -531,7 +508,7 @@ mod tests {
         archivist
             .install_log_services(LogOpts { ingest_v2_logs: false })
             .await
-            .install_controller_service();
+            .serve_test_controller_protocol();
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
             archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");

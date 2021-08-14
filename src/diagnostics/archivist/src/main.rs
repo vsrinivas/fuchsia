@@ -11,14 +11,14 @@ use {
     archivist_lib::{
         archivist::{Archivist, LogOpts},
         configs, diagnostics,
-        events::sources::LogConnectorEventSource,
+        events::sources::{ComponentEventProvider, EventSourceConnection, LogConnectorEventSource},
         logs,
     },
     argh::FromArgs,
     fdio::service_connect,
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
-    fuchsia_async::{self as fasync, LocalExecutor, SendExecutor},
+    fuchsia_async::{LocalExecutor, SendExecutor},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_syslog, fuchsia_zircon as zx,
@@ -128,14 +128,17 @@ async fn async_main(
 
     archivist.install_log_services(LogOpts { ingest_v2_logs: !opt.disable_event_source }).await;
     if !opt.disable_component_event_provider {
-        let legacy_event_provider = connect_to_protocol::<ComponentEventProviderMarker>()
-            .context("failed to connect to event provider")?;
+        let legacy_event_provider: ComponentEventProvider =
+            connect_to_protocol::<ComponentEventProviderMarker>()
+                .context("failed to connect to event provider")?
+                .into();
         archivist.add_event_source("v1", Box::new(legacy_event_provider)).await;
     }
 
     if !opt.disable_event_source {
-        let event_source = connect_to_protocol::<EventSourceMarker>()
-            .context("failed to connect to event source")?;
+        let event_source: EventSourceConnection = connect_to_protocol::<EventSourceMarker>()
+            .context("failed to connect to event source")?
+            .into();
         archivist.add_event_source("v2", Box::new(event_source)).await;
     }
 
@@ -149,11 +152,11 @@ async fn async_main(
     );
 
     if opt.install_controller {
-        archivist.install_controller_service();
+        archivist.serve_test_controller_protocol();
     }
 
     if opt.listen_to_lifecycle {
-        archivist.install_lifecycle_listener();
+        archivist.serve_lifecycle_protocol();
     }
 
     if !opt.disable_log_connector {
@@ -164,8 +167,7 @@ async fn async_main(
     }
 
     if !opt.disable_klog {
-        let debuglog = logs::KernelDebugLog::new().await.context("Failed to read kernel logs")?;
-        fasync::Task::spawn(archivist.data_repo().clone().drain_debuglog(debuglog)).detach();
+        archivist.start_draining_klog().await?;
     }
 
     let mut services = vec![];

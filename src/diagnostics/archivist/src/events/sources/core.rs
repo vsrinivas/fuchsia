@@ -10,12 +10,31 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, TryStreamExt},
-    std::convert::TryInto,
+    std::{convert::TryInto, ops::Deref},
     tracing::{debug, error, warn},
 };
 
+pub struct EventSourceConnection {
+    proxy: fsys::EventSourceProxy,
+    task: Option<fasync::Task<()>>,
+}
+
+impl From<fsys::EventSourceProxy> for EventSourceConnection {
+    fn from(proxy: fsys::EventSourceProxy) -> Self {
+        Self { proxy, task: None }
+    }
+}
+
+impl Deref for EventSourceConnection {
+    type Target = fsys::EventSourceProxy;
+
+    fn deref(&self) -> &Self::Target {
+        &self.proxy
+    }
+}
+
 #[async_trait]
-impl EventSource for fsys::EventSourceProxy {
+impl EventSource for EventSourceConnection {
     /// Subscribe to component lifecycle events.
     /// |node| is the node where stats about events seen will be recorded.
     async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
@@ -49,7 +68,7 @@ impl EventSource for fsys::EventSourceProxy {
             .await
             .map_err(|e| EventError::Fidl("Eventsource subscribe", e))?
             .map_err(|e| EventError::FidlComponent(format!("{:?}", e)))?;
-        EventStreamServer::new(sender).spawn(request_stream);
+        self.task = Some(EventStreamServer::new(sender).spawn(request_stream));
         Ok(())
     }
 }
@@ -65,13 +84,12 @@ impl EventStreamServer {
 }
 
 impl EventStreamServer {
-    pub fn spawn(self, stream: fsys::EventStreamRequestStream) {
+    pub fn spawn(self, stream: fsys::EventStreamRequestStream) -> fasync::Task<()> {
         fasync::Task::spawn(async move {
             self.handle_request_stream(stream)
                 .await
                 .unwrap_or_else(|e: EventError| error!(?e, "failed to run event stream server"));
         })
-        .detach();
     }
 
     async fn handle_request_stream(
@@ -272,7 +290,7 @@ pub mod tests {
     }
 
     fn spawn_fake_event_source(
-    ) -> (fsys::EventSourceProxy, RemoteHandle<ClientEnd<fsys::EventStreamMarker>>) {
+    ) -> (EventSourceConnection, RemoteHandle<ClientEnd<fsys::EventStreamMarker>>) {
         let (source, mut request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fsys::EventSourceMarker>().unwrap();
         let (f, stream_client_end_fut) = async move {
@@ -319,6 +337,6 @@ pub mod tests {
         }
         .remote_handle();
         fasync::Task::spawn(f).detach();
-        (source, stream_client_end_fut)
+        (source.into(), stream_client_end_fut)
     }
 }

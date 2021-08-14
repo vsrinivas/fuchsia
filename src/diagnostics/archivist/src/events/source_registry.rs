@@ -40,7 +40,7 @@ pub struct EventSourceRegistry {
 
     /// Used to close the receiving end of `event_sender` to stop receiving new events in the
     /// channel and proceed to drain existing ones.
-    stop_accepting_events: oneshot::Sender<()>,
+    stop_accepting_events: Option<oneshot::Sender<()>>,
 }
 
 const RECENT_EVENT_LIMIT: usize = 200;
@@ -59,7 +59,7 @@ impl EventSourceRegistry {
             event_stream: Some(event_stream),
             node,
             event_sender,
-            stop_accepting_events,
+            stop_accepting_events: Some(stop_accepting_events),
         };
         registry
     }
@@ -88,9 +88,11 @@ impl EventSourceRegistry {
         }
     }
 
-    pub fn terminate(self) {
-        // Swallow error, if the stream was dropped, it's already terminated.
-        let _ = self.stop_accepting_events.send(());
+    pub fn terminate(&mut self) {
+        if let Some(sender) = self.stop_accepting_events.take() {
+            // Swallow error, if the stream was dropped, it's already terminated.
+            let _ = sender.send(());
+        }
     }
 }
 

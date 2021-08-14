@@ -9,27 +9,35 @@ use {
         types::{ComponentEvent, EventSource},
     },
     async_trait::async_trait,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::channel::mpsc,
 };
 
 pub struct StaticEventStream {
-    stream: Option<fsys::EventStreamRequestStream>,
+    state: State,
+}
+
+enum State {
+    ReadyToListen(Option<fsys::EventStreamRequestStream>),
+    Listening(fasync::Task<()>),
 }
 
 impl StaticEventStream {
     pub fn new(stream: fsys::EventStreamRequestStream) -> Self {
-        Self { stream: Some(stream) }
+        Self { state: State::ReadyToListen(Some(stream)) }
     }
 }
 
 #[async_trait]
 impl EventSource for StaticEventStream {
     async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
-        match self.stream.take() {
-            None => Err(EventError::StreamAlreadyTaken),
-            Some(stream) => {
-                EventStreamServer::new(sender).spawn(stream);
+        match &mut self.state {
+            State::Listening(_) => Err(EventError::StreamAlreadyTaken),
+            State::ReadyToListen(ref mut stream) => {
+                // unwrap safe since we initialize to Some().
+                debug_assert!(stream.is_some());
+                let stream = stream.take().unwrap();
+                self.state = State::Listening(EventStreamServer::new(sender).spawn(stream));
                 Ok(())
             }
         }

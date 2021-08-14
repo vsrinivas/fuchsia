@@ -15,13 +15,18 @@ use {
 
 pub struct UnattributedLogSinkSource {
     stream_sender: mpsc::Sender<LogSinkRequestStream>,
-    stream_receiver: Option<mpsc::Receiver<LogSinkRequestStream>>,
+    state: State,
+}
+
+enum State {
+    ReadyToListen(Option<mpsc::Receiver<LogSinkRequestStream>>),
+    Listening(fasync::Task<()>),
 }
 
 impl UnattributedLogSinkSource {
     pub fn new() -> Self {
         let (stream_sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
-        Self { stream_sender, stream_receiver: Some(receiver) }
+        Self { stream_sender, state: State::ReadyToListen(Some(receiver)) }
     }
 
     pub fn get_publisher(&self) -> mpsc::Sender<LogSinkRequestStream> {
@@ -32,10 +37,13 @@ impl UnattributedLogSinkSource {
 #[async_trait]
 impl EventSource for UnattributedLogSinkSource {
     async fn listen(&mut self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
-        match self.stream_receiver.take() {
-            None => Err(EventError::StreamAlreadyTaken),
-            Some(receiver) => {
-                fasync::Task::spawn(async move {
+        match &mut self.state {
+            State::Listening(_) => Err(EventError::StreamAlreadyTaken),
+            State::ReadyToListen(ref mut receiver) => {
+                // unwrap safe since we initialize to Some().
+                debug_assert!(receiver.is_some());
+                let receiver = receiver.take().unwrap();
+                self.state = State::Listening(fasync::Task::spawn(async move {
                     let mut stream = Box::pin(receiver.boxed());
                     while let Some(requests) = stream.next().await {
                         let _ = sender
@@ -45,8 +53,7 @@ impl EventSource for UnattributedLogSinkSource {
                             }))
                             .await;
                     }
-                })
-                .detach();
+                }));
                 Ok(())
             }
         }
