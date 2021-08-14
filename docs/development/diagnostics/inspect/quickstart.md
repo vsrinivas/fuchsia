@@ -278,6 +278,8 @@ See below for the quick start guide in your language of choice.
     ...
     let mut fs = ServiceFs::new();
     ...
+    fs.take_and_serve_directory_handle().unwrap();
+    fs.collect::<()>().await;
     Ok(())
   }
   ```
@@ -286,17 +288,18 @@ See below for the quick start guide in your language of choice.
 
   ```rust
   // This creates the root of an inspect tree.
-  let inspector = component::inspector();
+  let inspector = fuchsia_inspect::component::inspector();
 
   // This serves the inspect Tree to the default path for reading at the standard
   // location "/diagnostics/fuchsia.inspect.Tree".
-  inspector.serve(&mut fs)?;
+  inspect_runtime::serve(&mut fs);
 
   // This will give you a reference to the root node of the inspect tree.
   let root = inspector.root();
   ```
 
-  Don't forget to `use fuchsia_inspect::component;`!
+  Don't forget to include `fuchsia_inspect` and `inspect_runtime` in your
+  `BUILD.gn`!
 
   Now you can use inspect! For example try the following:
 
@@ -311,7 +314,7 @@ See below for the quick start guide in your language of choice.
 
   ```rust
 
-  let inspector = component::inspector();
+  let inspector = fuchsia_inspect::component::inspector();
   let root = inspector.root();
   let child = root.create_child("child1");
   child.record_double("some_property_name", 1.0);
