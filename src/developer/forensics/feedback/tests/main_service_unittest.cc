@@ -35,43 +35,45 @@ class MainServiceTest : public UnitTestFixture {
   MainServiceTest()
       : clock_(dispatcher()),
         cobalt_(dispatcher(), services(), &clock_),
-        main_service_(
-            dispatcher(), services(), &clock_, &InspectRoot(), &cobalt_,
-            LastReboot::Options{
-                .is_first_instance = kIsFirstInstance,
-                .reboot_log = RebootLog(RebootReason::kUserRequest, "reboot log", zx::sec(100)),
-                .graceful_reboot_reason_write_path = "n/a",
-                .oom_crash_reporting_delay = zx::sec(1),
-            },
-            CrashReports::Options{
-                .config = {},
-                .snapshot_manager_max_annotations_size = StorageSize::Bytes(0),
-                .snapshot_manager_max_archives_size = StorageSize::Bytes(0),
-                .snapshot_manager_window_duration = zx::sec(0),
-                .build_version = "build_version",
-                .default_annotations = {},
-            },
-            FeedbackData::Options{
-                .config{},
-                .is_first_instance = kIsFirstInstance,
-                .limit_inspect_data = false,
-                .spawn_system_log_recorder = false,
-                .delete_previous_boot_logs_time = std::nullopt,
-                .device_id_path = "",
-                .current_boot_id = Error::kMissingValue,
-                .previous_boot_id = Error::kMissingValue,
-                .current_build_version = Error::kMissingValue,
-                .previous_build_version = Error::kMissingValue,
-                .last_reboot_reason = Error::kMissingValue,
-                .last_reboot_uptime = Error::kMissingValue,
-            }) {
+        main_service_(dispatcher(), services(), &clock_, &InspectRoot(), &cobalt_,
+                      MainService::Options{
+                          .local_device_id_path = std::nullopt,
+                          .last_reboot_options =
+                              LastReboot::Options{
+                                  .is_first_instance = kIsFirstInstance,
+                                  .reboot_log = RebootLog(RebootReason::kUserRequest, "reboot log",
+                                                          zx::sec(100)),
+                                  .graceful_reboot_reason_write_path = "n/a",
+                                  .oom_crash_reporting_delay = zx::sec(1),
+                              },
+                          .crash_reports_options =
+                              CrashReports::Options{
+                                  .config = {},
+                                  .snapshot_manager_max_annotations_size = StorageSize::Bytes(0),
+                                  .snapshot_manager_max_archives_size = StorageSize::Bytes(0),
+                                  .snapshot_manager_window_duration = zx::sec(0),
+                                  .build_version = "build_version",
+                                  .default_annotations = {},
+                              },
+                          .feedback_data_options = FeedbackData::Options{
+                              .config{},
+                              .is_first_instance = kIsFirstInstance,
+                              .limit_inspect_data = false,
+                              .spawn_system_log_recorder = false,
+                              .delete_previous_boot_logs_time = std::nullopt,
+                              .current_boot_id = Error::kMissingValue,
+                              .previous_boot_id = Error::kMissingValue,
+                              .current_build_version = Error::kMissingValue,
+                              .previous_build_version = Error::kMissingValue,
+                              .last_reboot_reason = Error::kMissingValue,
+                              .last_reboot_uptime = Error::kMissingValue,
+                          }}) {
     AddHandler(main_service_.GetHandler<fuchsia::feedback::LastRebootInfoProvider>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReporter>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReportingProductRegister>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::ComponentDataRegister>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::DataProvider>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::DataProviderController>());
-    AddHandler(main_service_.GetHandler<fuchsia::feedback::DeviceIdProvider>());
   }
 
  private:
@@ -108,7 +110,6 @@ TEST_F(MainServiceTest, LastReboot) {
                                            ProtocolMatcher("ComponentDataRegister", 0u, 0u),
                                            ProtocolMatcher("DataProvider", 0u, 0u),
                                            ProtocolMatcher("DataProviderController", 0u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 1u, 1u),
                                        }))),
                              })));
 
@@ -123,7 +124,6 @@ TEST_F(MainServiceTest, LastReboot) {
                                            ProtocolMatcher("ComponentDataRegister", 0u, 0u),
                                            ProtocolMatcher("DataProvider", 0u, 0u),
                                            ProtocolMatcher("DataProviderController", 0u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 1u, 1u),
                                        }))),
                              })));
 }
@@ -160,7 +160,6 @@ TEST_F(MainServiceTest, CrashReports) {
                                            ProtocolMatcher("ComponentDataRegister", 0u, 0u),
                                            ProtocolMatcher("DataProvider", 0u, 0u),
                                            ProtocolMatcher("DataProviderController", 0u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 1u, 1u),
                                        }))),
                              })));
 
@@ -176,7 +175,6 @@ TEST_F(MainServiceTest, CrashReports) {
                                            ProtocolMatcher("ComponentDataRegister", 0u, 0u),
                                            ProtocolMatcher("DataProvider", 0u, 0u),
                                            ProtocolMatcher("DataProviderController", 0u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 1u, 1u),
                                        }))),
                              })));
 }
@@ -191,9 +189,6 @@ TEST_F(MainServiceTest, FeedbackData) {
   fuchsia::feedback::DataProviderControllerPtr data_provider_controller_ptr_;
   services()->Connect(data_provider_controller_ptr_.NewRequest(dispatcher()));
 
-  fuchsia::feedback::DeviceIdProviderPtr device_id_provider_ptr_;
-  services()->Connect(device_id_provider_ptr_.NewRequest(dispatcher()));
-
   bool component_data_called = false;
   component_data_ptr_->Upsert(fuchsia::feedback::ComponentData{},
                               [&component_data_called]() { component_data_called = true; });
@@ -207,15 +202,10 @@ TEST_F(MainServiceTest, FeedbackData) {
   data_provider_controller_ptr_->DisableAndDropPersistentLogs(
       [&data_provider_controller_called]() { data_provider_controller_called = true; });
 
-  bool device_id_provider_called = false;
-  device_id_provider_ptr_->GetId(
-      [&device_id_provider_called](std::string) { device_id_provider_called = true; });
-
   RunLoopUntilIdle();
   EXPECT_TRUE(component_data_called);
   EXPECT_TRUE(data_provider_called);
   EXPECT_TRUE(data_provider_controller_called);
-  EXPECT_TRUE(device_id_provider_called);
   EXPECT_THAT(InspectTree(), ChildrenMatch(IsSupersetOf({
                                  AllOf(NodeMatches(NameMatches("fidl")),
                                        ChildrenMatch(IsSupersetOf({
@@ -225,14 +215,12 @@ TEST_F(MainServiceTest, FeedbackData) {
                                            ProtocolMatcher("ComponentDataRegister", 1u, 1u),
                                            ProtocolMatcher("DataProvider", 1u, 1u),
                                            ProtocolMatcher("DataProviderController", 1u, 1u),
-                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
                                        }))),
                              })));
 
   component_data_ptr_.Unbind();
   data_provider_ptr_.Unbind();
   data_provider_controller_ptr_.Unbind();
-  device_id_provider_ptr_.Unbind();
 
   RunLoopUntilIdle();
   EXPECT_THAT(InspectTree(), ChildrenMatch(IsSupersetOf({
@@ -244,7 +232,6 @@ TEST_F(MainServiceTest, FeedbackData) {
                                            ProtocolMatcher("ComponentDataRegister", 1u, 0u),
                                            ProtocolMatcher("DataProvider", 1u, 0u),
                                            ProtocolMatcher("DataProviderController", 1u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 2u, 1u),
                                        }))),
                              })));
 }

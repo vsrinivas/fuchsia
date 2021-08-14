@@ -142,7 +142,6 @@ source_set("static_annotations") {
 
   public_deps = [
     ":types",
-    "//src/developer/forensics/feedback_data:device_id_provider",
     "//src/developer/forensics/utils:previous_boot_file",
   ]
 

@@ -24,7 +24,6 @@
 #include "src/developer/forensics/feedback_data/data_provider_controller.h"
 #include "src/developer/forensics/feedback_data/data_register.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
-#include "src/developer/forensics/feedback_data/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
@@ -40,7 +39,6 @@ class FeedbackData {
     bool limit_inspect_data;
     bool spawn_system_log_recorder;
     std::optional<zx::duration> delete_previous_boot_logs_time;
-    std::string device_id_path;
     ErrorOr<std::string> current_boot_id;
     ErrorOr<std::string> previous_boot_id;
     ErrorOr<std::string> current_build_version;
@@ -78,7 +76,6 @@ class FeedbackData {
 
   InspectNodeManager inspect_node_manager_;
   feedback_data::InspectDataBudget inspect_data_budget_;
-  feedback_data::DeviceIdManager device_id_manager_;
   feedback_data::Datastore datastore_;
   feedback_data::DataProvider data_provider_;
   feedback_data::DataProviderController data_provider_controller_;

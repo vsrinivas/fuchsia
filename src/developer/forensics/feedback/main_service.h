@@ -33,10 +33,16 @@ namespace forensics::feedback {
 // dispatching those requests once migration is complete.
 class MainService {
  public:
+  struct Options {
+    std::optional<std::string> local_device_id_path;
+    LastReboot::Options last_reboot_options;
+    CrashReports::Options crash_reports_options;
+    FeedbackData::Options feedback_data_options;
+  };
+
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
               timekeeper::Clock* clock, inspect::Node* inspect_root, cobalt::Logger* cobalt,
-              LastReboot::Options last_reboot_options, CrashReports::Options crash_reports_options,
-              FeedbackData::Options feedback_data_options);
+              Options options);
 
   template <typename Protocol>
   ::fidl::InterfaceRequestHandler<Protocol> GetHandler();
@@ -53,7 +59,7 @@ class MainService {
   timekeeper::Clock* clock_;
   inspect::Node* inspect_root_;
   cobalt::Logger* cobalt_;
-  RemoteDeviceIdProvider device_id_provider_;
+  std::unique_ptr<DeviceIdProvider> device_id_provider_;
 
   FeedbackData feedback_data_;
   CrashReports crash_reports_;

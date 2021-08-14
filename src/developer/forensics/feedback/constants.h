@@ -14,6 +14,8 @@ namespace forensics::feedback {
 // Feedback gives the respective DirectoryMigrators 1 minutes to respond.
 constexpr zx::duration kDirectoryMigratorResponeTimeout = zx::min(1);
 
+constexpr char kUseRemoteDeviceIdProviderPath[] = "/config/data/feedback/remote_device_id_provider";
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Reboot reporting
 ///////////////////////////////////////////////////////////////////////////////////////////////////

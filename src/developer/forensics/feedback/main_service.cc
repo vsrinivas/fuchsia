@@ -7,30 +7,45 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <memory>
 #include <vector>
 
+#include "lib/sys/cpp/service_directory.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics::feedback {
+namespace {
+
+std::unique_ptr<DeviceIdProvider> MakeDeviceIdProvider(
+    const std::optional<std::string>& local_device_id_path, async_dispatcher_t* dispatcher,
+    const std::shared_ptr<sys::ServiceDirectory>& services) {
+  if (local_device_id_path.has_value()) {
+    FX_LOGS(INFO) << "Using local device id provider";
+    return std::make_unique<LocalDeviceIdProvider>(local_device_id_path.value());
+  }
+
+  FX_LOGS(INFO) << "Using remote device id provider";
+  return std::make_unique<RemoteDeviceIdProvider>(dispatcher, services);
+}
+
+}  // namespace
 
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
-                         inspect::Node* inspect_root, cobalt::Logger* cobalt,
-                         LastReboot::Options last_reboot_options,
-                         CrashReports::Options crash_reports_options,
-                         FeedbackData::Options feedback_data_options)
+                         inspect::Node* inspect_root, cobalt::Logger* cobalt, Options options)
     : dispatcher_(dispatcher),
       services_(services),
       clock_(clock),
       inspect_root_(inspect_root),
       cobalt_(cobalt),
-      device_id_provider_(dispatcher_, services_),
-      feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_, &device_id_provider_,
-                     feedback_data_options),
-      crash_reports_(dispatcher_, services_, clock_, inspect_root_, &device_id_provider_,
-                     feedback_data_.DataProvider(), crash_reports_options),
+      device_id_provider_(
+          MakeDeviceIdProvider(options.local_device_id_path, dispatcher_, services_)),
+      feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_,
+                     device_id_provider_.get(), options.feedback_data_options),
+      crash_reports_(dispatcher_, services_, clock_, inspect_root_, device_id_provider_.get(),
+                     feedback_data_.DataProvider(), options.crash_reports_options),
       last_reboot_(dispatcher_, services_, cobalt_, crash_reports_.CrashReporter(),
-                   last_reboot_options),
+                   options.last_reboot_options),
       inspect_node_manager_(inspect_root),
       last_reboot_info_provider_stats_(&inspect_node_manager_,
                                        "/fidl/fuchsia.feedback.LastRebootInfoProvider"),
@@ -128,15 +143,6 @@ MainService::GetHandler() {
     feedback_data_.Handle(std::move(request), [this](zx_status_t) {
       data_provider_controller_stats_.CloseConnection();
     });
-  };
-}
-
-template <>
-::fidl::InterfaceRequestHandler<fuchsia::feedback::DeviceIdProvider> MainService::GetHandler() {
-  return [this](::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
-    device_id_provider_stats_.NewConnection();
-    feedback_data_.Handle(std::move(request),
-                          [this](zx_status_t) { device_id_provider_stats_.CloseConnection(); });
   };
 }
 

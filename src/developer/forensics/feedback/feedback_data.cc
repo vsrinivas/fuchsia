@@ -30,7 +30,6 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       inspect_node_manager_(inspect_root),
       inspect_data_budget_(options.limit_inspect_data, &inspect_node_manager_, cobalt_),
-      device_id_manager_(dispatcher_, options.device_id_path),
       datastore_(dispatcher_, services_, cobalt_, options.config.annotation_allowlist,
                  options.config.attachment_allowlist, options.current_boot_id,
                  options.previous_boot_id, options.current_build_version,
@@ -67,11 +66,6 @@ void FeedbackData::Handle(
     ::fit::function<void(zx_status_t)> error_handler) {
   data_provider_controller_connections_.AddBinding(&data_provider_controller_, std::move(request),
                                                    dispatcher_, std::move(error_handler));
-}
-
-void FeedbackData::Handle(::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request,
-                          ::fit::function<void(zx_status_t)> error_handler) {
-  device_id_manager_.AddBinding(std::move(request), std::move(error_handler));
 }
 
 fuchsia::feedback::DataProvider* FeedbackData::DataProvider() { return &data_provider_; }

@@ -48,7 +48,6 @@ using fuchsia::feedback::Annotations;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
-using fuchsia::feedback::DeviceIdProviderSyncPtr;
 using fuchsia::feedback::GetAnnotationsParameters;
 using fuchsia::feedback::GetSnapshotParameters;
 using fuchsia::feedback::ImageEncoding;
@@ -494,16 +493,6 @@ TEST_F(FeedbackIntegrationTest,
 
   ASSERT_TRUE(snapshot.has_annotations());
   EXPECT_THAT(snapshot.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
-}
-
-TEST_F(FeedbackIntegrationTest, DeviceIdProvider_GetId_CheckValue) {
-  DeviceIdProviderSyncPtr device_id_provider;
-  environment_services_->Connect(device_id_provider.NewRequest());
-
-  std::string out_device_id;
-  ASSERT_EQ(device_id_provider->GetId(&out_device_id), ZX_OK);
-
-  EXPECT_TRUE(uuid::IsValid(out_device_id));
 }
 
 }  // namespace

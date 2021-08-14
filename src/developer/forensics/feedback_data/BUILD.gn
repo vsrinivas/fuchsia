@@ -190,27 +190,6 @@ source_set("default_annotations") {
   ]
 }
 
-source_set("device_id_provider") {
-  sources = [
-    "device_id_provider.cc",
-    "device_id_provider.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/forensics/feedback_data/annotations:types",
-  ]
-
-  deps = [
-    ":constants",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/utils:errors",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//src/lib/uuid",
-  ]
-}
-
 source_set("errors") {
   sources = [ "errors.h" ]
 
