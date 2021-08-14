@@ -20,11 +20,6 @@ impl Facade for NetstackFacade {
                 let result = self.list_interfaces().await?;
                 Ok(to_value(result)?)
             }
-            NetstackMethod::GetInterfaceInfo => {
-                let identifier = parse_u64_identifier(args)?;
-                let result = self.get_interface_info(identifier).await?;
-                Ok(to_value(result)?)
-            }
             NetstackMethod::GetIpv6Addresses => {
                 let result = self.get_ipv6_addresses().await?;
                 Ok(to_value(result)?)

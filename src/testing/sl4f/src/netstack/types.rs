@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 pub enum NetstackMethod {
     DisableInterface,
     EnableInterface,
-    GetInterfaceInfo,
     GetIpv6Addresses,
     GetLinkLocalIpv6Addresses,
     InitNetstack,
@@ -23,7 +22,6 @@ impl NetstackMethod {
         match method.as_ref() {
             "DisableInterface" => NetstackMethod::DisableInterface,
             "EnableInterface" => NetstackMethod::EnableInterface,
-            "GetInterfaceInfo" => NetstackMethod::GetInterfaceInfo,
             "GetIpv6Addresses" => NetstackMethod::GetIpv6Addresses,
             "GetLinkLocalIpv6Addresses" => NetstackMethod::GetLinkLocalIpv6Addresses,
             "ListInterfaces" => NetstackMethod::ListInterfaces,

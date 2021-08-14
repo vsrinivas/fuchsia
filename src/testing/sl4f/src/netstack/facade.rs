@@ -37,16 +37,6 @@ impl NetstackFacade {
         Ok(interface_list.iter().map(CustomInterfaceInfo::new).collect())
     }
 
-    pub async fn get_interface_info(&self, id: u64) -> Result<CustomInterfaceInfo, Error> {
-        let net_stack = self.get_net_stack()?;
-        let info = net_stack.get_interface_info(id).await?.map_err(
-            |err: fidl_fuchsia_net_stack::Error| {
-                anyhow!("failed to get interface {} info: {:?}", id, err)
-            },
-        )?;
-        Ok(CustomInterfaceInfo::new(&info))
-    }
-
     pub async fn enable_interface(&self, id: u64) -> Result<(), Error> {
         let net_stack = self.get_net_stack()?;
         net_stack.enable_interface(id).await?.map_err(|err: fidl_fuchsia_net_stack::Error| {
