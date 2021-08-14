@@ -23,7 +23,6 @@ use {
     async_trait::async_trait,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
-    storage_device::buffer::Buffer,
     vfs::{
         filesystem::{Filesystem, FilesystemRename},
         path::Path,
@@ -274,9 +273,6 @@ impl FilesystemRename for FxVolume {
 impl Filesystem for FxVolume {
     fn block_size(&self) -> u32 {
         self.store.block_size()
-    }
-    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
-        self.store.device().allocate_buffer(size)
     }
 }
 

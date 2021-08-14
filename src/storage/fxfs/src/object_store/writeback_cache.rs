@@ -14,7 +14,7 @@ use {
     std::ops::Range,
     std::sync::Mutex,
     std::time::Duration,
-    storage_device::buffer::{Buffer, BufferRef, MutableBufferRef},
+    storage_device::buffer::{Buffer, BufferRef},
 };
 
 // This module contains an implementation of a writeback cache.
@@ -208,7 +208,7 @@ pub struct MissingRange<'a> {
 }
 
 impl<'a> MissingRange<'a> {
-    pub fn populate(mut self, buf: BufferRef<'_>) {
+    pub fn populate(mut self, buf: &[u8]) {
         let cache = std::mem::take(&mut self.cache);
         cache.unwrap().complete_read(self.range.clone(), Some(buf));
     }
@@ -483,7 +483,7 @@ impl WritebackCache {
     /// Read from the cache.  See ReadResult for details.
     /// TODO(jfsulliv): We should make reads non-atomic, i.e. make ReadResult return a progress
     /// offset rather than doing the entire copy in one go.
-    pub fn read(&self, offset: u64, buf: MutableBufferRef<'_>, block_size: u64) -> ReadResult<'_> {
+    pub fn read(&self, offset: u64, buf: &mut [u8], block_size: u64) -> ReadResult<'_> {
         // TODO(jfsulliv): We need to be careful about pending reads interacting with discardable
         // ranges, when we get to that. Discarding needs to only touch pages that are Clean. This
         // sequence in particular might cause problems:
@@ -497,7 +497,7 @@ impl WritebackCache {
         let end = std::cmp::min(target_end, self.data.size());
         let buf = if end < target_end {
             let len = buf.len() - (target_end - end) as usize;
-            buf.subslice_mut(..len)
+            &mut buf[..len]
         } else {
             buf
         };
@@ -564,7 +564,7 @@ impl WritebackCache {
 
     // Populates a range that had to be loaded from disk.
     // If |data| is none, the read was aborted, so the range returns to being unmapped.
-    fn complete_read(&self, range: Range<u64>, data: Option<BufferRef<'_>>) {
+    fn complete_read(&self, range: Range<u64>, data: Option<&[u8]>) {
         let mut inner = self.inner.lock().unwrap();
         let ranges = inner
             .intervals
@@ -585,8 +585,7 @@ impl WritebackCache {
                     (cached_range.range.end - cached_range.range.start) as usize,
                     buf.len() - buf_offset,
                 );
-                self.data
-                    .write(cached_range.range.start, buf.subslice(buf_offset..buf_offset + len));
+                self.data.write(cached_range.range.start, &buf[buf_offset..buf_offset + len]);
                 cached_range.state = CacheState::Clean;
                 inner.intervals.add_interval(&cached_range).unwrap();
             }
@@ -605,7 +604,7 @@ impl WritebackCache {
     pub fn write_or_append(
         &self,
         offset: Option<u64>,
-        buf: BufferRef<'_>,
+        buf: &[u8],
         block_size: u64,
         reserve: &dyn StorageReservation,
         current_time: Option<Duration>,
@@ -814,7 +813,7 @@ impl WritebackCache {
 
             let len = std::cmp::min(size, interval.range.end) - interval.range.start;
             let mut buffer = allocate_buffer(len as usize);
-            self.data.read(interval.range.start, buffer.as_mut());
+            self.data.read(interval.range.start, buffer.as_mut_slice());
             ranges.push(FlushableRange { range: interval.range.clone(), data: buffer });
 
             interval.state = CacheState::Flushing;
@@ -1058,24 +1057,23 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_absent() {
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(3000));
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        let result = cache.read(0, buffer.subslice_mut(..4096), 512);
+        let result = cache.read(0, &mut buffer[..4096], 512);
         match result {
             ReadResult::MissingRanges(mut ranges) => {
                 assert_eq!(ranges.len(), 1);
                 let range = ranges.pop().unwrap();
                 assert_eq!(range.range(), &(0..3072));
-                buffer.as_mut_slice().fill(123u8);
-                range.populate(buffer.subslice(0..3000));
+                buffer.fill(123u8);
+                range.populate(&buffer[0..3000]);
             }
             _ => panic!("Unexpected result {:?}", result),
         }
-        buffer.as_mut_slice().fill(0u8);
-        let result = cache.read(0, buffer.subslice_mut(..4096), 512);
+        buffer.fill(0u8);
+        let result = cache.read(0, &mut buffer[..4096], 512);
         match result {
             ReadResult::Done(bytes) => {
                 assert_eq!(bytes, 3000);
@@ -1088,16 +1086,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_reads_block() {
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(8192));
-        let mut buffer1 = allocator.allocate_buffer(8192);
-        let mut buffer2 = allocator.allocate_buffer(8192);
+        let mut buffer1 = vec![0u8; 8192];
+        let mut buffer2 = vec![0u8; 8192];
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         join!(
             async {
-                let result = cache.read(3000, buffer1.subslice_mut(..1000), 512);
+                let result = cache.read(3000, &mut buffer1[..1000], 512);
                 match result {
                     ReadResult::MissingRanges(mut ranges) => {
                         send1.send(()).unwrap();
@@ -1105,12 +1102,12 @@ mod tests {
                         assert_eq!(ranges.len(), 1);
                         let range = ranges.pop().unwrap();
                         assert_eq!(range.range(), &(0..4096));
-                        buffer1.as_mut_slice().fill(123u8);
-                        range.populate(buffer1.subslice(..8192));
+                        buffer1.fill(123u8);
+                        range.populate(&buffer1[..8192]);
                     }
                     _ => panic!("Unexpected result {:?}", result),
                 }
-                let result = cache.read(3000, buffer1.subslice_mut(..1000), 512);
+                let result = cache.read(3000, &mut buffer1[..1000], 512);
                 match result {
                     ReadResult::Done(bytes) => {
                         assert_eq!(bytes, 1000);
@@ -1120,7 +1117,7 @@ mod tests {
             },
             async {
                 recv1.await.unwrap(); // Wait until the other task has claimed the range.
-                let result = cache.read(0, buffer2.subslice_mut(..4096), 512);
+                let result = cache.read(0, &mut buffer2[..4096], 512);
                 match result {
                     ReadResult::Contended(event) => {
                         send2.send(()).unwrap();
@@ -1128,7 +1125,7 @@ mod tests {
                     }
                     _ => panic!("Unexpected result {:?}", result),
                 }
-                let result = cache.read(0, buffer2.subslice_mut(..4096), 512);
+                let result = cache.read(0, &mut buffer2[..4096], 512);
                 match result {
                     ReadResult::Done(bytes) => {
                         assert_eq!(bytes, 4096);
@@ -1142,28 +1139,27 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_reads_block_unaligned_writes() {
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(65536, 512);
         let cache = WritebackCache::new(NativeDataBuffer::new(8192));
-        let mut buffer1 = allocator.allocate_buffer(8192);
-        let buffer2 = allocator.allocate_buffer(8192);
+        let mut buffer1 = vec![0u8; 8192];
+        let buffer2 = vec![0u8; 8192];
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         join!(
             async {
-                let result = cache.read(0, buffer1.as_mut(), 512);
+                let result = cache.read(0, &mut buffer1[..], 512);
                 match result {
                     ReadResult::MissingRanges(mut ranges) => {
                         send1.send(()).unwrap();
                         recv2.await.unwrap(); // Wait until the other task has attempted to write.
                         assert_eq!(ranges.len(), 1);
                         let range = ranges.pop().unwrap();
-                        buffer1.as_mut_slice().fill(123u8);
-                        range.populate(buffer1.as_ref());
+                        buffer1.fill(123u8);
+                        range.populate(&buffer1[..]);
                     }
                     _ => panic!("Unexpected result {:?}", result),
                 }
-                let result = cache.read(0, buffer1.as_mut(), 512);
+                let result = cache.read(0, &mut buffer1[..], 512);
                 match result {
                     ReadResult::Done(bytes) => {
                         assert_eq!(bytes, 8192);
@@ -1176,7 +1172,7 @@ mod tests {
                 recv1.await.unwrap();
                 // Aligned writes can go through.
                 let result = cache
-                    .write_or_append(Some(512), buffer2.subslice(..512), 512, &reserver, None)
+                    .write_or_append(Some(512), &buffer2[..512], 512, &reserver, None)
                     .expect("write failed");
                 if let WriteResult::Done(bytes) = result {
                     assert_eq!(bytes, 8192);
@@ -1185,7 +1181,7 @@ mod tests {
                 };
                 // Writes that extend the file can go through.
                 let result = cache
-                    .write_or_append(Some(8192), buffer2.subslice(..1), 512, &reserver, None)
+                    .write_or_append(Some(8192), &buffer2[..1], 512, &reserver, None)
                     .expect("write failed");
                 if let WriteResult::Done(bytes) = result {
                     assert_eq!(bytes, 8193);
@@ -1193,7 +1189,7 @@ mod tests {
                     panic!("Unexpected result {:?}", result)
                 };
                 let result = cache
-                    .write_or_append(None, buffer2.subslice(..1), 512, &reserver, None)
+                    .write_or_append(None, &buffer2[..1], 512, &reserver, None)
                     .expect("write failed");
                 if let WriteResult::Done(bytes) = result {
                     assert_eq!(bytes, 8194);
@@ -1202,10 +1198,10 @@ mod tests {
                 };
                 // Writes that are unaligned at the head or tail should block.
                 let mut result1 = cache
-                    .write_or_append(Some(500), buffer2.subslice(..524), 512, &reserver, None)
+                    .write_or_append(Some(500), &buffer2[..524], 512, &reserver, None)
                     .expect("write failed");
                 let mut result2 = cache
-                    .write_or_append(Some(4096), buffer2.subslice(..1), 512, &reserver, None)
+                    .write_or_append(Some(4096), &buffer2[..1], 512, &reserver, None)
                     .expect("write failed");
                 match (&mut result1, &mut result2) {
                     (WriteResult::Contended(event1), WriteResult::Contended(event2)) => {
@@ -1217,10 +1213,10 @@ mod tests {
                 }
 
                 let result1 = cache
-                    .write_or_append(Some(500), buffer2.subslice(..524), 512, &reserver, None)
+                    .write_or_append(Some(500), &buffer2[..524], 512, &reserver, None)
                     .expect("write failed");
                 let result2 = cache
-                    .write_or_append(Some(4096), buffer2.subslice(..1), 512, &reserver, None)
+                    .write_or_append(Some(4096), &buffer2[..1], 512, &reserver, None)
                     .expect("write failed");
                 match (&result1, &result2) {
                     (WriteResult::Done(_), WriteResult::Done(_)) => {}
@@ -1233,12 +1229,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_aborted() {
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(3000));
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        let result = cache.read(0, buffer.subslice_mut(..4096), 512);
+        let result = cache.read(0, &mut buffer[..4096], 512);
         match result {
             ReadResult::MissingRanges(ranges) => {
                 assert_eq!(ranges.len(), 1);
@@ -1247,7 +1242,7 @@ mod tests {
             _ => panic!("Unexpected result {:?}", result),
         }
         // We should get the same result on the next call.
-        let result = cache.read(0, buffer.subslice_mut(..4096), 512);
+        let result = cache.read(0, &mut buffer[..4096], 512);
         match result {
             ReadResult::MissingRanges(ranges) => {
                 assert_eq!(ranges.len(), 1);
@@ -1259,14 +1254,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_read() {
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        buffer.as_mut_slice().fill(123u8);
+        buffer.fill(123u8);
         let result = cache
-            .write_or_append(Some(0), buffer.subslice(..3000), 512, &reserver, None)
+            .write_or_append(Some(0), &buffer[..3000], 512, &reserver, None)
             .expect("write failed");
         match result {
             WriteResult::Done(size) => {
@@ -1275,8 +1269,8 @@ mod tests {
             _ => panic!("Unexpected result {:?}", result),
         }
 
-        buffer.as_mut_slice().fill(0u8);
-        let result = cache.read(0, buffer.subslice_mut(..4096), 512);
+        buffer.fill(0u8);
+        let result = cache.read(0, &mut buffer[..4096], 512);
         match result {
             ReadResult::Done(bytes) => {
                 assert_eq!(bytes, 3000);
@@ -1292,32 +1286,32 @@ mod tests {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(8192));
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        let result = cache.read(0, buffer.as_mut(), 512);
+        let result = cache.read(0, &mut buffer[..], 512);
         match result {
             ReadResult::MissingRanges(mut ranges) => {
                 assert_eq!(ranges.len(), 1);
                 let range = ranges.pop().unwrap();
                 assert_eq!(range.range(), &(0..8192));
-                buffer.as_mut_slice().fill(45u8);
+                buffer.fill(45u8);
                 let result2 = cache
-                    .write_or_append(Some(0), buffer.subslice(..4096), 512, &reserver, None)
+                    .write_or_append(Some(0), &buffer[..4096], 512, &reserver, None)
                     .expect("Write failed");
                 if let WriteResult::Done(size) = result2 {
                     assert_eq!(size, 8192);
                 } else {
                     panic!("Unexpected result {:?}", result2)
                 }
-                buffer.as_mut_slice().fill(123u8);
-                range.populate(buffer.as_ref());
+                buffer.fill(123u8);
+                range.populate(&buffer[..]);
             }
             _ => panic!("Unexpected result {:?}", result),
         }
 
         // The cache should reflect the state after the write, discarding the pending read result
         // where they overlap.
-        let result = cache.read(0, buffer.as_mut(), 512);
+        let result = cache.read(0, &mut buffer[..], 512);
         if let ReadResult::Done(bytes) = result {
             assert_eq!(bytes, 8192);
             assert_eq!(buffer.as_slice()[..4096], [45u8; 4096]);
@@ -1336,14 +1330,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_append() {
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        buffer.as_mut_slice().fill(123u8);
+        buffer.fill(123u8);
         let result = cache
-            .write_or_append(None, buffer.subslice(..3000), 512, &reserver, None)
+            .write_or_append(None, &buffer[..3000], 512, &reserver, None)
             .expect("write failed");
         match result {
             WriteResult::Done(size) => {
@@ -1351,9 +1344,9 @@ mod tests {
             }
             _ => panic!("Unexpected result {:?}", result),
         }
-        buffer.as_mut_slice().fill(45u8);
+        buffer.fill(45u8);
         let result = cache
-            .write_or_append(None, buffer.subslice(..3000), 512, &reserver, None)
+            .write_or_append(None, &buffer[..3000], 512, &reserver, None)
             .expect("write failed");
         match result {
             WriteResult::Done(size) => {
@@ -1362,9 +1355,9 @@ mod tests {
             _ => panic!("Unexpected result {:?}", result),
         }
 
-        buffer.as_mut_slice().fill(0u8);
+        buffer.fill(0u8);
         assert_eq!(cache.content_size(), 6000);
-        let result = cache.read(0, buffer.subslice_mut(..6000), 512);
+        let result = cache.read(0, &mut buffer[..6000], 512);
         match result {
             ReadResult::Done(bytes) => {
                 assert_eq!(bytes, 6000);
@@ -1378,14 +1371,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_read_partially_paged_in() {
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(4096));
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        buffer.as_mut_slice().fill(123u8);
+        buffer.fill(123u8);
         let result = cache
-            .write_or_append(Some(4096), buffer.subslice(..3000), 512, &reserver, None)
+            .write_or_append(Some(4096), &buffer[..3000], 512, &reserver, None)
             .expect("write failed");
         match result {
             WriteResult::Done(size) => {
@@ -1394,22 +1386,21 @@ mod tests {
             _ => panic!("Unexpected result {:?}", result),
         }
 
-        buffer.as_mut_slice().fill(0u8);
-        let result = cache.read(0, buffer.as_mut(), 512);
+        buffer.fill(0u8);
+        let result = cache.read(0, &mut buffer[..], 512);
         match result {
             ReadResult::MissingRanges(mut ranges) => {
                 assert_eq!(ranges.len(), 1);
                 let missing_range = ranges.pop().unwrap();
                 assert_eq!(missing_range.range(), &(0..4096));
-                buffer.as_mut_slice().fill(45u8);
-                let data = buffer.subslice(
-                    missing_range.range().start as usize..missing_range.range().end as usize,
-                );
+                buffer.fill(45u8);
+                let data = &buffer
+                    [missing_range.range().start as usize..missing_range.range().end as usize];
                 missing_range.populate(data);
             }
             _ => panic!("Unexpected result {:?}", result),
         }
-        let result = cache.read(0, buffer.as_mut(), 512);
+        let result = cache.read(0, &mut buffer[..], 512);
         match result {
             ReadResult::Done(bytes) => {
                 assert_eq!(bytes, 7096);
@@ -1423,14 +1414,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_read_sparse() {
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        buffer.as_mut_slice().fill(123u8);
+        buffer.fill(123u8);
         let result = cache
-            .write_or_append(Some(4096), buffer.subslice(..4096), 512, &reserver, None)
+            .write_or_append(Some(4096), &buffer[..4096], 512, &reserver, None)
             .expect("write failed");
         match result {
             WriteResult::Done(size) => {
@@ -1439,8 +1429,8 @@ mod tests {
             _ => panic!("Unexpected result {:?}", result),
         }
 
-        buffer.as_mut_slice().fill(45u8);
-        let result = cache.read(0, buffer.subslice_mut(..4096), 512);
+        buffer.fill(45u8);
+        let result = cache.read(0, &mut buffer[..4096], 512);
         match result {
             ReadResult::Done(bytes) => {
                 assert_eq!(bytes, 4096);
@@ -1458,11 +1448,11 @@ mod tests {
         let reserver = FakeReserver::new(512, 512);
         let cache = WritebackCache::new(NativeDataBuffer::new(8192));
 
-        let buffer = allocator.allocate_buffer(8192);
+        let buffer = vec![0u8; 8192];
         // Create a clean region in the middle of the cache so that we split the write into two
         // dirty ranges.
         let result = cache
-            .write_or_append(Some(512), buffer.subslice(..512), 512, &reserver, None)
+            .write_or_append(Some(512), &buffer[..512], 512, &reserver, None)
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
@@ -1479,7 +1469,7 @@ mod tests {
         }
 
         cache
-            .write_or_append(Some(0), buffer.as_ref(), 512, &reserver, None)
+            .write_or_append(Some(0), &buffer[..], 512, &reserver, None)
             .expect_err("write succeeded");
 
         // Ensure we can still reserve bytes, i.e. no reservations are leaked by the failed write.
@@ -1501,11 +1491,10 @@ mod tests {
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
-        let mut buffer = allocator.allocate_buffer(8192);
-        buffer.as_mut_slice().fill(123u8);
-        let result = cache
-            .write_or_append(None, buffer.subslice(..1), 512, &reserver, None)
-            .expect("write failed");
+        let mut buffer = vec![0u8; 8192];
+        buffer.fill(123u8);
+        let result =
+            cache.write_or_append(None, &buffer[..1], 512, &reserver, None).expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
             panic!("Unexpected result {:?}", result);
@@ -1514,8 +1503,8 @@ mod tests {
         assert_eq!(cache.content_size(), 1000);
 
         // The entire length of the file should be clean and contain the write, plus some zeroes.
-        buffer.as_mut_slice().fill(0xaa);
-        let result = cache.read(0, buffer.as_mut(), 512);
+        buffer.fill(0xaa);
+        let result = cache.read(0, &mut buffer[..], 512);
         if let ReadResult::Done(size) = result {
             assert_eq!(size, 1000);
             assert_eq!(buffer.as_slice()[..1], vec![123u8]);
@@ -1552,11 +1541,10 @@ mod tests {
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
-        let mut buffer = allocator.allocate_buffer(8192);
-        buffer.as_mut_slice().fill(123u8);
-        let result = cache
-            .write_or_append(None, buffer.as_ref(), 512, &reserver, None)
-            .expect("write failed");
+        let mut buffer = vec![0u8; 8192];
+        buffer.fill(123u8);
+        let result =
+            cache.write_or_append(None, &buffer[..], 512, &reserver, None).expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
             panic!("Unexpected result {:?}", result);
@@ -1599,35 +1587,35 @@ mod tests {
         let reserver = FakeReserver::new(65536, 512);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        buffer.as_mut_slice().fill(123u8);
+        buffer.fill(123u8);
         let result = cache
-            .write_or_append(Some(0), buffer.subslice(..2000), 512, &reserver, None)
+            .write_or_append(Some(0), &buffer[..2000], 512, &reserver, None)
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
             panic!("Unexpected result {:?}", result);
         }
-        buffer.as_mut_slice().fill(45u8);
+        buffer.fill(45u8);
         let result = cache
-            .write_or_append(Some(2048), buffer.subslice(..1), 512, &reserver, None)
+            .write_or_append(Some(2048), &buffer[..1], 512, &reserver, None)
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
             panic!("Unexpected result {:?}", result);
         }
-        buffer.as_mut_slice().fill(67u8);
+        buffer.fill(67u8);
         let result = cache
-            .write_or_append(Some(4000), buffer.subslice(..100), 512, &reserver, None)
+            .write_or_append(Some(4000), &buffer[..100], 512, &reserver, None)
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
             panic!("Unexpected result {:?}", result);
         }
-        buffer.as_mut_slice().fill(89u8);
+        buffer.fill(89u8);
         let result = cache
-            .write_or_append(Some(4000), buffer.subslice(..50), 512, &reserver, None)
+            .write_or_append(Some(4000), &buffer[..50], 512, &reserver, None)
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
@@ -1674,9 +1662,9 @@ mod tests {
         let reserver = FakeReserver::new(512, 512);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
-        let buffer = allocator.allocate_buffer(1);
+        let buffer = vec![0u8; 1];
         let result = cache
-            .write_or_append(Some(0), buffer.as_ref(), 512, &reserver, None)
+            .write_or_append(Some(0), &buffer[..], 512, &reserver, None)
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
@@ -1712,19 +1700,19 @@ mod tests {
         let secs = AtomicU64::new(1);
         let current_time = || Some(Duration::new(secs.fetch_add(1, Ordering::SeqCst), 0));
 
-        let mut buffer = allocator.allocate_buffer(8192);
+        let mut buffer = vec![0u8; 8192];
 
-        buffer.as_mut_slice().fill(123u8);
+        buffer.fill(123u8);
         let result = cache
-            .write_or_append(Some(0), buffer.subslice(..1), 512, &reserver, current_time())
+            .write_or_append(Some(0), &buffer[..1], 512, &reserver, current_time())
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
             panic!("Unexpected result {:?}", result);
         }
-        buffer.as_mut_slice().fill(45u8);
+        buffer.fill(45u8);
         let result = cache
-            .write_or_append(Some(0), buffer.subslice(..1), 512, &reserver, current_time())
+            .write_or_append(Some(0), &buffer[..1], 512, &reserver, current_time())
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
@@ -1746,9 +1734,9 @@ mod tests {
         let reserver = FakeReserver::new(65536, 4096);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
-        let buffer = allocator.allocate_buffer(8192);
+        let buffer = vec![0u8; 8192];
         let result = cache
-            .write_or_append(Some(0), buffer.subslice(..1), 512, &reserver, Some(Duration::ZERO))
+            .write_or_append(Some(0), &buffer[..1], 512, &reserver, Some(Duration::ZERO))
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {
@@ -1821,10 +1809,10 @@ mod tests {
         let reserver = FakeReserver::new(65536, 512);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
-        let mut buffer = allocator.allocate_buffer(512);
-        buffer.as_mut_slice().fill(123u8);
+        let mut buffer = vec![0u8; 512];
+        buffer.fill(123u8);
         let result = cache
-            .write_or_append(Some(0), buffer.as_ref(), 512, &reserver, None)
+            .write_or_append(Some(0), &buffer[..], 512, &reserver, None)
             .expect("write failed");
         if let WriteResult::Done(_) = result {
         } else {

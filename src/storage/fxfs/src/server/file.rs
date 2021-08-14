@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
+        object_handle::{GetProperties, ObjectHandle, WriteObjectHandle},
         object_store::{
             filesystem::SyncOptions, CachingObjectHandle, StoreObjectHandle, Timestamp,
         },
@@ -26,7 +26,6 @@ use {
         atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
         Arc,
     },
-    storage_device::buffer::MutableBufferRef,
     vfs::{
         common::send_on_open_with_error,
         directory::entry::{DirectoryEntry, EntryInfo},
@@ -35,7 +34,6 @@ use {
             connection::{self, io1::FileConnection},
             File, SharingMode,
         },
-        filesystem::Filesystem,
         path::Path,
     },
 };
@@ -65,14 +63,6 @@ impl FxFile {
 
     pub fn open_count(&self) -> usize {
         self.open_count.load(Ordering::Relaxed)
-    }
-
-    async fn write_or_append(&self, offset: Option<u64>, content: &[u8]) -> Result<u64, Error> {
-        let mut buf = self.handle.allocate_buffer(content.len());
-        buf.as_mut_slice().copy_from_slice(content);
-        let size = self.handle.write_or_append(offset, buf.as_ref()).await?;
-        self.has_written.store(true, Ordering::Relaxed);
-        Ok(size)
     }
 
     pub fn create_connection(
@@ -220,23 +210,26 @@ impl File for FxFile {
         Ok(())
     }
 
-    async fn read_at(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<u64, Status> {
-        let bytes_read = self.handle.read(offset, buffer).await.map_err(map_to_status)?;
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
+        let bytes_read = self.handle.read_cached(offset, buffer).await.map_err(map_to_status)?;
         Ok(bytes_read as u64)
     }
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
-        self.write_or_append(Some(offset), content)
+        let _ = self
+            .handle
+            .write_or_append_cached(Some(offset), content)
             .await
-            .map(|_| content.len() as u64)
-            .map_err(map_to_status)
+            .map_err(map_to_status)?;
+        self.has_written.store(true, Ordering::Relaxed);
+        Ok(content.len() as u64)
     }
 
     async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
-        self.write_or_append(None, content)
-            .await
-            .map(|size| (content.len() as u64, size))
-            .map_err(map_to_status)
+        let size =
+            self.handle.write_or_append_cached(None, content).await.map_err(map_to_status)?;
+        self.has_written.store(true, Ordering::Relaxed);
+        Ok((content.len() as u64, size))
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
@@ -311,10 +304,6 @@ impl File for FxFile {
         // TODO(csuter): at the moment, this doesn't send a flush to the device, which doesn't
         // match minfs.
         self.handle.store().filesystem().sync(SyncOptions::default()).await.map_err(map_to_status)
-    }
-
-    fn get_filesystem(&self) -> &dyn Filesystem {
-        self.handle.owner().as_ref()
     }
 }
 

@@ -124,11 +124,7 @@ impl vfs::file::File for MetaFile {
         Ok(())
     }
 
-    async fn read_at(
-        &self,
-        offset_chunk: u64,
-        mut buffer: storage_device::buffer::MutableBufferRef<'_>,
-    ) -> Result<u64, zx::Status> {
+    async fn read_at(&self, offset_chunk: u64, buffer: &mut [u8]) -> Result<u64, zx::Status> {
         let offset_far = offset_chunk + self.location.offset;
         let count = std::cmp::min(
             crate::usize_to_u64_safe(buffer.len()),
@@ -143,7 +139,7 @@ impl vfs::file::File for MetaFile {
             fx_log_err!("meta.far read_at protocol error: {:#}", anyhow!(e.clone()));
             e
         })?;
-        let () = buffer.as_mut_slice()[..bytes.len()].copy_from_slice(&bytes);
+        let () = &mut buffer[..bytes.len()].copy_from_slice(&bytes);
         Ok(crate::usize_to_u64_safe(bytes.len()))
     }
 
@@ -240,10 +236,6 @@ impl vfs::file::File for MetaFile {
     async fn sync(&self) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
-
-    fn get_filesystem(&self) -> &dyn vfs::filesystem::Filesystem {
-        self.root_dir.filesystem.as_ref()
-    }
 }
 
 #[cfg(test)]
@@ -275,13 +267,7 @@ mod tests {
             let (metafar_blob, _) = pkg.contents();
             let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
             blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-            let root_dir = RootDir::new(
-                blobfs_client,
-                metafar_blob.merkle,
-                Arc::new(crate::Filesystem::new(3 * 4096)),
-            )
-            .await
-            .unwrap();
+            let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap();
             let location = *root_dir.meta_files.get("meta/file").unwrap();
             (TestEnv { _blobfs_fake: blobfs_fake }, MetaFile::new(Arc::new(root_dir), location))
         }
@@ -425,53 +411,34 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn file_read_at_adjusts_offset() {
         let (_env, meta_file) = TestEnv::new().await;
-        let allocator = storage_device::buffer_allocator::BufferAllocator::new(
-            1, /*block_size*/
-            Box::new(storage_device::buffer_allocator::MemBufferSource::new(8096)),
-        );
-        let mut buffer = allocator.allocate_buffer(1);
+        let mut buffer = [0u8];
 
         for (i, e) in TEST_FILE_CONTENTS.iter().enumerate() {
-            assert_eq!(
-                File::read_at(&meta_file, i.try_into().unwrap(), buffer.as_mut()).await,
-                Ok(1)
-            );
-            assert_eq!(buffer.as_slice(), &[*e]);
+            assert_eq!(File::read_at(&meta_file, i.try_into().unwrap(), &mut buffer).await, Ok(1));
+            assert_eq!(&buffer, &[*e]);
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn file_read_at_past_end_returns_no_bytes() {
         let (_env, meta_file) = TestEnv::new().await;
-        let allocator = storage_device::buffer_allocator::BufferAllocator::new(
-            1, /*block_size*/
-            Box::new(storage_device::buffer_allocator::MemBufferSource::new(8096)),
-        );
-        let mut buffer = allocator.allocate_buffer(1);
+        let mut buffer = [0u8];
 
         assert_eq!(
-            File::read_at(
-                &meta_file,
-                TEST_FILE_CONTENTS.len().try_into().unwrap(),
-                buffer.as_mut()
-            )
-            .await,
+            File::read_at(&meta_file, TEST_FILE_CONTENTS.len().try_into().unwrap(), &mut buffer)
+                .await,
             Ok(0)
         );
-        assert_eq!(buffer.as_slice(), &[0]);
+        assert_eq!(&buffer, &[0]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn file_read_at_caps_count() {
         let (_env, meta_file) = TestEnv::new().await;
-        let allocator = storage_device::buffer_allocator::BufferAllocator::new(
-            1, /*block_size*/
-            Box::new(storage_device::buffer_allocator::MemBufferSource::new(8096)),
-        );
-        let mut buffer = allocator.allocate_buffer(5);
+        let mut buffer = [0u8; 5];
 
-        assert_eq!(File::read_at(&meta_file, 2, buffer.as_mut()).await, Ok(2));
-        assert_eq!(buffer.as_slice(), &[2, 3, 0, 0, 0]);
+        assert_eq!(File::read_at(&meta_file, 2, &mut buffer).await, Ok(2));
+        assert_eq!(&buffer, &[2, 3, 0, 0, 0]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -629,14 +596,5 @@ mod tests {
         let (_env, meta_file) = TestEnv::new().await;
 
         assert_eq!(File::sync(&meta_file).await, Err(zx::Status::NOT_SUPPORTED));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn file_get_filesystem() {
-        let (_env, meta_file) = TestEnv::new().await;
-
-        let filesystem = File::get_filesystem(&meta_file);
-
-        std::ptr::eq(filesystem, meta_file.root_dir.filesystem.as_ref());
     }
 }

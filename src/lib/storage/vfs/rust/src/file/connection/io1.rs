@@ -28,16 +28,9 @@ use {
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
     },
     futures::stream::StreamExt,
-    lazy_static::lazy_static,
     static_assertions::assert_eq_size,
-    std::ops::Range,
     std::sync::Arc,
-    storage_device::buffer::Buffer,
 };
-
-lazy_static! {
-    pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
-}
 
 /// Represents a FIDL connection to a file.
 pub struct FileConnection<T: 'static + File> {
@@ -67,15 +60,6 @@ pub struct FileConnection<T: 'static + File> {
     // Should we need to port to a 128 bit platform, there are static assertions in the code that
     // would fail.
     seek: u64,
-}
-
-fn round_down<T: Into<usize>>(offset: usize, block_size: T) -> usize {
-    offset - offset % block_size.into()
-}
-
-fn round_up<T: Into<usize>>(offset: usize, block_size: T) -> Option<usize> {
-    let block_size = block_size.into();
-    Some(round_down(offset.checked_add(block_size - 1)?, block_size))
 }
 
 /// Return type for [`handle_request()`] functions.
@@ -246,10 +230,10 @@ impl<T: 'static + File> FileConnection<T> {
             FileRequest::Read { count, responder } => {
                 fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
                 let advance = match self.handle_read_at(self.seek, count).await {
-                    Ok((buffer, range)) => {
+                    Ok((buffer, bytes_read)) => {
                         responder
-                            .send(zx::Status::OK.into_raw(), &buffer.as_slice()[range.clone()])?;
-                        (range.end - range.start) as u64
+                            .send(zx::Status::OK.into_raw(), &buffer[..bytes_read as usize])?;
+                        bytes_read
                     }
                     Err(status) => {
                         responder.send(status.into_raw(), &[0u8; 0])?;
@@ -266,8 +250,8 @@ impl<T: 'static + File> FileConnection<T> {
                     "bytes" => count
                 );
                 match self.handle_read_at(offset, count).await {
-                    Ok((buffer, range)) => {
-                        responder.send(zx::Status::OK.into_raw(), &buffer.as_slice()[range])?
+                    Ok((buffer, bytes_read)) => {
+                        responder.send(zx::Status::OK.into_raw(), &buffer[..bytes_read as usize])?
                     }
                     Err(status) => responder.send(status.into_raw(), &[0u8; 0])?,
                 }
@@ -366,21 +350,13 @@ impl<T: 'static + File> FileConnection<T> {
         &mut self,
         offset: u64,
         count: u64,
-    ) -> Result<(Buffer<'_>, Range<usize>), zx::Status> {
+    ) -> Result<(Vec<u8>, u64), zx::Status> {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
             return Err(zx::Status::BAD_HANDLE);
         }
 
-        let fs = self.file.get_filesystem();
-        let bs = std::cmp::max(fs.block_size() as usize, *PAGE_SIZE as usize);
-        let start = round_down(offset as usize, bs);
-        let align = offset as usize - start;
-        let end = round_up((offset + count) as usize, bs).ok_or(zx::Status::INVALID_ARGS)?;
-        let mut buffer = fs.allocate_buffer(end - start);
-        self.file.read_at(start as u64, buffer.as_mut()).await.map(|size| {
-            let count = std::cmp::min(count as usize, (size as usize).saturating_sub(align));
-            (buffer, align..align + count)
-        })
+        let mut buffer = vec![0u8; count as usize];
+        self.file.read_at(offset, &mut buffer[..]).await.map(|count| (buffer, count))
     }
 
     async fn handle_write(&mut self, content: &[u8]) -> (zx::Status, u64) {
@@ -560,13 +536,7 @@ mod tests {
         futures::prelude::*,
         lazy_static::lazy_static,
         matches::assert_matches,
-        std::any::Any,
         std::sync::Mutex,
-        storage_device::{
-            buffer::{Buffer, MutableBufferRef},
-            buffer_allocator::{BufferAllocator, MemBufferSource},
-        },
-        vfs::filesystem::{Filesystem, FilesystemRename},
     };
 
     #[derive(Debug, PartialEq)]
@@ -584,39 +554,9 @@ mod tests {
         Sync,
     }
 
-    struct MockFilesystem(BufferAllocator);
-
-    impl MockFilesystem {
-        fn new() -> Self {
-            Self(BufferAllocator::new(512, Box::new(MemBufferSource::new(1024 * 1024))))
-        }
-    }
-
-    #[async_trait]
-    impl FilesystemRename for MockFilesystem {
-        async fn rename(
-            &self,
-            _src_dir: Arc<Any + Sync + Send + 'static>,
-            _src_name: Path,
-            _dst_dir: Arc<Any + Sync + Send + 'static>,
-            _dst_name: Path,
-        ) -> Result<(), zx::Status> {
-            unreachable!();
-        }
-    }
-    impl Filesystem for MockFilesystem {
-        fn block_size(&self) -> u32 {
-            self.0.block_size() as u32
-        }
-        fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
-            self.0.allocate_buffer(size)
-        }
-    }
-
     type MockCallbackType = Box<Fn(&FileOperation) -> zx::Status + Sync + Send>;
     /// A fake file that just tracks what calls `FileConnection` makes on it.
     struct MockFile {
-        fs: Arc<MockFilesystem>,
         /// The list of operations that have been called.
         operations: Mutex<Vec<FileOperation>>,
         /// Callback used to determine how to respond to given operation.
@@ -628,16 +568,15 @@ mod tests {
     }
 
     lazy_static! {
-        pub static ref MOCK_FILE_SIZE: u64 = *PAGE_SIZE + 256;
+        pub static ref MOCK_FILE_SIZE: u64 = 256;
     }
     const MOCK_FILE_ID: u64 = 10;
     const MOCK_FILE_LINKS: u64 = 2;
     const MOCK_FILE_CREATION_TIME: u64 = 10;
     const MOCK_FILE_MODIFICATION_TIME: u64 = 100;
     impl MockFile {
-        pub fn new(fs: Arc<MockFilesystem>, callback: MockCallbackType) -> Arc<Self> {
+        pub fn new(callback: MockCallbackType) -> Arc<Self> {
             Arc::new(MockFile {
-                fs,
                 operations: Mutex::new(Vec::new()),
                 callback,
                 file_size: *MOCK_FILE_SIZE,
@@ -662,18 +601,13 @@ mod tests {
             Ok(())
         }
 
-        async fn read_at(
-            &self,
-            offset: u64,
-            mut buffer: MutableBufferRef<'_>,
-        ) -> Result<u64, zx::Status> {
-            assert_eq!(offset % *PAGE_SIZE, 0);
+        async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, zx::Status> {
             let count = buffer.len() as u64;
             self.handle_operation(FileOperation::ReadAt { offset, count })?;
 
             // Return data as if we were a file with 0..255 repeated endlessly.
             let mut i = offset;
-            buffer.as_mut_slice().fill_with(|| {
+            buffer.fill_with(|| {
                 let v = (i % 256) as u8;
                 i += 1;
                 v
@@ -756,10 +690,6 @@ mod tests {
         async fn sync(&self) -> Result<(), zx::Status> {
             self.handle_operation(FileOperation::Sync)
         }
-
-        fn get_filesystem(&self) -> &dyn Filesystem {
-            self.fs.as_ref()
-        }
     }
 
     impl DirectoryEntry for MockFile {
@@ -812,8 +742,7 @@ mod tests {
     }
 
     fn init_mock_file(callback: MockCallbackType, flags: u32) -> TestEnv {
-        let fs = Arc::new(MockFilesystem::new());
-        let file = MockFile::new(fs, callback);
+        let file = MockFile::new(callback);
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<FileMarker>().expect("Create proxy to succeed");
 
@@ -860,7 +789,7 @@ mod tests {
         let (clone_proxy, remote) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
         env.proxy.clone(CLONE_FLAG_SAME_RIGHTS, remote.into_channel().into()).unwrap();
         // Seek and read from clone_proxy.
-        let (status, _) = clone_proxy.seek(*PAGE_SIZE as i64, SeekOrigin::Start).await.unwrap();
+        let (status, _) = clone_proxy.seek(100, SeekOrigin::Start).await.unwrap();
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let (status, _) = clone_proxy.read(5).await.unwrap();
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
@@ -875,10 +804,10 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE },
-                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
+                FileOperation::ReadAt { offset: 0, count: 6 },
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE },
-                FileOperation::ReadAt { offset: *PAGE_SIZE, count: *PAGE_SIZE },
-                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
+                FileOperation::ReadAt { offset: 100, count: 5 },
+                FileOperation::ReadAt { offset: 6, count: 5 },
             ]
         );
     }
@@ -1041,7 +970,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
+                FileOperation::ReadAt { offset: 0, count: 10 },
             ]
         );
     }
@@ -1065,7 +994,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
+                FileOperation::ReadAt { offset: 10, count: 5 },
             ]
         );
     }
@@ -1085,7 +1014,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
+                FileOperation::ReadAt { offset: 10, count: 1 },
             ]
         );
     }
@@ -1109,7 +1038,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
+                FileOperation::ReadAt { offset: 8, count: 1 },
             ]
         );
     }
@@ -1138,7 +1067,7 @@ mod tests {
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
                 FileOperation::GetSize, // for the seek
-                FileOperation::ReadAt { offset: *PAGE_SIZE, count: *PAGE_SIZE },
+                FileOperation::ReadAt { offset, count: 1 },
             ]
         );
     }

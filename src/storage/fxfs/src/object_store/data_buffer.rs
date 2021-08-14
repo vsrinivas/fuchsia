@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    std::{convert::TryInto, ops::Range, sync::Mutex},
-    storage_device::buffer::{BufferRef, MutableBufferRef},
-};
+use std::{convert::TryInto, ops::Range, sync::Mutex};
 
 #[cfg(target_os = "fuchsia")]
 use crate::object_store::vmo_data_buffer::VmoDataBuffer;
@@ -17,8 +14,8 @@ pub trait DataBufferFactory {
 /// A readable, writable memory buffer that is not necessarily mapped into memory.
 /// Mainly serves as a portable abstraction over a VMO (see VmoDataBuffer).
 pub trait DataBuffer: Send + Sync {
-    fn read(&self, offset: u64, buf: MutableBufferRef<'_>);
-    fn write(&self, offset: u64, buf: BufferRef<'_>);
+    fn read(&self, offset: u64, buf: &mut [u8]);
+    fn write(&self, offset: u64, buf: &[u8]);
     fn size(&self) -> u64;
     fn resize(&self, size: u64);
     /// Marks |range| as unused, permitting its memory to be reclaimed.  Reading from the region
@@ -44,14 +41,14 @@ impl MemDataBuffer {
 }
 
 impl DataBuffer for MemDataBuffer {
-    fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) {
+    fn read(&self, offset: u64, buf: &mut [u8]) {
         let data = self.0.lock().unwrap();
         let len = buf.len();
-        buf.as_mut_slice().copy_from_slice(&data[offset as usize..offset as usize + len]);
+        buf.copy_from_slice(&data[offset as usize..offset as usize + len]);
     }
-    fn write(&self, offset: u64, buf: BufferRef<'_>) {
+    fn write(&self, offset: u64, buf: &[u8]) {
         let mut data = self.0.lock().unwrap();
-        data[offset as usize..offset as usize + buf.len()].copy_from_slice(buf.as_slice());
+        data[offset as usize..offset as usize + buf.len()].copy_from_slice(buf);
     }
     fn size(&self) -> u64 {
         self.0.lock().unwrap().len() as u64

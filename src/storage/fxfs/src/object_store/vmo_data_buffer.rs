@@ -6,7 +6,6 @@ use {
     crate::object_store::{data_buffer::DataBuffer, store_object_handle::round_up},
     fuchsia_zircon::{self as zx},
     std::ops::Range,
-    storage_device::buffer::{BufferRef, MutableBufferRef},
 };
 
 /// A DataBuffer implementation backed by a VMO.
@@ -31,7 +30,7 @@ impl From<zx::Vmo> for VmoDataBuffer {
 }
 
 impl DataBuffer for VmoDataBuffer {
-    fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) {
+    fn read(&self, offset: u64, buf: &mut [u8]) {
         assert!(
             offset as usize + buf.len() <= self.0.get_content_size().unwrap() as usize,
             "offset: {} buf_len: {} inner.size: {}",
@@ -39,9 +38,9 @@ impl DataBuffer for VmoDataBuffer {
             buf.len(),
             self.0.get_content_size().unwrap()
         );
-        self.0.read(buf.as_mut_slice(), offset).unwrap();
+        self.0.read(buf, offset).unwrap();
     }
-    fn write(&self, offset: u64, buf: BufferRef<'_>) {
+    fn write(&self, offset: u64, buf: &[u8]) {
         assert!(
             offset as usize + buf.len() <= self.0.get_content_size().unwrap() as usize,
             "offset: {} buf_len: {} inner.size: {}",
@@ -49,7 +48,7 @@ impl DataBuffer for VmoDataBuffer {
             buf.len(),
             self.0.get_content_size().unwrap()
         );
-        self.0.write(buf.as_slice(), offset).unwrap();
+        self.0.write(buf, offset).unwrap();
     }
     fn size(&self) -> u64 {
         self.0.get_content_size().unwrap()

@@ -45,7 +45,6 @@ pub(crate) struct RootDir {
     pub(crate) meta_files: HashMap<String, MetaFileLocation>,
     // The keys are object relative path expressions.
     pub(crate) non_meta_files: HashMap<String, fuchsia_hash::Hash>,
-    pub(crate) filesystem: Arc<dyn vfs::filesystem::Filesystem>,
     meta_far_vmo: OnceCell<zx::Vmo>,
 }
 
@@ -53,7 +52,6 @@ impl RootDir {
     pub(crate) async fn new(
         blobfs: blobfs::Client,
         hash: fuchsia_hash::Hash,
-        filesystem: Arc<dyn vfs::filesystem::Filesystem>,
     ) -> Result<Self, Error> {
         let meta_far = blobfs.open_blob_for_read_no_describe(&hash).map_err(Error::OpenMetaFar)?;
 
@@ -83,7 +81,7 @@ impl RootDir {
 
         let meta_far_vmo = OnceCell::new();
 
-        Ok(RootDir { blobfs, hash, meta_far, meta_files, non_meta_files, filesystem, meta_far_vmo })
+        Ok(RootDir { blobfs, hash, meta_far, meta_files, non_meta_files, meta_far_vmo })
     }
 
     pub(crate) async fn meta_far_vmo(&self) -> Result<&zx::Vmo, anyhow::Error> {
@@ -338,7 +336,6 @@ impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
 mod tests {
     use {
         super::*,
-        crate::Filesystem,
         fidl::endpoints::{create_proxy, Proxy as _},
         fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{
@@ -369,10 +366,8 @@ mod tests {
             for content in content_blobs {
                 blobfs_fake.add_blob(content.merkle, content.contents);
             }
-            let filesystem = Arc::new(Filesystem::new(4 * 4096));
 
-            let root_dir =
-                RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+            let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap();
             (Self { _blobfs_fake: blobfs_fake }, root_dir)
         }
     }

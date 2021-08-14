@@ -13,12 +13,9 @@ use {
     },
 };
 
-mod filesystem;
 mod meta_file;
 mod meta_subdir;
 mod root_dir;
-
-pub use filesystem::Filesystem;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -38,19 +35,17 @@ pub enum Error {
 /// Serves a package directory for the package with hash `meta_far` on `server_end`.
 /// The connection rights are set by `flags`, used the same as the `flags` parameter of
 ///   fuchsia.io/Directory.Open.
-/// Consider using an instance of `package_directory::Filesystem` for `filesystem`.
 pub async fn serve(
     scope: vfs::execution_scope::ExecutionScope,
     blobfs: blobfs::Client,
     meta_far: fuchsia_hash::Hash,
-    filesystem: Arc<dyn vfs::filesystem::Filesystem>,
     flags: u32,
     server_end: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Error> {
     let () = vfs::directory::immutable::connection::io1::ImmutableConnection::create_connection(
         scope,
         vfs::directory::connection::util::OpenDirectory::new(Arc::new(
-            root_dir::RootDir::new(blobfs, meta_far, filesystem).await?,
+            root_dir::RootDir::new(blobfs, meta_far).await?,
         )),
         flags,
         server_end.into_channel().into(),
@@ -158,7 +153,7 @@ mod tests {
     use {
         super::*,
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
-        std::{any::Any, sync::Arc},
+        std::any::Any,
         vfs::directory::dirents_sink::{self, Sealed, Sink},
     };
 
@@ -169,13 +164,11 @@ mod tests {
         let (metafar_blob, _) = package.contents();
         let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
         blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(3 * 4096));
 
         crate::serve(
             vfs::execution_scope::ExecutionScope::new(),
             blobfs_client,
             metafar_blob.merkle,
-            filesystem,
             fidl_fuchsia_io::OPEN_RIGHT_READABLE,
             server_end,
         )

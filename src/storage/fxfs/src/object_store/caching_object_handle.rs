@@ -47,6 +47,93 @@ impl<S: AsRef<ObjectStore> + DataBufferFactory + Send + Sync + 'static> CachingO
     }
 }
 
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
+    pub async fn read_cached(&self, offset: u64, buffer: &mut [u8]) -> Result<usize, Error> {
+        loop {
+            let result = self.cache.read(offset, buffer, self.block_size() as u64);
+            match result {
+                ReadResult::Done(bytes) => {
+                    return Ok(bytes as usize);
+                }
+                ReadResult::MissingRanges(missing_ranges) => {
+                    let fs = self.store().filesystem();
+                    let _guard = fs
+                        .read_lock(&[LockKey::object_attribute(
+                            self.store().store_object_id,
+                            self.handle.object_id,
+                            self.handle.attribute_id,
+                        )])
+                        .await;
+                    let mut buffer = self.allocate_buffer(CACHE_READ_AHEAD_SIZE as usize);
+                    for missing_range in missing_ranges {
+                        let range = missing_range.range().clone();
+                        let aligned_start = round_down(range.start, CACHE_READ_AHEAD_SIZE);
+                        let align = (range.start - aligned_start) as usize;
+                        let to_read = (range.end - aligned_start) as usize;
+                        let bytes_read =
+                            self.handle.read(aligned_start, buffer.subslice_mut(..to_read)).await?;
+                        let len = bytes_read.saturating_sub(align);
+                        if len == 0 {
+                            // A zero-length read would result in an infinite loop since we'd try to
+                            // read in the same range again, and indicates an inconsistency between
+                            // the object size and the actual amount of stored data.
+                            bail!(FxfsError::Inconsistent);
+                        }
+                        missing_range.populate(&buffer.as_slice()[align..align + len]);
+                    }
+                }
+                ReadResult::Contended(event) => {
+                    let _ = event.await;
+                }
+            }
+        }
+    }
+
+    pub async fn write_or_append_cached(
+        &self,
+        offset: Option<u64>,
+        buf: &[u8],
+    ) -> Result<u64, Error> {
+        let time = Timestamp::now().into();
+        let bs = self.block_size() as u64;
+        loop {
+            let result = self.cache.write_or_append(offset, buf, bs, self, Some(time))?;
+            match result {
+                WriteResult::Done(size) => {
+                    return Ok(size);
+                }
+                WriteResult::MissingRanges(missing_ranges) => {
+                    let fs = self.store().filesystem();
+                    let _guard = fs
+                        .read_lock(&[LockKey::object_attribute(
+                            self.store().store_object_id,
+                            self.handle.object_id,
+                            self.handle.attribute_id,
+                        )])
+                        .await;
+                    let mut buffer = self.allocate_buffer(bs as usize);
+                    for missing_range in missing_ranges {
+                        let range = missing_range.range().clone();
+                        assert!(range.start % bs == 0);
+                        assert!(range.end - range.start <= bs);
+                        let bytes_read = self
+                            .handle
+                            .read(
+                                range.start,
+                                buffer.subslice_mut(..(range.end - range.start) as usize),
+                            )
+                            .await?;
+                        missing_range.populate(&buffer.as_slice()[..bytes_read]);
+                    }
+                }
+                WriteResult::Contended(event) => {
+                    let _ = event.await;
+                }
+            }
+        }
+    }
+}
+
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Drop for CachingObjectHandle<S> {
     fn drop(&mut self) {
         self.cache.cleanup(self);
@@ -124,87 +211,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> GetProperties for CachingObj
 #[async_trait]
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for CachingObjectHandle<S> {
     async fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
-        loop {
-            let result = self.cache.read(offset, buf.reborrow(), self.block_size() as u64);
-            match result {
-                ReadResult::Done(bytes) => {
-                    return Ok(bytes as usize);
-                }
-                ReadResult::MissingRanges(missing_ranges) => {
-                    let fs = self.store().filesystem();
-                    let _guard = fs
-                        .read_lock(&[LockKey::object_attribute(
-                            self.store().store_object_id,
-                            self.handle.object_id,
-                            self.handle.attribute_id,
-                        )])
-                        .await;
-                    let mut buffer = self.allocate_buffer(CACHE_READ_AHEAD_SIZE as usize);
-                    for missing_range in missing_ranges {
-                        let range = missing_range.range().clone();
-                        let aligned_start = round_down(range.start, CACHE_READ_AHEAD_SIZE);
-                        let align = (range.start - aligned_start) as usize;
-                        let to_read = (range.end - aligned_start) as usize;
-                        let bytes_read =
-                            self.handle.read(aligned_start, buffer.subslice_mut(..to_read)).await?;
-                        let len = bytes_read.saturating_sub(align);
-                        if len == 0 {
-                            // A zero-length read would result in an infinite loop since we'd try to
-                            // read in the same range again, and indicates an inconsistency between
-                            // the object size and the actual amount of stored data.
-                            bail!(FxfsError::Inconsistent);
-                        }
-                        missing_range.populate(buffer.subslice(align..align + len));
-                    }
-                }
-                ReadResult::Contended(event) => {
-                    let _ = event.await;
-                }
-            }
-        }
+        self.read_cached(offset, buf.as_mut_slice()).await
     }
 }
 
 #[async_trait]
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for CachingObjectHandle<S> {
     async fn write_or_append(&self, offset: Option<u64>, buf: BufferRef<'_>) -> Result<u64, Error> {
-        let time = Timestamp::now().into();
-        let bs = self.block_size() as u64;
-        loop {
-            let result = self.cache.write_or_append(offset, buf, bs, self, Some(time))?;
-            match result {
-                WriteResult::Done(size) => {
-                    return Ok(size);
-                }
-                WriteResult::MissingRanges(missing_ranges) => {
-                    let fs = self.store().filesystem();
-                    let _guard = fs
-                        .read_lock(&[LockKey::object_attribute(
-                            self.store().store_object_id,
-                            self.handle.object_id,
-                            self.handle.attribute_id,
-                        )])
-                        .await;
-                    let mut buffer = self.allocate_buffer(bs as usize);
-                    for missing_range in missing_ranges {
-                        let range = missing_range.range().clone();
-                        assert!(range.start % bs == 0);
-                        assert!(range.end - range.start <= bs);
-                        let bytes_read = self
-                            .handle
-                            .read(
-                                range.start,
-                                buffer.subslice_mut(..(range.end - range.start) as usize),
-                            )
-                            .await?;
-                        missing_range.populate(buffer.subslice(..bytes_read));
-                    }
-                }
-                WriteResult::Contended(event) => {
-                    let _ = event.await;
-                }
-            }
-        }
+        self.write_or_append_cached(offset, buf.as_slice()).await
     }
 
     async fn truncate(&self, size: u64) -> Result<(), Error> {

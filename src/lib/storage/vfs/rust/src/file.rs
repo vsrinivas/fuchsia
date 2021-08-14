@@ -4,12 +4,8 @@
 
 //! Module holding different kinds of files and their building blocks.
 use {
-    crate::{directory::entry::DirectoryEntry, filesystem::Filesystem},
-    async_trait::async_trait,
-    fidl_fuchsia_io::NodeAttributes,
-    fidl_fuchsia_mem::Buffer,
-    fuchsia_zircon::Status,
-    storage_device::buffer::MutableBufferRef,
+    crate::directory::entry::DirectoryEntry, async_trait::async_trait,
+    fidl_fuchsia_io::NodeAttributes, fidl_fuchsia_mem::Buffer, fuchsia_zircon::Status,
 };
 
 /// File nodes backed by VMOs.
@@ -36,8 +32,7 @@ pub trait File: Sync + Send + DirectoryEntry {
     /// Read at most |buffer.len()| bytes starting at |offset| into |buffer|. The function may read
     /// less than |count| bytes and still return success, in which case read_at returns the number
     /// of bytes read into |buffer|.
-    /// |offset| must be block-aligned (`self.get_filesystem().block_size()`).
-    async fn read_at(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<u64, Status>;
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status>;
 
     /// Write |content| starting at |offset|, returning the number of bytes that were successfully
     /// written.
@@ -92,9 +87,6 @@ pub trait File: Sync + Send + DirectoryEntry {
     /// the call returns. It merely guarantees that any changes to the file have been propagated
     /// to the next layer in the storage stack.
     async fn sync(&self) -> Result<(), Status>;
-
-    /// Gets the filesystem this file belongs to.
-    fn get_filesystem(&self) -> &dyn Filesystem;
 }
 
 /// VMO mode for get_buffer.

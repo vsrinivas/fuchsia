@@ -179,7 +179,6 @@ impl vfs::directory::entry_container::Directory for MetaSubdir {
 mod tests {
     use {
         super::*,
-        crate::Filesystem,
         fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{DirectoryMarker, FileMarker, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
@@ -202,9 +201,7 @@ mod tests {
             let (metafar_blob, _) = pkg.contents();
             let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
             blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-            let filesystem = Arc::new(Filesystem::new(4 * 4096));
-            let root_dir =
-                RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+            let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap();
             let sub_dir = MetaSubdir::new(Arc::new(root_dir), "meta/dir/".to_string());
             (Self { _blobfs_fake: blobfs_fake }, sub_dir)
         }

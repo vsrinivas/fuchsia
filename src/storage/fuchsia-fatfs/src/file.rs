@@ -25,12 +25,10 @@ use {
         pin::Pin,
         sync::{Arc, RwLock},
     },
-    storage_device::buffer::MutableBufferRef,
     vfs::{
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
         file::{connection, File as VfsFile, SharingMode},
-        filesystem::Filesystem as VfsFilesystem,
         path::Path,
     },
 };
@@ -220,7 +218,7 @@ impl VfsFile for FatFile {
         Ok(())
     }
 
-    async fn read_at(&self, offset: u64, mut buffer: MutableBufferRef<'_>) -> Result<u64, Status> {
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
@@ -233,9 +231,7 @@ impl VfsFile for FatFile {
         }
         let mut total_read = 0;
         while total_read < buffer.len() {
-            let read = file
-                .read(&mut buffer.as_mut_slice()[total_read..])
-                .map_err(fatfs_error_to_status)?;
+            let read = file.read(&mut buffer[total_read..]).map_err(fatfs_error_to_status)?;
             if read == 0 {
                 break;
             }
@@ -347,10 +343,6 @@ impl VfsFile for FatFile {
         file.flush().map_err(fatfs_error_to_status)?;
         Ok(())
     }
-
-    fn get_filesystem(&self) -> &dyn VfsFilesystem {
-        &*self.filesystem
-    }
 }
 
 impl DirectoryEntry for FatFile {
@@ -407,7 +399,6 @@ mod tests {
             tests::{TestDiskContents, TestFatDisk},
         },
         fuchsia_async as fasync,
-        storage_device::buffer_allocator::{BufferAllocator, MemBufferSource},
     };
 
     const TEST_DISK_SIZE: u64 = 2048 << 10; // 2048K
@@ -459,9 +450,8 @@ mod tests {
         // The error is not particularly important, because fat has a maximum 32-bit file size.
         // An error like this will only happen if an application deliberately seeks to a (very)
         // out-of-range position or reads at a nonsensical offset.
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(512)));
-        let mut buffer = allocator.allocate_buffer(512);
-        let err = file.read_at(u64::MAX - 30, buffer.as_mut()).await.expect_err("Read fails");
+        let mut buffer = [0u8; 512];
+        let err = file.read_at(u64::MAX - 30, &mut buffer).await.expect_err("Read fails");
         assert_eq!(err, Status::INVALID_ARGS);
     }
 
