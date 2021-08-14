@@ -90,7 +90,7 @@ async fn test_add_and_commit_identities(
         move |access| expected_peers == access.peers.keys().cloned().collect(),
         "known device identifiers == expected device identifiers",
     );
-    access.when_satisfied(pred, timeout_duration()).await?;
+    let _ = access.when_satisfied(pred, timeout_duration()).await?;
 
     Ok(())
 }

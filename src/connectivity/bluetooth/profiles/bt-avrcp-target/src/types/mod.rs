@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, fuchsia_async as fasync,
-    log::warn,
+    tracing::warn,
 };
 
 pub mod bounded_queue;
@@ -143,10 +143,8 @@ mod tests {
 
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, TargetHandlerMarker};
-    use fuchsia_async as fasync;
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     /// Tests the comparison of `Notification` values works as intended.
     async fn test_notification_value_changed() -> Result<(), Error> {
         let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
@@ -227,8 +225,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     /// Tests sending response with a changed value successfully sends over the responder.
     async fn test_update_responder_changed_value_success() -> Result<(), Error> {
         let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
@@ -274,8 +271,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     /// Tests sending response with an unchanged value does not send/consume the responder.
     /// Instead, it should return itself, with the unchanged responder.
     async fn test_update_responder_same_value_success() -> Result<(), Error> {
@@ -320,8 +316,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     /// Tests sending an error response sends & consumes the responder.
     async fn test_update_responder_with_error() -> Result<(), Error> {
         let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()

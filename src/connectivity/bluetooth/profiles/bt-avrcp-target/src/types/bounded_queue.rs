@@ -104,7 +104,7 @@ impl<T> FromIterator<T> for BoundedQueue<T> {
         let mut queue = BoundedQueue::new(MAX_NOTIFICATION_EVENT_QUEUE_SIZE);
 
         for i in iter {
-            queue.insert(i);
+            let _ = queue.insert(i);
         }
         queue
     }
@@ -151,10 +151,10 @@ mod tests {
         assert_eq!(to_values(&mut queue), vec![0, 1, 2]);
         assert_eq!(queue.len(), 3);
         let res4 = queue.insert(3.into());
-        assert!(res4.is_some());
+        assert_eq!(res4, Some(Record { value: 0 }));
         assert!(queue.max_size_reached());
         assert_eq!(to_values(&mut queue), vec![1, 2, 3]);
-        queue.insert(4.into());
+        assert!(queue.insert(4.into()).is_some());
         assert_eq!(to_values(&mut queue), vec![2, 3, 4]);
         assert_eq!(queue.len(), 3);
         assert_eq!(queue.get_monotonic_count(), 5);
@@ -163,38 +163,38 @@ mod tests {
         // Test removing elements as well.
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(3);
         assert_eq!(to_values(&mut queue), vec![]);
-        queue.insert(0.into());
-        queue.insert(1.into());
-        queue.insert(2.into());
+        let _ = queue.insert(0.into());
+        let _ = queue.insert(1.into());
+        let _ = queue.insert(2.into());
         assert_eq!(to_values(&mut queue), vec![0, 1, 2]);
-        queue.insert(3.into());
+        let _ = queue.insert(3.into());
         assert_eq!(to_values(&mut queue), vec![1, 2, 3]);
         // The expected behavior is to evict old items as new ones are added
         assert!(queue.max_size_reached());
-        queue.insert(4.into());
+        let _ = queue.insert(4.into());
         assert_eq!(to_values(&mut queue), vec![2, 3, 4]);
-        queue.insert(6.into());
+        let _ = queue.insert(6.into());
         assert_eq!(to_values(&mut queue), vec![3, 4, 6]);
-        // Evict the oldest element (front of queue) success.
-        let evicted1 = queue.remove(0);
-        assert_eq!(evicted1, Some(3.into()));
+        // Remove the oldest element (front of queue) success.
+        let removed1 = queue.remove(0);
+        assert_eq!(removed1, Some(3.into()));
         assert_eq!(to_values(&mut queue), vec![4, 6]);
         assert_eq!(queue.len(), 2);
         assert_eq!(queue.get_monotonic_count(), 6);
-        // Try to evict an invalid index.
-        let evicted2 = queue.remove(5);
-        assert!(evicted2.is_none());
+        // Try to remove an invalid index.
+        let removed2 = queue.remove(5);
+        assert!(removed2.is_none());
         assert_eq!(to_values(&mut queue), vec![4, 6]);
         assert_eq!(queue.len(), 2);
-        queue.insert(7.into());
+        let _ = queue.insert(7.into());
         assert_eq!(to_values(&mut queue), vec![4, 6, 7]);
-        // Evict element in the middle.
-        let evicted3 = queue.remove(1);
+        // Remove element in the middle.
+        let removed3 = queue.remove(1);
         assert_eq!(to_values(&mut queue), vec![4, 7]);
-        assert_eq!(evicted3, Some(6.into()));
-        // Evict remaining elements.
-        queue.remove(0);
-        queue.remove(0);
+        assert_eq!(removed3, Some(6.into()));
+        // Remove remaining elements.
+        let _ = queue.remove(0);
+        let _ = queue.remove(0);
         assert_eq!(queue.len(), 0);
         assert_eq!(to_values(&mut queue), vec![]);
         // Evict index from an empty queue.

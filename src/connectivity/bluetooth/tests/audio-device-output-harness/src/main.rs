@@ -9,7 +9,7 @@ use {
     fuchsia_async::futures::StreamExt,
     fuchsia_audio_device_output::driver::SoftPcmOutput,
     fuchsia_zircon::DurationNum,
-    log::info,
+    tracing::info,
 };
 
 #[fasync::run_singlethreaded]

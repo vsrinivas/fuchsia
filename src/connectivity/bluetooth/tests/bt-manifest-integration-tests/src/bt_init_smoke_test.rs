@@ -22,8 +22,8 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
-    log::{error, info},
     std::sync::Arc,
+    tracing::{error, info},
     vfs::{directory::entry::DirectoryEntry, pseudo_directory},
 };
 
@@ -119,7 +119,7 @@ async fn mock_provider(sender: mpsc::Sender<Event>, handles: MockHandles) -> Res
     let mut fs = ServiceFs::new();
     let svc_dir = handles.clone_from_namespace("svc")?;
     let sender_clone = Some(sender.clone());
-    fs.dir("svc").add_service_at(SecureStoreMarker::PROTOCOL_NAME, move |chan| {
+    let _ = fs.dir("svc").add_service_at(SecureStoreMarker::PROTOCOL_NAME, move |chan| {
         let mut s = sender_clone.clone();
         let svc_dir = Clone::clone(&svc_dir);
         fasync::Task::local(async move {
@@ -145,14 +145,14 @@ async fn mock_provider(sender: mpsc::Sender<Event>, handles: MockHandles) -> Res
     add_fidl_service_handler::<SnoopMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<NameProviderMarker, _>(&mut fs, sender.clone());
 
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }
 
 // Helper for the common case of routing between bt-init and its mock client.
 fn route_from_bt_init_to_mock_client<S: DiscoverableProtocolMarker>(builder: &mut RealmBuilder) {
-    builder
+    let _ = builder
         .add_protocol_route::<S>(
             RouteEndpoint::component(BT_INIT_MONIKER),
             vec![RouteEndpoint::component(MOCK_CLIENT_MONIKER)],
@@ -172,7 +172,7 @@ async fn bt_init_component_topology() {
 
     let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
-    builder
+    let _ = builder
         // Add bt-init to the topology
         .add_component(BT_INIT_MONIKER, ComponentSource::url(BT_INIT_URL.to_string()))
         .await
@@ -224,7 +224,7 @@ async fn bt_init_component_topology() {
     route_from_bt_init_to_mock_client::<HostWatcherMarker>(&mut builder);
     route_from_bt_init_to_mock_client::<RfcommTestMarker>(&mut builder);
 
-    builder
+    let _ = builder
         // Add proxy route between secure store and mock provider
         .add_protocol_route::<SecureStoreMarker>(
             RouteEndpoint::component(SECURE_STORE_MONIKER),

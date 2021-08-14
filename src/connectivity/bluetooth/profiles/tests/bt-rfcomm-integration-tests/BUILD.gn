@@ -25,6 +25,8 @@ rustc_test("tests_bin") {
   ]
 
   sources = [ "src/main.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt_rfcomm_integration_tests") {
