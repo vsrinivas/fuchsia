@@ -989,6 +989,8 @@ InspectStats State::GetStats() const {
   ret.dynamic_child_count = link_callbacks_.size();
   ret.maximum_size = heap_->maximum_size();
   ret.size = heap_->size();
+  ret.allocated_blocks = heap_->TotalAllocatedBlocks();
+  ret.deallocated_blocks = heap_->TotalDeallocatedBlocks();
   return ret;
 }
 

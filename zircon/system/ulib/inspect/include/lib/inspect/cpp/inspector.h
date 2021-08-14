@@ -46,6 +46,12 @@ struct InspectStats final {
 
   // The number of dynamic children linked to an Inspector.
   size_t dynamic_child_count;
+
+  // The number of blocks allocated over the lifetime of the inspector.
+  size_t allocated_blocks;
+
+  // The number of blocks deallocated over the lifetime of the inspector.
+  size_t deallocated_blocks;
 };
 
 // The entry point into the Inspection API.

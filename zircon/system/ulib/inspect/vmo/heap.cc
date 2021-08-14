@@ -29,8 +29,9 @@ Heap::Heap(zx::vmo vmo) : vmo_(std::move(vmo)) {
 
 Heap::~Heap() {
   zx_vmar_unmap(zx_vmar_root_self(), buffer_addr_, max_size_);
-  ZX_DEBUG_ASSERT_MSG(num_allocated_blocks_ == 0, "There are still %lu outstanding blocks",
-                      num_allocated_blocks_);
+  const auto currently_allocated = total_allocated_blocks_ - total_deallocated_blocks_;
+  ZX_DEBUG_ASSERT_MSG(currently_allocated == 0, "There are still %lu outstanding blocks",
+                      currently_allocated);
 }
 
 const zx::vmo& Heap::GetVmo() const { return vmo_; }
@@ -84,7 +85,7 @@ zx_status_t Heap::Allocate(size_t min_size, BlockIndex* out_block) {
                        BlockFields::Type::Make(BlockType::kReserved);
 
   *out_block = next_block_index;
-  ++num_allocated_blocks_;
+  ++total_allocated_blocks_;
   return ZX_OK;
 }
 
@@ -115,7 +116,7 @@ void Heap::Free(BlockIndex block_index) {
                   BlockFields::Type::Make(BlockType::kFree) |
                   FreeBlockFields::NextFreeBlock::Make(free_blocks_[GetOrder(block)]);
   free_blocks_[GetOrder(block)] = block_index;
-  --num_allocated_blocks_;
+  ++total_deallocated_blocks_;
 }
 
 bool Heap::SplitBlock(BlockIndex block) {
