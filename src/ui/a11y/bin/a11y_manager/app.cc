@@ -275,6 +275,9 @@ void App::PropertyProviderOnChangeHandler() {
     if (state_.screen_reader_enabled()) {
       // Reset screen_reader_ to force re-initialization.
       screen_reader_.reset();
+
+      // Close the old engine connection.
+      tts_manager_->CloseEngine();
       UpdateScreenReaderState();
 
       // Clear screen reader gesture state to force update.
