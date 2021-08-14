@@ -779,4 +779,59 @@ class Strings {
             'The text displayed for downloading and updating to target channel.',
         args: [targetChannel],
       );
+  static String get cancelKeyboardShortcut => Intl.message(
+        'Dismiss system overlays',
+        name: 'dismiss system overlays',
+        desc: 'Keyboard shortcut description to dismiss system overlays.',
+      );
+  static String get closeKeyboardShortcut => Intl.message(
+        'Close top view',
+        name: 'close top view',
+        desc: 'Keyboard shortcut description to close topmost view.',
+      );
+  static String get launcherKeyboardShortcut => Intl.message(
+        'Show Launcher',
+        name: 'show launcher',
+        desc: 'Keyboard shortcut description to show launcher.',
+      );
+  static String get settingsKeyboardShortcut => Intl.message(
+        'Show Quick Settings',
+        name: 'show quick settings',
+        desc: 'Keyboard shortcut description to show quick settings.',
+      );
+  static String get shortcutsKeyboardShortcut => Intl.message(
+        'Show Keyboard Shortcuts',
+        name: 'show keyboard shortcuts',
+        desc: 'Keyboard shortcut description to show keyboard shortcuts.',
+      );
+  static String get screenSaverKeyboardShortcut => Intl.message(
+        'Start screen saver',
+        name: 'start screen saver',
+        desc: 'Keyboard shortcut description to start screen saver.',
+      );
+  static String get switchNextKeyboardShortcut => Intl.message(
+        'Switch to next app',
+        name: 'switch to next app',
+        desc: 'Keyboard shortcut description to switch to next app.',
+      );
+  static String get switchPrevKeyboardShortcut => Intl.message(
+        'Switch to previous app',
+        name: 'switch to previous app',
+        desc: 'Keyboard shortcut description to switch to previous app.',
+      );
+
+  /// Lookup message given it's name.
+  static String? lookup(String name) {
+    final _messages = <String, String>{
+      'cancelKeyboardShortcut': cancelKeyboardShortcut,
+      'closeKeyboardShortcut': closeKeyboardShortcut,
+      'launcherKeyboardShortcut': launcherKeyboardShortcut,
+      'settingsKeyboardShortcut': settingsKeyboardShortcut,
+      'shortcutsKeyboardShortcut': shortcutsKeyboardShortcut,
+      'screenSaverKeyboardShortcut': screenSaverKeyboardShortcut,
+      'switchNextKeyboardShortcut': switchNextKeyboardShortcut,
+      'switchPrevKeyboardShortcut': switchPrevKeyboardShortcut,
+    };
+    return _messages[name];
+  }
 }

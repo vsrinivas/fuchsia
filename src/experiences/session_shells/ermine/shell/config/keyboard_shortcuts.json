@@ -3,7 +3,8 @@
         {
             "char": "escape",
             "chord": "Escape",
-            "description": "Dismiss system overlays"
+            "description": "Dismiss system overlays",
+            "localizedDescription": "cancelKeyboardShortcut"
         }
     ],
     "close": [
@@ -12,7 +13,8 @@
             "chord": "Shift + Ctrl + w",
             "description": "Close top view",
             "exclusive": true,
-            "modifier": "shift + control"
+            "modifier": "shift + control",
+            "localizedDescription": "closeKeyboardShortcut"
         }
     ],
     "launcher": [
@@ -20,20 +22,23 @@
             "char": "leftMeta",
             "chord": "Meta",
             "description": "Show Launcher",
-            "exclusive": true
+            "exclusive": true,
+            "localizedDescription": "launcherKeyboardShortcut"
         },
         {
             "char": "rightMeta",
             "chord": "Meta",
             "description": "Show Launcher",
-            "exclusive": true
+            "exclusive": true,
+            "localizedDescription": "launcherKeyboardShortcut"
         },
         {
             "char": "space",
             "chord": "Alt + Space",
             "description": "Show Launcher",
             "exclusive": true,
-            "modifier": "alt"
+            "modifier": "alt",
+            "localizedDescription": "launcherKeyboardShortcut"
         }
     ],
     "settings": [
@@ -42,7 +47,8 @@
             "chord": "Alt + Shift + s",
             "description": "Show Quick Settings",
             "exclusive": true,
-            "modifier": "alt + shift"
+            "modifier": "alt + shift",
+            "localizedDescription": "settingsKeyboardShortcut"
         }
     ],
     "shortcuts": [
@@ -51,7 +57,8 @@
             "chord": "Ctrl + Alt + /",
             "description": "Show keyboard shortcuts",
             "exclusive": true,
-            "modifier": "control + alt"
+            "modifier": "control + alt",
+            "localizedDescription": "shortcutsKeyboardShortcut"
         }
     ],
     "screenSaver": [
@@ -61,7 +68,8 @@
             "description": "Start screen saver",
             "exclusive": true,
             "trigger": "pressAndRelease",
-            "modifier": "control + alt"
+            "modifier": "control + alt",
+            "localizedDescription": "screenSaverKeyboardShortcut"
         }
     ],
     "switchNext": [
@@ -70,7 +78,8 @@
             "chord": "Alt + tab",
             "description": "Switch to next app",
             "exclusive": true,
-            "modifier": "alt"
+            "modifier": "alt",
+            "localizedDescription": "switchNextKeyboardShortcut"
         }
     ],
     "switchPrev": [
@@ -79,7 +88,8 @@
             "chord": "Shift + Alt + tab",
             "description": "Switch to previous app",
             "exclusive": true,
-            "modifier": "shift + alt"
+            "modifier": "shift + alt",
+            "localizedDescription": "switchPrevKeyboardShortcut"
         }
     ]
 }
