@@ -262,6 +262,7 @@ dart_test("touch_input_latency_benchmarks_test") {
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/test",
     "//third_party/dart-pkg/pub/tuple",
   ]
@@ -294,6 +295,7 @@ dart_test("touch_input_latency_metric_test") {
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/test",
     "//third_party/dart-pkg/pub/tuple",
   ]
@@ -313,6 +315,7 @@ dart_test("flutter_startup_time_metric_test") {
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/test",
     "//third_party/dart-pkg/pub/tuple",
   ]

@@ -9,6 +9,7 @@ import 'dart:io' show File, Platform;
 
 import 'package:args/args.dart';
 import 'package:logging/logging.dart';
+import 'package:meta/meta.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
@@ -46,6 +47,10 @@ void runShardTests(List<String> args, List<void Function()> tests) {
 }
 
 class PerfTestHelper {
+  // Pathname to which components run via runTestComponent() should
+  // write their results.
+  static const String componentOutputPath = '/tmp/results.fuchsiaperf.json';
+
   sl4f.Sl4f sl4fDriver;
   sl4f.Performance performance;
   sl4f.Dump dump;
@@ -123,6 +128,38 @@ class PerfTestHelper {
     } finally {
       // Clean up: remove the temporary file.
       final result = await sl4fDriver.ssh.run('rm -f $resultsFile');
+      expect(result.exitCode, equals(0));
+    }
+  }
+
+  // Runs a component and publishes the performance test results that
+  // it produces, which the component should write to the file
+  // componentOutputPath.
+  Future<void> runTestComponent(
+      {@required String packageName,
+      @required String componentName,
+      @required String commandArgs}) async {
+    // Make a name for the realm that is very likely to be unique.
+    // This allows us to clean up the output directory tree.
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final String realmName = 'perftest_$timestamp';
+
+    const resultsFile = 'results.fuchsiaperf.json';
+    final String targetOutputPath = '/tmp/r/sys/r/$realmName/'
+        'fuchsia.com:$packageName:0#meta:$componentName/$resultsFile';
+    final String command = 'run-test-component --realm-label=$realmName'
+        ' fuchsia-pkg://fuchsia.com/$packageName#meta/$componentName'
+        ' -- $commandArgs';
+
+    final result = await sl4fDriver.ssh.run(command);
+    expect(result.exitCode, equals(0));
+    try {
+      final File localResultsFile = await storage.dumpFile(
+          targetOutputPath, 'results', 'fuchsiaperf_full.json');
+      await processResultsSummarized([localResultsFile]);
+    } finally {
+      // Clean up: remove the output tree.
+      final result = await sl4fDriver.ssh.run('rm -r /tmp/r/sys/r/$realmName');
       expect(result.exitCode, equals(0));
     }
   }

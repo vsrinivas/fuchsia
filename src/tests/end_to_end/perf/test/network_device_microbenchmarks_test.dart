@@ -11,19 +11,9 @@ void main() {
 
   test('network_device_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
-
-    const realmName = 'perftest';
-    const packageName = 'network-device-microbenchmarks';
-    const componentName = 'network-device-microbenchmarks.cmx';
-    const resultsFile = 'perftest_results.json';
-    const targetOutputPath =
-        '/tmp/r/sys/r/$realmName/fuchsia.com:$packageName:0#meta:$componentName/$resultsFile';
-    const command = 'run-test-component --realm-label=$realmName '
-        'fuchsia-pkg://fuchsia.com/$packageName#meta/$componentName'
-        ' -- -p --quiet --out /tmp/$resultsFile';
-
-    final result = await helper.sl4fDriver.ssh.run(command);
-    expect(result.exitCode, equals(0));
-    await helper.processResults(targetOutputPath);
+    await helper.runTestComponent(
+        packageName: 'network-device-microbenchmarks',
+        componentName: 'network-device-microbenchmarks.cmx',
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 }
