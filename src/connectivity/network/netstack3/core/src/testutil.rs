@@ -413,17 +413,12 @@ impl DummyEventDispatcherBuilder {
         let mut builder = DummyEventDispatcherBuilder::default();
         builder.devices.push((cfg.local_mac, Some((cfg.local_ip.get().into(), cfg.subnet.into()))));
 
-        // NOTE: We use two separate calls here rather than a single call to
-        // `.with` because both closures mutably borrow `builder`, and so they
-        // can't exist at the same time, which would be required in order to
-        // pass them both to `.with`.
-        cfg.remote_ip
-            .get()
-            .with_v4(|ip| builder.arp_table_entries.push((0, ip, cfg.remote_mac)), ());
-        cfg.remote_ip.get().with_v6(
-            |ip| builder.ndp_table_entries.push((0, UnicastAddr::new(ip).unwrap(), cfg.remote_mac)),
-            (),
-        );
+        match cfg.remote_ip.get().into() {
+            IpAddr::V4(ip) => builder.arp_table_entries.push((0, ip, cfg.remote_mac)),
+            IpAddr::V6(ip) => {
+                builder.ndp_table_entries.push((0, UnicastAddr::new(ip).unwrap(), cfg.remote_mac))
+            }
+        };
 
         // Even with fixed ipv4 address we can have IPv6 link local addresses
         // pre-cached.
@@ -580,12 +575,10 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     ip: A,
     mac: Mac,
 ) {
-    // NOTE: We use two separate calls here rather than a single call to `.with`
-    // because both closures mutably borrow `builder`, and so they can't exist
-    // at the same time, which would be required in order to pass them both to
-    // `.with`.
-    ip.with_v4(|ip| builder.add_arp_table_entry(device, ip, mac), ());
-    ip.with_v6(|ip| builder.add_ndp_table_entry(device, UnicastAddr::new(ip).unwrap(), mac), ());
+    match ip.into() {
+        IpAddr::V4(ip) => builder.add_arp_table_entry(device, ip, mac),
+        IpAddr::V6(ip) => builder.add_ndp_table_entry(device, UnicastAddr::new(ip).unwrap(), mac),
+    }
 }
 
 /// A dummy implementation of `Instant` for use in testing.

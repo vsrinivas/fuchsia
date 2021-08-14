@@ -594,31 +594,6 @@ pub trait IpAddress:
     /// [RFC 4632 Section 3.1]: https://tools.ietf.org/html/rfc4632#section-3.1
     fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool;
 
-    /// Invokes one function on this address if it is an [`Ipv4Addr`] and
-    /// another if it is an [`Ipv6Addr`].
-    ///
-    /// Watch out for the common pitfall that, if `v4` and `v6` are closures,
-    /// even though only one will be invoked in practice, the Rust borrow
-    /// checker will still not allow them to both borrow the same mutable state
-    /// simultaneously. If this becomes a problem, consider separate calls to
-    /// [`with_v4`] and [`with_v6`] instead.
-    ///
-    /// [`with_v4`]: crate::ip::IpAddress::with_v4
-    /// [`with_v6`]: crate::ip::IpAddress::with_v6
-    fn with<O, F4: FnOnce(Ipv4Addr) -> O, F6: FnOnce(Ipv6Addr) -> O>(self, v4: F4, v6: F6) -> O;
-
-    /// Invokes a function on this address if it is an [`Ipv4Addr`] or return
-    /// `default` if it is an [`Ipv6Addr`].
-    fn with_v4<O, F: FnOnce(Ipv4Addr) -> O>(self, f: F, default: O) -> O {
-        self.with(f, |_| default)
-    }
-
-    /// Invokes a function on this address if it is an [`Ipv6Addr`] or return
-    /// `default` if it is an [`Ipv4Addr`].
-    fn with_v6<O, F: FnOnce(Ipv6Addr) -> O>(self, f: F, default: O) -> O {
-        self.with(|_| default, f)
-    }
-
     // Functions used to implement internal types. These functions aren't
     // particularly useful to users, but allow us to implement certain
     // specialization-like behavior without actually relying on the unstable
@@ -627,73 +602,6 @@ pub trait IpAddress:
     #[doc(hidden)]
     fn subnet_into_either(subnet: Subnet<Self>) -> SubnetEither;
 }
-
-/// An witness of an [`IpAddress`].
-///
-/// `IpAddressWitnessExt` extends [`Witness<A>`] for `A: IpAddress`, adding
-/// extra IP address-specific functionality.
-///
-/// [`Witness<A>`]: crate::Witness
-pub trait IpAddressWitnessExt<A: IpAddress>: Witness<A> {
-    /// This witness type instantiated on the concrete address type
-    /// [`Ipv4Addr`].
-    type V4: Witness<Ipv4Addr>;
-
-    /// This witness type instantiated on the concrete address type
-    /// [`Ipv6Addr`].
-    type V6: Witness<Ipv6Addr>;
-
-    /// Invokes one function on this address if it is a witness of [`Ipv4Addr`]
-    /// and another if it is a witness of [`Ipv6Addr`].
-    ///
-    /// Watch out for the common pitfall that, if `v4` and `v6` are closures,
-    /// even though only one will be invoked in practice, the Rust borrow
-    /// checker will still not allow them to both borrow the same mutable state
-    /// simultaneously. If this becomes a problem, consider separate calls to
-    /// [`with_v4`] and [`with_v6`] instead.
-    ///
-    /// [`with_v4`]: crate::ip::IpAddressWitnessExt::with_v4
-    /// [`with_v6`]: crate::ip::IpAddressWitnessExt::with_v6
-    fn with<O, F4: FnOnce(Self::V4) -> O, F6: FnOnce(Self::V6) -> O>(self, v4: F4, v6: F6) -> O;
-
-    /// Invokes a function on this address if it is a witness of [`Ipv4Addr`] or return
-    /// `default` if it is a witness of [`Ipv6Addr`].
-    fn with_v4<O, F: FnOnce(Self::V4) -> O>(self, f: F, default: O) -> O {
-        self.with(f, |_| default)
-    }
-
-    /// Invokes a function on this address if it is a witness of [`Ipv6Addr`] or
-    /// return `default` if it is a witness of [`Ipv4Addr`].
-    fn with_v6<O, F: FnOnce(Self::V6) -> O>(self, f: F, default: O) -> O {
-        self.with(|_| default, f)
-    }
-}
-
-macro_rules! impl_ip_address_witness_ext {
-    ($ty:ident) => {
-        impl<A: IpAddress> IpAddressWitnessExt<A> for $ty<A> {
-            type V4 = $ty<Ipv4Addr>;
-            type V6 = $ty<Ipv6Addr>;
-
-            fn with<O, F4: FnOnce(Self::V4) -> O, F6: FnOnce(Self::V6) -> O>(
-                self,
-                v4: F4,
-                v6: F6,
-            ) -> O {
-                self.into_addr().with(
-                    |addr| v4(unsafe { $ty::new_unchecked(addr) }),
-                    |addr| v6(unsafe { $ty::new_unchecked(addr) }),
-                )
-            }
-        }
-    };
-    ($ty:ident, $($tys:ident),*) => {
-        impl_ip_address_witness_ext!($ty);
-        impl_ip_address_witness_ext!($($tys),*);
-    }
-}
-
-impl_ip_address_witness_ext!(SpecifiedAddr, MulticastAddr, LinkLocalAddr);
 
 impl<A: IpAddress> SpecifiedAddress for A {
     /// Is this an address other than the unspecified address?
@@ -1283,11 +1191,6 @@ impl IpAddress for Ipv4Addr {
             && subnet.contains(self)
     }
 
-    #[inline]
-    fn with<O, F4: FnOnce(Ipv4Addr) -> O, F6: FnOnce(Ipv6Addr) -> O>(self, v4: F4, _v6: F6) -> O {
-        v4(self)
-    }
-
     fn subnet_into_either(subnet: Subnet<Ipv4Addr>) -> SubnetEither {
         SubnetEither::V4(subnet)
     }
@@ -1507,11 +1410,6 @@ impl IpAddress for Ipv6Addr {
     #[inline]
     fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool {
         !self.is_multicast() && self.is_specified() && subnet.contains(self)
-    }
-
-    #[inline]
-    fn with<O, F4: FnOnce(Ipv4Addr) -> O, F6: FnOnce(Ipv6Addr) -> O>(self, _v4: F4, v6: F6) -> O {
-        v6(self)
     }
 
     fn subnet_into_either(subnet: Subnet<Ipv6Addr>) -> SubnetEither {

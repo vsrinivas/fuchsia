@@ -661,26 +661,22 @@ fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     addr: &A,
 ) -> Option<AddressState> {
     let state = ctx.get_state_with(device_id).ip();
-    addr.clone().with(
-        |addr| {
-            state.ipv4_addr_sub.iter().find_map(|a| {
-                if a.addr().get() == addr {
-                    Some(AddressState::Assigned)
-                } else {
-                    None
-                }
-            })
-        },
-        |addr| {
-            state.ipv6_addr_sub.iter().find_map(|a| {
-                if a.addr_sub().addr().get() == addr {
-                    Some(a.state())
-                } else {
-                    None
-                }
-            })
-        },
-    )
+    match addr.clone().into() {
+        IpAddr::V4(addr) => state.ipv4_addr_sub.iter().find_map(|a| {
+            if a.addr().get() == addr {
+                Some(AddressState::Assigned)
+            } else {
+                None
+            }
+        }),
+        IpAddr::V6(addr) => state.ipv6_addr_sub.iter().find_map(|a| {
+            if a.addr_sub().addr().get() == addr {
+                Some(a.state())
+            } else {
+                None
+            }
+        }),
+    }
 }
 
 /// Gets the state of an IPv6 address on a device with the an optional
@@ -806,12 +802,8 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     addr: &A,
     config_type: Option<AddrConfigType>,
 ) -> Result<(), AddressError> {
-    // NOTE: We use two separate calls here rather than a single call to `.with`
-    // because both closures mutably borrow `builder`, and so they can't exist
-    // at the same time, which would be required in order to pass them both to
-    // `.with`.
-    addr.clone().with_v4(
-        |addr| {
+    match addr.clone().into() {
+        IpAddr::V4(addr) => {
             assert_eq!(config_type, None);
 
             let state = ctx.get_state_mut_with(device_id).ip_mut();
@@ -827,11 +819,8 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
             assert_eq!(original_size - new_size, 1);
 
             Ok(())
-        },
-        Ok(()),
-    )?;
-    addr.clone().with_v6(
-        |addr| {
+        }
+        IpAddr::V6(addr) => {
             // TODO(fxbug.dev/69196): Give `addr` the type
             // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this dynamic
             // check here.
@@ -869,9 +858,8 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
             leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
 
             Ok(())
-        },
-        Ok(()),
-    )
+        }
+    }
 }
 
 /// Get a (non-tentative) IPv6 link-local address associated with this device.

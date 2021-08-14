@@ -8,7 +8,7 @@ use core::fmt::{self, Debug, Display, Formatter};
 
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-use crate::ip::{AddrSubnet, IpAddress, Ipv6, Ipv6Addr};
+use crate::ip::{AddrSubnet, IpAddr, IpAddress, Ipv6, Ipv6Addr};
 use crate::{
     BroadcastAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, UnicastAddress,
     Witness,
@@ -209,9 +209,9 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
         // We know the call to `unwrap` will not panic becase we are generating a multicast MAC
         // as defined in RFC 7042 section 2.1.1 and section 2.3.1 for IPv4 and IPv6 addresses,
         // respectively.
-        MulticastAddr::new(Mac::new(addr.with(
-            |a| {
-                let ip_bytes = a.clone().ipv4_bytes();
+        MulticastAddr::new(Mac::new(match addr.clone().into_addr().into() {
+            IpAddr::V4(addr) => {
+                let ip_bytes = addr.ipv4_bytes();
                 let mut mac_bytes = [0; 6];
                 mac_bytes[0] = 0x01;
                 mac_bytes[1] = 0x00;
@@ -220,9 +220,9 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
                 mac_bytes[4] = ip_bytes[2];
                 mac_bytes[5] = ip_bytes[3];
                 mac_bytes
-            },
-            |a| {
-                let ip_bytes = a.clone().ipv6_bytes();
+            }
+            IpAddr::V6(addr) => {
+                let ip_bytes = addr.ipv6_bytes();
                 let mut mac_bytes = [0; 6];
                 mac_bytes[0] = 0x33;
                 mac_bytes[1] = 0x33;
@@ -231,8 +231,8 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
                 mac_bytes[4] = ip_bytes[14];
                 mac_bytes[5] = ip_bytes[15];
                 mac_bytes
-            },
-        )))
+            }
+        }))
         .unwrap()
     }
 }
