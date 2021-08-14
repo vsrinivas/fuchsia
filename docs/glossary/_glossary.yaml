@@ -323,7 +323,7 @@
   implementation. Includes a runtime as implemented by
   <a href=\"/docs/glossary#component-manager\">component_manager</a>, protocols
   and types as defined in <a href=\"/sdk/fidl/fuchsia.sys2/\">fuchsia.sys2</a>,
-  and build-time tools such as <a href=\"/tools/cmc\">cmc</a>."
+  and build-time tools such as <a href=\"/docs/reference/tools/sdk/cmc\">cmc</a>."
   see_also: ["<a href=\"/docs/glossary#components-v1\">Components v1</a>"]
   related_guides: [""]
   area: ["Components"]
