@@ -73,9 +73,9 @@ type Component struct {
 }
 
 type NonBlobFSComponent struct {
-	Component     string      `json:"component"`
-	Limit         json.Number `json:"limit"`
-	BlobsJsonPath string      `json:"blobs_json_path"`
+	Component           string      `json:"component"`
+	Limit               json.Number `json:"limit"`
+	PackageManifestPath string      `json:"blobs_json_path"`
 }
 
 type ComponentSize struct {
@@ -99,6 +99,15 @@ type BlobFromSizes struct {
 	Size       int    `json:"size"`
 }
 
+type PackageManifestJSON struct {
+	Blobs []BlobFromJSON `json:"blobs"`
+}
+
+type PackageMetadata struct {
+	Name    string `json:"string"`
+	Version string `json:"version"`
+}
+
 type BlobFromJSON struct {
 	Merkle     string `json:"merkle"`
 	Path       string `json:"path"`
@@ -115,7 +124,10 @@ type ComponentListReport struct {
 
 const (
 	MetaFar             = "meta.far"
-	PackageList         = "gen/build/images/blob.manifest.list"
+	BlobManifest        = "obj/build/images/fuchsia/fuchsia/gen/blob.manifest"
+	RootBlobsJSON       = "obj/build/images/fuchsia/fuchsia/gen/blobs.json"
+	BasePackageManifest = "obj/build/images/fuchsia/fuchsia/base_package_manifest.json"
+	PackageManifest     = "package_manifest.json"
 	BlobsJSON           = "blobs.json"
 	ConfigData          = "config-data"
 	DataPrefix          = "data/"
@@ -315,82 +327,45 @@ func formatSize(sizeInBytes int64) string {
 	return fmt.Sprintf("%.2f MiB", sizeInMiB)
 }
 
-// Extract all the packages from a given blob.manifest.list and blobs.json.
-// It also returns a map containing all blobs, with the merkle root as the key.
-func extractPackages(buildDir, packageListFileName, blobsJSON string) (blobMap map[string]*Blob, packages []string, err error) {
-	blobMap = make(map[string]*Blob)
+//////////////////////////////////
+// 1. Collect the list of packages
+//////////////////////////////////
 
-	var merkleRootToSizeMap map[string]int64
-	if merkleRootToSizeMap, err = openAndProcessBlobsJSON(filepath.Join(buildDir, blobsJSON)); err != nil {
-		return
-	}
-
-	packageList, err := os.Open(filepath.Join(buildDir, packageListFileName))
-	if err != nil {
-		return
-	}
-	defer packageList.Close()
-
-	packageListScanner := bufio.NewScanner(packageList)
-	for packageListScanner.Scan() {
-		pkg, err := openAndParseBlobsManifest(blobMap, merkleRootToSizeMap, buildDir, packageListScanner.Text())
-		if err != nil {
-			return blobMap, packages, err
-		}
-
-		packages = append(packages, pkg...)
-	}
-
-	return
-}
-
-// Opens a blobs.manifest file to populate the blob map and extract all meta.far blobs.
+// Iterate over the blob.manifest, searching for any metafars, and returning them.
 // We expect each entry of blobs.manifest to have the following format:
 // `$MERKLE_ROOT=$PATH_TO_BLOB`
-func openAndParseBlobsManifest(
-	blobMap map[string]*Blob,
-	merkleRootToSizeMap map[string]int64,
-	buildDir, blobsManifestFileName string) ([]string, error) {
-	blobsManifestFile, err := os.Open(filepath.Join(buildDir, blobsManifestFileName))
+func extractPackages(buildDir string, blobManifestFileName string) (packages []string, err error) {
+	blobsManifestFile, err := os.Open(filepath.Join(buildDir, blobManifestFileName))
 	if err != nil {
+		log.Fatalf("Failed to open the file: %s\n", blobManifestFileName)
 		return nil, err
 	}
 	defer blobsManifestFile.Close()
 
-	return parseBlobsManifest(blobMap, merkleRootToSizeMap, blobsManifestFileName, blobsManifestFile), nil
-}
-
-// Similar to openAndParseBlobsManifest, except it doesn't throw an I/O error.
-func parseBlobsManifest(
-	merkleRootToBlobMap map[string]*Blob,
-	merkleRootToSizeMap map[string]int64,
-	blobsManifestFileName string, blobsManifestFile io.Reader) []string {
-	packages := []string{}
-
+	packages = []string{}
 	blobsManifestScanner := bufio.NewScanner(blobsManifestFile)
 	for blobsManifestScanner.Scan() {
 		temp := strings.Split(blobsManifestScanner.Text(), "=")
-		merkleRoot := temp[0]
 		fileName := temp[1]
-		if blob, ok := merkleRootToBlobMap[merkleRoot]; !ok {
-			blob = &Blob{
-				dep:  []string{blobsManifestFileName},
-				name: fileName,
-				size: merkleRootToSizeMap[merkleRoot],
-				hash: merkleRoot,
-			}
 
-			merkleRootToBlobMap[merkleRoot] = blob
-			// This blob is a Fuchsia package.
-			if strings.HasSuffix(fileName, MetaFar) {
-				packages = append(packages, fileName)
-			}
-		} else {
-			blob.dep = append(blob.dep, blobsManifestFileName)
+		// This blob is a Fuchsia package.
+		if strings.HasSuffix(fileName, MetaFar) {
+			packages = append(packages, fileName)
 		}
 	}
 
-	return packages
+	return packages, nil
+}
+
+////////////////////////////////
+// Calculating blob sizes
+////////////////////////////////
+
+type processingState struct {
+	blobMap           map[string]*Blob
+	icuDataMap        map[string]*Node
+	distributedShlibs map[string]*Node
+	root              *Node
 }
 
 // Translates blobs.json into a map, with the key as the merkle root and the value as the size of
@@ -418,48 +393,127 @@ func processBlobsJSON(blobsJSONFile io.Reader) (map[string]int64, error) {
 	return m, nil
 }
 
-type processingState struct {
-	blobMap           map[string]*Blob
-	icuDataMap        map[string]*Node
-	distributedShlibs map[string]*Node
-	root              *Node
-}
-
-// Process the packages extracted from blob.manifest.list and process the blobs.json file to build a
-// tree of packages.
-func openAndParseBlobsJSON(
+// Iterate over every package, and add their blobs to the blob map.
+// The size of each blob gets divided by the number of dependencies,
+// so that it does not get counted multiple times.
+func calculateBlobSizes(
+	state *processingState,
 	buildDir string,
-	packages []string,
-	state *processingState) error {
-	absBuildDir, err := filepath.Abs(buildDir)
+	blobManifest string,
+	basePackageManifest string,
+	rootBlobsJSON string,
+	packages []string) error {
+
+	// Find the compressed size of the blobs from the blobs.json produced by blobfs.
+	var merkleRootToSizeMap map[string]int64
+	merkleRootToSizeMap, err := openAndProcessBlobsJSON(filepath.Join(buildDir, rootBlobsJSON))
 	if err != nil {
-		return fmt.Errorf("could not find abs path of directory: %v: %w", buildDir, err)
+		log.Fatalf("Failed to parse the root blobs.json\n")
+		return err
 	}
-	for _, metaFar := range packages {
-		// From the meta.far file, we can get the path to the blobs.json for that package.
-		dir := filepath.Dir(metaFar)
-		blobsJSON := filepath.Join(buildDir, dir, BlobsJSON)
-		// We then parse the blobs.json
-		blobs := []BlobFromJSON{}
-		data, err := ioutil.ReadFile(blobsJSON)
+
+	var packageManifestFiles []string
+	for _, metafar := range packages {
+		packageManifestFile, err := getPackageManifestFileFromMetaFar(buildDir, blobManifest, metafar)
 		if err != nil {
-			return fmt.Errorf(readError(blobsJSON, err))
+			log.Fatalf("Failed to get the path of the package's blobs.json from the meta.far: %s\n", metafar)
+			return err
 		}
-		if err := json.Unmarshal(data, &blobs); err != nil {
-			return fmt.Errorf(unmarshalError(blobsJSON, err))
-		}
-		// Finally, we add the blob and the package to the tree.
-		parseBlobsJSON(state, blobs, dir, absBuildDir)
+		packageManifestFiles = append(packageManifestFiles, packageManifestFile)
 	}
+
+	// Manually add the base package manifest, because we do not yet have a way to
+	// find it in the blob.manifest.
+	// TODO: Determine a better way to find the base package manifest.
+	packageManifestFiles = append(packageManifestFiles, basePackageManifest)
+
+	// Add every blob to the blobMap, which will deduplicate the size across blobs.
+	for _, packageManifestFile := range packageManifestFiles {
+		blobs, err := readBlobsFromPackageManifest(filepath.Join(buildDir, packageManifestFile))
+		if err != nil {
+			log.Fatalf("Failed to read the blobs from: %s\n", packageManifestFile)
+			return err
+		}
+
+		for _, blob := range blobs {
+			blobState := state.blobMap[blob.Merkle]
+			if blobState == nil {
+				// Create the blob and insert.
+				state.blobMap[blob.Merkle] = &Blob{
+					dep:  []string{packageManifestFile},
+					name: blob.SourcePath,
+					size: merkleRootToSizeMap[blob.Merkle],
+					hash: blob.Merkle,
+				}
+			} else {
+				// Add another dep to the existing blobState.
+				blobState.dep = append(blobState.dep, packageManifestFile)
+			}
+		}
+	}
+
+	// Add every blob to the tree of paths, which will add the size of the blob to
+	// each package.
+	for _, packageManifestFile := range packageManifestFiles {
+		blobs, err := readBlobsFromPackageManifest(filepath.Join(buildDir, packageManifestFile))
+		if err != nil {
+			log.Fatalf("Failed to read the blobs from: %s\n", packageManifestFile)
+			return err
+		}
+
+		// The package path used for matching the budgets is relative to the buildDir.
+		pkgPath := filepath.Dir(packageManifestFile)
+
+		// Add the blobs to the tree.
+		addBlobsFromBlobsJSONToState(state, blobs, pkgPath)
+	}
+
 	return nil
 }
 
-// Similar to openAndParseBlobsJSON except it doesn't throw an I/O error.
-func parseBlobsJSON(
+// Get the path of the package's blobs.json which is sitting next to the metafar.
+// Return this path relative to the buildDir
+func getPackageManifestFileFromMetaFar(buildDir string, blobManifest string, metafar string) (string, error) {
+	dir := filepath.Dir(metafar)
+
+	// Get the absolute path of the package directory if not already an absolute path.
+	// We need to do this because the directory is currently relative to the
+	// blob.manifest and has a lot of ../../..
+	// TODO: we should investigate why the path is sometimes an absolute path.
+	if !filepath.IsAbs(dir) {
+		blobManifestDir := filepath.Dir(blobManifest)
+		absoluteDir, err := filepath.Abs(filepath.Join(buildDir, blobManifestDir, dir))
+		if err != nil {
+			log.Fatalf("Failed to find the absolute path of the package directory: %s\n", dir)
+			return "", fmt.Errorf(readError(dir, err))
+		}
+		dir = absoluteDir
+	}
+
+	// Get the absolute path of the buildDir
+	if !filepath.IsAbs(buildDir) {
+		absBuildDir, err := filepath.Abs(buildDir)
+		if err != nil {
+			log.Fatalf("Failed to find absolute build dir path: %+v", err)
+		}
+		buildDir = absBuildDir
+	}
+
+	// Rebase onto the buildDir.
+	relDir, err := filepath.Rel(buildDir, dir)
+	if err != nil {
+		log.Fatalf("Failed to find the relative path: %s\n", err)
+		return "", fmt.Errorf(readError(relDir, err))
+	}
+
+	return filepath.Join(relDir, PackageManifest), nil
+}
+
+// Iterate over all the blobs, and add them to the processing state.
+func addBlobsFromBlobsJSONToState(
 	state *processingState,
 	blobs []BlobFromJSON,
-	pkgPath string,
-	absBuildDir string) {
+	pkgPath string) {
 	for _, blob := range blobs {
 		// If the blob is an ICU data file, we don't add it to the tree.
 		// We check the path instead of the source path because prebuilt packages have hashes as the
@@ -518,27 +572,9 @@ func parseBlobsJSON(
 	}
 }
 
-func parseBlobfsCapacity(buildDir, fileSystemSizesJSONFilename string) int64 {
-	fileSystemSizesJSON := filepath.Join(buildDir, fileSystemSizesJSONFilename)
-	fileSystemSizesJSONData, err := ioutil.ReadFile(fileSystemSizesJSON)
-	if err != nil {
-		log.Fatal(readError(fileSystemSizesJSON, err))
-	}
-	var fileSystemSizes = new(FileSystemSizes)
-	if err := json.Unmarshal(fileSystemSizesJSONData, &fileSystemSizes); err != nil {
-		log.Fatal(unmarshalError(fileSystemSizesJSON, err))
-	}
-	for _, fileSystemSize := range *fileSystemSizes {
-		if fileSystemSize.Name == "blob/capacity" {
-			blobFsContentsSize, err := fileSystemSize.Limit.Int64()
-			if err != nil {
-				log.Fatalf("Failed to parse %s as an int64: %s\n", fileSystemSize.Limit, err)
-			}
-			return blobFsContentsSize
-		}
-	}
-	return 0
-}
+////////////////////////////////////////////
+// Calculate the size of non-blobfs packages
+////////////////////////////////////////////
 
 // Run an executable at |toolPath| and pass the |args|, then return the stdout.
 func runToolAndCollectOutput(toolPath string, args []string) (bytes.Buffer, error) {
@@ -575,24 +611,24 @@ func calculateCompressedBlobSizeFromToolOutput(out bytes.Buffer) (int64, error) 
 	return int64(size), nil
 }
 
-// Read the blobs.json file at |blobsJSONFilePath| and construct a BlobFromJSON
-// struct.
-func readBlobsJSONFile(blobsJSONFilePath string) ([]BlobFromJSON, error) {
-	blobs := []BlobFromJSON{}
-	data, err := ioutil.ReadFile(blobsJSONFilePath)
+// Read the package_manifest.json file at |packageManifestFile| and collect a
+// slice of the blobs.
+func readBlobsFromPackageManifest(packageManifestFile string) ([]BlobFromJSON, error) {
+	var packageManifest PackageManifestJSON
+	data, err := ioutil.ReadFile(packageManifestFile)
 	if err != nil {
-		return nil, fmt.Errorf(readError(blobsJSONFilePath, err))
+		return nil, fmt.Errorf(readError(packageManifestFile, err))
 	}
-	if err := json.Unmarshal(data, &blobs); err != nil {
-		return nil, fmt.Errorf(unmarshalError(blobsJSONFilePath, err))
+	if err := json.Unmarshal(data, &packageManifest); err != nil {
+		return nil, fmt.Errorf(unmarshalError(packageManifestFile, err))
 	}
-	return blobs, nil
+	return packageManifest.Blobs, nil
 }
 
-// Read the blobs.json file at |blobsJSONFilePath|, and return all the blobs
-// referenced in it.
-func getBlobPathsFromBlobsJSONFile(blobsJSONFilePath string) ([]string, error) {
-	var blobs, err = readBlobsJSONFile(blobsJSONFilePath)
+// Read the package_manifest.json file at |packageManifestFile| and return all
+// the blobs referenced in it.
+func getBlobPathsFromPackageManifest(packageManifestFile string) ([]string, error) {
+	var blobs, err = readBlobsFromPackageManifest(packageManifestFile)
 	if err != nil {
 		return nil, err
 	}
@@ -608,11 +644,17 @@ func getBlobPathsFromBlobsJSON(blobsJSON []BlobFromJSON) []string {
 	return blob_paths
 }
 
+////////////////////////////////////////////
+// Logic for checking size budgets
+////////////////////////////////////////////
+
 // Processes the given sizeLimits and throws an error if any component in the sizeLimits is above its
 // allocated space limit.
-func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON string) map[string]*ComponentSize {
+func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest string, basePackageManifest string, rootBlobsJSON string) map[string]*ComponentSize {
 	outputSizes := map[string]*ComponentSize{}
-	blobMap, packages, err := extractPackages(buildDir, packageList, blobsJSON)
+
+	// 1. Collect the list of packages.
+	packages, err := extractPackages(buildDir, blobManifest)
 	if err != nil {
 		return outputSizes
 	}
@@ -628,6 +670,11 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	for _, path := range sizeLimits.DistributedShlibs {
 		distributedShlibs[path] = newNode(path)
 	}
+
+	// 2. Iterate over all the packages and add the blobs from each to the
+	// processingState. This handles blob de-dup by dividing the size of each blob
+	// by their number of dependencies.
+	blobMap := make(map[string]*Blob)
 	st := processingState{
 		blobMap,
 		icuDataMap,
@@ -635,8 +682,8 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 		// The dummy node will have the root node as its only child.
 		newDummyNode(),
 	}
-	// We process the meta.far files that were found in the blobs.manifest here.
-	if err := openAndParseBlobsJSON(buildDir, packages, &st); err != nil {
+	if err := calculateBlobSizes(&st, buildDir, blobManifest, basePackageManifest, rootBlobsJSON, packages); err != nil {
+		log.Fatalf("Failed to calculate the blob sizes: %s\n", err)
 		return outputSizes
 	}
 
@@ -657,9 +704,12 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	var total int64
 	root, err := st.root.getOnlyChild()
 	if err != nil {
+		log.Fatalf("Could not find the root node (typically obj): %s\n", err)
 		return outputSizes
 	}
 
+	// 3. Iterate over every component, and detach the sizes at each mentioned
+	// path, then add the size to the outputSizes.
 	for _, component := range sizeLimits.Components {
 		var size int64
 		var nodes []*Node
@@ -668,6 +718,10 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 			if node := root.detachByPath(src); node != nil {
 				nodes = append(nodes, node)
 				size += node.size
+			} else {
+				// TODO: Make this fatal when all paths are accounted for.
+				// Currently this is printed, because a couple paths are missing:
+				log.Printf("Failed to find blobs at the path: %s\n", src)
 			}
 		}
 		total += size
@@ -694,10 +748,10 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	var blobfsCompressionToolPath = filepath.Join(buildDir, "host_x64/blobfs-compression")
 	for _, component := range sizeLimits.NonBlobFSComponents {
 		// Collect the paths to each blob in the component.
-		blobsJSONPath := filepath.Join(buildDir, component.BlobsJsonPath)
-		var blobPaths, err = getBlobPathsFromBlobsJSONFile(blobsJSONPath)
+		packageManifestPath := filepath.Join(buildDir, component.PackageManifestPath)
+		var blobPaths, err = getBlobPathsFromPackageManifest(packageManifestPath)
 		if err != nil {
-			log.Fatalf("Failed to read the blob paths from blob.json: %s\n", err)
+			log.Fatalf("Failed to read the blob paths from the package manifest: %s\n", err)
 		}
 
 		// Sum all the individual blob sizes.
@@ -715,7 +769,8 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 			size += blobSize
 		}
 
-		budget, err := component.Limit.Int64()
+		var budget int64
+		budget, err = component.Limit.Int64()
 		if err != nil {
 			log.Fatalf("Failed to parse %s as an int64: %s\n", component.Limit, err)
 		}
@@ -775,17 +830,9 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	return outputSizes
 }
 
-func readError(file string, err error) string {
-	return verbError("read", file, err)
-}
-
-func unmarshalError(file string, err error) string {
-	return verbError("unmarshal", file, err)
-}
-
-func verbError(verb, file string, err error) string {
-	return fmt.Sprintf("Failed to %s %s: %s", verb, file, err)
-}
+//////////////////////////////////
+// Generate the report
+//////////////////////////////////
 
 func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 	f, err := os.Create(outPath)
@@ -961,6 +1008,48 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	return overBudget, report.String()
 }
 
+func parseBlobfsCapacity(buildDir, fileSystemSizesJSONFilename string) int64 {
+	fileSystemSizesJSON := filepath.Join(buildDir, fileSystemSizesJSONFilename)
+	fileSystemSizesJSONData, err := ioutil.ReadFile(fileSystemSizesJSON)
+	if err != nil {
+		log.Fatal(readError(fileSystemSizesJSON, err))
+	}
+	var fileSystemSizes = new(FileSystemSizes)
+	if err := json.Unmarshal(fileSystemSizesJSONData, &fileSystemSizes); err != nil {
+		log.Fatal(unmarshalError(fileSystemSizesJSON, err))
+	}
+	for _, fileSystemSize := range *fileSystemSizes {
+		if fileSystemSize.Name == "blob/capacity" {
+			blobFsContentsSize, err := fileSystemSize.Limit.Int64()
+			if err != nil {
+				log.Fatalf("Failed to parse %s as an int64: %s\n", fileSystemSize.Limit, err)
+			}
+			return blobFsContentsSize
+		}
+	}
+	return 0
+}
+
+//////////////////////////////////
+// Common Errors
+//////////////////////////////////
+
+func readError(file string, err error) string {
+	return verbError("read", file, err)
+}
+
+func unmarshalError(file string, err error) string {
+	return verbError("unmarshal", file, err)
+}
+
+func verbError(verb, file string, err error) string {
+	return fmt.Sprintf("Failed to %s %s: %s", verb, file, err)
+}
+
+//////////////////////////////////
+// Entrypoint
+//////////////////////////////////
+
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, `Usage: size_checker [--budget-only] [--ignore-per-component-budget] --build-dir BUILD_DIR [--sizes-json-out SIZES_JSON]
@@ -1001,7 +1090,7 @@ See //tools/size_checker for more details.`)
 		os.Exit(0)
 	}
 
-	outputSizes := parseSizeLimits(&sizeLimits, buildDir, PackageList, BlobsJSON)
+	outputSizes := parseSizeLimits(&sizeLimits, buildDir, BlobManifest, BasePackageManifest, RootBlobsJSON)
 	if len(fileSizeOutPath) > 0 {
 		if err := writeOutputSizes(outputSizes, fileSizeOutPath); err != nil {
 			log.Fatal(err)

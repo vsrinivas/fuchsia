@@ -58,67 +58,54 @@ func Test_processBlobsJSON(t *testing.T) {
 		})
 	}
 }
-func Test_processBlobsManifest(t *testing.T) {
+func Test_extractPackages(t *testing.T) {
 	tests := []struct {
-		name            string
-		blobMap         map[string]*Blob
-		sizeMap         map[string]int64
-		fileName        string
-		file            io.Reader
-		expectedPackage []string
-		expectedBlobMap map[string]*Blob
+		name             string
+		blobManifest     string
+		expectedPackages []string
 	}{
 		{
-			"Adding New Blob To Empty Map",
-			map[string]*Blob{},
-			map[string]int64{"hash": 1},
-			"fileFoo",
-			strings.NewReader("hash=foo"),
+			"No Meta Fars",
+			"hash=foo",
 			[]string{},
-			map[string]*Blob{"hash": {dep: []string{"fileFoo"}, size: 1, name: "foo", hash: "hash"}},
 		},
 		{
-			"Adding New Meta Far To Empty Map",
-			map[string]*Blob{},
-			map[string]int64{"hash": 1},
-			"fileFoo",
-			strings.NewReader("hash=meta.far"),
-			[]string{"meta.far"},
-			map[string]*Blob{"hash": {dep: []string{"fileFoo"}, size: 1, name: "meta.far", hash: "hash"}},
+			"One Meta Far",
+			"hash=one/meta.far",
+			[]string{"one/meta.far"},
 		},
 		{
-			"Adding A Blob To A Map With That Blob",
-			map[string]*Blob{"hash": {dep: []string{"foo"}, size: 1, name: "foo", hash: "hash"}},
-			map[string]int64{"hash": 1},
-			"fileFoo",
-			strings.NewReader("hash=foo"),
-			[]string{},
-			map[string]*Blob{"hash": {dep: []string{"foo", "fileFoo"}, size: 1, name: "foo", hash: "hash"}},
-		},
-		{
-			"Adding A Meta Far To A Map With That Meta Far",
-			map[string]*Blob{"hash": {dep: []string{"foo"}, size: 1, name: "meta.far", hash: "hash"}},
-			map[string]int64{"hash": 1},
-			"fileFoo",
-			strings.NewReader("hash=meta.far"),
-			[]string{},
-			map[string]*Blob{"hash": {dep: []string{"foo", "fileFoo"}, size: 1, name: "meta.far", hash: "hash"}},
+			"Multiple Meta Fars",
+			"hash=foo\nhash=one/meta.far\nhash2=two/meta.far",
+			[]string{"one/meta.far", "two/meta.far"},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if p := parseBlobsManifest(test.blobMap, test.sizeMap, test.fileName, test.file); !reflect.DeepEqual(p, test.expectedPackage) {
-				t.Fatalf("processBlobsManifest(%+v, %+v, %s, %+v) = %+v; expect %+v", test.blobMap, test.sizeMap, test.fileName, test.file, p, test.expectedPackage)
+			// Create the fake blob.manifest.
+			tempdir := t.TempDir()
+			blobManifestFile, err := os.Create(path.Join(tempdir, "blob.manifest"))
+			if err != nil {
+				t.Fatalf("Failed to create blob.manifest: %v", err)
 			}
+			if _, err := blobManifestFile.WriteString(test.blobManifest); err != nil {
+				t.Fatalf("Failed to write blob.manifest: %v", err)
+			}
+			blobManifestFile.Close()
 
-			if !reflect.DeepEqual(test.blobMap["hash"], test.expectedBlobMap["hash"]) {
-				t.Fatalf("blob map: %+v; expect %+v", test.blobMap["hash"], test.expectedBlobMap["hash"])
+			// Extract the packages and check the results.
+			p, err := extractPackages(tempdir, "blob.manifest")
+			if err != nil {
+				t.Fatalf("extractPackages returned an error: %+v", err)
+			}
+			if !reflect.DeepEqual(p, test.expectedPackages) {
+				t.Fatalf("extractPackages(%s) = %+v; expect %+v", test.blobManifest, p, test.expectedPackages)
 			}
 		})
 	}
 }
-func Test_processBlobs(t *testing.T) {
+func Test_addBlobsFromBlobsJSONToState(t *testing.T) {
 	tests := []struct {
 		name                 string
 		blobMap              map[string]*Blob
@@ -156,7 +143,7 @@ func Test_processBlobs(t *testing.T) {
 				test.distributedShlibsMap,
 				newDummyNode(),
 			}
-			parseBlobsJSON(&st, test.blobs, "", "")
+			addBlobsFromBlobsJSONToState(&st, test.blobs, "")
 
 			if !reflect.DeepEqual(st.blobMap, test.expectedBlobMap) {
 				t.Fatalf("blob map: %v; expect %v", test.blobMap, test.expectedBlobMap)
@@ -173,7 +160,7 @@ func Test_processBlobs(t *testing.T) {
 	}
 }
 
-func Test_processBlobsJSON_blobLookup(t *testing.T) {
+func Test_addBlobsFromBlobsJSONToState_blobLookup(t *testing.T) {
 	tests := []struct {
 		name               string
 		pkgPath            string
@@ -215,7 +202,7 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 				dummyMap,
 				root,
 			}
-			parseBlobsJSON(&st, []BlobFromJSON{test.blob}, test.pkgPath, "")
+			addBlobsFromBlobsJSONToState(&st, []BlobFromJSON{test.blob}, test.pkgPath)
 
 			expectedNode := root.detachByPath(test.expectedPathInTree)
 			if expectedNode == nil {
@@ -274,7 +261,7 @@ func Test_calculateCompressedBlobSizeFromToolOutput(t *testing.T) {
 	}
 }
 
-func Test_getBlobsPathFromBlobsJson(t *testing.T) {
+func Test_getBlobPathFromBlobsJson(t *testing.T) {
 	blobs := []BlobFromJSON{
 		{
 			"11111",
@@ -384,6 +371,7 @@ func Test_nodeFind(t *testing.T) {
 }
 
 func Test_processInput(t *testing.T) {
+	// Create the test size limits.
 	const singleBlobSize = 4096
 	fooSrcRelPath := "foo.src"
 	input := SizeLimits{
@@ -399,12 +387,14 @@ func Test_processInput(t *testing.T) {
 		},
 		NonBlobFSComponents: []NonBlobFSComponent{
 			{
-				Component:     "bar",
-				Limit:         json.Number(strconv.Itoa(singleBlobSize)),
-				BlobsJsonPath: "blobs.json",
+				Component:           "bar",
+				Limit:               json.Number(strconv.Itoa(singleBlobSize)),
+				PackageManifestPath: "obj/foo-pkg/package_manifest.json",
 			},
 		},
 	}
+
+	// Create the test directories.
 	buildDir := t.TempDir()
 	pkgDir := path.Join("obj", "foo-pkg")
 	hostToolsDir := path.Join(buildDir, "host_x64")
@@ -414,9 +404,11 @@ func Test_processInput(t *testing.T) {
 	if err := os.MkdirAll(hostToolsDir, 0o700); err != nil {
 		t.Fatalf("Failed to create host tools dir: %v", err)
 	}
-	blobsJSONF, err := os.Create(path.Join(buildDir, pkgDir, BlobsJSON))
+
+	// Create the package manifest to test.
+	packageManifestJSONF, err := os.Create(path.Join(buildDir, pkgDir, PackageManifest))
 	if err != nil {
-		t.Fatalf("Failed to create %s: %v", BlobsJSON, err)
+		t.Fatalf("Failed to create %s: %v", PackageManifest, err)
 	}
 	metaFarRelPath := path.Join(pkgDir, MetaFar)
 	blobs := []BlobFromJSON{
@@ -431,15 +423,39 @@ func Test_processInput(t *testing.T) {
 			SourcePath: fooSrcRelPath,
 		},
 	}
-	blobsJSONBytes, err := json.Marshal(blobs)
+	packageManifest := PackageManifestJSON{
+		Blobs: blobs,
+	}
+	packageManifestJSONBytes, err := json.Marshal(packageManifest)
 	if err != nil {
-		t.Fatalf("Failed to marshal JSON for %s: %v", BlobsJSON, err)
+		t.Fatalf("Failed to marshal JSON for %s: %v", PackageManifest, err)
 	}
-	if _, err := blobsJSONF.Write(blobsJSONBytes); err != nil {
-		t.Fatalf("Failed to write %s: %v", BlobsJSON, err)
+	if _, err := packageManifestJSONF.Write(packageManifestJSONBytes); err != nil {
+		t.Fatalf("Failed to write %s: %v", PackageManifest, err)
 	}
-	blobsJSONF.Close()
-	blobManifestRelPath := path.Join(pkgDir, "blobs.manifest")
+	packageManifestJSONF.Close()
+
+	// Create the base package manifest.
+	basePackageManifestRelPath := "base_package_manifest.json"
+	basePackageManifestJSONF, err := os.Create(path.Join(buildDir, basePackageManifestRelPath))
+	if err != nil {
+		t.Fatalf("Failed to create base_package_manifest.json: %v", err)
+	}
+	baseBlobs := []BlobFromJSON{}
+	basePackageManifest := PackageManifestJSON{
+		Blobs: baseBlobs,
+	}
+	basePackageManifestJSONBytes, err := json.Marshal(basePackageManifest)
+	if err != nil {
+		t.Fatalf("Failed to marshal JSON for base_package_manifest.json: %v", err)
+	}
+	if _, err := basePackageManifestJSONF.Write(basePackageManifestJSONBytes); err != nil {
+		t.Fatalf("Failed to write base_package_manifest.json: %v", err)
+	}
+	basePackageManifestJSONF.Close()
+
+	// Create the blob.manifest.
+	blobManifestRelPath := "blobs.manifest"
 	blobManifestF, err := os.Create(path.Join(buildDir, blobManifestRelPath))
 	if err != nil {
 		t.Fatalf("Failed to create blob manifest file: %v", err)
@@ -449,15 +465,8 @@ func Test_processInput(t *testing.T) {
 		t.Fatalf("Failed to write blob manifest: %v", err)
 	}
 	blobManifestF.Close()
-	blobListRelPath := "blob.manifest.list"
-	blobListF, err := os.Create(path.Join(buildDir, blobListRelPath))
-	if err != nil {
-		t.Fatalf("Failed to create blob list file: %v", err)
-	}
-	if _, err := blobListF.Write([]byte(blobManifestRelPath)); err != nil {
-		t.Fatalf("Failed to write blob list: %v", err)
-	}
-	blobListF.Close()
+
+	// Create the blobs.json.
 	blobSizeRelPath := "blobs.json"
 	blobSizeF, err := os.Create(path.Join(buildDir, blobSizeRelPath))
 	if err != nil {
@@ -468,6 +477,7 @@ func Test_processInput(t *testing.T) {
 	}
 	blobSizeF.Close()
 
+	// Create the blobfs-compression script.j
 	blobfsCompressionFile := path.Join(buildDir, "host_x64", "blobfs-compression")
 	blobfsCompression, err := os.Create(blobfsCompressionFile)
 	if err != nil {
@@ -481,7 +491,8 @@ func Test_processInput(t *testing.T) {
 	}
 	blobfsCompression.Close()
 
-	sizes := parseSizeLimits(&input, buildDir, blobListRelPath, blobSizeRelPath)
+	// Run the function under test.
+	sizes := parseSizeLimits(&input, buildDir, blobManifestRelPath, basePackageManifestRelPath, blobSizeRelPath)
 	fooSize, ok := sizes["foo"]
 	if !ok {
 		t.Fatalf("Failed to find foo in sizes: %v", sizes)
