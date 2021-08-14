@@ -160,8 +160,7 @@ TEST_F(MouseDeliveryTest, StandardTest) {
                                fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
 
     EXPECT_TRUE(events[6].is_pointer());
-    // TODO(fxbug.dev/81710): Coordinates clamped to their owning view.
-    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5, 0,
+    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5,
                                fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 1));
   }
 
@@ -358,8 +357,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
                                fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
 
     EXPECT_TRUE(events[5].is_pointer());
-    // TODO(fxbug.dev/81710): Coordinates clamped to their owning view.
-    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5, 0,
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5,
                                fuchsia::ui::input::PointerEventType::MOUSE, /*buttons*/ 2));
   }
 

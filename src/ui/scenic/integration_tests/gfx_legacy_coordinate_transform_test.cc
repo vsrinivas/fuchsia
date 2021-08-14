@@ -276,12 +276,11 @@ TEST_F(GfxLegacyCoordinateTransformTest, Translated) {
   ASSERT_TRUE(child2_events[1].is_pointer());
   EXPECT_TRUE(PointerMatches(child2_events[1].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
   ASSERT_TRUE(child2_events[2].is_pointer());
-  // TODO(fxbug.dev/81710): The following have coordinates clamped to their owning view.
-  EXPECT_TRUE(PointerMatches(child2_events[2].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 0));
+  EXPECT_TRUE(PointerMatches(child2_events[2].pointer(), 1u, PointerEventPhase::MOVE, 1.5, -0.5));
   ASSERT_TRUE(child2_events[3].is_pointer());
-  EXPECT_TRUE(PointerMatches(child2_events[3].pointer(), 1u, PointerEventPhase::UP, 2.5, 0));
+  EXPECT_TRUE(PointerMatches(child2_events[3].pointer(), 1u, PointerEventPhase::UP, 2.5, -1.5));
   ASSERT_TRUE(child2_events[4].is_pointer());
-  EXPECT_TRUE(PointerMatches(child2_events[4].pointer(), 1u, PointerEventPhase::REMOVE, 2.5, 0));
+  EXPECT_TRUE(PointerMatches(child2_events[4].pointer(), 1u, PointerEventPhase::REMOVE, 2.5, -1.5));
 }
 
 // This test verifies scaling applied to a view subgraph behind another.

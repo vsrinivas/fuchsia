@@ -900,28 +900,16 @@ void InputSystem::ReportPointerEventToGfxLegacyView(const InternalPointerEvent& 
   if (!event_reporter)
     return;
 
-  if (view_tree_snapshot_->view_tree.count(view_ref_koid) == 0 ||
-      view_tree_snapshot_->view_tree.count(event.context) == 0) {
+  std::optional<glm::mat4> view_from_context_transform = GetDestinationViewFromSourceViewTransform(
+      /*source*/ event.context, /*destination*/ view_ref_koid);
+  if (!view_from_context_transform)
     return;
-  }
-
-  const glm::mat4 view_from_context_transform =
-      GetDestinationViewFromSourceViewTransform(/*source*/ event.context,
-                                                /*destination*/ view_ref_koid)
-          .value();
 
   const uint64_t trace_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
   InputEvent input_event;
-  {
-    auto pointer =
-        InternalPointerEventToGfxPointerEvent(event, view_from_context_transform, type, trace_id);
-    // TODO(fxbug.dev/81710): Stop clamping coordinates to view bounds.
-    const auto bbox = view_tree_snapshot_->view_tree.at(view_ref_koid).bounding_box;
-    pointer.x = std::clamp<float>(pointer.x, bbox.min[0], bbox.max[0]);
-    pointer.y = std::clamp<float>(pointer.y, bbox.min[1], bbox.max[1]);
-    input_event.set_pointer(std::move(pointer));
-  }
+  input_event.set_pointer(InternalPointerEventToGfxPointerEvent(
+      event, view_from_context_transform.value(), type, trace_id));
   FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
   ChattyGfxLog(input_event);
   contender_inspector_.OnInjectedEvents(view_ref_koid, 1);

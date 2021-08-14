@@ -324,8 +324,7 @@ TEST_F(PointerCaptureTest, CapturedInputCoordinates_ShouldMatch_RegularInputCoor
     EXPECT_TRUE(events[1].focus().focused);
 
     EXPECT_TRUE(events[2].is_pointer());
-    // TODO(fxbug.dev/81710): Coordinates clamped to their owning view.
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 3, 5));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 3, 6));
   }
 
   {
