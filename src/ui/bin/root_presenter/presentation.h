@@ -224,14 +224,13 @@ class Presentation : fuchsia::ui::policy::Presenter,
   // |proxy_view_holder_| is initially connected directly to the |proxy_view_|, but after
   // CreateAccessibilityViewHolder() it is instead connected to the a11y view.
   std::optional<scenic::ViewHolder> proxy_view_holder_;
-  std::optional<fuchsia::ui::views::ViewHolderToken> proxy_view_holder_token_;
 
   // ViewHolder connected to the client View and the ViewRef referring to the client view. Both are
   // std::nullopt until AttachClient() is called.
   std::optional<scenic::ViewHolder> client_view_holder_;
   std::optional<fuchsia::ui::views::ViewRef> client_view_ref_;
 
-  CreateAccessibilityViewHolderCallback create_a11y_view_holder_callback_ = {};
+  fit::function<void()> create_a11y_view_holder_callback_ = nullptr;
 
   // Tracks the current state of the scene graph. Each boolean denotes whether a view is connected
   // to its parent.

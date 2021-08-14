@@ -187,6 +187,29 @@ Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* co
                    << zx_status_get_string(status);
   });
 
+  proxy_session_.set_event_handler([this](std::vector<fuchsia::ui::scenic::Event> events) {
+    for (const auto& event : events) {
+      if (event.Which() != fuchsia::ui::scenic::Event::Tag::kGfx)
+        continue;
+
+      const auto& gfx_event = event.gfx();
+      if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected) {
+        UpdateGraphState({.client_view_attached = true});
+      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected) {
+        FX_LOGS(WARNING) << "Client View disconnected. Closing channel.";
+        proxy_view_->DetachChild(client_view_holder_.value());
+        client_view_holder_.reset();
+        safe_presenter_proxy_.QueuePresent([] {});
+        UpdateGraphState({.client_view_attached = false});
+        presentation_binding_.Unbind();
+      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
+        UpdateGraphState({.proxy_view_attached = true});
+      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene) {
+        UpdateGraphState({.proxy_view_attached = false});
+      }
+    }
+  });
+
   {
     // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
     fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
@@ -219,18 +242,14 @@ void Presentation::UpdateGraphState(GraphState updated_state) {
   graph_state_.client_view_attached =
       updated_state.client_view_attached.value_or(graph_state_.client_view_attached.value());
 
-  if (IsValidSceneGraph()) {
+  if (graph_state_.client_view_attached.value() && create_a11y_view_holder_callback_) {
+    create_a11y_view_holder_callback_();
+  } else if (IsValidSceneGraph()) {
     injector_->MarkSceneReady();
 
     FX_DCHECK(client_view_ref_.has_value());
     FX_LOGS(INFO) << "Transferring focus to client";
     view_focuser_->RequestFocus(fidl::Clone(client_view_ref_.value()), [](auto) {});
-  }
-
-  if (graph_state_.client_view_attached.value() && create_a11y_view_holder_callback_) {
-    create_a11y_view_holder_callback_(std::move(*proxy_view_holder_token_));
-    proxy_view_holder_token_ = std::nullopt;
-    create_a11y_view_holder_callback_ = {};
   }
 }
 
@@ -391,33 +410,6 @@ void Presentation::AttachClient(
 
   client_view_ref_ = std::move(view_ref);
 
-  proxy_session_.set_event_handler([this, client_id = client_view_holder_->id()](
-                                       std::vector<fuchsia::ui::scenic::Event> events) mutable {
-    for (const auto& event : events) {
-      if (event.Which() != fuchsia::ui::scenic::Event::Tag::kGfx)
-        continue;
-
-      const auto& gfx_event = event.gfx();
-      if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected &&
-          gfx_event.view_connected().view_holder_id == client_id) {
-        UpdateGraphState({.client_view_attached = true});
-      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected &&
-                 gfx_event.view_disconnected().view_holder_id == client_id) {
-        FX_LOGS(WARNING) << "Client View disconnected. Closing channel.";
-        proxy_view_->DetachChild(client_view_holder_.value());
-        client_view_holder_.reset();
-        safe_presenter_proxy_.QueuePresent([] {});
-        UpdateGraphState({.client_view_attached = false});
-        presentation_binding_.Unbind();
-        proxy_session_.set_event_handler([](auto) {});
-      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
-        UpdateGraphState({.proxy_view_attached = true});
-      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene) {
-        UpdateGraphState({.proxy_view_attached = false});
-      }
-    }
-  });
-
   presentation_binding_.Bind(std::move(presentation_request));
   safe_presenter_proxy_.QueuePresent([] {});
 }
@@ -576,6 +568,20 @@ void Presentation::CreateAccessibilityViewHolder(
     fuchsia::ui::views::ViewRef a11y_view_ref,
     fuchsia::ui::views::ViewHolderToken a11y_view_holder_token,
     CreateAccessibilityViewHolderCallback callback) {
+  if (!graph_state_.client_view_attached.value()) {
+    // Store a callback so that CreateAccessibilityViewHolder() is always called AFTER the
+    // client view is attached. Deferring this work prevents racy ordering issues, and a11y doesn't
+    // have anything to do when there's no client view anyway.
+    create_a11y_view_holder_callback_ =
+        [this, callback = std::move(callback), a11y_view_ref = std::move(a11y_view_ref),
+         a11y_view_holder_token = std::move(a11y_view_holder_token)]() mutable {
+          FX_DCHECK(graph_state_.client_view_attached.value());
+          CreateAccessibilityViewHolder(std::move(a11y_view_ref), std::move(a11y_view_holder_token),
+                                        std::move(callback));
+        };
+    return;
+  }
+
   FX_CHECK(injector_view_);
   FX_LOGS(INFO) << "Inserting A11y View";
   // Detach proxy view holder from injector view.
@@ -621,16 +627,8 @@ void Presentation::CreateAccessibilityViewHolder(
   safe_presenter_injector_.QueuePresent([this] { UpdateGraphState({.a11y_view_attached = true}); });
   safe_presenter_proxy_.QueuePresent([this] { UpdateGraphState({.client_view_attached = true}); });
 
-  // Store `callback`, so that UpdateGraphState() can deliver the client
-  // ViewHolderToken to the a11y manager AFTER the client view is connected
-  // to the proxy view.
-  //
-  // The a11y manager will then create its view and the new proxy view holder,
-  // and attach both to the scene.
-  FX_DCHECK(!graph_state_.client_view_attached.value());
-  create_a11y_view_holder_callback_ = std::move(callback);
-  proxy_view_holder_token_.emplace();
-  proxy_view_holder_token_ = std::move(proxy_view_holder_token);
+  create_a11y_view_holder_callback_ = nullptr;
+  callback(std::move(proxy_view_holder_token));
 }
 
 }  // namespace root_presenter

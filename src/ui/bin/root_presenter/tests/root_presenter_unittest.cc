@@ -273,42 +273,61 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
 
   // Verify that client view receives the event.
   RunLoopUntil([&fake_view]() {
-    const auto& view_events = fake_view.events();
-    for (const auto& event : view_events) {
-      // We're looking for the view attached event, so skip any events that are
-      // not gfx events.
-      if (event.Which() == fuchsia::ui::scenic::Event::Tag::kInput) {
-        return true;
-      }
-    }
-
-    return false;
+    return std::any_of(fake_view.events().begin(), fake_view.events().end(), [](const auto& event) {
+      return event.Which() == fuchsia::ui::scenic::Event::Tag::kInput;
+    });
   });
 }
 
 TEST_F(RootPresenterTest, TestAttachA11yViewBeforeClient) {
-  ConnectInjectorRegistry(/* use_fake = */ true);
+  ConnectInjectorRegistry(/* use_fake = */ false);
   ConnectAccessibilityViewRegistry();
   RunLoopUntilIdle();
 
+  // Add an a11y view.
   a11y::AccessibilityView a11y_view(context_provider_.context());
-
   RunLoopUntilIdle();
 
-  // The a11y view should wait to complete its setup until the client view is
-  // attached.
-  EXPECT_FALSE(a11y_view.is_initialized());
-
   // Present a fake view.
-  auto scenic = context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  fuchsia::ui::scenic::ScenicPtr scenic =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
   presentation()->PresentView(fake_view.view_holder_token(), nullptr);
 
   // Run until the view is attached to the scene.
   RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
-
-  // Run loop until a11y view is attached to the scene.
+  // A11y view should initialize after client view attaches.
   RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
+
+  // Add a rectangle to the fakeview so that hit testing will return a result.
+  auto view_properties = a11y_view.get_a11y_view_properties();
+  auto x = view_properties->bounding_box.min.x;
+  auto y = view_properties->bounding_box.min.y;
+  auto width = view_properties->bounding_box.max.x - view_properties->bounding_box.min.x;
+  auto height = view_properties->bounding_box.max.y - view_properties->bounding_box.min.y;
+  bool rectangle_added = false;
+  fake_view.AddRectangle(width, height, x, y, rectangle_added);
+  RunLoopUntil([&rectangle_added] { return rectangle_added; });
+
+  fake_view.clear_events();
+
+  // Register an input device.
+  fuchsia::ui::input::InputDevicePtr input_device_ptr;
+  input_device_ptr.set_error_handler([](auto...) { FAIL(); });
+  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
+                                             input_device_ptr.NewRequest());
+
+  RunLoopUntilIdle();
+
+  // Inject a touch event.
+  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
+
+  // Verify that client view receives the event.
+  RunLoopUntil([&fake_view]() {
+    return std::any_of(fake_view.events().begin(), fake_view.events().end(), [](const auto& event) {
+      return event.Which() == fuchsia::ui::scenic::Event::Tag::kInput;
+    });
+  });
 }
 
 TEST_F(RootPresenterTest, SinglePresentView_ShouldSucceed) {
