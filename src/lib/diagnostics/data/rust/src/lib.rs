@@ -849,6 +849,11 @@ impl Data<Logs> {
     pub fn tid(&self) -> Option<u64> {
         self.metadata.tid
     }
+
+    /// Returns the tags associated with the message, if any exist.
+    pub fn tags(&self) -> Option<&Vec<String>> {
+        self.metadata.tags.as_ref()
+    }
 }
 
 impl fmt::Display for Data<Logs> {

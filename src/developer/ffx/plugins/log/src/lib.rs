@@ -20,7 +20,6 @@ use {
     fidl_fuchsia_diagnostics::ComponentSelector,
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
     selectors::{match_moniker_against_component_selectors, parse_path_to_moniker},
-    std::sync::Arc,
     std::{
         iter::Iterator,
         time::{Duration, SystemTime},
@@ -65,11 +64,13 @@ fn format_ffx_event(msg: &str, timestamp: Option<Timestamp>) -> String {
 }
 
 struct LogFilterCriteria {
-    monikers: Vec<Arc<ComponentSelector>>,
-    exclude_monikers: Vec<Arc<ComponentSelector>>,
+    monikers: Vec<ComponentSelector>,
+    exclude_monikers: Vec<ComponentSelector>,
     min_severity: Severity,
     filters: Vec<String>,
     excludes: Vec<String>,
+    tags: Vec<String>,
+    exclude_tags: Vec<String>,
 }
 
 impl Default for LogFilterCriteria {
@@ -80,19 +81,31 @@ impl Default for LogFilterCriteria {
             min_severity: Severity::Info,
             filters: vec![],
             excludes: vec![],
+            tags: vec![],
+            exclude_tags: vec![],
         }
     }
 }
 
 impl LogFilterCriteria {
     fn new(
-        monikers: Vec<Arc<ComponentSelector>>,
-        exclude_monikers: Vec<Arc<ComponentSelector>>,
+        monikers: Vec<ComponentSelector>,
+        exclude_monikers: Vec<ComponentSelector>,
         min_severity: Severity,
         filters: Vec<String>,
         excludes: Vec<String>,
+        tags: Vec<String>,
+        exclude_tags: Vec<String>,
     ) -> Self {
-        Self { monikers, exclude_monikers, min_severity: min_severity, filters, excludes }
+        Self {
+            monikers,
+            exclude_monikers,
+            min_severity: min_severity,
+            filters,
+            excludes,
+            tags,
+            exclude_tags,
+        }
     }
 
     fn matches_filter_string(filter_string: &str, message: &str, log: &LogsData) -> bool {
@@ -113,6 +126,16 @@ impl LogFilterCriteria {
         }
 
         if self.excludes.iter().any(|f| Self::matches_filter_string(f, msg, &data)) {
+            return false;
+        }
+
+        if !self.tags.is_empty()
+            && !self.tags.iter().any(|f| data.tags().map(|t| t.contains(f)).unwrap_or(false))
+        {
+            return false;
+        }
+
+        if self.exclude_tags.iter().any(|f| data.tags().map(|t| t.contains(f)).unwrap_or(false)) {
             return false;
         }
 
@@ -168,12 +191,19 @@ impl LogFilterCriteria {
 
 impl From<&LogCommand> for LogFilterCriteria {
     fn from(cmd: &LogCommand) -> Self {
+        let mut monikers: Vec<ComponentSelector> = cmd.moniker.clone();
+        if cmd.kernel {
+            monikers.push(selectors::parse_component_selector("klog").unwrap());
+        }
+
         LogFilterCriteria::new(
-            cmd.moniker.clone().into_iter().map(|m| Arc::new(m)).collect(),
-            cmd.exclude_moniker.clone().into_iter().map(|m| Arc::new(m)).collect(),
+            monikers,
+            cmd.exclude_moniker.clone(),
             cmd.severity,
             cmd.contains.clone(),
             cmd.exclude.clone(),
+            cmd.tags.clone(),
+            cmd.exclude_tags.clone(),
         )
     }
 }
@@ -182,6 +212,8 @@ pub struct LogFormatterOptions {
     color: bool,
     time_format: TimeFormat,
     show_metadata: bool,
+    no_symbols: bool,
+    show_tags: bool,
 }
 
 pub struct DefaultLogFormatter<'a> {
@@ -209,7 +241,7 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
                         self.format_target_log_data(data, None)
                     }
                     LogEntry { data: LogData::SymbolizedTargetLog(data, symbolized), .. } => {
-                        if symbolized.is_empty() {
+                        if !self.options.no_symbols && symbolized.is_empty() {
                             return Ok(());
                         }
 
@@ -283,12 +315,15 @@ impl<'a> DefaultLogFormatter<'a> {
     }
 
     pub fn format_target_log_data(&self, data: LogsData, symbolized_msg: Option<String>) -> String {
+        let symbolized_msg = if self.options.no_symbols { None } else { symbolized_msg };
+
         let ts = self.format_target_timestamp(data.metadata.timestamp);
         let color_str = if self.options.color {
             severity_to_color_str(data.metadata.severity)
         } else {
             String::default()
         };
+
         let msg = symbolized_msg.unwrap_or(data.msg().unwrap_or("<missing message>").to_string());
 
         let process_info_str = if self.options.show_metadata {
@@ -297,14 +332,21 @@ impl<'a> DefaultLogFormatter<'a> {
             String::default()
         };
 
+        let tags_str = if self.options.show_tags {
+            format!("[{}]", data.tags().map(|t| t.join(",")).unwrap_or(String::default()))
+        } else {
+            String::default()
+        };
+
         let severity_str = &format!("{}", data.metadata.severity)[..1];
         msg.lines()
             .map(|l| {
                 format!(
-                    "[{}]{}[{}][{}{}{}] {}{}{}",
+                    "[{}]{}[{}]{}[{}{}{}] {}{}{}",
                     ts,
                     process_info_str,
                     data.moniker,
+                    tags_str,
                     color_str,
                     severity_str,
                     style::Reset,
@@ -378,6 +420,8 @@ pub async fn log_impl<W: std::io::Write>(
             color: should_color(config_color, cmd.no_color),
             time_format: cmd.clock.clone(),
             show_metadata: cmd.show_metadata,
+            no_symbols: cmd.no_symbols,
+            show_tags: cmd.show_tags,
         },
     );
 
@@ -616,13 +660,18 @@ mod test {
         LogCommand {
             contains: vec![],
             exclude: vec![],
+            tags: vec![],
+            exclude_tags: vec![],
+            show_tags: false,
             clock: TimeFormat::Monotonic,
             no_color: false,
             moniker: vec![],
             exclude_moniker: vec![],
+            kernel: false,
             severity: Severity::Info,
             show_metadata: false,
             no_dump_recent: false,
+            no_symbols: false,
             dump: false,
             since: None,
             since_monotonic: None,
@@ -632,14 +681,7 @@ mod test {
     }
 
     fn empty_dump_command() -> LogCommand {
-        LogCommand {
-            since: None,
-            since_monotonic: None,
-            until: None,
-            until_monotonic: None,
-            dump: true,
-            ..empty_log_command()
-        }
+        LogCommand { dump: true, ..empty_log_command() }
     }
 
     fn logs_data() -> LogsData {
@@ -651,9 +693,21 @@ mod test {
             size_bytes: 1,
         })
         .set_message("message")
+        .add_tag("tag1")
+        .add_tag("tag2")
         .set_pid(1)
         .set_tid(2)
         .build()
+    }
+
+    fn default_log_formatter_options() -> LogFormatterOptions {
+        LogFormatterOptions {
+            color: false,
+            time_format: TimeFormat::Monotonic,
+            show_metadata: false,
+            no_symbols: false,
+            show_tags: false,
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1215,6 +1269,59 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_criteria_tag_filter() {
+        let cmd = LogCommand {
+            tags: vec!["tag1".to_string()],
+            exclude_tags: vec!["tag3".to_string()],
+            ..empty_dump_command()
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(criteria.matches(&make_log_entry(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: 0.into(),
+                component_url: Some(String::default()),
+                moniker: String::default(),
+                severity: diagnostics_data::Severity::Error,
+                size_bytes: 1,
+            })
+            .set_message("included")
+            .add_tag("tag1")
+            .add_tag("tag2")
+            .build()
+            .into()
+        )));
+
+        assert!(!criteria.matches(&make_log_entry(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: 0.into(),
+                component_url: Some(String::default()),
+                moniker: String::default(),
+                severity: diagnostics_data::Severity::Error,
+                size_bytes: 1,
+            })
+            .set_message("included")
+            .add_tag("tag2")
+            .build()
+            .into()
+        )));
+        assert!(!criteria.matches(&make_log_entry(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: 0.into(),
+                component_url: Some(String::default()),
+                moniker: String::default(),
+                severity: diagnostics_data::Severity::Error,
+                size_bytes: 1,
+            })
+            .set_message("included")
+            .add_tag("tag1")
+            .add_tag("tag3")
+            .build()
+            .into()
+        )));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_matches_component_url() {
         let cmd = LogCommand {
             contains: vec!["fuchsia.com".to_string()],
@@ -1385,11 +1492,7 @@ mod test {
         let formatter = DefaultLogFormatter::new(
             LogFilterCriteria::default(),
             &mut stdout,
-            LogFormatterOptions {
-                color: false,
-                time_format: TimeFormat::Monotonic,
-                show_metadata: false,
-            },
+            default_log_formatter_options(),
         );
 
         assert_eq!(
@@ -1405,9 +1508,8 @@ mod test {
             LogFilterCriteria::default(),
             &mut stdout,
             LogFormatterOptions {
-                color: false,
                 time_format: TimeFormat::Local,
-                show_metadata: false,
+                ..default_log_formatter_options()
             },
         );
 
@@ -1433,11 +1535,7 @@ mod test {
         let mut formatter = DefaultLogFormatter::new(
             LogFilterCriteria::default(),
             &mut stdout,
-            LogFormatterOptions {
-                color: false,
-                time_format: TimeFormat::Utc,
-                show_metadata: false,
-            },
+            LogFormatterOptions { time_format: TimeFormat::Utc, ..default_log_formatter_options() },
         );
 
         // Before setting the boot timestamp, it should use monotonic time.
@@ -1459,11 +1557,7 @@ mod test {
         let formatter = DefaultLogFormatter::new(
             LogFilterCriteria::default(),
             &mut stdout,
-            LogFormatterOptions {
-                color: true,
-                time_format: TimeFormat::Monotonic,
-                show_metadata: false,
-            },
+            LogFormatterOptions { color: true, ..default_log_formatter_options() },
         );
 
         assert_eq!(
@@ -1478,16 +1572,57 @@ mod test {
         let formatter = DefaultLogFormatter::new(
             LogFilterCriteria::default(),
             &mut stdout,
-            LogFormatterOptions {
-                color: false,
-                time_format: TimeFormat::Monotonic,
-                show_metadata: true,
-            },
+            LogFormatterOptions { show_metadata: true, ..default_log_formatter_options() },
         );
 
         assert_eq!(
             formatter.format_target_log_data(logs_data(), None),
             "[1615535969.000][1][2][some/moniker][W\u{1b}[m] message\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_symbolized_log_message() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            default_log_formatter_options(),
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), Some("symbolized".to_string())),
+            "[1615535969.000][some/moniker][W\u{1b}[m] symbolized\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_no_symbols() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions { no_symbols: true, ..default_log_formatter_options() },
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), Some("symbolized".to_string())),
+            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_show_tags() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions { show_tags: true, ..default_log_formatter_options() },
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), None),
+            "[1615535969.000][some/moniker][tag1,tag2][W\u{1b}[m] message\u{1b}[m"
         );
     }
 }

@@ -75,11 +75,25 @@ Dump logs with monikers matching component selectors, instead of text matches:
 )]
 pub struct LogCommand {
     /// filter for a string in either the message, component or url.
+    /// May be repeated.
     #[argh(option)]
     pub contains: Vec<String>,
     /// exclude a string in either the message, component or url.
+    /// May be repeated.
     #[argh(option)]
     pub exclude: Vec<String>,
+
+    /// filter for only logs with a given tag. May be repeated.
+    #[argh(option)]
+    pub tags: Vec<String>,
+
+    /// exclude logs with a given tag. May be repeated.
+    #[argh(option)]
+    pub exclude_tags: Vec<String>,
+
+    /// show tags in addition to source component
+    #[argh(switch)]
+    pub show_tags: bool,
 
     /// disable coloring logs according to severity.
     /// Note that you can permanently disable this with
@@ -121,9 +135,17 @@ pub struct LogCommand {
     #[argh(switch)]
     pub no_dump_recent: bool,
 
+    /// when --dump is not provided, whether to print a small chunk of recent logs before streaming
+    #[argh(switch)]
+    pub no_symbols: bool,
+
     /// dump a snapshot of logs instead of streaming new ones
     #[argh(switch)]
     pub dump: bool,
+
+    /// outputs only kernel logs. Alias for "--moniker klog"
+    #[argh(switch)]
+    pub kernel: bool,
 
     /// show only logs after a certain time
     /// valid only with --dump
