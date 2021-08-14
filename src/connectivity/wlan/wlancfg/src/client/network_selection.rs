@@ -1167,6 +1167,7 @@ mod tests {
 
     #[fuchsia::test]
     fn select_best_connection_candidate_sorts_by_score() {
+        let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
         let mut inspect_node =
@@ -1286,6 +1287,7 @@ mod tests {
 
     #[fuchsia::test]
     fn select_best_connection_candidate_sorts_by_failure_count() {
+        let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
         let mut inspect_node =
@@ -1410,6 +1412,7 @@ mod tests {
 
     #[fuchsia::test]
     fn select_best_connection_candidate_incompatible() {
+        let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
         let mut inspect_node =
@@ -1530,6 +1533,7 @@ mod tests {
 
     #[fuchsia::test]
     fn select_best_connection_candidate_ignore_list() {
+        let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
         let mut inspect_node =
@@ -1619,6 +1623,7 @@ mod tests {
 
     #[fuchsia::test]
     fn select_best_connection_candidate_logs_to_inspect() {
+        let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
         let mut inspect_node =

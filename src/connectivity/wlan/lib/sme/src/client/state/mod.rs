@@ -2953,10 +2953,14 @@ mod tests {
         context: Context,
         // Inspector is kept so that root node doesn't automatically get removed from VMO
         _inspector: Inspector,
+        // Executor is needed as a time provider for the [`inspect_log!`] macro which panics
+        // without a fuchsia_async executor set up
+        _executor: fuchsia_async::TestExecutor,
     }
 
     impl TestHelper {
         fn new() -> Self {
+            let executor = fuchsia_async::TestExecutor::new().unwrap();
             let (mlme_sink, mlme_stream) = mpsc::unbounded();
             let (info_sink, info_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
@@ -2971,7 +2975,14 @@ mod tests {
                 info: InfoReporter::new(InfoSink::new(info_sink)),
                 is_softmac: true,
             };
-            TestHelper { mlme_stream, info_stream, time_stream, context, _inspector: inspector }
+            TestHelper {
+                mlme_stream,
+                info_stream,
+                time_stream,
+                context,
+                _inspector: inspector,
+                _executor: executor,
+            }
         }
     }
 

@@ -920,6 +920,7 @@ mod tests {
 
     #[test]
     fn test_log_scan_stats() {
+        let _executor = fasync::TestExecutor::new();
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
@@ -1585,6 +1586,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_scan() {
+        let _executor = fasync::TestExecutor::new();
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
@@ -1616,6 +1618,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_scan_failures() {
+        let _executor = fasync::TestExecutor::new();
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
@@ -1643,6 +1646,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_counters() {
+        let _executor = fasync::TestExecutor::new();
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let last = fake_iface_stats(10);
         let current = fake_iface_stats(20);
@@ -1666,6 +1670,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_counters_detects_overflow() {
+        let _executor = fasync::TestExecutor::new();
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let last = fake_iface_stats(20);
         let current = fake_iface_stats(10);

@@ -46,6 +46,7 @@ mod tests {
 
     #[test]
     fn test_log_state() {
+        let _executor = fuchsia_async::TestExecutor::new();
         let inspector = Inspector::new();
         let mut i = InspectInfo::new(inspector.root(), "id", "myname");
         assert_data_tree!(inspector, root: contains {
