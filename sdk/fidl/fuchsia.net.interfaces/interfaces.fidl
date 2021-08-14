@@ -93,13 +93,11 @@ protocol State {
     /// Initialize a watcher for interface state.
     ///
     /// The server enqueues interface addition, deletion and property changes as
-    /// they occur, which can then be retrieved via the pipelined protocol. If
-    /// the queue cannot be allocated, the channel will be closed. Also, if the
-    /// queue is full and a change event cannot be enqueued, the channel will be
-    /// closed.
+    /// they occur, which can then be retrieved via the pipelined protocol.
     ///
-    /// + request `watcher` the protocol channel over which changes can be
-    ///   observed.
+    /// + request `options` specifies the behavior of the [`Watcher`].
+    /// + request `watcher` grants access to a [`Watcher`]. Closed if the queue cannot be
+    ///     allocated or if the queue is full when the server attempts to enqueue an event.
     GetWatcher(resource struct {
         options WatcherOptions;
         watcher server_end:Watcher;
@@ -113,14 +111,14 @@ protocol Watcher {
     ///
     /// Clients should only have one call of this method at a time; a second
     /// call to this method while a call is already pending will cause
-    /// the channel to be closed.
+    /// the server end of the protocol to be closed.
     ///
-    /// If there are N interfaces present at the time the channel was
-    /// initialized, then the first N invocations of this method will return
-    /// [`Event.existing`] followed by a single [`Event.idle`] indicating that
-    /// all existing interfaces have been sent. Subsequent calls will
-    /// immediately return if there is a change to be reported, or block until a
-    /// change occurs.
+    /// If there are N interfaces present at the time the server end of the
+    /// protocol is initialized, then the first N invocations of this method
+    /// will return [`Event.existing`] followed by a single [`Event.idle`]
+    /// indicating that all existing interfaces have been sent. Subsequent calls
+    /// will immediately return if there is a change to be reported, or block
+    /// until a change occurs.
     ///
     /// The server may choose to coalesce property change events, e.g. when
     /// multiple independent property changes occur. As a result, clients cannot
@@ -128,10 +126,10 @@ protocol Watcher {
     /// order in which the changes occurred.
     ///
     /// - response `event` the interface change event. Properties of an added or
-    ///   existing interface will have all fields present. Property change
-    ///   events will always have the interface ID field present (the ID never
-    ///   changes); while other fields will only be present with the new value
-    ///   if the property has changed.
+    ///     existing interface will have all fields present. Property change
+    ///     events will always have the interface ID field present (the ID never
+    ///     changes); while other fields will only be present with the new value
+    ///     if the property has changed.
     Watch() -> (struct {
         event Event;
     });

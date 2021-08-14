@@ -14,8 +14,8 @@ protocol DnsServerWatcher {
     /// expiration, etc. Callers must repeatedly call `WatchServers` and replace any previously
     /// returned `servers` with new ones to avoid using stale or expired entries.
     ///
-    /// It is invalid to call `WatchServers` while a previous call is still pending. Doing so will
-    /// cause the `DnsServerWatcher` channel to be closed.
+    /// It is invalid to call this method while a previous call is pending. Doing so will cause the
+    /// server end of the protocol to be closed.
     ///
     /// - response `servers` The list of servers to use for DNS resolution, in priority order.
     WatchServers() -> (struct {

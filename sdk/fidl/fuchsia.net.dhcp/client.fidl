@@ -6,13 +6,13 @@ library fuchsia.net.dhcp;
 using zx;
 
 /// Client provides control operations on a DHCP client.
+///
+/// The server end of the protocol is closed when the underlying object ceases
+/// to exist.
 protocol Client {
     /// Start runs the DHCP client represented by this protocol.
     ///
     /// # Errors
-    ///
-    /// In the case that the interface this client represents no longer exists,
-    /// the server end of this protocol's channel will be closed.
     ///
     /// Start returns no other errors currently, but callers should check the error
     /// value in case new errors are returned in the future.
@@ -21,9 +21,6 @@ protocol Client {
     /// Stops the DHCP client (if it is running).
     ///
     /// # Errors
-    ///
-    /// In the case that the interface this client represents no longer exists,
-    /// the server end of this protocol's channel will be closed.
     ///
     /// Stop returns no other errors currently, but callers should check the error
     /// value in case new errors are returned in the future.

@@ -93,6 +93,14 @@ type AddressRemovalReason = strict enum {
 };
 
 /// Offers state information about an IP address.
+///
+/// This protocol encodes the underlying object's lifetime in both directions;
+/// the underlying object is alive iff both ends of the protocol are open. That
+/// is:
+///
+/// - Closing the client end causes the object to be destroyed.
+/// - Observing a closure of the server end indicates the object no longer
+///   exists.
 protocol AddressStateProvider {
     /// Push an update when the address properties change.
     ///
@@ -115,18 +123,16 @@ protocol AddressStateProvider {
     /// state. Subsequent calls will block until the returned value differs
     /// from the last observed value.
     ///
-    /// It is invalid to call `WatchAssignmentState` while a previous call is
-    /// still pending. Doing so will cause the channel to be closed.
+    /// It is invalid to call this method while a previous call is pending.
+    /// Doing so will cause the server end of the protocol to be closed.
     ///
     /// - response `assignment_state` the assignment state of the address.
     WatchAddressAssignmentState() -> (struct {
         assignment_state AddressAssignmentState;
     });
 
-    /// Event to signal that the address was removed.
-    ///
-    /// The channel is closed after sending this event. The event is always
-    /// sent prior to channel closure by the server.
+    /// Terminal event. Immediately precedes the closure of the server end of
+    /// the protocol.
     ///
     /// - response `error` the removal reason.
     -> OnAddressRemoved(struct {
@@ -159,12 +165,8 @@ type AddressParameters = resource table {
     /// If not set, interpreted as false.
     2: temporary bool;
 
-    /// A handle to an `AddressStateProvider` channel.
-    ///
     /// Used for exchanging state information about the address.
     ///
-    /// Optional field. If provided, the lifetime of the address is tied to the
-    /// lifetime of the channel; closing the channel causes the address to be
-    /// removed.
+    /// Optional.
     3: address_state_provider server_end:AddressStateProvider;
 };

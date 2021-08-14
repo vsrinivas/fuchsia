@@ -124,9 +124,8 @@ protocol ClientProvider {
     /// Provides a DHCPv6 client.
     ///
     /// + request `params` the parameters to create the client with.
-    /// + request `request` the channel handle that can be used to control the
-    ///     newly created client. Will be closed if a client cannot be created,
-    ///     with an epitaph explaining the reason.
+    /// + request `request` grants control over the client. Closed with an
+    ///     epitaph if the client cannot be created.
     NewClient(resource struct {
         params NewClientParams;
         request server_end:Client;
@@ -135,8 +134,13 @@ protocol ClientProvider {
 
 /// Provides methods to watch for discovered network configurations.
 ///
-/// The lifetime of the the client is tied to the channel; closing the channel
-/// will result in shutting down the client.
+/// This protocol encodes the underlying object's lifetime in both directions;
+/// the underlying object is alive iff both ends of the protocol are open. That
+/// is:
+///
+/// - Closing the client end causes the object to be destroyed.
+/// - Observing a closure of the server end indicates the object no longer
+///   exists.
 protocol Client {
     compose fuchsia.net.name.DnsServerWatcher;
 
@@ -148,8 +152,8 @@ protocol Client {
     /// is closed if the address becomes invalid (its valid lifetime expires
     /// and Renew and Rebind fail).
     ///
-    /// It is invalid to call `WatchAssignmentState` while a previous call is
-    /// still pending. Doing so will cause the channel to be closed.
+    /// It is invalid to call this method while a previous call is pending.
+    /// Doing so will cause the server end of the protocol to be closed.
     ///
     /// - response `address` the assigned address.
     /// - response `address_parameters` the parameters of the address.
@@ -158,14 +162,13 @@ protocol Client {
         address_parameters fuchsia.net.interfaces.admin.AddressParameters;
     });
 
-    /// Shuts down the `Client`.
+    /// Gracefully tears down the underlying object.
     ///
     /// Blocks until any held addresses are gracefully released, as described
     /// in
     /// [RFC 8415, Section 18.2.7](https://tools.ietf.org/html/rfc8415#section-18.2.7).
     ///
-    /// The channel is closed after shutdown, regardless of whether an error is
-    /// returned.
+    /// The server end of the protocol is closed after this method returns.
     ///
     /// * error a `zx.status` if any of the addresses were not gracefully
     ///     released, e.g. the client times out waiting for Reply to Release,

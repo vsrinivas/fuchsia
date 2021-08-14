@@ -104,6 +104,10 @@ protocol Netstack {
         nicid uint32;
     }) error zx.status;
 
+    /// Connects to a DHCP client.
+    ///
+    /// + request `nicid` the interface on which the target client is running.
+    /// + request `request` grants control over the client.
     // TODO(stijlist): re-home this protocol. GetDhcpClient should be a member
     // of the protocol that eventually owns network interface management
     // in general.

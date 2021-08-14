@@ -55,9 +55,8 @@ protocol View {
     /// Open a connection to an [`EntryIterator`] for listing existing entries
     /// and optionally watching for state changes.
     ///
-    /// + request `it` request the server to bind an implementation of
-    ///     `EntryIterator` to this channel.
-    /// + request `options` modifies the behavior of the [`EntryIterator`].
+    /// + request `it` grants access to the [`EntryIterator`].
+    /// + request `options` specifies the behavior of the [`EntryIterator`].
     OpenEntryIterator(resource struct {
         it server_end:EntryIterator;
         options EntryIteratorOptions;

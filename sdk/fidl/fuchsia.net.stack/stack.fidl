@@ -107,7 +107,7 @@ type Error = strict enum {
 
 /// An Ethernet device.
 /// The provided `network_device` is expected to support `Ethernet` frames.
-/// Its MAC address and MAC filtering is controlled by the provided `mac` channel.
+/// Its MAC address and MAC filtering is controlled by `mac`.
 type EthernetDeviceDefinition = resource struct {
     /// The connection to the device's data plane.
     network_device client_end:fuchsia.hardware.network.Device;
