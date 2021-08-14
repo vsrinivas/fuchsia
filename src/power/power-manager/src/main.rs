@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 // core
-mod cobalt_metrics;
 mod error;
 mod message;
 mod node;
@@ -21,6 +20,7 @@ mod dev_control_handler;
 mod driver_manager_handler;
 mod input_settings_handler;
 mod lid_shutdown;
+mod platform_metrics;
 mod shutdown_watcher;
 mod system_profile_handler;
 mod system_shutdown_handler;

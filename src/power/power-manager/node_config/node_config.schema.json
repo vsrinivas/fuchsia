@@ -216,6 +216,49 @@
       {
         "properties": {
           "type": {
+            "pattern": "PlatformMetrics"
+          },
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "cpu_temperature_poll_interval_s": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cpu_temperature_poll_interval_s"
+            ]
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "cpu_temperature_handler_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cpu_temperature_handler_node"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config",
+          "dependencies"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
             "pattern": "ShutdownWatcher"
           },
           "name": {
@@ -440,6 +483,9 @@
                   "type": "string"
                 }
               },
+              "platform_metrics_node": {
+                "type": "string"
+              },
               "system_power_handler_node": {
                 "type": "string"
               },
@@ -453,6 +499,7 @@
             "additionalProperties": false,
             "required": [
               "cpu_control_nodes",
+              "platform_metrics_node",
               "system_power_handler_node",
               "temperature_handler_node",
               "thermal_limiter_node"
@@ -546,6 +593,9 @@
           "dependencies": {
             "type": "object",
             "properties": {
+              "platform_metrics_node": {
+                "type": "string"
+              },
               "system_shutdown_node": {
                 "type": "string"
               },
@@ -555,6 +605,7 @@
             },
             "additionalProperties": false,
             "required": [
+              "platform_metrics_node",
               "system_shutdown_node",
               "temperature_handler_node"
             ]

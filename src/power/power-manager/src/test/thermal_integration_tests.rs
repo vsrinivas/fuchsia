@@ -377,6 +377,7 @@ impl<'a> ThermalPolicyTest<'a> {
             thermal_limiter_node,
             crash_report_handler: create_dummy_node(),
             policy_params,
+            platform_metrics_node: create_dummy_node(),
         };
         ThermalPolicyBuilder::new(thermal_config).build(futures).unwrap()
     }

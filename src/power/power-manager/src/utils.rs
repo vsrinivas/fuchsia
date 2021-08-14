@@ -12,6 +12,48 @@ macro_rules! log_if_err {
     };
 }
 
+/// Logs an error message if the provided `cond` evaluates to false. Also passes the same expression
+/// and message into `debug_assert!`, which will panic if debug assertions are enabled.
+#[macro_export]
+macro_rules! log_if_false_and_debug_assert {
+    ($cond:expr, $msg:expr) => {
+        if !($cond) {
+            log::error!($msg);
+            debug_assert!($cond, $msg);
+        }
+    };
+    ($cond:expr, $fmt:expr, $($arg:tt)+) => {
+        if !($cond) {
+            log::error!($fmt, $($arg)+);
+            debug_assert!($cond, $fmt, $($arg)+);
+        }
+    };
+}
+
+#[cfg(test)]
+mod log_err_with_debug_assert_tests {
+    use crate::log_if_false_and_debug_assert;
+
+    /// Tests that `log_if_false_and_debug_assert` panics for a false expression when debug
+    /// assertions are enabled.
+    #[test]
+    #[should_panic(expected = "this will panic")]
+    #[cfg(debug_assertions)]
+    fn test_debug_assert() {
+        log_if_false_and_debug_assert!(true, "this will not panic");
+        log_if_false_and_debug_assert!(false, "this will panic");
+    }
+
+    /// Tests that `log_if_false_and_debug_assert` does not panic for a false expression when debug
+    /// assertions are not enabled.
+    #[test]
+    #[cfg(not(debug_assertions))]
+    fn test_non_debug_assert() {
+        log_if_false_and_debug_assert!(true, "this will not panic");
+        log_if_false_and_debug_assert!(false, "this will not panic either");
+    }
+}
+
 /// Export the `connect_to_driver` function to be used throughout the crate.
 pub use connect_to_driver::connect_to_driver;
 mod connect_to_driver {

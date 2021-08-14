@@ -82,6 +82,16 @@
     "name": "thermal_limiter"
   },
   {
+    "type": "PlatformMetrics",
+    "name": "platform_metrics",
+    "config": {
+      "cpu_temperature_poll_interval_s": 1
+    },
+    "dependencies": {
+      "cpu_temperature_handler_node": "temperature_soc_pll"
+    }
+  },
+  {
     "type": "ThermalPolicy",
     "name": "thermal_policy",
     "dependencies": {
@@ -91,7 +101,8 @@
         "cpu_control"
       ],
       "system_power_handler_node": "sys_shutdown",
-      "thermal_limiter_node": "thermal_limiter"
+      "thermal_limiter_node": "thermal_limiter",
+      "platform_metrics_node": "platform_metrics"
     },
     "config": {
       "controller_params": {
@@ -113,7 +124,8 @@
     "name": "thermal_shutdown_therm_dsp",
     "dependencies": {
       "system_shutdown_node": "sys_shutdown",
-      "temperature_handler_node": "temperature_therm_dsp"
+      "temperature_handler_node": "temperature_therm_dsp",
+      "platform_metrics_node": "platform_metrics"
     },
     "config": {
       "thermal_shutdown_temperature_c": 73.0,
@@ -126,7 +138,8 @@
     "name": "thermal_shutdown_therm_wifi",
     "dependencies": {
       "system_shutdown_node": "sys_shutdown",
-      "temperature_handler_node": "temperature_therm_wifi"
+      "temperature_handler_node": "temperature_therm_wifi",
+      "platform_metrics_node": "platform_metrics"
     },
     "config": {
       "thermal_shutdown_temperature_c": 73.0,

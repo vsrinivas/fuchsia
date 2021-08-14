@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::cobalt_metrics::{get_cobalt_metrics_instance, CobaltMetrics};
 use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
@@ -45,19 +44,23 @@ pub struct ThermalShutdownBuilder {
     filter_time_constant: Seconds,
     temperature_node: Rc<dyn Node>,
     system_shutdown_node: Rc<dyn Node>,
-    thermal_metrics: Option<Box<dyn CobaltMetrics>>,
+    platform_metrics_node: Rc<dyn Node>,
 }
 
 impl ThermalShutdownBuilder {
     #[cfg(test)]
-    fn new(temperature_node: Rc<dyn Node>, system_shutdown_node: Rc<dyn Node>) -> Self {
+    fn new(
+        temperature_node: Rc<dyn Node>,
+        system_shutdown_node: Rc<dyn Node>,
+        platform_metrics_node: Rc<dyn Node>,
+    ) -> Self {
         ThermalShutdownBuilder {
             thermal_shutdown_temperature: Celsius(0.0),
             poll_interval: Seconds(0.0),
             filter_time_constant: Seconds(10.0),
             temperature_node,
             system_shutdown_node,
-            thermal_metrics: None,
+            platform_metrics_node,
         }
     }
 
@@ -73,6 +76,7 @@ impl ThermalShutdownBuilder {
         struct Dependencies {
             temperature_handler_node: String,
             system_shutdown_node: String,
+            platform_metrics_node: String,
         }
 
         #[derive(Deserialize)]
@@ -88,7 +92,7 @@ impl ThermalShutdownBuilder {
             filter_time_constant: Seconds(data.config.filter_time_constant_s),
             temperature_node: nodes[&data.dependencies.temperature_handler_node].clone(),
             system_shutdown_node: nodes[&data.dependencies.system_shutdown_node].clone(),
-            thermal_metrics: None,
+            platform_metrics_node: nodes[&data.dependencies.platform_metrics_node].clone(),
         }
     }
 
@@ -98,19 +102,10 @@ impl ThermalShutdownBuilder {
         self
     }
 
-    #[cfg(test)]
-    fn with_thermal_metrics(mut self, thermal_metrics: Box<dyn CobaltMetrics>) -> Self {
-        self.thermal_metrics = Some(thermal_metrics);
-        self
-    }
-
     pub fn build<'a>(
         self,
         futures_out: &FuturesUnordered<LocalBoxFuture<'a, ()>>,
     ) -> Result<Rc<ThermalShutdown>, Error> {
-        let thermal_metrics =
-            self.thermal_metrics.unwrap_or(Box::new(get_cobalt_metrics_instance()));
-
         let node = Rc::new(ThermalShutdown {
             temperature_filter: TemperatureFilter::new(
                 self.temperature_node.clone(),
@@ -120,7 +115,7 @@ impl ThermalShutdownBuilder {
             poll_interval: self.poll_interval,
             temperature_node: self.temperature_node,
             system_shutdown_node: self.system_shutdown_node,
-            thermal_metrics,
+            platform_metrics_node: self.platform_metrics_node,
         });
 
         futures_out.push(node.clone().polling_loop());
@@ -144,8 +139,9 @@ pub struct ThermalShutdown {
     /// Node to provide the system reboot functionality via the SystemShutdown message.
     system_shutdown_node: Rc<dyn Node>,
 
-    /// Metrics collection for thermals.
-    thermal_metrics: Box<dyn CobaltMetrics>,
+    /// The node that we'll notify when throttling conditions have changed, for logging and metrics
+    /// purposes.
+    platform_metrics_node: Rc<dyn Node>,
 }
 
 impl ThermalShutdown {
@@ -172,7 +168,14 @@ impl ThermalShutdown {
             >= self.thermal_shutdown_temperature
         {
             info!("{:?} crossed high temperature mark. Rebooting...", self.temperature_node.name());
-            self.thermal_metrics.log_throttle_end_shutdown(timestamp);
+            log_if_err!(
+                self.send_message(
+                    &self.platform_metrics_node,
+                    &Message::LogThrottleEndShutdown(timestamp),
+                )
+                .await,
+                "Failed to update platform metrics with LogThrottleEndShutdown"
+            );
             self.send_message(
                 &self.system_shutdown_node,
                 &Message::SystemShutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature)),
@@ -201,7 +204,6 @@ impl Node for ThermalShutdown {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cobalt_metrics::mock_cobalt_metrics::MockCobaltMetrics;
     use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
 
@@ -219,12 +221,14 @@ mod tests {
             "dependencies": {
                 "system_shutdown_node": "shutdown",
                 "temperature_handler_node": "temperature",
+                "platform_metrics_node": "metrics"
               },
         });
 
         let mut nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
         nodes.insert("temperature".to_string(), create_dummy_node());
         nodes.insert("shutdown".to_string(), create_dummy_node());
+        nodes.insert("metrics".to_string(), create_dummy_node());
         let _ = ThermalShutdownBuilder::new_from_json(json_data, &nodes);
     }
 
@@ -246,21 +250,21 @@ mod tests {
         );
 
         let node_futures = FuturesUnordered::new();
-        let node = ThermalShutdownBuilder::new(temperature_node, shutdown_node)
-            .with_thermal_shutdown_temperature(Celsius(99.0))
-            .build(&node_futures)
-            .unwrap();
+        let node =
+            ThermalShutdownBuilder::new(temperature_node, shutdown_node, create_dummy_node())
+                .with_thermal_shutdown_temperature(Celsius(99.0))
+                .build(&node_futures)
+                .unwrap();
         assert!(node.poll_temperature().await.is_ok());
     }
 
     /// Tests that when the node commands a system shutdown due to high temperature, it also calls
-    /// into the Cobalt metrics instance to log the thermal shutdown.
+    /// into the Platform metrics instance to log the thermal shutdown.
     #[test]
-    fn test_cobalt_metrics() {
+    fn test_platform_metrics() {
         let mut mock_maker = MockNodeMaker::new();
         let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(Seconds(10.0).into()); // arbitrary nonzero time
-        let mock_metrics = MockCobaltMetrics::new();
         let node_futures = FuturesUnordered::new();
         let node = ThermalShutdownBuilder::new(
             mock_maker.make(
@@ -274,20 +278,22 @@ mod tests {
                     msg_ok_return!(SystemShutdown),
                 )],
             ),
+            mock_maker.make(
+                "Metrics",
+                vec![(
+                    msg_eq!(LogThrottleEndShutdown(Seconds(10.0).into())),
+                    msg_ok_return!(LogThrottleEndShutdown),
+                )],
+            ),
         )
         .with_thermal_shutdown_temperature(Celsius(100.0))
-        .with_thermal_metrics(Box::new(mock_metrics.clone()))
         .build(&node_futures)
         .unwrap();
 
         // Cause the node to enter thermal shutdown
-        mock_metrics.expect_log_throttle_end_shutdown(Seconds(10.0).into());
         match executor.run_until_stalled(&mut Box::pin(node.poll_temperature())) {
             futures::task::Poll::Ready(result) => assert!(result.is_ok()),
             e => panic!("{:?}", e),
         };
-
-        // Ensure the expected call was received
-        mock_metrics.verify("Didn't receive expected calls for thermal shutdown");
     }
 }

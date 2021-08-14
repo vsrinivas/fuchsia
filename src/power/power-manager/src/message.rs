@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::shutdown_request::ShutdownRequest;
-use crate::types::{Celsius, ThermalLoad, Watts};
+use crate::types::{Celsius, Nanoseconds, ThermalLoad, Watts};
 
 /// Defines the message types and arguments to be used for inter-node communication
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -57,6 +57,18 @@ pub enum Message {
     /// Notify that the user active state has changed
     /// Arg: the new active state
     NotifyUserActiveChanged(bool),
+
+    /// Log the start of throttling with the Platform Metrics node
+    /// Arg: timestamp of the event
+    LogThrottleStart(Nanoseconds),
+
+    /// Log the end of throttling (due to successful mitigation) with the Platform Metrics node
+    /// Arg: timestamp of the event
+    LogThrottleEndMitigated(Nanoseconds),
+
+    /// Log the end of throttling (due to critical shutdown) with the Platform Metrics node
+    /// Arg: timestamp of the event
+    LogThrottleEndShutdown(Nanoseconds),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -103,4 +115,13 @@ pub enum MessageReturn {
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     NotifyUserActiveChanged,
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    LogThrottleStart,
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    LogThrottleEndMitigated,
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    LogThrottleEndShutdown,
 }

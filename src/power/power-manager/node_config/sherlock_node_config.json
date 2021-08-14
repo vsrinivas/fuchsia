@@ -93,6 +93,16 @@
     "name": "thermal_limiter"
   },
   {
+    "type": "PlatformMetrics",
+    "name": "platform_metrics",
+    "config": {
+      "cpu_temperature_poll_interval_s": 1
+    },
+    "dependencies": {
+      "cpu_temperature_handler_node": "temperature_soc_pll"
+    }
+  },
+  {
     "type": "ThermalPolicy",
     "name": "thermal_policy",
     "dependencies": {
@@ -103,7 +113,8 @@
         "big_cluster_control"
       ],
       "system_power_handler_node": "sys_shutdown",
-      "thermal_limiter_node": "thermal_limiter"
+      "thermal_limiter_node": "thermal_limiter",
+      "platform_metrics_node": "platform_metrics"
     },
     "config": {
       "controller_params": {

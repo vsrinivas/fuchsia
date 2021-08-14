@@ -93,7 +93,6 @@ rustc_binary("bin") {
 
   sources = [
     "src/activity_handler.rs",
-    "src/cobalt_metrics.rs",
     "src/cpu_control_handler.rs",
     "src/cpu_stats_handler.rs",
     "src/crash_report_handler.rs",
@@ -105,6 +104,7 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/message.rs",
     "src/node.rs",
+    "src/platform_metrics.rs",
     "src/power_manager.rs",
     "src/shutdown_request.rs",
     "src/shutdown_watcher.rs",

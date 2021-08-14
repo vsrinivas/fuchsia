@@ -44,6 +44,16 @@
     }
   },
   {
+    "type": "PlatformMetrics",
+    "name": "platform_metrics",
+    "config": {
+      "cpu_temperature_poll_interval_s": 1
+    },
+    "dependencies": {
+      "cpu_temperature_handler_node": "soc_pll_thermal"
+    }
+  },
+  {
     "type": "SystemProfileHandler",
     "name": "system_profile_handler"
   },
