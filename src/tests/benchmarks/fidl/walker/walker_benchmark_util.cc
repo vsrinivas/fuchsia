@@ -63,11 +63,17 @@ class NoOpVisitor final
 
   EnvelopeCheckpoint EnterEnvelope() { return {}; }
 
-  Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
+  Status LeaveEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                       EnvelopeCheckpoint prev_checkpoint) {
     return Status::kSuccess;
   }
 
-  Status VisitUnknownEnvelope(EnvelopePointer envelope, FidlIsResource is_source) {
+  Status LeaveInlinedEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                              EnvelopeCheckpoint prev_checkpoint) {
+    return Status::kSuccess;
+  }
+
+  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_source) {
     return Status::kSuccess;
   }
 

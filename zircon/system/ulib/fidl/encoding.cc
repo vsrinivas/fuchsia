@@ -76,6 +76,7 @@ class FidlEncoder final
   using ObjectPointerPointer = typename Base::ObjectPointerPointer;
   using HandlePointer = typename Base::HandlePointer;
   using CountPointer = typename Base::CountPointer;
+  using EnvelopeType = typename Base::EnvelopeType;
   using EnvelopePointer = typename Base::EnvelopePointer;
   using Position = EncodingPosition;
 
@@ -198,15 +199,27 @@ class FidlEncoder final
     };
   }
 
-  Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
+  Status LeaveEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                       EnvelopeCheckpoint prev_checkpoint) {
     uint32_t num_bytes = next_out_of_line_ - prev_checkpoint.num_bytes;
     uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
     // Validate the claimed num_bytes/num_handles.
-    if (unlikely(envelope->num_bytes != num_bytes)) {
+    if (unlikely(in_envelope.num_bytes != num_bytes)) {
       SetError("Envelope num_bytes was mis-sized");
       return Status::kConstraintViolationError;
     }
-    if (unlikely(envelope->num_handles != num_handles)) {
+    if (unlikely(in_envelope.num_handles != num_handles)) {
+      SetError("Envelope num_handles was mis-sized");
+      return Status::kConstraintViolationError;
+    }
+    return Status::kSuccess;
+  }
+
+  Status LeaveInlinedEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                              EnvelopeCheckpoint prev_checkpoint) {
+    // Validate the claimed num_bytes/num_handles.
+    uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
+    if (unlikely(in_envelope.num_handles != num_handles)) {
       SetError("Envelope num_handles was mis-sized");
       return Status::kConstraintViolationError;
     }
@@ -215,7 +228,7 @@ class FidlEncoder final
 
   // Error when attempting to encode an unknown envelope.
   // Unknown envelopes are not supported in C, which is the only user of FidlEncoder.
-  Status VisitUnknownEnvelope(EnvelopePointer envelope, FidlIsResource is_resource) {
+  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_resource) {
     SetError("Cannot encode unknown union or table");
     return Status::kConstraintViolationError;
   }

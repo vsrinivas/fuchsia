@@ -288,19 +288,26 @@ class FidlEncoder final
     };
   }
 
-  Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
+  Status LeaveEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                       EnvelopeCheckpoint prev_checkpoint) {
     uint32_t num_bytes = total_bytes_written_ - prev_checkpoint.num_bytes;
     uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
     // Write the num_bytes/num_handles.
-    envelope->num_bytes = num_bytes;
-    envelope->num_handles = num_handles;
+    out_envelope->num_bytes = num_bytes;
+    out_envelope->num_handles = num_handles;
+    return Status::kSuccess;
+  }
+
+  Status LeaveInlinedEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                              EnvelopeCheckpoint prev_checkpoint) {
+    out_envelope->num_handles = handle_idx_ - prev_checkpoint.num_handles;
     return Status::kSuccess;
   }
 
   // Error when attempting to encode an unknown envelope.
   // This behavior is LLCPP specific, and so assumes that the FidlEncoder is only
   // used in LLCPP.
-  Status VisitUnknownEnvelope(EnvelopePointer envelope, FidlIsResource is_resource) {
+  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_resource) {
     SetError("Cannot encode unknown union or table");
     return Status::kConstraintViolationError;
   }

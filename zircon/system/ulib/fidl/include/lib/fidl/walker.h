@@ -167,6 +167,8 @@ class Walker final {
 
   using EnvelopeCheckpoint = typename VisitorImpl::EnvelopeCheckpoint;
 
+  using EnvelopeType = typename VisitorImpl::EnvelopeType;
+
   using EnvelopePointer = typename VisitorImpl::EnvelopePointer;
 
   using VisitorSuper = Visitor<WireFormatVersion, MutationTrait, Position, EnvelopeCheckpoint>;
@@ -467,8 +469,9 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV1(Position envelope_
                                                               const fidl_type_t* payload_type,
                                                               OutOfLineDepth depth,
                                                               bool is_resource) {
-  auto envelope = PtrTo<std::remove_pointer_t<EnvelopePointer>>(envelope_position);
-  auto v1_envelope = reinterpret_cast<const fidl_envelope_t*>(envelope);
+  auto envelope = PtrTo<EnvelopeType>(envelope_position);
+  auto envelope_copy = *envelope;
+  auto v1_envelope = PtrTo<const fidl_envelope_t>(envelope_position);
 
   EnvelopeCheckpoint checkpoint = visitor_->EnterEnvelope();
 
@@ -489,12 +492,12 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV1(Position envelope_
       auto result = WalkInternal(payload_type, obj_position, obj_depth);
       FIDL_RESULT_GUARD(result);
     } else {
-      status = visitor_->VisitUnknownEnvelope(envelope, is_resource);
+      status = visitor_->VisitUnknownEnvelope(envelope_copy, is_resource);
       FIDL_STATUS_GUARD(status);
     }
   }
 
-  auto status = visitor_->LeaveEnvelope(envelope, checkpoint);
+  auto status = visitor_->LeaveEnvelope(envelope_copy, envelope, checkpoint);
   FIDL_STATUS_GUARD(status);
 
   return Result::kContinue;
@@ -505,8 +508,9 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
                                                               const fidl_type_t* payload_type,
                                                               OutOfLineDepth depth,
                                                               bool is_resource) {
-  auto envelope = PtrTo<std::remove_pointer_t<EnvelopePointer>>(envelope_position);
-  auto v2_envelope = reinterpret_cast<const fidl_envelope_v2_t*>(envelope);
+  auto envelope = PtrTo<EnvelopeType>(envelope_position);
+  auto envelope_copy = *envelope;
+  auto v2_envelope = PtrTo<const fidl_envelope_v2_t>(envelope_position);
 
   EnvelopeCheckpoint checkpoint = visitor_->EnterEnvelope();
 
@@ -525,12 +529,42 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
     FIDL_DEPTH_GUARD(obj_depth);
 
     if (payload_type != nullptr) {
+      switch (TypeSize<WireFormatVersion>(payload_type)) {
+        case 1: {
+          auto status = visitor_->VisitInternalPadding(envelope_position, 0xffffff00);
+          FIDL_STATUS_GUARD(status);
+          break;
+        }
+        case 2: {
+          auto status = visitor_->VisitInternalPadding(envelope_position, 0xffff0000);
+          FIDL_STATUS_GUARD(status);
+          break;
+        }
+        case 3: {
+          auto status = visitor_->VisitInternalPadding(envelope_position, 0xff000000);
+          FIDL_STATUS_GUARD(status);
+          break;
+        }
+        case 4:
+          // No padding needed.
+          break;
+        default:
+          // Only sizes 1-4 may be inlined.
+          visitor_->OnError("Value incorrectly inlined");
+          FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+          break;
+      }
+
       auto result = WalkInternal(payload_type, envelope_position, obj_depth);
       FIDL_RESULT_GUARD(result);
     } else {
-      auto status = visitor_->VisitUnknownEnvelope(envelope, is_resource);
+      auto status = visitor_->VisitUnknownEnvelope(envelope_copy, is_resource);
       FIDL_STATUS_GUARD(status);
     }
+
+    auto status = visitor_->LeaveInlinedEnvelope(envelope_copy, envelope, checkpoint);
+    FIDL_STATUS_GUARD(status);
+
     return Result::kContinue;
   }
 
@@ -550,12 +584,12 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
       auto result = WalkInternal(payload_type, obj_position, obj_depth);
       FIDL_RESULT_GUARD(result);
     } else {
-      status = visitor_->VisitUnknownEnvelope(envelope, is_resource);
+      status = visitor_->VisitUnknownEnvelope(envelope_copy, is_resource);
       FIDL_STATUS_GUARD(status);
     }
   }
 
-  auto status = visitor_->LeaveEnvelope(envelope, checkpoint);
+  auto status = visitor_->LeaveEnvelope(envelope_copy, envelope, checkpoint);
   FIDL_STATUS_GUARD(status);
 
   return Result::kContinue;

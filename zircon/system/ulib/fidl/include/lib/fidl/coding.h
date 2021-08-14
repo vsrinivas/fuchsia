@@ -33,11 +33,17 @@ zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* m
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         const zx_handle_t* handles, uint32_t num_handles,
                         const char** error_msg_out);
+zx_status_t internal__fidl_decode__v2__may_break(const fidl_type_t* type, void* bytes,
+                                                 uint32_t num_bytes, const zx_handle_t* handles,
+                                                 uint32_t num_handles, const char** error_msg_out);
 // Perform a fidl_decode, but leave unknown handles in flexible resource types intact
 // instead of closing them.
 zx_status_t fidl_decode_skip_unknown_handles(const fidl_type_t* type, void* bytes,
                                              uint32_t num_bytes, const zx_handle_t* handles,
                                              uint32_t num_handles, const char** error_msg_out);
+zx_status_t internal__fidl_decode_skip_unknown_handles__v2__may_break(
+    const fidl_type_t* type, void* bytes, uint32_t num_bytes, const zx_handle_t* handles,
+    uint32_t num_handles, const char** error_msg_out);
 
 // Perform a fidl_decode and check handle types and rights against the types and rights specified
 // in the FIDL file.
@@ -51,6 +57,11 @@ zx_status_t fidl_decode_skip_unknown_handles(const fidl_type_t* type, void* byte
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** error_msg_out);
+zx_status_t internal_fidl_decode_etc__v2__may_break(const fidl_type_t* type, void* bytes,
+                                                    uint32_t num_bytes,
+                                                    const zx_handle_info_t* handle_infos,
+                                                    uint32_t num_handle_infos,
+                                                    const char** error_msg_out);
 
 // Perform a fidl_decode_etc, but leave unknown handles in flexible resource types intact
 // instead of closing them.
@@ -58,6 +69,9 @@ zx_status_t fidl_decode_etc_skip_unknown_handles(const fidl_type_t* type, void* 
                                                  uint32_t num_bytes,
                                                  const zx_handle_info_t* handles,
                                                  uint32_t num_handles, const char** error_msg_out);
+zx_status_t internal__fidl_decode_etc_skip_unknown_handles__v2__may_break(
+    const fidl_type_t* type, void* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
+    uint32_t num_handles, const char** error_msg_out);
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
                             const char** out_error_msg);
 

@@ -1479,7 +1479,7 @@ decode_failure("BadPaddedTableStructUpperByte") {
 }
 
 decode_failure("UnionInlinePadding_OnePaddingByte_InvalidPadding") {
-    bindings_allowlist = [rust],
+    bindings_allowlist = [c, rust],
     type = UnionInlinePaddingStruct,
     bytes = {
         v2 = [
@@ -1492,7 +1492,7 @@ decode_failure("UnionInlinePadding_OnePaddingByte_InvalidPadding") {
 }
 
 decode_failure("UnionInlinePadding_TwoPaddingByte_LowerByte_InvalidPadding") {
-    bindings_allowlist = [rust],
+    bindings_allowlist = [c, rust],
     type = UnionInlinePaddingStruct,
     bytes = {
         v2 = [
@@ -1505,7 +1505,7 @@ decode_failure("UnionInlinePadding_TwoPaddingByte_LowerByte_InvalidPadding") {
 }
 
 decode_failure("UnionInlinePadding_TwoPaddingByte_UpperByte_InvalidPadding") {
-    bindings_allowlist = [rust],
+    bindings_allowlist = [c, rust],
     type = UnionInlinePaddingStruct,
     bytes = {
         v2 = [
@@ -1518,7 +1518,7 @@ decode_failure("UnionInlinePadding_TwoPaddingByte_UpperByte_InvalidPadding") {
 }
 
 decode_failure("UnionInlinePadding_ThreePaddingByte_LowerByte_InvalidPadding") {
-    bindings_allowlist = [rust],
+    bindings_allowlist = [c, rust],
     type = UnionInlinePaddingStruct,
     bytes = {
         v2 = [
@@ -1531,7 +1531,7 @@ decode_failure("UnionInlinePadding_ThreePaddingByte_LowerByte_InvalidPadding") {
 }
 
 decode_failure("UnionInlinePadding_ThreePaddingByte_MiddleByte_InvalidPadding") {
-    bindings_allowlist = [rust],
+    bindings_allowlist = [c, rust],
     type = UnionInlinePaddingStruct,
     bytes = {
         v2 = [
@@ -1544,7 +1544,7 @@ decode_failure("UnionInlinePadding_ThreePaddingByte_MiddleByte_InvalidPadding") 
 }
 
 decode_failure("UnionInlinePadding_ThreePaddingByte_UpperByte_InvalidPadding") {
-    bindings_allowlist = [rust],
+    bindings_allowlist = [c, rust],
     type = UnionInlinePaddingStruct,
     bytes = {
         v2 = [

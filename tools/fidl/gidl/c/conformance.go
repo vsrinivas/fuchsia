@@ -46,7 +46,7 @@ TEST(C_Conformance, {{ .Name }}_Decode) {
 	std::vector<uint8_t> bytes = {{ .Bytes }};
 	std::vector<zx_handle_t> handles = {{ .Handles }};
 	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(c_conformance_utils::DecodeSuccess(decltype(obj)::Type, std::move(bytes), std::move(handles)));
+	EXPECT_TRUE(c_conformance_utils::DecodeSuccess({{ .WireFormatVersion }}, decltype(obj)::Type, std::move(bytes), std::move(handles)));
 }
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
@@ -63,7 +63,7 @@ TEST(C_Conformance, {{ .Name }}_Decode_Failure) {
 	{{- end }}
 	std::vector<uint8_t> bytes = {{ .Bytes }};
 	std::vector<zx_handle_t> handles = {{ .Handles }};
-	EXPECT_TRUE(c_conformance_utils::DecodeFailure({{ .ValueType }}::Type, std::move(bytes), std::move(handles), {{ .ErrorCode }}));
+	EXPECT_TRUE(c_conformance_utils::DecodeFailure({{ .WireFormatVersion }}, {{ .ValueType }}::Type, std::move(bytes), std::move(handles), {{ .ErrorCode }}));
 	{{- if .HandleDefs }}
 	for (const zx_handle_t handle : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
@@ -82,13 +82,13 @@ type conformanceTmplInput struct {
 }
 
 type decodeSuccessCase struct {
-	Name, HandleDefs, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly                                            bool
+	Name, HandleDefs, ValueBuild, ValueVar, Bytes, Handles, WireFormatVersion string
+	FuchsiaOnly                                                               bool
 }
 
 type decodeFailureCase struct {
-	Name, HandleDefs, ValueType, Bytes, Handles, ErrorCode string
-	FuchsiaOnly                                            bool
+	Name, HandleDefs, ValueType, Bytes, Handles, ErrorCode, WireFormatVersion string
+	FuchsiaOnly                                                               bool
 }
 
 // Generate generates C tests.
@@ -128,13 +128,14 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:        testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandles(encoding.Handles),
-				FuchsiaOnly: fuchsiaOnly,
+				Name:              testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				HandleDefs:        handleDefs,
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+				Handles:           libhlcpp.BuildRawHandles(encoding.Handles),
+				FuchsiaOnly:       fuchsiaOnly,
+				WireFormatVersion: wireFormatName(encoding.WireFormat),
 			})
 		}
 	}
@@ -157,13 +158,14 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-				Name:        decodeFailure.Name,
-				HandleDefs:  handleDefs,
-				ValueType:   valueType,
-				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandles(encoding.Handles),
-				ErrorCode:   errorCode,
-				FuchsiaOnly: fuchsiaOnly,
+				Name:              testCaseName(decodeFailure.Name, encoding.WireFormat),
+				HandleDefs:        handleDefs,
+				ValueType:         valueType,
+				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+				Handles:           libhlcpp.BuildRawHandles(encoding.Handles),
+				ErrorCode:         errorCode,
+				FuchsiaOnly:       fuchsiaOnly,
+				WireFormatVersion: wireFormatName(encoding.WireFormat),
 			})
 		}
 	}
@@ -171,9 +173,13 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 }
 
 func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	return wireFormat == gidlir.V1WireFormat
+	return wireFormat == gidlir.V1WireFormat || wireFormat == gidlir.V2WireFormat
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("%s_%s", baseName, fidlgen.ToUpperCamelCase(wireFormat.String()))
+}
+
+func wireFormatName(wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("FIDL_WIRE_FORMAT_VERSION_%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
 }

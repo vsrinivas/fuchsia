@@ -6,6 +6,7 @@
 #define SRC_LIB_FIDL_C_WALKER_TESTS_CONFORMANCE_TEST_UTILS_H_
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/internal.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -45,11 +46,24 @@ bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size
 
 // Verifies that |bytes| and |handles| successfully decodes.
 // TODO(fxbug.dev/67276) Check deep equality of decoded value.
-inline bool DecodeSuccess(const fidl_type* type, std::vector<uint8_t> bytes,
-                          std::vector<zx_handle_t> handles) {
+inline bool DecodeSuccess(FidlWireFormatVersion wire_format_version, const fidl_type* type,
+                          std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles) {
   const char* error_msg = nullptr;
-  zx_status_t status =
-      fidl_decode(type, bytes.data(), bytes.size(), handles.data(), handles.size(), &error_msg);
+  zx_status_t status;
+  switch (wire_format_version) {
+    case FIDL_WIRE_FORMAT_VERSION_V1: {
+      status =
+          fidl_decode(type, bytes.data(), bytes.size(), handles.data(), handles.size(), &error_msg);
+      break;
+    }
+    case FIDL_WIRE_FORMAT_VERSION_V2: {
+      status = internal__fidl_decode__v2__may_break(type, bytes.data(), bytes.size(),
+                                                    handles.data(), handles.size(), &error_msg);
+      break;
+    }
+    default:
+      ZX_PANIC("unknown wire format");
+  }
   if (status != ZX_OK) {
     std::cout << "Decoding failed (" << zx_status_get_string(status) << "): " << error_msg
               << std::endl;
@@ -64,11 +78,25 @@ inline bool DecodeSuccess(const fidl_type* type, std::vector<uint8_t> bytes,
 }
 
 // Verifies that |bytes| and |handles| fails to decode.
-inline bool DecodeFailure(const fidl_type* type, std::vector<uint8_t> bytes,
-                          std::vector<zx_handle_t> handles, zx_status_t expected_error_code) {
+inline bool DecodeFailure(FidlWireFormatVersion wire_format_version, const fidl_type* type,
+                          std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles,
+                          zx_status_t expected_error_code) {
   const char* error_msg = nullptr;
-  zx_status_t status =
-      fidl_decode(type, bytes.data(), bytes.size(), handles.data(), handles.size(), &error_msg);
+  zx_status_t status;
+  switch (wire_format_version) {
+    case FIDL_WIRE_FORMAT_VERSION_V1: {
+      status =
+          fidl_decode(type, bytes.data(), bytes.size(), handles.data(), handles.size(), &error_msg);
+      break;
+    }
+    case FIDL_WIRE_FORMAT_VERSION_V2: {
+      status = internal__fidl_decode__v2__may_break(type, bytes.data(), bytes.size(),
+                                                    handles.data(), handles.size(), &error_msg);
+      break;
+    }
+    default:
+      ZX_PANIC("unknown wire format");
+  }
   if (status == ZX_OK) {
     std::cout << "Decoding unexpectedly succeeded" << std::endl;
     return false;

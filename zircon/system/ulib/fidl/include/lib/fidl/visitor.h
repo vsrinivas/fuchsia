@@ -89,10 +89,12 @@ class Visitor {
   // HandlePointer is ([const] zx_handle_t)*
   using HandlePointer = Ptr<zx_handle_t>;
 
+  // EnvelopeType is fidl_envelope_t or fidl_envelope_v2_t
+  using EnvelopeType = typename std::conditional_t<WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1,
+                                                   fidl_envelope_t, fidl_envelope_v2_t>;
+
   // EnvelopePointer is ([const] fidl_envelope_t)* or ([const] fidl_envelope_v2_t)*
-  using EnvelopePointer =
-      Ptr<typename std::conditional_t<WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1,
-                                      fidl_envelope_t, fidl_envelope_v2_t>>;
+  using EnvelopePointer = Ptr<EnvelopeType>;
 
   // CountPointer is ([const] uint64_t)*
   using CountPointer = Ptr<uint64_t>;
@@ -171,9 +173,31 @@ class Visitor {
 
   // Called when the walker leaves an envelope.
   //
-  // |envelope| is a pointer to the fidl_envelope_t structure containing the envelope.
+  // |in_envelope| is a fidl_envelope_t or fidl_envelope_v2_t structure containing the original
+  // input envelope. This should be used for reading because it won't have been clobbered by
+  // other calls.
+  // |out_envelope| is a fidl_envelope_t* or fidl_envelope_v2_t* pointing to the actual envelope
+  // backed by the message bytes. This should be used for writing but not reading.
   // |prev_checkpoint| is the checkpoint object returned in the EnterEnvelope call().
-  Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
+  Status LeaveEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                       EnvelopeCheckpoint prev_checkpoint) {
+    __builtin_unreachable();
+  }
+
+  // Called when the walker leaves an envelope that is inlined.
+  //
+  // This exists in addition to LeaveEnvelope, because the number of bytes consumed cannot
+  // be computed by counting the increase in out of line bytes when the envelope is inlined
+  // since there are no new out of line objects.
+  //
+  // |in_envelope| is a fidl_envelope_t or fidl_envelope_v2_t structure containing the original
+  // input envelope. This should be used for reading because it won't have been clobbered by
+  // other calls.
+  // |out_envelope| is a fidl_envelope_t* or fidl_envelope_v2_t* pointing to the actual envelope
+  // backed by the message bytes. This should be used for writing but not reading.
+  // |prev_checkpoint| is the checkpoint object returned in the EnterEnvelope call().
+  Status LeaveInlinedEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                              EnvelopeCheckpoint prev_checkpoint) {
     __builtin_unreachable();
   }
 
@@ -181,9 +205,9 @@ class Visitor {
   // This takes the place of the continued walk of the internal object that would take place
   // if they type was known.
   //
-  // |envelope| is a pointer to the fidl_envelope_t structure containing the envelope.
+  // |envelope| is a fidl_envelope_t or fidl_envelope_v2_t structure containing the envelope.
   // |is_resource| indicates whether the type containing this envelope is a resource type.
-  Status VisitUnknownEnvelope(EnvelopePointer envelope, FidlIsResource is_resource) {
+  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_resource) {
     __builtin_unreachable();
   }
 
