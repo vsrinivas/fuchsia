@@ -68,12 +68,12 @@ DeviceInterface::~DeviceInterface() {
                 "Can't destroy DeviceInterface with active primary session. (%s)",
                 primary_session_->name());
   ZX_ASSERT_MSG(sessions_.is_empty(), "Can't destroy DeviceInterface with %ld pending session(s).",
-                sessions_.size_slow());
+                sessions_.size());
   ZX_ASSERT_MSG(dead_sessions_.is_empty(),
                 "Can't destroy DeviceInterface with %ld pending dead session(s).",
-                dead_sessions_.size_slow());
+                dead_sessions_.size());
   ZX_ASSERT_MSG(bindings_.is_empty(), "Can't destroy device interface with %ld attached bindings.",
-                bindings_.size_slow());
+                bindings_.size());
   size_t active_ports = std::count_if(
       ports_.begin(), ports_.end(),
       [](const std::unique_ptr<DevicePort>& port) { return static_cast<bool>(port); });
@@ -682,7 +682,7 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
       case TeardownState::RUNNING: {
         teardown_state_ = TeardownState::BINDINGS;
         LOGF_TRACE("network-device: Teardown state is BINDINGS (%ld bindings to destroy)",
-                   bindings_.size_slow());
+                   bindings_.size());
         if (!bindings_.is_empty()) {
           for (auto& b : bindings_) {
             b.Unbind();
@@ -697,7 +697,7 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
         }
         teardown_state_ = TeardownState::PORT_WATCHERS;
         LOGF_TRACE("network-device: Teardown state is PORT_WATCHERS (%ld watchers to destroy)",
-                   port_watchers_.size_slow());
+                   port_watchers_.size());
         if (!port_watchers_.is_empty()) {
           for (auto& w : port_watchers_) {
             w.Unbind();
@@ -729,7 +729,8 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
           return nullptr;
         }
         teardown_state_ = TeardownState::SESSIONS;
-        LOG_TRACE("network-device: Teardown state is SESSIONS");
+        LOGF_TRACE("network-device: Teardown state is SESSIONS (primary=%s) (alive=%ld) (dead=%ld)",
+                   primary_session_ ? "true" : "false", sessions_.size(), dead_sessions_.size());
         if (primary_session_ || !sessions_.is_empty()) {
           // If we have any sessions, signal all of them to stop their threads callback. Each
           // session that finishes operating will go through the `NotifyDeadSession` machinery. The

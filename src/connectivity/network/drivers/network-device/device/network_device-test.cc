@@ -914,9 +914,9 @@ TEST_P(RxTxParamTest, WaitsForAllBuffersReturned) {
   ASSERT_OK(WaitRxAvailable());
 
   fbl::DoublyLinkedList rx_buffers = impl_.TakeRxBuffers();
-  ASSERT_EQ(rx_buffers.size_slow(), 1u);
+  ASSERT_EQ(rx_buffers.size(), 1u);
   fbl::DoublyLinkedList tx_buffers = impl_.TakeTxBuffers();
-  ASSERT_EQ(tx_buffers.size_slow(), 1u);
+  ASSERT_EQ(tx_buffers.size(), 1u);
 
   ASSERT_OK(session.Close());
   ASSERT_OK(WaitStop());

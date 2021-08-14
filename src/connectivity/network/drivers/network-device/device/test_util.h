@@ -229,28 +229,28 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
     return tx_buffers_.pop_front();
   }
 
-  fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>> TakeTxBuffers() __TA_EXCLUDES(lock_) {
+  fbl::SizedDoublyLinkedList<std::unique_ptr<TxBuffer>> TakeTxBuffers() __TA_EXCLUDES(lock_) {
     fbl::AutoLock lock(&lock_);
-    fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>> r;
+    fbl::SizedDoublyLinkedList<std::unique_ptr<TxBuffer>> r;
     tx_buffers_.swap(r);
     return r;
   }
 
-  fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> TakeRxBuffers() __TA_EXCLUDES(lock_) {
+  fbl::SizedDoublyLinkedList<std::unique_ptr<RxBuffer>> TakeRxBuffers() __TA_EXCLUDES(lock_) {
     fbl::AutoLock lock(&lock_);
-    fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> r;
+    fbl::SizedDoublyLinkedList<std::unique_ptr<RxBuffer>> r;
     rx_buffers_.swap(r);
     return r;
   }
 
   size_t rx_buffer_count() __TA_EXCLUDES(lock_) {
     fbl::AutoLock lock(&lock_);
-    return rx_buffers_.size_slow();
+    return rx_buffers_.size();
   }
 
   size_t tx_buffer_count() __TA_EXCLUDES(lock_) {
     fbl::AutoLock lock(&lock_);
-    return tx_buffers_.size_slow();
+    return tx_buffers_.size();
   }
 
   std::optional<uint8_t> first_vmo_id() {
@@ -287,8 +287,8 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   std::array<zx::vmo, MAX_VMOS> vmos_;
   device_info_t info_{};
   ddk::NetworkDeviceIfcProtocolClient device_client_;
-  fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> rx_buffers_ __TA_GUARDED(lock_);
-  fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>> tx_buffers_ __TA_GUARDED(lock_);
+  fbl::SizedDoublyLinkedList<std::unique_ptr<RxBuffer>> rx_buffers_ __TA_GUARDED(lock_);
+  fbl::SizedDoublyLinkedList<std::unique_ptr<TxBuffer>> tx_buffers_ __TA_GUARDED(lock_);
   zx::event event_;
   bool auto_start_ = true;
   bool auto_stop_ = true;

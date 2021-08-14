@@ -24,7 +24,7 @@ class TxQueue;
 
 class Session;
 class AttachedPort;
-using SessionList = fbl::DoublyLinkedList<std::unique_ptr<Session>>;
+using SessionList = fbl::SizedDoublyLinkedList<std::unique_ptr<Session>>;
 
 struct RefCountedFifo : public fbl::RefCounted<RefCountedFifo> {
   zx::fifo fifo;
@@ -180,7 +180,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
     Binding() = default;
     std::optional<fidl::ServerBindingRef<netdev::Device>> binding_;
   };
-  using BindingList = fbl::DoublyLinkedList<std::unique_ptr<Binding>>;
+  using BindingList = fbl::SizedDoublyLinkedList<std::unique_ptr<Binding>>;
 
   enum class TeardownState { RUNNING, BINDINGS, PORT_WATCHERS, PORTS, SESSIONS, FINISHED };
 
