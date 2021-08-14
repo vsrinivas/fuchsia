@@ -11,12 +11,13 @@ use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{Stream, StreamExt as _, TryFutureExt as _};
+use futures::{FutureExt as _, Stream, StreamExt as _, TryFutureExt as _};
 use net_declare::{fidl_subnet, net_ip_v4, net_ip_v6, net_mac};
 use netstack_testing_common::{
     constants::{ipv4 as ipv4_consts, ipv6 as ipv6_consts},
-    environments::{KnownServiceProvider, Netstack2, TestSandboxExt as _},
-    get_inspect_data, EthertapName as _,
+    get_inspect_data,
+    realms::{constants, KnownServiceProvider, Netstack2, TestSandboxExt as _},
+    wait_for_component_stopped, EthertapName as _,
 };
 use netstack_testing_macros::variants_test;
 use packet::{Buf, InnerPacketBuilder as _, Serializer as _};
@@ -535,9 +536,12 @@ async fn test_state<E: netemul::Endpoint>(
                 ipv6: if ipv6 > best_ipv6 { ipv6 } else { best_ipv6 },
             },
         );
+
+    let reachability_monitor_wait_fut =
+        wait_for_component_stopped(&realm, constants::reachability::COMPONENT_NAME, None).fuse();
+    futures::pin_mut!(reachability_monitor_wait_fut);
+
     loop {
-        // TODO(https://fxbug.dev/80818): Wait on reachability monitor exiting and fail the test if
-        // so.
         futures::select! {
             o = echo_reply_streams.next() => {
                 let () = o.expect("interface echo reply stream ended unexpectedly");
@@ -590,6 +594,9 @@ async fn test_state<E: netemul::Endpoint>(
                 {
                     break;
                 }
+            }
+            event = reachability_monitor_wait_fut => {
+                panic!("reachability monitor terminated unexpectedly with event: {:?}", event);
             }
         }
     }

@@ -24,6 +24,7 @@ use fidl_fuchsia_hardware_ethertap as fethertap;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netstack as fnetstack;
+use fidl_fuchsia_sys2 as fsys2;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
@@ -130,6 +131,39 @@ pub async fn write_ndp_message<
     ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")
 }
 
+/// Waits for a `stopped` event to be emitted for a component in a test realm.
+///
+/// Optionally specifies a matcher for the expected exit status of the `stopped` event.
+pub async fn wait_for_component_stopped(
+    realm: &netemul::TestRealm<'_>,
+    component_moniker: &str,
+    status_matcher: Option<component_events::matcher::ExitStatusMatcher>,
+) -> Result<component_events::events::Stopped> {
+    use component_events::{
+        events::{self, Event as _, EventMode, EventSource, EventSubscription},
+        matcher::EventMatcher,
+    };
+
+    let event_source = EventSource::from_proxy(
+        fuchsia_component::client::connect_to_protocol::<fsys2::EventSourceMarker>()
+            .context("failed to connect to event source protocol")?,
+    );
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
+        .await
+        .context("failed to subscribe to `Stopped` events")?;
+    let realm_moniker = &realm.get_moniker().await.context("calling get moniker")?;
+    let moniker_for_match = format!(
+        "{}:\\d+/{}:\\d+/{}:\\d+",
+        NETEMUL_SANDBOX_MONIKER, realm_moniker, component_moniker
+    );
+    EventMatcher::ok()
+        .stop(status_matcher)
+        .moniker(moniker_for_match)
+        .wait::<events::Stopped>(&mut event_stream)
+        .await
+}
+
 /// Waits for a non-loopback interface to come up with an ID not in `exclude_ids`.
 ///
 /// Useful when waiting for an interface to be discovered and brought up by a
@@ -230,8 +264,8 @@ pub async fn get_component_moniker<'a>(
 ///
 /// Returns the resulting inspect data for `component`, filtered by
 /// `tree_selector` and with inspect file starting with `file_prefix`.
-pub async fn get_inspect_data<'a>(
-    realm: &netemul::TestRealm<'a>,
+pub async fn get_inspect_data(
+    realm: &netemul::TestRealm<'_>,
     component_moniker: impl Into<String>,
     tree_selector: impl Into<String>,
     file_prefix: &str,
