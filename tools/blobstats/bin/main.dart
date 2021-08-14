@@ -49,8 +49,10 @@ Future main(List<String> args) async {
   if (argResults[image] != null) {
     prefix = '${argResults[image]}_';
   }
-  await stats.addManifest('${prefix}obj/build/images', 'blob.manifest');
-  await stats.addBlobSizes('${prefix}blobs.json');
+  await stats.addManifest(
+      '${prefix}obj/build/images/fuchsia/fuchsia/gen', 'blob.manifest');
+  await stats
+      .addBlobSizes('${prefix}obj/build/images/fuchsia/fuchsia/gen/blobs.json');
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
   stats
     ..computeStats()
