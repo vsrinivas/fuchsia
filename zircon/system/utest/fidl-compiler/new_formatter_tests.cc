@@ -5205,4 +5205,34 @@ alias constrained_handle
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
+// Regression test for fxbug.dev/82455.  Currently documents incorrect behavior.
+TEST(NewFormatterTests, DocCommentThenCommentThenChildComment) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+/// Doc comment.
+// Outer comment.
+type MyEnum = strict enum : uint16 {
+            // Inner comment.
+    MEMBER = 0;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+/// Doc comment.
+// Outer comment.
+type MyEnum = strict enum : uint16 {
+            // Inner comment.
+    MEMBER = 0;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
+}
+
 }  // namespace
