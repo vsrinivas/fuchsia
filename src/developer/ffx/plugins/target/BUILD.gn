@@ -13,7 +13,7 @@ ffx_plugin("ffx_target") {
     "flash:ffx_flash",
     "get-ssh-address:ffx_get_ssh_address",
     "list:ffx_list",
-    "log:ffx_log",
+    "log:ffx_target_log",
     "off:ffx_off",
     "reboot:ffx_reboot",
     "remove:ffx_target_remove",

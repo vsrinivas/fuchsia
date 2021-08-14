@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../../../build/ffx_plugin.gni")
+import("../../build/ffx_plugin.gni")
 
-ffx_plugin("ffx_target_log") {
+ffx_plugin("ffx_log") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
@@ -17,6 +17,8 @@ ffx_plugin("ffx_target_log") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:chrono-english",
   ]
+
+  config_data = [ "data/config.json" ]
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",

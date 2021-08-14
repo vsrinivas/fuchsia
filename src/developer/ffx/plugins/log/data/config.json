@@ -1,5 +1,5 @@
 {
-    "target_log": {
+    "log_cmd": {
         "color": true
     }
 }
