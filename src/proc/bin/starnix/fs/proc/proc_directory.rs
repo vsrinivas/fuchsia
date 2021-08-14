@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::inode_generation::*;
 use crate::fd_impl_directory;
 use crate::fs::*;
 use crate::task::*;
@@ -204,8 +205,9 @@ impl FileOps for DirectoryFileOps {
             for pid in &pids[start..] {
                 // TODO: Figure out if this inode number is fine, given the content of the task
                 // directories.
-                let inode_num = (*pid + pid_offset) as u64;
+                let inode_num = dir_inode_num(*pid);
                 let name = format!("{}", pid);
+
                 // The + 1 is to set the offset to the next possible pid for subsequent reads.
                 let next_offset = (*pid + pid_offset + 1) as i64;
                 sink.add(inode_num, next_offset, DirectoryEntryType::DIR, name.as_bytes())?;

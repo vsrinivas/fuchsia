@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod fs;
+mod inode_generation;
 mod proc_directory;
 
 pub use fs::*;
