@@ -2,20 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/component/component_id_index.gni")
 import("//build/images/args.gni")
+import("//build/images/assemble_system.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/images/zedboot/zedboot_args.gni")
-import("//build/unification/future/images/devmgr_config.gni")
-import("//build/zbi/kernel_cmdline.gni")
-import("//build/zbi/zbi.gni")
 import("//src/sys/root/build/root.gni")
 
 root_realm("root") {
   core_package_name = "core-invalid"
 }
+
+# Zedboot must be included to pave devices until recovery has a replacement
+# mechanism. Products can specify recovery_label to determine which
+# image to include in zircon-r.
+use_zedboot_as_recovery = false
+zedboot_metadata_slot = "zedboot"
+if (get_label_info(recovery_label, "label_with_toolchain") ==
+    get_label_info(":zedboot", "label_with_toolchain")) {
+  use_zedboot_as_recovery = true
+  zedboot_metadata_slot = "zircon-r"
+}
+
+##################################################
+# Old assembly
+##################################################
+
+import("//build/component/component_id_index.gni")
+import("//build/unification/future/images/devmgr_config.gni")
+import("//build/zbi/kernel_cmdline.gni")
+import("//build/zbi/zbi.gni")
 
 # Base system.
 zedboot_labels = []
@@ -264,6 +281,139 @@ if (use_vbmeta) {
   }
 }
 
+##################################################
+# New assembly
+##################################################
+
+# Note: The ZBI output is also used by a script in //scripts/verify_cmdline_params.
+assemble_system("zedboot_assembly") {
+  testonly = true
+  image_name = "zedboot"
+  include_component_id_index = true
+  include_shell_commands = false
+  generate_fvm = false
+
+  base_packages = []
+
+  devmgr_config = [
+                    "netsvc.all-features=true",
+                    "netsvc.netboot=true",
+                  ] + zedboot_devmgr_config
+
+  cmdline = [
+    "console.shell=true",
+    "netsvc.disable=false",
+    "kernel.enable-debugging-syscalls=true",
+    "kernel.enable-serial-syscalls=true",
+    "virtcon.colorscheme=special",
+  ]
+
+  bootfs_labels = [
+    ":root",
+    "//build/input:zedboot_bootfs",
+    "//build/info:bootfs",
+    "//bundles:bootstrap-zedboot",
+    "//bundles/drivers:bootstrap",
+    "//bundles/drivers:usb-host-stack",
+    "//bundles/drivers:usb-peripheral-stack",
+    "//bundles/drivers:utils",
+    "//src/sys/component_manager:component_manager_bootfs_config",
+    "//src/sys/installer:bin",
+  ]
+
+  # Needed for installer runs.
+  bootfs_labels += [
+    "//src/storage/bin/disk-pave:install-disk-image",
+    "//src/storage/bin/mount",
+    "//src/sys/installer:bin",
+  ]
+
+  # For debugging.
+  bootfs_labels += [
+    "//src/bringup/bin/virtcon:bootfs",
+    "//src/connectivity/network/bin/ping",
+    "//src/devices/nand/bin/nand-util",
+    "//src/devices/nand/drivers/broker:nand-broker",
+    "//src/diagnostics/bundles:bootstrap",
+    "//src/security/bin/syscall-check",
+    "//src/storage/bin/dd",
+    "//src/storage/bin/umount",
+    "//src/sys/bin/psutils:killall",
+    "//src/sys/bin/psutils:ps",
+    "//src/sys/bin/psutils:threads",
+    "//src/zircon/bin/ktrace",
+    "//zircon/third_party/uapp/dash",
+  ]
+
+  # zbi arguments
+  if (custom_signing_script != "") {
+    zbi_signing_script = custom_signing_script
+  } else if (use_vboot) {
+    zbi_signing_script = vboot_action.script
+    zbi_signing_args = vboot_action.args
+  }
+}
+
+##################################################
+# Verify the assembly outputs are equal
+##################################################
+
+files = {
+  outdir = "${target_out_dir}/zedboot"
+  gendir = "${outdir}/gen"
+  zbi = "${outdir}/zedboot.zbi"
+  zbi_manifest = "${gendir}/zbi.json"
+  zbi_signed = "${outdir}/zedboot.zbi.signed"
+}
+
+old_files = {
+  outdir = root_build_dir
+  zbi = "${outdir}/zedboot.zbi"
+  zbi_manifest = "${zbi}.json"
+  zbi_signed = "${zbi}.signed"
+}
+
+labels = {
+  images = ":zedboot_assembly"
+}
+
+old_labels = {
+  zbi = ":zbi"
+  zbi_manifest = zbi
+  zbi_signed = ":signed"
+}
+
+verify_files_match("zbi_manifest_matches") {
+  testonly = true
+  deps = [
+    labels.images,
+    old_labels.zbi_manifest,
+  ]
+
+  first = old_files.zbi_manifest
+  second = files.zbi_manifest
+
+  display_text_diff_on_failure = true
+}
+
+verify_files_match("zbi_matches") {
+  testonly = true
+  deps = [
+    ":zbi_manifest_matches",
+    labels.images,
+  ]
+
+  if (custom_signing_script != "" || use_vboot) {
+    deps += [ old_labels.zbi_signed ]
+    first = old_files.zbi_signed
+    second = files.zbi_signed
+  } else {
+    deps += [ old_labels.zbi ]
+    first = old_files.zbi
+    second = files.zbi
+  }
+}
+
 if (target_cpu != "arm64" && !use_vboot) {
   esp("esp") {
     output_name = "zedboot"
@@ -289,7 +439,11 @@ if (target_cpu != "arm64" && !use_vboot) {
 }
 
 group("zedboot") {
-  deps = [ ":zbi" ]
+  deps = [
+    ":zbi",
+    ":zbi_manifest_matches",
+    ":zedboot_assembly",
+  ]
   if (target_cpu != "arm64" && !use_vboot) {
     deps += [ ":esp" ]
   }
