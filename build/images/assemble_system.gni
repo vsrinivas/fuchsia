@@ -17,10 +17,9 @@ import("//build/images/system_image_fuchsia_packages.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/security/verify_build.gni")
-import("//build/unification/future/images/devmgr_config.gni")
-import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Assembles a Fuchsia system.

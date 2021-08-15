@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/images/fvm.gni")
 import("//build/test.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/volume_image/fvm/generate_fvm.gni")
 
 source_set("options") {
   public = [ "options.h" ]

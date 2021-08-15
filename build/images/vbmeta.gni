@@ -6,10 +6,6 @@
 # See [this document](https://android.googlesource.com/platform/external/avb/+/HEAD/README.md)
 # for more information.
 
-import("//build/testing/verify_files_match.gni")
-import("//build/zircon/tools.gni")
-import("//src/developer/ffx/build/ffx_action.gni")
-
 declare_args() {
   # If true, then a vbmeta image will be generated for provided ZBI
   # and the paving script will pave vbmeta images to the target device.
@@ -25,106 +21,33 @@ declare_args() {
   zvb_partition_name = "zircon"
 
   # Board level extra vbmeta descriptors to be combined into the top-level
-  # vbmeta struct (these are in json format)
+  # vbmeta struct.
   #
-  # see //build/images/vbmeta/README.md for more information about these.
+  # The format of these are:
+  #
+  # ```json
+  # {
+  #     "type": "partition",
+  #     "name": "partition_name",
+  #     "size": "104448",
+  #     "flags": "1",
+  #     "min_avb_version": "1.1"
+  # }
+  # ```
+  #
+  # - `name` = (string) The name of the partition as it to appear in the vbmeta image
+  # - `size` = (int as string) The size of the partition in bytes
+  # - `flags` = (int) The bit-wise set of flag values
+  # - `min_avb_version` = (version x.y as a string) the minimum avb version that the
+  #    resultant vbmeta image requires if it includes this descriptor.
+  #
+  # Note: These files cannot contain any comments, and must strictly conform to the
+  # [JSON](http://json.org) spec.
   board_extra_vbmeta_descriptors = []
 
   # DEPRECATED:  Remove when no boards set a value for these.
   board_extra_vbmeta_images = []
   avb_algorithm = "DEPRECATED"
-}
-
-# Template for producing VBMETA image for AVB
-#
-# Parameters
-#
-#   output_name (optional, default: target_name)
-#
-#   zbi (required)
-#       [list-of-strings] path to a ZBI image to be included in AVB chain.
-#       Must only contain a single entry.
-#
-#   deps (usually required)
-#   testonly, metadata
-#       Usual GN meaning.
-template("vbmeta") {
-  generate_image = false
-  if (defined(invoker.generate_image)) {
-    generate_image = invoker.generate_image
-  }
-
-  if (generate_image) {
-    if (defined(invoker.output_name)) {
-      output_file = "${invoker.output_name}"
-    } else {
-      output_file = "${target_name}"
-    }
-
-    output_file += ".vbmeta"
-
-    zbi = invoker.zbi
-    assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
-    assert(avb_key != "", "avb_key must be specified")
-    assert(avb_atx_metadata != "", "avb metadata must be specified")
-    output_file = "$root_out_dir/$output_file"
-
-    ffx_action(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                               "deps",
-                               "metadata",
-                             ])
-
-      args = [
-        "--config",
-        "assembly_enabled=true",
-        "assembly",
-        "vbmeta",
-        "sign",
-        "--key",
-        rebase_path(avb_key, root_build_dir),
-        "--key-metadata",
-        rebase_path(avb_atx_metadata, root_build_dir),
-        "--name",
-        zvb_partition_name,
-        "--image-path",
-        rebase_path(zbi[0], root_build_dir),
-        "--output",
-        rebase_path(output_file, root_build_dir),
-      ]
-      inputs = [
-        avb_key,
-        avb_atx_metadata,
-        zbi[0],
-      ]
-
-      # Add any json-format descriptors to the arguments list directly.
-      foreach(descriptor_file, board_extra_vbmeta_descriptors) {
-        args += [
-          "--additional-descriptor",
-          rebase_path(descriptor_file, root_build_dir),
-        ]
-        inputs += [ descriptor_file ]
-      }
-
-      outputs = [ output_file ]
-    }
-  } else {
-    group(target_name) {
-      not_needed(invoker, [ "output_name" ])
-      not_needed(invoker, [ "zbi" ])
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                               "deps",
-                               "metadata",
-                             ])
-    }
-  }
 }
 
 # DEPRECATED: Remove when no boards set a value for this.

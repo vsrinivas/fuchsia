@@ -89,64 +89,6 @@ vboot_action = {
   args += [ "--output-args=--pack" ]
 }
 
-# Build a "kernel partition" target for ChromeOS targets.
-#
-# Parameters
-#
-#   deps (required)
-#     [list of one label] Must be a `zbi()` target defined earlier in the file.
-#
-#   output_name (optional, default: `target_name`)
-#   output_extension (optional, default: `".signed"`)
-#     [string] Determines the file name, in `root_out_dir`.
-#
-template("vboot") {
-  assert(current_cpu == "x64")
-
-  if (defined(invoker.output_name)) {
-    output_file = invoker.output_name
-  } else {
-    output_file = target_name
-  }
-  if (defined(invoker.output_extension)) {
-    if (invoker.output_extension != "") {
-      output_file += ".${invoker.output_extension}"
-    }
-  } else {
-    output_file += ".signed"
-  }
-  output_file = "$root_out_dir/$output_file"
-
-  action(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "metadata",
-                             "testonly",
-                             "visibility",
-                           ])
-
-    script = vboot_action.script
-    args = vboot_action.args
-    inputs = vboot_action.inputs
-    deps = vboot_action.deps
-
-    outputs = [ output_file ]
-    args += [ "--output=" + rebase_path(output_file, root_build_dir) ]
-
-    assert(defined(invoker.deps), "vboot() requires deps")
-    deps += invoker.deps
-    zbi = []
-    foreach(label, invoker.deps) {
-      zbi_outputs = get_target_outputs(label)
-      zbi += [ zbi_outputs[0] ]
-    }
-    assert(zbi == [ zbi[0] ], "vboot() requires exactly one zbi() in deps")
-
-    inputs += zbi
-    args += [ "--zbi=" + rebase_path(zbi[0], root_build_dir) ]
-  }
-}
-
 # Build an "EFI System Partition" target for EFI targets.
 #
 # Parameters

@@ -6,6 +6,7 @@ import("//build/images/args.gni")
 import("//build/images/filesystem_limits.gni")
 import("//build/images/fvm.gni")
 import("//build/unification/zx_host_tool.gni")
+import("//build/zircon/tools.gni")
 
 # We only calculate filesystem sizes for non-bootfs-only builds.
 assert(!bootfs_only)
