@@ -21,9 +21,6 @@ pub mod vfs;
 pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
     // Dispatch to the correct operation based on the command.
     match cmd.op_class {
-        OperationClass::VBMeta(vbmeta_op) => match vbmeta_op.operation {
-            VBMetaOperation::Sign(args) => operations::vbmeta::sign(args),
-        },
         OperationClass::Image(args) => operations::image::assemble(args),
         OperationClass::Extract(args) => operations::extract::extract(args),
     }
