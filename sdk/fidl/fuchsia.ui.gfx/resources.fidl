@@ -80,19 +80,19 @@ type ImagePipe2Args = resource struct {
 /// it with Scenic.
 // TODO: specify resizing behavior.  Who can resize?  Client/Scenic/both/none?
 type MemoryArgs = resource struct {
-            // The VMO which backs this memory.
+    /// The VMO which backs this memory.
     vmo zx.handle:VMO;
 
-    // The amount of memory from `vmo` that should be utilized.
+    /// The amount of memory from `vmo` that should be utilized.
     allocation_size uint64;
 
-    // The type of memory stored in the VMO, namely whether it's GPU memory or
-    // host memory.
+    /// The type of memory stored in the VMO, namely whether it's GPU memory or
+    /// host memory.
     memory_type fuchsia.images.MemoryType;
 };
 
-// TODO: more precise and extensive docs.
 /// An image mapped to a range of a `Memory` resource.
+// TODO: more precise and extensive docs.
 @deprecated
 type ImageArgs = struct {
     info fuchsia.images.ImageInfo;
@@ -201,7 +201,7 @@ type ViewHolderArgs = resource struct {
 /// attached `Display`, if any.  If no display is attached, nothing is rendered.
 // TODO(fxbug.dev/23686): there is currently no way to create/attach a display.
 type CompositorArgs = struct {
-            // TODO(fxbug.dev/23916): Clean up dummy args.
+    // TODO(fxbug.dev/23916): Clean up dummy args.
     dummy uint32 = 0;
 };
 
@@ -268,7 +268,7 @@ type SceneArgs = struct {
 /// - SetCameraProjection
 /// - SetCameraPoseBuffer
 type CameraArgs = struct {
-    // The scene that the camera is viewing.
+    /// The scene that the camera is viewing.
     scene_id uint32;
 };
 
@@ -279,7 +279,7 @@ type CameraArgs = struct {
 /// Additional supported commands:
 /// - SetStereoCameraProjection
 type StereoCameraArgs = struct {
-    // The scene that the camera is viewing.
+    /// The scene that the camera is viewing.
     scene_id uint32;
 };
 
