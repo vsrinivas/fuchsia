@@ -42,6 +42,7 @@ assemble_system("bringup") {
   } else if (use_vboot) {
     zbi_signing_script = vboot_action.script
     zbi_signing_args = vboot_action.args
+    deps = vboot_action.deps
   }
 
   metadata = {

@@ -20,7 +20,7 @@ template("verify_zedboot_cmdline_params") {
     script = "//scripts/verify_cmdline_params/verify_cmdline_params.sh"
     sources = [ in ]
     deps = [
-      "//build/images/zedboot:zbi",
+      "//build/images/zedboot",
       zbi_tool_target,
     ]
     outputs = [ out ]

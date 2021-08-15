@@ -144,7 +144,7 @@ action("filesystem_sizes.json") {
   script = "format_filesystem_sizes.py"
   deps = filesystem_sizes_deps
   if (recovery_is_zedboot) {
-    deps += [ "//build/images/zedboot:zbi" ]
+    deps += [ "//build/images/zedboot" ]
   }
   output_name = "$root_build_dir/filesystem_sizes.json"
   outputs = [ output_name ]
