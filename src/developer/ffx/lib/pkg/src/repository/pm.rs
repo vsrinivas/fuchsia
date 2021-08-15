@@ -35,10 +35,6 @@ impl RepositoryBackend for PmRepository {
         self.repo.fetch(resource_path).await
     }
 
-    async fn fetch_blob(&self, resource_path: &str) -> Result<Resource, Error> {
-        self.repo.fetch_blob(&resource_path).await
-    }
-
     fn supports_watch(&self) -> bool {
         self.repo.supports_watch()
     }

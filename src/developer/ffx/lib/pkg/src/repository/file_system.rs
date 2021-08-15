@@ -60,10 +60,7 @@ impl RepositoryBackend for FileSystemRepository {
         let file = async_fs::File::open(&file_path).await?;
         let len = file.metadata().await?.len();
 
-        Ok(Resource {
-            len: Some(len),
-            stream: Box::pin(file_stream(file_path, len as usize, file)),
-        })
+        Ok(Resource { len, stream: Box::pin(file_stream(file_path, len as usize, file)) })
     }
 
     fn supports_watch(&self) -> bool {
@@ -114,11 +111,6 @@ impl RepositoryBackend for FileSystemRepository {
         watcher.watch(&self.repo_path, RecursiveMode::NonRecursive)?;
 
         Ok(WatchStream { _watcher: watcher, receiver }.boxed())
-    }
-
-    async fn fetch_blob(&self, resource_path: &str) -> Result<Resource, Error> {
-        let blob_path = format!("/blobs/{}", resource_path);
-        self.fetch(&blob_path).await
     }
 
     async fn target_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {

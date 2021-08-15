@@ -18,8 +18,6 @@ pub enum RepositorySpec {
     FileSystem { path: PathBuf },
 
     Pm { path: PathBuf },
-
-    HttpRepository { repo_url: String, blobs_url: String },
 }
 
 impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
@@ -35,13 +33,6 @@ impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
             fidl::RepositorySpec::Pm(pm_spec) => {
                 let path = pm_spec.path.ok_or(RepositoryError::MissingRepositorySpecField)?;
                 Ok(RepositorySpec::Pm { path: path.into() })
-            }
-            fidl::RepositorySpec::Http(http_spec) => {
-                let repo_url =
-                    http_spec.repo_url.ok_or(RepositoryError::MissingRepositorySpecField)?;
-                let blobs_url =
-                    http_spec.blobs_url.ok_or(RepositoryError::MissingRepositorySpecField)?;
-                Ok(RepositorySpec::HttpRepository { repo_url, blobs_url })
             }
             fidl::RepositorySpecUnknown!() => Err(RepositoryError::UnknownRepositorySpec),
         }
@@ -63,13 +54,6 @@ impl From<RepositorySpec> for fidl::RepositorySpec {
                 fidl::RepositorySpec::Pm(fidl::PmRepositorySpec {
                     path: Some(path.into()),
                     ..fidl::PmRepositorySpec::EMPTY
-                })
-            }
-            RepositorySpec::HttpRepository { repo_url, blobs_url } => {
-                fidl::RepositorySpec::Http(fidl::HttpRepositorySpec {
-                    repo_url: Some(repo_url),
-                    blobs_url: Some(blobs_url),
-                    ..fidl::HttpRepositorySpec::EMPTY
                 })
             }
         }

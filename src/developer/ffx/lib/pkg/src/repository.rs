@@ -32,13 +32,9 @@ use {
         client::{Client, Config, DefaultTranslator},
         crypto::KeyType,
         interchange::Json,
-        metadata::{
-            MetadataPath, MetadataVersion, RawSignedMetadata, Role, TargetDescription,
-            VirtualTargetPath,
-        },
+        metadata::{MetadataPath, MetadataVersion, RawSignedMetadata, Role},
         repository::{EphemeralRepository, RepositoryProvider},
     },
-    url::{ParseError, Url},
 };
 
 mod file_system;
@@ -49,7 +45,7 @@ mod server;
 pub mod http_repository;
 
 pub use file_system::FileSystemRepository;
-pub use http_repository::{package_download, HttpRepository};
+pub use http_repository::package_download;
 pub use manager::RepositoryManager;
 pub use pm::PmRepository;
 pub use server::{listen_addr, RepositoryServer, RepositoryServerBuilder};
@@ -132,8 +128,6 @@ pub enum Error {
     InvalidPath(PathBuf),
     #[error("I/O error")]
     Io(#[source] io::Error),
-    #[error("URL Parsing Error")]
-    URLParseError(#[source] ParseError),
     #[error(transparent)]
     Tuf(#[from] tuf::Error),
     #[error(transparent)]
@@ -150,17 +144,11 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<ParseError> for Error {
-    fn from(err: ParseError) -> Self {
-        Error::URLParseError(err)
-    }
-}
-
 /// [Resource] represents some resource as a stream of [Bytes] as provided from
 /// a repository server.
 pub struct Resource {
     /// The length of the file in bytes.
-    pub len: Option<u64>,
+    pub len: u64,
 
     /// A stream of bytes representing the resource.
     pub stream: BoxStream<'static, io::Result<Bytes>>,
@@ -176,7 +164,7 @@ impl TryFrom<RepositoryConfig> for Resource {
     type Error = Error;
     fn try_from(config: RepositoryConfig) -> Result<Resource, Error> {
         let json = Bytes::from(serde_json::to_vec(&config).map_err(|e| anyhow::anyhow!(e))?);
-        Ok(Resource { len: Some(json.len() as u64), stream: once(ready(Ok(json))).boxed() })
+        Ok(Resource { len: json.len() as u64, stream: once(ready(Ok(json))).boxed() })
     }
 }
 
@@ -231,12 +219,6 @@ impl Repository {
         let backend: Box<dyn RepositoryBackend + Send + Sync> = match spec {
             RepositorySpec::FileSystem { path } => Box::new(FileSystemRepository::new(path.into())),
             RepositorySpec::Pm { path } => Box::new(PmRepository::new(path.into())),
-            RepositorySpec::HttpRepository { repo_url, blobs_url } => {
-                Box::new(HttpRepository::new(
-                    Url::parse(repo_url.as_str())?,
-                    Url::parse(blobs_url.as_str())?,
-                ))
-            }
         };
 
         Self::new(name, backend).await
@@ -282,39 +264,12 @@ impl Repository {
     pub async fn fetch_bytes(&self, path: &str) -> Result<Vec<u8>, Error> {
         let mut resource = self.fetch(path).await?;
 
-        let mut bytes = Vec::with_capacity(resource.len.unwrap_or(0) as usize);
+        let mut bytes = Vec::with_capacity(resource.len as usize);
         while let Some(chunk) = resource.stream.next().await.transpose()? {
             bytes.extend_from_slice(&chunk);
         }
 
         Ok(bytes)
-    }
-
-    pub async fn fetch_blob(&self, path: &str) -> Result<Resource, Error> {
-        self.backend.fetch_blob(path).await
-    }
-
-    pub async fn get_target_description(
-        &self,
-        path: &str,
-    ) -> Result<Option<TargetDescription>, Error> {
-        let mut client = Self::get_tuf_client(self.backend.get_tuf_repo()?).await?;
-
-        match client.update().await {
-            Ok(_) => {}
-            Err(err) => {
-                return Err(err.into());
-            }
-        }
-
-        let targets = match client.trusted_targets() {
-            Some(t) => t.targets(),
-            None => return Ok(None),
-        };
-
-        return Ok(targets
-            .get(&VirtualTargetPath::new(path.to_string()).map_err(|e| anyhow::anyhow!(e))?)
-            .map(|t| t.clone()));
     }
 
     pub async fn get_config(
@@ -399,12 +354,9 @@ impl Repository {
         &self,
         package: &RepositoryPackage,
     ) -> Result<Vec<PackageEntry>> {
-        let mut resource = self.fetch_blob(package.hash.as_ref().unwrap()).await?;
-        let mut bytes = Vec::with_capacity(resource.len.unwrap_or(0) as usize);
-        while let Some(chunk) = resource.stream.next().await.transpose()? {
-            bytes.extend_from_slice(&chunk);
-        }
-        let mut archive = AsyncReader::new(Adapter::new(futures::io::Cursor::new(bytes))).await?;
+        // TODO: use `fetch_blobs` here once fxrev.dev/554888 is submitted.
+        let res = self.fetch_bytes(&format!("blobs/{}", package.hash.as_ref().unwrap())).await?;
+        let mut archive = AsyncReader::new(Adapter::new(futures::io::Cursor::new(res))).await?;
 
         let mut components = vec![];
         for item in archive.list() {
@@ -525,9 +477,6 @@ pub trait RepositoryBackend: std::fmt::Debug {
 
     /// Get the modification time of a path in this repository if available.
     async fn target_modification_time(&self, path: &str) -> anyhow::Result<Option<SystemTime>>;
-
-    /// Fetch a [Resource] from this repository.
-    async fn fetch_blob(&self, path: &str) -> Result<Resource, Error>;
 
     /// Produces the backing TUF [RepositoryProvider] for this repository.
     fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json>>, Error>;
