@@ -2522,5 +2522,46 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
   }
 }
 
+// This test guards against a regression where a dangling session would prevent device teardown from
+// completing.
+TEST_F(NetworkDeviceTest, DeadSessionsDontPreventTeardown) {
+  ASSERT_OK(CreateDeviceWithPort13());
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(AttachSessionPort(session, port13_));
+  session.ResetDescriptor(kDescriptorIndex0);
+  ASSERT_OK(session.SendRx(kDescriptorIndex0));
+  ASSERT_OK(WaitRxAvailable());
+  auto buffer = impl_.PopRxBuffer();
+  ASSERT_TRUE(buffer);
+
+  // Perform an active session close and wait for stop to be triggered, that puts the session in the
+  // dead state.
+  ASSERT_OK(session.Close());
+  ASSERT_OK(WaitStop(TEST_DEADLINE));
+  // The channel still isn't closed because we're holding a buffer.
+  ASSERT_STATUS(session.WaitClosed(zx::time::infinite_past()), ZX_ERR_TIMED_OUT);
+
+  // Start a device teardown while holding the buffer, which puts the session in a dead state.
+  sync_completion_t completer;
+  device_->Teardown([&completer, this]() {
+    // Destroy device to prevent test fixture from attempting to tear it down again.
+    device_ = nullptr;
+    sync_completion_signal(&completer);
+  });
+  // Teardown isn't called and the session isn't closed yet because we haven't returned the buffer.
+  ASSERT_STATUS(session.WaitClosed(zx::time::infinite_past()), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(sync_completion_wait_deadline(&completer, zx::time::infinite_past().get()),
+                ZX_ERR_TIMED_OUT);
+
+  RxReturnTransaction txn(&impl_);
+  txn.Enqueue(std::move(buffer), port13_.id());
+  txn.Commit();
+
+  // After returning the buffers, the session is closed and teardown completes.
+  ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
+  ASSERT_OK(sync_completion_wait_deadline(&completer, TEST_DEADLINE.get()));
+}
+
 }  // namespace testing
 }  // namespace network

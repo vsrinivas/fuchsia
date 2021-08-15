@@ -935,10 +935,11 @@ void DeviceInterface::PruneDeadSessions() __TA_REQUIRES_SHARED(control_lock_) {
       // ShouldDestroy should only return true once in the lifetime of a session, which guarantees
       // that postponing the destruction on the dispatcher is always safe.
       async::PostTask(dispatcher_, [&session, this]() {
-        fbl::AutoLock lock(&control_lock_);
+        control_lock_.Acquire();
         LOGF_TRACE("network-device: destroying %s", session.name());
         ReleaseVmo(session);
         dead_sessions_.erase(session);
+        ContinueTeardown(TeardownState::SESSIONS);
       });
     } else {
       LOGF_TRACE("network-device: %s: %s still pending", __FUNCTION__, session.name());
