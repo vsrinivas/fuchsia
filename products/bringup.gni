@@ -37,13 +37,8 @@ product_bootfs_labels += [
 product_bootfs_labels += [ "//src/testing/runtests" ]
 
 # Component manager configuration.
-product_bootfs_labels += [
-  "//src/sys/component_manager:component_manager_bootfs_config",
-
-  # TODO: Once all products use assemble_system(), remove this target.
-  # See https://fxbug.dev/71047 for details.
-  "//build/images:component_id_index_config",
-]
+product_bootfs_labels +=
+    [ "//src/sys/component_manager:component_manager_bootfs_config" ]
 
 meta_package_labels = []
 
