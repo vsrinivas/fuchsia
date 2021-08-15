@@ -26,9 +26,13 @@ pub fn construct_zbi(
     // Add the kernel image.
     zbi_builder.set_kernel(&product.kernel_image);
 
+    // Add the additional boot args.
+    for boot_arg in &product.boot_args {
+        zbi_builder.add_boot_arg(boot_arg);
+    }
+
     // If a base merkle is supplied, then add the boot arguments for starting up pkgfs with the
-    // merkle of the Base Package. Currently, all boot args are hidden behind this argument,
-    // because bootfs-only builds have zero boot args (or an empty devmgr config).
+    // merkle of the Base Package.
     if let Some(base_package) = &base_package {
         // Indicate the clock UTC backstop.
         let backstop = std::fs::read_to_string(&board.zbi.backstop_file)
@@ -37,11 +41,6 @@ pub fn construct_zbi(
 
         // Instruct devmgr that a /system volume is required.
         zbi_builder.add_boot_arg("devmgr.require-system=true");
-
-        // Add the additional boot args.
-        for boot_arg in &product.boot_args {
-            zbi_builder.add_boot_arg(boot_arg);
-        }
 
         // Specify how to launch pkgfs: bin/pkgsvr <base-merkle>
         zbi_builder
