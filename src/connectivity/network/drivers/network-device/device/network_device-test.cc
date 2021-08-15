@@ -510,7 +510,7 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   ASSERT_OK(WaitTx());
   TxReturnTransaction return_session(&impl_);
   // load the buffers from the fake device implementation and check them.
-  auto tx = impl_.PopTxBuffer();
+  std::unique_ptr tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
   ASSERT_EQ(tx->buffer().data_count, 1u);
   ASSERT_EQ(tx->buffer().data_list[0].offset, session.descriptor(kDescriptorIndex0).offset);
@@ -689,10 +689,11 @@ TEST_F(NetworkDeviceTest, TwoSessionsRx) {
   ASSERT_OK(session_b.SendRx(desc_buff, kBufferCount, nullptr));
 
   ASSERT_OK(WaitRxAvailable());
-  auto vmo_provider = impl_.VmoGetter();
+  VmoProvider vmo_provider = impl_.VmoGetter();
   RxReturnTransaction return_session(&impl_);
   for (uint16_t i = 0; i < kBufferCount; i++) {
-    auto buff = impl_.PopRxBuffer();
+    std::unique_ptr buff = impl_.PopRxBuffer();
+    ASSERT_TRUE(buff);
     std::vector<uint8_t> data(kDataLen, static_cast<uint8_t>(i));
     ASSERT_OK(buff->WriteData(data, vmo_provider));
     return_session.Enqueue(std::move(buff), kPort13);
@@ -1020,7 +1021,7 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
   ASSERT_EQ(sent, 2u);
   ASSERT_OK(WaitTx());
 
-  auto vmo_provider = impl_.VmoGetter();
+  VmoProvider vmo_provider = impl_.VmoGetter();
   TxReturnTransaction transaction(&impl_);
   constexpr struct {
     uint8_t expect;
@@ -1369,7 +1370,7 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
   ASSERT_OK(WaitStart());
   std::array<uint16_t, 2> descriptors = {0, 1};
 
-  for (auto desc : descriptors) {
+  for (uint16_t desc : descriptors) {
     buffer_descriptor_t& descriptor = session.ResetDescriptor(desc);
     // Garble descriptor port.
     descriptor.port_id = MAX_PORTS - 1;
@@ -1920,7 +1921,7 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
     for (auto& port : s.attach_ports) {
       ASSERT_OK(AttachSessionPort(s.session, port));
     }
-    for (auto desc : descriptors) {
+    for (uint16_t desc : descriptors) {
       buffer_descriptor_t& descriptor = s.session.ResetDescriptor(desc);
       // Garble descriptor port.
       descriptor.port_id = MAX_PORTS - 1;
@@ -2397,18 +2398,20 @@ TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
         }
       }
       uint8_t received[kBufferLength];
-      auto wr = std::begin(received);
+      auto wr_iter = std::begin(received);
       for (;;) {
         buffer_descriptor_t& desc = s.session.descriptor(desc_idx);
-        ASSERT_LE(static_cast<size_t>(std::distance(std::begin(received), wr)) + desc.data_length,
-                  std::size(received));
-        wr = std::copy_n(s.session.buffer(desc.offset + desc.head_length), desc.data_length, wr);
+        ASSERT_LE(
+            static_cast<size_t>(std::distance(std::begin(received), wr_iter)) + desc.data_length,
+            std::size(received));
+        wr_iter = std::copy_n(s.session.buffer(desc.offset + desc.head_length), desc.data_length,
+                              wr_iter);
         if (desc.chain_length == 0) {
           break;
         }
         desc_idx = desc.nxt;
       }
-      ASSERT_EQ(static_cast<size_t>(std::distance(std::begin(received), wr)),
+      ASSERT_EQ(static_cast<size_t>(std::distance(std::begin(received), wr_iter)),
                 b.reference_data.size());
       ASSERT_EQ(toHexString(fbl::Span(received, b.reference_data.size())),
                 toHexString(fbl::Span(b.reference_data.data(), b.reference_data.size())));
@@ -2532,7 +2535,7 @@ TEST_F(NetworkDeviceTest, DeadSessionsDontPreventTeardown) {
   session.ResetDescriptor(kDescriptorIndex0);
   ASSERT_OK(session.SendRx(kDescriptorIndex0));
   ASSERT_OK(WaitRxAvailable());
-  auto buffer = impl_.PopRxBuffer();
+  std::unique_ptr buffer = impl_.PopRxBuffer();
   ASSERT_TRUE(buffer);
 
   // Perform an active session close and wait for stop to be triggered, that puts the session in the

@@ -214,9 +214,9 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list
     const zx_status_t return_status = device_started_ ? ZX_OK : ZX_ERR_UNAVAILABLE;
     ASSERT_TRUE(buf_count < kTxDepth);
     std::array<tx_result_t, kTxDepth> results;
-    auto r = results.begin();
+    auto results_iter = results.begin();
     for (const tx_buffer_t& buff : buffers) {
-      *r++ = {
+      *results_iter++ = {
           .id = buff.id,
           .status = return_status,
       };
@@ -243,11 +243,11 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_
     ASSERT_TRUE(buf_count < kTxDepth);
     std::array<rx_buffer_t, kTxDepth> results;
     std::array<rx_buffer_part_t, kTxDepth> parts;
-    auto r = results.begin();
-    auto p = parts.begin();
+    auto results_iter = results.begin();
+    auto parts_iter = parts.begin();
     for (const rx_space_buffer_t& space : buffers) {
-      rx_buffer_part_t& part = *p++;
-      rx_buffer_t& rx_buffer = *r++;
+      rx_buffer_part_t& part = *parts_iter++;
+      rx_buffer_t& rx_buffer = *results_iter++;
       part = {
           .id = space.id,
           .length = length,
@@ -303,7 +303,7 @@ bool FakeNetworkDeviceImpl::TriggerStop() {
 
 zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::CreateChild(
     async_dispatcher_t* dispatcher) {
-  auto protocol = proto();
+  network_device_impl_protocol_t protocol = proto();
   zx::status device = internal::DeviceInterface::Create(
       dispatcher, ddk::NetworkDeviceImplProtocolClient(&protocol), "FakeImpl");
   if (device.is_error()) {
