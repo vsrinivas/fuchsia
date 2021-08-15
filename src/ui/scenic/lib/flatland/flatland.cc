@@ -8,6 +8,7 @@
 #include <lib/async/time.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <lib/ui/scenic/cpp/view_identity.h>
 #include <lib/zx/eventpair.h>
 
 #include <functional>
@@ -16,6 +17,7 @@
 #include <utility>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_access.hpp>
@@ -247,10 +249,24 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
 
 void Flatland::CreateView(ViewCreationToken token,
                           fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
+  CreateView2(std::move(token), scenic::NewViewIdentityOnCreation(),
+              fuchsia::ui::composition::ViewBoundProtocols(), std::move(parent_viewport_watcher));
+}
+
+void Flatland::CreateView2(ViewCreationToken token,
+                           fuchsia::ui::views::ViewIdentityOnCreation view_identity,
+                           fuchsia::ui::composition::ViewBoundProtocols protocols,
+                           fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
     error_reporter_->ERROR() << "CreateView failed, ViewCreationToken was invalid";
+    ReportBadOperationError();
+    return;
+  }
+
+  if (!scenic_impl::gfx::validate_viewref(view_identity.view_ref_control, view_identity.view_ref)) {
+    error_reporter_->ERROR() << "CreateView failed, ViewIdentityOnCreation was invalid";
     ReportBadOperationError();
     return;
   }
@@ -263,7 +279,8 @@ void Flatland::CreateView(ViewCreationToken token,
   // layout decisions before their first call to Present().
   auto link_origin = transform_graph_.CreateTransform();
   LinkSystem::ParentLink link = link_system_->CreateParentLink(
-      dispatcher_holder_, std::move(token), std::move(parent_viewport_watcher), link_origin,
+      dispatcher_holder_, std::move(token), std::move(view_identity),
+      std::move(parent_viewport_watcher), link_origin,
       [ref = weak_from_this(),
        dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
         FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
@@ -292,14 +309,6 @@ void Flatland::CreateView(ViewCreationToken token,
   bool child_added = transform_graph_.AddChild(link.child_view_watcher_handle, local_root_);
   FX_DCHECK(child_added);
   parent_link_ = std::move(link);
-}
-
-void Flatland::CreateView2(ViewCreationToken token,
-                           fuchsia::ui::views::ViewIdentityOnCreation view_identity,
-                           fuchsia::ui::composition::ViewBoundProtocols protocols,
-                           fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
-  // TODO(fxb/81795): Implement viewref and protocol hookup.
-  CreateView(std::move(token), std::move(parent_viewport_watcher));
 }
 
 void Flatland::ReleaseView(std::function<void(fuchsia::ui::views::ViewCreationToken)> callback) {

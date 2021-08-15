@@ -78,6 +78,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 
 LinkSystem::ParentLink LinkSystem::CreateParentLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ViewCreationToken token,
+    fuchsia::ui::views::ViewIdentityOnCreation view_identity,
     fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher,
     TransformHandle child_view_watcher_handle, LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
@@ -133,6 +134,8 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
   return ParentLink({
       .child_view_watcher_handle = child_view_watcher_handle,
       .exporter = std::move(exporter),
+      .view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_identity.view_ref)),
+      .view_ref_control = std::move(view_identity.view_ref_control),
   });
 }
 

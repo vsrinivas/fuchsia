@@ -180,6 +180,11 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
     // the LinkTopologyMap when the link resolves.
     TransformHandle child_view_watcher_handle;
     ObjectLinker::ExportLink exporter;
+
+    // Tracks the ViewRef for this View and is the reference for the lifetime of the ViewRef by
+    // uniquely holding |view_ref_control| until going out of scope.
+    std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref;
+    fuchsia::ui::views::ViewRefControl view_ref_control;
   };
 
   // Creates the child end of a link. The ChildLink's |link_handle| serves as the attachment point
@@ -207,6 +212,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   ParentLink CreateParentLink(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       fuchsia::ui::views::ViewCreationToken token,
+      fuchsia::ui::views::ViewIdentityOnCreation view_identity,
       fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher>
           parent_viewport_watcher,
       TransformHandle child_view_watcher_handle, LinkProtocolErrorCallback error_callback);

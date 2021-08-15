@@ -11,8 +11,8 @@
 namespace scenic {
 
 struct ViewRefPair {
-  // Convenience function which allows clients to easily create a valid
-  // |ViewRef| / |ViewRefControl| pair for use with the |View| resource.
+  // ViewRef creation for the legacy graphics API. For Flatland, use
+  // scenic::NewViewIdentityOnCreation().
   static ViewRefPair New();
 
   fuchsia::ui::views::ViewRefControl control_ref;

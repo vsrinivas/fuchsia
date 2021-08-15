@@ -58,7 +58,9 @@ source_set("flatland") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp:cpp",
     "//src/ui/scenic/lib/gfx:object_linker",
+    "//src/ui/scenic/lib/gfx:validate_eventpair",
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
     "//src/ui/scenic/lib/scheduling:present_helpers",

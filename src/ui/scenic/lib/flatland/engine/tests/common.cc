@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/flatland/engine/tests/common.h"
 
+#include <lib/ui/scenic/cpp/view_identity.h>
+
 using ::testing::_;
 using ::testing::Return;
 
@@ -34,8 +36,9 @@ DisplayCompositorTestBase::FakeFlatlandSession::CreateView(FakeFlatlandSession& 
   // Create the parent link.
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   LinkSystem::ParentLink parent_link = link_system_->CreateParentLink(
-      dispatcher_holder_, std::move(child_token), parent_viewport_watcher.NewRequest(),
-      graph_.CreateTransform(), [](const std::string& error_log) { GTEST_FAIL() << error_log; });
+      dispatcher_holder_, std::move(child_token), scenic::NewViewIdentityOnCreation(),
+      parent_viewport_watcher.NewRequest(), graph_.CreateTransform(),
+      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   // Create the child link.
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;

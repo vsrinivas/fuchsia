@@ -9,6 +9,7 @@ test("scenic_cpp_unittests") {
   sources = [
     "commands_sizing_test.cc",
     "session_test.cc",
+    "view_identity_test.cc",
     "view_ref_pair_test.cc",
     "view_token_pair_test.cc",
   ]

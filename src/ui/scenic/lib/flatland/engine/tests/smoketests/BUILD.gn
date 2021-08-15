@@ -30,6 +30,7 @@ source_set("smoketest_lib") {
 
   public_deps = [
     "//garnet/public/lib/gtest:gtest",
+    "//sdk/lib/ui/scenic/cpp:cpp",
     "//src/lib/fsl:fsl",
     "//src/ui/lib/display:hdcp_client",
     "//src/ui/lib/escher/test/common:gtest_escher",
