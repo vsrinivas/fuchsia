@@ -94,10 +94,9 @@ impl FontMetricsViewAssistant {
         self.app_context.request_render(self.view_key);
     }
 
-    fn new_sample_text(&mut self) {
-        let (title, para) = Self::new_sample_pair();
-        self.sample_title = title;
-        self.sample_paragraph = para;
+    fn update_text(&mut self, title: String, para: String) {
+        self.sample_title = title.to_string();
+        self.sample_paragraph = para.to_string();
         if let Some(scene_details) = self.scene_details.as_mut() {
             scene_details.scene.send_message(
                 &scene_details.sample_title.clone(),
@@ -109,6 +108,17 @@ impl FontMetricsViewAssistant {
             );
         }
         self.app_context.request_render(self.view_key);
+    }
+
+    fn new_sample_text(&mut self) {
+        let (title, para) = Self::new_sample_pair();
+        self.update_text(title, para);
+    }
+
+    fn new_blank_text(&mut self) {
+        let title = "".to_string();
+        let para = "\nnow is the time\n\n".to_string();
+        self.update_text(title, para);
     }
 
     fn show_next_face(&mut self) {
@@ -279,6 +289,7 @@ impl ViewAssistant for FontMetricsViewAssistant {
         _event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
+        const B: u32 = 'b' as u32;
         const C: u32 = 'c' as u32;
         const F: u32 = 'f' as u32;
         const K: u32 = 'k' as u32;
@@ -291,6 +302,7 @@ impl ViewAssistant for FontMetricsViewAssistant {
                 || keyboard_event.phase == input::keyboard::Phase::Repeat
             {
                 match code_point {
+                    B => self.new_blank_text(),
                     T => self.new_sample_text(),
                     F => self.show_next_face(),
                     PLUS | EQUALS => self.increase_sample_size(),

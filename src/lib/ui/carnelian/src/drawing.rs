@@ -564,7 +564,10 @@ impl Text {
     ) -> Self {
         let glyphs = &mut glyph_map.glyphs;
         let mut bounding_box = Rect::zero();
-        let mut raster_union = None;
+        let mut raster_union = {
+            let raster_builder = context.raster_builder().unwrap();
+            raster_builder.build()
+        };
         let ascent = face.ascent(size);
         let units_per_em = face.face.units_per_em().expect("units_per_em");
         let scale = size / units_per_em as f32;
@@ -587,11 +590,7 @@ impl Text {
                             .raster
                             .clone()
                             .translate(position.cast_unit::<euclid::UnknownUnit>());
-                        raster_union = if let Some(raster_union) = raster_union {
-                            Some(raster_union + raster)
-                        } else {
-                            Some(raster)
-                        };
+                        raster_union = raster_union + raster;
 
                         // Expand bounding box.
                         let glyph_bounding_box = &glyph.bounding_box.translate(position.to_f32());
@@ -609,7 +608,7 @@ impl Text {
             y_offset += vec2(0, size as i32);
         }
 
-        Self { raster: raster_union.expect("raster_union"), bounding_box }
+        Self { raster: raster_union, bounding_box }
     }
 
     #[allow(missing_docs)]
