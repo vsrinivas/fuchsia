@@ -13,7 +13,7 @@ From //zircon/system/ulib/acpica/acpica.gni:7
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:87
+From //build/images/args.gni:100
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -21,7 +21,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:93
+From //build/images/args.gni:106
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -31,7 +31,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:99
+From //build/images/args.gni:112
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -54,7 +54,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:114
+From //build/images/args.gni:127
 
 ### anv_enable_external_sync_fd
 TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
@@ -103,21 +103,21 @@ From //build/security.gni:126
 
 **Current value (from the default):** `"DEPRECATED"`
 
-From //build/images/vbmeta.gni:35
+From //build/images/vbmeta.gni:50
 
 ### avb_atx_metadata
 AVB metadata which will be used to validate public key
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:22
+From //build/images/vbmeta.gni:18
 
 ### avb_key
 a key which will be used to sign VBMETA and images for AVB
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:19
+From //build/images/vbmeta.gni:15
 
 ### base_driver_package_labels
 If you add fuchsia_driver_package labels to this variable, any drivers in these packages will
@@ -175,7 +175,7 @@ The format blobfs should store blobs in.
 
 **Current value (from the default):** `"compact"`
 
-From //build/images/args.gni:111
+From //build/images/args.gni:124
 
 ### blobfs_board_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -316,20 +316,39 @@ From //build/board.gni:14
 
 ### board_extra_vbmeta_descriptors
 Board level extra vbmeta descriptors to be combined into the top-level
-vbmeta struct (these are in json format)
+vbmeta struct.
 
-see //build/images/vbmeta/README.md for more information about these.
+The format of these are:
+
+```json
+{
+    "type": "partition",
+    "name": "partition_name",
+    "size": "104448",
+    "flags": "1",
+    "min_avb_version": "1.1"
+}
+```
+
+- `name` = (string) The name of the partition as it to appear in the vbmeta image
+- `size` = (int as string) The size of the partition in bytes
+- `flags` = (int) The bit-wise set of flag values
+- `min_avb_version` = (version x.y as a string) the minimum avb version that the
+   resultant vbmeta image requires if it includes this descriptor.
+
+Note: These files cannot contain any comments, and must strictly conform to the
+[JSON](http://json.org) spec.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:31
+From //build/images/vbmeta.gni:46
 
 ### board_extra_vbmeta_images
 DEPRECATED:  Remove when no boards set a value for these.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:34
+From //build/images/vbmeta.gni:49
 
 ### board_has_libvulkan_arm_mali
 Board files can set this to true if they have a package with a mali libvulkan VCD.
@@ -436,7 +455,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:137
+From //build/images/args.gni:150
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -485,6 +504,23 @@ From //products/bringup.gni:5
 **Overridden from the default:** `false`
 
 From //build/images/args.gni:14
+
+### bootstrap_files
+List of files needed to bootstrap the device.
+
+Flashing a device assumes a certain state; bootstrapping instead allows
+initially provisioning a device from unknown state, so may require
+additional resources that would not be included in an OTA.
+
+Each entry in the list is a scope containing:
+ * `path`: path to file.
+ * `partition` (optional): `fastboot flash` partition.
+ * `condition` (optional): a scope with `variable` and `value` keys; file is
+   only flashed if `fastboot getvar <variable>` == <value>.
+
+**Current value (from the default):** `[]`
+
+From //build/images/args.gni:59
 
 ### build_all_vp9_file_decoder_conformance_tests
 
@@ -669,7 +705,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:105
+From //build/images/args.gni:118
 
 ### check_repeatability
 If enabled, run each affected action twice (once with renamed outputs)
@@ -687,7 +723,7 @@ This is primarily meant to be used by the clang canary builders.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:66
+From //build/images/args.gni:79
 
 ### chromium_build_dir
 This variable specifies a fully qualified Chromium build output directory,
@@ -747,7 +783,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:108
+From //build/images/args.gni:121
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -909,7 +945,7 @@ partition.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:55
+From //build/images/args.gni:68
 
 ### debian_guest_earlycon
 
@@ -1066,7 +1102,7 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:60
+From //build/images/args.gni:73
 
 ### enable_rbe
 Set to true to enable distributed compilation using RBE.
@@ -1103,6 +1139,13 @@ using '--args=ermine_app_entries="config/app_launch_entries.json"'
 **Current value (from the default):** `"config/app_launch_entries.json"`
 
 From //src/experiences/session_shells/ermine/shell/BUILD.gn:24
+
+### ermine_start_screensaver
+Whether or not to launch screensaver.
+
+**Current value (from the default):** `true`
+
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:30
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -1183,7 +1226,7 @@ From //src/storage/fshost/BUILD.gn:33
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:88
+From //build/images/args.gni:101
 
 ### fidl_trace_level
 0 = Disable FIDL userspace tracing (default).
@@ -1474,7 +1517,7 @@ From //build/images/fvm.gni:47
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:86
+From //build/images/args.gni:99
 
 ### fvm_reserved_slices
 Number of slices reserved by FVM for internal usage. A reservation
@@ -1545,7 +1588,7 @@ Typically useful for initially flashing a device from zero-state.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:51
+From //build/images/args.gni:64
 
 ### graphics_compute_generate_debug_shaders
 Set to true in your args.gn file to generate pre-processed and
@@ -1687,7 +1730,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:117
+From //build/images/args.gni:130
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -2254,7 +2297,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:69
+From //build/images/args.gni:82
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -2262,7 +2305,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:69
+From //build/images/args.gni:82
 
 ### min_crashlog_size
 Controls minimum amount of space of persistent RAM to reserve for the
@@ -2986,7 +3029,7 @@ From //build/security/policies.gni:21
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:89
+From //build/images/args.gni:102
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -3049,7 +3092,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:126
+From //build/images/args.gni:139
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -3932,7 +3975,7 @@ and the paving script will pave vbmeta images to the target device.
 
 **Current value (from the default):** `false`
 
-From //build/images/vbmeta.gni:16
+From //build/images/vbmeta.gni:12
 
 ### use_vboot
 Use vboot images
@@ -3959,19 +4002,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:83
+From //build/images/args.gni:96
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:84
+From //build/images/args.gni:97
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:85
+From //build/images/args.gni:98
 
 ### vboot_verbose
 If true, vboot() image builds print out the exact "futility" command line.
@@ -3994,7 +4037,7 @@ is meant solely for developer debugging.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:142
+From //build/images/args.gni:155
 
 ### virtcon_boot_animation_path
 
@@ -4160,7 +4203,7 @@ doesn't require the FVM or SSH keys.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:80
+From //build/images/args.gni:93
 
 ### zircon_asserts
 
@@ -4172,7 +4215,7 @@ From //build/config/fuchsia/BUILD.gn:164
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:81
+From //build/images/args.gni:94
 
 ### zircon_build_root
 
@@ -4209,7 +4252,7 @@ From //build/config/zircon/levels.gni:18
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:82
+From //build/images/args.gni:95
 
 ### zircon_toolchain
 *This should never be set as a build argument.*
@@ -4243,7 +4286,7 @@ Partition name from where image will be verified
 
 **Current value (from the default):** `"zircon"`
 
-From //build/images/vbmeta.gni:25
+From //build/images/vbmeta.gni:21
 
 ### zx_assert_level
 Controls which asserts are enabled.
