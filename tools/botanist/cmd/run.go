@@ -46,9 +46,6 @@ type RunCommand struct {
 	// ImageManifest is a path to an image manifest.
 	imageManifest string
 
-	// flashScript is a path to a flash.sh file.
-	flashScript string
-
 	// Netboot tells botanist to netboot (and not to pave).
 	netboot bool
 
@@ -102,7 +99,6 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 	f.StringVar(&r.repoURL, "repo", "", "URL at which to configure a package repository; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
-	f.StringVar(&r.flashScript, "flash-script", "./flash.sh", "Path to flash.sh")
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -257,7 +253,7 @@ func (r *RunCommand) startTargets(ctx context.Context, targets []target.Target, 
 			}
 			defer closeFunc()
 
-			return t.Start(ctx, imgs, r.zirconArgs, serialSocketPath, r.flashScript)
+			return t.Start(ctx, imgs, r.zirconArgs, serialSocketPath)
 		})
 	}
 	return eg.Wait()

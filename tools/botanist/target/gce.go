@@ -437,7 +437,7 @@ func (g *GCETarget) SSHKey() string {
 	return g.opts.SSHKey
 }
 
-func (g *GCETarget) Start(ctx context.Context, _ []bootserver.Image, args []string, _, _ string) error {
+func (g *GCETarget) Start(ctx context.Context, _ []bootserver.Image, args []string, _ string) error {
 	return nil
 }
 

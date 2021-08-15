@@ -148,7 +148,7 @@ func (t *DeviceTarget) SSHKey() string {
 }
 
 // Start starts the device target.
-func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath, flashScript string) error {
+func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath string) error {
 	// Initialize the tftp client if:
 	// 1. It is currently uninitialized.
 	// 2. The device cannot be accessed via fastboot.
@@ -217,7 +217,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 
 	// Boot Fuchsia.
 	if t.config.FastbootSernum != "" {
-		if err := t.flash(ctx, flashScript, images); err != nil {
+		if err := t.flash(ctx, images); err != nil {
 			return err
 		}
 	} else {
@@ -233,7 +233,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	return nil
 }
 
-func (t *DeviceTarget) flash(ctx context.Context, flashScript string, images []bootserver.Image) error {
+func (t *DeviceTarget) flash(ctx context.Context, images []bootserver.Image) error {
 	// Download the images to disk.
 	// TODO(rudymathu): Transport these images via isolate for improved caching performance.
 	wd, err := os.Getwd()
@@ -248,6 +248,16 @@ func (t *DeviceTarget) flash(ctx context.Context, flashScript string, images []b
 		return err
 	}
 
+	flashScript := ""
+	for _, img := range imgs {
+		if img.Name == "flash-script" {
+			flashScript = img.Path
+			break
+		}
+	}
+	if flashScript == "" {
+		return errors.New("flash script not found")
+	}
 	// Write the public SSH key to disk if one is needed.
 	flashArgs := []string{"-s", t.config.FastbootSernum}
 	if !t.opts.Netboot && len(t.signers) > 0 {
