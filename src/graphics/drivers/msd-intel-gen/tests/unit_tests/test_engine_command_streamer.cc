@@ -273,20 +273,29 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     uint32_t tail_start = ringbuffer->tail();
 
     gpu_addr_t gpu_addr = 0x10000;  // Arbitrary
-    auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
-    render_cs->MoveBatchToInflight(std::make_unique<MockMappedBatch>(context_, gpu_addr));
+    EXPECT_TRUE(
+        engine_cs_->MoveBatchToInflight(std::make_unique<MockMappedBatch>(context_, gpu_addr)));
 
     // Validate ringbuffer
     uint32_t dword_count = 0;
     dword_count += MiBatchBufferStart::kDwordCount + MiNoop::kDwordCount;
-    dword_count += MiPipeControl::kDwordCount + MiNoop::kDwordCount + MiUserInterrupt::kDwordCount;
+    if (engine_cs_->id() == RENDER_COMMAND_STREAMER) {
+      dword_count +=
+          MiPipeControl::kDwordCount + MiNoop::kDwordCount + MiUserInterrupt::kDwordCount;
+    } else {
+      dword_count += MiFlush::kDwordCount + MiUserInterrupt::kDwordCount;
+    }
 
     ASSERT_EQ(ringbuffer->tail() - tail_start, dword_count * sizeof(uint32_t));
 
     uint32_t* ringbuffer_content =
         TestRingbuffer::vaddr(ringbuffer) + tail_start / sizeof(uint32_t);
     ringbuffer_content = ValidateBatchBufferStart(ringbuffer_content);
-    ringbuffer_content = ValidatePipeControl(ringbuffer_content, (uint32_t)kFirstSequenceNumber);
+    if (engine_cs_->id() == RENDER_COMMAND_STREAMER) {
+      ringbuffer_content = ValidatePipeControl(ringbuffer_content, kFirstSequenceNumber);
+    } else {
+      ringbuffer_content = ValidateFlush(ringbuffer_content, kFirstSequenceNumber);
+    }
   }
 
   void MappingRelease() {
@@ -308,13 +317,22 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
         std::make_unique<MappingReleaseBatch>(context_, std::move(bus_mappings)));
 
     // Validate ringbuffer
-    uint32_t dword_count =
-        MiPipeControl::kDwordCount + MiNoop::kDwordCount + MiUserInterrupt::kDwordCount;
+    uint32_t dword_count = 0;
+    if (engine_cs_->id() == RENDER_COMMAND_STREAMER) {
+      dword_count += MiPipeControl::kDwordCount + MiNoop::kDwordCount;
+    } else {
+      dword_count += MiFlush::kDwordCount;
+    }
+    dword_count += MiUserInterrupt::kDwordCount;
     ASSERT_EQ(ringbuffer->tail() - tail_start, dword_count * sizeof(uint32_t));
 
     uint32_t* ringbuffer_content =
         TestRingbuffer::vaddr(ringbuffer) + tail_start / sizeof(uint32_t);
-    ringbuffer_content = ValidatePipeControl(ringbuffer_content, (uint32_t)kFirstSequenceNumber);
+    if (engine_cs_->id() == RENDER_COMMAND_STREAMER) {
+      ringbuffer_content = ValidatePipeControl(ringbuffer_content, kFirstSequenceNumber);
+    } else {
+      ringbuffer_content = ValidateFlush(ringbuffer_content, kFirstSequenceNumber);
+    }
   }
 
   void Reset() {
@@ -394,6 +412,23 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     EXPECT_EQ(*ringbuffer_content++, magma::lower_32_bits(seqno_gpu_addr));
     EXPECT_EQ(*ringbuffer_content++, magma::upper_32_bits(seqno_gpu_addr));
     EXPECT_EQ(*ringbuffer_content++, sequence_number);
+    return ringbuffer_content;
+  }
+
+  uint32_t* ValidateFlush(uint32_t* ringbuffer_content, uint32_t sequence_number) {
+    gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page_mapping()->gpu_addr() +
+                                GlobalHardwareStatusPage::kSequenceNumberOffset;
+
+    // Subtract 2 from dword count as per the instruction definition
+    constexpr uint32_t kCommandFlushHeader = MiFlush::kCommandType | MiFlush::kCommandOpcode |
+                                             MiFlush::kPostSyncWriteImmediateBit |
+                                             MiFlush::kDwordCount - 2;
+    EXPECT_EQ(*ringbuffer_content++, kCommandFlushHeader);
+    EXPECT_EQ(*ringbuffer_content++,
+              magma::lower_32_bits(seqno_gpu_addr) | MiFlush::kAddressSpaceGlobalGttBit);
+    EXPECT_EQ(*ringbuffer_content++, magma::upper_32_bits(seqno_gpu_addr));
+    EXPECT_EQ(*ringbuffer_content++, sequence_number);
+    EXPECT_EQ(*ringbuffer_content++, 0u);
     return ringbuffer_content;
   }
 

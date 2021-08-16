@@ -19,24 +19,8 @@ class VideoCommandStreamer : public EngineCommandStreamer {
   explicit VideoCommandStreamer(EngineCommandStreamer::Owner* owner,
                                 std::unique_ptr<GpuMapping> hw_status_page);
 
-  void SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
-
-  bool IsIdle() override { return inflight_command_sequences_.empty(); }
-
-  bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) override;
-
-  void ResetCurrentContext() override;
-
-  void ProcessCompletedCommandBuffers(uint32_t last_completed_sequence);
-  void ContextSwitched();
-
  private:
-  void ScheduleContext();
-  bool MoveBatchToInflight(std::unique_ptr<MappedBatch> mapped_batch);
-
-  std::unique_ptr<Scheduler> scheduler_;
-  std::queue<InflightCommandSequence> inflight_command_sequences_;
-  bool context_switch_pending_{};
+  bool WriteBatchToRingBuffer(MappedBatch* mapped_batch, uint32_t* sequence_number_out) override;
 };
 
-#endif
+#endif  // VIDEO_COMMAND_STREAMER_H

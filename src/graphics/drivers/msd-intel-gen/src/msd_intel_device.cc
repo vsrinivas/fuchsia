@@ -131,6 +131,7 @@ void MsdIntelDevice::Destroy() {
     DLOG("joined");
   }
 
+  // TODO(fxbug.dev/82777): reset all engines
   if (render_engine_cs_) {
     // Ensure gpu is idle
     render_engine_cs_->Reset();

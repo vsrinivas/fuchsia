@@ -20,6 +20,9 @@
 #include "scheduler.h"
 #include "sequencer.h"
 
+// See below
+class InflightCommandSequence;
+
 class EngineCommandStreamer : public HardwareStatusPage::Owner {
  public:
   class Owner {
@@ -29,7 +32,8 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   };
 
   EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base,
-                        std::unique_ptr<GpuMapping> hw_status_page);
+                        std::unique_ptr<GpuMapping> hw_status_page,
+                        std::unique_ptr<Scheduler> scheduler);
 
   virtual ~EngineCommandStreamer() {}
 
@@ -43,6 +47,10 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
 
   GlobalHardwareStatusPage* hardware_status_page() { return &hw_status_page_; }
 
+  uint64_t GetActiveHeadPointer();
+
+  bool IsIdle() { return inflight_command_sequences_.empty(); }
+
   // Initialize backing store for the given context on this engine command streamer.
   bool InitContext(MsdIntelContext* context) const;
 
@@ -51,29 +59,41 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
 
   void InitHardware();
 
-  uint64_t GetActiveHeadPointer();
-
   bool Reset();
 
-  bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
-                        AddressSpaceType address_space_type);
+  // Execute the batch immediately.
+  bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch);
 
-  virtual bool IsIdle() = 0;
+  // Submit the batch for eventual execution.
+  void SubmitBatch(std::unique_ptr<MappedBatch> batch);
 
-  // Queue the batch for eventual execution.
-  virtual void SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
+  // Called in response to a context switch interrupt.
+  void ContextSwitched();
+
+  // Called in response to a user interrupt.
+  void ProcessCompletedCommandBuffers(uint32_t last_completed_sequence);
 
   // Reset the engine state and kill the current context.
-  virtual void ResetCurrentContext() = 0;
+  void ResetCurrentContext();
+
+  // This does not return ownership of the mapped batches so it is not safe
+  // to store the result and this method must be called from the device thread
+  std::vector<MappedBatch*> GetInflightBatches();
 
  protected:
-  // Execute the batch immediately.
-  virtual bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) = 0;
-
   bool SubmitContext(MsdIntelContext* context, uint32_t tail);
   bool UpdateContext(MsdIntelContext* context, uint32_t tail);
   void SubmitExeclists(MsdIntelContext* context);
   void InvalidateTlbs();
+
+  void ScheduleContext();
+  bool MoveBatchToInflight(std::unique_ptr<MappedBatch> mapped_batch);
+
+  // On success, returns a sequence number.
+  virtual bool WriteBatchToRingBuffer(MappedBatch* mapped_batch, uint32_t* sequence_number_out) = 0;
+
+  bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
+                        AddressSpaceType address_space_type);
 
   // from intel-gfx-prm-osrc-kbl-vol03-gpu_overview.pdf p.5
   static constexpr uint32_t kRenderEngineMmioBase = 0x2000;
@@ -84,6 +104,10 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   Sequencer* sequencer() { return owner_->sequencer(); }
 
   GpuMapping* hardware_status_page_mapping() { return hw_status_page_mapping_.get(); }
+
+  std::queue<InflightCommandSequence>& inflight_command_sequences() {
+    return inflight_command_sequences_;
+  }
 
  private:
   virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }
@@ -104,6 +128,10 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   GlobalHardwareStatusPage hw_status_page_;
   std::unique_ptr<GpuMapping> hw_status_page_mapping_;
   void* hw_status_page_cpu_addr_{};
+
+  std::unique_ptr<Scheduler> scheduler_;
+  std::queue<InflightCommandSequence> inflight_command_sequences_;
+  bool context_switch_pending_{};
 
   friend class TestEngineCommandStreamer;
   friend class TestMsdIntelDevice;

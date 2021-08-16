@@ -20,12 +20,14 @@
 
 EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
                                              uint32_t mmio_base,
-                                             std::unique_ptr<GpuMapping> hw_status_page)
+                                             std::unique_ptr<GpuMapping> hw_status_page,
+                                             std::unique_ptr<Scheduler> scheduler)
     : owner_(owner),
       id_(id),
       mmio_base_(mmio_base),
       hw_status_page_(this, id),
-      hw_status_page_mapping_(std::move(hw_status_page)) {
+      hw_status_page_mapping_(std::move(hw_status_page)),
+      scheduler_(std::move(scheduler)) {
   DASSERT(owner);
   bool status =
       hw_status_page_mapping_->buffer()->platform_buffer()->MapCpu(&hw_status_page_cpu_addr_);
@@ -520,4 +522,149 @@ bool EngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu_addr_
   DLOG("started batch buffer 0x%lx address_space_type %d", gpu_addr, address_space_type);
 
   return true;
+}
+
+bool EngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) {
+  TRACE_DURATION("magma", "ExecBatch");
+  auto context = mapped_batch->GetContext().lock();
+  DASSERT(context);
+
+  if (!MoveBatchToInflight(std::move(mapped_batch)))
+    return DRETF(false, "WriteBatchToRingbuffer failed");
+
+  SubmitContext(context.get(), context->get_ringbuffer(id())->tail());
+  return true;
+}
+
+void EngineCommandStreamer::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
+  auto context = batch->GetContext().lock();
+  if (!context)
+    return;
+
+  context->pending_batch_queue().emplace(std::move(batch));
+
+  scheduler_->CommandBufferQueued(context);
+
+  if (!context_switch_pending_)
+    ScheduleContext();
+}
+
+void EngineCommandStreamer::ContextSwitched() {
+  context_switch_pending_ = false;
+  ScheduleContext();
+}
+
+void EngineCommandStreamer::ScheduleContext() {
+  auto context = scheduler_->ScheduleContext();
+  if (!context)
+    return;
+
+  while (true) {
+    auto mapped_batch = std::move(context->pending_batch_queue().front());
+    mapped_batch->scheduled();
+    context->pending_batch_queue().pop();
+
+    // TODO(fxbug.dev/12764) - MoveBatchToInflight should not fail.  Scheduler should verify there
+    // is sufficient room in the ringbuffer before selecting a context. For now, drop the command
+    // buffer and try another context.
+    if (!MoveBatchToInflight(std::move(mapped_batch))) {
+      MAGMA_LOG(WARNING, "MoveBatchToInflight failed");
+      break;
+    }
+
+    // Scheduler returns nullptr when its time to switch contexts
+    auto next_context = scheduler_->ScheduleContext();
+    if (next_context == nullptr)
+      break;
+    DASSERT(context == next_context);
+  }
+
+  SubmitContext(context.get(), inflight_command_sequences_.back().ringbuffer_offset());
+  context_switch_pending_ = true;
+}
+
+bool EngineCommandStreamer::MoveBatchToInflight(std::unique_ptr<MappedBatch> mapped_batch) {
+  auto context = mapped_batch->GetContext().lock();
+  DASSERT(context);
+
+  uint32_t sequence_number;
+  if (!WriteBatchToRingBuffer(mapped_batch.get(), &sequence_number))
+    return DRETF(false, "WriteBatchToRingBuffer failed");
+
+  mapped_batch->SetSequenceNumber(sequence_number);
+
+  uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
+  inflight_command_sequences_.emplace(sequence_number, ringbuffer_offset, std::move(mapped_batch));
+
+  progress()->Submitted(sequence_number, std::chrono::steady_clock::now());
+
+  return true;
+}
+
+void EngineCommandStreamer::ProcessCompletedCommandBuffers(uint32_t last_completed_sequence) {
+  // pop all completed command buffers
+  while (!inflight_command_sequences_.empty() &&
+         inflight_command_sequences_.front().sequence_number() <= last_completed_sequence) {
+    InflightCommandSequence& sequence = inflight_command_sequences_.front();
+
+    DLOG(
+        "ProcessCompletedCommandBuffers popping inflight command sequence with "
+        "sequence_number 0x%x "
+        "ringbuffer_start_offset 0x%x",
+        sequence.sequence_number(), sequence.ringbuffer_offset());
+
+    auto context = sequence.GetContext().lock();
+    DASSERT(context);
+    context->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
+
+    // NOTE: The order of the following lines matter.
+    //
+    // We need to pop() before telling the scheduler we're done so that the
+    // flow events in the Command Buffer destructor happens before the
+    // Context Exec virtual duration event is over.
+    bool was_scheduled = sequence.mapped_batch()->was_scheduled();
+    inflight_command_sequences_.pop();
+
+    if (was_scheduled) {
+      scheduler_->CommandBufferCompleted(context);
+    }
+  }
+
+  progress()->Completed(last_completed_sequence, std::chrono::steady_clock::now());
+}
+
+void EngineCommandStreamer::ResetCurrentContext() {
+  DLOG("ResetCurrentContext");
+
+  if (!inflight_command_sequences_.empty()) {
+    auto context = inflight_command_sequences_.front().GetContext().lock();
+    DASSERT(context);
+
+    // Cleanup resources for any inflight command sequences on this context
+    while (!inflight_command_sequences_.empty()) {
+      auto& sequence = inflight_command_sequences_.front();
+      if (sequence.mapped_batch()->was_scheduled())
+        scheduler_->CommandBufferCompleted(inflight_command_sequences_.front().GetContext().lock());
+      inflight_command_sequences_.pop();
+    }
+
+    progress()->Reset();
+
+    context->Kill();
+  }
+}
+
+std::vector<MappedBatch*> EngineCommandStreamer::GetInflightBatches() {
+  size_t num_sequences = inflight_command_sequences_.size();
+  std::vector<MappedBatch*> inflight_batches;
+  inflight_batches.reserve(num_sequences);
+  for (uint32_t i = 0; i < num_sequences; i++) {
+    auto sequence = std::move(inflight_command_sequences_.front());
+    inflight_batches.push_back(sequence.mapped_batch());
+
+    // Pop off the front and push to the back
+    inflight_command_sequences_.pop();
+    inflight_command_sequences_.push(std::move(sequence));
+  }
+  return inflight_batches;
 }
