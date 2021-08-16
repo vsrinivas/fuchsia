@@ -5,8 +5,10 @@
 #ifndef SRC_DEVICES_TESTING_MOCK_DDK_MOCK_DEVICE_H_
 #define SRC_DEVICES_TESTING_MOCK_DDK_MOCK_DEVICE_H_
 
+#include <lib/ddk/binding_priv.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 
@@ -143,6 +145,9 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   void ChildPreReleaseOp(void* child_ctx);
   bool HasUnbindOp() { return ops_->unbind != nullptr; }
 
+  cpp20::span<const zx_device_prop_t> GetProperties() const { return props_; }
+  cpp20::span<const zx_device_str_prop_t> GetStringProperties() const { return str_props_; }
+
   // Size is often set for the parent of a device, to be available when the device
   // calls device_get_size
   void SetSize(size_t size);
@@ -261,6 +266,9 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   void* ctx_ = nullptr;
 
   std::string name_;
+
+  std::vector<zx_device_prop_t> props_;
+  std::vector<zx_device_str_prop_t> str_props_;
 };
 
 namespace mock_ddk {

@@ -25,6 +25,8 @@ sdk_source_set("mock-ddk") {
     "//zircon/public/lib/zx",
   ]
   public_deps = [
+    "//sdk/lib/stdcompat",
+
     # mock_ddk.h has #include <ddk/device.h>.
     "//src/lib/ddk",
 

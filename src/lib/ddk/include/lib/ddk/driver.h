@@ -130,7 +130,7 @@ typedef struct device_add_args {
   uint32_t prop_count;
 
   // Optional list of device string properties.
-  zx_device_str_prop_t* str_props;
+  const zx_device_str_prop_t* str_props;
 
   // Number of device string properties
   uint32_t str_prop_count;

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/binding_priv.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
@@ -15,7 +16,7 @@
 
 TEST(MockDdk, BasicOps) {
   zx_protocol_device_t ops = {};
-  device_add_args_t device_args;
+  device_add_args_t device_args = {};
   device_args.name = "test-driver";
   device_args.ops = &ops;
 
@@ -31,7 +32,7 @@ TEST(MockDdk, BasicOps) {
 TEST(MockDdk, InitOps) {
   zx_protocol_device_t ops = {};  // Important to initialize functions with nullptr!
   ops.init = [](void* ctx) { device_init_reply(*static_cast<zx_device_t**>(ctx), ZX_OK, nullptr); };
-  device_add_args_t device_args;
+  device_add_args_t device_args = {};
   device_args.name = "test-driver";
   device_args.ops = &ops;
   zx_device_t* device;  // this will be set by device_add_from_driver.
@@ -45,6 +46,13 @@ TEST(MockDdk, InitOps) {
   EXPECT_TRUE(device->InitReplyCalled());
   EXPECT_EQ(ZX_OK, device->InitReplyCallStatus());
 }
+
+const std::array kProps = {
+    zx_device_prop_t{0, 1, 2},
+};
+const std::array kStrProps = {
+    zx_device_str_prop_t{.key = "key1", .property_value = str_prop_str_val("value")},
+    zx_device_str_prop_t{.key = "key2", .property_value = str_prop_int_val(10)}};
 
 class TestDevice;
 using DeviceType = ddk::Device<TestDevice, ddk::Unbindable, ddk::Initializable, ddk::Suspendable>;
@@ -62,7 +70,8 @@ class TestDevice : public DeviceType {
     auto dev = std::make_unique<TestDevice>(parent);
     // The device_add_args_t will be filled out by the
     // base class.
-    auto status = dev->DdkAdd("my-test-device");
+    auto status = dev->DdkAdd(
+        ddk::DeviceAddArgs("my-test-device").set_props(kProps).set_str_props(kStrProps));
     // The MockDevice is now in charge of the memory for dev
     if (status == ZX_OK) {
       return zx::ok(dev.release());
@@ -490,4 +499,18 @@ TEST(MockDdk, SetSize) {
 
   // Size should be 32 after being set.
   EXPECT_EQ(device_get_size(parent.get()), 32);
+}
+
+TEST(MockDdk, GetProperties) {
+  auto parent = MockDevice::FakeRootParent();  // Hold on to the parent during the test.
+  auto result = TestDevice::Bind(parent.get());
+  ASSERT_TRUE(result.is_ok());
+  TestDevice* test_device = result.value();
+
+  ASSERT_EQ(test_device->zxdev()->GetProperties().size(), kProps.size());
+  ASSERT_EQ(memcmp(test_device->zxdev()->GetProperties().data(), kProps.data(), kProps.size()), 0);
+  ASSERT_EQ(test_device->zxdev()->GetStringProperties().size(), cpp20::span(kStrProps).size());
+  ASSERT_EQ(memcmp(test_device->zxdev()->GetStringProperties().data(), kStrProps.data(),
+                   kStrProps.size()),
+            0);
 }
