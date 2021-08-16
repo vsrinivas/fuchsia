@@ -137,9 +137,16 @@ template("target_archive_common") {
     }
 
     #
-    # Action: Dump the .rodata section of the compiled header structure.
+    # Action: Dump the read-only section of the compiled header
+    # structure.
     #
     _object_to_binary = target_name + "_object_to_binary"
+
+    if (host_os == "mac") {
+      _object_dump_section = "--dump-section=__TEXT,__const="
+    } else {
+      _object_dump_section = "--dump-section=.rodata="
+    }
 
     toolchain_utils_action(_object_to_binary) {
       utils = [ "objcopy" ]
@@ -149,7 +156,7 @@ template("target_archive_common") {
       args = [
         rebase_path(inputs[0]),
         "/dev/null",
-        "--dump-section=.rodata=" + rebase_path(outputs[0]),
+        _object_dump_section + rebase_path(outputs[0]),
       ]
     }
   }
