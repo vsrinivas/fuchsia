@@ -197,6 +197,12 @@ a different callee.
     setting the MBO's `key` field to its reply key.  The MBO's state
     is set to `enqueued_as_reply`.
 
+    If the MBO had no `reply_queue` set (which can be true for MBOs
+    used for fire-and-forget messages), the MBO enters a defunct state
+    where it cannot be used any further.  This is equivalent to the
+    MBO being enqueued as a reply on a MsgQueue for which the handles
+    are later closed.
+
 *   `zx_object_wait_async_mbo(handle, mbo, signals, options)`
 
     This is a replacement for `zx_object_wait_async()`.  Like that
@@ -265,6 +271,13 @@ are dropped:
     processing a request from a caller, or before unqueuing the
     request, the caller will not be left waiting for a reply message
     indefinitely.
+
+*   MsgQueue: When all the handles to a MsgQueue are closed, any
+    messages on the MsgQueue's queue are removed from the queue.
+    There may still be kernel-internal references to the MsgQueue
+    (from MBOs' `reply_queue` fields and from channels), but these are
+    not sufficient for keeping the messages on the queue because these
+    references cannot be used for reading from MsgQueues.
 
 ## State for each object type
 
