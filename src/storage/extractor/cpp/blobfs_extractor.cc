@@ -286,7 +286,18 @@ zx::status<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
 }
 
 zx::status<> FsWalker::LoadSuperblock() {
-  return TryLoadSuperblock(blobfs::kSuperblockOffset * blobfs::kBlobfsBlockSize);
+  ExtentProperties properties{.extent_kind = ExtentKind::Data, .data_kind = DataKind::Unmodified};
+  auto load_status = TryLoadSuperblock(blobfs::kSuperblockOffset * blobfs::kBlobfsBlockSize);
+  if (load_status.is_ok()) {
+    return load_status;
+  }
+  // If we fail to load primary superblock, dump primary superblock
+  if (auto status = extractor_.AddBlocks(blobfs::kSuperblockOffset, 1, properties);
+      status.is_error()) {
+    std::cerr << "FAIL: Add primary superblock" << std::endl;
+    return status;
+  }
+  return load_status;
 }
 
 }  // namespace

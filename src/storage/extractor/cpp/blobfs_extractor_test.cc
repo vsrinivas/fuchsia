@@ -49,7 +49,7 @@ constexpr uint64_t BlockBitmapOffset(const blobfs::Superblock& info) {
   uint64_t block_map_offset =
       SuperblockOffset() + blobfs::kBlobfsSuperblockBlocks * blobfs::kBlobfsBlockSize;
   if (info.flags & blobfs::kBlobFlagFVM) {
-    block_map_offset += blobfs::kBlobfsSuperblockBlocks;
+    block_map_offset += (blobfs::kBlobfsSuperblockBlocks * blobfs::kBlobfsBlockSize);
   }
   return block_map_offset;
 }
@@ -84,7 +84,8 @@ void CreateInputAndOutputStream(fs_test::TestFilesystem& fs, fbl::unique_fd& inp
   }
 }
 
-void Extract(const fbl::unique_fd& input_fd, const fbl::unique_fd& output_fd) {
+void Extract(const fbl::unique_fd& input_fd, const fbl::unique_fd& output_fd,
+             bool corruptSuperblock) {
   ExtractorOptions options = ExtractorOptions{.force_dump_pii = false,
                                               .add_checksum = false,
                                               .alignment = blobfs::kBlobfsBlockSize,
@@ -93,7 +94,9 @@ void Extract(const fbl::unique_fd& input_fd, const fbl::unique_fd& output_fd) {
   ASSERT_EQ(extractor_status.status_value(), ZX_OK);
   auto extractor = std::move(extractor_status.value());
   auto status = BlobfsExtract(input_fd.duplicate(), *extractor);
-  ASSERT_TRUE(status.is_ok());
+  if (!corruptSuperblock) {
+    ASSERT_TRUE(status.is_ok());
+  }
   ASSERT_TRUE(extractor->Write().is_ok());
 }
 
@@ -118,7 +121,7 @@ TEST_P(BlobfsExtractionTest, TestSuperblock) {
   fbl::unique_fd output_fd;
 
   CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
-  Extract(input_fd, output_fd);
+  Extract(input_fd, output_fd, false);
 
   blobfs::Superblock info;
   VerifyInputSuperblock(&info, input_fd);
@@ -128,12 +131,43 @@ TEST_P(BlobfsExtractionTest, TestSuperblock) {
   VerifyOutputSuperblock(&info, output_fd);
 }
 
+TEST_P(BlobfsExtractionTest, TestCorruptedSuperblock) {
+  fbl::unique_fd input_fd;
+  fbl::unique_fd output_fd;
+
+  CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
+  std::unique_ptr<char[]> original_superblock(new char[blobfs::kBlobfsBlockSize]);
+  ASSERT_EQ(pread(input_fd.get(), original_superblock.get(), blobfs::kBlobfsBlockSize, 0),
+            (ssize_t)blobfs::kBlobfsBlockSize);
+  char corrupt_block[blobfs::kBlobfsBlockSize] = {'C'};
+  ssize_t r =
+      pwrite(input_fd.get(), corrupt_block, sizeof(corrupt_block), blobfs::kSuperblockOffset);
+  ASSERT_EQ(r, (ssize_t)sizeof(corrupt_block));
+  Extract(input_fd, output_fd, true);
+
+  std::unique_ptr<char[]> superblock(new char[blobfs::kBlobfsBlockSize]);
+  ASSERT_EQ(pread(input_fd.get(), superblock.get(), blobfs::kBlobfsBlockSize, 0),
+            (ssize_t)blobfs::kBlobfsBlockSize);
+  std::unique_ptr<char[]> read_buffer_sb(new char[blobfs::kBlobfsBlockSize]);
+  ASSERT_EQ(pread(output_fd.get(), read_buffer_sb.get(), blobfs::kBlobfsBlockSize,
+                  kExtractedImageBlockCount * blobfs::kBlobfsBlockSize),
+            (ssize_t)blobfs::kBlobfsBlockSize);
+  ASSERT_EQ(memcmp(superblock.get(), corrupt_block, blobfs::kBlobfsBlockSize), 0);
+  ASSERT_EQ(memcmp(read_buffer_sb.get(), corrupt_block, blobfs::kBlobfsBlockSize), 0);
+
+  // Restore original superblock to pass Fsck test
+  ssize_t r1 = pwrite(input_fd.get(), original_superblock.get(), sizeof(corrupt_block),
+                      blobfs::kSuperblockOffset);
+
+  ASSERT_GE(r1, 0) << "errno: " << strerror(errno) << std::endl;
+}
+
 TEST_P(BlobfsExtractionTest, TestNodeMap) {
   fbl::unique_fd input_fd;
   fbl::unique_fd output_fd;
 
   CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
-  Extract(input_fd, output_fd);
+  Extract(input_fd, output_fd, false);
 
   blobfs::Superblock info;
   VerifyInputSuperblock(&info, input_fd);
@@ -159,7 +193,7 @@ TEST_P(BlobfsExtractionTest, TestBlockMap) {
   fbl::unique_fd output_fd;
 
   CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
-  Extract(input_fd, output_fd);
+  Extract(input_fd, output_fd, false);
 
   blobfs::Superblock info;
   VerifyInputSuperblock(&info, input_fd);
@@ -183,7 +217,7 @@ TEST_P(BlobfsExtractionTest, TestJournal) {
   fbl::unique_fd output_fd;
 
   CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
-  Extract(input_fd, output_fd);
+  Extract(input_fd, output_fd, false);
 
   blobfs::Superblock info;
 
@@ -241,7 +275,7 @@ TEST_P(BlobfsExtractionTest, TestCorruptBlob) {
       (blobfs::DataStartBlock(info) + input_datablock_offset + 1) * blobfs::kBlobfsBlockSize);
   ASSERT_EQ(r, (ssize_t)sizeof(corrupt_block));
 
-  Extract(input_fd, output_fd);
+  Extract(input_fd, output_fd, false);
   VerifyOutputSuperblock(&info, output_fd);
 
   struct stat stats;
