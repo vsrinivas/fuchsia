@@ -23,6 +23,6 @@ impl ProcFs {
     /// Creates a new instance of `ProcFs` for the given `kernel`.
     pub fn new(kernel: Weak<Kernel>) -> FileSystemHandle {
         let procfs = Arc::new(ProcFs {});
-        FileSystem::new(procfs, FsNode::new_root(ProcDirectory::new(kernel)), None)
+        FileSystem::new(procfs, FsNode::new_root(ProcDirectory::new(kernel)), None, false)
     }
 }

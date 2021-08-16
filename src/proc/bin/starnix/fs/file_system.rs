@@ -16,7 +16,13 @@ use crate::types::*;
 pub struct FileSystem {
     root: OnceCell<DirEntryHandle>,
     next_inode: AtomicU64,
-    ops: Box<dyn FileSystemOps>,
+    _ops: Box<dyn FileSystemOps>,
+
+    /// Whether DirEntries added to this filesystem should be considered permanent, instead of a
+    /// cache of the backing storage. An example is tmpfs: the DirEntry tree *is* the backing
+    /// storage, as opposed to ext4, which uses the DirEntry tree as a cache and removes unused
+    /// nodes from it.
+    permanent_entries: bool,
 
     /// The FsNode cache for this file system.
     ///
@@ -28,6 +34,11 @@ pub struct FileSystem {
     /// FileSystem::get_or_create_node to see if the FsNode already exists in
     /// the cache.
     nodes: Mutex<HashMap<ino_t, Weak<FsNode>>>,
+
+    /// DirEntryHandle cache for the filesystem. Currently only used by filesystems that set the
+    /// permanent_entries flag, to store every node and make sure it doesn't get freed without
+    /// being explicitly unlinked.
+    entries: Mutex<HashMap<usize, DirEntryHandle>>,
 }
 
 impl FileSystem {
@@ -36,9 +47,10 @@ impl FileSystem {
         ops: impl FileSystemOps + 'static,
         mut root_node: FsNode,
         root_inode_num: Option<ino_t>,
+        permanent_entries: bool,
     ) -> FileSystemHandle {
         // TODO(tbodt): I would like to use Arc::new_cyclic
-        let fs = Self::new_no_root(ops);
+        let fs = Self::new_internal(ops, permanent_entries);
         root_node.set_fs(&fs);
         root_node.inode_num = root_inode_num.unwrap_or(fs.next_inode_num());
         let root_node = Arc::new(root_node);
@@ -52,11 +64,20 @@ impl FileSystem {
 
     /// Create a file system with no root directory.
     pub fn new_no_root(ops: impl FileSystemOps + 'static) -> FileSystemHandle {
+        Self::new_internal(ops, false)
+    }
+
+    fn new_internal(
+        ops: impl FileSystemOps + 'static,
+        permanent_entries: bool,
+    ) -> FileSystemHandle {
         Arc::new(FileSystem {
             root: OnceCell::new(),
             next_inode: AtomicU64::new(0),
-            ops: Box::new(ops),
+            _ops: Box::new(ops),
+            permanent_entries,
             nodes: Mutex::new(HashMap::new()),
+            entries: Mutex::new(HashMap::new()),
         })
     }
 
@@ -130,18 +151,19 @@ impl FileSystem {
     }
 
     pub fn did_create_dir_entry(&self, entry: &DirEntryHandle) {
-        self.ops.did_create_dir_entry(self, entry);
+        if self.permanent_entries {
+            self.entries.lock().insert(Arc::as_ptr(&entry) as usize, entry.clone());
+        }
     }
 
     pub fn will_destroy_dir_entry(&self, entry: &DirEntryHandle) {
-        self.ops.will_destroy_dir_entry(self, entry);
+        if self.permanent_entries {
+            self.entries.lock().remove(&(Arc::as_ptr(entry) as usize));
+        }
     }
 }
 
 /// The filesystem-implementation-specific data for FileSystem.
-pub trait FileSystemOps: Send + Sync {
-    fn did_create_dir_entry(&self, _fs: &FileSystem, _entry: &DirEntryHandle) {}
-    fn will_destroy_dir_entry(&self, _fs: &FileSystem, _entry: &DirEntryHandle) {}
-}
+pub trait FileSystemOps: Send + Sync {}
 
 pub type FileSystemHandle = Arc<FileSystem>;

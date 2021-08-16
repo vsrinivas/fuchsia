@@ -22,7 +22,7 @@ impl RemoteFs {
     pub fn new(root: zx::Channel, rights: u32) -> FileSystemHandle {
         let zxio = Arc::new(Zxio::create(root.into_handle()).unwrap());
         // TODO: Should we use the inode_num from root rather than inventing a new number?
-        FileSystem::new(RemoteFs, FsNode::new_root(RemoteNode { zxio, rights }), None)
+        FileSystem::new(RemoteFs, FsNode::new_root(RemoteNode { zxio, rights }), None, false)
     }
 }
 

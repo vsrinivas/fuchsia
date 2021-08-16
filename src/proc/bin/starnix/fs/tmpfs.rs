@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use parking_lot::Mutex;
-use std::collections::HashMap;
 use std::ops::Bound;
 use std::sync::Arc;
 
@@ -13,26 +12,13 @@ use crate::fs::pipe::Pipe;
 use crate::task::*;
 use crate::types::*;
 
-#[derive(Default)]
-pub struct TmpFs {
-    entries: Mutex<HashMap<usize, DirEntryHandle>>,
-}
-impl FileSystemOps for Arc<TmpFs> {
-    fn did_create_dir_entry(&self, _fs: &FileSystem, entry: &DirEntryHandle) {
-        let k = Arc::as_ptr(entry) as usize;
-        self.entries.lock().insert(k, Arc::clone(entry));
-    }
-
-    fn will_destroy_dir_entry(&self, _fs: &FileSystem, entry: &DirEntryHandle) {
-        let k = Arc::as_ptr(entry) as usize;
-        self.entries.lock().remove(&k);
-    }
-}
+pub struct TmpFs(());
+impl FileSystemOps for Arc<TmpFs> {}
 
 impl TmpFs {
     pub fn new() -> FileSystemHandle {
-        let ops = Arc::new(TmpFs::default());
-        FileSystem::new(ops, FsNode::new_root(TmpfsDirectory), None)
+        let ops = Arc::new(TmpFs(()));
+        FileSystem::new(ops, FsNode::new_root(TmpfsDirectory), None, true)
     }
 }
 
