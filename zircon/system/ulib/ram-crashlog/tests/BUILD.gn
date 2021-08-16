@@ -5,12 +5,12 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":ram-crashlog" ]
+  deps = [ ":ram-crashlog-test-pkg" ]
 }
 
-test("ram-crashlog") {
+test("ram-crashlog-test") {
   output_name = "ram-crashlog-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -27,10 +27,5 @@ test("ram-crashlog") {
 
 fuchsia_unittest_package("ram-crashlog-test-pkg") {
   package_name = "ram-crashlog-test"
-  deps = [ ":ram-crashlog" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":ram-crashlog-test-pkg" ]
+  deps = [ ":ram-crashlog-test" ]
 }
