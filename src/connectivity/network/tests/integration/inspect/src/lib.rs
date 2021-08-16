@@ -618,6 +618,244 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
     }
 }
 
+// This test verifies exactly which stat counters are exported through
+// inspect. If any counter is added or deleted, the inline list of the
+// counters below should be updated accordingly.
+//
+// Note that many of the counters are implemented in gVisor. They are
+// automatically exported from netstack via reflection. This test
+// serves as a change detector to acknowledge any possible additions
+// or deletions when importing code from upstream.
+#[fasync::run_singlethreaded(test)]
+async fn inspect_stat_counters() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("inspect_for_sampler")
+        .expect("failed to create realm");
+    // Connect to netstack service to spawn a netstack instance.
+    let _netstack = realm
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
+        .expect("failed to connect to fuchsia.netstack/Netstack");
+
+    let data = get_inspect_data(&realm, "netstack", "Networking Stat Counters", "counters")
+        .await
+        .expect("get_inspect_data failed");
+    // TODO(https://fxbug.dev/62447): change AnyProperty to AnyUintProperty when available.
+    use fuchsia_inspect::testing::AnyProperty;
+    fuchsia_inspect::assert_data_tree!(data, "Networking Stat Counters": {
+        DroppedPackets: AnyProperty,
+        SocketCount: AnyProperty,
+        SocketsCreated: AnyProperty,
+        SocketsDestroyed: AnyProperty,
+        ARP: {
+            DisabledPacketsReceived: AnyProperty,
+            MalformedPacketsReceived: AnyProperty,
+            OutgoingRepliesDropped: AnyProperty,
+            OutgoingRepliesSent: AnyProperty,
+            OutgoingRequestBadLocalAddressErrors: AnyProperty,
+            OutgoingRequestInterfaceHasNoLocalAddressErrors: AnyProperty,
+            OutgoingRequestsDropped: AnyProperty,
+            OutgoingRequestsSent: AnyProperty,
+            PacketsReceived: AnyProperty,
+            RepliesReceived: AnyProperty,
+            RequestsReceived: AnyProperty,
+            RequestsReceivedUnknownTargetAddress: AnyProperty,
+        },
+        DHCPv6: {
+            ManagedAddress: AnyProperty,
+            NoConfiguration: AnyProperty,
+            OtherConfiguration: AnyProperty,
+        },
+        ICMP: {
+            V4: {
+                PacketsReceived: {
+                    DstUnreachable: AnyProperty,
+                    EchoReply: AnyProperty,
+                    EchoRequest: AnyProperty,
+                    InfoReply: AnyProperty,
+                    InfoRequest: AnyProperty,
+                    Invalid: AnyProperty,
+                    ParamProblem: AnyProperty,
+                    Redirect: AnyProperty,
+                    SrcQuench: AnyProperty,
+                    TimeExceeded: AnyProperty,
+                    Timestamp: AnyProperty,
+                    TimestampReply: AnyProperty,
+                },
+                PacketsSent: {
+                    Dropped: AnyProperty,
+                    DstUnreachable: AnyProperty,
+                    EchoReply: AnyProperty,
+                    EchoRequest: AnyProperty,
+                    InfoReply: AnyProperty,
+                    InfoRequest: AnyProperty,
+                    ParamProblem: AnyProperty,
+                    RateLimited: AnyProperty,
+                    Redirect: AnyProperty,
+                    SrcQuench: AnyProperty,
+                    TimeExceeded: AnyProperty,
+                    Timestamp: AnyProperty,
+                    TimestampReply: AnyProperty,
+                },
+            },
+            V6: {
+                PacketsReceived: {
+                    DstUnreachable: AnyProperty,
+                    EchoReply: AnyProperty,
+                    EchoRequest: AnyProperty,
+                    Invalid: AnyProperty,
+                    MulticastListenerDone: AnyProperty,
+                    MulticastListenerQuery: AnyProperty,
+                    MulticastListenerReport: AnyProperty,
+                    NeighborAdvert: AnyProperty,
+                    NeighborSolicit: AnyProperty,
+                    PacketTooBig: AnyProperty,
+                    ParamProblem: AnyProperty,
+                    RedirectMsg: AnyProperty,
+                    RouterAdvert: AnyProperty,
+                    RouterOnlyPacketsDroppedByHost: AnyProperty,
+                    RouterSolicit: AnyProperty,
+                    TimeExceeded: AnyProperty,
+                    Unrecognized: AnyProperty,
+                },
+                PacketsSent: {
+                    Dropped: AnyProperty,
+                    DstUnreachable: AnyProperty,
+                    EchoReply: AnyProperty,
+                    EchoRequest: AnyProperty,
+                    MulticastListenerDone: AnyProperty,
+                    MulticastListenerQuery: AnyProperty,
+                    MulticastListenerReport: AnyProperty,
+                    NeighborAdvert: AnyProperty,
+                    NeighborSolicit: AnyProperty,
+                    PacketTooBig: AnyProperty,
+                    ParamProblem: AnyProperty,
+                    RateLimited: AnyProperty,
+                    RedirectMsg: AnyProperty,
+                    RouterAdvert: AnyProperty,
+                    RouterSolicit: AnyProperty,
+                    TimeExceeded: AnyProperty,
+                },
+            },
+        },
+        IGMP: {
+            PacketsReceived: {
+                ChecksumErrors: AnyProperty,
+                Invalid: AnyProperty,
+                LeaveGroup: AnyProperty,
+                MembershipQuery: AnyProperty,
+                Unrecognized: AnyProperty,
+                V1MembershipReport: AnyProperty,
+                V2MembershipReport: AnyProperty,
+            },
+            PacketsSent: {
+                Dropped: AnyProperty,
+                LeaveGroup: AnyProperty,
+                MembershipQuery: AnyProperty,
+                V1MembershipReport: AnyProperty,
+                V2MembershipReport: AnyProperty,
+            },
+        },
+        IP: {
+            DisabledPacketsReceived: AnyProperty,
+            IPTablesForwardDropped: AnyProperty,
+            IPTablesInputDropped: AnyProperty,
+            IPTablesOutputDropped: AnyProperty,
+            IPTablesPostroutingDropped: AnyProperty,
+            IPTablesPreroutingDropped: AnyProperty,
+            InvalidDestinationAddressesReceived: AnyProperty,
+            InvalidSourceAddressesReceived: AnyProperty,
+            MalformedFragmentsReceived: AnyProperty,
+            MalformedPacketsReceived: AnyProperty,
+            OptionRecordRouteReceived: AnyProperty,
+            OptionRouterAlertReceived: AnyProperty,
+            OptionTimestampReceived: AnyProperty,
+            OptionUnknownReceived: AnyProperty,
+            OutgoingPacketErrors: AnyProperty,
+            PacketsDelivered: AnyProperty,
+            PacketsReceived: AnyProperty,
+            PacketsSent: AnyProperty,
+            ValidPacketsReceived: AnyProperty,
+            Forwarding: {
+                Errors: AnyProperty,
+                ExhaustedTTL: AnyProperty,
+                ExtensionHeaderProblem: AnyProperty,
+                HostUnreachable: AnyProperty,
+                LinkLocalDestination: AnyProperty,
+                LinkLocalSource: AnyProperty,
+                PacketTooBig: AnyProperty,
+                Unrouteable: AnyProperty,
+            },
+        },
+        IPv6AddressConfig: {
+            DHCPv6ManagedAddressOnly: AnyProperty,
+            GlobalSLAACAndDHCPv6ManagedAddress: AnyProperty,
+            GlobalSLAACOnly: AnyProperty,
+            NoGlobalSLAACOrDHCPv6ManagedAddress: AnyProperty,
+        },
+        NICs: {
+            MalformedL4RcvdPackets: AnyProperty,
+            UnknownL3ProtocolRcvdPackets: AnyProperty,
+            UnknownL4ProtocolRcvdPackets: AnyProperty,
+            DisabledRx: {
+                Bytes: AnyProperty,
+                Packets: AnyProperty,
+            },
+            Neighbor: {
+                UnreachableEntryLookups: AnyProperty,
+            },
+            Rx: {
+                Bytes: AnyProperty,
+                Packets: AnyProperty,
+            },
+            Tx: {
+                Bytes: AnyProperty,
+                Packets: AnyProperty,
+            },
+        },
+        TCP: {
+            ActiveConnectionOpenings: AnyProperty,
+            ChecksumErrors: AnyProperty,
+            CurrentConnected: AnyProperty,
+            CurrentEstablished: AnyProperty,
+            EstablishedClosed: AnyProperty,
+            EstablishedResets: AnyProperty,
+            EstablishedTimedout: AnyProperty,
+            FailedConnectionAttempts: AnyProperty,
+            FailedPortReservations: AnyProperty,
+            FastRecovery: AnyProperty,
+            FastRetransmit: AnyProperty,
+            InvalidSegmentsReceived: AnyProperty,
+            ListenOverflowAckDrop: AnyProperty,
+            ListenOverflowInvalidSynCookieRcvd: AnyProperty,
+            ListenOverflowSynCookieRcvd: AnyProperty,
+            ListenOverflowSynCookieSent: AnyProperty,
+            ListenOverflowSynDrop: AnyProperty,
+            PassiveConnectionOpenings: AnyProperty,
+            ResetsReceived: AnyProperty,
+            ResetsSent: AnyProperty,
+            Retransmits: AnyProperty,
+            SACKRecovery: AnyProperty,
+            SegmentSendErrors: AnyProperty,
+            SegmentsAckedWithDSACK: AnyProperty,
+            SegmentsSent: AnyProperty,
+            SlowStartRetransmits: AnyProperty,
+            TLPRecovery: AnyProperty,
+            Timeouts: AnyProperty,
+            ValidSegmentsReceived: AnyProperty,
+        },
+        UDP: {
+            ChecksumErrors: AnyProperty,
+            MalformedPacketsReceived: AnyProperty,
+            PacketSendErrors: AnyProperty,
+            PacketsReceived: AnyProperty,
+            PacketsSent: AnyProperty,
+            ReceiveBufferErrors: AnyProperty,
+            UnknownPortErrors: AnyProperty,
+        }
+    });
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn inspect_for_sampler() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
@@ -641,21 +879,36 @@ async fn inspect_for_sampler() {
         project_configs => panic!("expected one project_config but got {:#?}", project_configs),
     };
     for metric_config in &project_config.metrics {
-        let tree_selector = metric_config
+        let selector = metric_config
             .selector
             .strip_prefix("netstack.cmx:")
             .expect("failed to strip \"netstack.cmx:\"");
-        // Debug print data to make debugging easier in case of failures.
-        println!("tree_selector={:#?}", tree_selector);
-        let expected_key = metric_config.selector.split(":").last().expect("failed to find a key");
+        let (_, expected_key) = selector
+            .rsplit_once(":")
+            .unwrap_or_else(|| panic!("selector {:#?} has no key", selector));
 
-        let data = get_inspect_data(&realm, "netstack", tree_selector, "counters")
+        let data = get_inspect_data(&realm, "netstack", selector, "counters")
             .await
             .expect("get_inspect_data failed");
         let properties: Vec<_> = data
             .property_iter()
             .filter_map(|(_hierarchy_path, property_opt): (Vec<&String>, _)| property_opt)
             .collect();
-        matches::assert_matches!(properties[..], [Property::Uint(key, _)] if key == expected_key);
+        match &properties[..] {
+            [Property::Uint(key, _)] => {
+                if key != expected_key {
+                    panic!(
+                        "wrong key {:#?} found (expected {:#?}) for selector {:#?}",
+                        key, expected_key, selector
+                    );
+                }
+            }
+            [] => {
+                panic!("no properties found for selector {:#?}", selector)
+            }
+            properties => {
+                panic!("wrong properties {:#?} found for selector {:#?}", properties, selector);
+            }
+        }
     }
 }
