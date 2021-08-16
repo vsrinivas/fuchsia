@@ -26,6 +26,13 @@ declare_args() {
   if (host_cpu == "x64" || host_cpu == "arm64") {
     fuchsia_tool_dir = "${fuchsia_sdk}/tools/${host_cpu}"
   }
+
+  # fuchsia_auto_index_symbols when true adds the ids.txt file generated from a `fuchsia_package`
+  # to the Fuchsia symbol index used to symbolize logs and to find source when using zxdb.
+  # The default value is false, in order to be backwards compatibility with existing builds, and
+  # only makes sense to set to true when building as a developer that will need to symbolize logs
+  # or use the debugger with locally build code.
+  fuchsia_auto_index_symbols = false
 }
 
 if (fuchsia_sdk_id == "") {
