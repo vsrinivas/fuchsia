@@ -5,21 +5,6 @@
         "package": "my-cts-test-package"
     },
     {
-        "archive_name": "fuchsia-element-tests",
-        "component_name": "element-manager-test.cmx",
-        "package": "fuchsia-element-tests"
-    },
-    {
-        "archive_name": "fuchsia-hwinfo-tests",
-        "component_name": "hwinfo-test.cmx",
-        "package": "fuchsia-hwinfo-tests"
-    },
-    {
-        "archive_name": "fuchsia-diagnostics-tests",
-        "component_name": "inspect-publisher.cmx",
-        "package": "fuchsia-diagnostics-tests"
-    },
-    {
         "archive_name": "cts-hello-world-rust-tests",
         "component_name": "cts-hello-world-rust.cm",
         "package": "cts-hello-world-rust-tests"
