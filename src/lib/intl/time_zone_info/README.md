@@ -1,9 +1,7 @@
-# Time Zone Info Service
+# Time Zone Info Service library
 
-The Time Zone Info Service provides:
+This is the underlying implementation behind the Time Zone Info Service (see
+[`//src/intl/time_zone_info_service/`](../../../intl/time_zone_info_service/).
 
-* Properties of time zones — TODO(fxbug.dev/81902)
-* Conversions between civil and absolute times
-
-See
-[`fuchsia.intl.TimeZones`](https://fuchsia.dev/reference/fidl/fuchsia.intl#TimeZones).
+The library is kept as a separate target to allow it to be integrated into
+different host components as needed.

@@ -1,0 +1,5 @@
+{
+    "services": {
+        "fuchsia.intl.TimeZones": "fuchsia-pkg://fuchsia.com/time-zone-info-service#meta/time-zone-info-service.cmx"
+    }
+}

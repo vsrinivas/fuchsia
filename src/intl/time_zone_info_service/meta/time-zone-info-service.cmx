@@ -1,0 +1,8 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/time-zone-info-service"
+    }
+}

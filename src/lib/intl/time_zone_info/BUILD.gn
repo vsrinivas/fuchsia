@@ -11,10 +11,10 @@ group("time_zone_info") {
 
 group("tests") {
   testonly = true
-  deps = [ ":time-zone-info-service-tests" ]
+  deps = [ ":time-zone-info-service-lib-tests" ]
 }
 
-source_set("time_zone_info_service_lib") {
+source_set("time-zone-info-service-lib") {
   sources = [
     "time_zone_info_service.cc",
     "time_zone_info_service.h",
@@ -36,12 +36,12 @@ source_set("time_zone_info_service_lib") {
   ]
 }
 
-executable("time_zone_info_service_test_bin") {
+executable("time-zone-info-service-lib-test-bin") {
   testonly = true
-  output_name = "time-zone-info-service-test"
+  output_name = "time-zone-info-service-lib-test"
   sources = [ "time_zone_info_service_test.cc" ]
   deps = [
-    ":time_zone_info_service_lib",
+    ":time-zone-info-service-lib",
     "//garnet/bin/trace/tests:component_context",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//garnet/public/lib/gtest",
@@ -53,12 +53,12 @@ executable("time_zone_info_service_test_bin") {
   ]
 }
 
-fuchsia_unittest_component("time-zone-info-service-test") {
-  deps = [ ":time_zone_info_service_test_bin" ]
+fuchsia_unittest_component("time-zone-info-service-lib-test") {
+  deps = [ ":time-zone-info-service-lib-test-bin" ]
 }
 
-fuchsia_test_package("time-zone-info-service-tests") {
-  test_components = [ ":time-zone-info-service-test" ]
+fuchsia_test_package("time-zone-info-service-lib-tests") {
+  test_components = [ ":time-zone-info-service-lib-test" ]
   deps = [ "//src/intl:icudtl" ]
   test_specs = {
     log_settings = {
