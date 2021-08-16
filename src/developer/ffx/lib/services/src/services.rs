@@ -16,11 +16,61 @@ use {
     std::sync::Arc,
 };
 
+/// A `FidlService` type represents a service that can be run on the FFX
+/// Daemon.
+///
+/// # The Service Type
+///
+/// The `FidlService` type represents the implementation of a single FIDL
+/// protocol. Each protocol used on the Daemon for the purposes of defining a
+/// service should map one-to-one to a `FidlService` implementation.
+///
+/// In other words, if you create a FIDL protocol `FooProtocol`, you can only
+/// have one service whose [`FidlService::Service`] type is defined as being
+/// `FooProtocolMarker`. Violating this requirement will cause an error at build
+/// time.
+///
+/// # Examples
+///
+/// One of the simplest examples can be found under
+/// service, though. `//src/developer/ffx/daemon/services/echo`. Other more
+/// advanced examples can be found in `//src/developer/ffx/daemon/services/`.
+///
+/// # Do You Need a Service?
+///
+/// Before implementing a service, consider whether or not you _need_ a
+/// Daemon service. If the answer to any of the following questions are "yes,"
+/// then a Daemon service may be recommended:
+///
+/// * Do you intend to have a long-running task in the background kicked off by
+///   either an existing service or by some frontend interaction?
+/// * Do you need something running for the lifetime of the Daemon? (Uploading
+///   statistics to a pre-determined URL, for example).
+///
+/// Most other uses beyond the above aren't recommended for services, though if
+/// you're unsure, make sure to consult the FFX team.
+///
 #[async_trait(?Send)]
 pub trait FidlService: Unpin + Default {
+    /// This determines the protocol the FidlService will implement. This type
+    /// determines the input of the [`FidlService::serve`] and
+    /// [`FidlService::handle`] functions.
     type Service: DiscoverableProtocolMarker;
+
+    /// Type to determine how streams are handled when they come in. For
+    /// example, setting this type to `FidlStreamHandler<Self>` will ensure that
+    /// there will only ever be one instance of this service ever allocated.
+    /// This is very useful for keeping track of persistent state across all
+    /// different client streams with this service.
+    ///
+    /// See the documentation for other stream handlers in this crate if this
+    /// does not sound sufficient.
     type StreamHandler: StreamHandler + Default;
 
+    /// Dictates how the handle function is invoked across the lifetime of a
+    /// single FIDL request stream. The default is to handle each request in
+    /// serial. This can be changed as needed, but will likely only ever need
+    /// to remain the default implementation.
     async fn serve<'a>(
         &'a self,
         cx: &'a Context,
@@ -32,17 +82,33 @@ pub trait FidlService: Unpin + Default {
         Ok(())
     }
 
+    /// Handles each individual request coming from a FIDL request stream. If
+    /// interacting with another service, or some specific Daemon internal is
+    /// necessary, use the [`Context`] object.
     async fn handle(&self, cx: &Context, req: Request<Self::Service>) -> Result<()>;
 
+    /// Invoked before any streams are opened for the service. This will only
+    /// ever be invoked once through the lifetime of this service.
     async fn start(&mut self, _cx: &Context) -> Result<()> {
         Ok(())
     }
 
+    /// Invoked for cleanup at the end of the service's lifetime. This is
+    /// invoked after every active request stream has been stopped and every
+    /// running [`FidlService::handle`] function has exited. This function
+    /// will only ever be invoked once.
     async fn stop(&mut self, _cx: &Context) -> Result<()> {
         Ok(())
     }
 }
 
+/// `FidlInstancedStreamHandler` allows for a service to have an instance for
+/// each individual FIDL request stream. This can be useful for a service that
+/// does not need to run for a long time, or only is interested in state across
+/// several calls in only one stream.
+///
+/// Once the stream has completed [`FidlService::stop`] will be called on the
+/// instance.
 pub struct FidlInstancedStreamHandler<F: FidlService> {
     _service: PhantomData<F>,
 }
@@ -56,14 +122,20 @@ where
     }
 }
 
+/// A `StreamHandler` is something that takes a FIDL request stream and
+/// determines how to allocate/cleanup a service accordingly.
 #[async_trait(?Send)]
 pub trait StreamHandler {
     /// Starts the service, if possible. For instanced services this would be
     /// a no-op as the service would no longer later be usable by any caller.
+    ///
+    /// For a non-instanced service this is typically invoked before
+    /// [`StreamHandler::open`] begins handling the first stream.
     async fn start(&self, cx: Context) -> Result<()>;
 
     /// Called when opening a new stream. This stream may be shutdown outside
-    /// of the control of this object by the service register.
+    /// of the control of this object by the service register via the
+    /// `Arc<ServeInner>` struct.
     async fn open(
         &self,
         cx: Context,
@@ -114,6 +186,8 @@ where
 
 type StartFut = Shared<LocalBoxFuture<'static, Rc<Result<()>>>>;
 
+/// The recommended stream handler for services. This type will only ever open
+/// one instance of the service across all streams.
 #[derive(Default)]
 pub struct FidlStreamHandler<F: FidlService> {
     service: Rc<RwLock<Option<F>>>,
