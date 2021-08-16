@@ -280,6 +280,11 @@ zx_status_t File::CanUnlink() const { return ZX_OK; }
 
 fs::VnodeProtocolSet File::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
+bool File::ValidateRights(fs::Rights rights) const {
+  // Minfs files can only be opened as readable/writable, not executable.
+  return !rights.execute;
+}
+
 zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   TRACE_DURATION("minfs", "File::Read", "ino", GetIno(), "len", len, "off", off);
   FX_LOGS(DEBUG) << "minfs_read() vn=" << this << "(#" << GetIno() << ") len=" << len

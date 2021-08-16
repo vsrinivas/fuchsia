@@ -58,6 +58,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
 
   // fs::Vnode interface.
   fs::VnodeProtocolSet GetProtocols() const final;
+  bool ValidateRights(fs::Rights rights) const final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual)
       __TA_EXCLUDES(mutex_) final;

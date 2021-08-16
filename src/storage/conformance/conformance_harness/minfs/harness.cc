@@ -65,13 +65,13 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     fuchsia::io::test::Io1Config config;
     config.set_immutable_file(false);
     config.set_immutable_dir(false);
-    config.set_no_exec(false);
     config.set_no_admin(false);
     config.set_no_rename(false);
     config.set_no_link(false);
     config.set_no_set_attr(false);
 
-    // Minfs doesn't support vmo files or remote directories.
+    // Minfs doesn't support executable files, VMO files, nor remote directories.
+    config.set_no_exec(true);
     config.set_no_vmofile(true);
     config.set_no_remote_dir(true);
     config.set_no_get_buffer(true);
