@@ -53,5 +53,16 @@ void main() {
       // on a developer's device.
       await setUi.setLocale(originalInfo.locales.first);
     });
+
+    test('talks to SL4F setMicMute and changes mic InputState without error',
+        () async {
+      // If anything throws an exception then we've failed.
+      await setUi.setMicMute(sl4f.MicState.muted);
+      var state = await setUi.isMicMuted();
+      expect(state, true);
+      await setUi.setMicMute(sl4f.MicState.available);
+      state = await setUi.isMicMuted();
+      expect(state, false);
+    });
   }, timeout: _timeout);
 }

@@ -16,7 +16,6 @@ dart_test("sl4f_test") {
     "dump_test.dart",
     "performance_test.dart",
     "repository_manager_test.dart",
-    "setui_test.dart",
     "storage_test.dart",
     "tcp_proxy_test.dart",
     "time_test.dart",
@@ -35,6 +34,30 @@ dart_test("sl4f_test") {
   environments = [
     nuc_env,
 
+    # The astro environment has tags as it is still to be run on an FYI builder.
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+  ]
+}
+
+dart_test("sl4f_test_astro_only") {
+  sources = [ "setui_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/http",
+    "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+
+  environments = [
     # The astro environment has tags as it is still to be run on an FYI builder.
     {
       dimensions = {
@@ -87,5 +110,6 @@ group("test") {
   deps = [
     ":sl4f_astro_test($host_toolchain)",
     ":sl4f_test($host_toolchain)",
+    ":sl4f_test_astro_only($host_toolchain)",
   ]
 }

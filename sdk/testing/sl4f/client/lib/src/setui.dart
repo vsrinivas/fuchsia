@@ -7,7 +7,14 @@ import 'package:meta/meta.dart';
 
 import 'sl4f_client.dart';
 
+enum MicState { muted, available }
+
 enum NetworkOption { wifi, ethernet, unknown }
+
+final _micStateToJson = {
+  MicState.muted: 'muted',
+  MicState.available: 'available',
+};
 
 final _networkToJson = {
   NetworkOption.wifi: 'wifi',
@@ -112,5 +119,16 @@ class SetUi {
   Future<bool> isMicMuted() async {
     final result = await _sl4f.request('setui_facade.IsMicMuted');
     return result == 'true';
+  }
+
+  Future<void> setMicMute(MicState state) async {
+    _log.info('setMicMute - Setting mic state to ${state.toString()}');
+
+    try {
+      await _sl4f.request('setui_facade.SetMicMute', _micStateToJson[state]);
+    } on Exception catch (e) {
+      throw SetUiSl4fException(
+          'setMicMute - Setting mic state to ${state.toString()} returned with error: $e');
+    }
   }
 }
