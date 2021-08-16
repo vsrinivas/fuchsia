@@ -25,7 +25,6 @@ def main():
     parser.add_argument(
         '--archive', help='Path to archive containing prebuilt package')
     parser.add_argument('--workdir', help='Path to working directory')
-    parser.add_argument('--system-rsp', help='System response file to generate')
 
     args = parser.parse_args()
 
@@ -34,11 +33,10 @@ def main():
     with open(os.path.join(args.workdir, 'package_manifest.json')) as f:
         manifest = json.load(f)
         if manifest.get('package').get('name') != args.name:
-            sys.stderr.write('Prebuilt package name {} does not match the name contained within {}\n'.format(args.name, args.archive))
+            sys.stderr.write(
+                'Prebuilt package name {} does not match the name contained within {}\n'
+                .format(args.name, args.archive))
             return 1
-
-    with open(args.system_rsp, 'w') as f:
-        f.truncate(0)
 
     return 0
 

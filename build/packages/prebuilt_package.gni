@@ -103,7 +103,6 @@ template("prebuilt_package") {
 
     script = "//build/packages/prebuilt_package.py"
 
-    system_rsp = "$target_out_dir/$pkg_name.system.rsp"
     meta_merkle = "$meta_dir/meta.far.merkle"
     pm = "$host_out_dir/pm"
 
@@ -116,8 +115,6 @@ template("prebuilt_package") {
       rebase_path(archive, root_build_dir),
       "--workdir",
       rebase_path(meta_dir, root_build_dir),
-      "--system-rsp",
-      rebase_path(system_rsp, root_build_dir),
     ]
 
     inputs = [
@@ -127,7 +124,6 @@ template("prebuilt_package") {
 
     outputs = [
       blobs_manifest,
-      system_rsp,
       blobs_json,
       package_manifest_json,
       meta_merkle,
