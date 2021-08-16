@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FUZZING_FIDL_SIGNAL_COORDINATOR_H_
-#define SRC_LIB_FUZZING_FIDL_SIGNAL_COORDINATOR_H_
+#ifndef SRC_SYS_FUZZING_COMMON_SIGNAL_COORDINATOR_H_
+#define SRC_SYS_FUZZING_COMMON_SIGNAL_COORDINATOR_H_
 
-#include <lib/fxl/macros.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/types.h>
 
 #include <thread>
+
+#include "src/lib/fxl/macros.h"
 
 namespace fuzzing {
 
@@ -114,4 +115,4 @@ void SignalCoordinator::WaitLoop(SignalHandler on_signal) {
 
 }  // namespace fuzzing
 
-#endif  // SRC_LIB_FUZZING_FIDL_SIGNAL_COORDINATOR_H_
+#endif  // SRC_SYS_FUZZING_COMMON_SIGNAL_COORDINATOR_H_

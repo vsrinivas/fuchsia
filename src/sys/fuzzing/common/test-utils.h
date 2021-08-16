@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FUZZING_FIDL_TEST_UTILS_H_
-#define SRC_LIB_FUZZING_FIDL_TEST_UTILS_H_
+#ifndef SRC_SYS_FUZZING_COMMON_TEST_UTILS_H_
+#define SRC_SYS_FUZZING_COMMON_TEST_UTILS_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/synchronization/thread_annotations.h>
 #include <lib/sync/completion.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/zx/eventpair.h>
@@ -24,6 +22,9 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 namespace fuzzing {
 
@@ -136,4 +137,4 @@ class TestBase : public ::testing::Test {
 
 }  // namespace fuzzing
 
-#endif  // SRC_LIB_FUZZING_FIDL_TEST_UTILS_H_
+#endif  // SRC_SYS_FUZZING_COMMON_TEST_UTILS_H_

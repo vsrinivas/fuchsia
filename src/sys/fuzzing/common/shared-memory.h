@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FUZZING_FIDL_SHARED_MEMORY_H_
-#define SRC_LIB_FUZZING_FIDL_SHARED_MEMORY_H_
+#ifndef SRC_SYS_FUZZING_COMMON_SHARED_MEMORY_H_
+#define SRC_SYS_FUZZING_COMMON_SHARED_MEMORY_H_
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fxl/macros.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
+
+#include "src/lib/fxl/macros.h"
 
 namespace fuzzing {
 namespace {
@@ -121,4 +122,4 @@ class SharedMemory final {
 
 }  // namespace fuzzing
 
-#endif  // SRC_LIB_FUZZING_FIDL_SHARED_MEMORY_H_
+#endif  // SRC_SYS_FUZZING_COMMON_SHARED_MEMORY_H_

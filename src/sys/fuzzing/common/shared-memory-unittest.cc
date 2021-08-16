@@ -5,6 +5,7 @@
 #include "shared-memory.h"
 
 #include <zircon/errors.h>
+
 #include <gmock/gmock.h>
 
 #include "test-utils.h"

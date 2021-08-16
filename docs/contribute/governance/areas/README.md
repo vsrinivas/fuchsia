@@ -225,7 +225,7 @@ cryptographic key management) or tools (for example fuzzers).
 
 Examples:
 
-* [fuchsia.fuzzer](/src/lib/fuzzing/fidl/fuzzer.fidl)
+* [fuchsia.fuzzer](/src/sys/fuzzing/fuzzer.fidl)
 * [fuchsia.kms](/sdk/fidl/fuchsia.kms/)
 * [fuchsia.tee](/sdk/fidl/fuchsia.tee/)
 {% endif %} <!-- Security -->

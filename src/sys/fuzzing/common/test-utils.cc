@@ -10,8 +10,6 @@
 
 #include <gmock/gmock.h>
 
-#include "remote.h"
-
 namespace fuzzing {
 
 using ::testing::Eq;

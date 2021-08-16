@@ -7,8 +7,5 @@ import("//build/go/go_test.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    "fidl:tests",
-    "host:tests",
-  ]
+  deps = [ "host:tests" ]
 }
