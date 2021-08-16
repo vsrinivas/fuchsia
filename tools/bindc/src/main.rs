@@ -120,6 +120,10 @@ fn main() {
     }
 }
 
+fn convert_to_var_name(node_name: &String) -> String {
+    node_name.replace("-", "_")
+}
+
 fn write_depfile(
     output: &PathBuf,
     input: &Option<PathBuf>,
@@ -176,6 +180,7 @@ fn write_fragment_template<'a>(node: CompositeNode<'a>) -> Result<String, Error>
     output
         .write_fmt(format_args!(
             include_str!("templates/fragment.template"),
+            var_name = convert_to_var_name(&node.name),
             name = node.name,
             instructions = instructions_str,
         ))
@@ -184,11 +189,12 @@ fn write_fragment_template<'a>(node: CompositeNode<'a>) -> Result<String, Error>
 }
 
 fn write_composite_bind_template<'a>(bind_rules: CompositeBindRules<'a>) -> Result<String, Error> {
-    let mut fragment_list = bind_rules.primary_node.name.clone();
+    let mut fragment_list =
+        format!("{}_fragment", convert_to_var_name(&bind_rules.primary_node.name));
     let mut fragment_definition = write_fragment_template(bind_rules.primary_node)?;
 
     for node in bind_rules.additional_nodes {
-        fragment_list.push_str(&format!(", {}", &node.name));
+        fragment_list.push_str(&format!(", {}_fragment", convert_to_var_name(&node.name)));
         fragment_definition.push_str(&format!("\n{}", write_fragment_template(node)?));
     }
 
@@ -829,6 +835,24 @@ mod tests {
         if let CompiledBindRules::CompositeBind(bind_rules) = compiled_bind_rules {
             assert_eq!(
                 include_str!("tests/expected_composite_code"),
+                write_composite_bind_template(bind_rules).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn composite_bind_with_node_name_dashes() {
+        let composite_bind_rules = "composite grey_lourie;
+            primary node \"go-away-bird\" {
+                fuchsia.BIND_PROTOCOL == 1;
+            }";
+
+        let compiled_bind_rules =
+            compiler::compile(&composite_bind_rules, &vec![], false, false, true).unwrap();
+        assert_matches!(compiled_bind_rules, CompiledBindRules::CompositeBind(_));
+        if let CompiledBindRules::CompositeBind(bind_rules) = compiled_bind_rules {
+            assert_eq!(
+                include_str!("tests/expected_composite_code_w_dashes"),
                 write_composite_bind_template(bind_rules).unwrap()
             );
         }

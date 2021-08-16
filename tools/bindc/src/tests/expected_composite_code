@@ -14,7 +14,7 @@ constexpr device_fragment_part_t wagtail_fragment_part[] = {
   }
 };
 
-constexpr device_fragment_t wagtail = {
+constexpr device_fragment_t wagtail_fragment = {
     .name = "wagtail",
     .parts_count = countof(wagtail_fragment_part),
     .parts = wagtail_fragment_part,
@@ -32,12 +32,12 @@ constexpr device_fragment_part_t redpoll_fragment_part[] = {
   }
 };
 
-constexpr device_fragment_t redpoll = {
+constexpr device_fragment_t redpoll_fragment = {
     .name = "redpoll",
     .parts_count = countof(redpoll_fragment_part),
     .parts = redpoll_fragment_part,
 };
 
 constexpr device_fragment_t wallcreeper_fragments[] {
-  wagtail, redpoll
+  wagtail_fragment, redpoll_fragment
 };

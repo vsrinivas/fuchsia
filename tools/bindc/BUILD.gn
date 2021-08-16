@@ -32,6 +32,7 @@ if (is_host) {
       "src/templates/fragment.template",
       "src/templates/fidl.template",
       "src/tests/expected_composite_code",
+      "src/tests/expected_composite_code_w_dashes",
     ]
   }
 
