@@ -366,7 +366,7 @@ TEST_F(SyntheticHarness, ClearFeature) {
     ran = true;
     usb_request_complete(request, ZX_OK, 0, &completion);
   });
-  ASSERT_OK(RunSynchronously(dev->ClearFeature(3, 7, 2)));
+  ASSERT_OK(dev->ClearFeature(3, 7, 2));
   ASSERT_TRUE(ran);
 }
 
@@ -375,7 +375,6 @@ TEST_F(SyntheticHarness, GetPortStatus) {
   // Run through all 127 permutations of port configuration states
   // and ensure we set the correct bits for each one.
   for (uint16_t i = 0; i < 127; i++) {
-    bool ran = false;
     uint16_t features_cleared = 0;
     SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {
       switch (request->setup.bm_request_type) {
@@ -419,12 +418,9 @@ TEST_F(SyntheticHarness, GetPortStatus) {
       }
       usb_request_complete(request, ZX_OK, 0, &completion);
     });
-    ASSERT_OK(RunSynchronously(dev->GetPortStatusAsync(usb_hub::PortNumber(static_cast<uint8_t>(i)))
-                                   .and_then([&](usb_port_status_t& port_status) {
-                                     ran = true;
-                                     ASSERT_EQ(port_status.w_port_change, i);
-                                   })));
-    ASSERT_TRUE(ran);
+    auto result = dev->GetPortStatus(usb_hub::PortNumber(static_cast<uint8_t>(i)));
+    usb_port_status_t port_status = result.value();
+    ASSERT_EQ(port_status.w_port_change, i);
     ASSERT_EQ(features_cleared, i);
   }
 }

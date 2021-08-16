@@ -29,47 +29,9 @@
 #include <fbl/hard_int.h>
 #include <usb/usb.h>
 
-#include "lib/ddk/debug.h"
+#include <lib/fit/result.h>
+#include <lib/zx/time.h>
 #include "src/devices/usb/drivers/usb-hub-rewrite/usb_hub_rewrite_bind.h"
-
-namespace {
-// Collapses a vector of promises into a single promise which returns a user-provided value on
-// success, and an error code on failure.
-template <typename Success, typename Error, typename ReturnType>
-fpromise::promise<ReturnType, Error> Fold(
-    fpromise::promise<std::vector<fpromise::result<Success, Error>>> promise, ReturnType ok_value) {
-  return promise.then(
-      [success_value = std::move(ok_value)](
-          fpromise::result<std::vector<fpromise::result<void, zx_status_t>>, void>& results)
-          -> fpromise::result<ReturnType, Error> {
-        for (auto& result : results.value()) {
-          if (result.is_error()) {
-            return fpromise::error(result.error());
-          }
-        }
-        return fpromise::ok(success_value);
-      });
-}
-
-// Collapses a vector of promises into a single promise which returns void on success,
-// and an error code on failure.
-template <typename Success, typename Error>
-fpromise::promise<void, Error> Fold(
-    fpromise::promise<std::vector<fpromise::result<Success, Error>>> promise) {
-  return promise
-      .then([](fpromise::result<std::vector<fpromise::result<void, zx_status_t>>, void>& results)
-                -> fpromise::result<void, Error> {
-        for (auto& result : results.value()) {
-          if (result.is_error()) {
-            return fpromise::error(result.error());
-          }
-        }
-        return fpromise::ok();
-      })
-      .box();
-}
-
-}  // namespace
 
 namespace usb_hub {
 
@@ -103,26 +65,7 @@ zx_status_t UsbHubDevice::Init() {
 }
 
 zx_status_t UsbHubDevice::UsbHubInterfaceResetPort(uint32_t port) {
-  return RunSynchronously(
-      SetFeatureAsync(USB_RECIP_PORT, USB_FEATURE_PORT_RESET, static_cast<uint8_t>(port)));
-}
-
-zx_status_t UsbHubDevice::RunSynchronously(fpromise::promise<void, zx_status_t> promise) {
-  sync_completion_t completion;
-  zx_status_t status;
-  bool complete = false;
-  executor_->schedule_task(promise.then([&](fpromise::result<void, zx_status_t>& result) {
-    status = ZX_OK;
-    if (result.is_error()) {
-      status = result.error();
-    }
-    complete = true;
-    sync_completion_signal(&completion);
-  }));
-  while (!complete) {
-    sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  }
-  return status;
+  return SetFeature(USB_RECIP_PORT, USB_FEATURE_PORT_RESET, static_cast<uint8_t>(port));
 }
 
 zx_status_t UsbHubDevice::GetPortStatus() {
@@ -148,11 +91,6 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
   txn_ = std::move(txn);
   // First -- configure all endpoints and initialize the hub interface
   zx_status_t status = loop_.StartThread();
-  if (status != ZX_OK) {
-    txn_->Reply(status);
-    return;
-  }
-  status = loop_.StartThread();
   if (status != ZX_OK) {
     txn_->Reply(status);
     return;
@@ -360,12 +298,14 @@ zx_status_t UsbHubDevice::StartInterruptLoop() {
   return ZX_OK;
 }
 
-fpromise::promise<void, zx_status_t> UsbHubDevice::ResetPort(PortNumber port) {
-  return SetFeatureAsync(USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port.value())
-      .and_then([this, port]() {
-        fbl::AutoLock l(&async_execution_context_);
-        port_status_[PortNumberToIndex(port).value()].reset_pending = true;
-      });
+zx_status_t UsbHubDevice::ResetPort(PortNumber port) {
+  zx_status_t status = SetFeature(USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port.value());
+  if (status != ZX_OK) {
+    return status;
+  }
+  fbl::AutoLock l(&async_execution_context_);
+  port_status_[PortNumberToIndex(port).value()].reset_pending = true;
+  return ZX_OK;
 }
 
 PortNumber UsbHubDevice::GetPortNumber(const PortStatus& status) {
@@ -382,12 +322,13 @@ void UsbHubDevice::EnumerateNext() {
 }
 
 void UsbHubDevice::BeginEnumeration(PortNumber port) {
-  executor_->schedule_task(ResetPort(port).or_else([this, port](zx_status_t& status) {
+  zx_status_t status = ResetPort(port);
+  if (status != ZX_OK) {
     // Port reset failed -- stop enumeration and enumerate the next device.
     fbl::AutoLock l(&async_execution_context_);
     pending_enumeration_list_.erase(port_status_[PortNumberToIndex(port).value()]);
     EnumerateNext();
-  }));
+  }
 }
 
 void UsbHubDevice::HandleDeviceConnected(PortNumber port) {
@@ -404,9 +345,7 @@ void UsbHubDevice::HandleDeviceDisconnected(PortNumber port) {
   bool link_status = port_status_[PortNumberToIndex(port).value()].link_active;
   port_status_[PortNumberToIndex(port).value()].Reset();
   if (link_status) {
-    async::PostTask(loop_.dispatcher(), [=]() {
-      bus_.DeviceRemoved(reinterpret_cast<uint64_t>(zxdev()), port.value());
-    });
+    bus_.DeviceRemoved(reinterpret_cast<uint64_t>(zxdev()), port.value());
   }
 }
 
@@ -414,19 +353,12 @@ void UsbHubDevice::HandleResetComplete(PortNumber port) {
   port_status_[PortNumberToIndex(port).value()].reset_pending = false;
   port_status_[PortNumberToIndex(port).value()].enumeration_pending = true;
   auto speed = port_status_[PortNumberToIndex(port).value()].GetSpeed(speed_);
-  async::PostTask(loop_.dispatcher(), [this, port, speed]() {
-    // Online the device in xHCI
-    zx_status_t status = bus_.DeviceAdded(reinterpret_cast<uint64_t>(zxdev()), port.value(), speed);
-    executor_->schedule_task(fpromise::make_promise([this, port, status]() {
-      fbl::AutoLock lock(&async_execution_context_);
-      {
-        port_status_[PortNumberToIndex(port).value()].enumeration_pending = false;
-        port_status_[PortNumberToIndex(port).value()].link_active = status == ZX_OK;
-        pending_enumeration_list_.erase(port_status_[PortNumberToIndex(port).value()]);
-      }
-      EnumerateNext();
-    }));
-  });
+  zx_status_t status = bus_.DeviceAdded(reinterpret_cast<uint64_t>(zxdev()), port.value(), speed);
+
+  port_status_[PortNumberToIndex(port).value()].enumeration_pending = false;
+  port_status_[PortNumberToIndex(port).value()].link_active = (status == ZX_OK);
+  pending_enumeration_list_.erase(port_status_[PortNumberToIndex(port).value()]);
+  EnumerateNext();
 }
 
 zx_status_t UsbHubDevice::PowerOnPorts() {
@@ -444,65 +376,6 @@ zx_status_t UsbHubDevice::PowerOnPorts() {
   return ZX_OK;
 }
 
-fpromise::promise<usb_port_status_t, zx_status_t> UsbHubDevice::GetPortStatusAsync(
-    PortNumber port) {
-  return ControlInAsync(USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(),
-                        sizeof(usb_port_status_t))
-      .and_then([](std::vector<uint8_t>& data) -> fpromise::result<usb_port_status_t, zx_status_t> {
-        if (data.size() != sizeof(usb_port_status_t)) {
-          return fpromise::error(ZX_ERR_IO);
-        }
-        usb_port_status_t status;
-        memcpy(&status, data.data(), sizeof(status));
-        return fpromise::ok(status);
-      })
-      .and_then([this, port](usb_port_status_t& status) {
-        uint16_t port_change = status.w_port_change;
-        std::vector<fpromise::promise<void, zx_status_t>> pending_operations;
-        if (port_change & USB_C_PORT_CONNECTION) {
-          zxlogf(DEBUG, "USB_C_PORT_CONNECTION ");
-          pending_operations.push_back(
-              ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port.value()));
-        }
-        if (port_change & USB_C_PORT_ENABLE) {
-          zxlogf(DEBUG, "USB_C_PORT_ENABLE ");
-          pending_operations.push_back(
-              ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port.value()));
-        }
-        if (port_change & USB_C_PORT_SUSPEND) {
-          zxlogf(DEBUG, "USB_C_PORT_SUSPEND ");
-          pending_operations.push_back(
-              ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port.value()));
-        }
-        if (port_change & USB_C_PORT_OVER_CURRENT) {
-          zxlogf(DEBUG, "USB_C_PORT_OVER_CURRENT ");
-          pending_operations.push_back(
-              ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port.value()));
-        }
-        if (port_change & USB_C_PORT_RESET) {
-          zxlogf(DEBUG, "USB_C_PORT_RESET");
-          pending_operations.push_back(
-              ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port.value()));
-        }
-        if (port_change & USB_C_BH_PORT_RESET) {
-          zxlogf(DEBUG, "USB_C_BH_PORT_RESET");
-          pending_operations.push_back(
-              ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_BH_PORT_RESET, port.value()));
-        }
-        if (port_change & USB_C_PORT_LINK_STATE) {
-          zxlogf(DEBUG, "USB_C_PORT_LINK_STATE");
-          pending_operations.push_back(
-              ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_LINK_STATE, port.value()));
-        }
-        if (port_change & USB_C_PORT_CONFIG_ERROR) {
-          zxlogf(DEBUG, "USB_C_PORT_CONFIG_ERROR");
-          pending_operations.push_back(
-              ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port.value()));
-        }
-        return Fold(fpromise::join_promise_vector(std::move(pending_operations)).box(), status);
-      });
-}
-
 zx::status<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
   zx::status<std::vector<uint8_t>> result = ControlIn(
       USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(), sizeof(usb_port_status_t));
@@ -517,7 +390,7 @@ zx::status<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
   usb_port_status_t status;
   memcpy(&status, data.data(), sizeof(status));
   uint16_t port_change = status.w_port_change;
-  std::vector<fpromise::promise<void, zx_status_t>> pending_operations;
+  std::vector<zx_status_t> pending_operations;
   if (port_change & USB_C_PORT_CONNECTION) {
     zxlogf(DEBUG, "USB_C_PORT_CONNECTION ");
     pending_operations.push_back(
@@ -558,20 +431,10 @@ zx::status<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
     pending_operations.push_back(
         ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port.value()));
   }
-  zx_status_t operations_status = ZX_OK;
-  executor_->schedule_task(fpromise::join_promise_vector(std::move(pending_operations))
-                               .then([&](clear_feature_result& result) {
-                                 if (result.is_error()) {
-                                   operations_status = ZX_ERR_BAD_STATE;
-                                 }
-                                 for (auto& result : result.value()) {
-                                   if (result.is_error()) {
-                                     operations_status = ZX_ERR_BAD_STATE;
-                                   }
-                                 }
-                               }));
-  if (operations_status != ZX_OK) {
-    return zx::error(operations_status);
+  for (auto& feature_status : pending_operations) {
+    if (feature_status != ZX_OK) {
+      return zx::error(ZX_ERR_BAD_STATE);
+    }
   }
   return zx::ok(status);
 }
@@ -610,15 +473,8 @@ zx_status_t UsbHubDevice::SetFeature(uint8_t request_type, uint16_t feature, uin
   return ControlOut(request_type, USB_REQ_SET_FEATURE, feature, index, nullptr, 0);
 }
 
-fpromise::promise<void, zx_status_t> UsbHubDevice::SetFeatureAsync(uint8_t request_type,
-                                                                   uint16_t feature,
-                                                                   uint16_t index) {
-  return ControlOutAsync(request_type, USB_REQ_SET_FEATURE, feature, index, nullptr, 0);
-}
-
-fpromise::promise<void, zx_status_t> UsbHubDevice::ClearFeature(uint8_t request_type,
-                                                                uint16_t feature, uint16_t index) {
-  return ControlOutAsync(request_type, USB_REQ_CLEAR_FEATURE, feature, index, nullptr, 0);
+zx_status_t UsbHubDevice::ClearFeature(uint8_t request_type, uint16_t feature, uint16_t index) {
+  return ControlOut(request_type, USB_REQ_CLEAR_FEATURE, feature, index, nullptr, 0);
 }
 
 zx::status<std::vector<uint8_t>> UsbHubDevice::ControlIn(uint8_t request_type, uint8_t request,
@@ -661,41 +517,6 @@ zx::status<std::vector<uint8_t>> UsbHubDevice::ControlIn(uint8_t request_type, u
   return zx::ok(data);
 }
 
-fpromise::promise<std::vector<uint8_t>, zx_status_t> UsbHubDevice::ControlInAsync(
-    uint8_t request_type, uint8_t request, uint16_t value, uint16_t index, size_t read_size) {
-  if ((request_type & USB_DIR_MASK) != USB_DIR_IN) {
-    return fpromise::make_result_promise<std::vector<uint8_t>, zx_status_t>(
-        fpromise::error(ZX_ERR_INVALID_ARGS));
-  }
-  ZX_ASSERT(read_size <= kMaxRequestLength);
-  std::optional<Request> usb_request = AllocRequest();
-  usb_request->request()->header.length = read_size;
-  usb_request->request()->setup.bm_request_type = request_type;
-  usb_request->request()->setup.b_request = request;
-  usb_request->request()->setup.w_index = index;
-  usb_request->request()->setup.w_value = value;
-  usb_request->request()->setup.w_length = static_cast<uint16_t>(read_size);
-  return RequestQueue(*std::move(usb_request))
-      .then([this, read_size](fpromise::result<Request, void>& value)
-                -> fpromise::result<std::vector<uint8_t>, zx_status_t> {
-        auto request = std::move(value.take_ok_result().value);
-        auto status = request.request()->response.status;
-        if (status != ZX_OK) {
-          request_pool_.Add(std::move(request));
-          return fpromise::error(status);
-        }
-        std::vector<uint8_t> data;
-        if (read_size != 0) {
-          data.resize(request.request()->response.actual);
-          size_t copied = request.CopyFrom(data.data(), data.size(), 0);
-          ZX_ASSERT(copied == data.size());
-        }
-        request_pool_.Add(std::move(request));
-        return fpromise::ok(data);
-      })
-      .box();
-}
-
 zx_status_t UsbHubDevice::ControlOut(uint8_t request_type, uint8_t request, uint16_t value,
                                      uint16_t index, const void* write_buffer, size_t write_size) {
   if ((request_type & USB_DIR_MASK) != USB_DIR_OUT) {
@@ -727,38 +548,6 @@ zx_status_t UsbHubDevice::ControlOut(uint8_t request_type, uint8_t request, uint
       }));
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   return ZX_OK;
-}
-
-fpromise::promise<void, zx_status_t> UsbHubDevice::ControlOutAsync(uint8_t request_type,
-                                                                   uint8_t request, uint16_t value,
-                                                                   uint16_t index,
-                                                                   const void* write_buffer,
-                                                                   size_t write_size) {
-  if ((request_type & USB_DIR_MASK) != USB_DIR_OUT) {
-    return fpromise::make_result_promise<void, zx_status_t>(fpromise::error(ZX_ERR_INVALID_ARGS));
-  }
-  ZX_ASSERT(write_size <= kMaxRequestLength);
-  std::optional<Request> usb_request = AllocRequest();
-  usb_request->request()->header.length = write_size;
-  usb_request->request()->setup.bm_request_type = request_type;
-  usb_request->request()->setup.b_request = request;
-  usb_request->request()->setup.w_index = index;
-  usb_request->request()->setup.w_value = value;
-  usb_request->request()->setup.w_length = static_cast<uint16_t>(write_size);
-  size_t result = usb_request->CopyTo(write_buffer, write_size, 0);
-  ZX_ASSERT(result == write_size);
-  return RequestQueue(*std::move(usb_request))
-      .then([this](fpromise::result<Request, void>& value) -> fpromise::result<void, zx_status_t> {
-        auto request = std::move(value.take_ok_result().value);
-        auto status = request.request()->response.status;
-        if (status != ZX_OK) {
-          request_pool_.Add(std::move(request));
-          return fpromise::error(status);
-        }
-        request_pool_.Add(std::move(request));
-        return fpromise::ok();
-      })
-      .box();
 }
 
 std::optional<Request> UsbHubDevice::AllocRequest() {

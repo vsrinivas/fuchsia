@@ -71,20 +71,15 @@ class UsbHubDevice;
 using UsbHub = ddk::Device<UsbHubDevice, ddk::Unbindable, ddk::Initializable, ddk::GetProtocolable>;
 using Request = usb::Request<void>;
 using CallbackRequest = usb::CallbackRequest<sizeof(std::max_align_t) * 4>;
-using clear_feature_result =
-    fpromise::result<std::vector<fpromise::result<void, zx_status_t>>, void>;
 class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDevice> {
  public:
   explicit UsbHubDevice(zx_device_t* parent)
-      : UsbHub(parent),
-        loop_(&kAsyncLoopConfigNeverAttachToThread),
-        blocking_executor_(loop_.dispatcher()) {}
+      : UsbHub(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   UsbHubDevice(zx_device_t* parent, std::unique_ptr<fpromise::executor> executor)
       : UsbHub(parent),
         loop_(&kAsyncLoopConfigNeverAttachToThread),
-        executor_(std::move(executor)),
-        blocking_executor_(loop_.dispatcher()) {}
+        executor_(std::move(executor)) {}
 
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out) {
     switch (proto_id) {
@@ -97,9 +92,6 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
   zx_status_t Init();
 
-  // Invokes a promise and waits for its completion
-  zx_status_t RunSynchronously(fpromise::promise<void, zx_status_t> promise);
-
   // Synchronously resets a port
   zx_status_t UsbHubInterfaceResetPort(uint32_t port);
 
@@ -108,7 +100,6 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
   // Retrieves the status of a port.
   zx::status<usb_port_status_t> GetPortStatus(PortNumber port);
-  fpromise::promise<usb_port_status_t, zx_status_t> GetPortStatusAsync(PortNumber port);
 
   void InterruptCallback();
 
@@ -123,7 +114,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   zx_status_t StartInterruptLoop();
 
   // Resets a port
-  fpromise::promise<void, zx_status_t> ResetPort(PortNumber port);
+  zx_status_t ResetPort(PortNumber port);
 
   // Obtains the 1-based port number from a PortStatus reference
   PortNumber GetPortNumber(const PortStatus& status);
@@ -161,41 +152,15 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
   zx_status_t SetFeature(uint8_t request_type, uint16_t feature, uint16_t index);
 
-  fpromise::promise<void, zx_status_t> SetFeatureAsync(uint8_t request_type, uint16_t feature,
-                                                       uint16_t index);
-
-  fpromise::promise<void, zx_status_t> ClearFeature(uint8_t request_type, uint16_t feature,
-                                                    uint16_t index);
+  zx_status_t ClearFeature(uint8_t request_type, uint16_t feature, uint16_t index);
 
   zx::status<std::vector<uint8_t>> ControlIn(uint8_t request_type, uint8_t request, uint16_t value,
                                              uint16_t index, size_t read_size);
 
-  fpromise::promise<std::vector<uint8_t>, zx_status_t> ControlInAsync(
-      uint8_t request_type, uint8_t request, uint16_t value, uint16_t index, size_t read_size);
-
   zx_status_t ControlOut(uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
                          const void* write_buffer, size_t write_size);
 
-  fpromise::promise<void, zx_status_t> ControlOutAsync(uint8_t request_type, uint8_t request,
-                                                       uint16_t value, uint16_t index,
-                                                       const void* write_buffer, size_t write_size);
-
   std::optional<Request> AllocRequest();
-
-  // Runs blocking code (as specified by lambda) in the blocking
-  // context. Returns the result of executing the lambda which
-  // gets executed in the async context.
-  template <typename T>
-  auto RunBlocking(fit::function<T()> task) {
-    fpromise::bridge<T, void> bridge;
-
-    blocking_executor_.schedule_task(fpromise::make_promise(
-        [functor = std::move(task), completer = std::move(bridge.completer)]() mutable {
-          auto value = functor();
-          completer.complete_ok(value);
-        }));
-    return std::move(bridge.consumer.promise());
-  }
 
   template <typename T>
   fpromise::result<VariableLengthDescriptor<T>, zx_status_t> GetVariableLengthDescriptor(
@@ -252,10 +217,6 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   sync_completion_t xfer_done_;
 
   std::optional<ddk::InitTxn> txn_;
-  // Executor for running blocking tasks. These tasks MUST NOT
-  // interact with state that is mutated by the executor_
-  // or undefined behavior may occur.
-  async::Executor blocking_executor_;
   fbl::NullLock async_execution_context_;
 };
 
