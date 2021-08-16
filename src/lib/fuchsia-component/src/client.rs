@@ -8,8 +8,8 @@ use {
     crate::DEFAULT_SERVICE_INSTANCE,
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{
-        DiscoverableProtocolMarker, MemberOpener, ProtocolMarker, Proxy, ServerEnd,
-        UnifiedServiceMarker, UnifiedServiceProxy,
+        DiscoverableProtocolMarker, MemberOpener, ProtocolMarker, Proxy, ServerEnd, ServiceMarker,
+        ServiceProxy,
     },
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
@@ -240,8 +240,8 @@ impl MemberOpener for DirectoryProtocolImpl {
 
 /// Connect to the "default" instance of a FIDL service in the `/svc` directory of
 /// the application's root namespace.
-pub fn connect_to_service<US: UnifiedServiceMarker>() -> Result<US::Proxy, Error> {
-    connect_to_service_instance_at::<US>(SVC_DIR, DEFAULT_SERVICE_INSTANCE)
+pub fn connect_to_service<S: ServiceMarker>() -> Result<S::Proxy, Error> {
+    connect_to_service_instance_at::<S>(SVC_DIR, DEFAULT_SERVICE_INSTANCE)
 }
 
 /// Connect to an instance of a FIDL service in the `/svc` directory of
@@ -250,10 +250,8 @@ pub fn connect_to_service<US: UnifiedServiceMarker>() -> Result<US::Proxy, Error
 // NOTE: We would like to use impl AsRef<T> to accept a wide variety of string-like
 // inputs but Rust limits specifying explicit generic parameters when `impl-traits`
 // are present.
-pub fn connect_to_service_instance<US: UnifiedServiceMarker>(
-    instance: &str,
-) -> Result<US::Proxy, Error> {
-    connect_to_service_instance_at::<US>(SVC_DIR, instance)
+pub fn connect_to_service_instance<S: ServiceMarker>(instance: &str) -> Result<S::Proxy, Error> {
+    connect_to_service_instance_at::<S>(SVC_DIR, instance)
 }
 
 /// Connect to an instance of a FIDL service using the provided path prefix.
@@ -262,27 +260,27 @@ pub fn connect_to_service_instance<US: UnifiedServiceMarker>(
 // NOTE: We would like to use impl AsRef<T> to accept a wide variety of string-like
 // inputs but Rust limits specifying explicit generic parameters when `impl-traits`
 // are present.
-pub fn connect_to_service_instance_at<US: UnifiedServiceMarker>(
+pub fn connect_to_service_instance_at<S: ServiceMarker>(
     path_prefix: &str,
     instance: &str,
-) -> Result<US::Proxy, Error> {
+) -> Result<S::Proxy, Error> {
     let mut service_path = PathBuf::new();
     service_path.push(path_prefix);
-    service_path.push(US::SERVICE_NAME);
+    service_path.push(S::SERVICE_NAME);
     service_path.push(instance);
     let directory_proxy = io_util::open_directory_in_namespace(
         service_path.to_str().unwrap(),
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
     )?;
-    Ok(US::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
+    Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
 /// Connect to the "default" instance of a FIDL service hosted on the directory protocol
 /// channel `directory`.
-pub fn connect_to_service_at_dir<US: UnifiedServiceMarker>(
+pub fn connect_to_service_at_dir<S: ServiceMarker>(
     directory: &zx::Channel,
-) -> Result<US::Proxy, Error> {
-    connect_to_service_instance_at_dir::<US>(directory, DEFAULT_SERVICE_INSTANCE)
+) -> Result<S::Proxy, Error> {
+    connect_to_service_instance_at_dir::<S>(directory, DEFAULT_SERVICE_INSTANCE)
 }
 
 /// Connect to an instance of a FIDL service hosted on the directory protocol channel `directory`.
@@ -290,23 +288,23 @@ pub fn connect_to_service_at_dir<US: UnifiedServiceMarker>(
 // NOTE: We would like to use impl AsRef<T> to accept a wide variety of string-like
 // inputs but Rust limits specifying explicit generic parameters when `impl-traits`
 // are present.
-pub fn connect_to_service_instance_at_dir<US: UnifiedServiceMarker>(
+pub fn connect_to_service_instance_at_dir<S: ServiceMarker>(
     directory: &zx::Channel,
     instance: &str,
-) -> Result<US::Proxy, Error> {
-    let service_path = Path::new(US::SERVICE_NAME).join(instance);
+) -> Result<S::Proxy, Error> {
+    let service_path = Path::new(S::SERVICE_NAME).join(instance);
     let (directory_proxy, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
     let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
         | fidl_fuchsia_io::OPEN_RIGHT_READABLE
         | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
     fdio::open_at(directory, service_path.to_str().unwrap(), flags, server_end.into_channel())?;
-    Ok(US::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
+    Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
 /// Opens a FIDL service as a directory so that its instances can be listed.
-pub fn open_service<US: UnifiedServiceMarker>() -> Result<DirectoryProxy, Error> {
-    let service_path = Path::new(SVC_DIR).join(US::SERVICE_NAME);
+pub fn open_service<S: ServiceMarker>() -> Result<DirectoryProxy, Error> {
+    let service_path = Path::new(SVC_DIR).join(S::SERVICE_NAME);
     Ok(io_util::directory::open_in_namespace(
         service_path.to_str().unwrap(),
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
@@ -515,8 +513,8 @@ impl App {
 
     /// Connect to a FIDL service provided by the `App`.
     #[inline]
-    pub fn connect_to_service<US: UnifiedServiceMarker>(&self) -> Result<US::Proxy, Error> {
-        connect_to_service_at_dir::<US>(&self.directory_request)
+    pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
+        connect_to_service_at_dir::<S>(&self.directory_request)
     }
 
     /// Connect to a protocol by passing a channel for the server.

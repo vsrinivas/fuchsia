@@ -11,7 +11,7 @@ const serviceTmpl = `
 pub struct {{ $service.Name }}Marker;
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceMarker for {{ $service.Name }}Marker {
+impl fidl::endpoints::ServiceMarker for {{ $service.Name }}Marker {
     type Proxy = {{ $service.Name }}Proxy;
     type Request = {{ $service.Name }}Request;
     const SERVICE_NAME: &'static str = "{{ $service.ServiceName }}";
@@ -33,7 +33,7 @@ pub enum {{ $service.Name }}Request {
 }
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceRequest for {{ $service.Name }}Request {
+impl fidl::endpoints::ServiceRequest for {{ $service.Name }}Request {
     type Service = {{ $service.Name }}Marker;
 
     fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
@@ -63,7 +63,7 @@ impl fidl::endpoints::UnifiedServiceRequest for {{ $service.Name }}Request {
 pub struct {{ $service.Name }}Proxy(Box<dyn fidl::endpoints::MemberOpener>);
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceProxy for {{ $service.Name }}Proxy {
+impl fidl::endpoints::ServiceProxy for {{ $service.Name }}Proxy {
     type Service = {{ $service.Name }}Marker;
 
     fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {

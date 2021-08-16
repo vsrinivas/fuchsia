@@ -8,7 +8,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{create_proxy, Proxy, ServerEnd, UnifiedServiceMarker},
+    fidl::endpoints::{create_proxy, Proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_test::{
         CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
     },
@@ -308,25 +308,25 @@ async fn handles_dir_not_dir_flags() -> Result<(), Error> {
     Ok(())
 }
 
-/// Serves a dummy unified service `US` that immediately drops the request channel.
-fn serve_dummy_unified_service<US>() -> (impl Future<Output = Result<(), Error>>, DirectoryProxy)
+/// Serves a dummy service `S` that immediately drops the request channel.
+fn serve_dummy_unified_service<S>() -> (impl Future<Output = Result<(), Error>>, DirectoryProxy)
 where
-    US: UnifiedServiceMarker,
+    S: ServiceMarker,
 {
     let (mut fs, dir_proxy) = fs_with_connection();
-    fs.add_unified_service(|_: US::Request| ());
+    fs.add_unified_service(|_: S::Request| ());
     (fs.collect().map(Ok), dir_proxy)
 }
 
-/// Serves an instance of a dummy unified service `US` named `instance` that immediately drops the request channel.
-fn serve_dummy_unified_service_instance<US>(
+/// Serves an instance of a dummy service `S` named `instance` that immediately drops the request channel.
+fn serve_dummy_unified_service_instance<S>(
     instance: &str,
 ) -> (impl Future<Output = Result<(), Error>>, DirectoryProxy)
 where
-    US: UnifiedServiceMarker,
+    S: ServiceMarker,
 {
     let (mut fs, dir_proxy) = fs_with_connection();
-    fs.add_unified_service_instance(instance, |_: US::Request| ());
+    fs.add_unified_service_instance(instance, |_: S::Request| ());
     (fs.collect().map(Ok), dir_proxy)
 }
 

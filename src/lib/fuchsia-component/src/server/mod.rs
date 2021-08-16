@@ -9,8 +9,8 @@ use {
     anyhow::{format_err, Context as _, Error},
     byteorder::{LittleEndian, WriteBytesExt as _},
     fidl::endpoints::{
-        DiscoverableProtocolMarker, Proxy as _, RequestStream, ServerEnd, UnifiedServiceMarker,
-        UnifiedServiceRequest,
+        DiscoverableProtocolMarker, Proxy as _, RequestStream, ServerEnd, ServiceMarker,
+        ServiceRequest,
     },
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileRequest,
@@ -410,7 +410,7 @@ macro_rules! add_functions {
             self.add_service_at(path, FidlService::from(service))
         }
 
-        /// Adds a FIDL Unified Service to the directory as the default instance.
+        /// Adds a FIDL service to the directory as the default instance.
         ///
         /// The name of the default instance is
         /// [`DEFAULT_SERVICE_INSTANCE`](../constant.DEFAULT_SERVICE_INSTANCE.html).
@@ -430,38 +430,38 @@ macro_rules! add_functions {
         /// ```
         ///
         /// The `SERVICE_NAME` of FIDL Service `Bar` would be `lib.foo.Bar`.
-        pub fn add_unified_service<F, USR>(&mut self, service: F) -> &mut Self
+        pub fn add_unified_service<F, SR>(&mut self, service: F) -> &mut Self
         where
-            F: Fn(USR) -> ServiceObjTy::Output,
+            F: Fn(SR) -> ServiceObjTy::Output,
             F: Clone,
-            USR: UnifiedServiceRequest,
-            FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
+            SR: ServiceRequest,
+            FidlServiceMember<F, SR, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
-            self.add_unified_service_at(USR::Service::SERVICE_NAME, service)
+            self.add_unified_service_at(SR::Service::SERVICE_NAME, service)
         }
 
-        /// Adds a FIDL Unified Service to the directory as the default instance at the given path.
+        /// Adds a FIDL service to the directory as the default instance at the given path.
         ///
         /// The path must be a single component containing no `/` characters.
         /// The name of the default instance is
         /// [`DEFAULT_SERVICE_INSTANCE`](../constant.DEFAULT_SERVICE_INSTANCE.html).
         ///
         /// The FIDL service will be hosted at `[path]/default/`.
-        pub fn add_unified_service_at<F, USR>(
+        pub fn add_unified_service_at<F, SR>(
             &mut self,
             path: impl Into<String>,
             service: F,
         ) -> &mut Self
         where
-            F: Fn(USR) -> ServiceObjTy::Output,
+            F: Fn(SR) -> ServiceObjTy::Output,
             F: Clone,
-            USR: UnifiedServiceRequest,
-            FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
+            SR: ServiceRequest,
+            FidlServiceMember<F, SR, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
             self.add_unified_service_instance_at(path, DEFAULT_SERVICE_INSTANCE, service)
         }
 
-        /// Adds a named instance of a FIDL Unified Service to the directory.
+        /// Adds a named instance of a FIDL service to the directory.
         ///
         /// The FIDL service will be hosted at `[SERVICE_NAME]/[instance]/` where `SERVICE_NAME` is
         /// constructed from the FIDL library path and the name of the FIDL service.
@@ -480,43 +480,43 @@ macro_rules! add_functions {
         /// ```
         ///
         /// The `SERVICE_NAME` of FIDL Service `Bar` would be `lib.foo.Bar`.
-        pub fn add_unified_service_instance<F, USR>(
+        pub fn add_unified_service_instance<F, SR>(
             &mut self,
             instance: impl Into<String>,
             service: F,
         ) -> &mut Self
         where
-            F: Fn(USR) -> ServiceObjTy::Output,
+            F: Fn(SR) -> ServiceObjTy::Output,
             F: Clone,
-            USR: UnifiedServiceRequest,
-            FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
+            SR: ServiceRequest,
+            FidlServiceMember<F, SR, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
-            self.add_unified_service_instance_at(USR::Service::SERVICE_NAME, instance, service)
+            self.add_unified_service_instance_at(SR::Service::SERVICE_NAME, instance, service)
         }
 
-        /// Adds a named instance of a FIDL Unified Service to the directory at the given path.
+        /// Adds a named instance of a FIDL service to the directory at the given path.
         ///
         /// The FIDL service will be hosted at `[path]/[instance]/`.
         ///
         /// The `path` and `instance` must be single components containing no `/` characters.
-        pub fn add_unified_service_instance_at<F, USR>(
+        pub fn add_unified_service_instance_at<F, SR>(
             &mut self,
             path: impl Into<String>,
             instance: impl Into<String>,
             service: F,
         ) -> &mut Self
         where
-            F: Fn(USR) -> ServiceObjTy::Output,
+            F: Fn(SR) -> ServiceObjTy::Output,
             F: Clone,
-            USR: UnifiedServiceRequest,
-            FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
+            SR: ServiceRequest,
+            FidlServiceMember<F, SR, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
             // Create the service directory, with an instance subdirectory.
             let mut dir = self.dir(path);
             let mut dir = dir.dir(instance);
 
             // Attach member protocols under the instance directory.
-            for member in USR::member_names() {
+            for member in SR::member_names() {
                 dir.add_service_at(*member, FidlServiceMember::from(service.clone()));
             }
             self

@@ -11,7 +11,7 @@
 use {
     async_trait::async_trait,
     fidl,
-    fidl::endpoints::{DiscoverableProtocolMarker, Proxy, UnifiedServiceMarker},
+    fidl::endpoints::{DiscoverableProtocolMarker, Proxy, ServiceMarker},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_mem as fmem,
     fidl_fuchsia_session::{Annotation, Annotations, ElementSpec, Value},
     fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
@@ -290,19 +290,17 @@ impl Element {
         Ok(P::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
-    /// Connect to a FIDL Unified Service provided by the `Element`.
+    /// Connect to a FIDL service provided by the `Element`.
     ///
     /// # Type Parameters
-    /// - US: A FIDL Unified Service `Marker` type.
+    /// - S: A FIDL service `Marker` type.
     ///
     /// # Returns
     /// - A service `Proxy` matching the `Marker`, or an error if the service is not available from
     /// the `Element`.
     #[inline]
-    pub fn connect_to_unified_service<US: UnifiedServiceMarker>(
-        &self,
-    ) -> Result<US::Proxy, anyhow::Error> {
-        fuchsia_component::client::connect_to_service_at_dir::<US>(&self.directory_channel())
+    pub fn connect_to_unified_service<S: ServiceMarker>(&self) -> Result<S::Proxy, anyhow::Error> {
+        fuchsia_component::client::connect_to_service_at_dir::<S>(&self.directory_channel())
     }
 
     /// Connect to a service by passing a channel for the server.

@@ -34,7 +34,7 @@ use std::sync::Arc;
 /// setting handlers.
 #[derive(Clone, Debug)]
 enum Client {
-    /// A client from the Unified (service) MessageHub
+    /// A client from the service MessageHub.
     Service(service::message::MessageClient),
 }
 

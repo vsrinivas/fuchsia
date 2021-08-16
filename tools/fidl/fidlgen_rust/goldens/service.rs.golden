@@ -730,7 +730,7 @@ impl SecondProtocolControlHandle {
 pub struct EmptyServiceMarker;
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceMarker for EmptyServiceMarker {
+impl fidl::endpoints::ServiceMarker for EmptyServiceMarker {
     type Proxy = EmptyServiceProxy;
     type Request = EmptyServiceRequest;
     const SERVICE_NAME: &'static str = "fidl.test.service.EmptyService";
@@ -742,7 +742,7 @@ impl fidl::endpoints::UnifiedServiceMarker for EmptyServiceMarker {
 pub enum EmptyServiceRequest {}
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceRequest for EmptyServiceRequest {
+impl fidl::endpoints::ServiceRequest for EmptyServiceRequest {
     type Service = EmptyServiceMarker;
 
     fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
@@ -759,7 +759,7 @@ impl fidl::endpoints::UnifiedServiceRequest for EmptyServiceRequest {
 pub struct EmptyServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceProxy for EmptyServiceProxy {
+impl fidl::endpoints::ServiceProxy for EmptyServiceProxy {
     type Service = EmptyServiceMarker;
 
     fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
@@ -774,7 +774,7 @@ impl EmptyServiceProxy {}
 pub struct SingleMemberServiceMarker;
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceMarker for SingleMemberServiceMarker {
+impl fidl::endpoints::ServiceMarker for SingleMemberServiceMarker {
     type Proxy = SingleMemberServiceProxy;
     type Request = SingleMemberServiceRequest;
     const SERVICE_NAME: &'static str = "fidl.test.service.SingleMemberService";
@@ -788,7 +788,7 @@ pub enum SingleMemberServiceRequest {
 }
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceRequest for SingleMemberServiceRequest {
+impl fidl::endpoints::ServiceRequest for SingleMemberServiceRequest {
     type Service = SingleMemberServiceMarker;
 
     fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
@@ -810,7 +810,7 @@ impl fidl::endpoints::UnifiedServiceRequest for SingleMemberServiceRequest {
 pub struct SingleMemberServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceProxy for SingleMemberServiceProxy {
+impl fidl::endpoints::ServiceProxy for SingleMemberServiceProxy {
     type Service = SingleMemberServiceMarker;
 
     fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
@@ -832,7 +832,7 @@ impl SingleMemberServiceProxy {
 pub struct MultiHeterogeneousMemberServiceMarker;
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceMarker for MultiHeterogeneousMemberServiceMarker {
+impl fidl::endpoints::ServiceMarker for MultiHeterogeneousMemberServiceMarker {
     type Proxy = MultiHeterogeneousMemberServiceProxy;
     type Request = MultiHeterogeneousMemberServiceRequest;
     const SERVICE_NAME: &'static str = "fidl.test.service.MultiHeterogeneousMemberService";
@@ -847,7 +847,7 @@ pub enum MultiHeterogeneousMemberServiceRequest {
 }
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceRequest for MultiHeterogeneousMemberServiceRequest {
+impl fidl::endpoints::ServiceRequest for MultiHeterogeneousMemberServiceRequest {
     type Service = MultiHeterogeneousMemberServiceMarker;
 
     fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
@@ -874,7 +874,7 @@ impl fidl::endpoints::UnifiedServiceRequest for MultiHeterogeneousMemberServiceR
 pub struct MultiHeterogeneousMemberServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceProxy for MultiHeterogeneousMemberServiceProxy {
+impl fidl::endpoints::ServiceProxy for MultiHeterogeneousMemberServiceProxy {
     type Service = MultiHeterogeneousMemberServiceMarker;
 
     fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
@@ -902,7 +902,7 @@ impl MultiHeterogeneousMemberServiceProxy {
 pub struct MultiHomogeneousMemberServiceMarker;
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceMarker for MultiHomogeneousMemberServiceMarker {
+impl fidl::endpoints::ServiceMarker for MultiHomogeneousMemberServiceMarker {
     type Proxy = MultiHomogeneousMemberServiceProxy;
     type Request = MultiHomogeneousMemberServiceRequest;
     const SERVICE_NAME: &'static str = "fidl.test.service.MultiHomogeneousMemberService";
@@ -917,7 +917,7 @@ pub enum MultiHomogeneousMemberServiceRequest {
 }
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceRequest for MultiHomogeneousMemberServiceRequest {
+impl fidl::endpoints::ServiceRequest for MultiHomogeneousMemberServiceRequest {
     type Service = MultiHomogeneousMemberServiceMarker;
 
     fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
@@ -944,7 +944,7 @@ impl fidl::endpoints::UnifiedServiceRequest for MultiHomogeneousMemberServiceReq
 pub struct MultiHomogeneousMemberServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceProxy for MultiHomogeneousMemberServiceProxy {
+impl fidl::endpoints::ServiceProxy for MultiHomogeneousMemberServiceProxy {
     type Service = MultiHomogeneousMemberServiceMarker;
 
     fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {

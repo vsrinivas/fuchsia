@@ -20,20 +20,6 @@ use {
 #[cfg(target_os = "fuchsia")]
 use fuchsia_zircon as zx;
 
-// TODO(fxbug.dev/75869): Remove after soft-transition is complete.
-#[doc(hidden)]
-#[deprecated = "Use fidl::endpoints::ProtocolMarker instead"]
-pub trait ServiceMarker: ProtocolMarker {}
-#[allow(deprecated)]
-impl<T: ProtocolMarker> ServiceMarker for T {}
-
-// TODO(fxbug.dev/75869): Remove after soft-transition is complete.
-#[doc(hidden)]
-#[deprecated = "Use fidl::endpoints::DiscoverableProtocolMarker instead"]
-pub trait DiscoverableService: DiscoverableProtocolMarker {}
-#[allow(deprecated)]
-impl<T: DiscoverableProtocolMarker> DiscoverableService for T {}
-
 /// A marker for a particular FIDL protocol.
 ///
 /// Implementations of this trait can be used to manufacture instances of a FIDL protocol
@@ -143,26 +129,26 @@ pub trait RequestStream: Sized + Send + Stream + TryStream<Error = crate::Error>
 /// The Request type associated with a Marker.
 pub type Request<Marker> = <<Marker as ProtocolMarker>::RequestStream as futures::TryStream>::Ok;
 
-/// A marker for a particular FIDL Unified Service.
+/// A marker for a particular FIDL service.
 #[cfg(target_os = "fuchsia")]
-pub trait UnifiedServiceMarker: Sized + Send + Sync + 'static {
+pub trait ServiceMarker: Sized + Send + Sync + 'static {
     /// The type of the proxy object upon which calls are made to a remote FIDL service.
-    type Proxy: UnifiedServiceProxy<Service = Self>;
+    type Proxy: ServiceProxy<Service = Self>;
 
-    /// The request type for this particular FIDL Unified Service.
-    type Request: UnifiedServiceRequest<Service = Self>;
+    /// The request type for this particular FIDL service.
+    type Request: ServiceRequest<Service = Self>;
 
-    /// The name of the Unified Service. Used for service lookup and discovery.
+    /// The name of the service. Used for service lookup and discovery.
     const SERVICE_NAME: &'static str;
 }
 
-/// A request to initiate a connection to a FIDL Unified Service.
+/// A request to initiate a connection to a FIDL service.
 #[cfg(target_os = "fuchsia")]
-pub trait UnifiedServiceRequest: Sized + Send + Sync {
-    /// The FIDL Unified Service for which this request is destined.
-    type Service: UnifiedServiceMarker<Request = Self>;
+pub trait ServiceRequest: Sized + Send + Sync {
+    /// The FIDL service for which this request is destined.
+    type Service: ServiceMarker<Request = Self>;
 
-    /// Dispatches a connection attempt to this FIDL Unified Service's member protocol
+    /// Dispatches a connection attempt to this FIDL service's member protocol
     /// identified by `name`, producing an instance of this trait.
     fn dispatch(name: &str, channel: AsyncChannel) -> Self;
 
@@ -170,11 +156,11 @@ pub trait UnifiedServiceRequest: Sized + Send + Sync {
     fn member_names() -> &'static [&'static str];
 }
 
-/// Proxy by which a client sends messages to a FIDL Unified Service.
+/// Proxy by which a client sends messages to a FIDL service.
 #[cfg(target_os = "fuchsia")]
-pub trait UnifiedServiceProxy: Sized {
-    /// The FIDL Unified Service this proxy represents.
-    type Service: UnifiedServiceMarker<Proxy = Self>;
+pub trait ServiceProxy: Sized {
+    /// The FIDL service this proxy represents.
+    type Service: ServiceMarker<Proxy = Self>;
 
     /// Create a proxy from a MemberOpener implementation.
     #[doc(hidden)]
@@ -186,7 +172,7 @@ pub trait UnifiedServiceProxy: Sized {
 #[doc(hidden)]
 #[cfg(target_os = "fuchsia")]
 pub trait MemberOpener {
-    /// Opens a member protocol of a FIDL Unified Service by name, serving that protocol
+    /// Opens a member protocol of a FIDL service by name, serving that protocol
     /// on the given channel.
     fn open_member(&self, member: &str, server_end: Channel) -> Result<(), Error>;
 }

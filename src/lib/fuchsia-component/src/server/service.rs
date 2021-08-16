@@ -5,7 +5,7 @@
 //! The `Service` trait and its trait-object wrappers.
 
 use {
-    fidl::endpoints::{RequestStream, UnifiedServiceRequest},
+    fidl::endpoints::{RequestStream, ServiceRequest},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     std::marker::PhantomData,
 };
@@ -84,34 +84,34 @@ where
     }
 }
 
-/// A wrapper for functions from `UnifiedServiceRequest` to `Output` which implements
+/// A wrapper for functions from `ServiceRequest` to `Output` which implements
 /// `Service`.
 ///
 /// This type throws away channels that cannot be converted to the appropriate
-/// `UnifiedServiceRequest` type.
-pub struct FidlServiceMember<F, USR, Output>
+/// `ServiceRequest` type.
+pub struct FidlServiceMember<F, SR, Output>
 where
-    F: FnMut(USR) -> Output,
-    USR: UnifiedServiceRequest,
+    F: FnMut(SR) -> Output,
+    SR: ServiceRequest,
 {
     f: F,
-    marker: PhantomData<fn(USR) -> Output>,
+    marker: PhantomData<fn(SR) -> Output>,
 }
 
-impl<F, USR, Output> From<F> for FidlServiceMember<F, USR, Output>
+impl<F, SR, Output> From<F> for FidlServiceMember<F, SR, Output>
 where
-    F: FnMut(USR) -> Output,
-    USR: UnifiedServiceRequest,
+    F: FnMut(SR) -> Output,
+    SR: ServiceRequest,
 {
     fn from(f: F) -> Self {
         Self { f, marker: PhantomData }
     }
 }
 
-impl<F, USR, Output> Service for FidlServiceMember<F, USR, Output>
+impl<F, SR, Output> Service for FidlServiceMember<F, SR, Output>
 where
-    F: FnMut(USR) -> Output,
-    USR: UnifiedServiceRequest,
+    F: FnMut(SR) -> Output,
+    SR: ServiceRequest,
 {
     type Output = Output;
 
@@ -122,7 +122,7 @@ where
 
     fn connect_at(&mut self, path: &str, channel: zx::Channel) -> Option<Self::Output> {
         match fasync::Channel::from_channel(channel) {
-            Ok(chan) => Some((self.f)(USR::dispatch(path, chan))),
+            Ok(chan) => Some((self.f)(SR::dispatch(path, chan))),
             Err(e) => {
                 eprintln!("ServiceFs failed to convert channel to fasync channel: {:?}", e);
                 None

@@ -839,7 +839,7 @@ impl InterfaceControlHandle {
 pub struct ServiceMarker;
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceMarker for ServiceMarker {
+impl fidl::endpoints::ServiceMarker for ServiceMarker {
     type Proxy = ServiceProxy;
     type Request = ServiceRequest;
     const SERVICE_NAME: &'static str = "fidl.test.doccomments.Service";
@@ -859,7 +859,7 @@ pub enum ServiceRequest {
 }
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceRequest for ServiceRequest {
+impl fidl::endpoints::ServiceRequest for ServiceRequest {
     type Service = ServiceMarker;
 
     fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
@@ -882,7 +882,7 @@ impl fidl::endpoints::UnifiedServiceRequest for ServiceRequest {
 pub struct ServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
 
 #[cfg(target_os = "fuchsia")]
-impl fidl::endpoints::UnifiedServiceProxy for ServiceProxy {
+impl fidl::endpoints::ServiceProxy for ServiceProxy {
     type Service = ServiceMarker;
 
     fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
