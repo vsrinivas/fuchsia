@@ -18,6 +18,7 @@ group("tests") {
     "grpc:tests",
     "guest_config:tests",
     "guest_interaction:tests",
+    "machina-virtio-device:tests",
     "virtio-device:tests",
     "vsh:tests",
   ]

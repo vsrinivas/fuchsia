@@ -1,0 +1,46 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("machina-virtio-device") {
+  name = "machina-virtio-device"
+  version = "1.0.0"
+  edition = "2018"
+
+  sources = [
+    "src/bell.rs",
+    "src/lib.rs",
+    "src/mem.rs",
+    "src/notify.rs",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/virtualization/lib/virtio-device",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
+  with_unit_tests = true
+}
+
+fuchsia_unittest_package("machina-virtio-device-tests") {
+  deps = [ ":machina-virtio-device_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":machina-virtio-device-tests" ]
+}
