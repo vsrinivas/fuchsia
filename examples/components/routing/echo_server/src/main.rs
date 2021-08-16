@@ -6,7 +6,7 @@ use anyhow::{self, Context};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::{component, health::Reporter};
 use futures::prelude::*;
-use tracing;
+
 // [START server_declarations]
 use fidl_fidl_examples_routing_echo::{EchoRequest, EchoRequestStream};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -46,7 +46,6 @@ async fn main() -> Result<(), anyhow::Error> {
 
     component::health().set_ok();
     // [END server_inspect]
-    tracing::debug!("Initialized.");
 
     Ok(())
 }
