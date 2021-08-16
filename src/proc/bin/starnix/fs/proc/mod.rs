@@ -4,6 +4,7 @@
 
 mod fs;
 mod inode_generation;
+mod node_holder;
 mod proc_directory;
 
 pub use fs::*;

@@ -94,6 +94,7 @@ if (target_cpu == "x64") {
       "fs/proc/fs.rs",
       "fs/proc/inode_generation.rs",
       "fs/proc/mod.rs",
+      "fs/proc/node_holder.rs",
       "fs/proc/proc_directory.rs",
       "fs/symlink_node.rs",
       "fs/syscalls.rs",
