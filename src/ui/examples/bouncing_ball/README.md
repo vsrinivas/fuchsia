@@ -123,7 +123,7 @@ creates a `Session` and uses that to create a `View`.
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
  public:
   BouncingBallView(sys::ComponentContext* component_context,
-                           zx::eventpair view_token)
+                   zx::eventpair view_token)
       : session_listener_binding_(this) {
     // Connect to Scenic.
     fuchsia::ui::scenic::ScenicPtr scenic =
@@ -352,7 +352,7 @@ the circle.
   ...
 
   void OnPresent(fuchsia::images::PresentationInfo presentation_info) {
-    uint64_t presentation_time = presentation_info.presentation_time;
+    const uint64_t presentation_time = presentation_info.presentation_time;
 
     constexpr float kSecondsPerNanosecond = .000'000'001f;
     float t =
@@ -375,8 +375,8 @@ the circle.
                            {circle_pos_x_absolute, circle_pos_y_absolute, -kCircleElevation}));
     session_->Enqueue(std::move(cmds));
 
-    zx_time_t next_presentation_time = presentation_info.presentation_time +
-                                       presentation_info.presentation_interval;
+    const zx_time_t next_presentation_time = presentation_time +
+                                             presentation_info.presentation_interval;
     session_->Present(next_presentation_time, {}, {},
                       [this](fuchsia::images::PresentationInfo info) {
                         OnPresent(std::move(info));
