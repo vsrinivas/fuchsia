@@ -1,8 +1,0 @@
-{
-    include: [ "syslog/client.shard.cml" ],
-    program: {
-        runner: "elf",
-        binary: "bin/echo_environ",
-        environ: [ "FAVORITE_ANIMAL=HIPPOS" ],
-    },
-}
