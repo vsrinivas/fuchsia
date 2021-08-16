@@ -9,6 +9,39 @@ import (
 	"testing"
 )
 
+func TestGetHTMLEscaping(t *testing.T) {
+	tests := []struct {
+		text string
+		want string
+	}{
+		{
+			text: "",
+			want: "",
+		},
+		{
+			text: "simple",
+			want: "simple",
+		},
+		{
+			text: "a<b>c",
+			want: "a&lt;b&gt;c",
+		},
+		{
+			text: "a&b",
+			want: "a&amp;b",
+		},
+		{
+			text: "'\"",
+			want: "&#39;&#34;",
+		},
+	}
+	for _, tc := range tests {
+		if got := getHTMLText(&Match{Text: tc.text}); got != tc.want {
+			t.Errorf("getHTMLText(%q) = %q; want %q", tc.text, got, tc.want)
+		}
+	}
+}
+
 func TestGetHTMLTextDoesNotEscapeBR(t *testing.T) {
 	tests := []struct {
 		text string

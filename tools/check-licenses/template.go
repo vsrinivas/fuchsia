@@ -9,6 +9,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io/ioutil"
 	"sort"
 	"strings"
@@ -197,8 +198,7 @@ func getAuthors(l *License) []string {
 
 func getHTMLText(m *Match) string {
 	txt := m.Text
-	txt = strings.ReplaceAll(txt, "<", "&lt;")
-	txt = strings.ReplaceAll(txt, ">", "&gt;")
+	txt = html.EscapeString(txt)
 	txt = strings.Replace(txt, "\n", "<br />", -1)
 	return txt
 }
