@@ -7,10 +7,19 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/state.h>
+#include <lib/inspect/cpp/vmo/types.h>
+#include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/string_view.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace inspect {
 namespace internal {
@@ -64,7 +73,7 @@ void AutoGenerationIncrement::Release(Block* block) {
 }  // namespace
 
 template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
-WrapperType State::InnerCreateArray(const std::string& name, BlockIndex parent, size_t slots,
+WrapperType State::InnerCreateArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                     ArrayBlockFormat format) {
   size_t block_size_needed = slots * sizeof(NumericType) + kMinOrderSize;
   ZX_DEBUG_ASSERT_MSG(block_size_needed <= kMaxOrderSize,
@@ -136,7 +145,7 @@ void State::InnerFreeArray(WrapperType* value) {
 
   DecrementParentRefcount(value->value_index_);
 
-  heap_->Free(value->name_index_);
+  InnerReleaseStringReference(value->name_index_);
   heap_->Free(value->value_index_);
   value->state_ = nullptr;
 }
@@ -215,7 +224,7 @@ bool State::CopyBytes(std::vector<uint8_t>* out) const {
   return true;
 }
 
-IntProperty State::CreateIntProperty(const std::string& name, BlockIndex parent, int64_t value) {
+IntProperty State::CreateIntProperty(BorrowedStringValue name, BlockIndex parent, int64_t value) {
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
 
@@ -232,7 +241,8 @@ IntProperty State::CreateIntProperty(const std::string& name, BlockIndex parent,
   return IntProperty(weak_self_ptr_.lock(), name_index, value_index);
 }
 
-UintProperty State::CreateUintProperty(const std::string& name, BlockIndex parent, uint64_t value) {
+UintProperty State::CreateUintProperty(BorrowedStringValue name, BlockIndex parent,
+                                       uint64_t value) {
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
 
@@ -249,7 +259,7 @@ UintProperty State::CreateUintProperty(const std::string& name, BlockIndex paren
   return UintProperty(weak_self_ptr_.lock(), name_index, value_index);
 }
 
-DoubleProperty State::CreateDoubleProperty(const std::string& name, BlockIndex parent,
+DoubleProperty State::CreateDoubleProperty(BorrowedStringValue name, BlockIndex parent,
                                            double value) {
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
@@ -267,7 +277,7 @@ DoubleProperty State::CreateDoubleProperty(const std::string& name, BlockIndex p
   return DoubleProperty(weak_self_ptr_.lock(), name_index, value_index);
 }
 
-BoolProperty State::CreateBoolProperty(const std::string& name, BlockIndex parent, bool value) {
+BoolProperty State::CreateBoolProperty(BorrowedStringValue name, BlockIndex parent, bool value) {
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
 
@@ -283,24 +293,24 @@ BoolProperty State::CreateBoolProperty(const std::string& name, BlockIndex paren
   return BoolProperty(weak_self_ptr_.lock(), name_index, value_index);
 }
 
-IntArray State::CreateIntArray(const std::string& name, BlockIndex parent, size_t slots,
+IntArray State::CreateIntArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                ArrayBlockFormat format) {
   return InnerCreateArray<int64_t, IntArray, BlockType::kIntValue>(name, parent, slots, format);
 }
 
-UintArray State::CreateUintArray(const std::string& name, BlockIndex parent, size_t slots,
+UintArray State::CreateUintArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                  ArrayBlockFormat format) {
   return InnerCreateArray<uint64_t, UintArray, BlockType::kUintValue>(name, parent, slots, format);
 }
 
-DoubleArray State::CreateDoubleArray(const std::string& name, BlockIndex parent, size_t slots,
+DoubleArray State::CreateDoubleArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                      ArrayBlockFormat format) {
   return InnerCreateArray<double, DoubleArray, BlockType::kDoubleValue>(name, parent, slots,
                                                                         format);
 }
 
 template <typename WrapperType, typename ValueType>
-WrapperType State::InnerCreateProperty(const std::string& name, BlockIndex parent,
+WrapperType State::InnerCreateProperty(BorrowedStringValue name, BlockIndex parent,
                                        const char* value, size_t length,
                                        PropertyBlockFormat format) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -321,7 +331,7 @@ WrapperType State::InnerCreateProperty(const std::string& name, BlockIndex paren
                        PropertyBlockPayload::Flags::Make(format);
 
   if (status != ZX_OK) {
-    heap_->Free(name_index);
+    InnerReleaseStringReference(name_index);
     heap_->Free(value_index);
     return WrapperType();
   }
@@ -329,20 +339,20 @@ WrapperType State::InnerCreateProperty(const std::string& name, BlockIndex paren
   return WrapperType(weak_self_ptr_.lock(), name_index, value_index);
 }
 
-StringProperty State::CreateStringProperty(const std::string& name, BlockIndex parent,
+StringProperty State::CreateStringProperty(BorrowedStringValue name, BlockIndex parent,
                                            const std::string& value) {
   return InnerCreateProperty<StringProperty, std::string>(
       name, parent, value.data(), value.length(), PropertyBlockFormat::kUtf8);
 }
 
-ByteVectorProperty State::CreateByteVectorProperty(const std::string& name, BlockIndex parent,
+ByteVectorProperty State::CreateByteVectorProperty(BorrowedStringValue name, BlockIndex parent,
                                                    const std::vector<uint8_t>& value) {
   return InnerCreateProperty<ByteVectorProperty, std::vector<uint8_t>>(
       name, parent, reinterpret_cast<const char*>(value.data()), value.size(),
       PropertyBlockFormat::kBinary);
 }
 
-Link State::CreateLink(const std::string& name, BlockIndex parent, const std::string& content,
+Link State::CreateLink(BorrowedStringValue name, BlockIndex parent, BorrowedStringValue content,
                        LinkBlockDisposition disposition) {
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
@@ -354,10 +364,10 @@ Link State::CreateLink(const std::string& name, BlockIndex parent, const std::st
     return Link();
   }
 
-  status = CreateName(content, &content_index);
+  status = InnerCreateAndIncrementStringReference(content, &content_index);
   if (status != ZX_OK) {
     DecrementParentRefcount(value_index);
-    heap_->Free(name_index);
+    InnerReleaseStringReference(name_index);
     heap_->Free(value_index);
     return Link();
   }
@@ -375,9 +385,18 @@ Node State::CreateRootNode() {
   return Node(weak_self_ptr_.lock(), 0, 0);
 }
 
-LazyNode State::InnerCreateLazyLink(const std::string& name, BlockIndex parent,
+LazyNode State::InnerCreateLazyLink(BorrowedStringValue name, BlockIndex parent,
                                     LazyNodeCallbackFn callback, LinkBlockDisposition disposition) {
-  auto content = UniqueLinkName(name);
+  cpp17::string_view data;
+  switch (name.index()) {
+    case internal::isStringReference:
+      data = cpp17::get<internal::isStringReference>(name).Data();
+      break;
+    case internal::isStringLiteral:
+      data = cpp17::get<internal::isStringLiteral>(name);
+      break;
+  }
+  std::string content = UniqueLinkName(data);
   auto link = CreateLink(name, parent, content, disposition);
 
   {
@@ -389,17 +408,17 @@ LazyNode State::InnerCreateLazyLink(const std::string& name, BlockIndex parent,
   }
 }
 
-LazyNode State::CreateLazyNode(const std::string& name, BlockIndex parent,
+LazyNode State::CreateLazyNode(BorrowedStringValue name, BlockIndex parent,
                                LazyNodeCallbackFn callback) {
   return InnerCreateLazyLink(name, parent, std::move(callback), LinkBlockDisposition::kChild);
 }
 
-LazyNode State::CreateLazyValues(const std::string& name, BlockIndex parent,
+LazyNode State::CreateLazyValues(BorrowedStringValue name, BlockIndex parent,
                                  LazyNodeCallbackFn callback) {
   return InnerCreateLazyLink(name, parent, std::move(callback), LinkBlockDisposition::kInline);
 }
 
-Node State::CreateNode(const std::string& name, BlockIndex parent) {
+Node State::CreateNode(BorrowedStringValue name, BlockIndex parent) {
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
 
@@ -626,7 +645,7 @@ void State::DecrementParentRefcount(BlockIndex value_index) {
           // Continue decrementing refcounts.
           BlockIndex next_parent_index =
               ValueBlockFields::ParentIndex::Get<BlockIndex>(parent->header);
-          heap_->Free(ValueBlockFields::NameIndex::Get<BlockIndex>(parent->header));
+          InnerReleaseStringReference(ValueBlockFields::NameIndex::Get<BlockIndex>(parent->header));
           heap_->Free(parent_index);
           parent_index = next_parent_index;
           break;
@@ -652,7 +671,7 @@ void State::FreeIntProperty(IntProperty* metric) {
 
   DecrementParentRefcount(metric->value_index_);
 
-  heap_->Free(metric->name_index_);
+  InnerReleaseStringReference(metric->name_index_);
   heap_->Free(metric->value_index_);
   metric->state_ = nullptr;
 }
@@ -668,7 +687,7 @@ void State::FreeUintProperty(UintProperty* metric) {
 
   DecrementParentRefcount(metric->value_index_);
 
-  heap_->Free(metric->name_index_);
+  InnerReleaseStringReference(metric->name_index_);
   heap_->Free(metric->value_index_);
   metric->state_ = nullptr;
 }
@@ -684,7 +703,7 @@ void State::FreeDoubleProperty(DoubleProperty* metric) {
 
   DecrementParentRefcount(metric->value_index_);
 
-  heap_->Free(metric->name_index_);
+  InnerReleaseStringReference(metric->name_index_);
   heap_->Free(metric->value_index_);
   metric->state_ = nullptr;
 }
@@ -700,7 +719,7 @@ void State::FreeBoolProperty(BoolProperty* metric) {
 
   DecrementParentRefcount(metric->value_index_);
 
-  heap_->Free(metric->name_index_);
+  InnerReleaseStringReference(metric->name_index_);
   heap_->Free(metric->value_index_);
   metric->state_ = nullptr;
 }
@@ -726,7 +745,7 @@ void State::InnerFreePropertyWithExtents(WrapperType* property) {
   const auto* block = heap_->GetBlock(property->value_index_);
   InnerFreeExtentChain(PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(block->payload.u64));
 
-  heap_->Free(property->name_index_);
+  InnerReleaseStringReference(property->name_index_);
   heap_->Free(property->value_index_);
   property->state_ = nullptr;
 }
@@ -748,9 +767,9 @@ void State::FreeLink(Link* link) {
 
   DecrementParentRefcount(link->value_index_);
 
-  heap_->Free(link->name_index_);
+  InnerReleaseStringReference(link->name_index_);
   heap_->Free(link->value_index_);
-  heap_->Free(link->content_index_);
+  InnerReleaseStringReference(link->content_index_);
   link->state_ = nullptr;
 }
 
@@ -774,7 +793,7 @@ void State::FreeNode(Node* object) {
       // Actually free the block, decrementing parent refcounts.
       DecrementParentRefcount(object->value_index_);
       // Node has no refs, free it.
-      heap_->Free(object->name_index_);
+      InnerReleaseStringReference(object->name_index_);
       heap_->Free(object->value_index_);
     } else {
       // Node has refs, change type to tombstone so it can be removed
@@ -816,6 +835,56 @@ void State::FreeLazyNode(LazyNode* object) {
   holder.cancel();
 }
 
+void State::ReleaseStringReference(const BlockIndex index) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
+  InnerReleaseStringReference(index);
+}
+
+void State::InnerReleaseStringReference(const BlockIndex index) {
+  auto* const block = heap_->GetBlock(index);
+  const auto reference_count =
+      StringReferenceBlockFields::ReferenceCount::Get<uint64_t>(block->header);
+  StringReferenceBlockFields::ReferenceCount::Set(&block->header,
+                                                  reference_count > 0 ? reference_count - 1 : 0);
+  InnerMaybeFreeStringReference(index, block);
+}
+
+void State::InnerMaybeFreeStringReference(BlockIndex index, Block* block) {
+  const auto reference_count =
+      StringReferenceBlockFields::ReferenceCount::Get<uint64_t>(block->header);
+  if (reference_count != 0) {
+    return;
+  }
+
+  // If a reference ID is used again, it will just be re-allocated to the VMO.
+  // Additionally, though the index might not have been mapped to a state ID,
+  // failing to erase isn't an error.
+  string_reference_ids_.EraseByIndex(index);
+
+  const auto first_extent_index =
+      StringReferenceBlockFields::NextExtentIndex::Get<BlockIndex>(block->header);
+  heap_->Free(index);
+  InnerFreeExtentChain(first_extent_index);
+}
+
+void State::InnerReadExtents(BlockIndex head_extent, size_t remaining_length,
+                             std::vector<uint8_t>* buf) const {
+  auto* extent = heap_->GetBlock(head_extent);
+  while (remaining_length > 0) {
+    if (!extent || GetType(extent) != BlockType::kExtent) {
+      break;
+    }
+    size_t len = std::min(remaining_length, PayloadCapacity(GetOrder(extent)));
+    buf->insert(buf->cend(), extent->payload_ptr(), extent->payload_ptr() + len);
+    remaining_length -= len;
+
+    BlockIndex next_extent = ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header);
+
+    extent = heap_->GetBlock(next_extent);
+  }
+}
+
 std::vector<std::string> State::GetLinkNames() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<std::string> ret;
@@ -846,7 +915,7 @@ fpromise::promise<Inspector> State::CallLinkCallback(const std::string& name) {
   return holder.call();
 }
 
-zx_status_t State::InnerCreateValue(const std::string& name, BlockType type,
+zx_status_t State::InnerCreateValue(BorrowedStringValue name, BlockType type,
                                     BlockIndex parent_index, BlockIndex* out_name,
                                     BlockIndex* out_value, size_t min_size_required) {
   BlockIndex value_index, name_index;
@@ -856,7 +925,7 @@ zx_status_t State::InnerCreateValue(const std::string& name, BlockType type,
     return status;
   }
 
-  status = CreateName(name, &name_index);
+  status = InnerCreateAndIncrementStringReference(name, &name_index);
   if (status != ZX_OK) {
     heap_->Free(value_index);
     return status;
@@ -885,7 +954,7 @@ zx_status_t State::InnerCreateValue(const std::string& name, BlockType type,
     default:
       ZX_DEBUG_ASSERT_MSG(false, "Invalid parent block type %u for 0x%lx",
                           static_cast<uint32_t>(GetType(parent)), parent_index);
-      heap_->Free(name_index);
+      InnerReleaseStringReference(name_index);
       heap_->Free(value_index);
       return ZX_ERR_INVALID_ARGS;
   }
@@ -949,30 +1018,116 @@ std::pair<BlockIndex, zx_status_t> State::InnerCreateExtentChain(const char* val
   return {first_extent_index, ZX_OK};
 }
 
-std::string State::UniqueLinkName(const std::string& prefix) {
-  return prefix + "-" +
+std::string State::UniqueLinkName(cpp17::string_view prefix) {
+  return std::string(prefix.data(), prefix.size()) + "-" +
          std::to_string(next_unique_link_number_.fetch_add(1, std::memory_order_relaxed));
 }
 
-zx_status_t State::CreateName(const std::string& name, BlockIndex* out) {
-  ZX_DEBUG_ASSERT_MSG(name.size() <= kMaxPayloadSize, "Name too long (length is %lu)", name.size());
-  if (name.size() > kMaxPayloadSize) {
-    return ZX_ERR_INVALID_ARGS;
+zx_status_t State::CreateAndIncrementStringReference(BorrowedStringValue value, BlockIndex* out) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  // Since InnerCreateStringReferenceWithCount might not actually allocate, a potential
+  // optimzation here is to only conditionally increment the generation count.
+  AutoGenerationIncrement gen(header_, heap_.get());
+  return InnerCreateAndIncrementStringReference(value, out);
+}
+
+zx_status_t State::InnerCreateStringReference(BorrowedStringValue value, BlockIndex* const out) {
+  zx_status_t status;
+  cpp17::optional<BlockIndex> maybe_block_index;
+
+  switch (value.index()) {
+    case internal::isStringReference:
+      maybe_block_index =
+          string_reference_ids_.GetBlockIndex(cpp17::get<internal::isStringReference>(value).ID());
+      if (maybe_block_index.has_value()) {
+        *out = maybe_block_index.value();
+        return ZX_OK;
+      }
+
+      status = InnerDoStringReferenceAllocations(
+          cpp17::get<internal::isStringReference>(value).Data(), out);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      string_reference_ids_.Insert(*out, cpp17::get<internal::isStringReference>(value).ID());
+      break;
+
+    case internal::isStringLiteral:
+      return InnerDoStringReferenceAllocations(cpp17::get<internal::isStringLiteral>(value), out);
   }
 
-  zx_status_t status;
-  status = heap_->Allocate(BlockSizeForPayload(name.size()), out);
+  return ZX_OK;
+}
+
+namespace {
+constexpr size_t GetOrderForSizeOfStringReference(const size_t data_size) {
+  return std::min(
+      BlockSizeForPayload(data_size + StringReferenceBlockPayload::TotalLength::SizeInBytes()),
+      BlockSizeForPayload(kMaxPayloadSize));
+}
+}  // namespace
+
+zx_status_t State::InnerDoStringReferenceAllocations(cpp17::string_view data,
+                                                     BlockIndex* const out) {
+  const auto order_for_size = GetOrderForSizeOfStringReference(data.size());
+  auto status = heap_->Allocate(order_for_size, out);
   if (status != ZX_OK) {
     return status;
   }
 
   auto* block = heap_->GetBlock(*out);
-  block->header = NameBlockFields::Order::Make(GetOrder(block)) |
-                  NameBlockFields::Type::Make(BlockType::kName) |
-                  NameBlockFields::Length::Make(name.size());
-  memset(block->payload.data, 0, PayloadCapacity(GetOrder(block)));
-  memcpy(block->payload.data, name.data(), name.size());
+  block->header = StringReferenceBlockFields::Order::Make(GetOrder(block)) |
+                  StringReferenceBlockFields::Type::Make(BlockType::kStringReference) |
+                  StringReferenceBlockFields::NextExtentIndex::Make(
+                      0 /* this is potentially reset in WriteStringReferencePayload */) |
+                  StringReferenceBlockFields::ReferenceCount::Make(0);
+  block->payload.u64 = StringReferenceBlockPayload::TotalLength::Make(data.size());
+  return WriteStringReferencePayload(block, data);
+}
+
+zx_status_t State::WriteStringReferencePayload(Block* const block, cpp17::string_view data) {
+  // write the inline-portion first:
+  auto inline_length =
+      std::min(data.size(), PayloadCapacity(GetOrder(block)) -
+                                StringReferenceBlockPayload::TotalLength::SizeInBytes());
+  memcpy(block->payload.data + StringReferenceBlockPayload::TotalLength::SizeInBytes(), data.data(),
+         inline_length);
+  // this implies the whole piece of data fit inline, and we are done
+  if (inline_length == data.size()) {
+    return ZX_OK;
+  }
+
+  // allocate necessary extents, copying data
+  BlockIndex first_extent_index;
+  zx_status_t status;
+  std::tie(first_extent_index, status) =
+      InnerCreateExtentChain(std::cbegin(data) + inline_length, data.size() - inline_length);
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  block->header =
+      block->header | StringReferenceBlockFields::NextExtentIndex::Make(first_extent_index);
   return ZX_OK;
+}
+
+zx_status_t State::InnerCreateAndIncrementStringReference(BorrowedStringValue name,
+                                                          BlockIndex* out) {
+  const auto status = InnerCreateStringReference(name, out);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto* const block = heap_->GetBlock(*out);
+
+  // you must look up the reference count, because if the block already exists,
+  // InnerCreateStringReference does not notify you in any way
+  const auto count = StringReferenceBlockFields::ReferenceCount::Get<uint64_t>(block->header);
+  StringReferenceBlockFields::ReferenceCount::Set(&block->header, count + 1);
+
+  return status;
 }
 
 std::string State::UniqueName(const std::string& prefix) {
@@ -992,6 +1147,36 @@ InspectStats State::GetStats() const {
   ret.allocated_blocks = heap_->TotalAllocatedBlocks();
   ret.deallocated_blocks = heap_->TotalDeallocatedBlocks();
   return ret;
+}
+
+cpp17::optional<std::string> TesterLoadStringReference(const State& state, const BlockIndex index) {
+  std::lock_guard<std::mutex> lock(state.mutex_);
+  const auto* const block = state.heap_->GetBlock(index);
+  if (!block) {
+    return {};
+  }
+
+  std::vector<uint8_t> buffer;
+
+  const auto total_length =
+      StringReferenceBlockPayload::TotalLength::Get<size_t>(block->payload.u64);
+  buffer.reserve(total_length);
+  const auto max_inlinable_length =
+      PayloadCapacity(GetOrder(block)) - StringReferenceBlockPayload::TotalLength::SizeInBytes();
+  buffer.insert(buffer.cend(),
+                block->payload_ptr() + StringReferenceBlockPayload::TotalLength::SizeInBytes(),
+                block->payload_ptr() + StringReferenceBlockPayload::TotalLength::SizeInBytes() +
+                    std::min(total_length, max_inlinable_length));
+
+  if (total_length == buffer.size()) {
+    return std::string{buffer.cbegin(), buffer.cend()};
+  }
+
+  state.InnerReadExtents(
+      StringReferenceBlockFields::NextExtentIndex::Get<BlockIndex>(block->header),
+      total_length - max_inlinable_length, &buffer);
+
+  return std::string{buffer.cbegin(), buffer.cend()};
 }
 
 }  // namespace internal

@@ -13,11 +13,16 @@
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/heap.h>
 #include <lib/inspect/cpp/vmo/types.h>
+#include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/string_view.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <iterator>
 #include <map>
 #include <mutex>
+#include <string>
+#include <unordered_map>
 #include <utility>
 
 namespace inspect {
@@ -69,43 +74,43 @@ class State final {
 
   // Create a new |IntProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
-  IntProperty CreateIntProperty(const std::string& name, BlockIndex parent, int64_t value);
+  IntProperty CreateIntProperty(BorrowedStringValue name, BlockIndex parent, int64_t value);
 
   // Create a new |UintProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
-  UintProperty CreateUintProperty(const std::string& name, BlockIndex parent, uint64_t value);
+  UintProperty CreateUintProperty(BorrowedStringValue name, BlockIndex parent, uint64_t value);
 
   // Create a new |DoubleProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
-  DoubleProperty CreateDoubleProperty(const std::string& name, BlockIndex parent, double value);
+  DoubleProperty CreateDoubleProperty(BorrowedStringValue name, BlockIndex parent, double value);
 
   // Create a new |BoolProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
-  BoolProperty CreateBoolProperty(const std::string& name, BlockIndex parent, bool value);
+  BoolProperty CreateBoolProperty(BorrowedStringValue name, BlockIndex parent, bool value);
 
   // Create a new |IntArray| in the Inspect VMO. The returned value releases
   // the array when destroyed.
-  IntArray CreateIntArray(const std::string& name, BlockIndex parent, size_t slots,
+  IntArray CreateIntArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                           ArrayBlockFormat format);
 
   // Create a new |UintArray| in the Inspect VMO. The returned value releases
   // the array when destroyed.
-  UintArray CreateUintArray(const std::string& name, BlockIndex parent, size_t slots,
+  UintArray CreateUintArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                             ArrayBlockFormat format);
 
   // Create a new |DoubleArray| in the Inspect VMO. The returned value releases
   // the array when destroyed.
-  DoubleArray CreateDoubleArray(const std::string& name, BlockIndex parent, size_t slots,
+  DoubleArray CreateDoubleArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                 ArrayBlockFormat format);
 
   // Create a new |StringProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
-  StringProperty CreateStringProperty(const std::string& name, BlockIndex parent,
+  StringProperty CreateStringProperty(BorrowedStringValue name, BlockIndex parent,
                                       const std::string& value);
 
   // Create a new |ByteVectorProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
-  ByteVectorProperty CreateByteVectorProperty(const std::string& name, BlockIndex parent,
+  ByteVectorProperty CreateByteVectorProperty(BorrowedStringValue name, BlockIndex parent,
                                               const std::vector<uint8_t>& value);
 
   // Create a new [Link] in the Inspect VMO. The returned node releases the link when destroyed.
@@ -113,25 +118,29 @@ class State final {
   // A Link is a low-level reference to a new Inspector linked off of the one managed by this
   // state. A Link alone is not sufficient to populate the linked tree, see CreateLazyNode and
   // CreateLazyValues.
-  Link CreateLink(const std::string& name, BlockIndex parent, const std::string& content,
+  Link CreateLink(BorrowedStringValue name, BlockIndex parent, BorrowedStringValue content,
                   LinkBlockDisposition disposition);
 
   // Create a new |Node| in the Inspect VMO. Nodes are refcounted such that values nested under the
   // node remain valid until all such values values are destroyed.
-  Node CreateNode(const std::string& name, BlockIndex parent);
+  Node CreateNode(BorrowedStringValue name, BlockIndex parent);
 
-  // Create a special root |Node| in the Inspect VMO. This node is not backed by any storage, rather
-  // it allows clients to use the |Node| iterface to add properties and children directly to the
-  // root of the VMO.
+  // Create and allocate, if necessary, a StringReference block. The reference count will be 1
+  // if the block is new, and incremented if it already existed.
+  zx_status_t CreateAndIncrementStringReference(BorrowedStringValue value, BlockIndex* out);
+
+  // Create a special root |Node| in the Inspect VMO. This node is not backed by any storage,
+  // rather it allows clients to use the |Node| interface to add properties and children directly
+  // to the root of the VMO.
   Node CreateRootNode();
 
   // Create a new |LazyNode| with a new named |Link| that calls the given callback with child
   // disposition.
-  LazyNode CreateLazyNode(const std::string& name, BlockIndex parent, LazyNodeCallbackFn callback);
+  LazyNode CreateLazyNode(BorrowedStringValue name, BlockIndex parent, LazyNodeCallbackFn callback);
 
   // Create a new |LazyNode| with a new named |Link| that calls the given callback with inline
   // disposition.
-  LazyNode CreateLazyValues(const std::string& name, BlockIndex parent,
+  LazyNode CreateLazyValues(BorrowedStringValue name, BlockIndex parent,
                             LazyNodeCallbackFn callback);
 
   // Setters for various property types
@@ -174,6 +183,7 @@ class State final {
   void FreeLink(Link* link);
   void FreeNode(Node* node);
   void FreeLazyNode(LazyNode* lazy_node);
+  void ReleaseStringReference(BlockIndex index);
 
   // Get the names of all links in this state.
   std::vector<std::string> GetLinkNames() const;
@@ -244,12 +254,12 @@ class State final {
   void DecrementParentRefcount(BlockIndex value_index) __TA_REQUIRES(mutex_);
 
   // Helper method for creating a new VALUE block type.
-  zx_status_t InnerCreateValue(const std::string& name, BlockType type, BlockIndex parent_index,
+  zx_status_t InnerCreateValue(BorrowedStringValue name, BlockType type, BlockIndex parent_index,
                                BlockIndex* out_name, BlockIndex* out_value,
                                size_t min_size_required = kMinOrderSize) __TA_REQUIRES(mutex_);
 
   // Helper method to create a new LINK block that calls a callback when followed.
-  LazyNode InnerCreateLazyLink(const std::string& name, BlockIndex parent,
+  LazyNode InnerCreateLazyLink(BorrowedStringValue name, BlockIndex parent,
                                LazyNodeCallbackFn callback, LinkBlockDisposition disposition);
 
   // Returns true if the block is an extent, false otherwise.
@@ -265,16 +275,17 @@ class State final {
   void InnerFreeExtentChain(BlockIndex extent_index) __TA_REQUIRES(mutex_);
 
   // Helper to create a new name block with the given name.
-  zx_status_t CreateName(const std::string& name, BlockIndex* out) __TA_REQUIRES(mutex_);
+  zx_status_t InnerCreateAndIncrementStringReference(BorrowedStringValue name, BlockIndex* out)
+      __TA_REQUIRES(mutex_);
 
   // Helper function to create an array with the given name, number of slots, and format.
   template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
-  WrapperType InnerCreateArray(const std::string& name, BlockIndex parent, size_t slots,
+  WrapperType InnerCreateArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                ArrayBlockFormat format);
 
   // Helper function to create a property with a byte format.
   template <typename WrapperType, typename ValueType>
-  WrapperType InnerCreateProperty(const std::string& name, BlockIndex parent, const char* value,
+  WrapperType InnerCreateProperty(BorrowedStringValue name, BlockIndex parent, const char* value,
                                   size_t length, PropertyBlockFormat format);
 
   template <typename WrapperType>
@@ -299,7 +310,32 @@ class State final {
   void InnerFreeArray(WrapperType* value);
 
   // Helper function to generate a unique name for a link.
-  std::string UniqueLinkName(const std::string& prefix);
+  std::string UniqueLinkName(cpp17::string_view prefix);
+
+  // Create a new |StringReference| in the Inspect VMO, or get the existing index.
+  // If the StringReference is new, it will have a reference count of 0. If it already
+  // existed, the reference count will not be incremented.
+  zx_status_t InnerCreateStringReference(BorrowedStringValue value, BlockIndex* out)
+      __TA_REQUIRES(mutex_);
+
+  zx_status_t InnerDoStringReferenceAllocations(cpp17::string_view data, BlockIndex* out)
+      __TA_REQUIRES(mutex_);
+
+  // Free the block pointed to by |index| if and only if it has a reference count of 0.
+  // Attempting to free a reference that has a non-zero reference count is not an error,
+  // and will simply do nothing.
+  void InnerMaybeFreeStringReference(BlockIndex index, Block* block) __TA_REQUIRES(mutex_);
+
+  void InnerReleaseStringReference(BlockIndex index) __TA_REQUIRES(mutex_);
+
+  void InnerReadExtents(BlockIndex head_extent, size_t remaining_length,
+                        std::vector<uint8_t>* buf) const __TA_REQUIRES(mutex_);
+
+  zx_status_t WriteStringReferencePayload(Block* block, cpp17::string_view data)
+      __TA_REQUIRES(mutex_);
+
+  friend cpp17::optional<std::string> TesterLoadStringReference(const State& state,
+                                                                BlockIndex index);
 
   // Mutex wrapping all fields in the state.
   // The mutex is mutable to support locking when reading fields of a
@@ -330,6 +366,47 @@ class State final {
   //
   // Uses the fastest available atomic uint64 type for fetch_and_add.
   std::atomic_uint_fast64_t next_unique_link_number_;
+
+  // Map StringReference.ID to an index in the VMO and vice-versa.
+  class {
+   public:
+    void Insert(BlockIndex index, uint64_t id) {
+      state_id_to_block_index_.insert({id, index});
+      block_index_to_state_id_.insert({index, id});
+    }
+
+    cpp17::optional<BlockIndex> GetBlockIndex(uint64_t id) {
+      const auto index = state_id_to_block_index_.find(id);
+      if (index == std::cend(state_id_to_block_index_)) {
+        return {};
+      }
+      return index->second;
+    }
+
+    cpp17::optional<uint64_t> GetStateId(BlockIndex index) {
+      const auto state_id = block_index_to_state_id_.find(index);
+      if (state_id == std::cend(block_index_to_state_id_)) {
+        return {};
+      }
+
+      return state_id->second;
+    }
+
+    void EraseByIndex(BlockIndex index) {
+      const auto id = GetStateId(index);
+      if (!id.has_value()) {
+        return;
+      }
+
+      state_id_to_block_index_.erase(*id);
+      block_index_to_state_id_.erase(index);
+    }
+
+   private:
+    std::unordered_map<uint64_t, BlockIndex> state_id_to_block_index_;
+    std::unordered_map<BlockIndex, uint64_t> block_index_to_state_id_;
+
+  } string_reference_ids_;
 };
 
 }  // namespace internal

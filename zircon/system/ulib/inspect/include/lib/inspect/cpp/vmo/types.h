@@ -8,10 +8,16 @@
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/vmo/block.h>
+#include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/string_view.h>
+#include <lib/stdcompat/variant.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -366,6 +372,55 @@ class LazyNode final {
   Link link_;
 };
 
+// StringReference is a type that can be used as a name of a Node in the Inspect API.
+// Each StringReference will have a single allocation in the appropriate VMO.
+// StringReferences are lazy-node safe.
+//
+// StringReferences can be statically declared as a constant in namespace-scope.
+// Example:
+//
+// `namespace {`
+// `const StringReference kTimestamp("timestamp");`
+// `}  // namespace`
+//
+// Or,
+// `static const StringReference kTimestamp("timestamp");`
+class StringReference final {
+ public:
+  StringReference(StringReference&&) = default;
+  StringReference(const StringReference&) = default;
+
+  // Create a new `StringReference` for the given value.
+  //
+  // StringReference treats the data as borrowed; the caller is responsible for lifetime
+  // management. `data` must live as long as the StringReference. `data` must be null
+  // terminated.
+  explicit StringReference(const char* data);
+
+  // Access the data referenced by `this`.
+  cpp17::string_view Data() const;
+
+  // Access the state ID of the StringReference.
+  uint64_t ID() const;
+
+ private:
+  StringReference() = delete;
+  const cpp17::string_view data_;
+  const uint64_t reference_id_;
+};
+
+// `BorrowedStringValue` is a non-owning polymorphic type that allows the discrimination between
+// single-use StringReference-as-names and user-declared StringReferences that have
+// a re-usable state ID. This allows us to not do the work associated with maintaining
+// the state ID when unnecessary.
+using BorrowedStringValue = cpp17::variant<cpp17::string_view, StringReference>;
+namespace internal {
+enum StringReferenceWrapperDiscriminant {
+  isStringLiteral,
+  isStringReference,
+};
+}  // namespace internal
+
 // A node under which properties, metrics, and other nodes may be nested.
 // All methods wrap the corresponding functionality on |State|.
 class Node final {
@@ -384,77 +439,77 @@ class Node final {
   // Create a new |Node| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created node will
   // also not be stored in a buffer.
-  Node CreateChild(const std::string& name) __WARN_UNUSED_RESULT;
+  Node CreateChild(BorrowedStringValue name) __WARN_UNUSED_RESULT;
 
   // Same as CreateChild, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(Node).
   // inspect::ValueList is recommended for most use cases.
   template <typename T>
-  void CreateChild(const std::string& name, T* list) {
+  void CreateChild(BorrowedStringValue name, T* list) {
     list->emplace(CreateChild(name));
   }
 
   // Create a new |IntProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
-  IntProperty CreateInt(const std::string& name, int64_t value) __WARN_UNUSED_RESULT;
+  IntProperty CreateInt(BorrowedStringValue name, int64_t value) __WARN_UNUSED_RESULT;
 
   // Same as CreateInt, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(IntProperty).
   // inspect::ValueList is recommended for most use cases.
   template <typename T>
-  void CreateInt(const std::string& name, int64_t value, T* list) {
+  void CreateInt(BorrowedStringValue name, int64_t value, T* list) {
     list->emplace(CreateInt(name, value));
   }
 
   // Create a new |UintProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
-  UintProperty CreateUint(const std::string& name, uint64_t value) __WARN_UNUSED_RESULT;
+  UintProperty CreateUint(BorrowedStringValue name, uint64_t value) __WARN_UNUSED_RESULT;
 
   // Same as CreateUint, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(UintProperty).
   // inspect::ValueList is recommended for most use cases.
   template <typename T>
-  void CreateUint(const std::string& name, uint64_t value, T* list) {
+  void CreateUint(BorrowedStringValue name, uint64_t value, T* list) {
     list->emplace(CreateUint(name, value));
   }
 
   // Create a new |DoubleProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
-  DoubleProperty CreateDouble(const std::string& name, double value) __WARN_UNUSED_RESULT;
+  DoubleProperty CreateDouble(BorrowedStringValue name, double value) __WARN_UNUSED_RESULT;
 
   // Same as CreateDouble, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(DoubleProperty).
   // inspect::ValueList is recommended for most use cases.
   template <typename T>
-  void CreateDouble(const std::string& name, double value, T* list) {
+  void CreateDouble(BorrowedStringValue name, double value, T* list) {
     list->emplace(CreateDouble(name, value));
   }
 
   // Create a new |BoolProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
-  BoolProperty CreateBool(const std::string& name, bool value) __WARN_UNUSED_RESULT;
+  BoolProperty CreateBool(BorrowedStringValue name, bool value) __WARN_UNUSED_RESULT;
 
   // Same as CreateBool, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(BoolProperty).
   // inspect::ValueList is recommended for most use cases.
   template <typename T>
-  void CreateBool(const std::string& name, bool value, T* list) {
+  void CreateBool(BorrowedStringValue name, bool value, T* list) {
     list->emplace(CreateBool(name, value));
   }
 
   // Create a new |StringProperty| with the given name and value that is a child of this node.
   // If this node is not stored in a buffer, the created property will
   // also not be stored in a buffer.
-  StringProperty CreateString(const std::string& name,
+  StringProperty CreateString(BorrowedStringValue name,
                               const std::string& value) __WARN_UNUSED_RESULT;
 
   // Same as CreateString, but emplaces the value in the given container.
@@ -462,14 +517,14 @@ class Node final {
   // The type of |list| must have method emplace(StringProperty).
   // inspect::ValueList is recommended for most use cases.
   template <typename T>
-  void CreateString(const std::string& name, const std::string& value, T* list) {
+  void CreateString(BorrowedStringValue name, const std::string& value, T* list) {
     list->emplace(CreateString(name, value));
   }
 
   // Create a new |ByteVectorProperty| with the given name and value that is a child of this node.
   // If this node is not stored in a buffer, the created property will
   // also not be stored in a buffer.
-  ByteVectorProperty CreateByteVector(const std::string& name,
+  ByteVectorProperty CreateByteVector(BorrowedStringValue name,
                                       const std::vector<uint8_t>& value) __WARN_UNUSED_RESULT;
 
   // Same as CreateByteVector, but emplaces the value in the given container.
@@ -477,50 +532,50 @@ class Node final {
   // The type of |list| must have method emplace(ByteVectorProperty).
   // inspect::ValueList is recommended for most use cases.
   template <typename T>
-  void CreateByteVector(const std::string& name, const std::vector<uint8_t>& value, T* list) {
+  void CreateByteVector(BorrowedStringValue name, const std::vector<uint8_t>& value, T* list) {
     list->emplace(CreateByteVector(name, value));
   }
 
   // Create a new |IntArray| with the given name and slots that is a child of this node.
   // If this node is not stored in a buffer, the created value will
   // also not be stored in a buffer.
-  IntArray CreateIntArray(const std::string& name, size_t slots) __WARN_UNUSED_RESULT;
+  IntArray CreateIntArray(BorrowedStringValue name, size_t slots) __WARN_UNUSED_RESULT;
 
   // Create a new |UintArray| with the given name and slots that is a child of this node.
   // If this node is not stored in a buffer, the created value will
   // also not be stored in a buffer.
-  UintArray CreateUintArray(const std::string& name, size_t slots) __WARN_UNUSED_RESULT;
+  UintArray CreateUintArray(BorrowedStringValue name, size_t slots) __WARN_UNUSED_RESULT;
 
   // Create a new |DoubleArray| with the given name and slots that is a child of this node.
   // If this node is not stored in a buffer, the created value will
   // also not be stored in a buffer.
-  DoubleArray CreateDoubleArray(const std::string& name, size_t slots) __WARN_UNUSED_RESULT;
+  DoubleArray CreateDoubleArray(BorrowedStringValue name, size_t slots) __WARN_UNUSED_RESULT;
 
   // Create a new |LinearIntHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
-  LinearIntHistogram CreateLinearIntHistogram(const std::string& name, int64_t floor,
+  LinearIntHistogram CreateLinearIntHistogram(BorrowedStringValue name, int64_t floor,
                                               int64_t step_size,
                                               size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |LinearUintHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
-  LinearUintHistogram CreateLinearUintHistogram(const std::string& name, uint64_t floor,
+  LinearUintHistogram CreateLinearUintHistogram(BorrowedStringValue name, uint64_t floor,
                                                 uint64_t step_size,
                                                 size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |LinearDoubleHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
-  LinearDoubleHistogram CreateLinearDoubleHistogram(const std::string& name, double floor,
+  LinearDoubleHistogram CreateLinearDoubleHistogram(BorrowedStringValue name, double floor,
                                                     double step_size,
                                                     size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |ExponentialIntHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
-  ExponentialIntHistogram CreateExponentialIntHistogram(const std::string& name, int64_t floor,
+  ExponentialIntHistogram CreateExponentialIntHistogram(BorrowedStringValue name, int64_t floor,
                                                         int64_t initial_step,
                                                         int64_t step_multiplier,
                                                         size_t buckets) __WARN_UNUSED_RESULT;
@@ -528,7 +583,7 @@ class Node final {
   // Create a new |ExponentialUintHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
-  ExponentialUintHistogram CreateExponentialUintHistogram(const std::string& name, uint64_t floor,
+  ExponentialUintHistogram CreateExponentialUintHistogram(BorrowedStringValue name, uint64_t floor,
                                                           uint64_t initial_step,
                                                           uint64_t step_multiplier,
                                                           size_t buckets) __WARN_UNUSED_RESULT;
@@ -536,8 +591,8 @@ class Node final {
   // Create a new |ExponentialDoubleHistogram| with the given name and format that is a child of
   // this node. If this node is not stored in a buffer, the created value will also not be
   // stored in a buffer.
-  ExponentialDoubleHistogram CreateExponentialDoubleHistogram(const std::string& name, double floor,
-                                                              double initial_step,
+  ExponentialDoubleHistogram CreateExponentialDoubleHistogram(BorrowedStringValue name,
+                                                              double floor, double initial_step,
                                                               double step_multiplier,
                                                               size_t buckets) __WARN_UNUSED_RESULT;
 
@@ -560,7 +615,7 @@ class Node final {
   //    a:
   //      b:
   //        val = 2
-  LazyNode CreateLazyNode(const std::string& name,
+  LazyNode CreateLazyNode(BorrowedStringValue name,
                           LazyNodeCallbackFn callback) __WARN_UNUSED_RESULT;
 
   // Same as CreateLazyNode, but emplaces the value in the given container.
@@ -568,7 +623,7 @@ class Node final {
   // The type of |list| must have method emplace(LazyNode).
   // inspect::ValueList is recommended for most use cases.
   template <typename F, typename T>
-  void CreateLazyNode(const std::string& name, F callback, T* list) {
+  void CreateLazyNode(BorrowedStringValue name, F callback, T* list) {
     list->emplace(CreateLazyNode(name, std::move(callback)));
   }
 
@@ -606,7 +661,7 @@ class Node final {
   //  root:
   //    a:
   //      b [Failed to open link]
-  LazyNode CreateLazyValues(const std::string& name,
+  LazyNode CreateLazyValues(BorrowedStringValue name,
                             LazyNodeCallbackFn callback) __WARN_UNUSED_RESULT;
 
   // Same as CreateLazyValues, but emplaces the value in the given container.
@@ -614,7 +669,7 @@ class Node final {
   // The type of |list| must have method emplace(LazyNode).
   // inspect::ValueList is recommended for most use cases.
   template <typename F, typename T>
-  void CreateLazyValues(const std::string& name, F callback, T* list) {
+  void CreateLazyValues(BorrowedStringValue name, F callback, T* list) {
     list->emplace(CreateLazyValues(name, std::move(callback)));
   }
 

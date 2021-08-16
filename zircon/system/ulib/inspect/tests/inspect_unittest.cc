@@ -6,8 +6,12 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/cpp/vmo/types.h>
 
+#include <algorithm>
+#include <memory>
 #include <type_traits>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
@@ -40,6 +44,167 @@ TEST(Inspect, VmoName) {
   auto state = inspect::internal::GetState(inspector.get());
   EXPECT_OK(state->GetVmo().get_property(ZX_PROP_NAME, name, sizeof(name)));
   EXPECT_EQ(std::string(name), "InspectHeap");
+}
+
+TEST(Inspect, CreateNodeWithLongStringReferences) {
+  auto inspector = std::make_unique<Inspector>();
+  const std::string long_with_extent_data(3000, '.');
+
+  const inspect::StringReference long_with_extent(long_with_extent_data.c_str());
+
+  const auto initial = inspector->GetStats().allocated_blocks;
+  constexpr auto number_nodes_created = 1000u;
+  std::vector<inspect::Node> nodes(number_nodes_created);
+  for (size_t i = 0; i < number_nodes_created; i++) {
+    nodes.push_back(inspector->GetRoot().CreateChild(long_with_extent));
+  }
+
+  EXPECT_EQ(initial + number_nodes_created + 2, inspector->GetStats().allocated_blocks);
+
+  auto result = inspect::ReadFromVmo(inspector->DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+  ASSERT_EQ(number_nodes_created, hierarchy.children().size());
+  std::for_each(std::cbegin(hierarchy.children()), std::cend(hierarchy.children()),
+                [&](const auto& child) { EXPECT_EQ(long_with_extent_data, child.name()); });
+}
+
+TEST(Inspect, CreateNodeWithLongNames) {
+  auto inspector = std::make_unique<Inspector>();
+  const std::string long_one_block("This will make an order 1 block");
+  const std::string long_with_extent(3000, '.');
+
+  const auto initial = inspector->GetStats().allocated_blocks;
+
+  auto child_one = inspector->GetRoot().CreateChild(long_one_block);
+  EXPECT_EQ(initial + 2, inspector->GetStats().allocated_blocks);
+
+  auto child_two = inspector->GetRoot().CreateChild(long_with_extent);
+  EXPECT_EQ(initial + 2 + 3, inspector->GetStats().allocated_blocks);
+
+  auto result = inspect::ReadFromVmo(inspector->DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+  ASSERT_EQ(2u, hierarchy.children().size());
+  EXPECT_EQ(long_one_block, hierarchy.children()[0].name());
+  EXPECT_EQ(long_with_extent, hierarchy.children()[1].name());
+}
+
+TEST(Inspect, MixStringReferencesWithRegularStrings) {
+  auto inspector = std::make_unique<Inspector>();
+  auto regular = inspector->GetRoot().CreateChild("regular");
+  auto as_ref = inspector->GetRoot().CreateChild(inspect::StringReference("reference"));
+  auto result = inspect::ReadFromVmo(inspector->DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  ASSERT_EQ(2u, hierarchy.children().size());
+  EXPECT_EQ("regular", hierarchy.children()[0].name());
+  EXPECT_EQ("reference", hierarchy.children()[1].name());
+}
+
+TEST(Inspect, DeallocateStringReferencesThenAddMore) {
+  auto inspector = std::make_unique<Inspector>();
+  {
+    const inspect::StringReference sr1("first");
+    const inspect::StringReference sr2("second");
+
+    auto _ = inspector->GetRoot().CreateChild(sr1);
+    auto _i = inspector->GetRoot().CreateChild(sr2);
+
+    auto result = inspect::ReadFromVmo(inspector->DuplicateVmo());
+    ASSERT_TRUE(result.is_ok());
+    auto hierarchy = result.take_value();
+
+    ASSERT_EQ(2u, hierarchy.children().size());
+    EXPECT_EQ("first", hierarchy.children()[0].name());
+    EXPECT_EQ("second", hierarchy.children()[1].name());
+  }
+
+  const inspect::StringReference outer("outer");
+  auto _ = inspector->GetRoot().CreateChild(outer);
+
+  auto result = inspect::ReadFromVmo(inspector->DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  ASSERT_EQ(1u, hierarchy.children().size());
+  EXPECT_EQ("outer", hierarchy.children()[0].name());
+}
+
+TEST(Inspect, UsingStringReferencesAsNames) {
+  auto inspector = std::make_unique<Inspector>();
+  const inspect::StringReference one("one");
+  const inspect::StringReference two("two");
+
+  auto child_one = inspector->GetRoot().CreateChild(one);
+  auto child_two = inspector->GetRoot().CreateChild(two);
+
+  const auto after_children = inspector->GetStats().allocated_blocks;
+
+  auto child_one_child_two = child_one.CreateChild(two);
+  auto child_two_child_one = child_two.CreateChild(one);
+
+  const auto after_more_children = inspector->GetStats().allocated_blocks;
+  // the +2 are the child blocks, note that no name/string_reference is allocated
+  EXPECT_EQ(after_children + 2, after_more_children);
+
+  { auto c = child_one.CreateChild(one); }
+  // The 1 is the child created in the above block. Note that
+  // a new NAME or STRING_REFERENCE is *not* allocated and therefore
+  // not deallocated.
+  EXPECT_EQ(inspector->GetStats().deallocated_blocks, 1);
+
+  auto c = child_one.CreateChild(inspect::StringReference("a new string reference"));
+
+  auto result = inspect::ReadFromVmo(inspector->DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  // children of root
+  ASSERT_EQ(2u, hierarchy.children().size());
+  EXPECT_EQ("one", hierarchy.children()[1].name());
+  EXPECT_EQ("two", hierarchy.children()[0].name());
+
+  // children of child_one
+  ASSERT_EQ(2u, hierarchy.children()[1].children().size());
+  EXPECT_EQ("two", hierarchy.children()[1].children()[0].name());
+  EXPECT_EQ("a new string reference", hierarchy.children()[1].children()[1].name());
+
+  // children of child_two
+  ASSERT_EQ(1u, hierarchy.children()[0].children().size());
+  EXPECT_EQ("one", hierarchy.children()[0].children()[0].name());
+
+  // Inspector::State::~Heap will ensure that release is done properly,
+  // so this unit test ensures that StringReferences are correctly refcounted
+  // and released/destroyed/deallocated.
+}
+
+TEST(Inspect, CreateLazyNodeWithStringReferences) {
+  const inspect::StringReference lazy("lazy");
+  Inspector inspector;
+  inspector.GetRoot().CreateLazyNode(
+      lazy,
+      [] {
+        Inspector insp;
+        insp.GetRoot().CreateInt("val", 10, &insp);
+        return fpromise::make_ok_promise(insp);
+      },
+      &inspector);
+
+  auto children = inspector.GetChildNames();
+  ASSERT_EQ(1u, children.size());
+  EXPECT_EQ("lazy-0", children[0]);
+
+  auto stats = inspector.GetStats();
+  EXPECT_EQ(1u, stats.dynamic_child_count);
+
+  fpromise::result<Inspector> result;
+  fpromise::single_threaded_executor exec;
+  exec.schedule_task(inspector.OpenChild("lazy-0").then(
+      [&](fpromise::result<Inspector>& res) { result = std::move(res); }));
+  exec.run();
+  EXPECT_TRUE(result.is_ok());
 }
 
 TEST(Inspect, CreateChildren) {
