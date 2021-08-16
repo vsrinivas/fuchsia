@@ -1,0 +1,5 @@
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == {vid};
+    fuchsia.BIND_PLATFORM_DEV_PID == {pid};
+    fuchsia.BIND_PLATFORM_DEV_DID == {did};
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == {instance_id};

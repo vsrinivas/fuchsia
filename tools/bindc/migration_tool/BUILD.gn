@@ -1,0 +1,45 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+if (host_toolchain == current_toolchain) {
+  rustc_binary("bin") {
+    name = "bindc_migrate"
+    edition = "2018"
+
+    sources = [
+      "src/composite_bind.rs",
+      "src/composite_device_desc.rs",
+      "src/library.rs",
+      "src/main.rs",
+    ]
+
+    inputs = [
+      "src/templates/composite_bind.template",
+      "src/templates/composite_node.template",
+      "src/templates/pdev_bind.template",
+    ]
+
+    with_unit_tests = true
+    test_environments = [
+      linux_env,
+      mac_env,
+    ]
+
+    deps = [
+      "//src/devices/lib/bind:lib",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:structopt",
+    ]
+  }
+}
+
+install_host_tools("migration_tool") {
+  outputs = [ "bindc_migrate" ]
+  deps = [ ":bin" ]
+}
