@@ -2183,7 +2183,11 @@ impl<T: Autonull> Encodable for Option<&mut T> {
                 Some(x) => x.encode(encoder, offset, recursion_depth),
                 None => {
                     // This is an empty xunion.
-                    encoder.padding(offset, 24);
+                    let union_size = match encoder.context.wire_format_version {
+                        WireFormatVersion::V1 => 24,
+                        WireFormatVersion::V2 => 16,
+                    };
+                    encoder.padding(offset, union_size);
                     Ok(())
                 }
             }
@@ -2637,14 +2641,39 @@ pub fn encode_unknown_data(
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
-    (val.bytes.len() as u32).encode(encoder, offset, recursion_depth)?;
-    (val.handles.len() as u32).encode(encoder, offset + 4, recursion_depth)?;
-    ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
-    Encoder::check_recursion_depth(recursion_depth + 1)?;
-    encoder.append_out_of_line_bytes(&val.bytes);
+    match encoder.context.wire_format_version {
+        WireFormatVersion::V1 => {
+            (val.bytes.len() as u32).encode(encoder, offset, recursion_depth)?;
+            (val.handles.len() as u32).encode(encoder, offset + 4, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
+            Encoder::check_recursion_depth(recursion_depth + 1)?;
+            encoder.append_out_of_line_bytes(&val.bytes);
+            encoder.append_unknown_handles(&mut val.handles);
+        }
+        WireFormatVersion::V2 => {
+            if val.bytes.len() <= 4 {
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        val.bytes.as_ptr(),
+                        encoder.buf.as_mut_ptr().offset(offset as isize),
+                        val.bytes.len(),
+                    );
+                }
+                encoder.padding(offset + val.bytes.len(), 4 - val.bytes.len());
+                (val.handles.len() as u16).encode(encoder, offset + 4, recursion_depth)?;
+                1u16.encode(encoder, offset + 6, recursion_depth)?;
+                encoder.append_unknown_handles(&mut val.handles);
+            } else {
+                (val.bytes.len() as u32).encode(encoder, offset, recursion_depth)?;
+                (val.handles.len() as u32).encode(encoder, offset + 4, recursion_depth)?;
+                Encoder::check_recursion_depth(recursion_depth + 1)?;
+                encoder.append_out_of_line_bytes(&val.bytes);
+                encoder.append_unknown_handles(&mut val.handles);
+            }
+        }
+    }
     encoder.set_next_handle_subtype(ObjectType::NONE);
     encoder.set_next_handle_rights(Rights::SAME_RIGHTS);
-    encoder.append_unknown_handles(&mut val.handles);
     Ok(())
 }
 
@@ -2656,10 +2685,32 @@ pub fn encode_unknown_bytes(
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
-    (val.len() as u64).encode(encoder, offset, recursion_depth)?;
-    ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
-    Encoder::check_recursion_depth(recursion_depth + 1)?;
-    encoder.append_out_of_line_bytes(val);
+    match encoder.context.wire_format_version {
+        WireFormatVersion::V1 => {
+            (val.len() as u64).encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
+            Encoder::check_recursion_depth(recursion_depth + 1)?;
+            encoder.append_out_of_line_bytes(val);
+        }
+        WireFormatVersion::V2 => {
+            if val.len() <= 4 {
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        val.as_ptr(),
+                        encoder.buf.as_mut_ptr().offset(offset as isize),
+                        val.len(),
+                    );
+                }
+                encoder.padding(offset + val.len(), 4 - val.len());
+                0u16.encode(encoder, offset + 4, recursion_depth)?;
+                1u16.encode(encoder, offset + 6, recursion_depth)?;
+            } else {
+                (val.len() as u64).encode(encoder, offset, recursion_depth)?;
+                Encoder::check_recursion_depth(recursion_depth + 1)?;
+                encoder.append_out_of_line_bytes(val);
+            }
+        }
+    }
     Ok(())
 }
 
@@ -2673,21 +2724,51 @@ pub fn encode_in_envelope(
 ) -> Result<()> {
     match val {
         Some(x) => {
-            // Start at offset 8 because we write the first 8 bytes (number of
-            // bytes and number number of handles, both u32) at the end.
-            ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
-            let bytes_before = encoder.buf.len();
-            let handles_before = encoder.handles.len();
-            encoder.write_out_of_line(
-                x.inline_size(encoder.context),
-                recursion_depth,
-                |e, offset, recursion_depth| x.encode(e, offset, recursion_depth),
-            )?;
-            let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
-            let mut handles_written = (encoder.handles.len() - handles_before) as u32;
-            debug_assert!(bytes_written % 8 == 0);
-            bytes_written.encode(encoder, offset, recursion_depth)?;
-            handles_written.encode(encoder, offset + 4, recursion_depth)?;
+            match encoder.context.wire_format_version {
+                WireFormatVersion::V1 => {
+                    // Start at offset 8 because we write the first 8 bytes (number of
+                    // bytes and number number of handles, both u32) at the end.
+                    ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
+                    let bytes_before = encoder.buf.len();
+                    let handles_before = encoder.handles.len();
+                    encoder.write_out_of_line(
+                        x.inline_size(encoder.context),
+                        recursion_depth,
+                        |e, offset, recursion_depth| x.encode(e, offset, recursion_depth),
+                    )?;
+                    let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
+                    let mut handles_written = (encoder.handles.len() - handles_before) as u32;
+                    debug_assert!(bytes_written % 8 == 0);
+                    bytes_written.encode(encoder, offset, recursion_depth)?;
+                    handles_written.encode(encoder, offset + 4, recursion_depth)?;
+                }
+                WireFormatVersion::V2 => {
+                    let inline_size = x.inline_size(encoder.context);
+                    if inline_size <= 4 {
+                        let handles_before = encoder.handles.len();
+                        x.encode(encoder, offset, recursion_depth)?;
+                        encoder.padding(offset + inline_size, 4 - inline_size);
+                        let mut handles_written = (encoder.handles.len() - handles_before) as u16;
+                        handles_written.encode(encoder, offset + 4, recursion_depth)?;
+                        let mut inline_marker = 1u16;
+                        inline_marker.encode(encoder, offset + 6, recursion_depth)?;
+                        return Ok(());
+                    }
+
+                    let bytes_before = encoder.buf.len();
+                    let handles_before = encoder.handles.len();
+                    encoder.write_out_of_line(
+                        inline_size,
+                        recursion_depth,
+                        |e, offset, recursion_depth| x.encode(e, offset, recursion_depth),
+                    )?;
+                    let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
+                    let mut handles_written = (encoder.handles.len() - handles_before) as u32;
+                    debug_assert!(bytes_written % 8 == 0);
+                    bytes_written.encode(encoder, offset, recursion_depth)?;
+                    handles_written.encode(encoder, offset + 4, recursion_depth)?;
+                }
+            }
         }
         None => {
             0u32.encode(encoder, offset, recursion_depth)?; // num_bytes
@@ -2906,7 +2987,11 @@ macro_rules! fidl_table {
                 if max_ordinal == 0 {
                     return Ok(());
                 }
-                let bytes_len = (max_ordinal as usize) * 16;
+                let envelope_size = match encoder.context().wire_format_version {
+                    $crate::encoding::WireFormatVersion::V1 => 16,
+                    $crate::encoding::WireFormatVersion::V2 => 8,
+                };
+                let bytes_len = (max_ordinal as usize) * envelope_size;
                 encoder.write_out_of_line(bytes_len, recursion_depth, |_encoder, _offset, _recursion_depth| {
                     $(
                         let mut _unknown_fields = self.$value_unknown_name.iter().flatten();
@@ -2925,24 +3010,25 @@ macro_rules! fidl_table {
                             if **ordinal > $ordinal {
                                 break;
                             }
-                            let cur_offset: usize = (**ordinal as usize - 1) * 16;
+                            let cur_offset: usize = (**ordinal as usize - 1) * envelope_size;
                             // Zero reserved fields.
                             _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
 
                             // Safety:
-                            // - bytes_len is calculated to fit 16*max(member.ordinal).
-                            // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
-                            //   16 bytes, there is always sufficient room.
+                            // - bytes_len is calculated to fit envelope_size*max(member.ordinal).
+                            // - Since cur_offset is envelope_size*(member.ordinal - 1) and the envelope takes
+                            //   envelope_size bytes, there is always sufficient room.
                             _unknown_encoder_func(*data, _encoder, _offset + cur_offset, _recursion_depth)?;
                             _next_unknown = _unknown_fields.next();
-                            _prev_end_offset = cur_offset + 16;
+                            _prev_end_offset = cur_offset + envelope_size;
                         }
                         if $ordinal > max_ordinal {
                             return Ok(());
                         }
 
-                        // Write at offset+(ordinal-1)*16, since ordinals are one-based and envelopes are 16 bytes.
-                        let cur_offset: usize = ($ordinal - 1) * 16;
+                        // Write at offset+(ordinal-1)*envelope_size, since ordinals are one-based and envelopes
+                        // are envelope_size bytes.
+                        let cur_offset: usize = ($ordinal - 1) * envelope_size;
 
                         // Zero reserved fields.
                         _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
@@ -2953,30 +3039,30 @@ macro_rules! fidl_table {
                             _encoder.set_next_handle_rights($member_handle_rights);
                         )?
                         // Safety:
-                        // - bytes_len is calculated to fit 16*max(member.ordinal).
-                        // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
-                        //   16 bytes, there is always sufficient room.
+                        // - bytes_len is calculated to fit envelope_size*max(member.ordinal).
+                        // - Since cur_offset is envelope_size*(member.ordinal - 1) and the envelope takes
+                        //   envelope_size bytes, there is always sufficient room.
                         let mut field = self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable);
                         $crate::encoding::encode_in_envelope(&mut field, _encoder, _offset + cur_offset, _recursion_depth)?;
 
-                        _prev_end_offset = cur_offset + 16;
+                        _prev_end_offset = cur_offset + envelope_size;
                     )*
 
                     // Encode the remaining unknown envelopes. We use a while loop here instead of
                     // a for loop on `_unknown_fields`, because there might be a remaining unknown
                     // field stored in `_next_unknown`.
                     while let Some((ordinal, data)) = _next_unknown.as_mut() {
-                        let cur_offset: usize = (**ordinal as usize - 1) * 16;
+                        let cur_offset: usize = (**ordinal as usize - 1) * envelope_size;
                         // Zero reserved fields.
                         _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
 
                         // Safety:
-                        // - bytes_len is calculated to fit 16*max(member.ordinal).
-                        // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
-                        //   16 bytes, there is always sufficient room.
+                        // - bytes_len is calculated to fit envelope_size*max(member.ordinal).
+                        // - Since cur_offset is envelope_size*(member.ordinal - 1) and the envelope takes
+                        //   envelope_size bytes, there is always sufficient room.
                         _unknown_encoder_func(data, _encoder, _offset + cur_offset, _recursion_depth)?;
                         _next_unknown = _unknown_fields.next();
-                        _prev_end_offset = cur_offset + 16;
+                        _prev_end_offset = cur_offset + envelope_size;
                     }
 
                     Ok(())
