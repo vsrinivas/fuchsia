@@ -1346,18 +1346,6 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
   }
 
   if (driver->fallback) {
-    // TODO(fxbug.dev/44586): remove this once a better solution for driver prioritization is
-    // implemented.
-    for (auto& name : config_.eager_fallback_drivers) {
-      if (driver->name == name) {
-        LOGF(INFO, "Marking fallback driver '%s' as eager.", driver->name.c_str());
-        driver->fallback = false;
-        break;
-      }
-    }
-  }
-
-  if (driver->fallback) {
     // fallback driver, load only if all else fails
     fallback_drivers_.push_front(std::move(driver));
   } else if (version[0] == '!') {

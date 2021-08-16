@@ -164,7 +164,6 @@ struct CoordinatorConfig {
   // The path prefix to find binaries, drivers, etc. Typically this is "/boot/", but in test
   // environments this might be different.
   std::string path_prefix = "/boot/";
-  std::vector<fbl::String> eager_fallback_drivers;
   // The decision to make when we encounter a driver host crash.
   DriverHostCrashPolicy crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
 };

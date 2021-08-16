@@ -49,6 +49,31 @@ bool is_driver_disabled(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args
   return disabled.ok() && disabled->value;
 }
 
+bool is_driver_eager_fallback(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
+                              const char* name) {
+  if (!boot_args) {
+    return false;
+  }
+  std::vector<fbl::String> eager_fallback_drivers;
+  auto drivers = boot_args->GetString("devmgr.bind-eager");
+  if (drivers.ok() && !drivers->value.is_null() && !drivers->value.empty()) {
+    std::string list(drivers->value.data(), drivers->value.size());
+    size_t pos;
+    while ((pos = list.find(',')) != std::string::npos) {
+      eager_fallback_drivers.emplace_back(list.substr(0, pos));
+      list.erase(0, pos + 1);
+    }
+    eager_fallback_drivers.emplace_back(std::move(list));
+  }
+
+  for (auto& driver : eager_fallback_drivers) {
+    if (driver.compare(name) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
                   const uint8_t* bytecode, void* cookie) {
   auto context = static_cast<AddContext*>(cookie);
@@ -100,6 +125,12 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
   drv->name = note->name;
   if (note->version[0] == '*') {
     drv->fallback = true;
+    // TODO(fxbug.dev/44586): remove this once a better solution for driver prioritization is
+    // implemented.
+    if (is_driver_eager_fallback(context->boot_args, drv->name.c_str())) {
+      LOGF(INFO, "Marking fallback driver '%s' as eager.", drv->name.c_str());
+      drv->fallback = false;
+    }
   }
 
   if (context->vmo.is_valid()) {

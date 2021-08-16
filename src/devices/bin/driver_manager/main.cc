@@ -60,7 +60,6 @@ struct DriverManagerParams {
   bool require_system;
   bool suspend_timeout_fallback;
   bool verbose;
-  std::vector<fbl::String> eager_fallback_drivers;
   DriverHostCrashPolicy crash_policy;
 };
 
@@ -77,18 +76,6 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
       client.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_req));
   if (!bool_resp.ok()) {
     return {};
-  }
-
-  auto drivers = client.GetString("devmgr.bind-eager");
-  std::vector<fbl::String> eager_fallback_drivers;
-  if (drivers.ok() && !drivers->value.is_null() && !drivers->value.empty()) {
-    std::string list(drivers->value.data(), drivers->value.size());
-    size_t pos;
-    while ((pos = list.find(',')) != std::string::npos) {
-      eager_fallback_drivers.emplace_back(list.substr(0, pos));
-      list.erase(0, pos + 1);
-    }
-    eager_fallback_drivers.emplace_back(std::move(list));
   }
 
   auto crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
@@ -113,7 +100,6 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
       .require_system = bool_resp->values[2],
       .suspend_timeout_fallback = bool_resp->values[3],
       .verbose = bool_resp->values[4],
-      .eager_fallback_drivers = std::move(eager_fallback_drivers),
       .crash_policy = crash_policy,
   };
 }
@@ -340,7 +326,6 @@ int main(int argc, char** argv) {
   config.verbose = driver_manager_params.verbose;
   config.fs_provider = &system_instance;
   config.path_prefix = driver_manager_args.path_prefix;
-  config.eager_fallback_drivers = std::move(driver_manager_params.eager_fallback_drivers);
   config.enable_ephemeral = driver_manager_params.enable_ephemeral;
   config.crash_policy = driver_manager_params.crash_policy;
 
