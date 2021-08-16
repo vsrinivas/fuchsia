@@ -12,6 +12,7 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
+#include "src/devices/board/drivers/astro/astro-backlight-bind.h"
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556Metadata.h"
 
 namespace astro {
@@ -21,20 +22,6 @@ constexpr pbus_mmio_t backlight_mmios[] = {
         .base = S905D2_GPIO_A0_BASE,
         .length = S905D2_GPIO_AO_LENGTH,
     },
-};
-
-constexpr zx_bind_inst_t i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, ASTRO_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_BACKLIGHT_ADDR),
-};
-
-constexpr device_fragment_part_t i2c_fragment[] = {
-    {countof(i2c_match), i2c_match},
-};
-
-constexpr device_fragment_t fragments[] = {
-    {"i2c", countof(i2c_fragment), i2c_fragment},
 };
 
 constexpr double kMaxBrightnessInNits = 400.0;
@@ -84,8 +71,9 @@ constexpr pbus_dev_t backlight_dev = []() {
 }();
 
 zx_status_t Astro::BacklightInit() {
-  auto status = pbus_.CompositeDeviceAdd(&backlight_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), "i2c");
+  auto status = pbus_.CompositeDeviceAdd(&backlight_dev,
+                                         reinterpret_cast<uint64_t>(astro_backlight_fragments),
+                                         countof(astro_backlight_fragments), "i2c");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
   }

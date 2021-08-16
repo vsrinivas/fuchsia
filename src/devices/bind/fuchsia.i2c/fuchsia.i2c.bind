@@ -12,3 +12,17 @@ extend uint fuchsia.BIND_PROTOCOL {
 extend uint fuchsia.BIND_I2C_CLASS {
   HID = 0x01,
 };
+
+extend uint fuchsia.BIND_I2C_BUS_ID {
+  ASTRO_A0_0 = 0,
+  ASTRO_2 = 1,
+  ASTRO_3 = 2,
+};
+
+extend uint fuchsia.BIND_I2C_ADDRESS {
+  BACKLIGHT = 0x2C,
+  FOCALTECH_TOUCH = 0x38,
+  AMBIENTLIGHT = 0x39,
+  AUDIO_CODEC = 0x48,
+  GOODIX_TOUCH = 0x5d,
+};

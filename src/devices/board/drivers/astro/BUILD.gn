@@ -26,6 +26,14 @@ driver_bind_rules("astro-bind") {
   ]
 }
 
+driver_bind_rules("astro-backlight-bind") {
+  rules = "astro-backlight.bind"
+  header_output = "astro-backlight-bind.h"
+  bind_output = "astro-backlight.bindbc"
+  tests = "backlight-bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
 driver_module("astro-driver") {
   output_name = "astro"
   configs += [
@@ -63,6 +71,7 @@ driver_module("astro-driver") {
     "astro.cc",
   ]
   deps = [
+    ":astro-backlight-bind_header",
     ":astro-bind",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
