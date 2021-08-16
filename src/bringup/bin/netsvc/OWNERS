@@ -1,5 +1,4 @@
 include /src/connectivity/network/OWNERS
-scottmg@google.com
 surajmalhotra@google.com
 
 # COMPONENT: NetworkStack>netsvc

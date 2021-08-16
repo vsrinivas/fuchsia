@@ -2,4 +2,3 @@ include /zircon/kernel/OWNERS
 
 frousseau@google.com
 maniscalco@google.com
-scottmg@google.com
