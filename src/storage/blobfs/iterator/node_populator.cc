@@ -9,13 +9,13 @@
 
 #include <vector>
 
-#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/allocator/base_allocator.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/extent_iterator.h"
 
 namespace blobfs {
 
-NodePopulator::NodePopulator(Allocator* allocator, std::vector<ReservedExtent> extents,
+NodePopulator::NodePopulator(BaseAllocator* allocator, std::vector<ReservedExtent> extents,
                              std::vector<ReservedNode> nodes)
     : allocator_(allocator), extents_(std::move(extents)), nodes_(std::move(nodes)) {
   ZX_DEBUG_ASSERT(extents_.size() <= kMaxBlobExtents);
