@@ -14,10 +14,7 @@
     },
     capabilities: [
         {
-            protocol: [
-                "fuchsia.diagnostics.internal.PersistenceController",
-                "fuchsia.diagnostics.persist.DataPersistence-wlan",
-            ],
+            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-wlan" ],
         },
     ],
     use: [
@@ -37,8 +34,8 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.diagnostics.internal.PersistenceController" ],
-            from: "self",
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
         },
         {
             protocol: [ "fuchsia.diagnostics.persist.DataPersistence-wlan" ],

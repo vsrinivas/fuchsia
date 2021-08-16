@@ -11,11 +11,6 @@
         binary: "bin/launcher",
         args: [ "log-stats" ],
     },
-    capabilities: [
-        {
-            protocol: [ "fuchsia.diagnostics.internal.LogStatsController" ],
-        },
-    ],
     use: [
         {
             protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
@@ -31,8 +26,8 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.diagnostics.internal.LogStatsController" ],
-            from: "self",
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
         },
     ],
 }

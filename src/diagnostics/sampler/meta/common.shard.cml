@@ -7,11 +7,6 @@
         runner: "elf",
         binary: "bin/launcher",
     },
-    capabilities: [
-        {
-            protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
-        },
-    ],
     use: [
         {
             protocol: "fuchsia.logger.Log",
@@ -40,8 +35,8 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
-            from: "self",
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
         },
     ],
 }

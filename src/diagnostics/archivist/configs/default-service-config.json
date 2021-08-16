@@ -1,9 +1,9 @@
 {
     "service_list": [
-        "fuchsia.diagnostics.internal.DetectController",
-        "fuchsia.diagnostics.internal.KcounterController",
-        "fuchsia.diagnostics.internal.PersistenceController",
-        "fuchsia.diagnostics.internal.LogStatsController",
-        "fuchsia.diagnostics.internal.SamplerController"
+        "fuchsia.component.DetectBinder",
+        "fuchsia.component.KcounterBinder",
+        "fuchsia.component.PersistenceBinder",
+        "fuchsia.component.LogStatsBinder",
+        "fuchsia.component.SamplerBinder"
     ]
 }

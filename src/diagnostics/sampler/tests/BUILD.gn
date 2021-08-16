@@ -38,9 +38,9 @@ rustc_test("integration-bin") {
   deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
-    "//src/diagnostics/control:controller-rustc",
     "//src/diagnostics/sampler/tests/fidl:fuchsia.mockrebootcontroller-rustc",
     "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller-rustc",
     "//src/lib/diagnostics/reader/rust",

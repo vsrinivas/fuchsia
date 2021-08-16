@@ -14,7 +14,6 @@ rustc_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//src/diagnostics/control:controller-rustc",
     "//src/diagnostics/lib/inspect-fetcher",
     "//src/diagnostics/lib/util/injectable-time",
     "//src/diagnostics/persistence/fidl:persist-rustc",

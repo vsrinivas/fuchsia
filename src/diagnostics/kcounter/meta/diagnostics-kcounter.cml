@@ -8,18 +8,13 @@
         binary: "bin/launcher",
         args: [ "kcounter" ],
     },
-    capabilities: [
-        {
-            protocol: [ "fuchsia.diagnostics.internal.KcounterController" ],
-        },
-    ],
     use: [
         { protocol: "fuchsia.kernel.Counter" },
     ],
     expose: [
         {
-            protocol: [ "fuchsia.diagnostics.internal.KcounterController" ],
-            from: "self",
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
         },
     ],
 }

@@ -767,11 +767,11 @@
         // Weak services from appmgr and diagnostics products.
         {
             protocol: [
-                "fuchsia.diagnostics.internal.DetectController",
-                "fuchsia.diagnostics.internal.KcounterController",
-                "fuchsia.diagnostics.internal.LogStatsController",
-                "fuchsia.diagnostics.internal.PersistenceController",
-                "fuchsia.diagnostics.internal.SamplerController",
+                "fuchsia.component.DetectBinder",
+                "fuchsia.component.KcounterBinder",
+                "fuchsia.component.LogStatsBinder",
+                "fuchsia.component.PersistenceBinder",
+                "fuchsia.component.SamplerBinder",
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
             ],

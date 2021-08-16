@@ -4,7 +4,7 @@
 
 use diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect};
 use fidl_fuchsia_cobalt_test::LoggerQuerierMarker;
-use fidl_fuchsia_diagnostics_internal::SamplerControllerMarker;
+use fidl_fuchsia_component::BinderMarker;
 use fidl_fuchsia_mockrebootcontroller::MockRebootControllerMarker;
 use fidl_fuchsia_samplertestcontroller::SamplerTestControllerMarker;
 use fuchsia_async as fasync;
@@ -27,8 +27,10 @@ async fn event_count_sampler_test() {
         instance.root.connect_to_protocol_at_exposed_dir::<MockRebootControllerMarker>().unwrap();
     let logger_querier =
         instance.root.connect_to_protocol_at_exposed_dir::<LoggerQuerierMarker>().unwrap();
-    let _sampler_controller =
-        instance.root.connect_to_protocol_at_exposed_dir::<SamplerControllerMarker>().unwrap();
+    let _sampler_binder = instance
+        .root
+        .connect_to_named_protocol_at_exposed_dir::<BinderMarker>("fuchsia.component.SamplerBinder")
+        .unwrap();
 
     // If we don't sleep, then calls to logger_querier.watch fail because
     // the logger isn't available.
@@ -127,8 +129,10 @@ async fn reboot_server_crashed_test() {
         instance.root.connect_to_protocol_at_exposed_dir::<MockRebootControllerMarker>().unwrap();
     let logger_querier =
         instance.root.connect_to_protocol_at_exposed_dir::<LoggerQuerierMarker>().unwrap();
-    let _sampler_controller =
-        instance.root.connect_to_protocol_at_exposed_dir::<SamplerControllerMarker>().unwrap();
+    let _sampler_binder = instance
+        .root
+        .connect_to_named_protocol_at_exposed_dir::<BinderMarker>("fuchsia.component.SamplerBinder")
+        .unwrap();
 
     // If we don't sleep, then calls to logger_querier.watch fail because
     // the logger isn't available.
@@ -182,8 +186,10 @@ async fn reboot_server_crashed_test() {
 #[fuchsia::test]
 async fn sampler_inspect_test() {
     let instance = test_topology::create().await.expect("initialized topology");
-    let _sampler_controller =
-        instance.root.connect_to_protocol_at_exposed_dir::<SamplerControllerMarker>().unwrap();
+    let _sampler_binder = instance
+        .root
+        .connect_to_named_protocol_at_exposed_dir::<BinderMarker>("fuchsia.component.SamplerBinder")
+        .unwrap();
 
     // Observe verification shows up in inspect.
     let mut data = ArchiveReader::new()

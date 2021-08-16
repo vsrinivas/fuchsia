@@ -7,7 +7,7 @@ use anyhow::Error;
 use cm_rust;
 use fidl_fuchsia_io2 as fio2;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_component_test::{builder::*, mock::*, RealmInstance};
+use fuchsia_component_test::{builder::*, mock::*, Moniker, RealmInstance};
 use futures::StreamExt;
 use std::sync::{Arc, Mutex};
 
@@ -80,11 +80,6 @@ pub async fn create() -> Result<RealmInstance, Error> {
             ],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.diagnostics.internal.SamplerController"),
-            source: RouteEndpoint::component("wrapper/sampler"),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?
-        .add_route(CapabilityRoute {
             capability: Capability::directory("config-data", "", fio2::R_STAR_DIR),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component("wrapper/sampler")],
@@ -150,7 +145,29 @@ pub async fn create() -> Result<RealmInstance, Error> {
             source: RouteEndpoint::component("wrapper/test_case_archivist"),
             targets: vec![RouteEndpoint::component("wrapper/sampler")],
         })?;
-    let instance = builder.build().create().await?;
+    let mut realm = builder.build();
+
+    // TODO(fxbug.dev/82734): RealmBuilder currently doesn't support renaming capabilities, so we
+    // need to manually do it here.
+    let mut wrapper_decl = realm.get_decl(&"wrapper".into()).await.unwrap();
+    wrapper_decl.exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+        source: cm_rust::ExposeSource::Child("sampler".into()),
+        target: cm_rust::ExposeTarget::Parent,
+        source_name: "fuchsia.component.Binder".into(),
+        target_name: "fuchsia.component.SamplerBinder".into(),
+    }));
+    realm.set_component(&"wrapper".into(), wrapper_decl).await.unwrap();
+
+    let mut root_decl = realm.get_decl(&Moniker::root()).await.unwrap();
+    root_decl.exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+        source: cm_rust::ExposeSource::Child("wrapper".into()),
+        target: cm_rust::ExposeTarget::Parent,
+        source_name: "fuchsia.component.SamplerBinder".into(),
+        target_name: "fuchsia.component.SamplerBinder".into(),
+    }));
+    realm.set_component(&Moniker::root(), root_decl).await.unwrap();
+
+    let instance = realm.create().await?;
     Ok(instance)
 }
 

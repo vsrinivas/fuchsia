@@ -890,24 +890,29 @@
             from: "#session-manager",
         },
         {
-            protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
+            protocol: [ "fuchsia.component.Binder" ],
             from: "#detect",
+            as: "fuchsia.component.DetectBinder",
         },
         {
-            protocol: [ "fuchsia.diagnostics.internal.KcounterController" ],
+            protocol: [ "fuchsia.component.Binder" ],
             from: "#diagnostics-kcounter",
+            as: "fuchsia.component.KcounterBinder",
         },
         {
-            protocol: [ "fuchsia.diagnostics.internal.PersistenceController" ],
+            protocol: [ "fuchsia.component.Binder" ],
             from: "#diagnostics-persistence",
+            as: "fuchsia.component.PersistenceBinder",
         },
         {
-            protocol: [ "fuchsia.diagnostics.internal.LogStatsController" ],
+            protocol: [ "fuchsia.component.Binder" ],
             from: "#log-stats",
+            as: "fuchsia.component.LogStatsBinder",
         },
         {
-            protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
+            protocol: [ "fuchsia.component.Binder" ],
             from: "#sampler",
+            as: "fuchsia.component.SamplerBinder",
         },
         {
             protocol: [
