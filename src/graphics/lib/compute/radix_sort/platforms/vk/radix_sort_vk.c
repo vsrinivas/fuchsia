@@ -690,10 +690,9 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
   if (pfn_vkCmdBeginDebugUtilsLabelEXT != NULL)
     {
       VkDebugUtilsLabelEXT const label = {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        "radix_sort",
-        { 1.0f, 0.0f, 0.0f, 1.0f },  // {R,G,B,A}: RED
+        .sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        .pNext      = NULL,
+        .pLabelName = "radix_sort_vk_sort",
       };
 
       pfn_vkCmdBeginDebugUtilsLabelEXT(cb, &label);
@@ -1020,10 +1019,9 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
   if (pfn_vkCmdBeginDebugUtilsLabelEXT != NULL)
     {
       VkDebugUtilsLabelEXT const label = {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        "radix_sort",
-        { 1.0f, 0.0f, 0.0f, 1.0f },  // {R,G,B,A}: RED
+        .sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        .pNext      = NULL,
+        .pLabelName = "radix_sort_vk_sort_indirect",
       };
 
       pfn_vkCmdBeginDebugUtilsLabelEXT(cb, &label);

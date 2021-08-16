@@ -18,6 +18,7 @@
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
 #include "common/vk/cache.h"
+#include "common/vk/debug_utils.h"
 #include "common/vk/find_mem_type_idx.h"
 
 //
@@ -39,7 +40,9 @@
 #include "amd_gcn3_u32_rodata.h"
 #include "amd_gcn3_u64_rodata.h"
 #include "arm_bifrost4_u32_rodata.h"
+#include "arm_bifrost4_u64_rodata.h"
 #include "arm_bifrost8_u32_rodata.h"
+#include "arm_bifrost8_u64_rodata.h"
 #include "intel_gen8_u32_rodata.h"
 #include "intel_gen8_u64_rodata.h"
 #include "nvidia_sm35_u32_rodata.h"
@@ -200,7 +203,7 @@ rs_load_target(char const * filename)
 // clang-format off
 struct rs_name_target
 {
-  char const *                           name;
+  char const * name;
   union
   {
     struct target_archive_header const * header;
@@ -212,7 +215,9 @@ static struct rs_name_target const rs_named_targets[] = {
   { .name = "amd_gcn3_u32",     .header = amd_gcn3_u32_rodata     },
   { .name = "amd_gcn3_u64",     .header = amd_gcn3_u64_rodata     },
   { .name = "arm_bifrost4_u32", .header = arm_bifrost4_u32_rodata },
+  { .name = "arm_bifrost4_u64", .header = arm_bifrost4_u64_rodata },
   { .name = "arm_bifrost8_u32", .header = arm_bifrost8_u32_rodata },
+  { .name = "arm_bifrost8_u64", .header = arm_bifrost8_u64_rodata },
   { .name = "intel_gen8_u32",   .header = intel_gen8_u32_rodata   },
   { .name = "intel_gen8_u64",   .header = intel_gen8_u64_rodata   },
   { .name = "nvidia_sm35_u32",  .header = nvidia_sm35_u32_rodata  },
@@ -487,6 +492,11 @@ main(int argc, char const * argv[])
   vk(CreateInstance(&instance_info, NULL, &instance));
 
   //
+  // init debug utils
+  //
+  vk_debug_utils_init(instance);
+
+  //
   // acquire all physical devices and select a match
   //
   uint32_t pd_count;
@@ -510,7 +520,7 @@ main(int argc, char const * argv[])
                             (tmp.deviceID == device_id);
 
       fprintf(stdout,
-              "%c %4X : %X : %s\n",
+              "%c %8X : %-8X : %s\n",
               is_match ? '*' : ' ',
               tmp.vendorID,
               tmp.deviceID,
