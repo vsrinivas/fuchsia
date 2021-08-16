@@ -489,7 +489,7 @@ impl PeerTask {
             Ok(token) => Some(token),
         };
         info!("Connecting SCO to {}: {:?}", self.id, codec_id);
-        let try_codecs = codec_id.map_or(vec![CodecId::MSBC, CodecId::CVSD], |c| vec![c]);
+        let try_codecs = codec_id.map_or(vec![CodecId::CVSD], |c| vec![c]);
         let connection = self.sco_connector.connect(self.id.clone(), try_codecs).await?;
 
         let params = connection.params.clone();
@@ -1351,7 +1351,13 @@ mod tests {
         result: Result<(), ScoErrorCode>,
     ) -> Option<zx::Socket> {
         let proxy = match profile_requests.next().await.expect("request").unwrap() {
-            bredr::ProfileRequest::ConnectSco { receiver, .. } => receiver.into_proxy().unwrap(),
+            bredr::ProfileRequest::ConnectSco { receiver, params, .. } => {
+                // TODO(fxbug.dev/81374): Remove when mSBC is enabled again.
+                let param_set = params.parameter_set.unwrap();
+                assert!(param_set != bredr::HfpParameterSet::MsbcT1);
+                assert!(param_set != bredr::HfpParameterSet::MsbcT2);
+                receiver.into_proxy().unwrap()
+            }
             x => panic!("Unexpected request to profile stream: {:?}", x),
         };
         match result {

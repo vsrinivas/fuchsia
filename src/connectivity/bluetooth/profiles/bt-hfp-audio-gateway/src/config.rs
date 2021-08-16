@@ -57,7 +57,7 @@ mod tests {
         assert!(config.remote_audio_volume_control);
         assert!(!config.respond_and_hold);
         assert!(!config.enhanced_call_controls);
-        assert!(config.wide_band_speech);
+        assert!(!config.wide_band_speech);
         assert!(!config.enhanced_voice_recognition);
         assert!(!config.enhanced_voice_recognition_with_text);
     }

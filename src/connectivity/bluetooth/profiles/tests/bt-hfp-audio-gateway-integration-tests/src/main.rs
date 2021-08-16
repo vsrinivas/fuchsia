@@ -404,15 +404,18 @@ async fn test_hfp_full_slc_init_procedure(tf: HfpAgIntegrationTest) {
     // Peer sends its HF features to the HFP component (AG) - we expect HFP to send
     // its AG features back.
     // TODO: We shouldn't need to assert on the specific features in the response.
+    // TODO(fxbug.dev/81374): features should be 3907 if Codec negotiation is supported.
     let hf_features_cmd = at::Command::Brsf { features: 0b11_1111_1111_1111 };
     send_command_and_expect_response(
         &mut remote,
         hf_features_cmd,
-        vec![at::success(at::Success::Brsf { features: 3907i64 }), at::Response::Ok],
+        vec![at::success(at::Success::Brsf { features: 3395i64 }), at::Response::Ok],
     )
     .await;
 
     // Peer sends its supported codecs - expect OK back.
+    // TODO(fxbug.dev/81374): when we support codec negotiation, this should get sent
+    /*
     let peer_supported_codecs_cmd = at::Command::Bac { codecs: vec![] };
     send_command_and_expect_response(
         &mut remote,
@@ -420,6 +423,7 @@ async fn test_hfp_full_slc_init_procedure(tf: HfpAgIntegrationTest) {
         vec![at::Response::Ok],
     )
     .await;
+    */
 
     let indicator_test_cmd = at::Command::CindTest {};
     let expected3 = at::Response::RawBytes(Vec::from(CIND_TEST_RESPONSE_BYTES));
