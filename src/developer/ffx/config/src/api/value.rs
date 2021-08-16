@@ -72,6 +72,12 @@ impl TryFrom<ConfigValue> for Value {
 }
 
 impl ValueStrategy for Option<Value> {
+    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        Box::new(move |value| -> Option<Value> { next(value) })
+    }
+
     fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
         Ok(())
     }

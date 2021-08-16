@@ -1298,7 +1298,7 @@ mod tests {
             // The registration should have been cleared from the config.
             assert_matches!(
                 pkg::config::get_registration(REPO_NAME, TARGET_NODENAME).await,
-                Err(_)
+                Ok(None)
             );
         })
     }
@@ -1405,7 +1405,7 @@ mod tests {
             // The registration should have been cleared from the config.
             assert_matches!(
                 pkg::config::get_registration(REPO_NAME, TARGET_NODENAME).await,
-                Err(_)
+                Ok(None)
             );
         })
     }
@@ -1702,7 +1702,7 @@ mod tests {
             // Make sure nothing was saved to the config.
             assert_matches!(
                 pkg::config::get_registration(REPO_NAME, TARGET_NODENAME).await,
-                Err(_)
+                Ok(None)
             );
         });
     }
