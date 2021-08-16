@@ -52,7 +52,7 @@ zx_status_t SinkPolicyEngine::Init() {
 
 uint8_t SinkPolicyEngine::FindPdo(uint32_t max_voltage_mV, uint32_t max_current_mA) {
   for (size_t i = source_capabilities_.size() - 1; i >= 0; i--) {
-    const auto& pdo = source_capabilities_[i];
+    const auto& pdo = source_capabilities_.get(i);
     switch (pdo.power_type()) {
       case PowerType::FIXED_SUPPLY: {
         FixedSupplyPDO fixed(pdo.value);
@@ -108,7 +108,8 @@ zx_status_t SinkPolicyEngine::RunState(Event event, std::shared_ptr<PdMessage> m
                                           (payload[i * 4 + 2] << 16) | (payload[i * 4 + 3] << 24));
       }
       // Evaluate capabilities and find one satisfying requirements
-      curr_object_position_ = FindPdo(requested_max_volt_mV_, requested_max_curr_mA_);
+      curr_object_position_.set(
+          FindPdo(requested_max_volt_mV_.get(), requested_max_curr_mA_.get()));
       SetState(pe_snk_select_capability);
       break;
     }
@@ -116,16 +117,17 @@ zx_status_t SinkPolicyEngine::RunState(Event event, std::shared_ptr<PdMessage> m
       // Actions
       if (entry) {
         uint32_t rdo_val;
-        switch (source_capabilities_[curr_object_position_ - 1].power_type()) {
+        switch (source_capabilities_.get(curr_object_position_.get() - 1).power_type()) {
           case PowerType::FIXED_SUPPLY: {
-            auto max_curr = FixedSupplyPDO(source_capabilities_[curr_object_position_ - 1].value)
-                                .maximum_current_10mA();
+            auto max_curr =
+                FixedSupplyPDO(source_capabilities_.get(curr_object_position_.get() - 1).value)
+                    .maximum_current_10mA();
             FixedVariableSupplyRDO fixed(0);
             fixed.set_operating_current_10mA(0)
                 .set_maximum_current_10mA(max_curr)
                 // Note: FixedVariableSupplyRDO variables should come before RequestDataObject
                 // variables
-                .set_object_position(curr_object_position_)
+                .set_object_position(curr_object_position_.get())
                 .set_give_back(false)
                 .set_capability_mismatch(true)
                 .set_usb_communications_capable(false)
@@ -137,7 +139,7 @@ zx_status_t SinkPolicyEngine::RunState(Event event, std::shared_ptr<PdMessage> m
           // Only for fixed supply supported for now. Implement others as the need arises.
           default:
             zxlogf(ERROR, "Unsupported Source type %u",
-                   source_capabilities_[curr_object_position_ - 1].power_type());
+                   source_capabilities_.get(curr_object_position_.get() - 1).power_type());
             return ZX_ERR_INTERNAL;
         }
         uint8_t payload[4] = {static_cast<uint8_t>(rdo_val & 0xFF),
@@ -145,8 +147,8 @@ zx_status_t SinkPolicyEngine::RunState(Event event, std::shared_ptr<PdMessage> m
                               static_cast<uint8_t>((rdo_val >> 16) & 0xFF),
                               static_cast<uint8_t>((rdo_val >> 24) & 0xFF)};
         auto req = DataPdMessage(/* num_data_objects */ 1, device()->message_id_,
-                                 device()->power_role_, device()->spec_rev_, device()->data_role_,
-                                 DataMessageType::REQUEST, payload);
+                                 device()->power_role_.get(), device()->spec_rev_.get(),
+                                 device()->data_role_.get(), DataMessageType::REQUEST, payload);
         do {
           status = device()->FifoTransmit(req);
         } while (status == ZX_ERR_SHOULD_WAIT);
@@ -224,9 +226,9 @@ zx_status_t SinkPolicyEngine::RunState(Event event, std::shared_ptr<PdMessage> m
     case pe_snk_get_source_cap: {
       if (entry) {
         zxlogf(DEBUG, "Sending message with id %u", device()->message_id_);
-        auto req =
-            ControlPdMessage(device()->message_id_, device()->power_role_, device()->spec_rev_,
-                             device()->data_role_, ControlMessageType::GET_SOURCE_CAP);
+        auto req = ControlPdMessage(device()->message_id_, device()->power_role_.get(),
+                                    device()->spec_rev_.get(), device()->data_role_.get(),
+                                    ControlMessageType::GET_SOURCE_CAP);
         do {
           status = device()->FifoTransmit(req);
         } while (status == ZX_ERR_SHOULD_WAIT);
@@ -267,7 +269,7 @@ zx_status_t StateMachine::RunState(Event event, std::shared_ptr<PdMessage> messa
     case disabled: {
       device()->is_cc_connected_ = false;
       if (event.cc()) {
-        SetState((device()->power_role_ == sink) ? unattached_snk : unattached_src);
+        SetState((device()->power_role_.get() == sink) ? unattached_snk : unattached_src);
       }
       break;
     }
@@ -281,16 +283,16 @@ zx_status_t StateMachine::RunState(Event event, std::shared_ptr<PdMessage> messa
 
       // set msg header
       status = Switches1Reg::ReadFrom(device()->i2c_)
-                   .set_power_role(device()->power_role_)
-                   .set_data_role(device()->data_role_)
-                   .set_spec_rev(device()->spec_rev_)
+                   .set_power_role(device()->power_role_.get())
+                   .set_data_role(device()->data_role_.get())
+                   .set_spec_rev(device()->spec_rev_.get())
                    .WriteTo(device()->i2c_);
       if (status != ZX_OK) {
         zxlogf(ERROR, "Write failed. %d", status);
         return status;
       }
 
-      status = device()->SetPolarity(device()->polarity_);
+      status = device()->SetPolarity(device()->polarity_.get());
       if (status != ZX_OK) {
         zxlogf(ERROR, "Set polarity failed. %d", status);
         return status;

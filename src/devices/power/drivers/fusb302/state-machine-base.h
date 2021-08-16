@@ -8,7 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/zx/timer.h>
 
-#include "src/devices/power/drivers/fusb302/usb-pd.h"
+#include "src/devices/power/drivers/fusb302/inspectable-types.h"
 
 namespace fusb302 {
 
@@ -34,7 +34,11 @@ struct Event {
 template <class States, class Device>
 class StateMachineBase {
  public:
-  explicit StateMachineBase(Device* device) : device_(device) {}
+  explicit StateMachineBase(Device* device, States init_state, inspect::Node& inspect_root,
+                            const std::string& name)
+      : device_(device),
+        inspect_state_machine_(inspect_root.CreateChild(name)),
+        state_(InspectableUint<States>(&inspect_state_machine_, "State", init_state)) {}
   virtual ~StateMachineBase() = default;
 
   zx_status_t Run(Event event, std::shared_ptr<PdMessage> message) {
@@ -55,11 +59,12 @@ class StateMachineBase {
 
   void SetState(States state) {
     zxlogf(DEBUG, "Setting state to %u", state);
-    state_ = state;
+    state_.set(state);
     entry_ = true;
   }
-  States state() { return state_; }
+  States state() { return state_.get(); }
   Device* device() { return device_; }
+  inspect::Node* inspect() { return &inspect_state_machine_; }
 
  private:
   virtual zx_status_t RunState(Event event, std::shared_ptr<PdMessage> message, bool entry) = 0;
@@ -67,8 +72,9 @@ class StateMachineBase {
   // device_:Pointer to HW device (ex: Fusb302)
   Device* device_;
 
+  inspect::Node inspect_state_machine_;
   // state_: Current state.
-  States state_;
+  InspectableUint<States> state_;
 
   // entry_: Are we waiting to enter into a new state? If so, don't wait for the next timer to fire
   // and run the entry actions.

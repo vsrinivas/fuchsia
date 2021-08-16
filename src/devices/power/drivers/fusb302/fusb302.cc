@@ -50,8 +50,8 @@ zx::status<Event> Fusb302::GetInterrupt() {
   if (interrupt_a.i_togdone()) {
     event.set_cc(true);
     auto cc_state = Status1AReg::ReadFrom(i2c_).togss();
-    power_role_ = Status1AReg::GetPowerRole(cc_state);
-    polarity_ = Status1AReg::GetPolarity(cc_state);
+    power_role_.set(Status1AReg::GetPowerRole(cc_state));
+    polarity_.set(Status1AReg::GetPolarity(cc_state));
 
     status = Control2Reg::ReadFrom(i2c_).set_toggle(0).WriteTo(i2c_);
     if (status != ZX_OK) {
@@ -60,10 +60,10 @@ zx::status<Event> Fusb302::GetInterrupt() {
     }
 
     status = Switches0Reg::ReadFrom(i2c_)
-                 .set_pu_en1(power_role_ == source)
-                 .set_pu_en2(power_role_ == source)
-                 .set_pdwn1(power_role_ == sink)
-                 .set_pdwn2(power_role_ == sink)
+                 .set_pu_en1(power_role_.get() == source)
+                 .set_pu_en2(power_role_.get() == source)
+                 .set_pdwn1(power_role_.get() == sink)
+                 .set_pdwn2(power_role_.get() == sink)
                  .WriteTo(i2c_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
@@ -92,11 +92,11 @@ zx::status<Event> Fusb302::GetInterrupt() {
 
   if (interrupt_a.i_retryfail()) {
     event.set_tx(true);
-    tx_state_ = failed;
+    tx_state_.set(failed);
   }
 
   if (interrupt_a.i_hardsent()) {
-    tx_state_ = success;
+    tx_state_.set(success);
     event.set_tx(true);
   }
 
@@ -148,7 +148,7 @@ zx_status_t Fusb302::IrqThread() {
         zxlogf(DEBUG, "event %x", event.value);
 
         if (is_cc_connected_ && (event.cc())) {
-          if (power_role_ == sink) {
+          if (power_role_.get() == sink) {
             if (!Status0Reg::ReadFrom(i2c_).vbusok()) {
               InitHw();
               state_machine_.Restart();
@@ -160,7 +160,7 @@ zx_status_t Fusb302::IrqThread() {
               zxlogf(ERROR, "Failed to get CC. %d", status);
               break;
             }
-            if (polarity_ == CC2) {
+            if (polarity_.get() == CC2) {
               cc1 = cc2;
             }
             if (cc1 == 0) {
@@ -184,13 +184,13 @@ zx_status_t Fusb302::IrqThread() {
             // Received GOOD_CRC message. Should be a TX event.
             event.set_tx(true);
             event.set_rx(false);
-            tx_state_ = success;
+            tx_state_.set(success);
           } else {
             message = std::make_shared<PdMessage>(std::move(val.value()));
           }
         }
 
-        if ((event.tx()) && (tx_state_ == success)) {
+        if ((event.tx()) && (tx_state_.get() == success)) {
           message_id_++;
         }
         break;
@@ -224,7 +224,7 @@ zx_status_t Fusb302::IrqThread() {
 }
 
 zx_status_t Fusb302::FifoTransmit(const PdMessage& message) {
-  if (tx_state_ == busy) {
+  if (tx_state_.get() == busy) {
     return ZX_ERR_SHOULD_WAIT;
   }
   enum TxToken : uint8_t {
@@ -266,7 +266,7 @@ zx_status_t Fusb302::FifoTransmit(const PdMessage& message) {
       return status;
     }
   }
-  tx_state_ = busy;
+  tx_state_.set(busy);
   return ZX_OK;
 }
 
@@ -317,7 +317,7 @@ zx_status_t Fusb302::GetCC(uint8_t* cc1, uint8_t* cc2) {
 }
 
 uint8_t Fusb302::MeasureCC(Polarity polarity) {
-  if (power_role_ != sink) {
+  if (power_role_.get() != sink) {
     // Only sink operations allowed for now. Implement source when the need arises.
     zxlogf(ERROR, "Can't measure for source!");
     return 0;
@@ -396,7 +396,7 @@ zx_status_t Fusb302::SetPolarity(Polarity polarity) {
     return status;
   }
 
-  polarity_ = polarity;
+  polarity_.set(polarity);
   return ZX_OK;
 }
 
@@ -425,8 +425,8 @@ zx_status_t Fusb302::RxEnable(bool enable) {
   zx_status_t status;
   if (enable) {
     status = Switches0Reg::ReadFrom(i2c_)
-                 .set_meas_cc1(polarity_ == CC1)
-                 .set_meas_cc2(polarity_ == CC2)
+                 .set_meas_cc1(polarity_.get() == CC1)
+                 .set_meas_cc2(polarity_.get() == CC2)
                  .WriteTo(i2c_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to write to power delivery unit. %d", status);
@@ -597,12 +597,9 @@ zx_status_t Fusb302::Init() {
 zx_status_t Fusb302::InitInspect() {
   // Device ID
   auto device_id = DeviceIdReg::ReadFrom(i2c_);
-
-  device_id_ = inspect_.GetRoot().CreateChild("DeviceId");
-  device_id_.CreateUint("VersionId", device_id.version_id(), &inspect_);
-  device_id_.CreateUint("ProductId", device_id.product_id(), &inspect_);
-  device_id_.CreateUint("RevisionId", device_id.revision_id(), &inspect_);
-
+  inspect_device_id_.CreateUint("VersionId", device_id.version_id(), &inspect_);
+  inspect_device_id_.CreateUint("ProductId", device_id.product_id(), &inspect_);
+  inspect_device_id_.CreateUint("RevisionId", device_id.revision_id(), &inspect_);
   return ZX_OK;
 }
 

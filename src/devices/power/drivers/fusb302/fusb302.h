@@ -7,13 +7,13 @@
 
 #include <fuchsia/hardware/power/llcpp/fidl.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/inspect/cpp/inspect.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
 
+#include "src/devices/power/drivers/fusb302/inspectable-types.h"
 #include "src/devices/power/drivers/fusb302/registers.h"
 #include "src/devices/power/drivers/fusb302/state-machine-base.h"
 
@@ -54,8 +54,9 @@ enum SinkPolicyEngineStates : uint32_t {
 // SinkPolicyEngine: Sink Policy Engine state machine for USB-PD Protocol.
 class SinkPolicyEngine : public StateMachineBase<SinkPolicyEngineStates, Fusb302> {
  public:
-  SinkPolicyEngine(Fusb302* device, bool initialized)
-      : StateMachineBase(device), initialized_(initialized) {}
+  SinkPolicyEngine(Fusb302* device, bool initialized, inspect::Node& inspect_root)
+      : StateMachineBase(device, pe_snk_startup, inspect_root, "SinkPolicyEngine"),
+        initialized_(initialized) {}
   ~SinkPolicyEngine() = default;
 
   zx_status_t Init();
@@ -64,10 +65,13 @@ class SinkPolicyEngine : public StateMachineBase<SinkPolicyEngineStates, Fusb302
   zx_status_t RunState(Event event, std::shared_ptr<PdMessage> message, bool entry) override;
   uint8_t FindPdo(uint32_t max_voltage_mV, uint32_t max_current_mA);
 
-  std::vector<PowerDataObject> source_capabilities_;
-  uint8_t curr_object_position_ = UINT8_MAX;
-  uint64_t requested_max_curr_mA_ = kChargeInputDefaultCur;
-  uint64_t requested_max_volt_mV_ = kChargeInputDefaultVol;
+  InspectablePdoArray source_capabilities_ = InspectablePdoArray(inspect(), "Capabilities");
+  InspectableUint<uint8_t> curr_object_position_ =
+      InspectableUint<uint8_t>(inspect(), "CurrentCapabilityIndex", UINT8_MAX);
+  InspectableUint<uint64_t> requested_max_curr_mA_ =
+      InspectableUint<uint64_t>(inspect(), "RequestedMaxCurrent_mA", kChargeInputDefaultCur);
+  InspectableUint<uint64_t> requested_max_volt_mV_ =
+      InspectableUint<uint64_t>(inspect(), "RequestedMaxVoltage_mV", kChargeInputDefaultVol);
 
   // initialized_: Whether or not initialization happened in the bootloader and whether or not we've
   // corrected for it. Currently hard coded to true because the only use of it in Fuchsia should be
@@ -93,8 +97,9 @@ enum HwDrpStates : uint32_t {
 // which state is found and runs the correct policy engine state machine when in the correct state.
 class StateMachine : public StateMachineBase<HwDrpStates, Fusb302> {
  public:
-  StateMachine(Fusb302* device, bool initialized)
-      : StateMachineBase(device), sink_policy_engine_(device, initialized) {}
+  StateMachine(Fusb302* device, bool initialized, inspect::Node& inspect_root)
+      : StateMachineBase(device, disabled, inspect_root, "StateMachine"),
+        sink_policy_engine_(device, initialized, inspect_root) {}
   ~StateMachine() = default;
 
   void Restart() { SetState(disabled); }
@@ -158,14 +163,15 @@ class Fusb302 : public DeviceType {
   std::atomic_bool is_thread_running_ = false;
   thrd_t irq_thread_;
 
-  // state_machine_: HW DRP (Dual Role Port) state machine which will run the policy engine state
-  // machines when in the correct attached states.
-  StateMachine state_machine_ = StateMachine(this, /* initialized */ true);
-  uint8_t message_id_ = 0;
-
   // Inspect Variables
   inspect::Inspector inspect_;
-  inspect::Node device_id_;
+  inspect::Node inspect_device_id_ = inspect_.GetRoot().CreateChild("DeviceId");
+  inspect::Node inspect_hw_drp_ = inspect_.GetRoot().CreateChild("HardwareDRP");
+
+  // state_machine_: HW DRP (Dual Role Port) state machine which will run the policy engine state
+  // machines when in the correct attached states.
+  StateMachine state_machine_ = StateMachine(this, /* initialized */ true, inspect_.GetRoot());
+  uint8_t message_id_ = 0;
 
   // Hardware DRP Helper Functions and Variables
   zx_status_t SetPolarity(Polarity polarity);
@@ -180,16 +186,21 @@ class Fusb302 : public DeviceType {
   zx::status<PdMessage> FifoReceive();
 
   bool is_cc_connected_ = false;
-  PowerRole power_role_ = sink;
-  DataRole data_role_ = UFP;
-  SpecRev spec_rev_ = SpecRev::kRev2;
-  Polarity polarity_ = CC1;
+  InspectableBool<PowerRole> power_role_ =
+      InspectableBool<PowerRole>(&inspect_hw_drp_, "PowerRole", sink);
+  InspectableUint<DataRole> data_role_ =
+      InspectableUint<DataRole>(&inspect_hw_drp_, "DataRole", UFP);
+  InspectableUint<SpecRev> spec_rev_ =
+      InspectableUint<SpecRev>(&inspect_hw_drp_, "SpecRev", SpecRev::kRev2);
+  InspectableBool<Polarity> polarity_ =
+      InspectableBool<Polarity>(&inspect_hw_drp_, "Polarity", CC1);
   enum TxState : uint8_t {
     busy,
     failed,
     success,
   };
-  TxState tx_state_ = success;
+  InspectableUint<TxState> tx_state_ =
+      InspectableUint<TxState>(&inspect_hw_drp_, "TxState", success);
 };
 
 }  // namespace fusb302
