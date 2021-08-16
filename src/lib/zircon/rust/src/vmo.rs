@@ -32,7 +32,7 @@ pub struct VmoInfo {
     pub share_count: usize,
     pub flags: VmoInfoFlags,
     pub committed_bytes: u64,
-    handle_rights: Rights,
+    pub handle_rights: Rights,
 }
 
 impl Default for VmoInfo {
