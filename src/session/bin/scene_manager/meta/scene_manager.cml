@@ -1,7 +1,8 @@
 {
     include: [
-        "syslog/client.shard.cml",
+        "//sdk/lib/inspect/client.shard.cml",
         "//src/ui/lib/input_pipeline/meta/input_keymap_configuration.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",

@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
+    fuchsia_inspect as inspect,
     fuchsia_syslog::fx_log_warn,
     futures::lock::Mutex,
     futures::StreamExt,
@@ -14,7 +15,6 @@ use {
         self,
         ime_handler::ImeHandler,
         input_device,
-        input_handler::InputHandler,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
         keymap,
         mouse_handler::MouseHandler,
@@ -37,12 +37,14 @@ use {
 ///   `InputDeviceRegistry` messages.
 /// - `text_settings_handler`: An input pipeline stage that decorates `InputEvent`s with
 ///    text settings (e.g. desired keymap IDs).
+/// - `node`: The inspect node to insert individual inspect handler nodes into.
 pub async fn handle_input(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
     text_settings_handler: Rc<text_settings::Handler>,
+    node: &inspect::Node,
 ) -> Result<InputPipeline, Error> {
     let input_pipeline = InputPipeline::new(
         vec![
@@ -50,8 +52,7 @@ pub async fn handle_input(
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
         ],
-        InputPipelineAssembly::new()
-            .add_all_handlers(input_handlers(scene_manager, text_settings_handler).await),
+        input_handlers(scene_manager, text_settings_handler, node).await,
     )
     .await
     .context("Failed to create InputPipeline.")?;
@@ -71,60 +72,71 @@ pub async fn handle_input(
 async fn input_handlers(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
     text_settings_handler: Rc<text_settings::Handler>,
-) -> Vec<Rc<dyn InputHandler>> {
-    let mut handlers: Vec<Rc<dyn InputHandler>> = vec![];
-
+    node: &inspect::Node,
+) -> InputPipelineAssembly {
+    let mut assembly = InputPipelineAssembly::new();
     {
         let locked_scene_manager = scene_manager.lock().await;
+        assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         // Add the text settings handler early in the pipeline to use the
         // keymap settings in the remainder of the pipeline.
-        add_text_settings_handler(text_settings_handler, &mut handlers);
-        add_keymap_handler(&mut handlers);
+        assembly = add_text_settings_handler(text_settings_handler, assembly);
+        assembly = add_keymap_handler(assembly);
         // Shortcut needs to go before IME.
-        add_shortcut_handler(&mut handlers).await;
-        add_ime(&mut handlers).await;
+        assembly = add_shortcut_handler(assembly).await;
+        assembly = add_ime(assembly).await;
 
-        add_touch_handler(&locked_scene_manager, &mut handlers).await;
+        assembly = add_touch_handler(&locked_scene_manager, assembly).await;
     }
+    assembly = add_mouse_handler(scene_manager, assembly).await;
+    assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
 
-    add_mouse_handler(scene_manager, &mut handlers).await;
+    assembly
+}
 
-    handlers
+/// Hooks up the inspect handler.
+fn add_inspect_handler(
+    node: inspect::Node,
+    assembly: InputPipelineAssembly,
+) -> InputPipelineAssembly {
+    assembly.add_handler(input_pipeline::inspect::Handler::new(node))
 }
 
 /// Hooks up the text settings handler.
 fn add_text_settings_handler(
     text_settings_handler: Rc<text_settings::Handler>,
-    handlers: &mut Vec<Rc<dyn InputHandler>>,
-) {
-    handlers.push(text_settings_handler);
+    assembly: InputPipelineAssembly,
+) -> InputPipelineAssembly {
+    assembly.add_handler(text_settings_handler)
 }
 
 /// Hooks up the keymapper.  The keymapper requires the text settings handler to
 /// be added as well to support keymapping.  Otherwise, it defaults to applying
 /// the US QWERTY keymap.
-fn add_keymap_handler(handlers: &mut Vec<Rc<dyn InputHandler>>) {
-    handlers.push(keymap::Handler::new())
+fn add_keymap_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
+    assembly.add_handler(keymap::Handler::new())
 }
 
-async fn add_shortcut_handler(handlers: &mut Vec<Rc<dyn InputHandler>>) {
+async fn add_shortcut_handler(mut assembly: InputPipelineAssembly) -> InputPipelineAssembly {
     if let Ok(manager) = connect_to_protocol::<ui_shortcut::ManagerMarker>() {
         if let Ok(shortcut_handler) = ShortcutHandler::new(manager) {
-            handlers.push(shortcut_handler);
+            assembly = assembly.add_handler(shortcut_handler);
         }
     }
+    assembly
 }
 
-async fn add_ime(handlers: &mut Vec<Rc<dyn InputHandler>>) {
+async fn add_ime(mut assembly: InputPipelineAssembly) -> InputPipelineAssembly {
     if let Ok(ime_handler) = ImeHandler::new().await {
-        handlers.push(ime_handler);
+        assembly = assembly.add_handler(ime_handler);
     }
+    assembly
 }
 
 async fn add_touch_handler(
     scene_manager: &FlatSceneManager,
-    handlers: &mut Vec<Rc<dyn InputHandler>>,
-) {
+    mut assembly: InputPipelineAssembly,
+) -> InputPipelineAssembly {
     let (width_pixels, height_pixels) = scene_manager.display_size.pixels();
     if let Ok(touch_handler) = TouchHandler::new(
         scene_manager.session.clone(),
@@ -133,14 +145,15 @@ async fn add_touch_handler(
     )
     .await
     {
-        handlers.push(touch_handler);
+        assembly = assembly.add_handler(touch_handler);
     }
+    assembly
 }
 
 async fn add_mouse_handler(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
-    handlers: &mut Vec<Rc<dyn InputHandler>>,
-) {
+    mut assembly: InputPipelineAssembly,
+) -> InputPipelineAssembly {
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
         let scene_manager = scene_manager.lock().await;
@@ -151,7 +164,7 @@ async fn add_mouse_handler(
             scene_manager.session.clone(),
             scene_manager.compositor_id,
         );
-        handlers.push(mouse_handler);
+        assembly = assembly.add_handler(mouse_handler);
     }
 
     fasync::Task::spawn(async move {
@@ -163,6 +176,7 @@ async fn add_mouse_handler(
         }
     })
     .detach();
+    assembly
 }
 
 pub async fn handle_input_device_registry_request_streams(

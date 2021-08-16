@@ -1,5 +1,8 @@
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/scene_manager_session",

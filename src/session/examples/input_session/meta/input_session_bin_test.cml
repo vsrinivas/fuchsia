@@ -1,7 +1,8 @@
 {
     include: [
-        "syslog/client.shard.cml",
+        "//sdk/lib/inspect/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/input_session_bin_test",

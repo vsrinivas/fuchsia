@@ -106,6 +106,17 @@ pub fn create_keyboard_event(
     )
 }
 
+/// Creates a fake input event with the given event time.  Please do not
+/// read into other event fields.
+#[cfg(test)]
+pub fn create_fake_input_event(event_time: input_device::EventTime) -> input_device::InputEvent {
+    input_device::InputEvent {
+        event_time,
+        device_event: input_device::InputDeviceEvent::Fake,
+        device_descriptor: input_device::InputDeviceDescriptor::Fake,
+    }
+}
+
 /// Creates an [`input_device::InputDeviceDescriptor`] for a consumer controls device.
 #[cfg(test)]
 pub fn consumer_controls_device_descriptor() -> input_device::InputDeviceDescriptor {

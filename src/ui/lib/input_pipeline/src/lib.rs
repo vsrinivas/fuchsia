@@ -17,6 +17,7 @@ pub mod touch;
 pub mod factory_reset_handler;
 pub mod ime_handler;
 pub mod input_handler;
+pub mod inspect;
 pub mod keymap;
 pub mod media_buttons_handler;
 pub mod mouse_handler;

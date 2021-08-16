@@ -53,6 +53,8 @@ pub enum InputDeviceEvent {
     ConsumerControls(consumer_controls::ConsumerControlsEvent),
     Mouse(mouse::MouseEvent),
     Touch(touch::TouchEvent),
+    #[cfg(test)]
+    Fake,
 }
 
 /// An [`InputDescriptor`] describes the ranges of values a particular input device can generate.
@@ -70,6 +72,8 @@ pub enum InputDeviceDescriptor {
     ConsumerControls(consumer_controls::ConsumerControlsDeviceDescriptor),
     Mouse(mouse::MouseDeviceDescriptor),
     Touch(touch::TouchDeviceDescriptor),
+    #[cfg(test)]
+    Fake,
 }
 
 #[derive(Clone, Copy, PartialEq)]

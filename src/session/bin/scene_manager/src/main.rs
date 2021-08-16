@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
+    fuchsia_inspect as inspect,
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -37,6 +38,9 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["scene_manager"]).expect("Failed to init syslog");
 
     let mut fs = ServiceFs::new_local();
+
+    inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
+
     fs.dir("svc").add_fidl_service(ExposedServices::AccessibilityViewRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::Manager);
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
@@ -56,6 +60,10 @@ async fn main() -> Result<(), Error> {
     let flat_scene_manager = scene_management::FlatSceneManager::new(scenic, None, None).await?;
     let scene_manager = Arc::new(Mutex::new(flat_scene_manager));
 
+    // Create a node under root to hang all input pipeline inspect data off of.
+    let inspect_node =
+        Rc::new(inspect::component::inspector().root().create_child("input_pipeline"));
+
     while let Some(service_request) = fs.next().await {
         match service_request {
             ExposedServices::AccessibilityViewRegistry(request_stream) => {
@@ -73,6 +81,7 @@ async fn main() -> Result<(), Error> {
                         input_receiver,
                         // All text_handler clones share data, so it is OK to clone as needed.
                         text_handler.clone(),
+                        inspect_node.clone(),
                     ))
                     .detach();
                 }
@@ -131,11 +140,13 @@ pub async fn handle_manager_request_stream(
         InputDeviceRegistryRequestStream,
     >,
     text_handler: Rc<text_settings::Handler>,
+    inspect_root: Rc<inspect::Node>,
 ) {
     if let Ok(input_pipeline) = input_pipeline::handle_input(
         scene_manager.clone(),
         input_device_registry_request_stream_receiver,
         text_handler,
+        &inspect_root,
     )
     .await
     {

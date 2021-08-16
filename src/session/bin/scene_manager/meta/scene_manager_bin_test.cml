@@ -1,8 +1,9 @@
 {
     include: [
-        "syslog/client.shard.cml",
+        "//sdk/lib/inspect/client.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/scene_manager_bin_test",
