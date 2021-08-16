@@ -163,6 +163,13 @@ To identify your RFC, you need to edit the
       </td>
     </tr>
     <tr>
+      <td><code>consulted</code></td><td><b>Required once approved or rejected</b>
+        <p>
+        Stakeholders who were consulted about this RFC, but whose +1 is not required.
+        </p>
+      </td>
+    </tr>
+    <tr>
       <td><code>reviewed</code></td><td><b>Required</b>
         <p>
           Define the date when you received the decision from the

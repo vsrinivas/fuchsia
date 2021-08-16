@@ -1574,3 +1574,16 @@
   reviewers: [ 'geb@google.com', 'abarth@google.com', 'jmatt@google.com', 'shayba@google.com', 'crjohns@google.com', 'fsamuel@google.com' ]
   submitted: '2021-05-26'
   reviewed: '2021-08-11'
+
+- name: 'RFC-0122'
+  title: 'RFC Stakeholders'
+  short_description: 'Amend the RFC process around identifying and managing stakeholders'
+  authors: ['neelsa@google.com', 'wittrock@google.com', 'pascallouis@google.com']
+  file: '0122_stakeholders.md'
+  area: ['Governance']
+  issue: ['']
+  gerrit_change_id: ['545958']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'wittrock@google.com', 'pascallouis@google.com', 'aaronwood@google.com', 'dgilhooley@google.com', 'simonshields@google.com', 'bprosnitz@google.com']
+  submitted: '2021-06-21'
+  reviewed: '2021-08-16'

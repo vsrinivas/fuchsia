@@ -94,13 +94,20 @@ The RFC process may also be used for other kinds of changes that would benefit
 from its structured approach to decision making and its durable record of the
 decision.
 
-### Roles and responsibilities
+### Roles and responsibilities {#roles-and-responsibilities}
 
 People interact with the RFC process in several roles:
 
  * *RFC Authors.* An RFC Author is a person who writes an RFC. Everyone who
    contributes to Fuchsia can be an RFC Author. A given RFC can have one or more
    authors. The authors of a given RFC drive the process for that RFC.
+
+ * *Eng Council.* The [Eng Council (FEC)](../eng_council.md) facilitate
+   discussion and make the final decision as to whether the project accepts an
+   RFC.
+
+ * *Facilitator.* The person appointed by FEC to shepherd this RFC through the
+   RFC process. Today, this person must be an FEC member.
 
  * *Stakeholder.* A stakeholder is a person who has a stake in whether the
    project accepts a given RFC. Stakeholders are typically Fuchsia contributors,
@@ -111,9 +118,13 @@ People interact with the RFC process in several roles:
    often *represented* by someone, often a technical lead or other person
    responsible for a group of stakeholders.
 
- * *Eng Council.* The [Eng Council (FEC)](../eng_council.md) facilitate
-   discussion and make the final decision as to whether the project accepts an
-   RFC.
+ * *Reviewer(s).* The stakeholders whose +1 or -1 will be considered when the
+   FEC decides to accept or reject the RFC. (While a +2 is the "approve" on code
+   CLs, we tend to look to reviewers to +1 or -1 to indicate their support or
+   lack thereof, and look to the facilitator to +2 upon approval.)
+
+ * *Consulted.* The stakeholders whose feedback on the RFC was sought, but whose
+   +1 or -1 is not considered when the FEC decides to accept or reject the RFC.
 
 ### How the process works
 
@@ -150,6 +161,9 @@ technical leads for areas related to the problem you are trying to solve. For
 example, you might want to consult with people in the `OWNERS` files for the
 areas of the codebase will need to be modified to execute your idea.
 
+During this phase, the RFC author should start to identify the stakeholders for
+this RFC.
+
 If you are unsure how to socialize your idea, consider asking a technical leader
 for advice. They will often have more experience socializing ideas and might be
 able to point you in a good direction.
@@ -185,6 +199,10 @@ Do not worry about assigning a number to your RFC at this stage. Instead, use
 `NNNN` as a placeholder. For example, the file name should be something like
 `NNNN_my_idea.md`. The RFC will get a number shortly before landing.
 
+The RFC author should propose an initial set of stakeholders in consultation
+with the experts in their RFC [area](/docs/contribute/governance/areas). The set
+of stakeholders may initially be left empty or incomplete. If there is any
+ambiguity, they should consult FEC for assistance identifying stakeholders.
 
 > *Suggestion.* Consider marking the CL containing your RFC as a
 > "work-in-progress" until you are ready for feedback.
@@ -202,11 +220,20 @@ early in the process, thus reducing the likelihood of a surprise at the
 submission step.
 
 Mechanically, you should invite stakeholders to provide feedback on your RFC by
-adding them to the "Reviewers" or "CC" fields in the CL, as you would for a
-normal code review. In addition, you may email your CL to
-eng-council-discuss@fuchsia.dev soliciting additional feedback.
-The stakeholders should provide you feedback by leaving
-comments on your RFC in the code review tool.
+adding them to the "Reviewers" (for stakeholders whose +1 is required) or "CC"
+fields (for "consulted" stakeholders) in the CL, as you would for a normal code
+review. In addition, you may email your CL to eng-council-discuss@fuchsia.dev
+soliciting additional feedback. The stakeholders should provide you feedback by
+leaving comments on your RFC in the code review tool.
+
+Anyone can propose an additional stakeholder for a given RFC, including
+themselves, by commenting on the RFC CL, although these proposals may not always
+be accepted. If there is broad agreement, the RFC author should add the
+stakeholder. FEC may also request that the author add stakeholders.
+
+A stakeholder may 'opt out' and ask to be removed, or may delegate their review
+(for example, to another expert in the relevant area). FEC may request that a
+stakeholder be removed or moved from "reviewer" to "consulted".
 
 If the discussion is too complex for the code review tool, consider scheduling a
 meeting with the relevant stakeholders to have a more efficient discussion.
@@ -220,6 +247,11 @@ providing additional structure to the discussion or moving the discussion to
 another forum. Regardless of how the discussion proceeds, the results of any
 off-CL discussion must be captured in the CL, often by posting a summary of the
 discussion as a CL comment.
+
+Feedback may include comments from people who are not stakeholders. The author
+should respond to these comments if relevant, but settling them is not
+necessarily required to move to the last call stage. If the comments point to a
+disagreement about who is a stakeholder, FEC can help resolve this.
 
 At FEC's discretion, RFCs that would benefit from more socialization should be
 scheduled for an [engineering
@@ -262,11 +294,9 @@ An Eng Council member will send an email to all stakeholders and
 eng-council-discuss@fuchsia.dev to solicit any final feedback before moving to
 the decision step. The RFC will be open for feedback for the next 7 calendar days.
 
-Typically, stakeholders who need to approve a CL (i.e., whose sign-off
-is required for the RFC to move forward) should
-sign-off with a +2 whereas stakeholders whose approval is not required should
-sign-off with a +1, but all stakeholders are welcome to sign-off with a +2 if
-they wish to express their enthusiasm for the RFC.
+Typically, reviewers sign off with a +1 and the facilitator will sign off with a
++2. Consulted stakeholders may also sign off with a +1 or +2 if they wish to
+express their enthusiasm for the RFC, although this is not required.
 
 Stakeholders who wish to object to an RFC can set the Code-Review flag to -1 or
 -2, depending on how strongly they feel that the RFC should not move forward.

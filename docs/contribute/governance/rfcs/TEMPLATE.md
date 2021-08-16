@@ -16,6 +16,39 @@ A one paragraph description of the rest of the proposal.
 
 What problem does this proposal solve?
 
+## Stakeholders
+
+Who has a stake in whether this RFC is accepted? (This section is optional but
+encouraged.)
+
+_Facilitator:_
+
+The person appointed by FEC to shepherd this RFC through the RFC
+process.
+
+_Reviewers:_
+
+List people whose vote (+1 or -1) will be taken into consideration by FEC when
+deciding whether this RFC is accepted or rejected. Where applicable, also list
+the area they are expected to focus on, such as "FIDL" or "security".  In some
+cases this section may be initially left blank and stakeholder discovery
+completed after an initial round of socialization. In general, "reviewers"
+should be listed on the reviewers line in gerrit and people who are "consulted"
+should be CCed. Care should be taken to keep the number of reviewers manageable,
+although the exact number will depend on the scope of the RFC in question.
+
+
+_Consulted:_
+
+List people who should review the RFC, but whose approval is not required.
+
+
+_Socialization:_
+
+This section may be used to describe how the design was socialized before
+advancing to the "Iterate" stage of the RFC process. For example: "This RFC went
+through a design review with the Component Framework team."
+
 ## Design
 
 This is the technically detailed version of your proposal.

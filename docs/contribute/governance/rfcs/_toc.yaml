@@ -255,3 +255,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format.md
 - title: "RFC-0121: Component lifecycle events"
   path: /docs/contribute/governance/rfcs/0121_component_events.md
+- title: "RFC-0122: Stakeholders"
+  path: /docs/contribute/governance/rfcs/0122_stakeholders.md
