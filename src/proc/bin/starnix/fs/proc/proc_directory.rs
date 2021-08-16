@@ -4,6 +4,7 @@
 
 use super::inode_generation::*;
 use super::node_holder::*;
+use super::task_directory::*;
 use crate::fd_impl_directory;
 use crate::fs::*;
 use crate::task::*;
@@ -24,7 +25,7 @@ use std::sync::Weak;
 pub struct ProcDirectory {
     /// The kernel that this directory is associated with. This is used to populate the
     /// directory contents on-demand.
-    _kernel: Weak<Kernel>,
+    kernel: Weak<Kernel>,
 
     /// A map that stores lazy initializers for all the entries that are not "task-directories".
     ///
@@ -40,7 +41,7 @@ impl ProcDirectory {
             b"self".to_vec() => NodeHolder::new(SelfSymlink::new, SelfSymlink::file_mode()),
         }));
 
-        ProcDirectory { _kernel: kernel, nodes }
+        ProcDirectory { kernel, nodes }
     }
 }
 
@@ -52,7 +53,22 @@ impl FsNodeOps for ProcDirectory {
     fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         match self.nodes.lock().get_mut(name) {
             Some(node_holder) => node_holder.get_or_create_node(&node.fs()),
-            None => Err(ENOENT),
+            None => {
+                let pid_string = std::str::from_utf8(name).map_err(|_| ENOENT)?;
+                let pid = pid_string.parse::<pid_t>().map_err(|_| ENOENT)?;
+                if let Some(task) = self.kernel.upgrade().unwrap().pids.read().get_task(pid) {
+                    node.fs().get_or_create_node(Some(dir_inode_num(pid)), |inode_num| {
+                        Ok(FsNode::new(
+                            Box::new(TaskDirectory::new(task)),
+                            &node.fs(),
+                            inode_num,
+                            FileMode::IFDIR | FileMode::ALLOW_ALL,
+                        ))
+                    })
+                } else {
+                    Err(ENOENT)
+                }
+            }
         }
     }
 }
@@ -136,7 +152,7 @@ impl FileOps for DirectoryFileOps {
                 let inode_num = node.get_inode_num(&file.fs)?;
 
                 let new_offset = *offset + 1;
-                sink.add(inode_num, *offset, DirectoryEntryType::DIR, b"self")?;
+                sink.add(inode_num, *offset, DirectoryEntryType::from_mode(node.file_mode), &name)?;
                 *offset = new_offset;
             }
         }

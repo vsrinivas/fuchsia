@@ -15,7 +15,7 @@ pub struct NodeHolder {
     ops: fn() -> Box<dyn FsNodeOps>,
 
     /// The file mode to set on the created node.
-    file_mode: FileMode,
+    pub file_mode: FileMode,
 
     /// The inode number of the node, if the node has been created.
     inode_num: Option<ino_t>,
