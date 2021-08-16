@@ -93,10 +93,9 @@ protocol Realm {
     }) -> (struct {}) error fuchsia.component.Error;
 
     /// Destroys a dynamically-created component instance. When this function
-    /// returns, the client should assume the instance no longer exists.
-    /// However, some cleanup (such as stopping the component instance or
-    /// freeing its storage) may be performed in the background after the
-    /// function returns.
+    /// returns, the instance is destroyed and has stopped running.  However,
+    /// cleanup of the component's resources (such as its isolated storage) may
+    /// happen in the background after this function returns.
     ///
     /// Errors:
     /// - `INVALID_ARGUMENTS`: `child` is not a valid reference or does not refer
