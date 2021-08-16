@@ -48,6 +48,7 @@
                 "fuchsia.power.profile.Watcher",
                 "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys2.CrashIntrospect",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.thermal.Controller",
                 "fuchsia.time.Maintenance",

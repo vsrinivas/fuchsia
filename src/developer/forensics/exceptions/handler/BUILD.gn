@@ -23,6 +23,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.exception",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.sys.internal",
+    "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",

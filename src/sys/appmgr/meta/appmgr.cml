@@ -295,6 +295,10 @@
             protocol: "fuchsia.time.Maintenance",
             path: "/svc_for_sys/fuchsia.time.Maintenance",
         },
+        {
+            protocol: "fuchsia.sys2.CrashIntrospect",
+            path: "/svc_for_sys/fuchsia.sys2.CrashIntrospect",
+        },
 
         // From v2 components
         {

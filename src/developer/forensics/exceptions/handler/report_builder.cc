@@ -84,14 +84,13 @@ CrashReportBuilder& CrashReportBuilder::SetPolicyError(
   return *this;
 }
 
-CrashReportBuilder& CrashReportBuilder::SetComponentInfo(
-    const fuchsia::sys::internal::SourceIdentity& component_info) {
-  if (component_info.has_component_url()) {
-    component_url_ = component_info.component_url();
+CrashReportBuilder& CrashReportBuilder::SetComponentInfo(const ComponentInfo& component_info) {
+  if (!component_info.url.empty()) {
+    component_url_ = component_info.url;
   }
 
-  if (component_info.has_realm_path()) {
-    realm_path_ = "/" + fxl::JoinStrings(component_info.realm_path(), "/");
+  if (!component_info.realm_path.empty()) {
+    realm_path_ = component_info.realm_path;
   }
 
   return *this;

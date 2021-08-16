@@ -1,7 +1,7 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/connectivity/network/lib/net_interfaces/client.shard.cmx"
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/exceptions"
@@ -14,7 +14,8 @@
         "services": [
             "fuchsia.feedback.CrashReporter",
             "fuchsia.process.Launcher",
-            "fuchsia.sys.internal.CrashIntrospect"
+            "fuchsia.sys.internal.CrashIntrospect",
+            "fuchsia.sys2.CrashIntrospect"
         ]
     }
 }

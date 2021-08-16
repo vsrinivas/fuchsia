@@ -57,6 +57,7 @@
                 "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.process.Launcher",
+                "fuchsia.sys2.CrashIntrospect",
             ],
             from: "parent",
             to: [

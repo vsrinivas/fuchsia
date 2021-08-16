@@ -5,6 +5,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
+#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
@@ -19,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/exception/formatting.h"
+#include "src/developer/forensics/exceptions/handler/component_lookup.h"
 #include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
@@ -69,8 +71,14 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
   fidl::BindingSet<fuchsia::feedback::CrashReporter> bindings_;
 };
 
-class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
+class StubCrashIntrospectV1 : public fuchsia::sys::internal::CrashIntrospect {
  public:
+  struct ComponentInfo {
+    std::string url;
+    std::vector<std::string> realm_path;
+    std::string name;
+  };
+
   void FindComponentByThreadKoid(uint64_t thread_koid, FindComponentByThreadKoidCallback callback) {
     using namespace fuchsia::sys::internal;
     if (tids_to_component_infos_.find(thread_koid) == tids_to_component_infos_.end()) {
@@ -79,9 +87,9 @@ class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
       const auto& info = tids_to_component_infos_[thread_koid];
 
       SourceIdentity source_identity;
-      source_identity.set_component_url(info.component_url)
+      source_identity.set_component_url(info.url)
           .set_realm_path(info.realm_path)
-          .set_component_name(info.component_name);
+          .set_component_name(info.name);
 
       callback(CrashIntrospect_FindComponentByThreadKoid_Result::WithResponse(
           CrashIntrospect_FindComponentByThreadKoid_Response(std::move(source_identity))));
@@ -94,12 +102,6 @@ class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
     };
   }
 
-  struct ComponentInfo {
-    std::string component_url;
-    std::vector<std::string> realm_path;
-    std::string component_name;
-  };
-
   void AddThreadKoidToComponentInfo(uint64_t thread_koid, ComponentInfo component_info) {
     tids_to_component_infos_[thread_koid] = component_info;
   }
@@ -108,6 +110,43 @@ class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
   std::map<uint64_t, ComponentInfo> tids_to_component_infos_;
 
   fidl::BindingSet<fuchsia::sys::internal::CrashIntrospect> bindings_;
+};
+
+class StubCrashIntrospectV2 : public fuchsia::sys2::CrashIntrospect {
+ public:
+  struct ComponentInfo {
+    std::string url;
+  };
+  void FindComponentByThreadKoid(uint64_t thread_koid, FindComponentByThreadKoidCallback callback) {
+    using namespace fuchsia::sys2;
+    if (tids_to_component_infos_.find(thread_koid) == tids_to_component_infos_.end()) {
+      callback(CrashIntrospect_FindComponentByThreadKoid_Result::WithErr(
+          fuchsia::component::Error::RESOURCE_NOT_FOUND));
+    } else {
+      const auto& info = tids_to_component_infos_[thread_koid];
+
+      ComponentCrashInfo crash_info;
+      crash_info.set_url(info.url);
+
+      callback(CrashIntrospect_FindComponentByThreadKoid_Result::WithResponse(
+          CrashIntrospect_FindComponentByThreadKoid_Response(std::move(crash_info))));
+    }
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::sys2::CrashIntrospect> GetHandler() {
+    return [this](fidl::InterfaceRequest<fuchsia::sys2::CrashIntrospect> request) {
+      bindings_.AddBinding(this, std::move(request));
+    };
+  }
+
+  void AddThreadKoidToComponentInfo(uint64_t thread_koid, ComponentInfo component_info) {
+    tids_to_component_infos_[thread_koid] = component_info;
+  }
+
+ private:
+  std::map<uint64_t, ComponentInfo> tids_to_component_infos_;
+
+  fidl::BindingSet<fuchsia::sys2::CrashIntrospect> bindings_;
 };
 
 class HandlerTest : public UnitTestFixture {
@@ -138,18 +177,25 @@ class HandlerTest : public UnitTestFixture {
   }
 
   void SetUpCrashReporter() { InjectServiceProvider(&crash_reporter_); }
-  void SetUpCrashIntrospect() { InjectServiceProvider(&introspect_); }
+  void SetUpCrashIntrospect() {
+    InjectServiceProvider(&introspect_v1_);
+    InjectServiceProvider(&introspect_v2_);
+  }
 
   const StubCrashReporter& crash_reporter() const { return crash_reporter_; }
 
-  StubCrashIntrospect& introspect() { return introspect_; }
-  const StubCrashIntrospect& introspect() const { return introspect_; }
+  StubCrashIntrospectV1& introspect_v1() { return introspect_v1_; }
+  const StubCrashIntrospectV1& introspect_v1() const { return introspect_v1_; }
+
+  StubCrashIntrospectV2& introspect_v2() { return introspect_v2_; }
+  const StubCrashIntrospectV2& introspect_v2() const { return introspect_v2_; }
 
  private:
   std::unique_ptr<CrashReporter> handler_{nullptr};
 
   StubCrashReporter crash_reporter_;
-  StubCrashIntrospect introspect_;
+  StubCrashIntrospectV1 introspect_v1_;
+  StubCrashIntrospectV2 introspect_v2_;
 };
 
 bool RetrieveExceptionContext(ExceptionContext* pe) {
@@ -231,7 +277,7 @@ TEST_F(HandlerTest, NoIntrospectConnection) {
   exception.job.kill();
 }
 
-TEST_F(HandlerTest, NoCrashReporterConnection) {
+TEST_F(HandlerTest, NoCrashReporterConnectionV1) {
   SetUpCrashIntrospect();
 
   // Create the exception.
@@ -245,11 +291,11 @@ TEST_F(HandlerTest, NoCrashReporterConnection) {
   const std::string kComponentUrl = "component_url";
   const std::vector<std::string> kRealmPath = {"realm", "path"};
   const std::string kComponentName = "component_name";
-  introspect().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospect::ComponentInfo{
-                                                             .component_url = kComponentUrl,
-                                                             .realm_path = kRealmPath,
-                                                             .component_name = kComponentName,
-                                                         });
+  introspect_v1().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospectV1::ComponentInfo{
+                                                                .url = kComponentUrl,
+                                                                .realm_path = kRealmPath,
+                                                                .name = kComponentName,
+                                                            });
 
   bool called = false;
   std::optional<std::string> out_moniker{std::nullopt};
@@ -274,7 +320,45 @@ TEST_F(HandlerTest, NoCrashReporterConnection) {
   exception.job.kill();
 }
 
-TEST_F(HandlerTest, NoException) {
+TEST_F(HandlerTest, NoCrashReporterConnectionV2) {
+  SetUpCrashIntrospect();
+
+  // Create the exception.
+  ExceptionContext exception;
+  ASSERT_TRUE(RetrieveExceptionContext(&exception));
+
+  zx::thread thread;
+  ASSERT_EQ(exception.exception.get_thread(&thread), ZX_OK);
+  const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
+
+  const std::string kComponentUrl = "component_url";
+  introspect_v2().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospectV2::ComponentInfo{
+                                                                .url = kComponentUrl,
+                                                            });
+
+  bool called = false;
+  std::optional<std::string> out_moniker{std::nullopt};
+  HandleException(std::move(exception.exception), kDefaultTimeout,
+                  [&called, &out_moniker](const ::fidl::StringPtr moniker) {
+                    called = true;
+                    if (moniker.has_value()) {
+                      out_moniker = moniker.value();
+                    }
+                  });
+
+  ASSERT_TRUE(called);
+  ASSERT_FALSE(out_moniker.has_value());
+
+  // The stub shouldn't be called.
+  EXPECT_EQ(crash_reporter().reports().size(), 0u);
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  exception.job.kill();
+}
+
+TEST_F(HandlerTest, NoExceptionV1) {
   SetUpCrashReporter();
   SetUpCrashIntrospect();
 
@@ -295,11 +379,11 @@ TEST_F(HandlerTest, NoException) {
   const std::string kComponentUrl = "component_url";
   const std::vector<std::string> kRealmPath = {"realm", "path"};
   const std::string kComponentName = "component_name";
-  introspect().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospect::ComponentInfo{
-                                                             .component_url = kComponentUrl,
-                                                             .realm_path = kRealmPath,
-                                                             .component_name = kComponentName,
-                                                         });
+  introspect_v1().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospectV1::ComponentInfo{
+                                                                .url = kComponentUrl,
+                                                                .realm_path = kRealmPath,
+                                                                .name = kComponentName,
+                                                            });
   exception.exception.reset();
 
   bool called = false;
@@ -323,6 +407,56 @@ TEST_F(HandlerTest, NoException) {
                       {
                           {"crash.realm-path", "/realm/path"},
                       });
+  ValidateCrashSignature(report, "fuchsia-no-minidump-exception-expired");
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  exception.job.kill();
+}
+
+TEST_F(HandlerTest, NoExceptionV2) {
+  SetUpCrashReporter();
+  SetUpCrashIntrospect();
+
+  // Create the exception.
+  ExceptionContext exception;
+  ASSERT_TRUE(RetrieveExceptionContext(&exception));
+
+  zx::process process;
+  ASSERT_EQ(exception.exception.get_process(&process), ZX_OK);
+  const std::string process_name = fsl::GetObjectName(process.get());
+  const zx_koid_t process_koid = fsl::GetKoid(process.get());
+
+  zx::thread thread;
+  ASSERT_EQ(exception.exception.get_thread(&thread), ZX_OK);
+  const std::string thread_name = fsl::GetObjectName(thread.get());
+  const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
+
+  const std::string kComponentUrl = "component_url";
+  introspect_v2().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospectV2::ComponentInfo{
+                                                                .url = kComponentUrl,
+                                                            });
+  exception.exception.reset();
+
+  bool called = false;
+  std::optional<std::string> out_moniker{std::nullopt};
+  HandleException(std::move(process), std::move(thread), zx::duration::infinite(),
+                  [&called, &out_moniker](const ::fidl::StringPtr moniker) {
+                    called = true;
+                    if (moniker.has_value()) {
+                      out_moniker = moniker.value();
+                    }
+                  });
+
+  ASSERT_TRUE(called);
+  ASSERT_FALSE(out_moniker.has_value());
+
+  ASSERT_EQ(crash_reporter().reports().size(), 1u);
+  auto& report = crash_reporter().reports().front();
+
+  ValidateCrashReport(report, kComponentUrl, process_name, process_koid, thread_name, thread_koid,
+                      {});
   ValidateCrashSignature(report, "fuchsia-no-minidump-exception-expired");
 
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process

@@ -4,76 +4,133 @@
 
 #include "src/developer/forensics/exceptions/handler/component_lookup.h"
 
+#include <fuchsia/sys/internal/cpp/fidl.h>
+#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 #include "src/developer/forensics/utils/fit/promise.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 namespace forensics {
 namespace exceptions {
 namespace handler {
 namespace {
 
-using fuchsia::sys::internal::CrashIntrospect_FindComponentByThreadKoid_Result;
-using fuchsia::sys::internal::SourceIdentity;
+::fpromise::promise<ComponentInfo> GetV1Info(async_dispatcher_t* dispatcher,
+                                             std::shared_ptr<sys::ServiceDirectory> services,
+                                             fit::Timeout timeout, zx_koid_t thread_koid) {
+  namespace sys = fuchsia::sys::internal;
+  auto introspect_ptr =
+      std::make_unique<fidl::OneShotPtr<sys::CrashIntrospect, ComponentInfo>>(dispatcher, services);
+  (*introspect_ptr)
+      ->FindComponentByThreadKoid(
+          thread_koid, [introspect = introspect_ptr.get()](
+                           sys::CrashIntrospect_FindComponentByThreadKoid_Result result) {
+            if (introspect->IsAlreadyDone()) {
+              return;
+            }
 
-// Wraps around fuchsia::sys::internal::CrashIntrospectPtr to handle establishing the connection,
-// losing the connection, waiting for the callback, enforcing a timeout, etc.
-//
-// GetSourceIdentity() is expected to be called only once.
-class ComponentLookup {
- public:
-  // fuchsia.sys.internal.CrashIntrospect is expected to be in |services|.
-  ComponentLookup(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
-      : introspect_(dispatcher, services) {}
+            if (result.is_response()) {
+              const sys::SourceIdentity& info = result.response().component_info;
 
-  ::fpromise::promise<SourceIdentity> GetSourceIdentity(zx_koid_t process_koid,
-                                                        fit::Timeout timeout);
+              std::string url;
+              if (info.has_component_url()) {
+                url = info.component_url();
+              }
 
- private:
-  fidl::OneShotPtr<fuchsia::sys::internal::CrashIntrospect, SourceIdentity> introspect_;
-};
+              std::string realm_path;
+              if (info.has_realm_path()) {
+                realm_path = "/" + fxl::JoinStrings(info.realm_path(), "/");
+              }
 
-::fpromise::promise<SourceIdentity> ComponentLookup::GetSourceIdentity(zx_koid_t thread_koid,
-                                                                       fit::Timeout timeout) {
-  introspect_->FindComponentByThreadKoid(
-      thread_koid, [this](CrashIntrospect_FindComponentByThreadKoid_Result result) {
-        if (introspect_.IsAlreadyDone()) {
-          return;
-        }
+              std::string moniker;
+              if (info.has_realm_path() && info.has_component_name()) {
+                std::vector<std::string> moniker_parts = info.realm_path();
+                moniker_parts.push_back(info.component_name());
+                moniker = fxl::JoinStrings(moniker_parts, "/");
+              }
 
-        if (result.is_response()) {
-          introspect_.CompleteOk(std::move(result.response().component_info));
-        } else {
-          // ZX_ERR_NOT_FOUND most likely means a thread from a process outside a component,
-          // which is not an error.
-          if (result.err() != ZX_ERR_NOT_FOUND) {
-            FX_PLOGS(WARNING, result.err()) << "Failed FindComponentByProcessKoid";
-          }
+              introspect->CompleteOk(ComponentInfo{
+                  .url = url,
+                  .realm_path = realm_path,
+                  .moniker = moniker,
+              });
+            } else {
+              // ZX_ERR_NOT_FOUND most likely means a thread from a process outside a component,
+              // which is not an error.
+              if (result.err() != ZX_ERR_NOT_FOUND) {
+                FX_PLOGS(WARNING, result.err()) << "Failed v1 FindComponentBeThreadKoid ";
+              }
 
-          introspect_.CompleteError(Error::kDefault);
-        }
-      });
+              introspect->CompleteError(Error::kDefault);
+            }
+          });
 
-  return introspect_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
-    return ::fpromise::error();
-  });
+  return introspect_ptr->WaitForDone(std::move(timeout))
+      .or_else([_ = std::move(introspect_ptr)](const Error& error) { return ::fpromise::error(); });
+}
+
+::fpromise::promise<ComponentInfo> GetV2Info(async_dispatcher_t* dispatcher,
+                                             std::shared_ptr<sys::ServiceDirectory> services,
+                                             fit::Timeout timeout, zx_koid_t thread_koid) {
+  namespace sys = fuchsia::sys2;
+  auto introspect_ptr =
+      std::make_unique<fidl::OneShotPtr<sys::CrashIntrospect, ComponentInfo>>(dispatcher, services);
+  (*introspect_ptr)
+      ->FindComponentByThreadKoid(
+          thread_koid, [introspect = introspect_ptr.get()](
+                           sys::CrashIntrospect_FindComponentByThreadKoid_Result result) {
+            if (introspect->IsAlreadyDone()) {
+              return;
+            }
+
+            if (result.is_response()) {
+              const sys::ComponentCrashInfo& info = result.response().info;
+              introspect->CompleteOk(ComponentInfo{
+                  .url = (info.has_url()) ? info.url() : "",
+                  .realm_path = "",
+                  .moniker = "",
+              });
+            } else {
+              // RESOURCE_NOT_FOUND most likely means a thread from a process outside a component,
+              // which is not an error.
+              if (result.err() != fuchsia::component::Error::RESOURCE_NOT_FOUND) {
+                FX_LOGS(WARNING) << "Failed v2 FindComponentByThreadKoid, error: "
+                                 << static_cast<int>(result.err());
+              }
+
+              introspect->CompleteError(Error::kDefault);
+            }
+          });
+
+  return introspect_ptr->WaitForDone(std::move(timeout))
+      .or_else([_ = std::move(introspect_ptr)](const Error& error) { return ::fpromise::error(); });
 }
 
 }  // namespace
 
-::fpromise::promise<SourceIdentity> GetComponentSourceIdentity(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout, zx_koid_t thread_koid) {
-  auto component_lookup = std::make_unique<ComponentLookup>(dispatcher, services);
+::fpromise::promise<ComponentInfo> GetComponentInfo(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<sys::ServiceDirectory> services,
+                                                    const zx::duration timeout,
+                                                    zx_koid_t thread_koid) {
+  auto get_v1_info = GetV1Info(dispatcher, services, fit::Timeout(timeout), thread_koid);
+  auto get_v2_info = GetV2Info(dispatcher, services, fit::Timeout(timeout), thread_koid);
+  return ::fpromise::join_promises(std::move(get_v1_info), std::move(get_v2_info))
+      .and_then([](std::tuple<::fit::result<ComponentInfo>, ::fit::result<ComponentInfo>>& results)
+                    -> ::fpromise::result<ComponentInfo> {
+        auto& v1_result = std::get<0>(results);
+        auto& v2_result = std::get<1>(results);
 
-  // We must store the promise in a variable due to the fact that the order of evaluation of
-  // function parameters is undefined.
-  auto component = component_lookup->GetSourceIdentity(thread_koid, std::move(timeout));
-  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(component),
-                                              /*args=*/std::move(component_lookup));
+        if (v1_result.is_error() && v2_result.is_error()) {
+          return ::fit::error();
+        }
+
+        ComponentInfo info = (v1_result.is_ok()) ? v1_result.take_value() : v2_result.take_value();
+        return ::fit::ok(std::move(info));
+      });
 }
 
 }  // namespace handler

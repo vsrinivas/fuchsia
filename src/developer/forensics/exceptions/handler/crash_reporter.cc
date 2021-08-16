@@ -4,6 +4,8 @@
 #include "src/developer/forensics/exceptions/handler/crash_reporter.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/string.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/exception.h>
 
@@ -22,7 +24,6 @@ namespace handler {
 namespace {
 
 using fuchsia::feedback::CrashReport;
-using fuchsia::sys::internal::SourceIdentity;
 
 // Either resets the exception immediately if the process only has one thread or with a 5s delay
 // otherwise.
@@ -55,17 +56,6 @@ void ResetException(async_dispatcher_t* dispatcher, zx::exception exception,
   }
 }
 
-::fidl::StringPtr CreateMoniker(const SourceIdentity& source_identity) {
-  if (!source_identity.has_realm_path() || !source_identity.has_component_name()) {
-    return std::nullopt;
-  }
-
-  std::vector<std::string> moniker_parts = source_identity.realm_path();
-  moniker_parts.push_back(source_identity.component_name());
-
-  return fxl::JoinStrings(moniker_parts, "/");
-}
-
 }  // namespace
 
 CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
@@ -96,18 +86,18 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
     builder.SetExceptionExpired();
   }
 
+  const auto thread_koid = fsl::GetKoid(crashed_thread.get());
   auto file_crash_report =
-      GetComponentSourceIdentity(dispatcher_, services_, fit::Timeout(component_lookup_timeout_),
-                                 fsl::GetKoid(crashed_thread.get()))
+      GetComponentInfo(dispatcher_, services_, component_lookup_timeout_, thread_koid)
           .then(
               [dispatcher = dispatcher_, services = services_, builder = std::move(builder),
-               callback = std::move(callback)](::fpromise::result<SourceIdentity>& result) mutable {
-                SourceIdentity component_lookup;
+               callback = std::move(callback)](::fpromise::result<ComponentInfo>& result) mutable {
+                ComponentInfo component_info;
                 if (result.is_ok()) {
-                  component_lookup = result.take_value();
+                  component_info = result.take_value();
                 }
 
-                builder.SetComponentInfo(component_lookup);
+                builder.SetComponentInfo(component_info);
 
                 fuchsia::feedback::CrashReporterPtr crash_reporter;
 
@@ -135,7 +125,11 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
                 crash_reporter->File(builder.Consume(),
                                      [](fuchsia::feedback::CrashReporter_File_Result result) {});
 
-                callback(CreateMoniker(component_lookup));
+                ::fidl::StringPtr moniker = std::nullopt;
+                if (!component_info.moniker.empty()) {
+                  moniker = component_info.moniker;
+                }
+                callback(std::move(moniker));
 
                 return ::fpromise::ok();
               });
