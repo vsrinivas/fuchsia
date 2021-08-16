@@ -27,19 +27,35 @@ impl ProbeEntry {
     }
 }
 
-type ProbeTable = [[TxVecIdx; SEQUENCE_LENGTH]; NUM_PROBE_SEQUENCE];
+pub type ProbeTable = [[TxVecIdx; SEQUENCE_LENGTH]; NUM_PROBE_SEQUENCE];
 
 pub struct ProbeSequence {
     probe_table: ProbeTable,
 }
 
 impl ProbeSequence {
-    pub fn random_new() -> Self {
-        let mut rng = rand::thread_rng();
+    pub fn sequential() -> Self {
+        // This unwrap is safe, since START_IDX is const and always a valid TxVecIdx.
         let default_idx = TxVecIdx::new(START_IDX).unwrap();
         let mut probe_table = [[default_idx; SEQUENCE_LENGTH]; NUM_PROBE_SEQUENCE];
         for i in 0..NUM_PROBE_SEQUENCE {
             for j in START_IDX..=MAX_VALID_IDX {
+                // The unwrap here is safe because the range is exactly the set of valid TxVecIdx.
+                probe_table[i][(j - START_IDX) as usize] = TxVecIdx::new(j).unwrap();
+            }
+        }
+        Self { probe_table }
+    }
+
+    pub fn random_new() -> Self {
+        let mut rng = rand::thread_rng();
+        // This unwrap is safe, since START_IDX is const and always a valid TxVecIdx.
+        let default_idx = TxVecIdx::new(START_IDX).unwrap();
+        let mut probe_table = [[default_idx; SEQUENCE_LENGTH]; NUM_PROBE_SEQUENCE];
+        for i in 0..NUM_PROBE_SEQUENCE {
+            for j in START_IDX..=MAX_VALID_IDX {
+                // This unwrap is safe, since the range we're iterating over is exactly the set of
+                // valid TxVecIdx values as defined by the START_IDX and MAX_VALID_IDX consts.
                 probe_table[i][(j - START_IDX) as usize] = TxVecIdx::new(j).unwrap();
             }
             (&mut probe_table[i][..]).shuffle(&mut rng);

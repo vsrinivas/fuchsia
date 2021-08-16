@@ -14,6 +14,7 @@ pub mod disconnect;
 pub mod error;
 pub mod key;
 mod logger;
+mod minstrel;
 #[allow(unused)] // TODO(fxbug.dev/79543): Remove annotation once used.
 mod probe_sequence;
 pub mod timer;

@@ -80,7 +80,6 @@ impl TxVector {
         phy: hw_wlan_info::WlanPhyType,
         gi: hw_wlan_info::WlanGi,
         cbw: banjo_common::ChannelBandwidth,
-        nss: u8,
         mcs_idx: u8,
     ) -> Result<Self, Error> {
         let supported_mcs = match phy {
@@ -103,6 +102,11 @@ impl TxVector {
             other => bail!("Unsupported phy type: {:?}", other),
         };
         if supported_mcs {
+            let nss = match phy {
+                hw_wlan_info::WlanPhyType::HT => 1 + mcs_idx / HT_NUM_UNIQUE_MCS,
+                // TODO(fxbug.dev/20947): Support VHT NSS
+                _ => 1,
+            };
             Ok(Self { phy, gi, cbw, nss, mcs_idx })
         } else {
             bail!("Unsupported MCS {:?} for phy type {:?}", mcs_idx, phy);
@@ -135,7 +139,6 @@ impl TxVector {
             phy,
             hw_wlan_info::WlanGi::G_800NS,
             banjo_common::ChannelBandwidth::CBW20,
-            1,
             mcs_idx,
         )
     }
@@ -157,13 +160,12 @@ impl TxVector {
                     _ => banjo_common::ChannelBandwidth::CBW40,
                 };
                 let mcs_idx = ((*idx - HT_START_IDX) % HT_NUM_MCS as u16) as u8;
-                Self::new(phy, gi, cbw, 1 + mcs_idx / HT_NUM_UNIQUE_MCS, mcs_idx).unwrap()
+                Self::new(phy, gi, cbw, mcs_idx).unwrap()
             }
             hw_wlan_info::WlanPhyType::ERP => Self::new(
                 phy,
                 hw_wlan_info::WlanGi::G_800NS,
                 banjo_common::ChannelBandwidth::CBW20,
-                1,
                 (*idx - ERP_START_IDX) as u8,
             )
             .unwrap(),
@@ -171,7 +173,6 @@ impl TxVector {
                 phy,
                 hw_wlan_info::WlanGi::G_800NS,
                 banjo_common::ChannelBandwidth::CBW20,
-                1,
                 (*idx - DSSS_CCK_START_IDX) as u8,
             )
             .unwrap(),
@@ -222,6 +223,8 @@ impl TxVecIdx {
         }
     }
 
+    // TODO(fxbug.dev/82520): Add a const fn new when it's a stable feature.
+
     pub fn to_erp_rate(&self) -> Option<SupportedRate> {
         const ERP_RATE_LIST: [u8; ERP_NUM_TX_VECTOR as usize] = [12, 18, 24, 36, 48, 72, 96, 108];
         if self.is_erp() {
@@ -251,6 +254,13 @@ impl TxVecIdx {
 
     pub fn is_erp(&self) -> bool {
         ERP_START_IDX <= self.0 && self.0 < ERP_START_IDX + ERP_NUM_TX_VECTOR as u16
+    }
+}
+
+impl std::fmt::Display for TxVecIdx {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let tx_vector = TxVector::from_idx(*self);
+        write!(f, "TxVecIdx {:3}: {:?}", self.0, tx_vector)
     }
 }
 

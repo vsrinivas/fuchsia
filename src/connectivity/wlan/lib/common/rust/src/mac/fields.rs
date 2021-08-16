@@ -112,6 +112,18 @@ impl PowerState {
 #[repr(C)]
 pub struct FrameControl(pub u16);
 
+impl FrameControl {
+    pub fn is_mgmt(&self) -> bool {
+        self.frame_type() == FrameType::MGMT
+    }
+    pub fn is_ctrl(&self) -> bool {
+        self.frame_type() == FrameType::CTRL
+    }
+    pub fn is_data(&self) -> bool {
+        self.frame_type() == FrameType::DATA
+    }
+}
+
 // IEEE Std 802.11-2016, 9.2.4.4
 #[bitfield(
     0..=3   frag_num,
