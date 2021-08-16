@@ -1,0 +1,41 @@
+// Basic cpu stats, reported in "tally mode".
+{
+  "config_name": "basic-cpu-test",
+  "events": [
+    {
+      "group_name": "fixed",
+      "event_name": "instructions_retired",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "fixed",
+      "event_name": "unhalted_reference_cycles",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "llc_references",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "llc_misses",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "branch_instructions_retired",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "branch_misses_retired",
+      "flags": [ "os", "user" ]
+    }
+  ],
+  "buffer_size_in_mb": 1,
+  "duration": 1,
+  "num_iterations": 10,
+  "output_path_prefix": "/tmp/cpuperf-test",
+  "session_result_spec_path": "/tmp/cpuperf-test.cpsession"
+}

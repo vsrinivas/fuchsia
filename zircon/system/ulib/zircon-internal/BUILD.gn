@@ -18,6 +18,7 @@ zx_library("zircon-internal") {
     "lib/zircon-internal/device/cpu-trace/perf-mon.h",
     "lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc",
     "lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc",
+    "lib/zircon-internal/device/cpu-trace/goldmont-pm-events.inc",
     "lib/zircon-internal/fnv1hash.h",
     "lib/zircon-internal/ktrace-def.h",
     "lib/zircon-internal/ktrace.h",

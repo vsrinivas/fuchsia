@@ -75,6 +75,7 @@ resource("cpuperf_resources") {
   if (current_cpu == "x64") {
     sources = [
       "cpspec/intel/basic-cpu-memory.cpspec",
+      "cpspec/intel/basic-cpu.cpspec",
       "cpspec/intel/l1.cpspec",
       "cpspec/intel/l2.cpspec",
       "cpspec/intel/l3.cpspec",

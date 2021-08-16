@@ -45,6 +45,9 @@ enum ModelEvent : uint16_t {
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
   symbol,
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
+#define DEF_GLM_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
+  symbol,
+#include <lib/zircon-internal/device/cpu-trace/goldmont-pm-events.inc>
 };
 
 static const EventDetails kArchEvents[] = {
@@ -58,6 +61,9 @@ static const EventDetails kModelEvents[] = {
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
   {id, event, umask, flags},
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
+#define DEF_GLM_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
+  {id, event, umask, flags},
+#include <lib/zircon-internal/device/cpu-trace/goldmont-pm-events.inc>
 };
 
 // A table to map event id to index in |kArchEvents|.

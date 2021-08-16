@@ -58,12 +58,26 @@ void RegisterIntelSkylakeEvents(internal::EventRegistry* registry) {
                            g_num_skl_misc_event_details);
 }
 
+const EventDetails g_glm_event_details[] = {
+#define DEF_GLM_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
+  [id] = {MakeEventId(kGroupModel, id), #event_name, readable_name, description},
+#include <lib/zircon-internal/device/cpu-trace/goldmont-pm-events.inc>
+};
+const size_t g_num_glm_event_details = std::size(g_glm_event_details);
+
+void RegisterIntelGoldmontEvents(internal::EventRegistry* registry) {
+  registry->RegisterEvents("goldmont", "fixed", g_fixed_event_details, g_num_fixed_event_details);
+  registry->RegisterEvents("goldmont", "arch", g_arch_event_details, g_num_arch_event_details);
+  registry->RegisterEvents("goldmont", "model", g_glm_event_details, g_num_glm_event_details);
+}
+
 }  // namespace
 
 namespace internal {
 
 void RegisterAllIntelModelEvents(internal::EventRegistry* registry) {
   RegisterIntelSkylakeEvents(registry);
+  RegisterIntelGoldmontEvents(registry);
 }
 
 }  // namespace internal
