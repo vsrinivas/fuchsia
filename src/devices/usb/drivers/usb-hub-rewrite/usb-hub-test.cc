@@ -4,52 +4,29 @@
 
 #include "usb-hub.h"
 
-#include <fuchsia/hardware/usb/bus/cpp/banjo.h>
-#include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <fuchsia/hardware/usb/hub/c/banjo.h>
-#include <fuchsia/hardware/usb/hub/cpp/banjo.h>
 #include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <fuchsia/hardware/usb/request/c/banjo.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/loop.h>
-#include <lib/async/cpp/executor.h>
-#include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/defer.h>
-#include <lib/fit/function.h>
-#include <lib/sync/completion.h>
 #include <lib/synchronous-executor/executor.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/compiler.h>
-#include <zircon/errors.h>
-#include <zircon/hw/usb.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 
 #include <array>
 #include <atomic>
-#include <cstdio>
 #include <cstring>
 #include <functional>
-#include <memory>
 #include <thread>
 #include <variant>
 
-#include <ddktl/device.h>
-#include <fbl/array.h>
-#include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
-#include <fbl/null_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/span.h>
-#include <fbl/string.h>
-#include <usb/request-cpp.h>
-#include <usb/usb-request.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-device.h"
@@ -164,25 +141,6 @@ class SyntheticHarness : public zxtest::Test {
   }
 
   usb_hub::UsbHubDevice* device() { return device_->device(); }
-
-  zx_status_t RunSynchronously(fpromise::promise<void, zx_status_t> promise) {
-    bool ran = false;
-    zx_status_t status = ZX_OK;
-    sync_completion_t completion;
-    executor_->schedule_task(
-        std::move(promise).then([&](fpromise::result<void, zx_status_t>& result) {
-          ran = true;
-          if (result.is_error()) {
-            status = result.error();
-          }
-          sync_completion_signal(&completion);
-        }));
-    sync_completion_wait(&completion, ZX_TIME_INFINITE);
-    if (!ran) {
-      status = ZX_ERR_INTERNAL;
-    }
-    return status;
-  }
 
   void TearDown() override {
     loop_.Shutdown();
@@ -425,7 +383,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
   }
 }
 
-// This test checks that GetUsbHubDescriptor will fail on invalid sized descriptors 
+// This test checks that GetUsbHubDescriptor will fail on invalid sized descriptors
 TEST_F(SyntheticHarness, BadDescriptorTest) {
   auto dev = device();
   SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {

@@ -75,6 +75,8 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
         loop_(&kAsyncLoopConfigNeverAttachToThread),
         executor_(std::move(executor)) {}
 
+  ~UsbHubDevice() { loop_.Shutdown(); }
+
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out) {
     switch (proto_id) {
       case ZX_PROTOCOL_USB:
@@ -84,23 +86,58 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
     return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
   }
 
-  zx_status_t Init();
-
   // Synchronously resets a port
   zx_status_t UsbHubInterfaceResetPort(uint32_t port);
 
-  // Powers on all ports on the hub
-  zx_status_t PowerOnPorts();
-
   // Retrieves the status of a port.
   zx::status<usb_port_status_t> GetPortStatus(PortNumber port);
+
+  zx_status_t SetFeature(uint8_t request_type, uint16_t feature, uint16_t index);
+
+  zx_status_t ClearFeature(uint8_t request_type, uint16_t feature, uint16_t index);
+
+  void DdkInit(ddk::InitTxn txn);
+
+  static zx_status_t Bind(void* ctx, zx_device_t* parent);
+
+  static zx_status_t Bind(std::unique_ptr<fpromise::executor> executor, zx_device_t* parent);
+
+  void DdkUnbind(ddk::UnbindTxn txn);
+
+  void DdkRelease() { delete this; }
+
+  zx::status<usb_hub_descriptor_t> GetUsbHubDescriptor(uint16_t type) {
+    size_t length = sizeof(usb_hub_descriptor_t);
+    auto result = ControlIn(USB_TYPE_CLASS | USB_RECIP_DEVICE | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
+                            static_cast<uint16_t>(type << 8), 0, length);
+    if (result.is_error()) {
+      return zx::error(result.error_value());
+    }
+    size_t request_size = result.value().size();
+    usb_hub_descriptor_t hub_descriptor;
+    if (sizeof(hub_descriptor) < request_size) {
+      zxlogf(ERROR, "Size of hub descriptor less than request size");
+      return zx::error(ZX_ERR_NO_MEMORY);
+    }
+    memcpy(&hub_descriptor, result.value().data(), request_size);
+    auto* usb_descriptor = reinterpret_cast<usb_descriptor_header_t*>(&hub_descriptor);
+    if (usb_descriptor->bLength != request_size) {
+      zxlogf(ERROR, "Mismatched descriptor length");
+      return zx::error(ZX_ERR_BAD_STATE);
+    }
+    return zx::ok(hub_descriptor);
+  }
+
+ private:
+  zx_status_t Init();
+
+  // Powers on all ports on the hub
+  zx_status_t PowerOnPorts();
 
   void InterruptCallback();
 
   // Updates the status of all ports on the hub
   zx_status_t GetPortStatus();
-
-  void DdkInit(ddk::InitTxn txn);
 
   void HandlePortStatusChanged(PortNumber port) __TA_REQUIRES(async_execution_context_);
 
@@ -144,10 +181,6 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
     return PortNumber(index.value() + 1);
   }
 
-  zx_status_t SetFeature(uint8_t request_type, uint16_t feature, uint16_t index);
-
-  zx_status_t ClearFeature(uint8_t request_type, uint16_t feature, uint16_t index);
-
   zx::status<std::vector<uint8_t>> ControlIn(uint8_t request_type, uint8_t request, uint16_t value,
                                              uint16_t index, size_t read_size);
 
@@ -156,43 +189,8 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
   std::optional<Request> AllocRequest();
 
-
-  zx::status<usb_hub_descriptor_t> GetUsbHubDescriptor(uint16_t type) {
-    size_t length = sizeof(usb_hub_descriptor_t);
-    auto result = ControlIn(USB_TYPE_CLASS | USB_RECIP_DEVICE | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
-                            static_cast<uint16_t>(type << 8), 0, length);
-    if (result.is_error()) {
-      return zx::error(result.error_value());
-    }
-    size_t request_size = result.value().size();
-    usb_hub_descriptor_t hub_descriptor;
-    if (sizeof(hub_descriptor) < request_size) {
-      zxlogf(ERROR, "Size of hub descriptor less than request size");
-      return zx::error(ZX_ERR_NO_MEMORY);
-    }
-    memcpy(&hub_descriptor, result.value().data(), request_size);
-    auto* usb_descriptor =
-        reinterpret_cast<usb_descriptor_header_t*>(&hub_descriptor);
-    if (usb_descriptor->bLength != request_size) {
-      zxlogf(ERROR, "Mismatched descriptor length");
-      return zx::error(ZX_ERR_BAD_STATE);
-    }
-    return zx::ok(hub_descriptor);
-  }
-
   fpromise::promise<Request, void> RequestQueue(Request request);
 
-  static zx_status_t Bind(void* ctx, zx_device_t* parent);
-
-  static zx_status_t Bind(std::unique_ptr<fpromise::executor> executor, zx_device_t* parent);
-
-  void DdkUnbind(ddk::UnbindTxn txn);
-
-  void DdkRelease();
-
-  ~UsbHubDevice();
-
- private:
   std::atomic<bool> shutting_down_ = false;
   fbl::Array<PortStatus> port_status_ __TA_GUARDED(async_execution_context_);
   fbl::DoublyLinkedList<PortStatus*> pending_enumeration_list_

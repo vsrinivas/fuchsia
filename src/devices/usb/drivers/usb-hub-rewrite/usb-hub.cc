@@ -5,32 +5,14 @@
 #include "usb-hub.h"
 
 #include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
-#include <lib/fit/function.h>
-#include <lib/fit/result.h>
-#include <lib/fit/single_threaded_executor.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/time.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include <zircon/errors.h>
 #include <zircon/listnode.h>
-#include <zircon/status.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-#include <cstdint>
-#include <memory>
-#include <string>
-
-#include <fbl/auto_lock.h>
-#include <fbl/hard_int.h>
-#include <usb/usb.h>
-
-#include <lib/fit/result.h>
-#include <lib/zx/time.h>
 #include "src/devices/usb/drivers/usb-hub-rewrite/usb_hub_rewrite_bind.h"
 
 namespace usb_hub {
@@ -576,10 +558,6 @@ zx_status_t UsbHubDevice::Bind(void* ctx, zx_device_t* parent) {
   }
   return status;
 }
-
-void UsbHubDevice::DdkRelease() { delete this; }
-
-UsbHubDevice::~UsbHubDevice() { loop_.Shutdown(); }
 
 }  // namespace usb_hub
 static zx_driver_ops_t usb_hub_driver_ops = {
