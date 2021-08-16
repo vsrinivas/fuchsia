@@ -199,7 +199,7 @@ func getAuthors(l *License) []string {
 func getHTMLText(m *Match) string {
 	txt := m.Text
 	txt = html.EscapeString(txt)
-	txt = strings.Replace(txt, "\n", "<br />", -1)
+	txt = strings.Replace(txt, "\n", "<br />\n", -1)
 	return txt
 }
 

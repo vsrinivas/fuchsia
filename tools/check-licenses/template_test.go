@@ -53,7 +53,7 @@ func TestGetHTMLTextDoesNotEscapeBR(t *testing.T) {
 		},
 		{
 			text: "text with a\nlinebreak",
-			want: "text with a<br />linebreak",
+			want: "text with a<br />\nlinebreak",
 		},
 		{
 			text: "text with a <br /> tag to escape",
@@ -61,7 +61,7 @@ func TestGetHTMLTextDoesNotEscapeBR(t *testing.T) {
 		},
 		{
 			text: "text\nwith <br /> both",
-			want: "text<br />with &lt;br /&gt; both",
+			want: "text<br />\nwith &lt;br /&gt; both",
 		},
 	}
 	for _, tc := range tests {
