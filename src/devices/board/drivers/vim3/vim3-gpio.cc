@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
@@ -69,7 +69,8 @@ static const pbus_irq_t gpio_irqs[] = {
 
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
-    {VIM3_J4_PIN_39}, {VIM3_ETH_MAC_INTR}, {A311D_GPIOBOOT(12)}, {A311D_GPIOX(6)}, {VIM3_HPD_IN},
+    {VIM3_J4_PIN_39}, {VIM3_ETH_MAC_INTR}, {A311D_GPIOBOOT(12)},
+    {A311D_GPIOX(6)}, {VIM3_HPD_IN},       {VIM3_FUSB302_INT},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

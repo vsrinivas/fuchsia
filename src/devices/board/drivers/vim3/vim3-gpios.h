@@ -27,4 +27,7 @@
 // Display
 #define VIM3_HPD_IN A311D_GPIOH(2)
 
+// USB Power Delivery (Fusb302)
+#define VIM3_FUSB302_INT A311D_GPIOAO(8)
+
 #endif  // SRC_DEVICES_BOARD_DRIVERS_VIM3_VIM3_GPIOS_H_

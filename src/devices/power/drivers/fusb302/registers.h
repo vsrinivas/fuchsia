@@ -290,7 +290,6 @@ class InterruptBReg : public Fusb302Reg<InterruptBReg> {
   static auto Get() { return hwreg::I2cRegisterAddr<InterruptBReg>(INTERRUPT_B_ADDR); }
 };
 
-const std::string bc_level[4] = {"< 200 mV", "200 mV - 660 mV", "660 mV - 1.23 V", "> 1.23 V"};
 class Status0Reg : public Fusb302Reg<Status0Reg> {
  public:
   DEF_BIT(7, vbusok);

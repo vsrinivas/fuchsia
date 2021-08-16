@@ -18,6 +18,7 @@ driver_bind_rules("fusb302-bind") {
 group("common") {
   public_deps = [
     ":fusb302-bind",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/lib/ddk",
@@ -30,7 +31,11 @@ group("common") {
 
 driver_module("fusb302-driver") {
   output_name = "fusb302"
-  sources = [ "fusb302.cc" ]
+  sources = [
+    "fusb302.cc",
+    "state-machine.cc",
+  ]
+  configs += [ "//build/config:all_source" ]
   deps = [
     ":common",
     "//src/devices/lib/driver",
@@ -46,8 +51,10 @@ test("fusb302-test-bin") {
   sources = [
     "fusb302-test.cc",
     "fusb302.cc",
+    "state-machine.cc",
   ]
   output_name = "fusb302-test"
+  configs += [ "//build/config:all_source" ]
   deps = [
     ":common",
     "//sdk/lib/inspect/testing/cpp:zxtest",

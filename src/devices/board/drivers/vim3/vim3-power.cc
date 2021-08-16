@@ -176,12 +176,22 @@ constexpr zx_bind_inst_t i2c_match[] = {
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x22),
 };
 
+constexpr zx_bind_inst_t gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, VIM3_FUSB302_INT),
+};
+
 constexpr device_fragment_part_t i2c_fragment[] = {
     {countof(i2c_match), i2c_match},
 };
 
+constexpr device_fragment_part_t gpio_fragment[] = {
+    {countof(gpio_match), gpio_match},
+};
+
 constexpr device_fragment_t fusb302_fragments[] = {
     {"i2c", countof(i2c_fragment), i2c_fragment},
+    {"gpio", countof(gpio_fragment), gpio_fragment},
 };
 
 constexpr composite_device_desc_t fusb302_desc = {
