@@ -14,8 +14,8 @@ group("packages") {
     ":virtio_input",
     ":virtio_magma",
     ":virtio_net",
-    ":virtio_rng",
     ":virtio_wl",
+    "virtio_rng",
   ]
 }
 
@@ -273,19 +273,6 @@ executable("virtio_net_bin") {
 fuchsia_package_with_single_component("virtio_net") {
   manifest = "../meta/virtio_net.cmx"
   deps = [ ":virtio_net_bin" ]
-}
-
-executable("virtio_rng_bin") {
-  visibility = [ ":*" ]
-
-  output_name = "virtio_rng"
-  sources = [ "virtio_rng.cc" ]
-  deps = [ ":virtio" ]
-}
-
-fuchsia_package_with_single_component("virtio_rng") {
-  manifest = "../meta/virtio_rng.cmx"
-  deps = [ ":virtio_rng_bin" ]
 }
 
 executable("virtio_wl_bin") {
