@@ -262,12 +262,7 @@ impl File for FxFile {
         })
     }
 
-    async fn set_attrs(
-        &self,
-        flags: u32,
-        attrs: NodeAttributes,
-        may_defer: bool,
-    ) -> Result<(), Status> {
+    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
         let crtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME > 0 {
             Some(Timestamp::from_nanos(attrs.creation_time))
         } else {
@@ -283,9 +278,6 @@ impl File for FxFile {
         }
         self.handle.write_timestamps(crtime, mtime).await.map_err(map_to_status)?;
         self.has_written.store(true, Ordering::Relaxed);
-        if !may_defer {
-            self.handle.flush().await.map_err(map_to_status)?;
-        }
         Ok(())
     }
 

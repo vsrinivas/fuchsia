@@ -220,12 +220,7 @@ impl vfs::file::File for MetaFile {
         })
     }
 
-    async fn set_attrs(
-        &self,
-        _flags: u32,
-        _attrs: NodeAttributes,
-        _may_defer: bool,
-    ) -> Result<(), zx::Status> {
+    async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
@@ -577,7 +572,6 @@ mod tests {
                     creation_time: 0,
                     modification_time: 0,
                 },
-                false
             )
             .await,
             Err(zx::Status::NOT_SUPPORTED)

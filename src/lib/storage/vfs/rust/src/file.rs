@@ -66,17 +66,7 @@ pub trait File: Sync + Send + DirectoryEntry {
 
     /// Set the attributes of this file based on the values in `attrs`.
     /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.
-    /// If |may_defer| is set, the filesystem can choose to delay writing the new attributes to
-    /// disk, but the new attribute value must be reflected even if the write is deferred (i.e. the
-    /// filesystem should cache the new value until flushed).  The filesystem should flush these
-    /// attribute writes atomically with the next data write.  If the filesystem cannot do so
-    /// atomically, the filesystem should *first* write the attributes, then write the data.
-    async fn set_attrs(
-        &self,
-        flags: u32,
-        attrs: NodeAttributes,
-        may_defer: bool,
-    ) -> Result<(), Status>;
+    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status>;
 
     /// Called when the file is closed.
     /// This function will also do the equivalent of sync() before the returning.

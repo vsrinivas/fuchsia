@@ -290,21 +290,7 @@ impl VfsFile for FatFile {
     // use a TimeProvider to change the creation/modification time of a file after the fact,
     // so we need to use the deprecated methods.
     #[allow(deprecated)]
-    async fn set_attrs(
-        &self,
-        flags: u32,
-        attrs: NodeAttributes,
-        may_defer: bool,
-    ) -> Result<(), Status> {
-        if may_defer {
-            // The VFS sends a deferred set_attr prior to a write, so that the filesystem can
-            // enqueue a pending attribute mutation (e.g. mtime update) to be flushed on the next
-            // write.  However, the underlying fat library always updates mtime on every write, so
-            // we can ignore this for now.  When we have writeback caching this will no longer work
-            // since not every write to the VFS will be immediately sent to the filesystem, so we
-            // should handle |may_defer| correctly at that point.
-            return Ok(());
-        }
+    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 

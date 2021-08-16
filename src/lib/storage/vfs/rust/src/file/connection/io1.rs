@@ -4,10 +4,7 @@
 
 use {
     crate::{
-        common::{
-            current_time, inherit_rights_for_clone, node_attributes, send_on_open_with_error,
-            GET_FLAGS_VISIBLE,
-        },
+        common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
         directory::entry::DirectoryEntry,
         execution_scope::ExecutionScope,
         file::{
@@ -365,11 +362,6 @@ impl<T: 'static + File> FileConnection<T> {
         }
 
         if self.flags & OPEN_FLAG_APPEND != 0 {
-            // When we have writeback caching, this should be called when the first write for the
-            // file is cached.
-            if let Err(status) = self.mark_modified().await {
-                return (status, 0);
-            }
             match self.file.append(content).await {
                 Ok((bytes, offset)) => {
                     self.seek = offset;
@@ -388,12 +380,6 @@ impl<T: 'static + File> FileConnection<T> {
     async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> (zx::Status, u64) {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
             return (zx::Status::BAD_HANDLE, 0);
-        }
-
-        // When we have writeback caching, this should be called when the first write for the file
-        // is cached.
-        if let Err(status) = self.mark_modified().await {
-            return (status, 0);
         }
 
         match self.file.write_at(offset, content).await {
@@ -440,9 +426,7 @@ impl<T: 'static + File> FileConnection<T> {
             return zx::Status::BAD_HANDLE;
         }
 
-        // TODO(jfsulliv): Consider always permitting attributes to be deferrable. The risk with
-        // this is that filesystems would require a background flush of dirty attributes to disk.
-        match self.file.set_attrs(flags, attrs, false).await {
+        match self.file.set_attrs(flags, attrs).await {
             Ok(()) => zx::Status::OK,
             Err(status) => status,
         }
@@ -451,10 +435,6 @@ impl<T: 'static + File> FileConnection<T> {
     async fn handle_truncate(&mut self, length: u64) -> zx::Status {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
             return zx::Status::BAD_HANDLE;
-        }
-
-        if let Err(status) = self.mark_modified().await {
-            return status;
         }
 
         match self.file.truncate(length).await {
@@ -476,16 +456,6 @@ impl<T: 'static + File> FileConnection<T> {
             Ok(buf) => (zx::Status::OK, buf),
             Err(e) => (e, None),
         }
-    }
-
-    // Updates the file's modification_time timestamp.  This may be deferred and not persisted to
-    // disk, but it will be immediately readable in a later call to get_attrs regardless.
-    async fn mark_modified(&self) -> Result<(), zx::Status> {
-        let mut attrs = node_attributes();
-        attrs.modification_time = current_time();
-        self.file
-            .set_attrs(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, attrs, true)
-            .await
     }
 
     fn get_buffer_validate_flags(
@@ -563,8 +533,6 @@ mod tests {
         callback: MockCallbackType,
         /// Only used for get_size/get_attributes
         file_size: u64,
-        /// A cached but unflushed attribute update.
-        pending_setattr: Mutex<Option<FileOperation>>,
     }
 
     lazy_static! {
@@ -580,7 +548,6 @@ mod tests {
                 operations: Mutex::new(Vec::new()),
                 callback,
                 file_size: *MOCK_FILE_SIZE,
-                pending_setattr: Mutex::new(None),
             })
         }
 
@@ -616,27 +583,16 @@ mod tests {
         }
 
         async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, zx::Status> {
-            if let Some(op) = std::mem::take(&mut *self.pending_setattr.lock().unwrap()) {
-                self.handle_operation(op)?;
-            }
             self.handle_operation(FileOperation::WriteAt { offset, content: content.to_vec() })?;
-
             Ok(content.len() as u64)
         }
 
         async fn append(&self, content: &[u8]) -> Result<(u64, u64), zx::Status> {
-            if let Some(op) = std::mem::take(&mut *self.pending_setattr.lock().unwrap()) {
-                self.handle_operation(op)?;
-            }
             self.handle_operation(FileOperation::Append { content: content.to_vec() })?;
-
             Ok((content.len() as u64, self.file_size + content.len() as u64))
         }
 
         async fn truncate(&self, length: u64) -> Result<(), zx::Status> {
-            if let Some(op) = std::mem::take(&mut *self.pending_setattr.lock().unwrap()) {
-                self.handle_operation(op)?;
-            }
             self.handle_operation(FileOperation::Truncate { length })
         }
 
@@ -667,18 +623,8 @@ mod tests {
             })
         }
 
-        async fn set_attrs(
-            &self,
-            flags: u32,
-            attrs: NodeAttributes,
-            may_defer: bool,
-        ) -> Result<(), zx::Status> {
-            let op = FileOperation::SetAttrs { flags, attrs };
-            if may_defer {
-                *self.pending_setattr.lock().unwrap() = Some(op);
-            } else {
-                self.handle_operation(op)?;
-            }
+        async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), zx::Status> {
+            self.handle_operation(FileOperation::SetAttrs { flags, attrs })?;
             Ok(())
         }
 
@@ -1136,10 +1082,6 @@ mod tests {
             &events[..],
             [
                 FileOperation::Init { flags: OPEN_RIGHT_WRITABLE },
-                FileOperation::SetAttrs {
-                    flags: fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
-                    ..
-                },
                 FileOperation::Truncate { length: 10 },
             ]
         );
@@ -1166,14 +1108,10 @@ mod tests {
             &events[..],
             [
                 FileOperation::Init { flags: OPEN_RIGHT_WRITABLE },
-                FileOperation::SetAttrs {
-                    flags: fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
-                    ..
-                },
                 FileOperation::WriteAt { offset: 0, .. },
             ]
         );
-        if let FileOperation::WriteAt { content, .. } = &events[2] {
+        if let FileOperation::WriteAt { content, .. } = &events[1] {
             assert_eq!(content.as_slice(), data);
         } else {
             unreachable!();
@@ -1202,14 +1140,10 @@ mod tests {
             &events[..],
             [
                 FileOperation::Init { flags: OPEN_RIGHT_WRITABLE },
-                FileOperation::SetAttrs {
-                    flags: fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
-                    ..
-                },
                 FileOperation::WriteAt { offset: 10, .. },
             ]
         );
-        if let FileOperation::WriteAt { content, .. } = &events[2] {
+        if let FileOperation::WriteAt { content, .. } = &events[1] {
             assert_eq!(content.as_slice(), data);
         } else {
             unreachable!();
@@ -1233,16 +1167,9 @@ mod tests {
         const INIT_FLAGS: u32 = OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND;
         assert_matches!(
             &events[..],
-            [
-                FileOperation::Init { flags: INIT_FLAGS },
-                FileOperation::SetAttrs {
-                    flags: fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
-                    ..
-                },
-                FileOperation::Append { .. },
-            ]
+            [FileOperation::Init { flags: INIT_FLAGS }, FileOperation::Append { .. },]
         );
-        if let FileOperation::Append { content } = &events[2] {
+        if let FileOperation::Append { content } = &events[1] {
             assert_eq!(content.as_slice(), data);
         } else {
             unreachable!();
