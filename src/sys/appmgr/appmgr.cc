@@ -13,6 +13,8 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fpromise/single_threaded_executor.h>
+#include <lib/inspect/cpp/inspector.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/zx/time.h>
@@ -24,7 +26,6 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "lib/inspect/cpp/inspector.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
@@ -37,12 +38,18 @@ namespace component {
 namespace {
 constexpr zx::duration kCpuSamplePeriod = zx::min(1);
 constexpr size_t kMaxInspectSize = 2 * 1024 * 1024 /* 2MB */;
+
+const inspect::StringReference kCpuStats("cpu_stats");
+const inspect::StringReference kInspectStats("inspect_stats");
+const inspect::StringReference kCurrentSize("current_size");
+const inspect::StringReference kMaximumSize("maximum_size");
+const inspect::StringReference kDynamicLinks("dynamic_links");
 }  // namespace
 
 Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     : inspector_(inspect::InspectSettings{.maximum_size = kMaxInspectSize}),
       cpu_watcher_(
-          std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild("cpu_stats"), zx::job())),
+          std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild(kCpuStats), zx::job())),
       publish_vfs_(dispatcher),
       publish_dir_(fbl::MakeRefCounted<fs::PseudoDir>()),
       sysmgr_url_(std::move(args.sysmgr_url)),
@@ -58,14 +65,15 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       lifecycle_executor_(dispatcher),
       lifecycle_allowlist_(std::move(args.lifecycle_allowlist)),
       startup_service_() {
+  // TODO(fxbug.dev/75726)
   inspector_.GetRoot().CreateLazyNode(
-      "inspect_stats",
-      [this] {
+      kInspectStats,
+      [&] {
         inspect::InspectStats stats = inspector_.GetStats();
         inspect::Inspector insp;
-        insp.GetRoot().CreateUint("current_size", stats.size, &insp);
-        insp.GetRoot().CreateUint("maximum_size", stats.maximum_size, &insp);
-        insp.GetRoot().CreateUint("dynamic_links", stats.dynamic_child_count, &insp);
+        insp.GetRoot().CreateUint(kCurrentSize, stats.size, &insp);
+        insp.GetRoot().CreateUint(kMaximumSize, stats.maximum_size, &insp);
+        insp.GetRoot().CreateUint(kDynamicLinks, stats.dynamic_child_count, &insp);
         return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
       },
       &inspector_);
