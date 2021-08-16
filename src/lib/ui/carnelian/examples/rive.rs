@@ -186,7 +186,7 @@ impl ViewAssistant for RiveViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new().background_color(self.background);
+            let mut builder = SceneBuilder::new().background_color(self.background).mutable(false);
             let artboards: Vec<_> = self
                 .file
                 .artboards()

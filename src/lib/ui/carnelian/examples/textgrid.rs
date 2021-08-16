@@ -333,7 +333,7 @@ impl ViewAssistant for TextGridViewAssistant {
                 .expect("unable to load font data");
             let pages = load_pages(Path::new("/pkg/data/static").join(self.filename.clone()))
                 .expect("unable to load text data");
-            let mut builder = SceneBuilder::new().background_color(self.background);
+            let mut builder = SceneBuilder::new().background_color(self.background).mutable(false);
             let textgrid_facet =
                 TextGridFacet::new(font, self.cell_size, self.cell_padding, self.foreground, pages);
             let textgrid = builder.facet(Box::new(textgrid_facet));

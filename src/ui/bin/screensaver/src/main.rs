@@ -77,7 +77,7 @@ impl ViewAssistant for ScreensaverViewAssistant {
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let file = load_rive(PathBuf::from(ANIMATION)).expect("failed to load animation");
-            let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR);
+            let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR).mutable(false);
             let artboard = file.artboard().expect("failed to get artboard");
             let artboard_ref = artboard.as_ref();
             let rive_facet = RiveFacet::new(context.size, artboard.clone());

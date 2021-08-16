@@ -558,7 +558,8 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
             let mut builder = SceneBuilder::new()
                 .background_color(self.color_scheme.back)
                 .enable_mouse_cursor(false)
-                .round_scene_corners(self.round_scene_corners);
+                .round_scene_corners(self.round_scene_corners)
+                .mutable(false);
 
             let textgrid = if let Some(animation) = &self.animation {
                 builder.facet(Box::new(RiveFacet::new(context.size, animation.artboard.clone())));

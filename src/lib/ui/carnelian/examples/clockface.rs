@@ -307,7 +307,7 @@ impl ViewAssistant for ClockfaceViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR);
+            let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR).mutable(false);
             let clock_face_facet = ClockFaceFacet::new(render_context);
             let _ = builder.facet(Box::new(clock_face_facet));
             SceneDetails { scene: builder.build() }

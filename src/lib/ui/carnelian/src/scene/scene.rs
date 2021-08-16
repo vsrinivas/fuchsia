@@ -100,6 +100,10 @@ pub struct SceneOptions {
     pub enable_mouse_cursor: bool,
     /// Option arranger for the root group.
     pub root_arranger: Option<ArrangerPtr>,
+    /// True if the scene should be mutable. If the scene is not going
+    /// to change, setting this to false can provide some important
+    /// performance benefits.
+    pub mutable: bool,
 }
 
 impl SceneOptions {
@@ -116,6 +120,7 @@ impl Default for SceneOptions {
             round_scene_corners: false,
             enable_mouse_cursor: true,
             root_arranger: None,
+            mutable: true,
         }
     }
 }
@@ -164,6 +169,7 @@ impl Scene {
 
     /// Add a facet to the scene, returning its ID.
     pub fn add_facet(&mut self, facet: FacetPtr) -> FacetId {
+        assert_eq!(self.options.mutable, true);
         let facet_id = FacetId::new(&mut self.id_generator);
         self.facets
             .insert(facet_id, FacetEntry { facet, location: Point::zero(), size: Size::zero() });
@@ -173,6 +179,7 @@ impl Scene {
 
     /// Remove a particular facet from the scene.
     pub fn remove_facet(&mut self, facet_id: FacetId) -> Result<(), Error> {
+        assert_eq!(self.options.mutable, true);
         if let Some(_) = self.facets.remove(&facet_id).as_mut() {
             self.layers.remove(&facet_id);
             self.facet_order.retain(|fid| facet_id != *fid);
@@ -184,6 +191,7 @@ impl Scene {
 
     /// Move a facet forward in the facet order list.
     pub fn move_facet_forward(&mut self, facet_id: FacetId) -> Result<(), Error> {
+        assert_eq!(self.options.mutable, true);
         if let Some(index) = self.facet_order.iter().position(|fid| *fid == facet_id) {
             if index > 0 {
                 let new_index = index - 1;
@@ -197,6 +205,7 @@ impl Scene {
 
     /// Move a facet backwards in the facet order list.
     pub fn move_facet_backward(&mut self, facet_id: FacetId) -> Result<(), Error> {
+        assert_eq!(self.options.mutable, true);
         if let Some(index) = self.facet_order.iter().position(|fid| *fid == facet_id) {
             if index < self.facet_order.len() - 1 {
                 let new_index = index + 1;
@@ -312,6 +321,12 @@ impl Scene {
         }
     }
 
+    fn is_immutable_single_facet_scene_at_origin(&self) -> bool {
+        !self.options.mutable
+            && self.facets.len() == 1
+            && self.facets.iter().next().expect("first facet").1.location == Point::zero()
+    }
+
     /// Render the scene. Expected to be called from the view assistant's render method.
     pub fn render(
         &mut self,
@@ -346,13 +361,10 @@ impl Scene {
             &None
         };
 
-        // Allow single scene facets to mutate the composition directly for optimal
-        // performance.
-        if self.facets.len() == 1 {
+        // Allow immutable single facet scenes at origin to mutate the composition directly
+        // for optimal performance.
+        if self.is_immutable_single_facet_scene_at_origin() {
             let (_, facet_entry) = self.facets.iter_mut().next().expect("first facet");
-            if facet_entry.location != Point::zero() {
-                panic!("single facet scene with non-zero ({:?}) location", facet_entry.location);
-            }
             let composition = &mut self.composition;
             let mut layer_group = DirectLayerGroup(composition);
             facet_entry
@@ -424,6 +436,7 @@ impl Scene {
 
     /// Set the absolute position of a facet.
     pub fn set_facet_location(&mut self, target: &FacetId, location: Point) {
+        assert_eq!(self.options.mutable, true);
         if let Some(facet_entry) = self.facets.get_mut(target) {
             facet_entry.location = location;
         }
@@ -431,6 +444,7 @@ impl Scene {
 
     /// Set the size of a facet.
     pub fn set_facet_size(&mut self, target: &FacetId, size: Size) {
+        assert_eq!(self.options.mutable, true);
         if let Some(facet_entry) = self.facets.get_mut(target) {
             facet_entry.size = size;
         }
@@ -634,6 +648,12 @@ impl SceneBuilder {
     /// Set the color to use for the background of a scene.
     pub fn background_color(mut self, background_color: Color) -> Self {
         self.options.background_color = background_color;
+        self
+    }
+
+    /// If true, the scene can be mutated after being built.
+    pub fn mutable(mut self, mutable: bool) -> Self {
+        self.options.mutable = mutable;
         self
     }
 
