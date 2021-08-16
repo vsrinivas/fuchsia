@@ -11,13 +11,17 @@ void main() {
 
   test('archivist_redaction_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestCommand(
-        (resultsFile) => '/bin/archivist_redaction_benchmarks $resultsFile');
+    await helper.runTestComponent(
+        packageName: 'archivist-redaction-benchmarks',
+        componentName: 'archivist-redaction-benchmarks.cmx',
+        commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
 
   test('archivist_logging_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestCommand(
-        (resultsFile) => '/bin/archivist_logging_benchmarks $resultsFile');
+    await helper.runTestComponent(
+        packageName: 'archivist-logging-benchmarks',
+        componentName: 'archivist-logging-benchmarks.cmx',
+        commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
 }

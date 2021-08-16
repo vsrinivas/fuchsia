@@ -2,17 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//src/diagnostics/archivist/build/archivist.gni")
-
-fuchsia_shell_package("archivist-benchmarks") {
-  deps = [
-    "logging:bin",
-    "redaction:bin",
-  ]
-}
-
 group("bench") {
   testonly = true
-  deps = [ ":archivist-benchmarks" ]
+  deps = [
+    "logging:archivist-logging-benchmarks",
+    "redaction:archivist-redaction-benchmarks",
+  ]
 }

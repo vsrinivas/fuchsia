@@ -16,3 +16,8 @@ archivist_optimized_binary("bin") {
 
   sources = [ "src/main.rs" ]
 }
+
+fuchsia_package_with_single_component("archivist-redaction-benchmarks") {
+  deps = [ ":bin" ]
+  manifest = "meta/archivist-redaction-benchmarks.cmx"
+}
