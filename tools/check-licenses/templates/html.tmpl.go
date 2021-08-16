@@ -6,6 +6,7 @@ package templates
 
 const TemplateHtml = `
 <html>
+<meta charset="utf-8"/>
 
 <div style="width: 1000">
 Table of Contents:
