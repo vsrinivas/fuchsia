@@ -1,4 +1,4 @@
-# Set up and run zxdb, Fuchsia's native debugger
+# Set up and run zxdb, Fuchsia's debugger for C++ and Rust code
 
 ## Preparation: Boot with networking
 
