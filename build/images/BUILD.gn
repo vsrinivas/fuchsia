@@ -321,29 +321,9 @@ group("fvm.sparse.blk") {
   public_deps = [ "${labels.images}" ]
 }
 
-# This is a hack, because an internal repo is relying on the old path.
-# Remove this when the repo switches to the correct path.
-if (!bootfs_only) {
-  old_fvm_blob_label = "//build/images:fvm.blob.sparse.blk"
-  old_fvm_blob_sparse = get_label_info(old_fvm_blob_label, "target_out_dir") +
-                        "/" + get_label_info(old_fvm_blob_label, "name")
-  new_fvm_blob_sparse =
-      get_label_info(labels.images, "target_out_dir") + "/" +
-      get_label_info(labels.images, "name") + "/fvm.blob.sparse.blk"
-  copy("copy_fvm_blob_sparse") {
-    testonly = fuchsia_zbi_testonly
-    sources = [ new_fvm_blob_sparse ]
-    outputs = [ old_fvm_blob_sparse ]
-    deps = [ "${labels.images}" ]
-  }
-}
-
 group("fvm.blob.sparse.blk") {
   testonly = fuchsia_zbi_testonly
   public_deps = [ "${labels.images}" ]
-  if (!bootfs_only) {
-    public_deps += [ ":copy_fvm_blob_sparse" ]
-  }
 }
 
 group("fvm.fastboot.blk") {

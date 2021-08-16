@@ -145,11 +145,42 @@ if (!bootfs_only) {
   }
 }
 
+# Copy the fvm.blob.sparse.blk to the old location for assembled images.
+# TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
+if (include_fvm_blob_sparse) {
+  old_fvm_blob_sparse_path =
+      "${root_out_dir}/obj/build/images/fvm.blob.sparse.blk"
+  copy("copy_fvm_blob_sparse") {
+    testonly = fuchsia_zbi_testonly
+    sources = [ "${target_out_dir}/fuchsia/fvm.blob.sparse.blk" ]
+    outputs = [ old_fvm_blob_sparse_path ]
+    deps = [ ":fuchsia_assembly" ]
+
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":fuchsia", "label_with_toolchain")
+
+          # Hack: Infra expects bootserver_pave to be present
+          # in the GN graph for this image to be built.
+          bootserver_pave = []
+          name = "fvm.blob.sparse"
+          path = rebase_path(old_fvm_blob_sparse_path, root_build_dir)
+          type = "blk"
+        },
+      ]
+    }
+  }
+}
+
 group("fuchsia") {
   testonly = fuchsia_zbi_testonly
   public_deps = [ ":fuchsia_assembly" ]
   if (!bootfs_only) {
     public_deps += [ ":copy_blobfs" ]
+  }
+  if (include_fvm_blob_sparse) {
+    public_deps += [ ":copy_fvm_blob_sparse" ]
   }
 }
 
@@ -333,21 +364,22 @@ assemble_system("fuchsia_assembly") {
       image_paths += [ "IMAGE_VBMETAA_RAW=fuchsia.vbmeta" ]
     }
 
+    # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
     # Optionally include the blob-only sparse FVM.
-    if (include_fvm_blob_sparse) {
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
+    # if (include_fvm_blob_sparse) {
+    #   images += [
+    #     {
+    #       label = get_label_info(":$target_name", "label_with_toolchain")
 
-          # Hack: Infra expects bootserver_pave to be present
-          # in the GN graph for this image to be built.
-          bootserver_pave = []
-          name = "fvm.blob.sparse"
-          path = rebased_files.fvm_blob_sparse
-          type = "blk"
-        },
-      ]
-    }
+    #       # Hack: Infra expects bootserver_pave to be present
+    #       # in the GN graph for this image to be built.
+    #       bootserver_pave = []
+    #       name = "fvm.blob.sparse"
+    #       path = rebased_files.fvm_blob_sparse
+    #       type = "blk"
+    #     },
+    #   ]
+    # }
 
     # Optionally include the fastboot FVM.
     if (supports_fastboot_fvm) {
