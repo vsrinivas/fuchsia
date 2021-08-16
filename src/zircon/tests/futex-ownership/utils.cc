@@ -109,7 +109,7 @@ void Thread::Start(const char* name, Thunk thunk) {
 
   int res = thrd_create_with_name(&thread_, internal_thunk, this, name);
   ASSERT_EQ(res, 0);
-  ASSERT_OK(started_evt_.Wait(THREAD_TIMEOUT));
+  ASSERT_OK(started_evt_.Wait(kLongTimeout));
   ASSERT_TRUE(handle_.is_valid());
   ASSERT_NE(koid_, ZX_KOID_INVALID);
 }
@@ -121,7 +121,7 @@ zx_status_t Thread::Stop() {
 
   stop_evt_.Signal();
 
-  zx::time deadline = zx::deadline_after(THREAD_TIMEOUT);
+  zx::time deadline = zx::deadline_after(kLongTimeout);
   while (state() != State::STOPPED) {
     if (zx::clock::get_monotonic() > deadline) {
       return ZX_ERR_TIMED_OUT;
@@ -171,13 +171,12 @@ int ExternalThread::DoHelperThread() {
     return -__LINE__;
   }
 
-  // Block until our parent closes our control channel, then exit.  Do not
-  // block forever... If the worst happens, we don't want to be leaking
-  // processes in our test environment.  For now, waiting 2 minutes seems like
-  // a Very Long Time to wait for our parent to give us the all clear.
-  constexpr zx::duration TIMEOUT(ZX_SEC(120));
+  // Block until our parent closes our control channel, then exit.  Do not block
+  // forever... If the worst happens, we don't want to be leaking processes in
+  // our test environment.  For now, waiting 60 seconds seems like a Very Long
+  // Time to wait for our parent to give us the all clear.
   zx_status_t wait_res;
-  wait_res = remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(TIMEOUT), nullptr);
+  wait_res = remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(kLongTimeout), nullptr);
 
   return (wait_res == ZX_OK) ? 0 : -__LINE__;
 }
@@ -207,10 +206,9 @@ void ExternalThread::Start() {
   ASSERT_OK(res, "%s", err_msg_out);
 
   // Get our child's thread handle, but do not wait forever.
-  constexpr zx::duration TIMEOUT(ZX_MSEC(2500));
   constexpr zx_signals_t WAKE_SIGS = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
   zx_signals_t sigs = 0;
-  ASSERT_OK(local.wait_one(WAKE_SIGS, zx::deadline_after(TIMEOUT), &sigs));
+  ASSERT_OK(local.wait_one(WAKE_SIGS, zx::deadline_after(kLongTimeout), &sigs));
   ASSERT_NE(sigs & ZX_CHANNEL_READABLE, 0);
 
   uint32_t rxed_handles = 0;

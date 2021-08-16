@@ -27,7 +27,7 @@ static constexpr size_t kMaxLambdaStorage = sizeof(void*) * 4;
 // TODO(fxbug.dev/55744): An extremely long timeout we use as a proxy for "forever".
 // Someday, if the test framework ever gives us an environment specific timeout
 // to use as a soft watchdog threshold, we should switch to using that instead.
-static constexpr zx::duration kLongTimeout = zx::sec(25);
+static constexpr zx::duration kLongTimeout = zx::sec(60);
 
 // A small helper which allows us to poll with a timeout for a condition to
 // become true.  Sadly, some of the futex-ownership tests require this as there
@@ -85,7 +85,6 @@ class Thread {
   State state() const { return state_.load(); }
 
  private:
-  static constexpr zx::duration THREAD_TIMEOUT = kLongTimeout;
   static constexpr zx::duration THREAD_POLL_INTERVAL = zx::msec(1);
 
   void SetState(State state) { state_.store(state); }
