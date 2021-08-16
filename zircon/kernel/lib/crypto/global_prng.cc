@@ -85,9 +85,11 @@ static bool IntegrateCmdlineEntropy() {
     return false;
   }
 
+  // Keep only the first |hex_len| characters of |entropy|.
   constexpr size_t kMaxEntropyArgumentLen = 128;
   const size_t hex_len = ktl::min(entropy.size(), kMaxEntropyArgumentLen);
-  entropy = entropy.substr(hex_len);
+  entropy = entropy.substr(0, hex_len);
+  DEBUG_ASSERT_MSG(entropy.size() == hex_len, "size=%zu hex_len=%zu", entropy.size(), hex_len);
 
   for (char c : entropy) {
     if (!isxdigit(c)) {
