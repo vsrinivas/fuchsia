@@ -40,6 +40,19 @@ TEST(Vulkan, IcdLoad) {
   test.LoadIcd();
 }
 
+TEST(Vulkan, CreateInstance) {
+  VkInstanceCreateInfo info{.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+  VkInstance instance;
+  ASSERT_EQ(VK_SUCCESS, vkCreateInstance(&info, nullptr, &instance));
+
+  VkPhysicalDevice device;
+  uint32_t physicalDeviceCount = 1;
+  VkResult result = vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, &device);
+  EXPECT_TRUE(result == VK_SUCCESS || result == VK_INCOMPLETE) << result;
+  EXPECT_EQ(1u, physicalDeviceCount);
+  vkDestroyInstance(instance, nullptr);
+}
+
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {
     return EXIT_FAILURE;
