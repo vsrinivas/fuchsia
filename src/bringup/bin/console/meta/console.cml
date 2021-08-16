@@ -25,6 +25,8 @@
             "minfs",
             "--allow-log-tag",
             "wlan",
+            "--allow-log-tag",
+            "fxfs",
 
             // LogListener has a maxmimum number of tags that can be filtered, so adding
             // more here may not work.
