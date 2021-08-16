@@ -102,7 +102,7 @@ static bool IntegrateCmdlineEntropy() {
   SHA256(reinterpret_cast<const uint8_t*>(entropy.data()), entropy.size(), digest);
   kGlobalPrng->AddEntropy(digest, sizeof(digest));
 
-  const size_t entropy_added = ktl::max(hex_len / 2, sizeof(digest));
+  const size_t entropy_added = ktl::min(entropy.size() / 2, sizeof(digest));
   LTRACEF("Collected %zu bytes of entropy from the kernel cmdline.\n", entropy_added);
   return (entropy_added >= PRNG::kMinEntropy);
 }
