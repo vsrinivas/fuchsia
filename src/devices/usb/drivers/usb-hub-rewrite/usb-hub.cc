@@ -124,22 +124,14 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
   speed_ = usb_.GetSpeed();
   uint16_t desc_type = (speed_ == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
 
-  auto result = GetVariableLengthDescriptor<usb_hub_descriptor_t>(USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                                                                  desc_type, 0);
+  auto result = GetUsbHubDescriptor(desc_type);
   if (result.is_error()) {
     zxlogf(ERROR, "Could not create usb hub descriptor");
-    txn_->Reply(result.take_error());
+    txn_->Reply(result.error_value());
     return;
   }
-  usb_hub_descriptor_t descriptor = result.value().descriptor;
-  size_t descriptor_length = result.value().length;
+  usb_hub_descriptor_t descriptor = result.value();
   fbl::AutoLock l(&async_execution_context_);
-  constexpr auto kMinDescriptorLength = 7;
-  if (descriptor_length < kMinDescriptorLength) {
-    zxlogf(ERROR, "Descriptor length constraint failed");
-    txn_->Reply(result.take_error());
-    return;
-  }
   hub_descriptor_ = descriptor;
   {
     port_status_ = fbl::Array<PortStatus>(new PortStatus[hub_descriptor_.b_nbr_ports],

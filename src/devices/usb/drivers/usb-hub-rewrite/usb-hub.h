@@ -48,12 +48,6 @@ constexpr auto kMaxRequestLength = 32;
 // Hub Status Bit
 constexpr auto hubStatusBit = 1;
 
-template <typename T>
-struct VariableLengthDescriptor {
-  T descriptor;
-  size_t length;
-};
-
 DEFINE_HARD_INT(PortNumber, uint8_t)
 DEFINE_HARD_INT(PortArrayIndex, uint8_t)
 
@@ -162,29 +156,28 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
   std::optional<Request> AllocRequest();
 
-  template <typename T>
-  fpromise::result<VariableLengthDescriptor<T>, zx_status_t> GetVariableLengthDescriptor(
-      uint8_t request_type, uint16_t type, uint16_t index, size_t length = sizeof(T)) {
-    static_assert(sizeof(T) >= sizeof(usb_descriptor_header_t));
-    auto result = ControlIn(request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
-                            static_cast<uint16_t>(type << 8 | index), 0, length);
+
+  zx::status<usb_hub_descriptor_t> GetUsbHubDescriptor(uint16_t type) {
+    size_t length = sizeof(usb_hub_descriptor_t);
+    auto result = ControlIn(USB_TYPE_CLASS | USB_RECIP_DEVICE | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
+                            static_cast<uint16_t>(type << 8), 0, length);
     if (result.is_error()) {
-      return fpromise::error(result.error_value());
+      return zx::error(result.error_value());
     }
     size_t request_size = result.value().size();
-    VariableLengthDescriptor<T> variable_descriptor;
-    if (sizeof(variable_descriptor.descriptor) < request_size) {
-      return fpromise::error(ZX_ERR_NO_MEMORY);
+    usb_hub_descriptor_t hub_descriptor;
+    if (sizeof(hub_descriptor) < request_size) {
+      zxlogf(ERROR, "Size of hub descriptor less than request size");
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
-    memcpy(&variable_descriptor.descriptor, result.value().data(), request_size);
+    memcpy(&hub_descriptor, result.value().data(), request_size);
     auto* usb_descriptor =
-        reinterpret_cast<usb_descriptor_header_t*>(&variable_descriptor.descriptor);
+        reinterpret_cast<usb_descriptor_header_t*>(&hub_descriptor);
     if (usb_descriptor->bLength != request_size) {
-      zxlogf(ERROR, "Mismatched descriptor length\n");
-      return fpromise::error(ZX_ERR_BAD_STATE);
+      zxlogf(ERROR, "Mismatched descriptor length");
+      return zx::error(ZX_ERR_BAD_STATE);
     }
-    variable_descriptor.length = request_size;
-    return fpromise::ok(variable_descriptor);
+    return zx::ok(hub_descriptor);
   }
 
   fpromise::promise<Request, void> RequestQueue(Request request);

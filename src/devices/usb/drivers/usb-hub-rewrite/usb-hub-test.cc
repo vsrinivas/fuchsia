@@ -425,6 +425,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
   }
 }
 
+// This test checks that GetUsbHubDescriptor will fail on invalid sized descriptors 
 TEST_F(SyntheticHarness, BadDescriptorTest) {
   auto dev = device();
   SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {
@@ -433,8 +434,29 @@ TEST_F(SyntheticHarness, BadDescriptorTest) {
     devdesc->b_length = sizeof(usb_device_descriptor_t);
     usb_request_complete(request, ZX_OK, sizeof(usb_descriptor_header_t), &completion);
   });
-  auto result = dev->GetVariableLengthDescriptor<usb_device_descriptor_t>(0, 0, 0);
-  ASSERT_EQ(result.take_error(), ZX_ERR_BAD_STATE);
+  auto result = dev->GetUsbHubDescriptor(0);
+  ASSERT_EQ(result.error_value(), ZX_ERR_BAD_STATE);
+
+  SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {
+    usb_device_descriptor_t* devdesc;
+    usb_request_mmap(request, reinterpret_cast<void**>(&devdesc));
+    devdesc->b_length = sizeof(usb_device_descriptor_t);
+    usb_request_complete(request, ZX_OK, sizeof(usb_device_descriptor_t), &completion);
+  });
+  result = dev->GetUsbHubDescriptor(USB_HUB_DESC_TYPE_SS);
+  ASSERT_EQ(result.error_value(), ZX_ERR_NO_MEMORY);
+}
+
+TEST_F(SyntheticHarness, GoodDescriptorTest) {
+  auto dev = device();
+  SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {
+    usb_device_descriptor_t* devdesc;
+    usb_request_mmap(request, reinterpret_cast<void**>(&devdesc));
+    devdesc->b_length = sizeof(usb_descriptor_header_t);
+    usb_request_complete(request, ZX_OK, sizeof(usb_descriptor_header_t), &completion);
+  });
+  auto result = dev->GetUsbHubDescriptor(USB_HUB_DESC_TYPE_SS);
+  ASSERT_OK(result);
 }
 
 }  // namespace
