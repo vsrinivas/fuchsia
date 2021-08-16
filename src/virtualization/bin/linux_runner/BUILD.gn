@@ -138,7 +138,6 @@ romfs_image("extras") {
 
     deps += [
       "//src/graphics/examples:vkcube-on-wayland(${linux_exe_toolchain})",
-      "//src/graphics/lib/compute/radix_sort/platforms/vk/tests(${linux_exe_toolchain})",
       "//src/graphics/lib/compute/tools/bench/platforms/vk:bench-vk(${linux_exe_toolchain})",
       "//src/graphics/lib/magma/tests/integration:virtmagma_abi_conformance_tests(${linux_exe_toolchain})",
       "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_image_tests(${linux_exe_toolchain})",
@@ -154,7 +153,6 @@ romfs_image("extras") {
       "${linux_exe_path}/cube-wayland",
       "${linux_exe_path}/vulkaninfo",
       "${linux_exe_path}/virtmagma_image_tests",
-      "${linux_exe_path}/radix-sort-vk-bench",
       "${linux_exe_path}/bench-vk",
     ]
 
