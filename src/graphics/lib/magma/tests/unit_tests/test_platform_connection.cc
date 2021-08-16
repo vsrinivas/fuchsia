@@ -264,7 +264,6 @@ class TestPlatformConnection {
                                          1u /* page_offset */, 2u /* page_count */, 5 /* flags */),
         MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->UnmapBufferGpu(buf->id(), page_size() * 1000), MAGMA_STATUS_OK);
-    EXPECT_EQ(client_connection_->CommitBuffer(buf->id(), 1000, 2000), MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->BufferRangeOp(buf->id(), MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES,
                                                 1000, 2000),
               MAGMA_STATUS_OK);
@@ -272,7 +271,7 @@ class TestPlatformConnection {
                                                 1000, 2000),
               MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->GetError(), 0);
-    FlowControlCheck(6, buf->size());
+    FlowControlCheck(5, buf->size());
   }
 
   void TestNotificationChannel() {
@@ -541,15 +540,6 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(shared_data_->test_buffer_id, buffer_id);
     EXPECT_EQ(page_size() * 1000lu, gpu_va);
-    return MAGMA_STATUS_OK;
-  }
-
-  magma::Status CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
-                             uint64_t page_count) override {
-    std::unique_lock<std::mutex> lock(shared_data_->mutex);
-    EXPECT_EQ(shared_data_->test_buffer_id, buffer_id);
-    EXPECT_EQ(1000lu, page_offset);
-    EXPECT_EQ(2000lu, page_count);
     return MAGMA_STATUS_OK;
   }
 

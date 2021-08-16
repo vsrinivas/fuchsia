@@ -345,11 +345,6 @@ magma_status_t magma_clean_cache(magma_buffer_t buffer, uint64_t offset, uint64_
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_commit_buffer(magma_connection_t connection, magma_buffer_t buffer,
-                                   uint64_t page_offset, uint64_t page_count) {
-  return MAGMA_STATUS_OK;
-}
-
 magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t buffer,
                                   uint64_t addr, uint64_t offset, uint64_t length) {
   return MAGMA_STATUS_UNIMPLEMENTED;

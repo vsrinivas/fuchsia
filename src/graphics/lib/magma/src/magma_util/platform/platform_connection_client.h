@@ -56,8 +56,6 @@ class PlatformConnectionClient : public magma_connection {
 
   virtual magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
 
-  virtual magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
-                                      uint64_t page_count) = 0;
   virtual magma_status_t BufferRangeOp(uint64_t buffer_id, uint32_t options, uint64_t start,
                                        uint64_t length) = 0;
 

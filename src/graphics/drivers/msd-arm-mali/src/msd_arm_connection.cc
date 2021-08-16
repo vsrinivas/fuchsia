@@ -1090,16 +1090,6 @@ magma_status_t msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection,
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t msd_connection_commit_buffer(msd_connection_t* abi_connection,
-                                            msd_buffer_t* abi_buffer, uint64_t page_offset,
-                                            uint64_t page_count) {
-  MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
-  if (!connection->SetCommittedPagesForBuffer(MsdArmAbiBuffer::cast(abi_buffer)->base_ptr().get(),
-                                              page_offset, page_count))
-    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "CommitMemoryForBuffer failed");
-  return MAGMA_STATUS_OK;
-}
-
 magma_status_t msd_connection_buffer_range_op(msd_connection_t* abi_connection,
                                               msd_buffer_t* abi_buffer, uint32_t options,
                                               uint64_t start_offset, uint64_t length) {

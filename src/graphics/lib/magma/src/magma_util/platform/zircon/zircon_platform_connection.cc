@@ -342,17 +342,6 @@ void ZirconPlatformConnection::UnmapBufferGpu(UnmapBufferGpuRequestView request,
     SetError(&completer, status.get());
 }
 
-void ZirconPlatformConnection::CommitBuffer(CommitBufferRequestView request,
-                                            CommitBufferCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection: CommitBufferFIDL");
-  FlowControl();
-
-  magma::Status status =
-      delegate_->CommitBuffer(request->buffer_id, request->page_offset, request->page_count);
-  if (!status.ok())
-    SetError(&completer, status.get());
-}
-
 void ZirconPlatformConnection::BufferRangeOp(BufferRangeOpRequestView request,
                                              BufferRangeOpCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection:::BufferOp %d", static_cast<uint32_t>(request->op));

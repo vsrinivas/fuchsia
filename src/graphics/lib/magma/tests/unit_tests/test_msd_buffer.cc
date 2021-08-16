@@ -249,62 +249,6 @@ TEST(MsdBuffer, MapAndAutoUnmap) {
   msd_driver_destroy(driver);
 }
 
-TEST(MsdBuffer, Commit) {
-  msd_driver_t* driver = msd_driver_create();
-  ASSERT_TRUE(driver);
-
-  constexpr uint32_t kBufferSizeInPages = 1;
-
-  auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * page_size(), "test");
-  ASSERT_NE(platform_buf, nullptr);
-
-  uint32_t duplicate_handle;
-  ASSERT_TRUE(platform_buf->duplicate_handle(&duplicate_handle));
-
-  msd_buffer_t* buffer = msd_buffer_import(duplicate_handle);
-  ASSERT_TRUE(buffer);
-
-  msd_device_t* device = msd_driver_create_device(driver, GetTestDeviceHandle());
-  ASSERT_TRUE(device);
-
-  msd_connection_t* connection = msd_device_open(device, 0);
-  ASSERT_TRUE(connection);
-
-  // Bad offset
-  magma_status_t status;
-  status = msd_connection_commit_buffer(connection, buffer,
-                                        kBufferSizeInPages,  // page offset
-                                        1                    // page count
-  );
-  EXPECT_NE(MAGMA_STATUS_OK, status);
-
-  // Bad page count
-  status = msd_connection_commit_buffer(connection, buffer,
-                                        0,                      // page offset
-                                        kBufferSizeInPages + 1  // page count
-  );
-  EXPECT_NE(MAGMA_STATUS_OK, status);
-
-  // Full
-  status = msd_connection_commit_buffer(connection, buffer,
-                                        0,                  // page offset
-                                        kBufferSizeInPages  // page count
-  );
-  EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_UNIMPLEMENTED);
-
-  // Partial
-  status = msd_connection_commit_buffer(connection, buffer,
-                                        0,  // page offset
-                                        1   // page count
-  );
-  EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_UNIMPLEMENTED);
-
-  msd_buffer_destroy(buffer);
-  msd_connection_close(connection);
-  msd_device_destroy(device);
-  msd_driver_destroy(driver);
-}
-
 TEST(MsdBuffer, MapDoesntFit) {
   TestMsd test;
   ASSERT_TRUE(test.Init());

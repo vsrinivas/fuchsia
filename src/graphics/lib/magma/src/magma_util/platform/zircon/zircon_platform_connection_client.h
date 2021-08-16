@@ -35,7 +35,6 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
   magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                               uint64_t page_count, fuchsia_gpu_magma::wire::MapFlags flags);
   magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va);
-  magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count);
   magma_status_t BufferRangeOp(uint64_t buffer_id, fuchsia_gpu_magma::wire::BufferOp op,
                                uint64_t start, uint64_t length);
   magma_status_t AccessPerformanceCounters(zx::event event);

@@ -421,57 +421,6 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
   }
 }
 
-TEST_F(TestMagmaFidl, Commit) {
-  // Not implemented for Intel or VSI
-  if (vendor_id() == 0x8086 || vendor_id() == 0x10001) {
-    GTEST_SKIP();
-  }
-
-  constexpr uint64_t kPageCount = 10;
-  uint64_t size = kPageCount * page_size();
-  uint64_t buffer_id;
-  zx::vmo vmo;
-
-  {
-    ASSERT_EQ(ZX_OK, zx::vmo::create(size, 0 /*options*/, &vmo));
-    buffer_id = fsl::GetKoid(vmo.get());
-
-    zx::vmo vmo_dupe;
-    ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dupe));
-
-    auto wire_result =
-        primary_->ImportObject(std::move(vmo_dupe), fuchsia_gpu_magma::wire::ObjectType::kBuffer);
-    EXPECT_TRUE(wire_result.ok());
-    EXPECT_FALSE(CheckForUnbind());
-  }
-
-  {
-    auto wire_result = primary_->MapBufferGpu(buffer_id, 0x1000 /*gpu_address*/, 0 /*page_offset*/,
-                                              kPageCount, fuchsia_gpu_magma::wire::MapFlags::kRead);
-    EXPECT_TRUE(wire_result.ok());
-    EXPECT_FALSE(CheckForUnbind());
-  }
-
-  {
-    zx_info_vmo_t info;
-    ASSERT_EQ(ZX_OK, vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-    EXPECT_EQ(0u, info.committed_bytes);
-  }
-
-  {
-    auto wire_result = primary_->CommitBuffer(buffer_id, 0 /*page_offset*/, kPageCount);
-    EXPECT_TRUE(wire_result.ok());
-    EXPECT_FALSE(CheckForUnbind());
-  }
-
-  // Should be sync'd after the unbind check
-  {
-    zx_info_vmo_t info;
-    ASSERT_EQ(ZX_OK, vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-    EXPECT_EQ(size, info.committed_bytes);
-  }
-}
-
 TEST_F(TestMagmaFidl, FlowControl) {
   // Without flow control, this will trigger a policy exception (too many channel messages)
   // or an OOM.

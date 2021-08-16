@@ -152,21 +152,6 @@ void magma_unmap_buffer_gpu(
     uint64_t gpu_va);
 
 ///
-/// \brief Deprecated. Ensures that the given page range of a buffer is backed by physical memory.
-///        If the buffer is mapped, also ensures that the CPU page tables are populated to avoid
-///        unnecessary page faults when supported by the platform.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param page_offset Page offset into the buffer.
-/// \param page_count Number of pages to commit.
-///
-magma_status_t magma_commit_buffer(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    uint64_t page_offset,
-    uint64_t page_count);
-
-///
 /// \brief Exports the given buffer, returning a handle that may be imported into another
 ///        connection.
 /// \param connection An open connection.

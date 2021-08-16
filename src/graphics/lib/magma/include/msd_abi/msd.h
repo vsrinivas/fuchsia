@@ -61,9 +61,6 @@ magma_status_t msd_connection_map_buffer_gpu(struct msd_connection_t* connection
                                              uint64_t flags);
 magma_status_t msd_connection_unmap_buffer_gpu(struct msd_connection_t* connection,
                                                struct msd_buffer_t* buffer, uint64_t gpu_va);
-magma_status_t msd_connection_commit_buffer(struct msd_connection_t* connection,
-                                            struct msd_buffer_t* buffer, uint64_t page_offset,
-                                            uint64_t page_count);
 
 magma_status_t msd_connection_buffer_range_op(struct msd_connection_t* connection,
                                               struct msd_buffer_t* buffer, uint32_t options,

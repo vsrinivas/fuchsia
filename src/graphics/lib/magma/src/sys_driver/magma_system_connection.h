@@ -43,8 +43,6 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   magma::Status MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                              uint64_t page_count, uint64_t flags) override;
   magma::Status UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override;
-  magma::Status CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
-                             uint64_t page_count) override;
   magma::Status BufferRangeOp(uint64_t buffer_id, uint32_t op, uint64_t start,
                               uint64_t length) override;
   magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,

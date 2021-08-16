@@ -262,34 +262,6 @@
         ]
       },
       {
-        "ordinal": 25,
-        "name": "magma_commit_buffer",
-        "type": "magma_status_t",
-        "description": "Deprecated. Ensures that the given page range of a buffer is backed by physical memory. If the buffer is mapped, also ensures that the CPU page tables are populated to avoid unnecessary page faults when supported by the platform.",
-        "arguments": [
-          {
-            "name": "connection",
-            "type": "magma_connection_t",
-            "description": "An open connection."
-          },
-          {
-            "name": "buffer",
-            "type": "magma_buffer_t",
-            "description": "A valid buffer."
-          },
-          {
-            "name": "page_offset",
-            "type": "uint64_t",
-            "description": "Page offset into the buffer."
-          },
-          {
-            "name": "page_count",
-            "type": "uint64_t",
-            "description": "Number of pages to commit."
-          }
-        ]
-      },
-      {
         "ordinal": 26,
         "name": "magma_export",
         "type": "magma_status_t",

@@ -279,17 +279,6 @@ magma_status_t PrimaryWrapper::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_v
   return MagmaChannelStatus(status);
 }
 
-magma_status_t PrimaryWrapper::CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
-                                            uint64_t page_count) {
-  std::lock_guard<std::mutex> lock(flow_control_mutex_);
-  FlowControl();
-  zx_status_t status = client_->CommitBuffer(buffer_id, page_offset, page_count).status();
-  if (status == ZX_OK) {
-    UpdateFlowControl();
-  }
-  return MagmaChannelStatus(status);
-}
-
 magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
                                              fuchsia_gpu_magma::wire::BufferOp op, uint64_t start,
                                              uint64_t length) {
@@ -669,16 +658,6 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return MAGMA_STATUS_OK;
   }
 
-  magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
-                              uint64_t page_count) override {
-    DLOG("ZirconPlatformConnectionClient: CommitBuffer");
-    magma_status_t result = client_.CommitBuffer(buffer_id, page_offset, page_count);
-
-    if (result != MAGMA_STATUS_OK)
-      return DRET_MSG(result, "failed to write to channel");
-
-    return MAGMA_STATUS_OK;
-  }
   magma_status_t BufferRangeOp(uint64_t buffer_id, uint32_t options, uint64_t start,
                                uint64_t length) override {
     DLOG("ZirconPlatformConnectionClient::BufferOpRange");

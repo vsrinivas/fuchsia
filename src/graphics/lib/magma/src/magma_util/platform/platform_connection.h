@@ -54,8 +54,6 @@ class PlatformConnection {
     virtual magma::Status MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                                        uint64_t page_count, uint64_t flags) = 0;
     virtual magma::Status UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
-    virtual magma::Status CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
-                                       uint64_t page_count) = 0;
     virtual magma::Status BufferRangeOp(uint64_t buffer_id, uint32_t op, uint64_t start,
                                         uint64_t length) = 0;
     ;

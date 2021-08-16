@@ -235,15 +235,6 @@ protocol Primary {
         gpu_va uint64;
     });
 
-    /// DEPRECATED and replaced by BufferOp.POPULATE_TABLES. Ensures that `page_count` pages
-    /// starting at `page_offset` from the beginning of the buffer are backed by physical memory.
-    @deprecated
-    CommitBuffer(struct {
-        buffer_id zx.koid;
-        page_offset uint64;
-        page_count uint64;
-    });
-
     /// Perform an operation on a range of the buffer, starting at `start_bytes` and `length` bytes
     /// long.
     BufferRangeOp(struct {
