@@ -434,6 +434,7 @@
             to: [
                 "#console-launcher",
                 "#device_name_provider",
+                "#flashmap",
                 "#fshost",
                 "#miscsvc",
                 "#netsvc",

@@ -17,12 +17,13 @@ use {
 };
 
 pub struct Manager {
+    address_hint: Option<u64>,
     instances: Mutex<HashMap<String, Arc<Flashmap>>>,
 }
 
 impl Manager {
-    pub fn new() -> Self {
-        Manager { instances: Mutex::new(HashMap::new()) }
+    pub fn new(address_hint: Option<u64>) -> Self {
+        Manager { address_hint, instances: Mutex::new(HashMap::new()) }
     }
 
     pub async fn serve(&self, mut stream: ManagerRequestStream) {
@@ -63,7 +64,7 @@ impl Manager {
             if let Some(value) = lock.get(&path) {
                 Arc::clone(&value)
             } else {
-                let flashmap = Arc::new(Flashmap::new(broker).await?);
+                let flashmap = Arc::new(Flashmap::new(broker, self.address_hint).await?);
                 lock.insert(path, Arc::clone(&flashmap));
                 flashmap
             }
@@ -93,7 +94,7 @@ mod tests {
         let (manager, stream) =
             fidl::endpoints::create_proxy_and_stream::<ManagerMarker>().unwrap();
         Task::spawn(async move {
-            let manager = Manager::new();
+            let manager = Manager::new(None);
             manager.serve(stream).await;
         })
         .detach();
@@ -119,7 +120,7 @@ mod tests {
         let (manager, stream) =
             fidl::endpoints::create_proxy_and_stream::<ManagerMarker>().unwrap();
         Task::spawn(async move {
-            let manager = Manager::new();
+            let manager = Manager::new(None);
             manager.serve(stream).await;
         })
         .detach();

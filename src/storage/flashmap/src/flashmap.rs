@@ -114,7 +114,7 @@ struct FlashmapInner {
 impl Flashmap {
     /// Construct a new |Flashmap|. Will return an error if the given NAND device |device| doesn't
     /// contain a flashmap.
-    pub async fn new(device: BrokerProxy) -> Result<Self, Error> {
+    pub async fn new(device: BrokerProxy, address: Option<u64>) -> Result<Self, Error> {
         let (status, info) = device.get_info().await.context("Sending FIDL get_info request")?;
         zx::ok(status).context("getting info failed")?;
         let info = info.unwrap();
@@ -131,14 +131,13 @@ impl Flashmap {
             inner: Mutex::new(FlashmapInner { nand_vmo, mapping }),
         };
 
-        map.find_flashmap().await?;
+        map.find_flashmap(address).await?;
 
         Ok(map)
     }
 
     /// Perform a linear search on the NAND device to find the flashmap header.
-    // TODO(simonshields): use the coreboot table as a hint so we don't have to search blindly.
-    async fn find_flashmap(&mut self) -> Result<(), Error> {
+    async fn find_flashmap(&mut self, address: Option<u64>) -> Result<(), Error> {
         let max_offset = (self.info.pages_per_block as u32) * (self.info.num_blocks as u32);
         if self.vmo_size % (self.info.page_size as usize) != 0 {
             return Err(anyhow!("Page size must divide evenly into VMO size."));
@@ -150,17 +149,28 @@ impl Flashmap {
 
         let data = inner.mapping.as_slice();
 
+        let (mut read_start_page, should_scan) = match address {
+            None => (0, true),
+            Some(value) => (value / (self.info.page_size as u64))
+                .try_into()
+                .map(|v| (v, false))
+                .unwrap_or_else(|_| {
+                    fx_log_warn!(
+                        "Suggested address is too large, falling back to a linear search."
+                    );
+                    (0, true)
+                }),
+        };
+
         let mut request = BrokerRequestData {
             vmo: None,
             length: pages_per_vmo as u32,
             data_vmo: true,
             offset_data_vmo: 0,
             offset_oob_vmo: 0,
-            offset_nand: 0,
+            offset_nand: read_start_page,
             oob_vmo: false,
         };
-
-        let mut read_start_page = 0;
 
         // Scan through the NAND, checking to see if each chunk contains the flashmap header.
         while read_start_page < max_offset {
@@ -188,6 +198,10 @@ impl Flashmap {
                 return Ok(());
             } else {
                 request.offset_nand += request.length;
+            }
+
+            if !should_scan {
+                break;
             }
         }
 
@@ -727,7 +741,7 @@ pub mod tests {
         })
         .detach();
 
-        let _flashmap = Flashmap::new(proxy).await.expect("Flashmap OK");
+        let _flashmap = Flashmap::new(proxy, None).await.expect("Flashmap OK");
         assert!(nand.stats().await.reads == 1);
     }
 
@@ -765,7 +779,7 @@ pub mod tests {
         })
         .detach();
 
-        let _flashmap = Flashmap::new(proxy).await.expect("Flashmap OK");
+        let _flashmap = Flashmap::new(proxy, None).await.expect("Flashmap OK");
 
         assert!(nand.stats().await.reads > 1);
     }
@@ -781,7 +795,7 @@ pub mod tests {
         })
         .detach();
 
-        let flashmap = Flashmap::new(proxy).await;
+        let flashmap = Flashmap::new(proxy, None).await;
         assert_eq!(flashmap.is_err(), true);
     }
 
@@ -801,7 +815,7 @@ pub mod tests {
 
         let buffer = fidl_fuchsia_mem::Buffer { vmo, size: data.len() as u64 };
 
-        let flashmap = Flashmap::new(proxy).await.expect("Flashmap OK");
+        let flashmap = Flashmap::new(proxy, None).await.expect("Flashmap OK");
         flashmap.write_flashmap_area("HELLO", 10, buffer).await.expect("Write succeeds");
 
         let written_data = nand.data.lock().await;
@@ -819,7 +833,7 @@ pub mod tests {
         })
         .detach();
 
-        let flashmap = Flashmap::new(proxy).await.expect("Flashmap OK");
+        let flashmap = Flashmap::new(proxy, None).await.expect("Flashmap OK");
         flashmap
             .erase_flashmap_area("HELLO", 1, PAGE_SIZE * PAGES_PER_BLOCK)
             .await
@@ -841,7 +855,7 @@ pub mod tests {
         })
         .detach();
 
-        let flashmap = Flashmap::new(proxy).await.expect("Flashmap OK");
+        let flashmap = Flashmap::new(proxy, None).await.expect("Flashmap OK");
         flashmap
             .erase_flashmap_area("HELLO", 0, PAGE_SIZE * PAGES_PER_BLOCK)
             .await
@@ -852,5 +866,43 @@ pub mod tests {
             data[0..(PAGE_SIZE * PAGES_PER_BLOCK) as usize].iter().all(|v| *v == 0xff),
             true
         );
+    }
+
+    #[fuchsia::test]
+    async fn test_flashmap_with_address_hint() {
+        let nand = FakeNandDevice::new(zx::system_get_page_size() * 8);
+        let mut header = FlashmapHeader::default();
+        header.nareas = 2;
+
+        let area = RawFlashmapArea::new("area1", 0, 256);
+        let area2 = RawFlashmapArea::new("area2", 256, 1024);
+
+        let fmap_addr = (4 * zx::system_get_page_size() as usize) + 4;
+        let mut base = fmap_addr;
+
+        {
+            let mut data = nand.data.lock().await;
+            // Write the header and the areas.
+            let slice = make_slice(&header);
+            data[base..base + slice.len()].copy_from_slice(slice);
+            base += slice.len();
+            let slice = make_slice(&area);
+            data[base..base + slice.len()].copy_from_slice(slice);
+            base += slice.len();
+            let slice = make_slice(&area2);
+            data[base..base + slice.len()].copy_from_slice(slice);
+        }
+
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<BrokerMarker>().unwrap();
+        let nand = Arc::new(nand);
+        let clone = Arc::clone(&nand);
+        Task::spawn(async move {
+            clone.serve(stream).await.unwrap();
+        })
+        .detach();
+
+        let _flashmap = Flashmap::new(proxy, Some(fmap_addr as u64)).await.expect("Flashmap OK");
+
+        assert_eq!(nand.stats().await.reads, 1);
     }
 }

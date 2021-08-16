@@ -30,6 +30,7 @@ rustc_binary("bin") {
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",

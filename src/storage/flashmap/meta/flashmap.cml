@@ -13,6 +13,13 @@
     capabilities: [
         { protocol: "fuchsia.nand.flashmap.Manager" },
     ],
+    use: [
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
     expose: [
         {
             protocol: "fuchsia.nand.flashmap.Manager",
