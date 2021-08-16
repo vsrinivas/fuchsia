@@ -248,16 +248,20 @@ mod tests {
         }
     }
 
+    /*
+    TODO(fxb/82299): Re-enable this after fxr/563821 lands.
+
     #[fasync::run_singlethreaded(test)]
     async fn map_launch_element_result_not_bound() {
         init_logger();
-        let error = ElementManagerError::not_bound("", "", "", fcomponent::Error::Internal);
+        let error = ElementManagerError::not_bound("", "", "", "");
         let result = map_launch_element_result(Err(error), None);
         match result {
             Err(ProposeElementError::Rejected) => (),
             _ => panic!("wrong error returned"),
         }
     }
+    */
 
     #[fasync::run_singlethreaded(test)]
     async fn map_launch_element_result_not_launched() {
