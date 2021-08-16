@@ -17,6 +17,8 @@ class MockWebDriverHelper extends Mock implements WebDriverHelper {}
 
 class MockWebDriver extends Mock implements WebDriver {}
 
+class MockWindow extends Mock implements Window {}
+
 const String testDutAddress = '192.168.1.1';
 
 void main(List<String> args) {
@@ -75,6 +77,8 @@ void main(List<String> args) {
     when(webDrivers.single.window).thenAnswer(
         (_) => throw NoSuchWindowException(1, 'Session not displayed'));
 
+    expect(await webDriverConnector.webDriversForHost('www.test.com'), isEmpty);
+
     when(portForwarder.forwardPort(any)).thenAnswer((invocation) {
       final remotePort = invocation.positionalArguments.first;
       return Future.value(HostAndPort(testDutAddress, remotePort + 10));
@@ -85,6 +89,9 @@ void main(List<String> args) {
       when(webDriver.currentUrl).thenReturn('https://www.test.com/path/2');
       return webDriver;
     });
+
+    // Stop expiring sessions
+    when(webDrivers.single.window).thenAnswer((_) => MockWindow());
 
     final result = await webDriverConnector.webDriversForHost('www.test.com');
     expect(result.single.currentUrl, 'https://www.test.com/path/2');

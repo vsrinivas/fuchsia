@@ -234,6 +234,28 @@ class WebDriverConnector {
 
     final ports = Set.from(remotePortsResult['ports']);
 
+    // TODO(b/191696991): This ensures that we always check port 9222 for a
+    // debugging endpoint. With the componentization of webengine, Cast
+    // applications will open a debugging endpoint on port 9222 but the
+    // component responsible for them does not implement the fuchsia.web.Debug
+    // API, and therefore does not inform SL4F when the port is open. In the
+    // long term, webengine is likely to become more componentized and not
+    // necessarily with a predictable debugging port, so we will need a suitable
+    // evolution for the Debug API.
+    // ignore: cascade_invocations
+    ports.add(9222);
+
+    // To accommodate the fact that we don't actually know if there is a debug
+    // endpoint on port 9222, we add the new sessions before removing any that
+    // are not displayed, so the result is that 9222 will be added and
+    // immediately removed if it is not actually open.
+    for (final remotePort in ports) {
+      if (!_webDriverSessions.containsKey(remotePort)) {
+        final webDriverSession = await _createWebDriverSession(remotePort);
+        _webDriverSessions[remotePort] = webDriverSession;
+      }
+    }
+
     // Remove port forwarding for any ports that aren't open or shown.
     final removedSessions = [];
     _webDriverSessions.removeWhere((port, session) {
@@ -246,14 +268,6 @@ class WebDriverConnector {
     for (final removedSession in removedSessions) {
       await _portForwarder.stopPortForwarding(
           removedSession.value.accessPoint, removedSession.key);
-    }
-
-    // Add new sessions for new ports.
-    for (final remotePort in ports) {
-      if (!_webDriverSessions.containsKey(remotePort)) {
-        final webDriverSession = await _createWebDriverSession(remotePort);
-        _webDriverSessions[remotePort] = webDriverSession;
-      }
     }
   }
 
