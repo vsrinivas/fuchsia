@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::Context;
-use std::convert::TryFrom;
 use {
     anyhow::{format_err, Result},
     ffx_core::ffx_plugin,
@@ -31,9 +30,6 @@ pub async fn lsusb(device_watcher: DeviceWatcherProxy, cmd: DriverLsusbCommand) 
     return do_list_device(device, "000", cmd).await;
 }
 
-#[cfg(test)]
-mod test {}
-
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct DeviceDescriptor {
@@ -53,6 +49,15 @@ pub struct DeviceDescriptor {
     pub bNumConfigurations: u8,
 }
 
+impl DeviceDescriptor {
+    pub fn from_array(array: [u8; std::mem::size_of::<Self>()]) -> Self {
+        unsafe { std::mem::transmute::<[u8; std::mem::size_of::<Self>()], Self>(array) }
+    }
+    pub fn to_array(self) -> [u8; std::mem::size_of::<Self>()] {
+        unsafe { std::mem::transmute::<Self, [u8; std::mem::size_of::<Self>()]>(self) }
+    }
+}
+
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct ConfigurationDescriptor {
@@ -64,6 +69,16 @@ pub struct ConfigurationDescriptor {
     pub iConfiguration: u8,
     pub bmAttributes: u8,
     pub bMaxPower: u8,
+}
+
+impl ConfigurationDescriptor {
+    pub fn from_array(array: [u8; std::mem::size_of::<Self>()]) -> Self {
+        unsafe { std::mem::transmute::<[u8; std::mem::size_of::<Self>()], Self>(array) }
+    }
+
+    pub fn to_array(self) -> [u8; std::mem::size_of::<Self>()] {
+        unsafe { std::mem::transmute::<Self, [u8; std::mem::size_of::<Self>()]>(self) }
+    }
 }
 
 #[allow(non_snake_case)]
@@ -78,6 +93,16 @@ pub struct InterfaceInfoDescriptor {
     pub bInterfaceSubClass: u8,
     pub bInterfaceProtocol: u8,
     pub iInterface: u8,
+}
+
+impl InterfaceInfoDescriptor {
+    pub fn from_array(array: [u8; std::mem::size_of::<Self>()]) -> Self {
+        unsafe { std::mem::transmute::<[u8; std::mem::size_of::<Self>()], Self>(array) }
+    }
+
+    pub fn to_array(self) -> [u8; std::mem::size_of::<Self>()] {
+        unsafe { std::mem::transmute::<Self, [u8; std::mem::size_of::<Self>()]>(self) }
+    }
 }
 
 struct UsbSpeed(u32);
@@ -111,7 +136,7 @@ async fn do_list_device(
         .await
         .context(format!("DeviceGetDeviceSpeed failed for /dev/class/usb-device/{}", devname))?;
 
-    let device_desc = unsafe { std::mem::transmute::<[u8; 18], DeviceDescriptor>(device_desc) };
+    let device_desc = DeviceDescriptor::from_array(device_desc);
 
     let (status, string_manu_desc, _) =
         device.get_string_descriptor(device_desc.iManufacturer, EN_US).await.context(format!(
@@ -177,7 +202,7 @@ async fn do_list_device(
             ))?);
         }
 
-        let (status, mut config_desc) =
+        let (status, config_desc_data) =
             device.get_configuration_descriptor(config.unwrap()).await.context(format!(
                 "DeviceGetConfigurationDescriptor failed for /dev/class/usb-device/{}",
                 devname
@@ -186,12 +211,17 @@ async fn do_list_device(
         zx::Status::ok(status)
             .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
 
-        config_desc.resize(std::mem::size_of::<ConfigurationDescriptor>(), 0);
-        let config_desc =
-            <[u8; std::mem::size_of::<ConfigurationDescriptor>()]>::try_from(config_desc).unwrap();
+        if config_desc_data.len() < std::mem::size_of::<ConfigurationDescriptor>() {
+            return Err(anyhow::anyhow!(
+                "ConfigurationDescriptor data is too small, size: {}",
+                config_desc_data.len()
+            ));
+        }
 
-        let config_desc =
-            unsafe { std::mem::transmute::<[u8; 10], ConfigurationDescriptor>(config_desc) };
+        let mut config_desc = [0; std::mem::size_of::<ConfigurationDescriptor>()];
+        config_desc
+            .copy_from_slice(&config_desc_data[0..std::mem::size_of::<ConfigurationDescriptor>()]);
+        let config_desc = ConfigurationDescriptor::from_array(config_desc);
 
         println!("{}", "  Configuration Descriptor:");
         println!("    {:<33}{}", "bLength", config_desc.bLength);
@@ -210,4 +240,136 @@ async fn do_list_device(
         // TODO: print interface & endpoint descriptors (add pointers together)
     }
     return Ok(());
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use fuchsia_async as fasync;
+    use futures::prelude::*;
+    use futures::FutureExt;
+
+    async fn run_usb_server(
+        stream: fidl_fuchsia_hardware_usb_device::DeviceRequestStream,
+    ) -> Result<(), anyhow::Error> {
+        stream
+        .map(|result| result.context("failed request"))
+        .try_for_each(|request| async {
+            match request {
+                fidl_fuchsia_hardware_usb_device::DeviceRequest::GetDeviceSpeed {responder } => {
+                    responder.send(1)?;
+                }
+                fidl_fuchsia_hardware_usb_device::DeviceRequest::GetDeviceDescriptor {
+                        responder} => {
+                    let descriptor = DeviceDescriptor {
+                        bLength: std::mem::size_of::<DeviceDescriptor>() as u8,
+                        bDescriptorType: 1,
+                        bcdUSB: 2,
+                        bDeviceClass: 3,
+                        bDeviceSubClass: 4,
+                        bDeviceProtocol: 5,
+                        bMaxPacketSize0: 6,
+                        idVendor: 7,
+                        idProduct: 8,
+                        bcdDevice: 9,
+                        iManufacturer: 10,
+                        iProduct: 11,
+                        iSerialNumber: 12,
+                        bNumConfigurations: 2,
+                    };
+                    let mut array = descriptor.to_array();
+                    responder.send(&mut array)?;
+                }
+                fidl_fuchsia_hardware_usb_device::DeviceRequest::GetConfigurationDescriptor {
+                        config: _, responder} => {
+                    let total_length =
+                        std::mem::size_of::<ConfigurationDescriptor>() +
+                        std::mem::size_of::<InterfaceInfoDescriptor>() * 2;
+
+                    let config_descriptor = ConfigurationDescriptor {
+                        bLength: std::mem::size_of::<ConfigurationDescriptor>() as u8,
+                        bDescriptorType: 0,
+                        wTotalLength: total_length as u16,
+                        bNumInterfaces: 2,
+                        bConfigurationValue: 0,
+                        iConfiguration: 0,
+                        bmAttributes: 0,
+                        bMaxPower: 0,
+                    };
+
+                    let interface_one = InterfaceInfoDescriptor {
+                        bLength: std::mem::size_of::<InterfaceInfoDescriptor>() as u8,
+                        bDescriptorType: 0,
+                        bInterfaceNumber: 1,
+                        bAlternateSetting: 0,
+                        bNumEndpoints: 0,
+                        bInterfaceClass: 1,
+                        bInterfaceSubClass: 2,
+                        bInterfaceProtocol: 3,
+                        iInterface: 1,
+                    };
+
+                    let interface_two = InterfaceInfoDescriptor {
+                        bLength: std::mem::size_of::<InterfaceInfoDescriptor>() as u8,
+                        bDescriptorType: 0,
+                        bInterfaceNumber: 2,
+                        bAlternateSetting: 0,
+                        bNumEndpoints: 0,
+                        bInterfaceClass: 3,
+                        bInterfaceSubClass: 4,
+                        bInterfaceProtocol: 5,
+                        iInterface: 2,
+                    };
+
+                    let mut vec = std::vec::Vec::new();
+                    vec.extend_from_slice(&config_descriptor.to_array());
+                    vec.extend_from_slice(&interface_one.to_array());
+                    vec.extend_from_slice(&interface_two.to_array());
+
+                    responder.send(0, &mut vec)?;
+                }
+                fidl_fuchsia_hardware_usb_device::DeviceRequest::GetStringDescriptor {
+                        desc_id: _, lang_id: _, responder} => {
+                    responder.send(0, "<unknown>", 0)?;
+                }
+                fidl_fuchsia_hardware_usb_device::DeviceRequest::GetConfiguration {responder} => {
+                    responder.send(0)?;
+                }
+                _ => {
+                    return Err(anyhow::anyhow!("Unsupported function"));
+                }
+            }
+            Ok(())
+        })
+        .await?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn smoke_test() {
+        let (device, stream) = fidl::endpoints::create_proxy_and_stream::<
+            fidl_fuchsia_hardware_usb_device::DeviceMarker,
+        >()
+        .unwrap();
+
+        let server_task = run_usb_server(stream).fuse();
+        let test_task = async move {
+            let cmd = DriverLsusbCommand {
+                tree: false,
+                verbose: true,
+                configuration: None,
+                debug: false,
+            };
+            do_list_device(device, "000", cmd).await.unwrap();
+        }
+        .fuse();
+        futures::pin_mut!(server_task, test_task);
+        futures::select! {
+            result = server_task => {
+                panic!("Server task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
 }
