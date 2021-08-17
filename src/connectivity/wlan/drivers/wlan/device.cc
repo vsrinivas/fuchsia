@@ -5,6 +5,7 @@
 #include "device.h"
 
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/thread.h>
@@ -655,10 +656,7 @@ zx_status_t Device::ClearAssoc(const wlan::common::MacAddr& peer_addr) {
       minstrel_->RemovePeer(peer_addr);
     }
   }
-
-  uint8_t mac[wlan::common::kMacAddrLen];
-  peer_addr.CopyTo(mac);
-  return wlanmac_proxy_.ClearAssoc(0u, mac, sizeof(mac));
+  return wlanmac_proxy_.ClearAssoc(0u, peer_addr.byte);
 }
 
 fbl::RefPtr<DeviceState> Device::GetState() { return state_; }

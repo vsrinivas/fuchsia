@@ -13,7 +13,7 @@ using zx;
 
 type WlanmacInfo = struct {
     /// MAC address.
-    mac_addr array<uint8, 6>;
+    mac_addr ieee80211.MacAddr;
 
     /// MAC role
     mac_role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
@@ -129,7 +129,7 @@ type WlanTxStatus = struct {
     /// WLAN_TX_VECTOR_IDX_INVALID indicates no more entries.
     tx_status_entry array<WlanTxStatusEntry, WLAN_TX_STATUS_MAX_ENTRY>;
     /// Destination mac address, or addr1 in packet header.
-    peer_addr array<uint8, 6>;
+    peer_addr ieee80211.MacAddr;
     /// Outcome of packet transmission. True iff ACK was received from peer.
     success bool;
 };
@@ -154,7 +154,7 @@ type WlanKeyConfig = struct {
     key_type fuchsia.hardware.wlan.info.WlanKeyType;
     /// The peer MAC address for pairwise and peer keys.
     /// For group keys this value is always the broadcast address.
-    peer_addr array<uint8, 6>;
+    peer_addr ieee80211.MacAddr;
     /// Index for rotating keys, e.g. group keys.
     /// This value is always 0 for key types which aren't rotating, e.g. pairwise keys.
     key_idx uint8;
@@ -374,7 +374,7 @@ protocol Wlanmac {
     /// Notifies MAC and PHY that the peer has been de-associated.
     ClearAssoc(struct {
         options uint32;
-        peer_addr vector<uint8>:MAX;
+        peer_addr ieee80211.MacAddr;
     }) -> (struct {
         st zx.status;
     });

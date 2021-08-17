@@ -44,7 +44,7 @@ type UserDisconnectReason = strict enum {
 };
 
 type ScanResult = struct {
-    bssid array<uint8, 6>;
+    bssid ieee80211.MacAddr;
     ssid ieee80211.Ssid;
     rssi_dbm int8;
     snr_db int8;
@@ -173,7 +173,7 @@ type ConnectRequest = struct {
 };
 
 type ServingApInfo = struct {
-    bssid array<uint8, 6>;
+    bssid ieee80211.MacAddr;
     ssid ieee80211.Ssid;
     rssi_dbm int8;
     snr_db int8;

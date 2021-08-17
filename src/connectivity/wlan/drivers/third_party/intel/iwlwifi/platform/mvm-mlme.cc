@@ -48,6 +48,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -476,8 +477,8 @@ out:
   return ret;
 }
 
-zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
-                            size_t peer_addr_size) {
+zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
+                            const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
   IWL_INFO(ctx, "Disassociating ...\n");
 
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);

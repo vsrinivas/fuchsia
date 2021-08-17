@@ -5,6 +5,7 @@
 #include "iface-device.h"
 
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
@@ -46,7 +47,8 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     },
     .configure_assoc = [](void* ctx, uint32_t options,
                           const wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t { return ZX_OK; },
-    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t*, size_t) -> zx_status_t {
+    .clear_assoc = [](void* ctx, uint32_t options,
+                      const uint8_t[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) -> zx_status_t {
       return ZX_OK;
     },
 };

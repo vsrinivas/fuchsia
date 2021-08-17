@@ -557,9 +557,7 @@ impl<T: TimerManager> MinstrelRateSelector<T> {
     }
 
     pub fn get_fidl_peers(&self) -> fidl_minstrel::Peers {
-        fidl_minstrel::Peers {
-            peers: self.peer_map.iter().map(|(peer, _)| peer.to_vec()).collect(),
-        }
+        fidl_minstrel::Peers { peers: self.peer_map.iter().map(|(peer, _)| *peer).collect() }
     }
 
     pub fn get_fidl_peer_stats(

@@ -59,9 +59,9 @@ zx_status_t WlanmacDevice::WlanmacConfigureAssoc(uint32_t options,
   return mac_configure_assoc(mvmvif_, options, assoc_ctx);
 }
 
-zx_status_t WlanmacDevice::WlanmacClearAssoc(uint32_t options, const uint8_t* peer_addr_list,
-                                             size_t peer_addr_count) {
-  return mac_clear_assoc(mvmvif_, options, peer_addr_list, peer_addr_count);
+zx_status_t WlanmacDevice::WlanmacClearAssoc(
+    uint32_t options, const uint8_t peer_addr_list[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
+  return mac_clear_assoc(mvmvif_, options, peer_addr_list);
 }
 
 zx_status_t WlanmacDevice::WlanmacStartHwScan(const wlan_hw_scan_config_t* scan_config) {

@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
@@ -148,12 +149,12 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacClearAssoc(void* ctx, uint32_t options, const uint8_t* mac,
-                                       size_t mac_len) {
+  static zx_status_t WlanmacClearAssoc(
+      void* ctx, uint32_t options, const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (!mac) {
+    if (!peer_addr) {
       return ZX_ERR_INVALID_ARGS;
     }
     // TODO(fxbug.dev/28907): Evalute the use and implement

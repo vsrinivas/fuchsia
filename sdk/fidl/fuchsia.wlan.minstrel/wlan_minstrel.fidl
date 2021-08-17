@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 library fuchsia.wlan.minstrel;
 
+using fuchsia.wlan.ieee80211 as ieee80211;
+
 type Peers = struct {
-    peers vector<bytes:6>;
+    peers vector<ieee80211.MacAddr>;
 };
 
 // LINT.IfChange
@@ -22,7 +24,7 @@ type StatsEntry = struct {
 };
 
 type Peer = struct {
-    mac_addr array<uint8, 6>;
+    mac_addr ieee80211.MacAddr;
     max_tp uint16;
     max_probability uint16;
     basic_highest uint16;

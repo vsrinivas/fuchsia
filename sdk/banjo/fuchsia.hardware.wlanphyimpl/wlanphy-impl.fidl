@@ -4,7 +4,7 @@
 library fuchsia.hardware.wlanphyimpl;
 
 using ddk.hw.wlan.wlaninfo;
-using fuchsia.hardware.ethernet.mac;
+using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
 
 /// Parameters to create an interface.
@@ -20,7 +20,7 @@ type WlanphyImplCreateIfaceReq = resource struct {
     has_init_mac_addr bool;
 
     /// The initial mac address set from configuration layer.
-    init_mac_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    init_mac_addr ieee80211.MacAddr;
 };
 
 /// Info about this WLAN PHY.

@@ -20,6 +20,10 @@ type CSsid = struct {
     data array<uint8, MAX_SSID_BYTE_LEN>;
 };
 
+@namespaced
+const MAC_ADDR_LEN uint8 = 6;
+alias MacAddr = array<uint8, MAC_ADDR_LEN>;
+
 /// IEEE Std 802.11-2016, 9.4.2.99
 @namespaced
 const MAX_MESH_ID_BYTE_LEN uint8 = 32;

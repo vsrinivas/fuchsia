@@ -4,6 +4,7 @@
 library fuchsia.wlan.policy;
 
 using fuchsia.wlan.common;
+using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
 
 /// The ClientProvider API provides a mechanism for wlan control and is intended
@@ -144,7 +145,7 @@ type ScanResult = table {
 /// Information for a particular ScanResult entry.
 type Bss = table {
     /// MAC address for the AP interface.
-    1: bssid array<uint8, 6>;
+    1: bssid ieee80211.MacAddr;
 
     /// Calculated received signal strength for the beacon/probe response.
     2: rssi int8;

@@ -6,7 +6,7 @@ struct/member fuchsia.wlan.minstrel/Peer.max_probability uint16
 struct/member fuchsia.wlan.minstrel/Peer.max_tp uint16
 struct/member fuchsia.wlan.minstrel/Peer.probes uint64
 struct fuchsia.wlan.minstrel/Peer
-struct/member fuchsia.wlan.minstrel/Peers.peers vector<vector<uint8>:6>
+struct/member fuchsia.wlan.minstrel/Peers.peers vector<array<uint8,6>>
 struct fuchsia.wlan.minstrel/Peers
 struct/member fuchsia.wlan.minstrel/StatsEntry.attempts_cur uint64
 struct/member fuchsia.wlan.minstrel/StatsEntry.attempts_total uint64

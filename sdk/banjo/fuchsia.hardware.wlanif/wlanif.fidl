@@ -6,7 +6,6 @@ library fuchsia.hardware.wlanif;
 using ddk.hw.wlan.ieee80211;
 using ddk.hw.wlan.wlaninfo;
 using fuchsia.hardware.ethernet;
-using fuchsia.hardware.ethernet.mac;
 using fuchsia.hardware.wlan.info;
 using fuchsia.wlan.internal;
 using fuchsia.wlan.ieee80211 as ieee80211;
@@ -29,7 +28,7 @@ const WLAN_WMM_PARAM_LEN uint32 = 18;
 type WlanifScanReq = struct {
     txn_id uint64;
     bss_type_selector fuchsia.wlan.internal.BssTypeSelector;
-    bssid array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    bssid ieee80211.MacAddr;
     ssid ieee80211.CSsid;
     scan_type WlanScanType;
     probe_delay uint32;
@@ -68,7 +67,7 @@ type WlanAuthType = strict enum : uint8 {
 };
 
 type WlanifAuthReq = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     auth_type WlanAuthType;
     auth_failure_timeout uint32;
 
@@ -78,17 +77,17 @@ type WlanifAuthReq = struct {
 };
 
 type WlanifAuthInd = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     auth_type WlanAuthType;
 };
 
 type WlanifDeauthReq = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     reason_code ddk.hw.wlan.ieee80211.ReasonCode;
 };
 
 type WlanifAssocReq = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     rsne_len uint64;
     rsne array<uint8, WLAN_IE_BODY_MAX_LEN>;
     vendor_ie_len uint64;
@@ -96,7 +95,7 @@ type WlanifAssocReq = struct {
 };
 
 type WlanifAssocInd = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     listen_interval uint16;
     ssid ieee80211.CSsid;
     rsne_len uint64;
@@ -106,12 +105,12 @@ type WlanifAssocInd = struct {
 };
 
 type WlanifDisassocReq = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     reason_code uint16;
 };
 
 type WlanifResetReq = struct {
-    sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    sta_address ieee80211.MacAddr;
     set_default_mib bool;
 };
 
@@ -135,7 +134,7 @@ type SetKeyDescriptor = struct {
     key vector<uint8>:MAX;
     key_id uint16;
     key_type fuchsia.hardware.wlan.info.WlanKeyType;
-    address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    address ieee80211.MacAddr;
     rsc uint64;
     cipher_suite_oui array<uint8, 3>;
     cipher_suite_type uint8;
@@ -151,7 +150,7 @@ type WlanifSetKeysReq = struct {
 type DeleteKeyDescriptor = struct {
     key_id uint16;
     key_type fuchsia.hardware.wlan.info.WlanKeyType;
-    address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    address ieee80211.MacAddr;
 };
 
 type WlanifDelKeysReq = struct {
@@ -160,21 +159,21 @@ type WlanifDelKeysReq = struct {
 };
 
 type WlanifEapolReq = struct {
-    src_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
-    dst_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    src_addr ieee80211.MacAddr;
+    dst_addr ieee80211.MacAddr;
     data vector<uint8>:MAX;
 };
 
 /// This struct is sent from SME to wlanif, indicating the result of SAE handshake process.
 type WlanifSaeHandshakeResp = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     status_code ddk.hw.wlan.ieee80211.StatusCode;
 };
 
 /// This struct is sent in both directions, containing the information of SAE authentication
 /// frames, sae_fields maps to challenge text, see IEEE Std 802.11-2016, 9.3.3.12.
 type WlanifSaeFrame = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     status_code ddk.hw.wlan.ieee80211.StatusCode;
     seq_num uint16;
     sae_fields vector<uint8>:MAX;
@@ -251,22 +250,22 @@ type WlanAuthResult = strict enum : uint8 {
 };
 
 type WlanifAuthConfirm = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     auth_type WlanAuthType;
     result_code WlanAuthResult;
 };
 
 type WlanifAuthResp = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     result_code WlanAuthResult;
 };
 
 type WlanifDeauthConfirm = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
 };
 
 type WlanifDeauthIndication = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     reason_code ddk.hw.wlan.ieee80211.ReasonCode;
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
@@ -293,7 +292,7 @@ type WlanifAssocConfirm = struct {
 };
 
 type WlanifAssocResp = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     result_code WlanAssocResult;
     association_id uint16;
 };
@@ -303,7 +302,7 @@ type WlanifDisassocConfirm = struct {
 };
 
 type WlanifDisassocIndication = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
     reason_code ddk.hw.wlan.ieee80211.ReasonCode;
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
@@ -341,7 +340,7 @@ type WlanifEapolConfirm = struct {
     /// This value corresponds to the dst_addr in the EapolRequest we're confirming.
     /// IEEE 802.11-2016 does not include this field, but we need it to disambiguate
     /// if multiple EAPoL handshakes are ongoing.
-    dst_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    dst_addr ieee80211.MacAddr;
 };
 
 type WlanifSignalReportIndication = struct {
@@ -350,13 +349,13 @@ type WlanifSignalReportIndication = struct {
 };
 
 type WlanifEapolIndication = struct {
-    src_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
-    dst_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    src_addr ieee80211.MacAddr;
+    dst_addr ieee80211.MacAddr;
     data vector<uint8>:MAX;
 };
 
 type WlanifSaeHandshakeInd = struct {
-    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    peer_sta_address ieee80211.MacAddr;
 };
 
 type WlanifBandCapabilities = struct {
@@ -381,7 +380,7 @@ type WlanifFeature = strict enum : uint32 {
 };
 
 type WlanifQueryInfo = struct {
-    mac_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    mac_addr ieee80211.MacAddr;
     /// WLAN_MAC_ROLE_*
     role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
     /// WLANIF_FEATURE_*

@@ -5,13 +5,14 @@ library fuchsia.wlan.tap;
 
 using fuchsia.wlan.common;
 using fuchsia.wlan.device;
+using fuchsia.wlan.ieee80211 as ieee80211;
 using fuchsia.wlan.internal;
 using zx;
 
 /// Describes the capabilities of the fake wlantap-phy device to be created.
 type WlantapPhyConfig = struct {
     // TODO(fxbug.dev/64628): wlantap will configure all of its ifaces to use the same MAC address
-    iface_mac_addr array<uint8, 6>;
+    iface_mac_addr ieee80211.MacAddr;
     mac_role fuchsia.wlan.device.MacRole;
     supported_phys vector<fuchsia.wlan.device.SupportedPhy>:8;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:8;
@@ -74,7 +75,7 @@ type WlanKeyConfig = struct {
     cipher_oui array<uint8, 3>;
     cipher_type uint8;
     key_type uint8;
-    peer_addr array<uint8, 6>;
+    peer_addr ieee80211.MacAddr;
     key_idx uint8;
     key vector<uint8>:32;
 };
@@ -91,7 +92,7 @@ type WlanTxStatusEntry = struct {
 /// You are encouraged to use the default value in //src/connectivity/wlan/testing/hw-sim/src/lib.rs
 /// See wlan_tx_status_t for details about each field.
 type WlanTxStatus = struct {
-    peer_addr array<uint8, 6>;
+    peer_addr ieee80211.MacAddr;
     tx_status_entries array<WlanTxStatusEntry, 8>;
     success bool;
 };

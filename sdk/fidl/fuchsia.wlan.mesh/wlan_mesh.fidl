@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 library fuchsia.wlan.mesh;
 
+using fuchsia.wlan.ieee80211 as ieee80211;
+
 // This file is shared between SME and MLME.
 
 type MeshPath = struct {
-    dest_address array<uint8, 6>;
-    next_hop array<uint8, 6>;
+    dest_address ieee80211.MacAddr;
+    next_hop ieee80211.MacAddr;
     metric uint32;
 };
 
