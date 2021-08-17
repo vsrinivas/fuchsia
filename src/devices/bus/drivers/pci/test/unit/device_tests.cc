@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/inspect/cpp/hierarchy.h>
@@ -15,7 +16,6 @@
 #include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 
-#include "fuchsia/hardware/pci/c/banjo.h"
 #include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/device.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_bus.h"

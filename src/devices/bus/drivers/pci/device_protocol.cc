@@ -112,19 +112,6 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
     return LOG_STATUS(DEBUG, ZX_ERR_INVALID_ARGS, "%u", bar_id);
   }
 
-#ifdef ENABLE_MSIX
-  // If this device supports MSIX then we need to deny access to the BARs it
-  // uses.
-  // TODO(fxbug.dev/32978): It is technically possible for a device to place the pba/mask
-  // tables in the same bar as other data. In that case, we would need to ensure
-  // that the bar size reflected the non-table portions, and only allow mapping
-  // of that other space.
-  auto& msix = caps_.msix;
-  if (msix && (msix->table_bar() == bar_id || msix->pba_bar() == bar_id)) {
-    return LOG_STATUS(DEBUG, ZX_ERR_ACCESS_DENIED, "%u", bar_id);
-  }
-#endif
-
   // Both unused BARs and BARs that are the second half of a 64 bit
   // BAR have a size of zero.
   auto& bar = bars_[bar_id];
@@ -132,9 +119,23 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
     return LOG_STATUS(DEBUG, ZX_ERR_NOT_FOUND, "%u", bar_id);
   }
 
+  size_t bar_size = bar.size;
+#ifdef ENABLE_MSIX
+  // If this device shares BAR data with either of the MSI-X tables then we need
+  // to determine what portions of the BAR the driver can be permitted to
+  // access.
+  if (caps_.msix) {
+    zx::status<size_t> result = caps_.msix->GetBarDataSize(bar);
+    if (!result.is_ok()) {
+      return LOG_STATUS(DEBUG, result.status_value(), "%u", bar_id);
+    }
+    bar_size = result.value();
+  }
+#endif
+
   out_bar->id = bar_id;
   out_bar->address = bar.address;
-  out_bar->size = bar.size;
+  out_bar->size = bar_size;
   out_bar->type = (bar.is_mmio) ? ZX_PCI_BAR_TYPE_MMIO : ZX_PCI_BAR_TYPE_PIO;
 
   // MMIO Bars have an associated VMO for the driver to map, whereas IO bars

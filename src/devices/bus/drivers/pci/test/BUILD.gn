@@ -23,6 +23,7 @@ test("pci-unit") {
     "unit/device_tests.cc",
     "unit/fake_pciroot_tests.cc",
     "unit/main.cc",
+    "unit/msix_tests.cc",
   ]
 
   if (userspace_pci_enable_msi_x) {

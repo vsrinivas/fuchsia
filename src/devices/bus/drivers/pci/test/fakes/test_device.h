@@ -40,7 +40,7 @@
 // 	Capabilities: [258] L1 PM Substates
 // 	Capabilities: [128] Power Budgeting <?>
 // 	Capabilities: [600] Vendor Specific Information: ID=0001 Rev=1 Len=024 <?>
-std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
+static std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
     0xde, 0x10, // Vendor Id
     0xba, 0x13, // Device Id
     0x07, 0x00, // Command
@@ -331,7 +331,7 @@ constexpr size_t kFakeQuadroMsiXIrqCnt = 5;
 
 // BAR metadata for the fake Quadro. Refer to the BAR lines above for an
 // explanation.
-constexpr struct test_bar_info_t {
+static constexpr struct test_bar_info_t {
     bool is_upper_half;
     uint16_t address;
     uint32_t size;
@@ -346,7 +346,7 @@ constexpr struct test_bar_info_t {
 
 // This is the configuration space dump of a virtio-input device. It should
 // contain an MSIX capability along with 5 Vendor capabilities.
-std::array<uint8_t, PCI_BASE_CONFIG_SIZE> kFakeVirtioInputDeviceConfig = {
+static std::array<uint8_t, PCI_BASE_CONFIG_SIZE> kFakeVirtioInputDeviceConfig = {
     0xf4, 0x1a, // Vendor Id
     0x52, 0x10, // Device Id
     0x07, 0x01, // Command

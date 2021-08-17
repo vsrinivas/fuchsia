@@ -5,9 +5,11 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSIX_H_
 
 #include <lib/mmio/mmio.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <algorithm>
+#include <utility>
 
 #include <hwreg/bitfields.h>
 
@@ -50,10 +52,16 @@ static_assert(sizeof(MsixTable) == 16);
 // PCI Local Bus Spec 6.8.2: MSI-X Capability and Table Structure.
 class MsixCapability : public Capability {
  public:
+  static constexpr uint8_t kMsixControlRegisterOffset = 0x2;
+  static constexpr uint8_t kMsixTableRegisterOffset = 0x4;
+  static constexpr uint8_t kMsixPbaRegisterOffset = 0x8;
+
   MsixCapability(const Config& cfg, uint8_t base);
 
   zx_status_t Init(const Bar& tbar, const Bar& pbar);
-
+  // Returns the size of the safe portion of the BAR a device can map without
+  // having access to the MSI-X vector table or pba.
+  zx::status<size_t> GetBarDataSize(const Bar& bar) const;
   PciReg16 ctrl() { return ctrl_; }
   PciReg32 table() { return table_reg_; }
   PciReg32 pba() { return pba_reg_; }
