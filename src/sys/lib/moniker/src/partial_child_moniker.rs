@@ -9,6 +9,9 @@ use {
     std::{fmt, str::FromStr},
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Validates that the given string is valid as the instance or collection name in a moniker.
 // TODO(fxbug.dev/77563): The moniker types should be updated to use Name directly instead of String
 // so that it is clear what is validated and what isn't.
@@ -22,6 +25,7 @@ pub fn validate_moniker_part(name: Option<&str>) -> Result<(), MonikerError> {
 /// A variant of child moniker that does not distinguish between instances
 ///
 /// Display notation: "name[:collection]".
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Eq, PartialEq, Debug, Clone, Hash, Default)]
 pub struct PartialChildMoniker {
     pub name: String,

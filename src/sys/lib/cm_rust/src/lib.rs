@@ -19,6 +19,12 @@ use {
     thiserror::Error,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "serde")]
+mod serde_ext;
+
 pub mod data;
 
 lazy_static! {
@@ -153,6 +159,11 @@ impl ComponentDecl {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    derive(Deserialize, Serialize),
+    serde(tag = "type", rename_all = "snake_case")
+)]
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_union = "fsys::UseDecl")]
 pub enum UseDecl {
@@ -164,6 +175,7 @@ pub enum UseDecl {
     EventStream(UseEventStreamDecl),
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::UseServiceDecl")]
 pub struct UseServiceDecl {
@@ -173,6 +185,7 @@ pub struct UseServiceDecl {
     pub dependency_type: DependencyType,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::UseProtocolDecl")]
 pub struct UseProtocolDecl {
@@ -182,17 +195,28 @@ pub struct UseProtocolDecl {
     pub dependency_type: DependencyType,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::UseDirectoryDecl")]
 pub struct UseDirectoryDecl {
     pub source: UseSource,
     pub source_name: CapabilityName,
     pub target_path: CapabilityPath,
+
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            deserialize_with = "serde_ext::deserialize_fio2_operations",
+            serialize_with = "serde_ext::serialize_fio2_operations"
+        )
+    )]
     pub rights: fio2::Operations,
+
     pub subdir: Option<PathBuf>,
     pub dependency_type: DependencyType,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::UseStorageDecl")]
 pub struct UseStorageDecl {
@@ -212,6 +236,7 @@ impl UseDeclCommon for UseStorageDecl {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::UseEventDecl")]
 pub struct UseEventDecl {
@@ -223,6 +248,7 @@ pub struct UseEventDecl {
     pub dependency_type: DependencyType,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::EventSubscription")]
 pub struct EventSubscription {
@@ -230,6 +256,7 @@ pub struct EventSubscription {
     pub mode: EventMode,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EventMode {
     Async,
@@ -254,6 +281,7 @@ impl FidlIntoNative<EventMode> for fsys::EventMode {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::UseEventStreamDecl")]
 pub struct UseEventStreamDecl {
@@ -261,6 +289,11 @@ pub struct UseEventStreamDecl {
     pub subscriptions: Vec<EventSubscription>,
 }
 
+#[cfg_attr(
+    feature = "serde",
+    derive(Deserialize, Serialize),
+    serde(tag = "type", rename_all = "snake_case")
+)]
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_union = "fsys::OfferDecl")]
 pub enum OfferDecl {
@@ -273,6 +306,7 @@ pub enum OfferDecl {
     Event(OfferEventDecl),
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::OfferServiceDecl")]
 pub struct OfferServiceDecl {
@@ -282,6 +316,7 @@ pub struct OfferServiceDecl {
     pub target_name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::OfferProtocolDecl")]
 pub struct OfferProtocolDecl {
@@ -292,6 +327,7 @@ pub struct OfferProtocolDecl {
     pub dependency_type: DependencyType,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::OfferDirectoryDecl")]
 pub struct OfferDirectoryDecl {
@@ -300,10 +336,20 @@ pub struct OfferDirectoryDecl {
     pub target: OfferTarget,
     pub target_name: CapabilityName,
     pub dependency_type: DependencyType,
+
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            deserialize_with = "serde_ext::deserialize_opt_fio2_operations",
+            serialize_with = "serde_ext::serialize_opt_fio2_operations"
+        )
+    )]
     pub rights: Option<fio2::Operations>,
+
     pub subdir: Option<PathBuf>,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::OfferStorageDecl")]
 pub struct OfferStorageDecl {
@@ -313,6 +359,7 @@ pub struct OfferStorageDecl {
     pub target_name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::OfferRunnerDecl")]
 pub struct OfferRunnerDecl {
@@ -322,6 +369,7 @@ pub struct OfferRunnerDecl {
     pub target_name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::OfferResolverDecl")]
 pub struct OfferResolverDecl {
@@ -331,6 +379,7 @@ pub struct OfferResolverDecl {
     pub target_name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::OfferEventDecl")]
 pub struct OfferEventDecl {
@@ -394,6 +443,11 @@ impl OfferDeclCommon for OfferDecl {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    derive(Deserialize, Serialize),
+    serde(tag = "type", rename_all = "snake_case")
+)]
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_union = "fsys::ExposeDecl")]
 pub enum ExposeDecl {
@@ -448,15 +502,18 @@ impl ExposeDeclCommon for ExposeDecl {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ExposeServiceDecl")]
 pub struct ExposeServiceDecl {
     pub source: ExposeSource,
+
     pub source_name: CapabilityName,
     pub target: ExposeTarget,
     pub target_name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ExposeProtocolDecl")]
 pub struct ExposeProtocolDecl {
@@ -466,6 +523,7 @@ pub struct ExposeProtocolDecl {
     pub target_name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ExposeDirectoryDecl")]
 pub struct ExposeDirectoryDecl {
@@ -473,10 +531,20 @@ pub struct ExposeDirectoryDecl {
     pub source_name: CapabilityName,
     pub target: ExposeTarget,
     pub target_name: CapabilityName,
+
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            deserialize_with = "serde_ext::deserialize_opt_fio2_operations",
+            serialize_with = "serde_ext::serialize_opt_fio2_operations"
+        )
+    )]
     pub rights: Option<fio2::Operations>,
+
     pub subdir: Option<PathBuf>,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ExposeRunnerDecl")]
 pub struct ExposeRunnerDecl {
@@ -486,6 +554,7 @@ pub struct ExposeRunnerDecl {
     pub target_name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ExposeResolverDecl")]
 pub struct ExposeResolverDecl {
@@ -495,6 +564,11 @@ pub struct ExposeResolverDecl {
     pub target_name: CapabilityName,
 }
 
+#[cfg_attr(
+    feature = "serde",
+    derive(Deserialize, Serialize),
+    serde(tag = "type", rename_all = "snake_case")
+)]
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_union = "fsys::CapabilityDecl")]
 pub enum CapabilityDecl {
@@ -506,6 +580,7 @@ pub enum CapabilityDecl {
     Resolver(ResolverDecl),
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ServiceDecl")]
 pub struct ServiceDecl {
@@ -513,6 +588,7 @@ pub struct ServiceDecl {
     pub source_path: CapabilityPath,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ProtocolDecl")]
 pub struct ProtocolDecl {
@@ -520,14 +596,24 @@ pub struct ProtocolDecl {
     pub source_path: CapabilityPath,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::DirectoryDecl")]
 pub struct DirectoryDecl {
     pub name: CapabilityName,
     pub source_path: CapabilityPath,
+
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            deserialize_with = "serde_ext::deserialize_fio2_operations",
+            serialize_with = "serde_ext::serialize_fio2_operations"
+        )
+    )]
     pub rights: fio2::Operations,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::StorageDecl")]
 pub struct StorageDecl {
@@ -535,9 +621,11 @@ pub struct StorageDecl {
     pub source: StorageDirectorySource,
     pub backing_dir: CapabilityName,
     pub subdir: Option<PathBuf>,
+    #[cfg_attr(feature = "serde", serde(with = "serde_ext::StorageId"))]
     pub storage_id: fsys::StorageId,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::RunnerDecl")]
 pub struct RunnerDecl {
@@ -545,6 +633,7 @@ pub struct RunnerDecl {
     pub source_path: CapabilityPath,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ResolverDecl")]
 pub struct ResolverDecl {
@@ -671,6 +760,7 @@ fidl_translations_identical!(fsys::EnvironmentExtends);
 fidl_translations_identical!(fsys::StorageId);
 fidl_translations_identical!(Vec<fprocess::HandleInfo>);
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DependencyType {
     Strong,
@@ -775,6 +865,7 @@ impl UseDecl {
 ///
 /// Unlike a `CapabilityPath`, a `CapabilityName` doesn't encode any form
 /// of hierarchy.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CapabilityName(pub String);
 
@@ -853,6 +944,7 @@ pub trait CapabilityDeclCommon: Send + Sync {
 /// A named capability type.
 ///
 /// `CapabilityTypeName` provides a user friendly type encoding for a capability.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CapabilityTypeName {
     Directory,
@@ -1018,6 +1110,7 @@ fn to_fidl_dict(dict: HashMap<String, DictionaryValue>) -> fdata::Dictionary {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UseSource {
     Parent,
@@ -1057,6 +1150,7 @@ impl NativeIntoFidl<fsys::Ref> for UseSource {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferSource {
     Framework,
@@ -1098,6 +1192,7 @@ impl NativeIntoFidl<fsys::Ref> for OfferSource {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExposeSource {
     Self_,
@@ -1136,6 +1231,7 @@ impl NativeIntoFidl<fsys::Ref> for ExposeSource {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ExposeTarget {
     Parent,
@@ -1170,6 +1266,7 @@ pub struct ServiceSource<T> {
     pub source_name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StorageDirectorySource {
     Parent,
@@ -1230,6 +1327,7 @@ impl NativeIntoFidl<fsys::Ref> for RegistrationSource {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum OfferTarget {
     Child(String),
