@@ -123,6 +123,7 @@ pub fn dispatch_syscall(
         setgroups[2],
         setitimer[3],
         sigaltstack[2],
+        statfs[2],
         symlinkat[3],
         tgkill[3],
         truncate[2],

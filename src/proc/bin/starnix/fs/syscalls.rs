@@ -165,6 +165,16 @@ pub fn sys_fstatfs(
     Ok(SUCCESS)
 }
 
+pub fn sys_statfs(
+    ctx: &SyscallContext<'_>,
+    _user_path: UserCString,
+    user_buf: UserRef<statfs>,
+) -> Result<SyscallResult, Errno> {
+    let result = statfs::default();
+    ctx.task.mm.write_object(user_buf, &result)?;
+    Ok(SUCCESS)
+}
+
 /// A convenient wrapper for Task::open_file_at.
 ///
 /// Reads user_path from user memory and then calls through to Task::open_file_at.
