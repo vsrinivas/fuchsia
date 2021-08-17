@@ -234,8 +234,8 @@ impl ConnectTransactionSink {
     }
 
     pub fn send(&mut self, event: ConnectTransactionEvent) {
-        if let ConnectTransactionEvent::OnDisconnect { is_reconnecting } = &event {
-            self.is_reconnecting = *is_reconnecting;
+        if let ConnectTransactionEvent::OnDisconnect { info } = &event {
+            self.is_reconnecting = info.is_sme_reconnecting;
         };
         self.sink.send(event);
     }
@@ -246,7 +246,7 @@ pub type ConnectTransactionStream = mpsc::UnboundedReceiver<ConnectTransactionEv
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConnectTransactionEvent {
     OnConnectResult { result: ConnectResult, is_reconnect: bool },
-    OnDisconnect { is_reconnecting: bool },
+    OnDisconnect { info: fidl_sme::DisconnectInfo },
 }
 
 #[derive(Clone, Debug, PartialEq)]

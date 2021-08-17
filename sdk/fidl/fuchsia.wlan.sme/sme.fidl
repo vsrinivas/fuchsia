@@ -103,6 +103,21 @@ type ConnectResultCode = strict enum {
     CREDENTIAL_REJECTED = 3;
 };
 
+type DisconnectSource = strict enum {
+    AP = 0;
+    USER = 1;
+    MLME = 2;
+};
+
+type DisconnectInfo = struct {
+    /// Whether SME is attempting to reconnect by itself
+    is_sme_reconnecting bool;
+    /// Reason for disconnect. Meaning differs depending on `disconnect_source`
+    reason_code uint16;
+    /// Where the disconnect originated
+    disconnect_source DisconnectSource;
+};
+
 protocol ConnectTransaction {
     /// Return the result of the initial connection request or later SME-initiated reconnection.
     -> OnConnectResult(struct {
@@ -112,11 +127,10 @@ protocol ConnectTransaction {
         is_reconnect bool;
     });
 
-    /// Notify that the client has disconnected.
+    /// Notify that the client has disconnected. If DisconnectInfo indicates that SME is
+    /// attempting to reconnect by itself, there's not need for caller to intervene for now.
     -> OnDisconnect(struct {
-        /// Whether SME is attempting to reconnect by itself. If `is_reconnecting` is true,
-        /// there's no need for caller to intervene for now.
-        is_reconnecting bool;
+        info DisconnectInfo;
     });
 };
 

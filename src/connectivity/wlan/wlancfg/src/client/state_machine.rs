@@ -635,14 +635,14 @@ async fn connected_state(
             event = options.connect_txn_stream.next() => match event {
                 Some(Ok(event)) => {
                     let is_sme_idle = match event {
-                        fidl_sme::ConnectTransactionEvent::OnDisconnect { is_reconnecting } => {
+                        fidl_sme::ConnectTransactionEvent::OnDisconnect { info } => {
                             // Log a disconnect in Cobalt
                             common_options.cobalt_api.log_event(
                                 DISCONNECTION_METRIC_ID,
                                 types::DisconnectReason::DisconnectDetectedFromSme
                             );
                             common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
-                            !is_reconnecting
+                            !info.is_sme_reconnecting
                         }
                         fidl_sme::ConnectTransactionEvent::OnConnectResult { code, .. } => match code {
                             fidl_sme::ConnectResultCode::Success => {
@@ -760,7 +760,8 @@ mod tests {
                 listener,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                    generate_random_bss_description, generate_random_sme_scan_result, poll_sme_req,
+                    generate_disconnect_info, generate_random_bss_description,
+                    generate_random_sme_scan_result, poll_sme_req,
                     validate_sme_scan_request_and_send_results,
                 },
             },
@@ -2625,9 +2626,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // SME notifies Policy of disconnection
-        let is_reconnecting = false;
+        let is_sme_reconnecting = false;
         connect_txn_handle
-            .send_on_disconnect(is_reconnecting)
+            .send_on_disconnect(&mut generate_disconnect_info(is_sme_reconnecting))
             .expect("failed to send disconnection event");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
@@ -2762,9 +2763,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut state_fut), Poll::Pending);
 
         // SME notifies Policy of disconnection.
-        let is_reconnecting = false;
+        let is_sme_reconnecting = false;
         connect_txn_handle
-            .send_on_disconnect(is_reconnecting)
+            .send_on_disconnect(&mut generate_disconnect_info(is_sme_reconnecting))
             .expect("failed to send disconnection event");
         assert_variant!(exec.run_until_stalled(&mut state_fut), Poll::Pending);
 
@@ -3094,9 +3095,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // SME notifies Policy of disconnection.
-        let is_reconnecting = false;
+        let is_sme_reconnecting = false;
         connect_txn_handle
-            .send_on_disconnect(is_reconnecting)
+            .send_on_disconnect(&mut generate_disconnect_info(is_sme_reconnecting))
             .expect("failed to send disconnection event");
 
         // Run the state machine
@@ -3249,9 +3250,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // SME notifies Policy of disconnection
-        let is_reconnecting = true;
+        let is_sme_reconnecting = true;
         connect_txn_handle
-            .send_on_disconnect(is_reconnecting)
+            .send_on_disconnect(&mut generate_disconnect_info(is_sme_reconnecting))
             .expect("failed to send disconnection event");
 
         // Run the state machine
@@ -3342,9 +3343,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // SME notifies Policy of disconnection
-        let is_reconnecting = true;
+        let is_sme_reconnecting = true;
         connect_txn_handle
-            .send_on_disconnect(is_reconnecting)
+            .send_on_disconnect(&mut generate_disconnect_info(is_sme_reconnecting))
             .expect("failed to send disconnection event");
 
         // Run the state machine

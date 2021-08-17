@@ -217,8 +217,8 @@ async fn serve_connect_txn_stream(
                         let result = handle.send_on_connect_result(connect_result, is_reconnect);
                         filter_out_peer_closed(result)?;
                     }
-                    ConnectTransactionEvent::OnDisconnect { is_reconnecting } => {
-                        let result = handle.send_on_disconnect(is_reconnecting);
+                    ConnectTransactionEvent::OnDisconnect { mut info } => {
+                        let result = handle.send_on_disconnect(&mut info);
                         filter_out_peer_closed(result)?;
                     }
                 },
@@ -536,15 +536,19 @@ mod tests {
         );
 
         // Test sending OnDisconnect
+        let input_info = fidl_sme::DisconnectInfo {
+            is_sme_reconnecting: true,
+            reason_code: 1,
+            disconnect_source: fidl_sme::DisconnectSource::Mlme,
+        };
         sme_proxy
-            .unbounded_send(ConnectTransactionEvent::OnDisconnect { is_reconnecting: true })
+            .unbounded_send(ConnectTransactionEvent::OnDisconnect { info: input_info.clone() })
             .expect("expect sending ConnectTransactionEvent to succeed");
         assert_variant!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
         let event = assert_variant!(poll_stream_fut(&mut exec, &mut fidl_client_fut), Poll::Ready(Some(Ok(event))) => event);
-        assert_variant!(
-            event,
-            fidl_sme::ConnectTransactionEvent::OnDisconnect { is_reconnecting: true }
-        );
+        assert_variant!(event, fidl_sme::ConnectTransactionEvent::OnDisconnect { info: output_info } => {
+            assert_eq!(input_info, output_info);
+        });
 
         // When SME proxy is dropped, the fut should terminate
         std::mem::drop(sme_proxy);

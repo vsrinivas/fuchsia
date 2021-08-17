@@ -69,3 +69,17 @@ pub fn generate_random_sme_scan_result() -> fidl_sme::ScanResult {
         bss_description: generate_random_bss_description(),
     }
 }
+
+pub fn generate_disconnect_info(is_sme_reconnecting: bool) -> fidl_sme::DisconnectInfo {
+    let mut rng = rand::thread_rng();
+    fidl_sme::DisconnectInfo {
+        is_sme_reconnecting,
+        reason_code: rng.gen::<u16>(),
+        disconnect_source: match rng.gen_range(0, 2) {
+            0 => fidl_sme::DisconnectSource::Ap,
+            1 => fidl_sme::DisconnectSource::User,
+            2 => fidl_sme::DisconnectSource::Mlme,
+            _ => panic!(),
+        },
+    }
+}

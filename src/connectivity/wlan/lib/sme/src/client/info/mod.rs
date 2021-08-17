@@ -406,6 +406,16 @@ impl DisconnectSource {
     }
 }
 
+impl From<DisconnectSource> for fidl_sme::DisconnectSource {
+    fn from(source: DisconnectSource) -> Self {
+        match source {
+            DisconnectSource::Ap(..) => Self::Ap,
+            DisconnectSource::User(..) => Self::User,
+            DisconnectSource::Mlme(..) => Self::Mlme,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -580,8 +580,13 @@ impl Associated {
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
             context.info.report_disconnect(disconnect_info);
+            let fidl_disconnect_info = fidl_sme::DisconnectInfo {
+                is_sme_reconnecting: true,
+                reason_code: disconnect_source.unflattened_reason_code(),
+                disconnect_source: disconnect_source.into(),
+            };
             self.connect_txn_sink
-                .send(ConnectTransactionEvent::OnDisconnect { is_reconnecting: true });
+                .send(ConnectTransactionEvent::OnDisconnect { info: fidl_disconnect_info });
         }
         let msg = format!(
             "received DisassociateInd msg; reason code {:?}",
@@ -653,8 +658,13 @@ impl Associated {
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
+                let fidl_disconnect_info = fidl_sme::DisconnectInfo {
+                    is_sme_reconnecting: false,
+                    reason_code: disconnect_source.unflattened_reason_code(),
+                    disconnect_source: disconnect_source.into(),
+                };
                 self.connect_txn_sink
-                    .send(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false });
+                    .send(ConnectTransactionEvent::OnDisconnect { info: fidl_disconnect_info });
             }
             None => {
                 let connect_result = EstablishRsnaFailure {
@@ -1082,9 +1092,14 @@ impl ClientState {
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
+                let fidl_disconnect_info = fidl_sme::DisconnectInfo {
+                    is_sme_reconnecting: false,
+                    reason_code: disconnect_source.unflattened_reason_code(),
+                    disconnect_source: disconnect_source.into(),
+                };
                 state
                     .connect_txn_sink
-                    .send(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false });
+                    .send(ConnectTransactionEvent::OnDisconnect { info: fidl_disconnect_info });
             }
         }
         let start_state = self.state_name();
@@ -2388,10 +2403,13 @@ mod tests {
                 reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             }));
         });
-        assert_variant!(
+        let info = assert_variant!(
             connect_txn_stream.try_next(),
-            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false }))
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
         );
+        assert!(!info.is_sme_reconnecting);
+        assert_eq!(info.reason_code, fidl_ieee80211::ReasonCode::LeavingNetworkDeauth as u16);
+        assert_eq!(info.disconnect_source, fidl_sme::DisconnectSource::Mlme);
     }
 
     #[test]
@@ -2422,10 +2440,13 @@ mod tests {
                 reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
             }));
         });
-        assert_variant!(
+        let info = assert_variant!(
             connect_txn_stream.try_next(),
-            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: true }))
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
         );
+        assert!(info.is_sme_reconnecting);
+        assert_eq!(info.reason_code, fidl_ieee80211::ReasonCode::ReasonInactivity as u16);
+        assert_eq!(info.disconnect_source, fidl_sme::DisconnectSource::Mlme);
 
         // Check that association is attempted
         expect_assoc_req(&mut h.mlme_stream, bss.bssid);
@@ -2459,7 +2480,7 @@ mod tests {
         let state = state.on_mlme_event(deauth_ind, &mut h.context);
         assert_variant!(
             connect_txn_stream.try_next(),
-            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: true }))
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { .. }))
         );
 
         // Check that association is attempted
@@ -2498,10 +2519,13 @@ mod tests {
             assert_eq!(info.bssid, bss.bssid);
             assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
         });
-        assert_variant!(
+        let info = assert_variant!(
             connect_txn_stream.try_next(),
-            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false }))
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
         );
+        assert!(!info.is_sme_reconnecting);
+        assert_eq!(info.reason_code, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting as u16);
+        assert_eq!(info.disconnect_source, fidl_sme::DisconnectSource::User);
     }
 
     #[test]
@@ -2528,10 +2552,13 @@ mod tests {
             assert_eq!(info.bssid, [8; 6]);
             assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
         });
-        assert_variant!(
+        let info = assert_variant!(
             connect_txn_stream.try_next(),
-            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false }))
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
         );
+        assert!(!info.is_sme_reconnecting);
+        assert_eq!(info.reason_code, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting as u16);
+        assert_eq!(info.disconnect_source, fidl_sme::DisconnectSource::User);
     }
 
     #[test]
