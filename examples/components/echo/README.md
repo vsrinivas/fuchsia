@@ -31,7 +31,7 @@ When the above command is run, you can see the following output with `fx log`:
 ## Testing
 
 Unit tests for echo are available in the `echo-unittests` package.
-Use the `ffx test run` command to run the tests on a target device
+Use the `ffx test run` command to run the tests on a target device:
 
 ```
 $ ffx test run fuchsia-pkg://fuchsia.com/echo-unittests#meta/echo-unittests.cm
