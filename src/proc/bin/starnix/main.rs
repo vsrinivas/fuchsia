@@ -17,6 +17,7 @@ mod loader;
 mod logging;
 mod mm;
 mod runner;
+mod selinux;
 mod signals;
 mod syscalls;
 mod task;

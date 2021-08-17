@@ -4,6 +4,7 @@
 
 mod anon_node;
 mod dir_entry;
+mod directory_file;
 mod dirent_sink;
 mod fd_events;
 mod fd_number;
@@ -20,6 +21,7 @@ mod vmo_file;
 
 pub use anon_node::*;
 pub use dir_entry::*;
+pub use directory_file::*;
 pub use dirent_sink::*;
 pub use fd_events::*;
 pub use fd_number::*;
@@ -44,6 +46,7 @@ pub mod path;
 pub mod pipe;
 pub mod proc;
 pub mod syscalls;
+pub mod sysfs;
 pub mod tmpfs;
 
 pub use path::{FsStr, FsString};

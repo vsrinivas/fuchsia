@@ -111,3 +111,10 @@ impl ops::Not for FileMode {
         Self(!self.0)
     }
 }
+
+#[macro_export]
+macro_rules! mode {
+    ($type:ident, $mode:expr) => {
+        crate::types::FileMode::from_bits($mode) | crate::types::FileMode::$type
+    };
+}

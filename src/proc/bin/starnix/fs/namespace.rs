@@ -14,8 +14,10 @@ use parking_lot::RwLock;
 use super::devfs::dev_tmp_fs;
 use super::devpts::DevptsFs;
 use super::proc::proc_fs;
+use super::sysfs::sys_fs;
 use super::tmpfs::TmpFs;
 use super::*;
+use crate::selinux::selinux_fs;
 use crate::task::Kernel;
 use crate::task::Task;
 use crate::types::*;
@@ -96,6 +98,8 @@ pub fn create_filesystem(
         b"devfs" => Fs(dev_tmp_fs(kernel).clone()),
         b"devpts" => Fs(DevptsFs::new()),
         b"proc" => Fs(proc_fs(kernel.clone())),
+        b"selinuxfs" => Fs(selinux_fs(kernel).clone()),
+        b"sysfs" => Fs(sys_fs(kernel).clone()),
         b"tmpfs" => Fs(TmpFs::new()),
         _ => return Err(ENODEV),
     })

@@ -177,6 +177,16 @@ impl DirEntry {
         })
     }
 
+    pub fn add_node_ops(
+        self: &DirEntryHandle,
+        name: &FsStr,
+        mode: FileMode,
+        dev: DeviceType,
+        ops: impl FsNodeOps + 'static,
+    ) -> Result<DirEntryHandle, Errno> {
+        self.create_entry(name, mode, dev, || Ok(self.node.fs().create_node(Box::new(ops), mode)))
+    }
+
     pub fn create_symlink(
         self: &DirEntryHandle,
         name: &FsStr,
