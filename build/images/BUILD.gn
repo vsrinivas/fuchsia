@@ -35,13 +35,13 @@ labels = {
   images = "//build/images/fuchsia"
   images_prime = "//build/images/fuchsia:fuchsia_prime"
   images_netboot = "//build/images/fuchsia:netboot"
-  minfs = "//build/images:data.blk"
 }
 
 supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 files = {
   outdir = get_label_info(labels.images, "target_out_dir") + "/fuchsia"
   gendir = "${outdir}/gen"
+  minfs = "${outdir}/data.blk"
   blobfs = "${root_out_dir}/obj/build/images/blob.blk"
 
   if (!bootfs_only) {
@@ -60,10 +60,6 @@ recovery_is_zedboot =
 # Dependencies for all image targets referenced by paver_targets, i.e., the
 # images needed by the generated pave scripts.
 default_image_deps = [ labels.images ]
-
-if (!bootfs_only) {
-  default_image_deps += [ "fuchsia:copy_blobfs" ]
-}
 
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
@@ -287,43 +283,6 @@ action("check_vtables_in_rodata") {
   ]
 }
 
-# data.blk creates minfs data partition. The partition is included in fvm.blk
-# and fvm.sparse.blk. To increase the size of the data partition, increase
-# the total size of the fvm images using |fvm_image_size|.
-data_image_path = "$target_out_dir/data.blk"
-compiled_action("data.blk") {
-  testonly = true
-
-  rebased_data_image_path = rebase_path(data_image_path, root_build_dir)
-
-  tool = "//zircon/tools/minfs"
-  outputs = [ data_image_path ]
-  depfile = data_image_path + ".d"
-  args = [
-    "--depfile",
-    rebase_path(data_image_path, root_build_dir),
-    "create",
-  ]
-  if (data_partition_manifest != "") {
-    args += [
-      "--manifest",
-      rebase_path(data_partition_manifest),
-    ]
-  }
-
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "data"
-        path = rebased_data_image_path
-        type = "blk"
-      },
-    ]
-    image_paths = [ "IMAGE_DATA_RAW=$rebased_data_image_path" ]
-  }
-}
-
 group("fvm.sparse.blk") {
   testonly = fuchsia_zbi_testonly
   public_deps = [ "${labels.images}" ]
@@ -356,7 +315,7 @@ group("signed") {
 
 # Pseudo-target to record information about the sizes of filesystems assembled
 # during the build for later analysis.
-# TODO(fxbug.dev/81871): Only include this for builds theaat generated blobfs,
+# TODO(fxbug.dev/81871): Only include this for builds that generate blobfs
 # once this targets is no longer hardcoded in infra.
 group("record_filesystem_sizes") {
   testonly = true
@@ -1485,13 +1444,12 @@ compiled_action("uefi-disk") {
   } else {
     inputs += [
       fvm_tool_path,
-      data_image_path,
+      files.minfs,
       files.blobfs,
     ]
     deps += [
       "//src/storage/bin/fvm:fvm(//build/toolchain:host_x64)",
       labels.images,
-      labels.minfs,
     ]
   }
 

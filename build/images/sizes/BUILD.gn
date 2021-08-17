@@ -24,7 +24,7 @@ files = {
   gendir = "${outdir}/gen"
 
   zbi = "${outdir}/fuchsia.zbi"
-  minfs = "$root_out_dir/obj/build/images/data.blk"
+  minfs = "${outdir}/data.blk"
   blobfs = "${outdir}/blob.blk"
   fvm_sparse = "${outdir}/fvm.sparse.blk"
   blobs_json = "${gendir}/blobs.json"
@@ -98,7 +98,6 @@ fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
 fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir") + "/fvm"
 
 filesystem_sizes_deps += [
-  "//build/images:data.blk",
   blobfs_tool_target,
   fvm_tool_target,
   labels.images,

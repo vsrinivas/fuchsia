@@ -32,6 +32,7 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/base_package",
     "//src/lib/assembly/blobfs",
     "//src/lib/assembly/fvm",
+    "//src/lib/assembly/minfs",
     "//src/lib/assembly/test_keys",
     "//src/lib/assembly/update_package",
     "//src/lib/assembly/util",
@@ -69,10 +70,12 @@ host_test_data("tools_for_testing") {
     _blobfs_path,
     _fvm_path,
     _zbi_path,
+    minfs_tool_path,
   ]
   deps = [
     _blobfs_target,
     _fvm_target,
     _zbi_target,
+    minfs_tool_target,
   ]
 }
