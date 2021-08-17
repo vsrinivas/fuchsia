@@ -57,8 +57,9 @@ type ScanResult = struct {
 type ScanErrorCode = strict enum {
     NOT_SUPPORTED = 1;
     INTERNAL_ERROR = 2;
-    SHOULD_WAIT = 3;
-    CANCELED_BY_DRIVER_OR_FIRMWARE = 4;
+    INTERNAL_MLME_ERROR = 3;
+    SHOULD_WAIT = 4;
+    CANCELED_BY_DRIVER_OR_FIRMWARE = 5;
 };
 
 type ScanError = struct {
