@@ -6,16 +6,10 @@ import("//build/unification/zx_library.gni")
 
 zx_library("ftl-mtd") {
   sdk = "source"
-  sdk_headers = [
-    "lib/ftl-mtd/nand-volume-driver.h",
-    "lib/ftl-mtd/ftl-volume-wrapper.h",
-  ]
+  sdk_headers = [ "lib/ftl-mtd/nand-volume-driver.h" ]
   host = true
 
-  sources = [
-    "ftl-volume-wrapper.cc",
-    "nand-volume-driver.cc",
-  ]
+  sources = [ "nand-volume-driver.cc" ]
 
   public_deps = [
     "//zircon/public/lib/fbl",
@@ -23,7 +17,6 @@ zx_library("ftl-mtd") {
   ]
 
   deps = [
-    "//src/storage/fvm/host",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/ftl",

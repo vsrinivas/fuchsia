@@ -7,10 +7,7 @@ import("//build/test.gni")
 group("tests") {
   testonly = true
   if (current_os == "linux") {
-    deps = [
-      ":ftl-volume-wrapper($host_toolchain)",
-      ":nand-volume-driver($host_toolchain)",
-    ]
+    deps = [ ":nand-volume-driver($host_toolchain)" ]
   }
 }
 
@@ -26,18 +23,6 @@ test("nand-volume-driver") {
   sources = [ "nand-volume-driver-tests.cc" ]
   deps = [
     ":common",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ftl-mtd",
-    "//zircon/system/ulib/mtd",
-  ]
-}
-
-test("ftl-volume-wrapper") {
-  # Restrict visbility to ensure OS is checked.
-  visibility = [ ":tests" ]
-  sources = [ "ftl-volume-wrapper-tests.cc" ]
-  deps = [
-    "//src/storage/fvm/host",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ftl-mtd",
     "//zircon/system/ulib/mtd",

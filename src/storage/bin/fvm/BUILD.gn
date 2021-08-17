@@ -9,8 +9,9 @@ executable("fvm") {
 
   deps = [
     "//sdk/lib/fit",
+    "//src/storage/blobfs",
     "//src/storage/fvm",
-    "//src/storage/fvm/host",
+    "//src/storage/minfs",
     "//src/storage/volume_image/adapter:commands",
     "//src/storage/volume_image/ftl:ftl-image",
     "//src/storage/volume_image/ftl:ftl-raw-nand-image-writer",
@@ -24,16 +25,6 @@ executable("fvm") {
 
   if (!is_fuchsia) {
     deps += [ "//zircon/system/ulib/zx-panic-libc" ]
-  }
-
-  if (current_os == "linux") {
-    sources += [ "mtd.cc" ]
-    deps += [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/system/ulib/mtd",
-    ]
-  } else {
-    sources += [ "mtd_stub.cc" ]
   }
 }
 

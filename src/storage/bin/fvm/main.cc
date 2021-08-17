@@ -21,17 +21,9 @@
 
 #include "fbl/unique_fd.h"
 #include "range/interval-tree.h"
-#include "src/storage/bin/fvm/mtd.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/fvm/format.h"
-#include "src/storage/fvm/fvm_sparse.h"
-#include "src/storage/fvm/host/container.h"
-#include "src/storage/fvm/host/file_wrapper.h"
-#include "src/storage/fvm/host/format.h"
-#include "src/storage/fvm/host/fvm_container.h"
-#include "src/storage/fvm/host/fvm_reservation.h"
-#include "src/storage/fvm/host/sparse_container.h"
 #include "src/storage/fvm/sparse_reader.h"
+#include "src/storage/minfs/format.h"
 #include "src/storage/volume_image/adapter/commands.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
 #include "src/storage/volume_image/ftl/ftl_raw_nand_image_writer.h"
@@ -47,11 +39,6 @@
 #include "src/storage/volume_image/utils/fd_writer.h"
 
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20))
-constexpr char kMinimumInodes[] = "--minimum-inodes";
-constexpr char kMinimumData[] = "--minimum-data-bytes";
-constexpr char kMaximumBytes[] = "--maximum-bytes";
-constexpr char kEmptyMinfs[] = "--with-empty-minfs";
-constexpr char kReserveSlices[] = "--reserve-slices";
 
 enum DiskType {
   File = 0,
@@ -238,84 +225,6 @@ class RawBlockImageWriter final : public storage::volume_image::Writer {
   storage::volume_image::Writer* writer_ = nullptr;
 };
 
-int add_partitions(Container* container, int argc, char** argv) {
-  // If the flag |kEmptyMinfs| is set, an empty minfs partition will be added after the rest of the
-  // partitions have been processed.
-  bool add_empty_minfs = false;
-  // If the flag |kReserveSlices| is set, a reservation partition with the desired number of slices
-  // will be added after the rest of the partitions have been processed.
-  size_t slices_to_reserve = 0;
-
-  for (int i = 0; i < argc;) {
-    if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
-      usage();
-    }
-
-    const char* partition_type = argv[i] + 2;
-    const char* partition_path = argv[i + 1];
-    if (i < argc && strcmp(argv[i], kEmptyMinfs) == 0) {
-      add_empty_minfs = true;
-      i++;
-      continue;
-    }
-    if (i < argc && strcmp(argv[i], kReserveSlices) == 0) {
-      if (parse_size(argv[i + 1], &slices_to_reserve) < 0) {
-        usage();
-        return -1;
-      }
-      i += 2;
-      continue;
-    }
-
-    std::optional<uint64_t> inodes = {}, data = {}, total_bytes = {};
-    i += 2;
-
-    while (true) {
-      size_t size;
-      if ((i + 2) <= argc && strcmp(argv[i], kMinimumInodes) == 0) {
-        if (parse_size(argv[i + 1], &size) < 0) {
-          usage();
-          return -1;
-        }
-        inodes = safemath::checked_cast<uint64_t>(size);
-        i += 2;
-      } else if ((i + 2) <= argc && strcmp(argv[i], kMinimumData) == 0) {
-        if (parse_size(argv[i + 1], &size) < 0) {
-          usage();
-          return -1;
-        }
-        data = safemath::checked_cast<uint64_t>(size);
-        i += 2;
-      } else if ((i + 2) <= argc && strcmp(argv[i], kMaximumBytes) == 0) {
-        if (parse_size(argv[i + 1], &size) < 0) {
-          usage();
-          return -1;
-        }
-        total_bytes = safemath::checked_cast<uint64_t>(size);
-        i += 2;
-      } else {
-        break;
-      }
-    }
-
-    FvmReservation reserve(inodes, data, total_bytes);
-    zx_status_t status = container->AddPartition(partition_path, partition_type, &reserve);
-    if (status != ZX_OK) {
-      fprintf(stderr, "Failed to add partition: %d\n", status);
-      reserve.Dump(stderr);
-      return -1;
-    }
-  }
-  if (add_empty_minfs) {
-    container->AddCorruptedPartition(kDataTypeName, 0);
-  }
-  if (slices_to_reserve) {
-    container->AddReservedPartition(slices_to_reserve);
-  }
-
-  return 0;
-}
-
 size_t get_disk_size(const char* path, size_t offset) {
   fbl::unique_fd fd(open(path, O_RDONLY, 0644));
 
@@ -346,61 +255,6 @@ zx_status_t ParseDiskType(const char* type_str, DiskType* out) {
 
   fprintf(stderr, "Unknown disk type: '%s'.\n", type_str);
   return ZX_ERR_INVALID_ARGS;
-}
-
-bool IsRawFvmImageFile(const char* path, size_t offset) {
-  zx_status_t status = FvmContainer::Verify(path, offset);
-  return status == ZX_OK;
-}
-
-zx_status_t IsFvmSparseImageFile(const char* path, bool* result) {
-  fbl::unique_fd fd(open(path, O_RDONLY, 0644));
-  if (!fd) {
-    fprintf(stderr, "Fail to open file %s\n", path);
-    return ZX_ERR_IO;
-  }
-  std::unique_ptr<fvm::SparseReader> reader;
-  *result = fvm::SparseReader::CreateSilent(std::move(fd), &reader) == ZX_OK;
-  return ZX_OK;
-}
-
-zx_status_t IsLZ4CompressedFile(const char* path, bool* result) {
-  constexpr uint32_t kLZ4Magic = 0x184D2204;
-  fbl::unique_fd fd(open(path, O_RDONLY, 0644));
-  if (!fd) {
-    fprintf(stderr, "Fail to open file %s\n", path);
-    return ZX_ERR_IO;
-  }
-  uint32_t magic;
-  if (read(fd.get(), &magic, sizeof(magic)) != sizeof(magic)) {
-    fprintf(stderr, "Fail to read from file %s\n", path);
-    return ZX_ERR_IO;
-  }
-  *result = magic == kLZ4Magic;
-  return ZX_OK;
-}
-
-const char* DetermineImageInputTypeOption(const char* input_path, size_t offset) {
-  bool result;
-  if (IsRawFvmImageFile(input_path, offset)) {
-    return "--raw";
-  }
-
-  if (IsFvmSparseImageFile(input_path, &result) != ZX_OK) {
-    return nullptr;
-  }
-  if (result) {
-    return "--sparse";
-  }
-
-  if (IsLZ4CompressedFile(input_path, &result) != ZX_OK) {
-    return nullptr;
-  }
-  if (result) {
-    return "--lz4";
-  }
-
-  return nullptr;
 }
 
 zx_status_t CopyFile(const char* dst, const char* src) {

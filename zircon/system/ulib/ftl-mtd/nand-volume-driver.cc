@@ -211,6 +211,8 @@ uint32_t NandVolumeDriver::ByteOffset() { return block_offset_ * interface_->Blo
 
 uint32_t NandVolumeDriver::PageSize() { return page_multiplier_ * interface_->PageSize(); }
 
-uint8_t NandVolumeDriver::SpareSize() { return page_multiplier_ * interface_->OobSize(); }
+uint8_t NandVolumeDriver::SpareSize() {
+  return static_cast<uint8_t>(page_multiplier_ * interface_->OobSize());
+}
 
 }  // namespace ftl_mtd
