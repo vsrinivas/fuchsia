@@ -51,12 +51,12 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
   void GetConfig(GetConfigCallback callback) final {
     fuchsia::io::test::Io1Config config;
     config.set_immutable_file(false);
-    config.set_no_exec(false);
     config.set_no_vmofile(false);
     config.set_no_remote_dir(false);
     config.set_no_admin(false);
 
     // PseudoFile/PseudoDir do not support a variety of methods:
+    config.set_no_exec(true);
     config.set_immutable_dir(true);
     config.set_no_get_buffer(true);
     config.set_no_rename(true);

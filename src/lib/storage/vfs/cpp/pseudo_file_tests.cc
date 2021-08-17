@@ -106,6 +106,7 @@ TEST(PseudoFile, OpenValidationBuffered) {
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
   }
 
@@ -114,6 +115,7 @@ TEST(PseudoFile, OpenValidationBuffered) {
     auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
 
     fbl::RefPtr<fs::Vnode> redirect;
@@ -128,6 +130,7 @@ TEST(PseudoFile, OpenValidationBuffered) {
     auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(nullptr, &DummyWriter);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
 
     fbl::RefPtr<fs::Vnode> redirect;
@@ -140,6 +143,7 @@ TEST(PseudoFile, OpenValidationBuffered) {
   // read handler, write handler
   {
     auto file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader, &DummyWriter);
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
 
     {
@@ -173,6 +177,7 @@ TEST(PseudoFile, OpenValidationUnbuffered) {
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
   }
 
@@ -181,6 +186,7 @@ TEST(PseudoFile, OpenValidationUnbuffered) {
     auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(&DummyReader);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     fbl::RefPtr<fs::Vnode> redirect;
     auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
@@ -194,6 +200,7 @@ TEST(PseudoFile, OpenValidationUnbuffered) {
     auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(nullptr, &DummyWriter);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     fbl::RefPtr<fs::Vnode> redirect;
     auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
@@ -205,6 +212,7 @@ TEST(PseudoFile, OpenValidationUnbuffered) {
   // read handler, write handler
   {
     auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(&DummyReader, &DummyWriter);
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     {
       fbl::RefPtr<fs::Vnode> redirect;

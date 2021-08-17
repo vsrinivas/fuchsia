@@ -50,7 +50,15 @@ VmoFile::~VmoFile() {}
 
 VnodeProtocolSet VmoFile::GetProtocols() const { return VnodeProtocol::kMemory; }
 
-bool VmoFile::ValidateRights(Rights rights) const { return !rights.write || writable_; }
+bool VmoFile::ValidateRights(Rights rights) const {
+  // Executable rights/VMOs are currently not supported, but may be added in the future.
+  // If this is the case, we should further restrict the allowable set of rights such that
+  // an executable VmoFile can only be opened as readable/executable and not writable.
+  if (rights.execute) {
+    return false;
+  }
+  return !rights.write || writable_;
+}
 
 zx_status_t VmoFile::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();

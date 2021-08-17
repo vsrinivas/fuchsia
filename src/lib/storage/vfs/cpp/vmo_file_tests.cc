@@ -119,6 +119,8 @@ TEST(VmoFile, Open) {
     EXPECT_NULL(redirect);
     EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
     EXPECT_NULL(redirect);
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
+    EXPECT_NULL(redirect);
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
   }
@@ -138,6 +140,8 @@ TEST(VmoFile, Open) {
     result = file->ValidateOptions(VnodeOptions::WriteOnly());
     EXPECT_RESULT_OK(result);
     EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
+    EXPECT_NULL(redirect);
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadExec()));
     EXPECT_NULL(redirect);
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
