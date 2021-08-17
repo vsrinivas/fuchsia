@@ -340,6 +340,7 @@ sdk_molecule("core_lib") {
     "//sdk/lib/syslog/structured_backend:structured_backend_sdk",
     "//sdk/lib/ui/scenic/cpp:cpp_sdk",
     "//sdk/lib/vfs/cpp:cpp_sdk",
+    "//sdk/lib/vulkan",
     "//src/storage/memfs:memfs_sdk",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-cpp:async-cpp_sdk",

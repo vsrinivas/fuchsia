@@ -44,6 +44,7 @@ fuchsia_component("icd_load_v2_cmp") {
   component_name = "icd_load_v2"
   deps = [
     ":icd_load_bin",
+    "//sdk/lib/vulkan",
     "//src/lib/vulkan/validation_layers",
   ]
 

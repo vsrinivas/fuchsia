@@ -1,4 +1,5 @@
 sdk://component_manifest/syslog
+sdk://component_manifest/vulkan
 sdk://docs/low_level
 sdk://docs/metadata_schemas
 sdk://docs/musl_license
