@@ -11,6 +11,19 @@ use {
     uuid::Uuid,
 };
 
+/// Captures metadata about where a component was loaded from.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+pub enum ComponentSource {
+    /// Component manifest was not found, but the component was designated as a
+    /// service provider in the service mappings in a Component Framework v1
+    /// sysmgr config file.
+    Inferred,
+    /// Component was loaded ZBI bootfs.
+    ZbiBootfs,
+    /// Component was loaded from a package with the given merkle hash.
+    Package(String),
+}
+
 /// Defines a component. Each component has a unique id which is used to link
 /// it in the Route table. Each component also has a url and a version. This
 /// structure is intended to be lightweight and general purpose if you need to
@@ -21,7 +34,7 @@ pub struct Component {
     pub id: i32,
     pub url: String,
     pub version: i32,
-    pub inferred: bool,
+    pub source: ComponentSource,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
@@ -450,5 +463,17 @@ impl DataCollection for Sysmgr {
     }
     fn collection_description() -> String {
         "Contains all the service and app mappings found in the sysmgr config".to_string()
+    }
+}
+
+#[cfg(test)]
+pub mod testing {
+    use super::ComponentSource;
+
+    const FAKE_PKG_MERKLE: &str =
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    pub fn fake_component_src_pkg() -> ComponentSource {
+        ComponentSource::Package(FAKE_PKG_MERKLE.to_string())
     }
 }

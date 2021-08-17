@@ -5,8 +5,8 @@
 use {
     crate::core::{
         collection::{
-            Capability, Component, Components, Manifest, ManifestData, Manifests, Package,
-            Packages, ProtocolCapability, Route, Routes, Sysmgr, Zbi,
+            Capability, Component, ComponentSource, Components, Manifest, ManifestData, Manifests,
+            Package, Packages, ProtocolCapability, Route, Routes, Sysmgr, Zbi,
         },
         package::{artifact::ArtifactGetter, getter::PackageGetter, reader::*},
         util::types::*,
@@ -216,7 +216,12 @@ impl PackageDataCollector {
                 let url = format!("{}#{}", pkg.url, path);
                 components.insert(
                     url.clone(),
-                    Component { id: *component_id, url: url.clone(), version: 2, inferred: false },
+                    Component {
+                        id: *component_id,
+                        url: url.clone(),
+                        version: 2,
+                        source: ComponentSource::Package(pkg.merkle.clone()),
+                    },
                 );
 
                 let cf2_manifest = {
@@ -287,7 +292,12 @@ impl PackageDataCollector {
                 let url = format!("{}#{}", pkg.url, path);
                 components.insert(
                     url.clone(),
-                    Component { id: *component_id, url: url.clone(), version: 1, inferred: false },
+                    Component {
+                        id: *component_id,
+                        url: url.clone(),
+                        version: 1,
+                        source: ComponentSource::Package(pkg.merkle.clone()),
+                    },
                 );
 
                 let cf1_manifest = {
@@ -401,7 +411,7 @@ impl PackageDataCollector {
                                 id: *component_id,
                                 url: url.to_string(),
                                 version: 2,
-                                inferred: false,
+                                source: ComponentSource::ZbiBootfs,
                             },
                         );
                         manifests.push(Manifest {
@@ -436,7 +446,7 @@ impl PackageDataCollector {
                         id: *component_id,
                         url: pkg_url.clone(),
                         version: 1,
-                        inferred: true,
+                        source: ComponentSource::Inferred,
                     },
                 );
             }
@@ -475,7 +485,7 @@ impl PackageDataCollector {
                                     id: *component_id,
                                     url: url.clone(),
                                     version: 1,
-                                    inferred: true,
+                                    source: ComponentSource::Inferred,
                                 },
                             );
                             // Add the inferred node to the service map to be found by future consumers of the service
@@ -642,27 +652,37 @@ impl DataCollector for PackageDataCollector {
 pub mod tests {
     use {
         super::*,
-        crate::core::package::test_utils::{
-            create_model, create_svc_pkg_def, create_svc_pkg_def_with_array, create_test_cm_map,
-            create_test_cmx_map, create_test_package_with_cms, create_test_package_with_contents,
-            create_test_package_with_meta, create_test_sandbox, MockPackageGetter,
-            MockPackageReader,
+        crate::core::{
+            collection::testing::fake_component_src_pkg,
+            package::test_utils::{
+                create_model, create_svc_pkg_def, create_svc_pkg_def_with_array,
+                create_test_cm_map, create_test_cmx_map, create_test_package_with_cms,
+                create_test_package_with_contents, create_test_package_with_meta,
+                create_test_sandbox, MockPackageGetter, MockPackageReader,
+            },
+            util::jsons::{Custom, FarPackageDefinition, Signed, TargetsJson},
         },
-        crate::core::util::jsons::*,
         scrutiny_testing::fake::fake_model_config,
     };
 
-    fn count_defined_inferred(components: HashMap<String, Component>) -> (usize, usize) {
-        let mut defined_count = 0;
+    fn count_sources(components: HashMap<String, Component>) -> (usize, usize, usize) {
         let mut inferred_count = 0;
+        let mut zbi_bootfs_count = 0;
+        let mut package_count = 0;
         for (_, comp) in components {
-            if comp.inferred {
-                inferred_count += 1;
-            } else {
-                defined_count += 1;
+            match comp.source {
+                ComponentSource::Inferred => {
+                    inferred_count += 1;
+                }
+                ComponentSource::ZbiBootfs => {
+                    zbi_bootfs_count += 1;
+                }
+                ComponentSource::Package(_) => {
+                    package_count += 1;
+                }
             }
         }
-        (defined_count, inferred_count)
+        (inferred_count, zbi_bootfs_count, package_count)
     }
 
     #[test]
@@ -847,7 +867,7 @@ pub mod tests {
         assert_eq!(1, response.routes.len());
         assert_eq!(1, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((1, 1), count_defined_inferred(response.components)); // 1 real, 1 inferred
+        assert_eq!((1, 0, 1), count_sources(response.components)); // 1 inferred, 0 zbi/bootfs, 1 package
     }
 
     #[test]
@@ -879,7 +899,7 @@ pub mod tests {
         assert_eq!(1, response.routes.len());
         assert_eq!(1, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((1, 1), count_defined_inferred(response.components)); // 1 real, 1 inferred
+        assert_eq!((1, 0, 1), count_sources(response.components)); // 1 inferred, 0 zbi/bootfs, 1 package
     }
 
     #[test]
@@ -910,7 +930,7 @@ pub mod tests {
         assert_eq!(0, response.routes.len());
         assert_eq!(1, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((0, 0), count_defined_inferred(response.components)); // 0 real, 0 inferred
+        assert_eq!((0, 0, 0), count_sources(response.components)); // 0 inferred, 0 zbi/bootfs, 0 package
     }
 
     #[test]
@@ -967,7 +987,7 @@ pub mod tests {
         assert_eq!(2, response.routes.len());
         assert_eq!(2, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((2, 1), count_defined_inferred(response.components)); // 2 real, 1 inferred
+        assert_eq!((1, 0, 2), count_sources(response.components)); // 1 inferred, 0 zbi/bootfs, 2 package
     }
 
     #[test]
@@ -1004,7 +1024,7 @@ pub mod tests {
         assert_eq!(1, response.routes.len());
         assert_eq!(2, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((2, 0), count_defined_inferred(response.components)); // 2 real, 0 inferred
+        assert_eq!((0, 0, 2), count_sources(response.components)); // 0 inferred, 0 zbi/bootfs, 2 package
     }
 
     #[test]
@@ -1018,13 +1038,13 @@ pub mod tests {
                 id: 1,
                 url: String::from("test.component"),
                 version: 0,
-                inferred: false,
+                source: ComponentSource::ZbiBootfs,
             });
             comps.push(Component {
                 id: 1,
                 url: String::from("foo.bar"),
                 version: 0,
-                inferred: false,
+                source: fake_component_src_pkg(),
             });
             model.set(Components { entries: comps }).unwrap();
 

@@ -163,7 +163,9 @@ mod tests {
 
     use {
         super::*,
-        crate::core::collection::{Component, Manifest},
+        crate::core::collection::{
+            testing::fake_component_src_pkg, Component, ComponentSource, Manifest,
+        },
         scrutiny_testing::fake::*,
         serde_json::json,
     };
@@ -172,8 +174,8 @@ mod tests {
         serde_json::from_str("{}").unwrap()
     }
 
-    fn make_component(id: i32, url: &str, version: i32, inferred: bool) -> Component {
-        Component { id: id, url: url.to_string(), version: version, inferred: inferred }
+    fn make_component(id: i32, url: &str, version: i32, source: ComponentSource) -> Component {
+        Component { id, url: url.to_string(), version, source }
     }
 
     fn make_manifest(id: i32, manifest: &str) -> Manifest {
@@ -188,8 +190,8 @@ mod tests {
     fn components_controller_returns_all_components() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, true);
+        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
+        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -208,8 +210,8 @@ mod tests {
     fn component_id_controller_known_id_returns_component() {
         let model = fake_data_model();
 
-        let comp_1 = make_component(1, "fake_url", 0, false);
-        let comp_2 = make_component(2, "fake_url_2", 0, true);
+        let comp_1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
+        let comp_2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
         let mut components = Components::default();
         components.push(comp_1.clone());
         components.push(comp_2.clone());
@@ -236,8 +238,8 @@ mod tests {
     fn component_id_controller_unknown_id_returns_err() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, true);
+        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
+        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -254,8 +256,8 @@ mod tests {
     fn component_raw_manifest_controller_known_id_returns_manifest() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, true);
+        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
+        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -278,8 +280,8 @@ mod tests {
     fn component_raw_manifest_controller_unknown_id_returns_err() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, true);
+        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
+        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -301,8 +303,8 @@ mod tests {
     fn component_raw_manifest_controller_string_id_returns_manifest() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, true);
+        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
+        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -327,8 +329,18 @@ mod tests {
     fn component_urls() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm", 0, true);
-        let comp2 = make_component(2, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm", 0, false);
+        let comp1 = make_component(
+            1,
+            "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm",
+            0,
+            ComponentSource::Inferred,
+        );
+        let comp2 = make_component(
+            2,
+            "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+            0,
+            fake_component_src_pkg(),
+        );
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());

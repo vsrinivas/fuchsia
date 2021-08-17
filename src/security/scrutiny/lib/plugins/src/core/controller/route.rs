@@ -155,7 +155,9 @@ impl DataController for ComponentUsedGraphController {
 mod tests {
     use {
         super::*,
-        crate::core::collection::{Component, Route},
+        crate::core::collection::{
+            testing::fake_component_src_pkg, Component, ComponentSource, Route,
+        },
         scrutiny_testing::fake::*,
         serde_json::json,
     };
@@ -164,8 +166,8 @@ mod tests {
         serde_json::from_str("{}").unwrap()
     }
 
-    fn make_component(id: i32, url: &str, version: i32, inferred: bool) -> Component {
-        Component { id: id, url: url.to_string(), version: version, inferred: inferred }
+    fn make_component(id: i32, url: &str, version: i32, source: ComponentSource) -> Component {
+        Component { id, url: url.to_string(), version: version, source }
     }
 
     fn make_route(id: i32, src: i32, dst: i32) -> Route {
@@ -176,9 +178,9 @@ mod tests {
     fn routes_controller_returns_all_routes() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, false);
-        let comp3 = make_component(3, "fake_url_3", 0, true);
+        let comp1 = make_component(1, "fake_url", 0, ComponentSource::ZbiBootfs);
+        let comp2 = make_component(2, "fake_url_2", 0, fake_component_src_pkg());
+        let comp3 = make_component(3, "fake_url_3", 0, ComponentSource::Inferred);
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -205,9 +207,9 @@ mod tests {
     fn uses_controller_known_id_returns_all_dependency_ids() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, false);
-        let comp3 = make_component(3, "fake_url_3", 0, false);
+        let comp1 = make_component(1, "fake_url", 0, ComponentSource::ZbiBootfs);
+        let comp2 = make_component(2, "fake_url_2", 0, fake_component_src_pkg());
+        let comp3 = make_component(3, "fake_url_3", 0, fake_component_src_pkg());
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -237,9 +239,9 @@ mod tests {
     fn uses_controller_unknown_id_returns_err() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, false);
-        let comp3 = make_component(3, "fake_url_3", 0, false);
+        let comp1 = make_component(1, "fake_url", 0, ComponentSource::ZbiBootfs);
+        let comp2 = make_component(2, "fake_url_2", 0, fake_component_src_pkg());
+        let comp3 = make_component(3, "fake_url_3", 0, fake_component_src_pkg());
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -264,9 +266,9 @@ mod tests {
     fn uses_controller_known_id_no_dependencies_returns_empty() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, false);
-        let comp3 = make_component(3, "fake_url_3", 0, false);
+        let comp1 = make_component(1, "fake_url", 0, ComponentSource::ZbiBootfs);
+        let comp2 = make_component(2, "fake_url_2", 0, fake_component_src_pkg());
+        let comp3 = make_component(3, "fake_url_3", 0, fake_component_src_pkg());
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -294,9 +296,9 @@ mod tests {
     fn used_controller_known_id_returns_all_dependency_ids() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, false);
-        let comp3 = make_component(3, "fake_url_3", 0, false);
+        let comp1 = make_component(1, "fake_url", 0, ComponentSource::ZbiBootfs);
+        let comp2 = make_component(2, "fake_url_2", 0, fake_component_src_pkg());
+        let comp3 = make_component(3, "fake_url_3", 0, fake_component_src_pkg());
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -326,9 +328,9 @@ mod tests {
     fn used_controller_unknown_id_returns_err() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, false);
-        let comp3 = make_component(3, "fake_url_3", 0, false);
+        let comp1 = make_component(1, "fake_url", 0, ComponentSource::ZbiBootfs);
+        let comp2 = make_component(2, "fake_url_2", 0, fake_component_src_pkg());
+        let comp3 = make_component(3, "fake_url_3", 0, fake_component_src_pkg());
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -352,9 +354,9 @@ mod tests {
     fn used_controller_known_id_no_dependencies_returns_empty() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, false);
-        let comp2 = make_component(2, "fake_url_2", 0, false);
-        let comp3 = make_component(3, "fake_url_3", 0, false);
+        let comp1 = make_component(1, "fake_url", 0, ComponentSource::ZbiBootfs);
+        let comp2 = make_component(2, "fake_url_2", 0, fake_component_src_pkg());
+        let comp3 = make_component(3, "fake_url_3", 0, fake_component_src_pkg());
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());

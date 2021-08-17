@@ -37,7 +37,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            core::collection::{Component, Components, Manifest, ManifestData, Manifests, Zbi},
+            core::collection::{
+                testing::fake_component_src_pkg, Component, Components, Manifest, ManifestData,
+                Manifests, Zbi,
+            },
             verify::{
                 collection::V2ComponentTree,
                 collector::component_tree::{DEFAULT_CONFIG_PATH, DEFAULT_ROOT_URL},
@@ -157,7 +160,7 @@ mod tests {
     }
 
     fn make_v2_component(id: i32, url: String) -> Component {
-        Component { id, url, version: 2, inferred: false }
+        Component { id, url, version: 2, source: fake_component_src_pkg() }
     }
 
     fn make_v2_manifest(component_id: i32, decl: ComponentDecl) -> Result<Manifest> {

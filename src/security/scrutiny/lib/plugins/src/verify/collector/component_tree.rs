@@ -142,7 +142,10 @@ impl DataCollector for V2ComponentTreeDataCollector {
 pub mod tests {
     use {
         super::*,
-        crate::core::collection::{Component, Components, Manifest, ManifestData, Manifests},
+        crate::core::collection::{
+            testing::fake_component_src_pkg, Component, Components, Manifest, ManifestData,
+            Manifests,
+        },
         anyhow::Result,
         cm_rust::{ChildDecl, NativeIntoFidl},
         fidl::encoding::encode_persistent,
@@ -173,7 +176,7 @@ pub mod tests {
     }
 
     fn make_v1_component(id: i32) -> Component {
-        Component { id, url: "".to_string(), version: 1, inferred: false }
+        Component { id, url: "".to_string(), version: 1, source: fake_component_src_pkg() }
     }
 
     fn make_v1_manifest(component_id: i32) -> Manifest {
@@ -181,7 +184,7 @@ pub mod tests {
     }
 
     fn make_v2_component(id: i32, url: String) -> Component {
-        Component { id, url, version: 2, inferred: false }
+        Component { id, url, version: 2, source: fake_component_src_pkg() }
     }
 
     fn make_v2_manifest(component_id: i32, decl: ComponentDecl) -> Result<Manifest> {

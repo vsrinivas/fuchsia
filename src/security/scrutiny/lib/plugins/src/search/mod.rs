@@ -34,8 +34,8 @@ mod tests {
     use {
         super::*,
         crate::core::collection::{
-            Component, Components, Manifest, ManifestData, Manifests, Package, Packages, Route,
-            Routes,
+            testing::fake_component_src_pkg, Component, Components, Manifest, ManifestData,
+            Manifests, Package, Packages, Route, Routes,
         },
         crate::search::controller::{
             components::ComponentSearchRequest, manifests::ManifestSearchRequest,
@@ -59,7 +59,7 @@ mod tests {
                 id: 0,
                 url: "foo".to_string(),
                 version: 0,
-                inferred: false,
+                source: fake_component_src_pkg(),
             }]))
             .unwrap();
         let request_one = ComponentSearchRequest { url: "foo".to_string() };

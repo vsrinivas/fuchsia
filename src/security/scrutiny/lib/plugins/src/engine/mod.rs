@@ -71,7 +71,7 @@ impl Plugin for EnginePlugin {
 mod tests {
     use {
         super::*,
-        crate::core::collection::{Component, Components},
+        crate::core::collection::{Component, ComponentSource, Components},
         crate::engine::controller::{
             collector::CollectorListEntry, model::ModelStats, plugin::PluginListEntry,
         },
@@ -134,7 +134,7 @@ mod tests {
                 id: 1,
                 url: "".to_string(),
                 version: 1,
-                inferred: true,
+                source: ComponentSource::Inferred,
             }]))
             .unwrap();
         let response = model_stats.query(model.clone(), json!("")).unwrap();
