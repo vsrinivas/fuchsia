@@ -19,6 +19,7 @@ import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
 import("//build/sdk/physical_device.gni")
+import("//build/sdk/product_metadata.gni")
 import("//build/security.gni")
 import("//build/security/policies.gni")
 import("//build/security/policies_swd.gni")
@@ -42,6 +43,10 @@ files = {
   outdir = get_label_info(labels.images, "target_out_dir") + "/fuchsia"
   gendir = "${outdir}/gen"
   blobfs = "${root_out_dir}/obj/build/images/blob.blk"
+
+  if (!bootfs_only) {
+    fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
+  }
 
   if (supports_fastboot_fvm) {
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
@@ -209,23 +214,26 @@ shell_commands("shell-commands") {
 ### Zircon Boot Images
 ###
 
+# Kernel file used to populate emu manifest
+qemu_kernel_file = ""
+qemu_kernel_target = ""
+if (target_cpu == "x64") {
+  qemu_kernel_file = "$root_build_dir/multiboot.bin"
+  qemu_kernel_target = "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
+} else if (target_cpu == "arm64") {
+  qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
+  qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
+} else {
+  assert(false, "Unsupported target cpu: $target_cpu")
+}
+
 # Used to populate image_paths.sh with the right values to point to the QEMU kernel.
 group("qemu-kernel") {
-  if (target_cpu == "x64") {
-    _qemu_kernel_target =
-        "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
-    _qemu_kernel_file = "$root_build_dir/multiboot.bin"
-  } else if (target_cpu == "arm64") {
-    _qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
-    _qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
-  } else {
-    assert(false, "Unsupported target cpu: $target_cpu")
-  }
   metadata = {
     image_paths = [ "IMAGE_QEMU_KERNEL_RAW=" +
-                    rebase_path(_qemu_kernel_file, root_build_dir) ]
+                    rebase_path(qemu_kernel_file, root_build_dir) ]
   }
-  deps = [ _qemu_kernel_target ]
+  deps = [ qemu_kernel_target ]
 }
 
 default_image_deps += [ ":qemu-kernel" ]
@@ -1503,8 +1511,23 @@ compiled_action("uefi-disk") {
   }
 }
 
-physical_device_manifest("physical_device_manifest") {
-  testonly = true
+if (!bootfs_only) {
+  # Product and device metadata.
+  physical_device_manifest("physical_device_manifest") {
+    testonly = true
+    name = board_name
+  }
+
+  # The list of device names must contain the name of the physical device.
+  product_metadata("product_metadata") {
+    testonly = true
+    devices = [ board_name ]
+    emu_manifest = {
+      initial_ramdisk = "fuchsia.zbi"
+      kernel = rebase_path(qemu_kernel_file, root_out_dir)
+      disk_images = [ rebase_path(files.fvm_blob_sparse, root_out_dir) ]
+    }
+  }
 }
 
 group("images") {
@@ -1531,9 +1554,6 @@ group("default-images") {
     ":flash_script",
     ":qemu-kernel",
     recovery_label,
-
-    # Device manifest
-    ":physical_device_manifest",
   ]
 
   if (recovery_is_zedboot) {
@@ -1552,11 +1572,13 @@ group("default-images") {
     deps += [ ":netboot-script" ]
   }
 
-  # XXX(46415): The build graph for "bringup" (bootfs_only) MUST only
+  # TODO(fxbug.dev/46415): The build graph for "bringup" (bootfs_only) MUST only
   # contain one zircon-a metadata target, which means that anything
   # reaching fuchsia.zbi must be excluded from the build graph.
   if (!bootfs_only) {
     deps += [
+      ":physical_device_manifest",
+      ":product_metadata",
       ":record_filesystem_sizes",
       ":root_component_index_metadata",
       ":updates",

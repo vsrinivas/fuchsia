@@ -1,0 +1,126 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/info/info.gni")
+import("//build/json/validate_json.gni")
+import("//build/product.gni")
+
+# Generates a physical device manifest and product bundle metadata JSON files.
+#
+# The template uses the product and board definitions to populate some values.
+#
+# Parameters
+#
+#   devices(required)
+#     A list of device names or identifiers this product may be installed on.
+#
+#   emu_manifest(optional)
+#     Emulator manifest
+#     See //build/sdk/meta/emu_manifest.json
+#
+#   flash_manifest(optional)
+#     Flash manifest
+#     See //build/sdk/meta/flash_manifest-02.json
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+template("product_metadata") {
+  assert(defined(invoker.devices), "Devices names are required.")
+
+  # All the paths are relative to the generated metadata json.
+  amber_files = rebase_path("$root_build_dir/amber-files", target_gen_dir)
+  image_base = rebase_path("$root_build_dir", target_gen_dir)
+
+  # This is the most recent schema.
+  schema_file = "product_bundle-6320eef1.json"
+  schema_target = "//build/sdk/meta/${schema_file}"
+
+  # Schema ID must match the id field in the schema file.
+  schema_id = "http://fuchsia.com/schemas/sdk/${schema_file}"
+
+  file_contents = {
+    schema_id = schema_id
+    data = {
+      type = "product_bundle"
+      name = core_realm_package_name
+      description = product_description
+      device_refs = invoker.devices
+      metadata = [
+        [
+          "build_info_board",
+          build_info_board,
+        ],
+        [
+          "build_info_product",
+          build_info_product,
+        ],
+        [
+          "is_debug",
+          is_debug,
+        ],
+      ]
+      packages = [
+        {
+          format = "files"
+          repo_uri = "file://$amber_files"
+        },
+      ]
+      images = [
+        {
+          format = "files"
+          base_uri = "file://$image_base"
+        },
+      ]
+      manifests = {
+        if (defined(invoker.emu_manifest)) {
+          emu = invoker.emu_manifest
+        }
+        if (defined(invoker.flash_manifest)) {
+          flash = invoker.flash_manifest
+        }
+      }
+    }
+  }
+
+  file = "$target_gen_dir/product_bundle.json"
+  generator_target = "${target_name}_json_generator"
+  generated_file(generator_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    contents = file_contents
+    output_conversion = "json"
+    outputs = [ file ]
+  }
+
+  validator_target = "${target_name}_json_validator"
+  validate_json(validator_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    data = file
+    deps = [ ":${generator_target}" ]
+    schema = schema_target
+    sources = [
+      # Included schemata.
+      "//build/sdk/meta/common.json",
+      "//build/sdk/meta/emu_manifest.json",
+      "//build/sdk/meta/flash_manifest-02.json",
+    ]
+    allow_comments = true
+  }
+
+  # TODO(https://fxbug.dev/82728): Add path validation.
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visbility",
+                           ])
+    deps = [
+      ":${generator_target}",
+      ":${validator_target}",
+    ]
+  }
+}

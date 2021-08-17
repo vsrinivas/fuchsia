@@ -14,8 +14,11 @@ import("//build/json/validate_json.gni")
 # A release builder subsequently fetches all available device profiles metadata
 # and incorporates them into the single SDK release artifact.
 #
-# This build rule does not have any require attributes. It pulls its values
-# from the build environment.
+# This build rule pulls some of the values it uses from the build environment.
+#
+#   name(required)
+#     The name or identifier of the device. This name will be referenced from
+#     the product bundle metadata.
 #
 #   deps (optional)
 #   public_deps (optional)
@@ -23,22 +26,24 @@ import("//build/json/validate_json.gni")
 #   visibility (optional)
 #     Standard GN meaning.
 template("physical_device_manifest") {
+  assert(defined(invoker.name), "Device name is required.")
+
   # The following vars are defined in a board definition file.
   arch = target_cpu
   description = board_description
-  name = board_name
 
   # This is the most recent schema.
-  schema = "//build/sdk/meta/physical_device-0bd5d21f.json"
+  schema_file = "physical_device-0bd5d21f.json"
+  schema_target = "//build/sdk/meta/${schema_file}"
 
   # Schema ID must match the schema file.
-  schema_id = "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json"
+  schema_id = "http://fuchsia.com/schemas/sdk/${schema_file}"
 
-  manifest_contents = {
+  file_contents = {
     schema_id = schema_id
     data = {
       type = "physical_device"
-      name = name
+      name = invoker.name
       description = description
       hardware = {
         cpu = {
@@ -47,12 +52,18 @@ template("physical_device_manifest") {
       }
     }
   }
-  manifest_file = "$target_gen_dir/physical_device.json"
-
-  write_file(manifest_file, manifest_contents, "json")
+  file = "$target_gen_dir/physical_device.json"
+  generator_target = "${target_name}_json_generator"
+  generated_file(generator_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    contents = file_contents
+    output_conversion = "json"
+    outputs = [ file ]
+  }
 
   # Verify that the metadata complies with the specified schema.
-  validate_json(target_name) {
+  validator_target = "${target_name}_json_validator"
+  validate_json(validator_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -60,13 +71,26 @@ template("physical_device_manifest") {
                              "testonly",
                              "visibility",
                            ])
-    data = manifest_file
-    schema = schema
+    data = file
+    deps = [ ":${generator_target}" ]
+    schema = schema_target
     sources = [
       # Included schemata.
       "//build/sdk/meta/common.json",
       "//build/sdk/meta/hardware-f6f47515.json",
     ]
     allow_comments = true
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visbility",
+                           ])
+    deps = [
+      ":${generator_target}",
+      ":${validator_target}",
+    ]
   }
 }

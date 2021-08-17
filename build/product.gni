@@ -9,6 +9,9 @@ declare_args() {
   # A list of binary labels to include in the system_image package.
   product_system_image_deps = []
 
+  # A human readable product description.
+  product_description = ""
+
   # The following arguments are all used to configure the contents of the core
   # component realm. See //src/sys/core/build/core.gni for documentation on what
   # each field means.
