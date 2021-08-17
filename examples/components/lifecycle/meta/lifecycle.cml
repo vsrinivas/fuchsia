@@ -1,0 +1,25 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START example_snippet]
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        // Use the built-in ELF runner.
+        runner: "elf",
+
+        // The binary to run for this component.
+        binary: "bin/lifecycle",
+
+        // Subscribe to component lifecycle events
+        lifecycle: { stop_event: "notify" },
+    },
+}
+
+// [END example_snippet]

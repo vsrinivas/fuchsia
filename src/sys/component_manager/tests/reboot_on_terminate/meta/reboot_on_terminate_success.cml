@@ -10,7 +10,7 @@
     children: [
         {
             name: "critical_child",
-            url: "#meta/hello-world.cm",
+            url: "#meta/hello-world-rust.cm",
 
             // When this component exits, it should trigger reboot.
             startup: "eager",

@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -35,7 +35,7 @@ async fn main() {
             {
                 match request {
                     LifecycleRequest::Stop { control_handle: c } => {
-                        info!("Receive request to stop, bye bye!");
+                        info!("Received request to stop, bye bye!");
                         c.shutdown();
                         process::exit(0);
                     }

@@ -1,8 +1,11 @@
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
-        binary: "bin/lifecycle_full",
+        binary: "bin/lifecycle",
         lifecycle: { stop_event: "notify" },
     },
 }

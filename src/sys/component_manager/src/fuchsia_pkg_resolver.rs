@@ -208,7 +208,7 @@ mod tests {
     async fn resolve_test() {
         let loader = MockLoader::start();
         let resolver = FuchsiaPkgResolver::new(loader);
-        let url = "fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm";
+        let url = "fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm";
         let component = resolver.resolve_async(url).await.expect("resolve failed");
 
         // Check that both the returned component manifest and the component manifest in
@@ -220,12 +220,22 @@ mod tests {
         let expected_program = Some(fsys::ProgramDecl {
             runner: Some("elf".to_string()),
             info: Some(fdata::Dictionary {
-                entries: Some(vec![fdata::DictionaryEntry {
-                    key: "binary".to_string(),
-                    value: Some(Box::new(fdata::DictionaryValue::Str(
-                        "bin/hello_world".to_string(),
-                    ))),
-                }]),
+                entries: Some(vec![
+                    fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                            "bin/hello_world_rust".to_string(),
+                        ))),
+                    },
+                    fdata::DictionaryEntry {
+                        key: "forward_stderr_to".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("log".to_string()))),
+                    },
+                    fdata::DictionaryEntry {
+                        key: "forward_stdout_to".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("log".to_string()))),
+                    },
+                ]),
                 ..fdata::Dictionary::EMPTY
             }),
             ..fsys::ProgramDecl::EMPTY
@@ -239,7 +249,7 @@ mod tests {
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello-world");
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
-        let path = Path::new("meta/hello-world.cm");
+        let path = Path::new("meta/hello-world-rust.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
 
@@ -251,7 +261,7 @@ mod tests {
 
         // Try to load an executable file, like a binary, reusing the library_loader helper that
         // opens with OPEN_RIGHT_EXECUTABLE and gets a VMO with VMO_FLAG_EXEC.
-        library_loader::load_vmo(&dir_proxy, "bin/hello_world")
+        library_loader::load_vmo(&dir_proxy, "bin/hello_world_rust")
             .await
             .expect("failed to open executable file");
     }
@@ -272,7 +282,7 @@ mod tests {
         let resolver = FuchsiaPkgResolver::new(loader);
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg:///hello-world#meta/hello-world.cm",
+            "fuchsia-pkg:///hello-world#meta/hello-world-rust.cm",
             ResolverError::MalformedUrl { .. }
         );
         test_resolve_error!(
@@ -282,7 +292,7 @@ mod tests {
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/goodbye-world#meta/hello-world.cm",
+            "fuchsia-pkg://fuchsia.com/goodbye-world#meta/hello-world-rust.cm",
             ResolverError::PackageNotFound { .. }
         );
         test_resolve_error!(

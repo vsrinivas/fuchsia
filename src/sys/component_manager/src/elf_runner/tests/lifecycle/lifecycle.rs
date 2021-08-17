@@ -25,9 +25,7 @@ async fn test_normal_behavior() {
     let (child_name, destroy_waiter) = {
         let mut instance = ScopedInstance::new(
             collection_name.clone(),
-            String::from(
-                "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle-full.cm",
-            ),
+            String::from("fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle.cm"),
         )
         .await
         .unwrap();

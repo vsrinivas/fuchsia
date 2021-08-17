@@ -196,7 +196,7 @@ fuchsia_component("lifecycle_timeout_root") {
 
 fuchsia_component("lifecycle_timeout_node") {
   testonly = true
-  deps = [ "//examples/components/basic:lifecycle_full_bin" ]
+  deps = [ "//examples/components/lifecycle:lifecycle_example" ]
   manifest = "meta/lifecycle_timeout_node.cml"
 }
 
@@ -227,7 +227,7 @@ fuchsia_test_package("elf_runner_lifecycle_test") {
     ":lifecycle_timeout_unresponsive_node",
     ":lifecycle_timeout_unresponsive_root",
     ":rendezvous_exit_component",
-    "//examples/components/basic:lifecycle-full",
+    "//examples/components/lifecycle:lifecycle_example_component",
   ]
   test_specs = {
     # `component_exit` fails when test cases are executed in parallel.

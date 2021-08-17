@@ -125,8 +125,8 @@ fuchsia_unittest_package("reboot_on_terminate_test") {
     ":reboot_on_terminate_policy",
     ":reboot_on_terminate_success",
     ":reboot_on_terminate_test_bin",
-    "//examples/components/basic:hello-world",
     "//examples/components/routing/echo_server:echo_server_component",
+    "//examples/hello_world/rust:hello-world-rust-component",
     "//src/power/shutdown-shim/tests:shutdown_shim_component",
   ]
 }

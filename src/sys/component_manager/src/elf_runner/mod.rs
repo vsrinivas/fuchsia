@@ -729,7 +729,7 @@ mod tests {
 
         fcrunner::ComponentStartInfo {
             resolved_url: Some(
-                "fuchsia-pkg://fuchsia.com/lifecycle_full#meta/lifecycle_full.cm".to_string(),
+                "fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle.cm".to_string(),
             ),
             program: Some(fdata::Dictionary {
                 entries: Some(vec![
@@ -743,7 +743,7 @@ mod tests {
                     fdata::DictionaryEntry {
                         key: "binary".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str(
-                            "bin/lifecycle_full".to_string(),
+                            "bin/lifecycle".to_string(),
                         ))),
                     },
                     fdata::DictionaryEntry {

@@ -14,7 +14,7 @@ group("tests") {
 fuchsia_component("hello_world") {
   testonly = true
   manifest = "meta/hello_world.cml"
-  deps = [ "//examples/components/basic:hello_world_bin" ]
+  deps = [ "//examples/hello_world/rust:bin" ]
 }
 
 rustc_test("binder_integration_test_bin") {

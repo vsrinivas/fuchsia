@@ -150,7 +150,7 @@ fx list-packages --base
 [doc-package-set]: /docs/concepts/packages/package.md#types_of_packages
 [doc-storage]: capabilities/storage.md
 [doc-topology]: topology.md
-[handler-example]: /examples/components/basic/src/lifecycle_full.rs
+[handler-example]: /examples/components/lifecycle
 [principle-accountability]: design_principles.md#accountability
 [principle-continuity]: design_principles.md#illusion-of-continuity
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm

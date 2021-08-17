@@ -388,8 +388,7 @@ fuchsia_test_package("component-manager-tests") {
     ":component_manager_tests_invalid_manifest",
     "src/elf_runner/tests/lifecycle:run-indefinitely",
     "tests/crash_introspect:panic_on_start",
-    "//examples/components/basic:hello-world",
-    "//examples/components/basic:lifecycle-full",
+    "//examples/components/lifecycle:lifecycle_example_component",
     "//examples/hello_world/rust:hello-world-rust-component",
     "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
   ]

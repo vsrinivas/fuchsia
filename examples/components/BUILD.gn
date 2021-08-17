@@ -5,8 +5,8 @@
 group("components") {
   testonly = true
   deps = [
-    "basic:components-basic-example",
     "echo:echo-example",
+    "lifecycle:lifecycle-example",
     "routing:components-routing-example",
     "routing_failed:components-routing-failed-example",
     "services",
@@ -16,7 +16,6 @@ group("components") {
 group("tests") {
   testonly = true
   deps = [
-    "basic:tests",
     "echo:tests",
     "routing:tests",
     "services:tests",

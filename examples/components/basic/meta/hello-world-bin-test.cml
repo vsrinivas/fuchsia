@@ -1,9 +1,0 @@
-{
-    include: [
-        "//src/sys/test_runners/rust/default.shard.cml",
-        "syslog/client.shard.cml",
-    ],
-    program: {
-        binary: "bin/hello_world_bin_test",
-    },
-}
