@@ -11,6 +11,7 @@ use {
     fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_scenic as scenic, fuchsia_scenic,
+    fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::unbounded,
     input_pipeline::Size,
     std::sync::Arc,
@@ -279,7 +280,10 @@ impl SceneManager for FlatSceneManager {
     fn set_cursor_location(&mut self, location: ScreenCoordinates) {
         if self.cursor_node.is_none() {
             // We don't already have a cursor node so let's make one with the default cursor
-            self.set_cursor_shape(self.get_default_cursor());
+            if let Err(error) = self.set_cursor_image("/pkg/data/cursor.png") {
+                fx_log_warn!("Failed to load image cursor: {:?}", error);
+                self.set_cursor_shape(self.get_default_cursor());
+            }
         }
 
         let (x, y) = location.pips();
