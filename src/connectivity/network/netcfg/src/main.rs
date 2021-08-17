@@ -70,9 +70,6 @@ const INTF_METRIC_ETH: u32 = 100;
 /// Path to devfs.
 const DEV_PATH: &str = "/dev";
 
-/// Path to devfs in netemul environments.
-const NETEMUL_DEV_PATH: &str = "/vdev";
-
 /// File that stores persistent interface configurations.
 const PERSISTED_INTERFACE_CONFIG_FILEPATH: &str = "/data/net_interfaces.cfg.json";
 
@@ -173,15 +170,21 @@ impl FromStr for LogLevel {
 #[derive(FromArgs, Debug)]
 struct Opt {
     /// should netemul specific configurations be used?
-    #[argh(switch, short = 'n')]
-    netemul: bool,
+    #[argh(switch)]
+    allow_virtual_devices: bool,
 
-    /// minimum severity for logs.
-    #[argh(option, short = 'm', default = "LogLevel::Info")]
+    /// path to devfs
+    // TODO(https://fxbug.dev/70187): remove once netcfg is no longer used in netemul-v1 integration
+    // tests, where the devfs path is /vdev.
+    #[argh(option, default = "DEV_PATH.to_string()")]
+    devfs_path: String,
+
+    /// minimum severity for logs
+    #[argh(option, default = "LogLevel::Info")]
     min_severity: LogLevel,
 
     /// config file to use
-    #[argh(option, short = 'c', default = "\"default.json\".to_string()")]
+    #[argh(option, default = "\"/config/data/default.json\".to_string()")]
     config_data: String,
 }
 
@@ -1418,9 +1421,10 @@ async fn main() {
     // We use a closure so we can grab the error and log it before returning from main.
     let f = || async {
         let opt: Opt = argh::from_env();
+        let Opt { allow_virtual_devices, devfs_path, min_severity, config_data } = &opt;
 
         let () = fuchsia_syslog::init().context("cannot init logger")?;
-        fsyslog::set_severity(opt.min_severity.into());
+        fsyslog::set_severity((*min_severity).into());
 
         info!("starting");
         debug!("starting with options = {:?}", opt);
@@ -1430,7 +1434,7 @@ async fn main() {
             rules: default_config_rules,
             filter_config,
             filter_enabled_interface_types,
-        } = Config::load(format!("/config/data/{}", opt.config_data))?;
+        } = Config::load(config_data)?;
 
         let filter_enabled_interface_types: HashSet<InterfaceType> =
             filter_enabled_interface_types.into_iter().map(Into::into).collect();
@@ -1444,13 +1448,14 @@ async fn main() {
             ));
         };
 
-        let (path, allow_virtual) =
-            if opt.netemul { (NETEMUL_DEV_PATH, true) } else { (DEV_PATH, false) };
-
-        let mut netcfg =
-            NetCfg::new(path, allow_virtual, default_config_rules, filter_enabled_interface_types)
-                .await
-                .context("error creating new netcfg instance")?;
+        let mut netcfg = NetCfg::new(
+            devfs_path,
+            *allow_virtual_devices,
+            default_config_rules,
+            filter_enabled_interface_types,
+        )
+        .await
+        .context("error creating new netcfg instance")?;
 
         let () =
             netcfg.update_filters(filter_config).await.context("update filters based on config")?;

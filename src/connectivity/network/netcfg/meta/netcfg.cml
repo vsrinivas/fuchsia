@@ -1,0 +1,33 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/netcfg",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.net.dhcp.Server",
+                "fuchsia.net.dhcpv6.ClientProvider",
+                "fuchsia.net.filter.Filter",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.LookupAdmin",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+            ],
+        },
+        {
+            directory: "dev-class-ethernet",
+            rights: [ "rw*" ],
+            path: "/dev/class/ethernet",
+        },
+        {
+            directory: "dev-class-network",
+            rights: [ "rw*" ],
+            path: "/dev/class/network",
+        },
+    ],
+}

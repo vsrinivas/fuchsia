@@ -6,7 +6,9 @@
         "args": [
             "--min-severity",
             "DEBUG",
-            "--netemul"
+            "--allow-virtual-devices",
+            "--devfs-path",
+            "/vdev"
         ],
         "binary": "bin/netcfg"
     },

@@ -181,7 +181,8 @@ impl Manager for NetCfg {
     const PKG_URL: &'static str =
         "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netcfg-netemul.cmx";
     // Specify an empty config file for NetCfg when it is run in netemul.
-    const TESTING_ARGS: &'static [&'static str] = &["--config-data", "netcfg/empty.json"];
+    const TESTING_ARGS: &'static [&'static str] =
+        &["--config-data", "/config/data/netcfg/empty.json"];
 }
 
 /// Abstraction for a Fuchsia component which monitors reachability status.

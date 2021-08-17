@@ -20,11 +20,11 @@ use futures::future::{FutureExt as _, TryFutureExt as _};
 use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
-use netstack_testing_common::environments::{
-    KnownServices, Manager, Netstack2, TestSandboxExt as _,
+use netstack_testing_common::realms::{
+    constants, KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _,
 };
 use netstack_testing_common::{
-    try_all, try_any, wait_for_non_loopback_interface_up, Result,
+    try_all, try_any, wait_for_component_stopped, wait_for_non_loopback_interface_up, Result,
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -34,32 +34,36 @@ use netstack_testing_macros::variants_test;
 #[variants_test]
 async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
-    // Create an environment with the LookupAdmin service as NetCfg tries to configure
-    // it. NetCfg will fail if it can't send the LookupAdmin a request.
-    let environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(name, &[KnownServices::LookupAdmin])
-        .context("create netstack environment")?;
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            name,
+            &[
+                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::Dhcpv6Client,
+                KnownServiceProvider::SecureStash,
+            ],
+        )
+        .context("create netstack realm")?;
 
-    // Start the network manager.
-    let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netmgr =
-        fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), M::testing_args())
-            .context("launch the network manager")?;
-
-    // Add a device to the environment.
+    // Add a device to the realm.
     let endpoint = sandbox.create_endpoint::<E, _>(name).await.context("create endpoint")?;
     let () = endpoint.set_link_up(true).await.context("set link up")?;
     let endpoint_mount_path = E::dev_path("ep");
     let endpoint_mount_path = endpoint_mount_path.as_path();
-    let () = environment
+    let () = realm
         .add_virtual_device(&endpoint, endpoint_mount_path)
+        .await
         .with_context(|| format!("add virtual device {}", endpoint_mount_path.display()))?;
 
     // Make sure the Netstack got the new device added.
-    let mut wait_for_netmgr = netmgr.wait().fuse();
-    let interface_state = environment
-        .connect_to_service::<net_interfaces::StateMarker>()
+    let interface_state = realm
+        .connect_to_protocol::<net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
+    let wait_for_netmgr =
+        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+    futures::pin_mut!(wait_for_netmgr);
     let _: (u64, String) = wait_for_non_loopback_interface_up(
         &interface_state,
         &mut wait_for_netmgr,
@@ -69,8 +73,9 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
     .await
     .context("wait for non loopback interface")?;
 
-    environment
+    realm
         .remove_virtual_device(endpoint_mount_path)
+        .await
         .with_context(|| format!("remove virtual device {}", endpoint_mount_path.display()))
 }
 
@@ -78,22 +83,27 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
 #[variants_test]
 async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
-    let environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(name, &[KnownServices::LookupAdmin])
-        .context("create netstack environment")?;
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            name,
+            &[
+                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::Dhcpv6Client,
+                KnownServiceProvider::SecureStash,
+            ],
+        )
+        .context("create netstack realm")?;
 
-    // Start the network manager.
-    let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netmgr =
-        fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), M::testing_args())
-            .context("launch the network manager")?;
-
-    let mut wait_for_netmgr = netmgr.wait().fuse();
-    let netstack = environment
-        .connect_to_service::<netstack::NetstackMarker>()
+    let wait_for_netmgr =
+        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+    futures::pin_mut!(wait_for_netmgr);
+    let netstack = realm
+        .connect_to_protocol::<netstack::NetstackMarker>()
         .context("connect to netstack service")?;
 
-    // Add a device to the environment and wait for it to be added to the netstack.
+    // Add a device to the realm and wait for it to be added to the netstack.
     //
     // Non PCI and USB devices get their interface names from their MAC addresses.
     // Using the same MAC address for different devices will result in the same
@@ -109,11 +119,12 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
     let () = ethx7.set_link_up(true).await.context("set link up")?;
     let endpoint_mount_path = E::dev_path("ep1");
     let endpoint_mount_path = endpoint_mount_path.as_path();
-    let () = environment
+    let () = realm
         .add_virtual_device(&ethx7, endpoint_mount_path)
+        .await
         .with_context(|| format!("add virtual device1 {}", endpoint_mount_path.display()))?;
-    let interface_state = environment
-        .connect_to_service::<net_interfaces::StateMarker>()
+    let interface_state = realm
+        .connect_to_protocol::<net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let (id_ethx7, name_ethx7) = wait_for_non_loopback_interface_up(
         &interface_state,
@@ -178,8 +189,9 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
     let () = etht1.set_link_up(true).await.context("set link up")?;
     let endpoint_mount_path = E::dev_path("ep2");
     let endpoint_mount_path = endpoint_mount_path.as_path();
-    let () = environment
+    let () = realm
         .add_virtual_device(&etht1, endpoint_mount_path)
+        .await
         .with_context(|| format!("add virtual device2 {}", endpoint_mount_path.display()))?;
     let (id_etht1, name_etht1) = wait_for_non_loopback_interface_up(
         &interface_state,
@@ -234,7 +246,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
     /// have been removed.
     async fn wlan_ap_dhcp_server_inner<'a, E: netemul::Endpoint>(
         sandbox: &'a netemul::TestSandbox,
-        environment: &netemul::TestEnvironment<'a>,
+        realm: &netemul::TestRealm<'a>,
         offset: u8,
     ) -> Result {
         // These constants are all hard coded in NetCfg for the WLAN AP interface and
@@ -252,9 +264,10 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
             )
         };
 
-        // Add a device to the environment that looks like a WLAN AP from the perspective
-        // of NetCfg. The topological path for the interface must include "wlanif-ap" as
-        // that is how NetCfg identifies a WLAN AP interface.
+        // Add a device to the realm that looks like a WLAN AP from the
+        // perspective of NetCfg. The topological path for the interface must
+        // include "wlanif-ap" as that is how NetCfg identifies a WLAN AP
+        // interface.
         let network = sandbox
             .create_network(format!("dhcp-server-{}", offset))
             .await
@@ -264,15 +277,16 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
             .await
             .context("create wlan ap")?;
         let path = E::dev_path(&format!("dhcp-server-ep-{}", offset));
-        let () = environment
+        let () = realm
             .add_virtual_device(&wlan_ap, path.as_path())
+            .await
             .with_context(|| format!("add WLAN AP virtual device {}", path.display()))?;
         let () = wlan_ap.set_link_up(true).await.context("set wlan ap link up")?;
 
         // Make sure the WLAN AP interface is added to the Netstack and is brought up with
         // the right IP address.
-        let interface_state = environment
-            .connect_to_service::<net_interfaces::StateMarker>()
+        let interface_state = realm
+            .connect_to_protocol::<net_interfaces::StateMarker>()
             .context("connect to fuchsia.net.interfaces/State service")?;
         let (watcher, watcher_server) =
             ::fidl::endpoints::create_proxy::<net_interfaces::WatcherMarker>()?;
@@ -313,8 +327,8 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         .context("failed to wait for presence of a WLAN AP interface")?;
 
         // Check the DHCP server's configured parameters.
-        let dhcp_server = environment
-            .connect_to_service::<dhcp::Server_Marker>()
+        let dhcp_server = realm
+            .connect_to_protocol::<dhcp::Server_Marker>()
             .context("connect to DHCP server service")?;
         let checks = [
             (dhcp::ParameterName::IpAddrs, dhcp::Parameter::IpAddrs(vec![INTERFACE_ADDR])),
@@ -375,8 +389,9 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
             .await
             .context("create host")?;
         let path = E::dev_path(&format!("dhcp-client-ep-{}", offset));
-        let () = environment
+        let () = realm
             .add_virtual_device(&host, path.as_path())
+            .await
             .with_context(|| format!("add host virtual device {}", path.display()))?;
         let () = host.set_link_up(true).await.context("set host link up")?;
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -437,33 +452,34 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
     }
 
     let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
-    let environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
             name,
-            vec![
-                KnownServices::LookupAdmin.into_launch_service(),
-                KnownServices::DhcpServer.into_launch_service(),
-                KnownServices::SecureStash.into_launch_service(),
+            &[
+                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::Dhcpv6Client,
+                KnownServiceProvider::SecureStash,
             ],
         )
-        .context("create netstack environment")?;
-
-    // Start NetCfg.
-    let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netcfg =
-        fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), M::testing_args())
-            .context("launch netcfg")?;
-    let mut wait_for_netcfg_fut = netcfg.wait().fuse();
+        .context("create netstack realm")?;
+    let wait_for_netmgr =
+        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+    futures::pin_mut!(wait_for_netmgr);
 
     // Add a WLAN AP, make sure the DHCP server gets configurd and starts or stops when the
     // interface is added and brought up or brought down/removed.
     for i in 0..=1 {
-        let test_fut = wlan_ap_dhcp_server_inner::<E>(&sandbox, &environment, i).fuse();
+        let test_fut = wlan_ap_dhcp_server_inner::<E>(&sandbox, &realm, i).fuse();
         futures::pin_mut!(test_fut);
         let () = futures::select! {
             test_res = test_fut => test_res,
-            wait_for_netcfg_res = wait_for_netcfg_fut => {
-                Err(anyhow::anyhow!("NetCfg unexpectedly exited with exit status = {:?}", wait_for_netcfg_res?))
+            stopped_event = wait_for_netmgr => {
+                Err(anyhow::anyhow!(
+                    "NetCfg unexpectedly exited with exit status = {:?}",
+                    stopped_event
+                ))
             }
         }
         .with_context(|| format!("test {}-th interface", i))?;

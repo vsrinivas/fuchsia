@@ -49,6 +49,12 @@ fuchsia_component("component") {
   deps = [ ":dhcpv6_client" ]
 }
 
+fuchsia_component("component-v2") {
+  component_name = "dhcpv6-client"
+  manifest = "meta/dhcpv6-client.cml"
+  deps = [ ":dhcpv6_client" ]
+}
+
 fuchsia_package("dhcpv6-client") {
   deps = [ ":component" ]
 }

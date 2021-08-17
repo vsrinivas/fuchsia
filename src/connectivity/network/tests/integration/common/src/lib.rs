@@ -171,7 +171,7 @@ pub async fn wait_for_component_stopped(
 ///
 /// Returns the interface's ID and name.
 pub async fn wait_for_non_loopback_interface_up<
-    F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
+    F: Unpin + FusedFuture + Future<Output = Result<component_events::events::Stopped>>,
 >(
     interface_state: &fnet_interfaces::StateProxy,
     mut wait_for_netmgr: &mut F,
@@ -208,8 +208,8 @@ pub async fn wait_for_non_loopback_interface_up<
         wait_for_interface_res = wait_for_interface => {
             wait_for_interface_res
         }
-        wait_for_netmgr_res = wait_for_netmgr => {
-            Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
+        stopped_event = wait_for_netmgr => {
+            Err(anyhow::anyhow!("the network manager unexpectedly stopped with event = {:?}", stopped_event))
         }
     }
 }

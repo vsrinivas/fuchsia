@@ -23,10 +23,7 @@ group("compile") {
   ]
 }
 
-tests = [
-  "dns",
-  "management",
-]
+tests = [ "dns" ]
 
 foreach(test, tests) {
   name = "netstack_${test}_integration_test"
@@ -81,6 +78,7 @@ tests_v2 = [
   "inspect",
   "ipv4",
   "ipv6",
+  "management",
   "neighbor",
   "reachability",
   "routes",
@@ -124,14 +122,27 @@ fuchsia_test_package("netstack-integration-tests-v2") {
     # dhcpd is used to test DHCP address acquisition.
     "//src/connectivity/network/dhcp:component",
 
+    # DHCPv6 client is under test.
+    "//src/connectivity/network/dhcpv6/client:component-v2",
+
     # dns_resolver integration with netstack is tested.
     "//src/connectivity/network/dns:component-v2",
+
+    # netcfg integration with netstack is tested.
+    ":netcfg-netemul-config-v2",
+    "//src/connectivity/network/netcfg:component-v2",
   ]
 }
 
 config_data("netcfg-netemul-config") {
   testonly = true
   for_pkg = "netstack-integration-tests"
+  sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
+  outputs = [ "netcfg/empty.json" ]
+}
+
+resource("netcfg-netemul-config-v2") {
+  testonly = true
   sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
   outputs = [ "netcfg/empty.json" ]
 }

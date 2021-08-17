@@ -63,6 +63,5 @@ rustc_library("netstack_testing_common") {
   visibility = [
     "//src/connectivity/network/tests/integration:compile",
     "//src/connectivity/network/tests/integration/dns",
-    "//src/connectivity/network/tests/integration/management",
   ]
 }

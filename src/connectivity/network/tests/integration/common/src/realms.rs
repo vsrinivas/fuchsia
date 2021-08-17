@@ -6,7 +6,8 @@
 
 use {
     anyhow::Context as _, async_trait::async_trait,
-    fidl::endpoints::DiscoverableProtocolMarker as _, fidl_fuchsia_net_filter as fnet_filter,
+    fidl::endpoints::DiscoverableProtocolMarker as _, fidl_fuchsia_net_dhcp as fnet_dhcp,
+    fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6, fidl_fuchsia_net_filter as fnet_filter,
     fidl_fuchsia_net_interfaces as fnet_interfaces, fidl_fuchsia_net_name as fnet_name,
     fidl_fuchsia_net_neighbor as fnet_neighbor, fidl_fuchsia_net_routes as fnet_routes,
     fidl_fuchsia_net_stack as fnet_stack, fidl_fuchsia_netemul as fnetemul,
@@ -56,15 +57,44 @@ impl NetstackVersion {
     }
 }
 
+/// The network manager to use in a [`KnownServiceProvider::Manager`].
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[allow(missing_docs)]
+pub enum ManagementAgent {
+    NetCfg,
+}
+
+impl ManagementAgent {
+    /// Gets the URL for this network manager component.
+    pub fn get_url(&self) -> &'static str {
+        match self {
+            ManagementAgent::NetCfg => "#meta/netcfg.cm",
+        }
+    }
+
+    /// Default arguments that should be passed to the component when run in a
+    /// test realm.
+    pub fn get_program_args(&self) -> &[&'static str] {
+        &[
+            "--min-severity",
+            "DEBUG",
+            "--allow-virtual-devices",
+            "--config-data",
+            "/pkg/netcfg/empty.json",
+        ]
+    }
+}
+
 /// Components that provide known services used in tests.
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[allow(missing_docs)]
 pub enum KnownServiceProvider {
     Netstack(NetstackVersion),
+    Manager(ManagementAgent),
     SecureStash,
     DhcpServer { persistent: bool },
     Dhcpv6Client,
-    LookupAdmin,
+    DnsResolver,
     Reachability,
 }
 
@@ -79,6 +109,15 @@ pub mod constants {
     pub mod netstack {
         pub const COMPONENT_NAME: &str = "netstack";
     }
+    pub mod netcfg {
+        pub const COMPONENT_NAME: &str = "netcfg";
+        // These capability names and filepaths should match the devfs capabilities used by netemul
+        // in its component manifest, i.e. netemul.cml.
+        pub const DEV_CLASS_ETHERNET: &str = "dev-class-ethernet";
+        pub const CLASS_ETHERNET_PATH: &str = "class/ethernet";
+        pub const DEV_CLASS_NETWORK: &str = "dev-class-network";
+        pub const CLASS_NETWORK_PATH: &str = "class/network";
+    }
     pub mod secure_stash {
         pub const COMPONENT_NAME: &str = "stash_secure";
         pub const COMPONENT_URL: &str = "#meta/stash_secure.cm";
@@ -89,8 +128,7 @@ pub mod constants {
     }
     pub mod dhcpv6_client {
         pub const COMPONENT_NAME: &str = "dhcpv6-client";
-        pub const COMPONENT_URL: &str =
-            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for dhcpv6 client";
+        pub const COMPONENT_URL: &str = "#meta/dhcpv6-client.cm";
     }
     pub mod dns_resolver {
         pub const COMPONENT_NAME: &str = "dns_resolver";
@@ -129,6 +167,51 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 uses: use_log_sink(),
                 ..fnetemul::ChildDef::EMPTY
             },
+            KnownServiceProvider::Manager(management_agent) => fnetemul::ChildDef {
+                name: Some(constants::netcfg::COMPONENT_NAME.to_string()),
+                url: Some(management_agent.get_url().to_string()),
+                program_args: Some(
+                    management_agent.get_program_args().iter().cloned().map(Into::into).collect(),
+                ),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_filter::FilterMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_interfaces::StateMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_stack::StackMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnetstack::NetstackMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_dhcp::Server_Marker>(
+                        constants::dhcp_server::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(
+                        protocol_dep::<fnet_dhcpv6::ClientProviderMarker>(
+                            constants::dhcpv6_client::COMPONENT_NAME,
+                        ),
+                    ),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_name::LookupAdminMarker>(
+                        constants::dns_resolver::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                        name: Some(constants::netcfg::DEV_CLASS_ETHERNET.to_string()),
+                        subdir: Some(constants::netcfg::CLASS_ETHERNET_PATH.to_string()),
+                        ..fnetemul::DevfsDep::EMPTY
+                    }),
+                    fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                        name: Some(constants::netcfg::DEV_CLASS_NETWORK.to_string()),
+                        subdir: Some(constants::netcfg::CLASS_NETWORK_PATH.to_string()),
+                        ..fnetemul::DevfsDep::EMPTY
+                    }),
+                ])),
+                eager: Some(true),
+                ..fnetemul::ChildDef::EMPTY
+            },
             KnownServiceProvider::SecureStash => fnetemul::ChildDef {
                 name: Some(constants::secure_stash::COMPONENT_NAME.to_string()),
                 url: Some(constants::secure_stash::COMPONENT_URL.to_string()),
@@ -146,9 +229,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             KnownServiceProvider::DhcpServer { persistent } => fnetemul::ChildDef {
                 name: Some(constants::dhcp_server::COMPONENT_NAME.to_string()),
                 url: Some(constants::dhcp_server::COMPONENT_URL.to_string()),
-                exposes: Some(
-                    vec![fidl_fuchsia_net_dhcp::Server_Marker::PROTOCOL_NAME.to_string()],
-                ),
+                exposes: Some(vec![fnet_dhcp::Server_Marker::PROTOCOL_NAME.to_string()]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
                     fnetemul::Capability::ChildDep(protocol_dep::<fnet_name::LookupMarker>(
@@ -176,9 +257,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             KnownServiceProvider::Dhcpv6Client => fnetemul::ChildDef {
                 name: Some(constants::dhcpv6_client::COMPONENT_NAME.to_string()),
                 url: Some(constants::dhcpv6_client::COMPONENT_URL.to_string()),
-                exposes: Some(vec![
-                    fidl_fuchsia_net_dhcpv6::ClientProviderMarker::PROTOCOL_NAME.to_string()
-                ]),
+                exposes: Some(vec![fnet_dhcpv6::ClientProviderMarker::PROTOCOL_NAME.to_string()]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
                     fnetemul::Capability::ChildDep(protocol_dep::<fposix_socket::ProviderMarker>(
@@ -187,7 +266,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 ])),
                 ..fnetemul::ChildDef::EMPTY
             },
-            KnownServiceProvider::LookupAdmin => fnetemul::ChildDef {
+            KnownServiceProvider::DnsResolver => fnetemul::ChildDef {
                 name: Some(constants::dns_resolver::COMPONENT_NAME.to_string()),
                 url: Some(constants::dns_resolver::COMPONENT_URL.to_string()),
                 exposes: Some(vec![
@@ -253,18 +332,8 @@ impl Netstack for Netstack3 {
 
 /// Abstraction for a Fuchsia component which offers network configuration services.
 pub trait Manager: Copy + Clone {
-    /// The Fuchsia package URL to the component.
-    const PKG_URL: &'static str;
-
-    /// Default arguments that should be passed to the component when run under a test
-    /// environment.
-    const TESTING_ARGS: &'static [&'static str];
-
-    /// Returns `TESTING_ARGS` as a type that [`fuchsia_component::client::launch`]
-    /// accepts.
-    fn testing_args() -> Option<Vec<String>> {
-        Some(Self::TESTING_ARGS.iter().cloned().map(String::from).collect())
-    }
+    /// The management agent to be used.
+    const MANAGEMENT_AGENT: ManagementAgent;
 }
 
 /// Uninstantiable type that represents NetCfg's implementation of a network manager.
@@ -272,11 +341,7 @@ pub trait Manager: Copy + Clone {
 pub enum NetCfg {}
 
 impl Manager for NetCfg {
-    // Note, netcfg.cmx must never be used in a Netemul environment as it breaks
-    // hermeticity.
-    const PKG_URL: &'static str = "#meta/netcfg-netemul.cmx";
-    // Specify an empty config file for NetCfg when it is run in netemul.
-    const TESTING_ARGS: &'static [&'static str] = &["--config-data", "netcfg/empty.json"];
+    const MANAGEMENT_AGENT: ManagementAgent = ManagementAgent::NetCfg;
 }
 
 /// Extensions to `netemul::TestSandbox`.
