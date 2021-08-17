@@ -6,6 +6,7 @@ The Fuchsia RFC process has evolved from the following RFCs:
 * [RFC-0006: Addendum of the RFC process for Zircon](0006_addendum_to_rfc_process_for_zircon.md)
 * [RFC-0067: Additions to Fuchsia RFC process](0067_rfc_process_additions.md)
 * [RFC-0017: The FTP Process is dead, long live the RFC Process!](0017_folding_ftp_into_rfc.md)
+* [RFC-0122: RFC Stakeholders](0122_stakeholders.md)
 
 This page collates the above RFCs and captures the current process.
 
