@@ -4,7 +4,12 @@
 
 use {
     crate::dirs_to_test,
-    fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_RIGHT_READABLE},
+    anyhow::{anyhow, Context as _, Error},
+    fidl::AsHandleRef,
+    fidl_fuchsia_io::{
+        DirectoryProxy, FileObject, NodeInfo, NodeProxy, Service, MODE_TYPE_DIRECTORY,
+        MODE_TYPE_FILE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
+    },
     fuchsia_zircon as zx,
 };
 
@@ -180,4 +185,103 @@ async fn close_per_package_source(root_dir: DirectoryProxy) {
     verify_close(&root_dir, "file", MODE_TYPE_FILE).await;
     verify_close(&root_dir, "meta/file", MODE_TYPE_FILE).await;
     verify_close(&root_dir, "meta", MODE_TYPE_FILE).await;
+}
+
+#[fuchsia::test]
+async fn describe() {
+    for dir in dirs_to_test().await {
+        describe_per_package_source(dir).await
+    }
+}
+
+async fn describe_per_package_source(root_dir: DirectoryProxy) {
+    assert_describe_directory(&root_dir, ".").await;
+
+    assert_describe_directory(&root_dir, "meta").await;
+    assert_describe_meta_file(&root_dir, "meta").await;
+
+    assert_describe_directory(&root_dir, "meta/dir").await;
+    assert_describe_directory(&root_dir, "dir").await;
+
+    assert_describe_file(&root_dir, "file").await;
+    assert_describe_meta_file(&root_dir, "meta/file").await;
+}
+
+async fn assert_describe_directory(package_root: &DirectoryProxy, path: &str) {
+    for flag in [0, OPEN_FLAG_NODE_REFERENCE] {
+        let node = io_util::directory::open_node(package_root, path, flag, MODE_TYPE_DIRECTORY)
+            .await
+            .unwrap();
+
+        if let Err(e) = verify_describe_directory_success(node).await {
+            panic!("failed to verify describe. path: {:?}, error: {:#}", path, e);
+        }
+    }
+}
+
+async fn verify_describe_directory_success(node: NodeProxy) -> Result<(), Error> {
+    match node.describe().await {
+        Ok(NodeInfo::Directory(directory_object)) => {
+            assert_eq!(directory_object, fidl_fuchsia_io::DirectoryObject);
+            Ok(())
+        }
+        Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+        Err(e) => return Err(e).context("failed to call describe"),
+    }
+}
+
+async fn assert_describe_file(package_root: &DirectoryProxy, path: &str) {
+    for flag in [OPEN_RIGHT_READABLE, OPEN_FLAG_NODE_REFERENCE] {
+        let node = io_util::directory::open_node(package_root, path, flag, 0).await.unwrap();
+        if let Err(e) = verify_describe_content_file(node, flag).await {
+            panic!(
+                "failed to verify describe. path: {:?}, flag: {:#x}, \
+                    mode: {:#x}, error: {:#}",
+                path, flag, 0, e
+            );
+        }
+    }
+}
+
+async fn verify_describe_content_file(node: NodeProxy, flag: u32) -> Result<(), Error> {
+    if flag & OPEN_FLAG_NODE_REFERENCE != 0 {
+        match node.describe().await {
+            Ok(NodeInfo::Service(Service {})) => return Ok(()),
+            Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+            Err(e) => return Err(e).context("failed to call describe"),
+        }
+    } else {
+        match node.describe().await {
+            Ok(NodeInfo::File(FileObject { event: Some(event), stream: None })) => {
+                match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
+                    Ok(_) => return Ok(()),
+                    Err(_) => return Err(anyhow!("FILE_SIGNAL_READABLE not set")),
+                }
+            }
+            Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+            Err(e) => return Err(e).context("failed to call describe"),
+        }
+    }
+}
+
+async fn assert_describe_meta_file(package_root: &DirectoryProxy, path: &str) {
+    for flag in [0, OPEN_FLAG_NODE_REFERENCE] {
+        let node =
+            io_util::directory::open_node(package_root, path, flag, MODE_TYPE_FILE).await.unwrap();
+        if let Err(e) = verify_describe_meta_file_success(node).await {
+            panic!(
+                "failed to verify describe. path: {:?}, flag: {:#x}, \
+                    mode: MODE_TYPE_FILE, error: {:#}",
+                path, flag, e
+            );
+        }
+    }
+}
+
+async fn verify_describe_meta_file_success(node: NodeProxy) -> Result<(), Error> {
+    match node.describe().await {
+        Ok(NodeInfo::File(_)) => return Ok(()),
+        Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+        Err(e) => return Err(e).context("failed to call describe"),
+    }
 }

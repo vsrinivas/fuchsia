@@ -553,9 +553,7 @@ async fn verify_content_file_opened(node: NodeProxy, flag: u32) -> Result<(), Er
                     assert_eq!(*boxed, NodeInfo::Service(Service));
                     return Ok(());
                 }
-                Some(Ok(other)) => {
-                    return Err(anyhow!("wrong node type returned: {:?}", other))
-                }
+                Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
                 Some(Err(e)) => return Err(e).context("failed to call onopen"),
                 None => return Err(anyhow!("no events!")),
             };
@@ -573,9 +571,7 @@ async fn verify_content_file_opened(node: NodeProxy, flag: u32) -> Result<(), Er
                         _ => return Err(anyhow!("expected FileObject")),
                     };
                 }
-                Some(Ok(other)) => {
-                    return Err(anyhow!("wrong node type returned: {:?}", other))
-                }
+                Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
                 Some(Err(e)) => return Err(e).context("failed to call onopen"),
                 None => return Err(anyhow!("no events!")),
             }
