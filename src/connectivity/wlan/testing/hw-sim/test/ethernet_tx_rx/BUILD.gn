@@ -8,6 +8,7 @@ rustc_test("ethernet_tx_rx") {
   edition = "2018"
   deps = [
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
     "//src/lib/network/ethernet",

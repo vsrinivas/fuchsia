@@ -55,7 +55,7 @@ pub fn get_legacy_wpa_association(
         psk,
         device_info.mac_addr,
         ProtectionInfo::LegacyWpa(s_wpa),
-        bss.bssid,
+        bss.bssid.0,
         ProtectionInfo::LegacyWpa(a_wpa),
     )
     .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
@@ -87,9 +87,10 @@ fn construct_s_wpa(a_wpa: &WpaIe) -> WpaIe {
 mod tests {
     use super::*;
     use crate::test_utils::{fake_device_info, make_wpa1_ie};
+    use ieee80211::MacAddr;
     use wlan_common::fake_bss_description;
 
-    const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
+    const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
     #[test]
     fn test_incompatible_multicast_cipher() {

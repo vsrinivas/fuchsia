@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 rustc_test("connect_to_open_network") {
   edition = "2018"
   deps = [
-    "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
   ]

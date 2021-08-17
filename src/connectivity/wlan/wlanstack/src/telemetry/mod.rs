@@ -386,7 +386,7 @@ async fn log_connect_result_stats(
     let oui = connect_stats
         .candidate_network
         .as_ref()
-        .map(|network| network.bss.bssid.to_oui_uppercase(""));
+        .map(|network| network.bss.bssid.0.to_oui_uppercase(""));
     let result_dim = convert_connection_result(&connect_stats.result);
     sender.with_component().log_event_count::<_, String, _>(
         metrics::CONNECTION_RESULT_METRIC_ID,
@@ -432,7 +432,7 @@ async fn log_connect_result_stats(
         Some(network) => (&network.bss, network.multiple_bss_candidates),
         None => return,
     };
-    let oui = bss.bssid.to_oui_uppercase("");
+    let oui = bss.bssid.0.to_oui_uppercase("");
 
     let is_multi_bss_dim = convert_bool_dim(is_multi_bss);
     let protection_dim = convert_protection(&bss.protection());
@@ -680,8 +680,8 @@ pub async fn log_disconnect(
         connected_duration: info.connected_duration.into_nanos(),
         last_rssi: info.last_rssi,
         last_snr: info.last_snr,
-        bssid: info.bssid.to_mac_string(),
-        bssid_hash: inspect_tree.hasher.hash_mac_addr(&info.bssid),
+        bssid: info.bssid.0.to_mac_string(),
+        bssid_hash: inspect_tree.hasher.hash_mac_addr(&info.bssid.0),
         ssid: info.ssid.to_string(),
         ssid_hash: inspect_tree.hasher.hash_ssid(&info.ssid),
         wsc?: match &info.wsc {
@@ -724,7 +724,7 @@ pub async fn log_disconnect(
         sender.with_component().log_event_count(
             metrics::LOST_CONNECTION_COUNT_METRIC_ID,
             [duration_dim as u32, rssi_dim as u32],
-            info.bssid.to_oui_uppercase(""),
+            info.bssid.0.to_oui_uppercase(""),
             0,
             1,
         );
@@ -767,7 +767,7 @@ pub async fn log_disconnect(
             recent_channel_switch_dim as u32,
             channel_band_dim as u32,
         ],
-        info.bssid.to_oui_uppercase(""),
+        info.bssid.0.to_oui_uppercase(""),
         0,
         1,
     );
@@ -775,7 +775,7 @@ pub async fn log_disconnect(
         cobalt_1dot1_proxy,
         log_string,
         metrics::DISCONNECT_COUNT_BREAKDOWN_MIGRATED_METRIC_ID,
-        &info.bssid.to_oui_uppercase(""),
+        &info.bssid.0.to_oui_uppercase(""),
         &[
             connected_time_dim as u32,
             disconnect_source_dim as u32,
@@ -832,7 +832,7 @@ mod tests {
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
         fuchsia_zircon as zx,
         futures::channel::mpsc,
-        ieee80211::Ssid,
+        ieee80211::{Bssid, Ssid},
         maplit::hashset,
         pin_utils::pin_mut,
         std::collections::HashSet,
@@ -1403,7 +1403,7 @@ mod tests {
             DisconnectSource::User(fidl_sme::UserDisconnectReason::FailedToConnect);
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
-            bssid: [1u8; 6],
+            bssid: Bssid([1u8; 6]),
             ssid: Ssid::from("foo"),
             wsc: Some(fake_probe_resp_wsc_ie()),
             protection: BssProtection::Open,
@@ -1472,7 +1472,7 @@ mod tests {
         });
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
-            bssid: [1u8; 6],
+            bssid: Bssid([1u8; 6]),
             ssid: Ssid::from("foo"),
             wsc: None,
             protection: BssProtection::Open,
@@ -1536,7 +1536,7 @@ mod tests {
         });
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
-            bssid: [1u8; 6],
+            bssid: Bssid([1u8; 6]),
             ssid: Ssid::from("foo"),
             wsc: None,
             protection: BssProtection::Open,

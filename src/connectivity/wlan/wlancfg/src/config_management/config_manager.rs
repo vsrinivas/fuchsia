@@ -21,6 +21,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
+    ieee80211::Bssid,
     log::{error, info, warn},
     rand::Rng,
     std::{
@@ -106,7 +107,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
         &self,
         id: NetworkIdentifier,
         credential: &Credential,
-        bssid: types::Bssid,
+        bssid: Bssid,
         connect_result: fidl_sme::ConnectResultCode,
         discovered_in_scan: Option<ScanType>,
     );
@@ -117,7 +118,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
         &self,
         id: &NetworkIdentifier,
         credential: &Credential,
-        bssid: types::Bssid,
+        bssid: Bssid,
         uptime: zx::Duration,
         curr_time: zx::Time,
     );
@@ -464,7 +465,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         &self,
         id: NetworkIdentifier,
         credential: &Credential,
-        bssid: types::Bssid,
+        bssid: Bssid,
         connect_result: fidl_sme::ConnectResultCode,
         discovered_in_scan: Option<ScanType>,
     ) {
@@ -523,7 +524,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         &self,
         id: &NetworkIdentifier,
         credential: &Credential,
-        bssid: types::Bssid,
+        bssid: Bssid,
         uptime: zx::Duration,
         curr_time: zx::Time,
     ) {
@@ -1081,14 +1082,14 @@ mod tests {
 
         let network_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
         let credential = Credential::Password(b"password".to_vec());
-        let bssid = [4; 6];
+        let bssid = Bssid([4; 6]);
 
         // If connect and network hasn't been saved, we should not save the network.
         saved_networks
             .record_connect_result(
                 network_id.clone(),
                 &credential,
-                bssid.clone(),
+                bssid,
                 fidl_sme::ConnectResultCode::Success,
                 None,
             )
@@ -1110,7 +1111,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
-                bssid.clone(),
+                bssid,
                 fidl_sme::ConnectResultCode::Success,
                 None,
             )
@@ -1127,7 +1128,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
-                bssid.clone(),
+                bssid,
                 fidl_sme::ConnectResultCode::Success,
                 Some(ScanType::Active),
             )
@@ -1177,7 +1178,7 @@ mod tests {
         let net_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         let net_id_also_valid = NetworkIdentifier::new("foo", SecurityType::Wpa);
         let credential = Credential::Password(b"some_password".to_vec());
-        let bssid = [2; 6];
+        let bssid = Bssid([2; 6]);
 
         // Save the networks and record a successful connection.
         assert!(saved_networks
@@ -1219,7 +1220,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let network_id = NetworkIdentifier::new("foo", SecurityType::None);
         let credential = Credential::None;
-        let bssid = [1; 6];
+        let bssid = Bssid([1; 6]);
         let before_recording = zx::Time::get_monotonic();
 
         // Verify that recording connect result does not save the network.
@@ -1227,7 +1228,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
-                bssid.clone(),
+                bssid,
                 fidl_sme::ConnectResultCode::Failed,
                 None,
             )
@@ -1245,7 +1246,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
-                bssid.clone(),
+                bssid,
                 fidl_sme::ConnectResultCode::Failed,
                 None,
             )
@@ -1254,7 +1255,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
-                bssid.clone(),
+                bssid,
                 fidl_sme::ConnectResultCode::CredentialRejected,
                 None,
             )
@@ -1290,7 +1291,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let network_id = NetworkIdentifier::new("foo", SecurityType::None);
         let credential = Credential::None;
-        let bssid = [0; 6];
+        let bssid = Bssid([0; 6]);
         let before_recording = zx::Time::get_monotonic();
 
         // Verify that recording connect result does not save the network.
@@ -1342,7 +1343,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         let credential = Credential::Psk(vec![1; 32]);
-        let bssid = [1; 6];
+        let bssid = Bssid([1; 6]);
         let recording_time = zx::Time::get_monotonic();
         let uptime = zx::Duration::from_seconds(1);
 

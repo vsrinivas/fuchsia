@@ -11,6 +11,7 @@ rustc_library("wlan-sae") {
   deps = [
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
     "//src/lib/mundane",
     "//third_party/boringssl/rust/boringssl-sys",

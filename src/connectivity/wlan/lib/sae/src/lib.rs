@@ -18,10 +18,10 @@ use {
     anyhow::{bail, Error},
     boringssl::{Bignum, EcGroupId},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    ieee80211::MacAddr,
     log::warn,
     mundane::{hash::Digest, hmac},
     wlan_common::ie::rsn::akm::{self, Akm, AKM_PSK, AKM_SAE},
-    wlan_common::mac::MacAddr,
 };
 
 /// IEEE Std 802.11-2016, 12.4.4.1

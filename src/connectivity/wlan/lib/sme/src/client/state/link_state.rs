@@ -19,6 +19,7 @@ use {
     anyhow, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
+    ieee80211::{Bssid, MacAddr, WILDCARD_BSSID},
     log::{error, warn},
     wlan_common::bss::BssDescription,
     wlan_rsn::{
@@ -69,7 +70,7 @@ enum RsnaStatus {
 impl EstablishingRsna {
     fn on_rsna_established(self, bss: &BssDescription, context: &mut Context) -> LinkUp {
         context.mlme_sink.send(MlmeRequest::SetCtrlPort(fidl_mlme::SetControlledPortRequest {
-            peer_sta_address: bss.bssid.clone(),
+            peer_sta_address: bss.bssid.0,
             state: fidl_mlme::ControlledPortState::Open,
         }));
 
@@ -320,7 +321,7 @@ fn inspect_log_key(context: &mut Context, key: &Key) {
     });
 }
 
-fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
+fn send_keys(mlme_sink: &MlmeSink, bssid: Bssid, key: Key) {
     match key {
         Key::Ptk(ptk) => {
             mlme_sink.send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
@@ -328,7 +329,7 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
                     key_type: fidl_mlme::KeyType::Pairwise,
                     key: ptk.tk().to_vec(),
                     key_id: 0,
-                    address: bssid,
+                    address: bssid.0,
                     cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
                     cipher_suite_type: ptk.cipher.suite_type,
                     rsc: 0,
@@ -341,7 +342,7 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
                     key_type: fidl_mlme::KeyType::Group,
                     key: gtk.tk().to_vec(),
                     key_id: gtk.key_id() as u16,
-                    address: [0xFFu8; 6],
+                    address: WILDCARD_BSSID.0,
                     cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
                     cipher_suite_type: gtk.cipher.suite_type,
                     rsc: gtk.rsc,
@@ -372,8 +373,8 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
 /// frame in response to this one, and schedule a timeout as well.
 fn send_eapol_frame(
     context: &mut Context,
-    bssid: [u8; 6],
-    sta_addr: [u8; 6],
+    bssid: Bssid,
+    sta_addr: MacAddr,
     frame: eapol::KeyFrameBuf,
     schedule_timeout: bool,
 ) -> Option<EventId> {
@@ -385,7 +386,7 @@ fn send_eapol_frame(
     inspect_log!(context.inspect.rsn_events.lock(), tx_eapol_frame: InspectBytes(&frame[..]));
     context.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
         src_addr: sta_addr,
-        dst_addr: bssid,
+        dst_addr: bssid.0,
         data: frame.into(),
     }));
     resp_timeout_id
@@ -410,7 +411,7 @@ fn process_eapol_conf(
         }
     }
     context.info.report_supplicant_updates(&update_sink);
-    process_eapol_updates(context, eapol_conf.dst_addr, update_sink)
+    process_eapol_updates(context, Bssid(eapol_conf.dst_addr), update_sink)
 }
 
 fn process_eapol_key_frame_timeout(
@@ -476,12 +477,12 @@ fn process_eapol_ind(
         }
     }
     context.info.report_supplicant_updates(&update_sink);
-    process_eapol_updates(context, ind.src_addr, update_sink)
+    process_eapol_updates(context, Bssid(ind.src_addr), update_sink)
 }
 
 fn process_eapol_updates(
     context: &mut Context,
-    bssid: [u8; 6],
+    bssid: Bssid,
     updates: rsna::UpdateSink,
 ) -> RsnaStatus {
     let sta_addr = context.device_info.mac_addr;

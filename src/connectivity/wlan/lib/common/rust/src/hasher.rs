@@ -4,7 +4,7 @@
 
 use {
     boringssl_sys::SHA256_DIGEST_LENGTH,
-    ieee80211::Ssid,
+    ieee80211::{MacAddr, Ssid},
     mundane::{
         hash::{Digest, Sha256},
         hmac::hmac,
@@ -29,7 +29,7 @@ impl WlanHasher {
         hmac::<Sha256>(&self.hash_key, bytes).bytes()
     }
 
-    pub fn hash_mac_addr(&self, mac_addr: &[u8; 6]) -> String {
+    pub fn hash_mac_addr(&self, mac_addr: &MacAddr) -> String {
         format!(
             "{:02x}:{:02x}:{:02x}:{}",
             mac_addr[0],

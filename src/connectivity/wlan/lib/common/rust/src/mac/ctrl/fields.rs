@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::mac::{Bssid, MacAddr},
+    ieee80211::{Bssid, MacAddr},
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
 

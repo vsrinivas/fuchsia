@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::MacAddr,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
+    ieee80211::MacAddr,
     std::convert::TryInto,
     wlan_common::{
         channel::{Cbw, Phy},

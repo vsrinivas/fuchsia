@@ -17,6 +17,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
+    ieee80211::Bssid,
     log::{debug, error, info, warn},
     measure_tape_for_scan_result::measure,
     std::{collections::HashMap, sync::Arc},
@@ -314,9 +315,9 @@ fn insert_bss_to_network_bss_map(
             .entry(SmeNetworkIdentifier { ssid: bss.ssid.to_vec(), protection: bss.protection })
             .or_insert(vec![]);
         // Check if this BSSID is already in the hashmap
-        if !entry.iter().any(|existing_bss| existing_bss.bssid == bss.bssid) {
+        if !entry.iter().any(|existing_bss| existing_bss.bssid.0 == bss.bssid) {
             entry.push(types::Bss {
-                bssid: bss.bssid,
+                bssid: Bssid(bss.bssid),
                 rssi: bss.rssi_dbm,
                 snr_db: bss.snr_db,
                 channel: bss.channel,
@@ -405,7 +406,7 @@ fn scan_result_to_policy_scan_result(
                                 let frequency =
                                     Channel::from(input.channel).get_center_freq().unwrap_or(0);
                                 fidl_policy::Bss {
-                                    bssid: Some(input.bssid),
+                                    bssid: Some(input.bssid.0),
                                     rssi: Some(input.rssi),
                                     frequency: Some(frequency.into()), // u16.into() -> u32
                                     timestamp_nanos: Some(input.timestamp_nanos),
@@ -739,7 +740,7 @@ mod tests {
                 security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
                 entries: vec![
                     types::Bss {
-                        bssid: [0, 0, 0, 0, 0, 0],
+                        bssid: Bssid([0, 0, 0, 0, 0, 0]),
                         rssi: 0,
                         timestamp_nanos: 0,
                         snr_db: 1,
@@ -753,7 +754,7 @@ mod tests {
                         bss_description: bss_desc1.clone(),
                     },
                     types::Bss {
-                        bssid: [7, 8, 9, 10, 11, 12],
+                        bssid: Bssid([7, 8, 9, 10, 11, 12]),
                         rssi: 13,
                         timestamp_nanos: 0,
                         snr_db: 3,
@@ -773,7 +774,7 @@ mod tests {
                 ssid: "unique ssid".as_bytes().to_vec(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
                 entries: vec![types::Bss {
-                    bssid: [1, 2, 3, 4, 5, 6],
+                    bssid: Bssid([1, 2, 3, 4, 5, 6]),
                     rssi: 7,
                     timestamp_nanos: 0,
                     snr_db: 2,
@@ -869,7 +870,7 @@ mod tests {
                 security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
                 entries: vec![
                     types::Bss {
-                        bssid: [0, 0, 0, 0, 0, 0],
+                        bssid: Bssid([0, 0, 0, 0, 0, 0]),
                         rssi: 0,
                         timestamp_nanos: 0,
                         snr_db: 1,
@@ -883,7 +884,7 @@ mod tests {
                         bss_description: bss_desc1.clone(),
                     },
                     types::Bss {
-                        bssid: [7, 8, 9, 10, 11, 12],
+                        bssid: Bssid([7, 8, 9, 10, 11, 12]),
                         rssi: 13,
                         timestamp_nanos: 0,
                         snr_db: 3,
@@ -903,7 +904,7 @@ mod tests {
                 ssid: "foo active ssid".as_bytes().to_vec(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
                 entries: vec![types::Bss {
-                    bssid: [9, 9, 9, 9, 9, 9],
+                    bssid: Bssid([9, 9, 9, 9, 9, 9]),
                     rssi: 0,
                     timestamp_nanos: 0,
                     snr_db: 8,
@@ -922,7 +923,7 @@ mod tests {
                 ssid: "misc ssid".as_bytes().to_vec(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
                 entries: vec![types::Bss {
-                    bssid: [8, 8, 8, 8, 8, 8],
+                    bssid: Bssid([8, 8, 8, 8, 8, 8]),
                     rssi: 7,
                     timestamp_nanos: 0,
                     snr_db: 9,
@@ -941,7 +942,7 @@ mod tests {
                 ssid: "unique ssid".as_bytes().to_vec(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
                 entries: vec![types::Bss {
-                    bssid: [1, 2, 3, 4, 5, 6],
+                    bssid: Bssid([1, 2, 3, 4, 5, 6]),
                     rssi: 7,
                     timestamp_nanos: 0,
                     snr_db: 2,
@@ -1597,7 +1598,7 @@ mod tests {
 
         // We should only see one entry for the duplicated BSSs in the passive scan results
         let expected_bss = vec![types::Bss {
-            bssid: [0, 0, 0, 0, 0, 0],
+            bssid: Bssid([0, 0, 0, 0, 0, 0]),
             rssi: 0,
             timestamp_nanos: 0,
             snr_db: 1,
@@ -1651,7 +1652,7 @@ mod tests {
         // After the active scan, there should be a second bss included in the results
         let expected_bss = vec![
             types::Bss {
-                bssid: [0, 0, 0, 0, 0, 0],
+                bssid: Bssid([0, 0, 0, 0, 0, 0]),
                 rssi: 0,
                 timestamp_nanos: 0,
                 snr_db: 1,
@@ -1665,7 +1666,7 @@ mod tests {
                 bss_description: passive_bss_desc.clone(),
             },
             types::Bss {
-                bssid: [1, 2, 3, 4, 5, 6],
+                bssid: Bssid([1, 2, 3, 4, 5, 6]),
                 rssi: 101,
                 timestamp_nanos: 0,
                 snr_db: 101,
@@ -2230,7 +2231,7 @@ mod tests {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
             compatibility: fidl_policy::Compatibility::Supported,
             entries: vec![types::Bss {
-                bssid: scan_result.bssid.clone(),
+                bssid: Bssid(scan_result.bssid),
                 rssi: scan_result.rssi_dbm,
                 snr_db: scan_result.snr_db,
                 channel: scan_result.channel,

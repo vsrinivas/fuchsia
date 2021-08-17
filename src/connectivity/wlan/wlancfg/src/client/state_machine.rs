@@ -28,6 +28,7 @@ use {
         select,
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
+    ieee80211::Bssid,
     log::{debug, error, info},
     std::sync::Arc,
     void::ResultVoidErrExt,
@@ -307,11 +308,7 @@ type MultipleBssCandidates = bool;
 enum SmeOperation {
     ConnectResult(
         Result<
-            (
-                fidl_sme::ConnectResultCode,
-                fidl_sme::ConnectTransactionEventStream,
-                Box<types::Bssid>,
-            ),
+            (fidl_sme::ConnectResultCode, fidl_sme::ConnectTransactionEventStream, Box<Bssid>),
             anyhow::Error,
         >,
     ),
@@ -465,7 +462,7 @@ async fn connecting_state<'a>(
                             return handle_connecting_error_and_retry(common_options, options).await;
                         }
                     };
-                    let bssid = Box::new(bss_description.bssid.clone());
+                    let bssid = Box::new(Bssid(bss_description.bssid.clone()));
                     // Send a connect request to the SME
                     let (connect_txn, remote) = create_proxy()
                         .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
@@ -502,7 +499,7 @@ async fn connecting_state<'a>(
                     common_options.saved_networks_manager.record_connect_result(
                         options.connect_request.target.network.clone().into(),
                         &options.connect_request.target.credential,
-                        *bssid.clone(),
+                        *bssid,
                         code,
                         scan_type
                     ).await;
@@ -610,7 +607,7 @@ async fn connecting_state<'a>(
 struct ConnectedOptions {
     // Keep track of the BSSID we are connected in order to record connection information for
     // future network selection.
-    bssid: types::Bssid,
+    bssid: Bssid,
     currently_fulfilled_request: types::ConnectRequest,
     connect_txn_stream: fidl_sme::ConnectTransactionEventStream,
 }
@@ -2494,7 +2491,7 @@ mod tests {
                 .expect("failed to create a connect txn channel");
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request,
-            bssid: bss_description.bssid,
+            bssid: Bssid(bss_description.bssid),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -2614,7 +2611,7 @@ mod tests {
         let connect_txn_handle = connect_txn_stream.control_handle();
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_description.bssid,
+            bssid: Bssid(bss_description.bssid),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
 
@@ -2642,7 +2639,7 @@ mod tests {
             .disconnect_list
             .get_recent(zx::Time::ZERO);
         assert_variant!(disconnects.as_slice(), [disconnect] => {
-            assert_eq!(disconnect.bssid, bss_description.bssid);
+            assert_eq!(disconnect.bssid.0, bss_description.bssid);
         });
 
         // Disconnect telemetry event sent
@@ -2779,7 +2776,7 @@ mod tests {
             .disconnect_list
             .get_recent(zx::Time::ZERO);
         assert_variant!(disconnects.as_slice(), [disconnect] => {
-            assert_eq!(disconnect.bssid, bss_description.bssid);
+            assert_eq!(disconnect.bssid.0, bss_description.bssid);
         });
     }
 
@@ -2809,7 +2806,7 @@ mod tests {
                 .expect("failed to create a connect txn channel");
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_description.bssid,
+            bssid: Bssid(bss_description.bssid),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -2869,7 +2866,7 @@ mod tests {
                 .expect("failed to create a connect txn channel");
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_description.bssid,
+            bssid: Bssid(bss_description.bssid),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -3081,7 +3078,7 @@ mod tests {
         let connect_txn_handle = connect_txn_stream.control_handle();
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_description.bssid,
+            bssid: Bssid(bss_description.bssid),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(common_options, options);
@@ -3238,7 +3235,7 @@ mod tests {
         let connect_txn_handle = connect_txn_stream.control_handle();
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_description.bssid,
+            bssid: Bssid(bss_description.bssid),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -3329,7 +3326,7 @@ mod tests {
         let mut connect_txn_handle = connect_txn_stream.control_handle();
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_description.bssid,
+            bssid: Bssid(bss_description.bssid),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);

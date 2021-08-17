@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    fidl_fuchsia_wlan_policy as fidl_policy,
-    log::info,
-    pin_utils::pin_mut,
-    wlan_common::{bss::Protection, mac::Bssid},
-    wlan_hw_sim::*,
+    fidl_fuchsia_wlan_policy as fidl_policy, ieee80211::Bssid, log::info, pin_utils::pin_mut,
+    wlan_common::bss::Protection, wlan_hw_sim::*,
 };
 
 const BSSID: &Bssid = &Bssid(*b"bessid");

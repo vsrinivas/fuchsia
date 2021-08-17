@@ -6,7 +6,7 @@ use fuchsia_zircon::{self as zx, prelude::DurationNum};
 
 use crate::client::info::ConnectionPingInfo;
 use crate::timer::TimeoutDuration;
-use crate::MacAddr;
+use ieee80211::{Bssid, MacAddr};
 
 pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
@@ -53,7 +53,7 @@ impl TimeoutDuration for EstablishingRsnaTimeout {
 
 #[derive(Debug, Clone)]
 pub struct KeyFrameExchangeTimeout {
-    pub bssid: MacAddr,
+    pub bssid: Bssid,
     pub sta_addr: MacAddr,
 }
 impl TimeoutDuration for KeyFrameExchangeTimeout {

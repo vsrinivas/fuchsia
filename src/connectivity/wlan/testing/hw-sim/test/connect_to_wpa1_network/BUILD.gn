@@ -9,7 +9,7 @@ rustc_test("connect_to_wpa1_network") {
   deps = [
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
-    "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/connectivity/wlan/testing/wlantap-client",
     "//src/lib/fuchsia-async",

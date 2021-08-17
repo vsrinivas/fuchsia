@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect::NumericProperty,
     fuchsia_zircon as zx,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid, WILDCARD_BSSID},
     log::warn,
     std::{
         collections::{hash_map, HashMap, HashSet},
@@ -29,11 +29,9 @@ const PASSIVE_SCAN_CHANNEL_MS: u32 = 200;
 const ACTIVE_SCAN_PROBE_DELAY_MS: u32 = 5;
 const ACTIVE_SCAN_CHANNEL_MS: u32 = 75;
 
-type BssId = [u8; 6];
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScanResult {
-    pub bssid: [u8; 6],
+    pub bssid: Bssid,
     pub ssid: Ssid,
     pub rssi_dbm: i8,
     pub snr_db: i8,
@@ -91,7 +89,7 @@ enum ScanState<T> {
     ScanningToDiscover {
         cmd: DiscoveryScan<T>,
         mlme_txn_id: u64,
-        bss_map: HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
+        bss_map: HashMap<Bssid, (fidl_internal::BssDescription, IesMerger)>,
     },
 }
 
@@ -194,14 +192,14 @@ impl<T> ScanScheduler<T> {
 }
 
 fn maybe_insert_bss(
-    bss_map: &mut HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
+    bss_map: &mut HashMap<Bssid, (fidl_internal::BssDescription, IesMerger)>,
     mut fidl_bss: fidl_internal::BssDescription,
     sme_inspect: &Arc<inspect::SmeTree>,
 ) {
     let mut ies = vec![];
     std::mem::swap(&mut ies, &mut fidl_bss.ies);
 
-    match bss_map.entry(fidl_bss.bssid) {
+    match bss_map.entry(Bssid(fidl_bss.bssid)) {
         hash_map::Entry::Occupied(mut entry) => {
             let (ref mut existing_bss, ref mut ies_merger) = entry.get_mut();
             ies_merger.merge(&ies[..]);
@@ -220,7 +218,7 @@ fn maybe_insert_bss(
 }
 
 fn convert_bss_map(
-    bss_map: HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
+    bss_map: HashMap<Bssid, (fidl_internal::BssDescription, IesMerger)>,
     ssid_selector: Option<Ssid>,
     sme_inspect: &Arc<inspect::SmeTree>,
 ) -> Vec<BssDescription> {
@@ -243,8 +241,6 @@ fn convert_bss_map(
     }
 }
 
-const WILDCARD_BSS_ID: [u8; 6] = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
-
 fn new_scan_request(
     mlme_txn_id: u64,
     scan_request: fidl_sme::ScanRequest,
@@ -255,7 +251,7 @@ fn new_scan_request(
         txn_id: mlme_txn_id,
         // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
         bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
-        bssid: WILDCARD_BSS_ID.clone(),
+        bssid: WILDCARD_BSSID.0,
         ssid: ssid.into(),
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
@@ -357,10 +353,11 @@ mod tests {
 
     use crate::test_utils;
     use fuchsia_inspect::Inspector;
+    use ieee80211::MacAddr;
     use itertools;
     use wlan_common::{assert_variant, fake_fidl_bss_description, hasher::WlanHasher};
 
-    const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
+    const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
     fn passive_discovery_scan(token: i32) -> DiscoveryScan<i32> {
         DiscoveryScan::new(token, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}))

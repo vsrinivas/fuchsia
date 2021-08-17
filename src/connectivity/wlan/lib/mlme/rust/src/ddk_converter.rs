@@ -9,12 +9,13 @@ use {
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
+    ieee80211::Bssid,
     log::warn,
     wlan_common::{
         ie::{
             parse_ht_capabilities, parse_ht_operation, parse_vht_capabilities, parse_vht_operation,
         },
-        mac::{Aid, Bssid},
+        mac::Aid,
     },
     zerocopy::AsBytes,
 };

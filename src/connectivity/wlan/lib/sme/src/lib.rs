@@ -19,7 +19,6 @@ use thiserror::Error;
 
 use crate::client::InfoEvent;
 use crate::timer::TimedEvent;
-use wlan_common::mac::MacAddr;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Config {

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
-    wlan_common::{bss::Protection, mac::Bssid},
+    wlan_common::bss::Protection,
     wlan_hw_sim::*,
 };
 

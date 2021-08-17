@@ -16,13 +16,13 @@ use {
     banjo_fuchsia_hardware_wlan_info::*,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
-    ieee80211::Ssid,
+    ieee80211::{MacAddr, Ssid},
     std::collections::VecDeque,
     wlan_common::{
         appendable::Appendable,
         buffer_writer::BufferWriter,
         ie,
-        mac::{self, Aid, AuthAlgorithmNumber, FrameClass, MacAddr, ReasonCode, StatusCode},
+        mac::{self, Aid, AuthAlgorithmNumber, FrameClass, ReasonCode, StatusCode},
         TimeUnit,
     },
     wlan_statemachine::StateMachine,
@@ -1091,11 +1091,8 @@ mod tests {
             device::{Device, FakeDevice},
             timer::{FakeScheduler, Scheduler, Timer},
         },
-        wlan_common::{
-            assert_variant,
-            mac::{Bssid, CapabilityInfo},
-            test_utils::fake_frames::*,
-        },
+        ieee80211::Bssid,
+        wlan_common::{assert_variant, mac::CapabilityInfo, test_utils::fake_frames::*},
     };
 
     const CLIENT_ADDR: MacAddr = [1; 6];

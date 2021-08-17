@@ -5,12 +5,8 @@
 use {
     anyhow::{format_err, Error},
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
-    wlan_common::{
-        channel::derive_channel,
-        ie,
-        mac::{Bssid, CapabilityInfo},
-        TimeUnit,
-    },
+    ieee80211::Bssid,
+    wlan_common::{channel::derive_channel, ie, mac::CapabilityInfo, TimeUnit},
 };
 
 /// Given information from beacon or probe response, convert to BssDescription.

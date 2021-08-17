@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_wlan_mlme as fidl_mlme, wlan_common::mac::MacAddr};
+use {fidl_fuchsia_wlan_mlme as fidl_mlme, ieee80211::MacAddr};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -29,6 +29,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
+    ieee80211::{Bssid, MacAddr},
     link_state::LinkState,
     log::{error, info, warn},
     static_assertions::assert_eq_size,
@@ -39,7 +40,6 @@ use {
         channel::Channel,
         format::MacFmt as _,
         ie::{self, rsn::cipher},
-        mac::Bssid,
         RadioConfig,
     },
     wlan_rsn::{
@@ -181,7 +181,7 @@ impl Joining {
                 };
 
                 context.mlme_sink.send(MlmeRequest::Authenticate(fidl_mlme::AuthenticateRequest {
-                    peer_sta_address: self.cmd.bss.bssid.clone(),
+                    peer_sta_address: self.cmd.bss.bssid.0,
                     auth_type,
                     auth_failure_timeout: DEFAULT_AUTH_FAILURE_TIMEOUT,
                     sae_password,
@@ -222,7 +222,7 @@ impl Authenticating {
             fidl_mlme::AuthenticateResultCode::Success => {
                 context.info.report_assoc_started();
                 send_mlme_assoc_req(
-                    Bssid(self.cmd.bss.bssid.clone()),
+                    self.cmd.bss.bssid.clone(),
                     self.capability_info.as_ref(),
                     &self.protection_ie,
                     &context.mlme_sink,
@@ -606,7 +606,7 @@ impl Associated {
             radio_cfg: self.radio_cfg,
         };
         send_mlme_assoc_req(
-            Bssid(cmd.bss.bssid.clone()),
+            cmd.bss.bssid.clone(),
             self.capability_info.as_ref(),
             &self.protection_ie,
             &context.mlme_sink,
@@ -730,14 +730,14 @@ impl Associated {
         }
 
         // Reject EAPoL frames from other BSS.
-        if ind.src_addr != self.bss.bssid {
+        if ind.src_addr != self.bss.bssid.0 {
             let eapol_pdu = &ind.data[..];
             inspect_log!(context.inspect.rsn_events.lock(), {
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 foreign_bssid: ind.src_addr.to_mac_string(),
                 foreign_bssid_hash: context.inspect.hasher.hash_mac_addr(&ind.src_addr),
-                current_bssid: self.bss.bssid.to_mac_string(),
-                current_bssid_hash: context.inspect.hasher.hash_mac_addr(&self.bss.bssid),
+                current_bssid: self.bss.bssid.0.to_mac_string(),
+                current_bssid_hash: context.inspect.hasher.hash_mac_addr(&self.bss.bssid.0),
                 status: "rejected (foreign BSS)",
             });
             return Ok(self);
@@ -1045,8 +1045,8 @@ impl ClientState {
             from: start_state,
             to: JOINING_STATE,
             ctx: msg,
-            bssid: cmd.bss.bssid.to_mac_string(),
-            bssid_hash: context.inspect.hasher.hash_mac_addr(&cmd.bss.bssid),
+            bssid: cmd.bss.bssid.0.to_mac_string(),
+            bssid_hash: context.inspect.hasher.hash_mac_addr(&cmd.bss.bssid.0),
             ssid: cmd.bss.ssid.to_string(),
             ssid_hash: context.inspect.hasher.hash_ssid(&cmd.bss.ssid),
         });
@@ -1181,8 +1181,8 @@ impl ClientState {
                 LinkState::LinkUp { .. } => {
                     let bss_description = &associated.bss;
                     ClientSmeStatus::Connected(ServingApInfo {
+                        bssid: bss_description.bssid,
                         ssid: bss_description.ssid.clone(),
-                        bssid: bss_description.bssid.clone(),
                         rssi_dbm: associated.last_rssi,
                         snr_db: associated.last_snr,
                         signal_report_time: associated.last_signal_report_time,
@@ -1208,7 +1208,7 @@ fn update_wmm_ac_param(ac_params: &mut ie::WmmAcParams, update: &fidl_internal::
     ac_params.txop_limit = update.txop_limit;
 }
 
-fn process_sae_updates(updates: UpdateSink, peer_sta_address: [u8; 6], context: &mut Context) {
+fn process_sae_updates(updates: UpdateSink, peer_sta_address: MacAddr, context: &mut Context) {
     for update in updates {
         match update {
             SecAssocUpdate::TxSaeFrame(frame) => {
@@ -1271,7 +1271,7 @@ fn process_sae_frame_rx(
 
 fn process_sae_timeout(
     protection: &mut Protection,
-    bssid: [u8; 6],
+    bssid: Bssid,
     event: Event,
     context: &mut Context,
 ) -> Result<(), anyhow::Error> {
@@ -1285,7 +1285,7 @@ fn process_sae_timeout(
 
             let mut updates = UpdateSink::default();
             supplicant.on_sae_timeout(&mut updates, timer.0)?;
-            process_sae_updates(updates, bssid, context);
+            process_sae_updates(updates, bssid.0, context);
         }
         _ => (),
     }
@@ -1345,7 +1345,7 @@ fn log_state_change(
     }
 }
 
-fn install_wep_key(context: &mut Context, bssid: [u8; 6], key: &wep_deprecated::Key) {
+fn install_wep_key(context: &mut Context, bssid: Bssid, key: &wep_deprecated::Key) {
     let cipher_suite = match key {
         wep_deprecated::Key::Bits40(_) => cipher::WEP_40,
         wep_deprecated::Key::Bits104(_) => cipher::WEP_104,
@@ -1359,7 +1359,7 @@ fn install_wep_key(context: &mut Context, bssid: [u8; 6], key: &wep_deprecated::
     });
     context
         .mlme_sink
-        .send(MlmeRequest::SetKeys(wep_deprecated::make_mlme_set_keys_request(bssid, key)));
+        .send(MlmeRequest::SetKeys(wep_deprecated::make_mlme_set_keys_request(bssid.0, key)));
 }
 
 /// Custom logging for ConnectCommand because its normal full debug string is too large, and we
@@ -1387,7 +1387,7 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
 
 fn send_deauthenticate_request(current_bss: &BssDescription, mlme_sink: &MlmeSink) {
     mlme_sink.send(MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
-        peer_sta_address: current_bss.bssid.clone(),
+        peer_sta_address: current_bss.bssid.0,
         reason_code: fidl_ieee80211::ReasonCode::StaLeaving,
     }));
 }
@@ -1537,7 +1537,7 @@ mod tests {
         assert_variant!(&mut h.mlme_stream.try_next(),
             Ok(Some(MlmeRequest::Authenticate(req))) => {
                 assert_eq!(fidl_mlme::AuthenticationTypes::SharedKey, req.auth_type);
-                assert_eq!(bssid, req.peer_sta_address);
+                assert_eq!(bssid.0, req.peer_sta_address);
             }
         );
 
@@ -1734,7 +1734,7 @@ mod tests {
         // (mlme->sme) Send an unsuccessful AuthenticateConf
         let auth_conf = MlmeEvent::AuthenticateConf {
             resp: fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: connect_command_one().0.bss.bssid,
+                peer_sta_address: connect_command_one().0.bss.bssid.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCode::Refused,
             },
@@ -1973,7 +1973,7 @@ mod tests {
         });
 
         // Send an EapolInd from foreign BSS.
-        let eapol_ind = create_eapol_ind([1; 6], test_utils::eapol_key_frame().into());
+        let eapol_ind = create_eapol_ind(Bssid([1; 6]), test_utils::eapol_key_frame().into());
         let state = state.on_mlme_event(eapol_ind, &mut h.context);
 
         // Verify state did not change.
@@ -2526,7 +2526,7 @@ mod tests {
             assert_eq!(info.ssid, Ssid::from("bar"));
             assert_eq!(info.wsc, Some(fake_probe_resp_wsc_ie()));
             assert_eq!(info.protection, BssProtection::Open);
-            assert_eq!(info.bssid, [8; 6]);
+            assert_eq!(info.bssid.0, [8; 6]);
             assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
         });
         assert_variant!(
@@ -2990,7 +2990,7 @@ mod tests {
     fn on_eapol_ind(
         state: ClientState,
         helper: &mut TestHelper,
-        bssid: [u8; 6],
+        bssid: Bssid,
         suppl_mock: &MockSupplicantController,
         update_sink: UpdateSink,
     ) -> ClientState {
@@ -3000,10 +3000,10 @@ mod tests {
         state.on_mlme_event(eapol_ind, &mut helper.context)
     }
 
-    fn create_eapol_ind(bssid: [u8; 6], data: Vec<u8>) -> MlmeEvent {
+    fn create_eapol_ind(bssid: Bssid, data: Vec<u8>) -> MlmeEvent {
         MlmeEvent::EapolInd {
             ind: fidl_mlme::EapolIndication {
-                src_addr: bssid,
+                src_addr: bssid.0,
                 dst_addr: fake_device_info().mac_addr,
                 data,
             },
@@ -3013,58 +3013,58 @@ mod tests {
     fn exchange_deauth(state: ClientState, h: &mut TestHelper) -> ClientState {
         // (sme->mlme) Expect a DeauthenticateRequest
         assert_variant!(h.mlme_stream.try_next(), Ok(Some(MlmeRequest::Deauthenticate(req))) => {
-            assert_eq!(connect_command_one().0.bss.bssid, req.peer_sta_address);
+            assert_eq!(connect_command_one().0.bss.bssid.0, req.peer_sta_address);
         });
 
         // (mlme->sme) Send a DeauthenticateConf as a response
         let deauth_conf = MlmeEvent::DeauthenticateConf {
             resp: fidl_mlme::DeauthenticateConfirm {
-                peer_sta_address: connect_command_one().0.bss.bssid,
+                peer_sta_address: connect_command_one().0.bss.bssid.0,
             },
         };
         state.on_mlme_event(deauth_conf, &mut h.context)
     }
 
-    fn expect_join_request(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+    fn expect_join_request(mlme_stream: &mut MlmeStream, bssid: Bssid) {
         // (sme->mlme) Expect a JoinRequest
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(req))) => {
-            assert_eq!(bssid, req.selected_bss.bssid)
+            assert_eq!(bssid.0, req.selected_bss.bssid)
         });
     }
 
     fn expect_set_ctrl_port(
         mlme_stream: &mut MlmeStream,
-        bssid: [u8; 6],
+        bssid: Bssid,
         state: fidl_mlme::ControlledPortState,
     ) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetCtrlPort(req))) => {
-            assert_eq!(req.peer_sta_address, bssid);
+            assert_eq!(req.peer_sta_address, bssid.0);
             assert_eq!(req.state, state);
         });
     }
 
-    fn expect_auth_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+    fn expect_auth_req(mlme_stream: &mut MlmeStream, bssid: Bssid) {
         // (sme->mlme) Expect an AuthenticateRequest
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Authenticate(req))) => {
-            assert_eq!(bssid, req.peer_sta_address)
+            assert_eq!(bssid.0, req.peer_sta_address)
         });
     }
 
     fn expect_deauth_req(
         mlme_stream: &mut MlmeStream,
-        bssid: [u8; 6],
+        bssid: Bssid,
         reason_code: fidl_ieee80211::ReasonCode,
     ) {
         // (sme->mlme) Expect a DeauthenticateRequest
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Deauthenticate(req))) => {
-            assert_eq!(bssid, req.peer_sta_address);
+            assert_eq!(bssid.0, req.peer_sta_address);
             assert_eq!(reason_code, req.reason_code);
         });
     }
 
-    fn expect_assoc_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+    fn expect_assoc_req(mlme_stream: &mut MlmeStream, bssid: Bssid) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Associate(req))) => {
-            assert_eq!(bssid, req.peer_sta_address);
+            assert_eq!(bssid.0, req.peer_sta_address);
         });
     }
 
@@ -3079,22 +3079,22 @@ mod tests {
     }
 
     #[track_caller]
-    fn expect_eapol_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+    fn expect_eapol_req(mlme_stream: &mut MlmeStream, bssid: Bssid) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Eapol(req))) => {
             assert_eq!(req.src_addr, fake_device_info().mac_addr);
-            assert_eq!(req.dst_addr, bssid);
+            assert_eq!(req.dst_addr, bssid.0);
             assert_eq!(req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
         });
     }
 
-    fn expect_set_ptk(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+    fn expect_set_ptk(mlme_stream: &mut MlmeStream, bssid: Bssid) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
             assert_eq!(set_keys_req.keylist.len(), 1);
             let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
             assert_eq!(k.key, vec![0xCCu8; test_utils::cipher().tk_bytes().unwrap()]);
             assert_eq!(k.key_id, 0);
             assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
-            assert_eq!(k.address, bssid);
+            assert_eq!(k.address, bssid.0);
             assert_eq!(k.rsc, 0);
             assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
             assert_eq!(k.cipher_suite_type, 4);
@@ -3115,14 +3115,14 @@ mod tests {
         });
     }
 
-    fn expect_set_wpa1_ptk(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+    fn expect_set_wpa1_ptk(mlme_stream: &mut MlmeStream, bssid: Bssid) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
             assert_eq!(set_keys_req.keylist.len(), 1);
             let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
             assert_eq!(k.key, vec![0xCCu8; test_utils::wpa1_cipher().tk_bytes().unwrap()]);
             assert_eq!(k.key_id, 0);
             assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
-            assert_eq!(k.address, bssid);
+            assert_eq!(k.address, bssid.0);
             assert_eq!(k.rsc, 0);
             assert_eq!(k.cipher_suite_oui, [0x00, 0x50, 0xF2]);
             assert_eq!(k.cipher_suite_type, 2);
@@ -3143,14 +3143,14 @@ mod tests {
         });
     }
 
-    fn expect_set_wep_key(mlme_stream: &mut MlmeStream, bssid: [u8; 6], key_bytes: Vec<u8>) {
+    fn expect_set_wep_key(mlme_stream: &mut MlmeStream, bssid: Bssid, key_bytes: Vec<u8>) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
             assert_eq!(set_keys_req.keylist.len(), 1);
             let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
             assert_eq!(k.key, &key_bytes[..]);
             assert_eq!(k.key_id, 0);
             assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
-            assert_eq!(k.address, bssid);
+            assert_eq!(k.address, bssid.0);
             assert_eq!(k.rsc, 0);
             assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
             assert_eq!(k.cipher_suite_type, 1);

@@ -18,11 +18,11 @@ use {
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, MacAddr, Ssid},
     log::{error, info, log},
     std::fmt,
     wlan_common::{
-        mac::{self, Bssid, CapabilityInfo, MacAddr},
+        mac::{self, CapabilityInfo},
         TimeUnit,
     },
     zerocopy::ByteSlice,

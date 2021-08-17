@@ -7,10 +7,11 @@ use {
     crate::{
         appendable::{Appendable, BufferTooSmall},
         error::FrameWriteError,
-        mac::{MacAddr, ReasonCode},
+        mac::ReasonCode,
         organization::Oui,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    ieee80211::MacAddr,
     std::mem::size_of,
     zerocopy::AsBytes,
 };

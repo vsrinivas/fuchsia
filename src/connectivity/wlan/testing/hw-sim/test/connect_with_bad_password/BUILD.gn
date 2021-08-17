@@ -10,6 +10,7 @@ rustc_test("connect_with_bad_password") {
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/connectivity/wlan/testing/wlantap-client",

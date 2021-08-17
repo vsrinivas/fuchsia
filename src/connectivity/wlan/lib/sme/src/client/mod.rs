@@ -39,7 +39,7 @@ use {
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent, ScanRequest},
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     futures::channel::{mpsc, oneshot},
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     log::{error, info, warn},
     std::sync::Arc,
     wep_deprecated,
@@ -115,8 +115,8 @@ impl ClientConfig {
         device_info: &fidl_mlme::DeviceInfo,
     ) -> ScanResult {
         ScanResult {
+            bssid: bss.bssid,
             ssid: bss.ssid.clone(),
-            bssid: bss.bssid.clone(),
             rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
             signal_report_time: zx::Time::ZERO,
@@ -385,7 +385,7 @@ impl From<EstablishRsnaFailure> for ConnectFailure {
 // contains more info here than it does in fidl_sme.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ServingApInfo {
-    pub bssid: [u8; 6],
+    pub bssid: Bssid,
     pub ssid: Ssid,
     pub rssi_dbm: i8,
     pub snr_db: i8,
@@ -401,7 +401,7 @@ pub struct ServingApInfo {
 impl From<ServingApInfo> for fidl_sme::ServingApInfo {
     fn from(ap: ServingApInfo) -> fidl_sme::ServingApInfo {
         fidl_sme::ServingApInfo {
-            bssid: ap.bssid,
+            bssid: ap.bssid.0,
             ssid: ap.ssid.to_vec(),
             rssi_dbm: ap.rssi_dbm,
             snr_db: ap.snr_db,
@@ -705,7 +705,7 @@ fn get_protection(
     hasher: &WlanHasher,
 ) -> Result<Protection, anyhow::Error> {
     let ssid_hash = hasher.hash_ssid(&bss.ssid);
-    let bssid_hash = hasher.hash_mac_addr(&bss.bssid);
+    let bssid_hash = hasher.hash_mac_addr(&bss.bssid.0);
 
     let selected_assoc_type = match bss.protection() {
         wlan_common::bss::Protection::Open => SelectedAssocType::Open,
@@ -787,6 +787,7 @@ mod tests {
     use fidl_fuchsia_wlan_internal as fidl_internal;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
+    use ieee80211::MacAddr;
     use wlan_common::{
         assert_variant,
         channel::Cbw,
@@ -804,7 +805,7 @@ mod tests {
     use crate::test_utils;
     use crate::Station;
 
-    const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
+    const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
     const DUMMY_HASH_KEY: [u8; 8] = [88, 77, 66, 55, 44, 33, 22, 11];
 
     fn report_fake_scan_result(sme: &mut ClientSme, bss: fidl_internal::BssDescription) {
@@ -882,7 +883,7 @@ mod tests {
         assert_eq!(
             scan_result,
             ScanResult {
-                bssid: [0u8; 6],
+                bssid: Bssid([0u8; 6]),
                 ssid: Ssid::empty(),
                 rssi_dbm: -30,
                 snr_db: 0,
@@ -919,7 +920,7 @@ mod tests {
         assert_eq!(
             scan_result,
             ScanResult {
-                bssid: [0u8; 6],
+                bssid: Bssid([0u8; 6]),
                 ssid: Ssid::empty(),
                 rssi_dbm: -30,
                 snr_db: 0,
@@ -953,7 +954,7 @@ mod tests {
         assert_eq!(
             scan_result,
             ScanResult {
-                bssid: [0u8; 6],
+                bssid: Bssid([0u8; 6]),
                 ssid: Ssid::empty(),
                 rssi_dbm: -30,
                 snr_db: 0,
@@ -988,7 +989,7 @@ mod tests {
         assert_eq!(
             scan_result,
             ScanResult {
-                bssid: [0u8; 6],
+                bssid: Bssid([0u8; 6]),
                 ssid: Ssid::empty(),
                 rssi_dbm: -30,
                 snr_db: 0,
@@ -1518,7 +1519,7 @@ mod tests {
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("bssname"));
-        let bssid = bss_description.bssid;
+        let bssid = Bssid(bss_description.bssid);
         let mut req = connect_req(Ssid::from("bssname"), bss_description, credential);
         req.multiple_bss_candidates = false;
         let _connect_fut = sme.on_connect_command(req);
@@ -1554,7 +1555,7 @@ mod tests {
             credential,
         ));
 
-        let bssid = bss_description.bssid;
+        let bssid = Bssid(bss_description.bssid);
         report_fake_scan_result(&mut sme, bss_description);
 
         sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCode::Success));
@@ -1619,7 +1620,7 @@ mod tests {
         assert_variant!(recv.try_recv(), Ok(Some(Ok(scan_result_list))) => {
             let mut reported_ssid = scan_result_list.into_iter().map(|scan_result| (scan_result.ssid, scan_result.bssid)).collect::<Vec<_>>();
             reported_ssid.sort();
-            assert_eq!(reported_ssid, vec![(Ssid::from("foo"), [3; 6]), (Ssid::from("foo"), [4; 6])]);
+            assert_eq!(reported_ssid, vec![(Ssid::from("foo"), Bssid([3; 6])), (Ssid::from("foo"), Bssid([4; 6]))]);
         })
     }
 

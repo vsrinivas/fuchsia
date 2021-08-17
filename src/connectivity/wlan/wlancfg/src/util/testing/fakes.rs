@@ -15,6 +15,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
+    ieee80211::Bssid,
     std::collections::HashMap,
 };
 
@@ -98,7 +99,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         &self,
         _id: NetworkIdentifier,
         _credential: &Credential,
-        _bssid: client_types::Bssid,
+        _bssid: Bssid,
         _connect_result: fidl_sme::ConnectResultCode,
         _discovered_in_scan: Option<fidl_common::ScanType>,
     ) {
@@ -109,7 +110,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         &self,
         _id: &NetworkIdentifier,
         _credential: &Credential,
-        _bssid: client_types::Bssid,
+        _bssid: Bssid,
         _uptime: zx::Duration,
         _curr_time: zx::Time,
     ) {

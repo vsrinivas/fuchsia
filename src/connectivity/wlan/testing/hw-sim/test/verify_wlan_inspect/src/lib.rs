@@ -10,16 +10,11 @@ use {
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
     fuchsia_zircon::DurationNum,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
     selectors,
     std::collections::HashSet,
-    wlan_common::{
-        assert_variant,
-        bss::Protection,
-        format::MacFmt as _,
-        mac::{self, Bssid},
-    },
+    wlan_common::{assert_variant, bss::Protection, format::MacFmt as _, mac},
     wlan_hw_sim::*,
 };
 

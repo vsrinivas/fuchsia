@@ -70,7 +70,7 @@ mod tests {
         let tracked_disconnects = disconnect_tracker.disconnects_today_helper(now);
         assert_eq!(tracked_disconnects.len(), MAX_TRACKED);
         for i in 0..MAX_TRACKED {
-            assert_eq!(tracked_disconnects[i].bssid, [i as u8 + 1u8; 6]);
+            assert_eq!(tracked_disconnects[i].bssid.0, [i as u8 + 1u8; 6]);
         }
     }
 }

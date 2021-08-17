@@ -10,8 +10,9 @@ use {
     banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_internal::BssConfig,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    ieee80211::MacAddr,
     std::ffi::c_void,
-    wlan_common::{mac::MacAddr, TimeUnit},
+    wlan_common::TimeUnit,
 };
 
 #[cfg(test)]

@@ -14,11 +14,12 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, DurationNum},
+    ieee80211::MacAddr,
     log::error,
     std::sync::{Arc, Mutex},
     wlan_common::{
         ie::{intersect, rsn::rsne, SupportedRate},
-        mac::{Aid, CapabilityInfo, MacAddr},
+        mac::{Aid, CapabilityInfo},
     },
     wlan_rsn::{
         self,
@@ -830,7 +831,7 @@ mod tests {
             test_utils, timer, MlmeRequest, MlmeStream,
         },
         futures::channel::mpsc,
-        ieee80211::Ssid,
+        ieee80211::{MacAddr, Ssid},
         wlan_common::{
             assert_variant,
             ie::rsn::{
@@ -838,7 +839,6 @@ mod tests {
                 cipher::{CIPHER_CCMP_128, CIPHER_GCMP_256},
                 rsne::Rsne,
             },
-            mac::MacAddr,
         },
         wlan_rsn::key::exchange::Key,
     };

@@ -16,7 +16,7 @@ use {
     },
     anyhow::format_err,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     static_assertions::assert_eq_size,
     std::{cmp::Ordering, collections::HashMap, convert::TryInto, fmt, hash::Hash, ops::Range},
     zerocopy::{AsBytes, LayoutVerified},
@@ -95,7 +95,7 @@ pub enum Standard {
 pub struct BssDescription {
     // *** Fields originally in fidl_internal::BssDescription
     pub ssid: Ssid,
-    pub bssid: [u8; 6],
+    pub bssid: Bssid,
     pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
     pub timestamp: u64,
@@ -383,7 +383,7 @@ impl BssDescription {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
             hasher.hash_ssid(&self.ssid),
-            hasher.hash_mac_addr(&self.bssid),
+            hasher.hash_mac_addr(&self.bssid.0),
             self.protection(),
             self.channel.primary,
             self.rssi_dbm,
@@ -396,7 +396,7 @@ impl BssDescription {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
             self.ssid.to_string_not_redactable(),
-            self.bssid.to_mac_string(),
+            self.bssid.0.to_mac_string(),
             self.protection(),
             self.channel.primary,
             self.rssi_dbm,
@@ -456,7 +456,7 @@ impl BssDescription {
 
         Ok(Self {
             ssid: Ssid::from(&bss.ies[ssid_range]),
-            bssid: bss.bssid,
+            bssid: Bssid(bss.bssid),
             bss_type: bss.bss_type,
             beacon_period: bss.beacon_period,
             timestamp: bss.timestamp,
@@ -480,7 +480,7 @@ impl BssDescription {
 
     pub fn to_fidl(self) -> fidl_internal::BssDescription {
         fidl_internal::BssDescription {
-            bssid: self.bssid,
+            bssid: self.bssid.0,
             bss_type: self.bss_type,
             beacon_period: self.beacon_period,
             timestamp: self.timestamp,

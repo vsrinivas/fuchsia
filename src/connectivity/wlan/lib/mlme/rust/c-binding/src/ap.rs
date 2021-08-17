@@ -5,8 +5,8 @@
 use {
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
+    ieee80211::Bssid,
     log::error,
-    wlan_common::mac::Bssid,
     wlan_mlme::{ap::Ap, buffer::BufferProvider, device::Device, error::ResultExt, timer::*},
     wlan_span::CSpan,
 };

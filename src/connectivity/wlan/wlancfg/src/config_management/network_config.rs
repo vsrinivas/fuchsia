@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::client::types,
     arbitrary::Arbitrary,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_zircon as zx,
+    ieee80211::Bssid,
     serde::{Deserialize, Serialize},
     std::{
         collections::VecDeque,
@@ -90,7 +90,7 @@ pub struct ConnectFailure {
     /// The reason that connection failed
     pub reason: FailureReason,
     /// The BSSID that we failed to connect to
-    pub bssid: types::Bssid,
+    pub bssid: Bssid,
 }
 
 /// Ring buffer that holds network denials. It starts empty and replaces oldest when full.
@@ -105,7 +105,7 @@ impl ConnectFailureList {
 
     /// Record network denial information in the network config, dropping the oldest information
     /// if the list of denial reasons is already full before adding.
-    pub fn add(&mut self, bssid: types::Bssid, reason: FailureReason) {
+    pub fn add(&mut self, bssid: Bssid, reason: FailureReason) {
         if self.0.len() == self.0.capacity() {
             let _ = self.0.pop_front();
         }
@@ -124,7 +124,7 @@ pub struct Disconnect {
     /// The time of the disconnect, used to determe whether this disconnect is still relevant.
     pub time: zx::Time,
     /// The BSSID that we only had a short connection uptime on.
-    pub bssid: types::Bssid,
+    pub bssid: Bssid,
     /// The time between connection starting and disconnecting.
     pub uptime: zx::Duration,
 }
@@ -138,7 +138,7 @@ impl DisconnectList {
     }
 
     /// Add the disconnect, dropping the oldest value if the list is already full.
-    pub fn add(&mut self, bssid: types::Bssid, uptime: zx::Duration, curr_time: zx::Time) {
+    pub fn add(&mut self, bssid: Bssid, uptime: zx::Duration, curr_time: zx::Time) {
         if self.0.len() == self.0.capacity() {
             let _ = self.0.pop_front();
         }
@@ -756,7 +756,7 @@ mod tests {
         // Get time before adding so we can get back everything we added.
         let curr_time = zx::Time::get_monotonic();
         assert!(failure_list.get_recent(curr_time).is_empty());
-        let bssid = [1; 6];
+        let bssid = Bssid([1; 6]);
         failure_list.add(bssid.clone(), FailureReason::GeneralFailure);
 
         let result_list = failure_list.get_recent(curr_time);
@@ -776,7 +776,7 @@ mod tests {
         assert!(failure_list.get_recent(curr_time).is_empty());
         let failure_list_capacity = failure_list.0.capacity();
         assert!(failure_list_capacity >= NUM_DENY_REASONS);
-        let bssid = [0; 6];
+        let bssid = Bssid([0; 6]);
         for _i in 0..failure_list_capacity + 2 {
             failure_list.add(bssid, FailureReason::GeneralFailure);
         }
@@ -791,7 +791,7 @@ mod tests {
     #[fuchsia::test]
     fn get_part_of_failure_list() {
         let mut failure_list = ConnectFailureList::new();
-        let bssid = [0; 6];
+        let bssid = Bssid([0; 6]);
         // curr_time is before or at the part of the list we want and after the one we don't want
         let curr_time = zx::Time::get_monotonic();
         // Inject a failure into the list that is older than the specified time.
@@ -829,7 +829,7 @@ mod tests {
 
         let curr_time = zx::Time::get_monotonic();
         assert!(disconnects.get_recent(curr_time).is_empty());
-        let bssid = [1; 6];
+        let bssid = Bssid([1; 6]);
         let uptime = zx::Duration::from_seconds(2);
 
         // Add a disconnect and check that we get it back.
@@ -862,13 +862,13 @@ mod tests {
         assert!(disconnect_list_capacity >= NUM_DISCONNECTS);
 
         // Insert first disconnect, which we will check was pushed out of the list
-        let first_bssid = [10; 6];
+        let first_bssid = Bssid([10; 6]);
         disconnects.add(first_bssid, zx::Duration::from_seconds(1), zx::Time::get_monotonic());
         assert_variant!(disconnects.get_recent(zx::Time::ZERO).as_slice(), [d] => {
             assert_eq!(d.bssid, first_bssid);
         });
 
-        let bssid = [0; 6];
+        let bssid = Bssid([0; 6]);
         for _i in 0..disconnect_list_capacity {
             disconnects.add(bssid, zx::Duration::from_seconds(2), zx::Time::get_monotonic());
         }

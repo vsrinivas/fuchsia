@@ -148,7 +148,7 @@ pub fn get_wpa2_rsna(
         psk,
         device_info.mac_addr,
         ProtectionInfo::Rsne(s_rsne),
-        bss.bssid,
+        bss.bssid.0,
         ProtectionInfo::Rsne(a_rsne),
     )
     .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
@@ -195,7 +195,7 @@ fn get_wpa3_auth_config(
         Some(DriverFeature::SaeSmeAuth) => Ok(auth::Config::Sae {
             password,
             mac: device_info.mac_addr.clone(),
-            peer_mac: bss.bssid.clone(),
+            peer_mac: bss.bssid.0,
         }),
         Some(DriverFeature::SaeDriverAuth) => Ok(auth::Config::DriverSae { password }),
         _ => Err(format_err!("Could not generate WPA3 auth config -- no SAE driver feature")),
@@ -225,7 +225,7 @@ pub fn get_wpa3_rsna(
         get_wpa3_auth_config(device_info, password, bss)?,
         device_info.mac_addr,
         ProtectionInfo::Rsne(s_rsne),
-        bss.bssid,
+        bss.bssid.0,
         ProtectionInfo::Rsne(a_rsne),
     )
     .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
@@ -236,9 +236,10 @@ pub fn get_wpa3_rsna(
 mod tests {
     use super::*;
     use crate::test_utils::fake_device_info;
+    use ieee80211::MacAddr;
     use wlan_common::{assert_variant, fake_bss_description};
 
-    const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
+    const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
     #[test]
     fn test_get_rsna_password_for_unprotected_network() {

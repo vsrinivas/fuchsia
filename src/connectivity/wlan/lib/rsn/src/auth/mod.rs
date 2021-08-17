@@ -12,8 +12,9 @@ use crate::{
 
 use anyhow;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
+use ieee80211::MacAddr;
 use log::warn;
-use wlan_common::{ie::rsn::akm::AKM_SAE, mac::MacAddr};
+use wlan_common::ie::rsn::akm::AKM_SAE;
 use wlan_sae as sae;
 use zerocopy::ByteSlice;
 

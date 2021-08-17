@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {wlan_common::mac::Bssid, wlan_hw_sim::*};
+use {ieee80211::Bssid, wlan_hw_sim::*};
 
 /// Test a client successfully connects to a network protected by WPA1-PSK.
 #[fuchsia_async::run_singlethreaded(test)]
