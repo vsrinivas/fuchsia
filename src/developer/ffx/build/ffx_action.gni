@@ -4,6 +4,13 @@
 
 import("//build/compiled_action.gni")
 
+# These files are created by the 'ffx_env_for_build` target in the BUILD.gn
+# in this folder, and need to be kept in sync with that.
+ffx_env_for_build_label =
+    "//src/developer/ffx/build:ffx_env_config($host_toolchain)"
+ffx_env_config = root_build_dir + "/.ffx.env"
+ffx_env_build_config = root_build_dir + "/.ffx.build_config"
+
 # Executes an ffx command as an action during the build.
 #
 # This is a wrapper around compiled_action() that automatically adds ffx as
@@ -57,7 +64,6 @@ import("//build/compiled_action.gni")
 #
 #  Which is equivalent to:
 #    `ffx path to plugin src/foo/my_input_file --output-dir obj/bar`
-
 template("ffx_action") {
   assert(defined(invoker.args), "args must be defined for $target_name")
   assert(defined(invoker.outputs), "outputs must be defined for $target_name")
@@ -89,11 +95,14 @@ template("ffx_action") {
     # Use a builddir-specific environment, not the user's own environment.
     args = [
              "--env",
-             rebase_path("${root_build_dir}/.ffx.env", root_build_dir),
+             rebase_path(ffx_env_config, root_build_dir),
            ] + invoker.args
 
-    deps += [ "//src/developer/ffx/build:envfile_for_build($host_toolchain)" ]
-    inputs += [ "$root_build_dir/.ffx.env" ]
+    deps += [ ffx_env_for_build_label ]
+    inputs += [
+      ffx_env_config,
+      ffx_env_build_config,
+    ]
 
     tool = "//src/developer/ffx:ffx_bin"
     tool_output_name = "ffx"

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/python/python_binary.gni")
+import("ffx_action.gni")
 
 python_binary("gn_generate_plugins") {
   main_source = "gn_generate_plugins.py"
@@ -21,17 +22,28 @@ python_binary("gn_generate_cmd") {
 }
 
 if (is_host) {
-  action("envfile_for_build") {
-    script = "make_ffx_env.py"
-    inputs = []
-    deps = []
-    args = [
-      ".ffx.env",
-      ".ffx.build_config",
-    ]
-    outputs = [
-      "$root_build_dir/.ffx.env",
-      "$root_build_dir/.ffx.build_config",
-    ]
+  # This is the build configuration for the ffx environment used by ffx_action()
+  #
+  generated_file("ffx_env_build_config") {
+    outputs = [ ffx_env_build_config ]
+    output_conversion = "json"
+    contents = {
+      ffx = {
+        analytics = {
+          disabled = true
+        }
+      }
+    }
+  }
+
+  # This is the ffx environment used by ffx_action()
+  #
+  generated_file("ffx_env_config") {
+    outputs = [ ffx_env_config ]
+    output_conversion = "json"
+    public_deps = [ ":ffx_env_build_config" ]
+    contents = {
+      global = rebase_path(ffx_env_build_config, root_build_dir)
+    }
   }
 }
