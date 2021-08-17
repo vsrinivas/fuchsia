@@ -69,20 +69,28 @@ static bool is_slot_bootable(const AbrSlotData* slot) {
 }
 
 static void set_slot_unbootable(AbrSlotData* slot) {
-  slot->priority = 0;
   slot->tries_remaining = 0;
   slot->successful_boot = 0;
 }
 
-static bool is_slot_active(const AbrData* abr_data, AbrSlotIndex slot_index) {
-  AbrSlotIndex active_slot =
-      (abr_data->slot_data[kAbrSlotIndexB].priority > abr_data->slot_data[kAbrSlotIndexA].priority)
-          ? kAbrSlotIndexB
-          : kAbrSlotIndexA;
-  if (!is_slot_bootable(&abr_data->slot_data[active_slot])) {
-    active_slot = kAbrSlotIndexR;
+static uint8_t get_normalized_priority(const AbrSlotData* slot) {
+  return is_slot_bootable(slot) ? slot->priority : 0;
+}
+
+static AbrSlotIndex get_active_slot(const AbrData* abr_data) {
+  uint8_t priority_a = get_normalized_priority(&abr_data->slot_data[kAbrSlotIndexA]);
+  uint8_t priority_b = get_normalized_priority(&abr_data->slot_data[kAbrSlotIndexB]);
+  // zero priority means unbootable.
+  if (priority_b > priority_a) {
+    return kAbrSlotIndexB;
+  } else if (priority_a) {
+    return kAbrSlotIndexA;
   }
-  return (active_slot == slot_index);
+  return kAbrSlotIndexR;
+}
+
+static bool is_slot_active(const AbrData* abr_data, AbrSlotIndex slot_index) {
+  return get_active_slot(abr_data) == slot_index;
 }
 
 /* Ensure all unbootable or invalid states are marked as the canonical 'unbootable' state. That is,
@@ -212,6 +220,19 @@ static bool check_slot_index(AbrSlotIndex slot_index) {
   return true;
 }
 
+AbrResult AbrGetLastMarkActiveSlot(const AbrOps* abr_ops, AbrSlotIndex* out_slot) {
+  AbrData abr_data, abr_data_orig;
+  AbrResult result = load_metadata(abr_ops, &abr_data, &abr_data_orig);
+  if (result != kAbrResultOk) {
+    return result;
+  }
+
+  uint8_t priority_a = abr_data.slot_data[kAbrSlotIndexA].priority;
+  uint8_t priority_b = abr_data.slot_data[kAbrSlotIndexB].priority;
+  *out_slot = priority_b > priority_a ? kAbrSlotIndexB : kAbrSlotIndexA;
+  return result;
+}
+
 AbrSlotIndex AbrGetBootSlot(const AbrOps* abr_ops, bool update_metadata,
                             bool* is_slot_marked_successful) {
   AbrData abr_data, abr_data_orig;
@@ -237,18 +258,14 @@ AbrSlotIndex AbrGetBootSlot(const AbrOps* abr_ops, bool update_metadata,
     abr_data.one_shot_recovery_boot = 1;
   }
 
-  /* Choose the highest priority slot. This logic assumes normalized metadata. */
-  slot_to_boot =
-      (abr_data.slot_data[kAbrSlotIndexB].priority > abr_data.slot_data[kAbrSlotIndexA].priority)
-          ? kAbrSlotIndexB
-          : kAbrSlotIndexA;
-  if (is_slot_bootable(&abr_data.slot_data[slot_to_boot])) {
+  /* Choose the highest priority and bootable slot, if there is one, otherwise R slot*/
+  slot_to_boot = get_active_slot(&abr_data);
+  if (slot_to_boot == kAbrSlotIndexR) {
+    ABR_DEBUG("All slots are unbootable, falling back to recovery mode.\n");
+  } else {
     if (is_slot_marked_successful && abr_data.slot_data[slot_to_boot].successful_boot) {
       *is_slot_marked_successful = true;
     }
-  } else {
-    ABR_DEBUG("All slots are unbootable, falling back to recovery mode.\n");
-    slot_to_boot = kAbrSlotIndexR;
   }
 
   if (update_metadata) {

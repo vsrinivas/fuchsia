@@ -208,7 +208,6 @@ void TestInvalidZbiHeaderOsAbr(std::function<void(zbi_header_t* hdr)> corrupt_hd
   ASSERT_OK(dev->ReadFromPartition(GPT_DURABLE_BOOT_NAME, 0, sizeof(abr_data), &abr_data));
   ASSERT_EQ(abr_data.slot_data[0].tries_remaining, 0);
   ASSERT_EQ(abr_data.slot_data[0].successful_boot, 0);
-  ASSERT_EQ(abr_data.slot_data[0].priority, 0);
 }
 
 TEST(BootTests, LoadAndBootInvalidZbiHeaderType) {
@@ -378,7 +377,6 @@ void VerifySlotMetadataUnbootable(MockZirconBootOps* dev, const std::vector<AbrS
     auto slot_data = slot == kAbrSlotIndexA ? abr_data.slot_data[0] : abr_data.slot_data[1];
     ASSERT_EQ(slot_data.tries_remaining, 0);
     ASSERT_EQ(slot_data.successful_boot, 0);
-    ASSERT_EQ(slot_data.priority, 0);
   }
 }
 

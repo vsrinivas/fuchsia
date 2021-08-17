@@ -111,6 +111,19 @@ const char* AbrGetSlotSuffix(AbrSlotIndex slot_index);
  */
 AbrResult AbrMarkSlotActive(const AbrOps* abr_ops, AbrSlotIndex slot_index);
 
+/* Returns the slot index on which AbrMarkSlotActive was lastly called. The result is stored in
+ * |out_slot|.
+ *
+ * This function is typically used by the recovery system (i.e. the R slot OS) to retry the slot
+ * that was lastly marked as active after fixing problems. Specifically, in the event of boot
+ * failures where the device ends up in R slot, after issues are fixed, this function can be used to
+ * query the slot that was lastly marked active by AbrMarkSlotActive, then AbrMarkSlotActive can be
+ * used again to re-mark it as active so that it can be retried.
+ *
+ * If A/B/R metadata is not valid, it will be reset and slot A will be the default active slot.
+ */
+AbrResult AbrGetLastMarkActiveSlot(const AbrOps* abr_ops, AbrSlotIndex* out_slot);
+
 /* Marks the given |slot_index| as unbootable. Returns kAbrResultOk on success.
  *
  * Calling this on kAbrSlotIndexR is an error and kAbrResultErrorInvalidData will be returned.

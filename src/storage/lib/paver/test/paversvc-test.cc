@@ -706,7 +706,6 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  abr_data.slot_data[0].priority = 0;
   abr_data.slot_data[0].tries_remaining = 0;
   abr_data.slot_data[0].successful_boot = 0;
   ComputeCrc(&abr_data);
@@ -737,7 +736,6 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  abr_data.slot_data[1].priority = 0;
   abr_data.slot_data[1].tries_remaining = 0;
   abr_data.slot_data[1].successful_boot = 0;
   ComputeCrc(&abr_data);
@@ -957,10 +955,8 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
 
   abr_data.slot_data[0].tries_remaining = 0;
   abr_data.slot_data[0].successful_boot = 1;
-  abr_data.slot_data[0].priority = 1;
   abr_data.slot_data[1].tries_remaining = 0;
   abr_data.slot_data[1].successful_boot = 0;
-  abr_data.slot_data[1].priority = 0;
   ComputeCrc(&abr_data);
 
   abr = GetAbr();
