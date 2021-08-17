@@ -750,7 +750,7 @@ impl ThermalPolicy {
         // intended big.LITTLE scheduling and operation to better inform our decisions here. We may
         // find that we'll need to first query the nodes to learn how much power they intend to use
         // before making allocation decisions.
-        for (i, node) in self.config.cpu_control_nodes.iter().enumerate() {
+        for node in self.config.cpu_control_nodes.iter() {
             if let MessageReturn::SetMaxPowerConsumption(power_used) = self
                 .send_message(&node, &Message::SetMaxPowerConsumption(total_available_power))
                 .await?
@@ -758,7 +758,7 @@ impl ThermalPolicy {
                 self.inspect
                     .throttle_history
                     .borrow_mut()
-                    .record_cpu_power_consumption(i, power_used);
+                    .record_cpu_power_consumption(node.name(), power_used);
                 total_available_power = total_available_power - power_used;
             }
         }
@@ -965,14 +965,15 @@ impl InspectThrottleHistory {
         }
     }
 
-    /// Record the current CPU power consumption for a given CPU index. No-op unless throttling has
-    /// been set active.
-    fn record_cpu_power_consumption(&mut self, cpu_index: usize, power_used: Watts) {
+    /// Record the current CPU power consumption for the given CPU domain. No-op unless throttling
+    /// has been set active. `cpu_domain` is the name of the CpuControlHandler node that controls
+    /// the given CPU domain.
+    fn record_cpu_power_consumption(&mut self, cpu_domain: String, power_used: Watts) {
         if self.throttling_active {
             self.throttle_history_list
                 .back_mut()
                 .unwrap()
-                .get_cpu_power_usage_property(cpu_index)
+                .get_cpu_power_usage_property(cpu_domain)
                 .insert(power_used.0);
         }
     }
@@ -986,7 +987,10 @@ struct InspectThrottleHistoryEntry {
     thermal_load_hist: inspect::UintLinearHistogramProperty,
     available_power_hist: inspect::DoubleLinearHistogramProperty,
     cpu_power_usage_node: inspect::Node,
-    cpu_power_usage: Vec<inspect::DoubleLinearHistogramProperty>,
+
+    /// Key is the name of the CPU domain. Value is a tuple of 1) Inspect node to hold the histogram
+    /// property, and 2) the histogram property.
+    cpu_power_usage: HashMap<String, (inspect::Node, inspect::DoubleLinearHistogramProperty)>,
 }
 
 impl InspectThrottleHistoryEntry {
@@ -1004,24 +1008,26 @@ impl InspectThrottleHistoryEntry {
                 LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
             ),
             cpu_power_usage_node: node.create_child("cpu_power_usage"),
-            cpu_power_usage: Vec::new(),
+            cpu_power_usage: HashMap::new(),
             _node: node,
         }
     }
 
-    /// Gets the property to record CPU power usage for the given CPU index. These properties are
-    /// created dynamically because CPU domain count is not a fixed number.
+    /// Gets the property to record CPU power usage for the given CPU domain.
     fn get_cpu_power_usage_property(
         &mut self,
-        index: usize,
+        cpu_domain: String,
     ) -> &inspect::DoubleLinearHistogramProperty {
-        if self.cpu_power_usage.get(index).is_none() {
-            self.cpu_power_usage.push(self.cpu_power_usage_node.create_double_linear_histogram(
-                index.to_string(),
+        if let None = self.cpu_power_usage.get(&cpu_domain) {
+            let child = self.cpu_power_usage_node.create_child(&cpu_domain);
+            let property = child.create_double_linear_histogram(
+                "hist",
                 LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
-            ))
+            );
+            self.cpu_power_usage.insert(cpu_domain.clone(), (child, property));
         }
-        &self.cpu_power_usage[index]
+
+        &self.cpu_power_usage[&cpu_domain].1
     }
 }
 
@@ -1372,8 +1378,12 @@ pub mod tests {
                             thermal_load_hist: expected_thermal_load_hist,
                             available_power_hist: expected_available_power_hist,
                             cpu_power_usage: {
-                                "0": expected_cpu_1_power_usage_hist,
-                                "1": expected_cpu_2_power_usage_hist
+                                Cpu1Node: {
+                                    hist: expected_cpu_1_power_usage_hist,
+                                },
+                                Cpu2Node: {
+                                    hist: expected_cpu_2_power_usage_hist,
+                                }
                             }
                         },
                     }

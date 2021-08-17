@@ -486,7 +486,7 @@ impl CpuControlHandler {
 #[async_trait(?Send)]
 impl Node for CpuControlHandler {
     fn name(&self) -> String {
-        "CpuControlHandler".to_string()
+        format!("CpuControlHandler ({})", self.cpu_driver_path)
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
