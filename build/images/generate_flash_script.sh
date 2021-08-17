@@ -224,8 +224,7 @@ if [[ ! -z "${FVM_PARTITION}" ]]; then
 
   # Provision SSH key from fastboot if --ssh-key was given.
   echo "if [[ ! -z \"\${SSH_KEY}\" ]]; then" >> "${OUTPUT}"
-  echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "stage \"\${SSH_KEY}\"" >> "${OUTPUT}"
-  echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "oem add-staged-bootloader-file ssh.authorized_keys" >> "${OUTPUT}"
+  echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "stage \"\${SSH_KEY}\" oem add-staged-bootloader-file ssh.authorized_keys" >> "${OUTPUT}"
   echo "fi" >> "${OUTPUT}"
 
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" continue >> "${OUTPUT}"
