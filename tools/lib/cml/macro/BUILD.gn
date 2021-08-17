@@ -16,5 +16,11 @@ rustc_macro("macro") {
     "//third_party/rust_crates:syn",
   ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/common.rs",
+    "src/derive_checked_vec.rs",
+    "src/derive_one_or_many.rs",
+    "src/derive_reference.rs",
+    "src/lib.rs",
+  ]
 }
