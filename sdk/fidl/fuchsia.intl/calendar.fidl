@@ -1,0 +1,32 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.intl;
+
+/// Enumeration of the days of the week.
+type DayOfWeek = strict enum : uint8 {
+    SUNDAY = 1;
+    MONDAY = 2;
+    TUESDAY = 3;
+    WEDNESDAY = 4;
+    THURSDAY = 5;
+    FRIDAY = 6;
+    SATURDAY = 7;
+};
+
+/// Enumeration of the months of the year.
+type Month = strict enum : uint8 {
+    JANUARY = 1;
+    FEBRUARY = 2;
+    MARCH = 3;
+    APRIL = 4;
+    MAY = 5;
+    JUNE = 6;
+    JULY = 7;
+    AUGUST = 8;
+    SEPTEMBER = 9;
+    OCTOBER = 10;
+    NOVEMBER = 11;
+    DECEMBER = 12;
+};

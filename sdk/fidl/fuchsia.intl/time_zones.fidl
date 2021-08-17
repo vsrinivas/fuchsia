@@ -1,0 +1,119 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.intl;
+
+using zx;
+
+type TimeZonesError = flexible enum : int32 {
+    /// An internal error has occurred within the service.
+    INTERNAL_ERROR = 1;
+    /// The requested time zone ID is invalid.
+    UNKNOWN_TIME_ZONE = 2;
+    /// The provided date is out of range or invalid.
+    INVALID_DATE = 3;
+};
+
+/// During a transition from daylight savings to standard time (when the clock is turned back), a
+/// civil time can correspond to two possible absolute times. This setting determines which of those
+/// times should be assumed during the conversion to absolute time.
+///
+/// TODO(fxbug.dev/82309): Implement `AFTER_TRANSITION`.
+type RepeatedTimeConversion = flexible enum : int32 {
+    /// Returns the wall clock time before the transition.
+    ///
+    /// For example, in "America/New_York" on the night of the fall transition to standard time,
+    /// `1:30 AM` is interpreted as `01:30-04:00` (EDT), which is `05:30Z`.
+    BEFORE_TRANSITION = 1;
+};
+
+/// During a transition from standard time to daylight savings time (when the clock is turned
+/// forward), a span of civil times is skipped (usually one hour). This setting determines how
+/// invalid civil times within this span should be treated.
+///
+/// TODO(fxbug.dev/82309): Implement `BEFORE_TRANSITION` and `AFTER_TRANSITION`.
+type SkippedTimeConversion = flexible enum : int32 {
+    /// Returns `TimeZonesError::INVALID_DATE` when trying to convert a skipped civil time.
+    REJECT = 1;
+
+    /// Returns the closest valid time after the requested time.
+    ///
+    /// For example, in "America/New_York" on the night of the spring transition to daylight savings
+    /// time, `2:30 AM` doesn't exist, so the next valid time, `3:00 AM` (EDT) is returned instead.
+    NEXT_VALID_TIME = 2;
+};
+
+/// Options for `TimeZones.CivilToAbsoluteTime`.
+type CivilToAbsoluteTimeOptions = table {
+    /// Optional setting for handling repeated times during backward daylight savings time
+    /// transitions.
+    ///
+    /// Default: `BEFORE_TRANSITION`.
+    1: repeated_time_conversion RepeatedTimeConversion;
+    /// Optional setting for handling skipped times during forward daylight savings time
+    /// transitions.
+    ///
+    /// Default: `NEXT_VALID_TIME`.
+    2: skipped_time_conversion SkippedTimeConversion;
+};
+
+/// Provides information about time zones and offers date-time conversion methods.
+///
+/// TODO(fxbug.dev/81902): Add time zone info methods, including offsets from UTC.
+@discoverable
+protocol TimeZones {
+
+    /// Converts the given absolute time to a civil date and time in the given time zone, using the
+    /// Gregorian calendar.
+    AbsoluteToCivilTime(struct {
+        /// The time zone in which to calculate a civil date and time.
+        time_zone_id TimeZoneId;
+        /// The number of nanoseconds since the Unix epoch.
+        absolute_time zx.time;
+    }) -> (struct {
+        civil_time CivilTime;
+    }) error TimeZonesError;
+
+    /// Converts the given civil date and time in the given time zone to nanoseconds since the Unix
+    /// epoch.
+    CivilToAbsoluteTime(struct {
+        /// The civil date and time to convert.
+        ///
+        /// Note that `civil_time.weekday` and `civil_time.year_day` may be omitted for this method.
+        /// If present, they must be consistent with the other fields.
+        civil_time CivilTime;
+        /// Conversion options for civil times that cross a daylight savings transition.
+        options CivilToAbsoluteTimeOptions;
+    }) -> (struct {
+        absolute_time zx.time;
+    }) error TimeZonesError;
+};
+
+/// Describes a time on a civil calendar (Gregorian), with nanosecond precision. This is roughly
+/// equivalent to the `tm` struct in `time.h` in the C standard library, and is intended as a
+/// structured intermediate format for printing or parsing dates.
+type CivilTime = table {
+    /// Year, in the closed range `[1678, 2262]`.
+    1: year uint16;
+    /// Month of the year.
+    2: month Month;
+    /// Day of the month, in the closed range `[1, 31]`.
+    3: day uint8;
+    /// Hour of the day, in the closed range `[0, 23]`.
+    4: hour uint8;
+    /// Minute of the hour, in the closed range `[0, 59]`.
+    5: minute uint8;
+    /// Second of the minute, in the closed range `[0, 59]`.
+    ///
+    /// (Note that Fuchsia does not currently calculate leap seconds when converting dates.)
+    6: second uint8;
+    /// Nanosecond, in the closed range `[0, 999_999_999]`.
+    7: nanos uint64;
+    /// Day of the week.
+    8: weekday DayOfWeek;
+    /// Day of the year, in the closed range `[0, 365]`.
+    9: year_day uint16;
+    /// The time zone corresponding to this time. If omitted, the default is UTC.
+   10: time_zone_id TimeZoneId;
+};

@@ -14,7 +14,11 @@ fidl("fuchsia.intl") {
   sdk_category = "partner"
 
   sources = [
+    "calendar.fidl",
     "intl.fidl",
     "property_provider.fidl",
+    "time_zones.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }
