@@ -303,6 +303,9 @@ pub enum FvmFilesystemEntry {
 
     /// A MinFS filesystem.
     MinFS {
+        /// The path to a prebuilt minfs to add to the FVM.
+        path: PathBuf,
+
         /// The filesystem attributes of minfs.
         #[serde(flatten)]
         attributes: FilesystemAttributes,

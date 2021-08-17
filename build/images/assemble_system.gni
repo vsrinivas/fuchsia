@@ -143,6 +143,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 # Board: MinFS parameters:
 #
+#   minfs (optional)
+#     [path] Path to prebuilt MinFS block file.
+#
 #   minfs_minimum_inodes, minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
 #     [int] Size options for minfs to pass to the fvm tool.
 #
@@ -195,6 +198,7 @@ template("assemble_system") {
     copy_zbi_manifest = "${image_name}_copy_zbi_manifest"
     copy_images = "${image_name}_copy_images"
     config_data = "${image_name}_config-data"
+    empty_minfs = "${image_name}_data.blk"
     shell_commands = "${image_name}_shell_commands"
   }
 
@@ -202,6 +206,7 @@ template("assemble_system") {
   files = {
     product_config = "$target_out_dir/${image_name}_product_config.json"
     board_config = "$target_out_dir/${image_name}_board_config.json"
+    empty_minfs = "$target_out_dir/${image_name}_data.blk"
 
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
@@ -211,7 +216,6 @@ template("assemble_system") {
     vbmeta = "${outdir}/${image_name}.vbmeta"
     base_package = "${outdir}/base.far"
     update_package = "${outdir}/update.far"
-    minfs = "${outdir}/data.blk"
     blobfs = "${outdir}/blob.blk"
     fvm = "${outdir}/fvm.blk"
     fvm_sparse = "${outdir}/fvm.sparse.blk"
@@ -353,6 +357,20 @@ template("assemble_system") {
     }
   }
 
+  compiled_action(labels.empty_minfs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    outputs = [ files.empty_minfs ]
+    tool = "//zircon/tools/minfs"
+    args = [
+      rebase_path(files.empty_minfs, root_build_dir),
+      "create",
+    ]
+  }
+
   #######
   # Build the images using the Image Assembler.
   #
@@ -439,6 +457,7 @@ template("assemble_system") {
       zbi_name = invoker.zbi_name
     }
 
+    # Use an empty minfs by default, otherwise use the supplied minfs.
     if (generate_fvm) {
       fvm_slice_size = 1048576
       if (defined(invoker.assembly_fvm_slice_size)) {
@@ -453,6 +472,13 @@ template("assemble_system") {
       compress_blobs = true
       if (defined(invoker.assembly_compress_blobs)) {
         compress_blobs = invoker.assembly_compress_blobs
+      }
+
+      if (defined(invoker.minfs)) {
+        minfs = invoker.minfs
+      } else {
+        minfs = rebase_path(files.empty_minfs, root_build_dir)
+        deps = [ ":${labels.empty_minfs}" ]
       }
     }
   }
@@ -546,7 +572,6 @@ template("assemble_system") {
       outputs += [
         # In the outdir.
         files.base_package,
-        files.minfs,
         files.blobfs,
         files.fvm,
         files.fvm_sparse,

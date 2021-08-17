@@ -6,7 +6,6 @@ use crate::config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
 
 use anyhow::Result;
 use assembly_fvm::{Filesystem, FvmBuilder, FvmType, NandFvmBuilder};
-use assembly_minfs::MinFSBuilder;
 use std::path::{Path, PathBuf};
 
 /// The resulting paths to each generated FVM.
@@ -47,13 +46,9 @@ pub fn construct_fvm(
                 blobfs =
                     Some(Filesystem { path: path.to_path_buf(), attributes: attributes.clone() });
             }
-            FvmFilesystemEntry::MinFS { attributes } => {
-                let minfs_path = outdir.as_ref().join("data.blk");
-                MinFSBuilder::build(&minfs_path)?;
-                minfs = Some(Filesystem {
-                    path: minfs_path.to_path_buf(),
-                    attributes: attributes.clone(),
-                });
+            FvmFilesystemEntry::MinFS { path, attributes } => {
+                minfs =
+                    Some(Filesystem { path: path.to_path_buf(), attributes: attributes.clone() });
             }
         };
     }
@@ -158,6 +153,7 @@ mod tests {
 
     use crate::config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
     use assembly_fvm::FilesystemAttributes;
+    use std::path::PathBuf;
     use tempfile::tempdir;
 
     #[test]
@@ -238,6 +234,7 @@ mod tests {
                 },
             },
             FvmFilesystemEntry::MinFS {
+                path: PathBuf::from("path/to/data.blk"),
                 attributes: FilesystemAttributes {
                     name: "minfs".to_string(),
                     minimum_inodes: None,

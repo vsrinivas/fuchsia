@@ -32,7 +32,6 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/base_package",
     "//src/lib/assembly/blobfs",
     "//src/lib/assembly/fvm",
-    "//src/lib/assembly/minfs",
     "//src/lib/assembly/test_keys",
     "//src/lib/assembly/update_package",
     "//src/lib/assembly/util",

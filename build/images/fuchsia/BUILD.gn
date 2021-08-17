@@ -12,6 +12,10 @@ assert(current_toolchain == target_toolchain)
 # Shared parameters across assemblies in this file
 ##################################################
 
+if (!bootfs_only) {
+  minfs =
+      rebase_path("${root_build_dir}/obj/build/images/data.blk", root_build_dir)
+}
 supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 
 fuchsia_base = {
@@ -58,8 +62,9 @@ fuchsia_base = {
   cache_packages = [ "//:additional_cache_packages" ]
   system_image_deps = [ "//build/input:system_image" ]
 
+  # minfs arguments
   if (!bootfs_only) {
-    # minfs arguments
+    minfs = minfs
     if (minfs_product_minimum_inodes != false) {
       minfs_minimum_inodes = minfs_product_minimum_inodes
     } else if (minfs_board_minimum_inodes != false) {
@@ -75,8 +80,10 @@ fuchsia_base = {
     } else if (minfs_board_maximum_bytes != false) {
       minfs_maximum_bytes = minfs_board_maximum_bytes
     }
+  }
 
-    # blobfs arguments
+  # blobfs arguments
+  if (!bootfs_only) {
     assembly_blob_layout_format = blob_layout_format
     assembly_compress_blobs = compress_blobs
     if (blobfs_product_minimum_inodes != false) {
@@ -202,7 +209,6 @@ assemble_system("fuchsia_assembly") {
     zbi = "${outdir}/fuchsia.zbi"
     zbi_signed = "${outdir}/fuchsia.zbi.signed"
     vbmeta = "${outdir}/fuchsia.vbmeta"
-    minfs = "${outdir}/data.blk"
     blobfs = "${outdir}/blob.blk"
     fvm = "${outdir}/fvm.blk"
     fvm_sparse = "${outdir}/fvm.sparse.blk"
@@ -213,7 +219,6 @@ assemble_system("fuchsia_assembly") {
     zbi = rebase_path(files.zbi, root_build_dir)
     zbi_signed = rebase_path(files.zbi_signed, root_build_dir)
     vbmeta = rebase_path(files.vbmeta, root_build_dir)
-    minfs = rebase_path(files.minfs, root_build_dir)
     blobfs = rebase_path(files.blobfs, root_build_dir)
     fvm = rebase_path(files.fvm, root_build_dir)
     fvm_sparse = rebase_path(files.fvm_sparse, root_build_dir)
@@ -231,14 +236,6 @@ assemble_system("fuchsia_assembly") {
 
     # Declare all the generated images.
     images = [
-      # MinFS
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "data"
-        path = rebased_files.minfs
-        type = "blk"
-      },
-
       # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
       # BlobFS
       #{
@@ -306,7 +303,6 @@ assemble_system("fuchsia_assembly") {
 
     # Declare the paths to the images.
     image_paths = [
-      "IMAGE_DATA_RAW=${rebased_files.minfs}",
       "IMAGE_BLOB_RAW=${rebased_files.blobfs}",
       "IMAGE_ZIRCONA_ZBI=fuchsia.zbi",
       "IMAGE_FVM_RAW=${rebased_files.fvm}",
