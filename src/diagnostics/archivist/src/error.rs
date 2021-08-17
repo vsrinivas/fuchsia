@@ -21,7 +21,7 @@ pub enum AccessorError {
     #[error("requested selectors are unsupported: {}", .0)]
     InvalidSelectors(&'static str),
 
-    #[error("couldn't parse/validate the provided selectors")]
+    #[error("couldn't parse/validate the provided selectors: {}", .0)]
     ParseSelectors(#[source] anyhow::Error),
 
     #[error("format must be set")]
