@@ -29,5 +29,9 @@
             protocol: "fuchsia.component.Binder",
             from: "framework",
         },
+        {
+            protocol: [ "fuchsia.component.Binder" ],
+            from: "framework",
+        },
     ],
 }
