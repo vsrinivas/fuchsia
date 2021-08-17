@@ -92,11 +92,9 @@ class GnTester(object):
         self._run_unit_test(self.gen_fidl_response_file_unittest)
         print("FIDL response file unit test passed.")
 
-    def _run_cmd(self, args, cwd=None) : # -> (str, str):
+    def _run_cmd(self, args, cwd=None):
         job = Popen(args, cwd=cwd, stdout=PIPE, stderr=PIPE)
         (stdoutdata, stderrdata) = job.communicate()
-        stdoutdata = stdoutdata.decode('utf-8')
-        stderrdata = stderrdata.decode('utf-8')
         print(stdoutdata)
         if job.returncode:
             print(stderrdata)
@@ -119,7 +117,7 @@ class GnTester(object):
         self._invoke_ninja(arch, explain=False)
         print("Test project for %s built successfully" % arch)
 
-    def _invoke_gn(self, arch, additional_args=""): # -> (str,str):
+    def _invoke_gn(self, arch, additional_args=""):
         """Invokes GN targeting the given architecture.
 
         Example invocation:
@@ -137,7 +135,7 @@ class GnTester(object):
         print('Running gn gen: "%s"' % ' '.join(invocation))
         self._run_cmd(invocation, cwd=self.proj_dir)
 
-    def _invoke_ninja(self, arch, explain=True, targets=["default", "tests"]): # -> (str, str):
+    def _invoke_ninja(self, arch, explain=True, targets=["default", "tests"]):
         """Invokes Ninja to build default and tests targets.
 
         Args:
@@ -273,15 +271,6 @@ class GnTester(object):
             msg += '"%s"' % stdout
             raise AssertionError(msg)
 
-    def _verify_register_symbols(self, arch):
-        (before, stderr) = self._run_cmd(['third_party/fuchsia-sdk/tools/x64/symbol-index', 'list'], cwd=self.proj_dir)
-        self._invoke_gn(arch, additional_args="fuchsia_auto_index_symbols=true")
-        (stdout, stderr) = self._invoke_ninja(arch)
-        (after, stderr) = self._run_cmd(['third_party/fuchsia-sdk/tools/x64/symbol-index', 'list'], cwd=self.proj_dir)
-        if before == after:
-            msg = 'Expected symbol index differences [%s]\n' % after
-            raise AssertionError(msg)
-
     def _verify_invalid_cmx(self, arch):
         """Run gn gen and then run ninja and expect it to fail."""
         self._invoke_gn(arch)
@@ -303,7 +292,6 @@ class GnTester(object):
             self._run_test("_verify_rebuild_noop", arch)
             self._run_test("_verify_component_override", arch)
             self._run_test("_verify_cmx_touch", arch)
-            self._run_test("_verify_register_symbols", arch)
 
     def _run_devtool_e2e_tests(self):
        """Tests the SDK dev tools in sdk/gn/base/bin."""
