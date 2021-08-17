@@ -2,32 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
-#include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <getopt.h>
-#include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/status.h>
-#include <libgen.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
 
 #include <optional>
 #include <utility>
 
 #include <block-client/cpp/remote-block-device.h>
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
@@ -49,19 +36,15 @@ struct Options {
 };
 
 zx::resource AttemptToGetVmexResource() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return zx::resource();
-  }
-  status = fdio_service_connect("/svc_blobfs/fuchsia.kernel.VmexResource", remote.release());
-  if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to connect to fuchsia.kernel.VmexResource: " << status;
+  auto client_end_or =
+      service::Connect<fuchsia_kernel::VmexResource>("/svc_blobfs/fuchsia.kernel.VmexResource");
+  if (client_end_or.is_error()) {
+    FX_LOGS(WARNING) << "Failed to connect to fuchsia.kernel.VmexResource: "
+                     << client_end_or.status_string();
     return zx::resource();
   }
 
-  auto client = fidl::WireSyncClient<fuchsia_kernel::VmexResource>{std::move(local)};
-  auto result = client.Get();
+  auto result = fidl::WireCall(*client_end_or).Get();
   if (!result.ok()) {
     FX_LOGS(WARNING) << "fuchsia.kernel.VmexResource.Get() failed: " << result.error();
     return zx::resource();
@@ -345,12 +328,6 @@ int main(int argc, char** argv) {
   zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
   if (!block_connection.is_valid()) {
     FX_LOGS(ERROR) << "Could not access startup handle to block device";
-    return EXIT_FAILURE;
-  }
-
-  fbl::unique_fd svc_fd(open("/svc", O_RDONLY));
-  if (!svc_fd.is_valid()) {
-    FX_LOGS(ERROR) << "Failed to open svc from incoming namespace";
     return EXIT_FAILURE;
   }
 

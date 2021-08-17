@@ -3,33 +3,17 @@
 # found in the LICENSE file.
 
 executable("blobfs") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
-    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/digest",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/blobfs",
-    "//third_party/boringssl",
-    "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
