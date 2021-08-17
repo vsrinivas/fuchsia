@@ -22,6 +22,7 @@ pub struct Heap {
     free_head_per_order: [u32; constants::NUM_ORDERS],
     allocated_blocks: usize,
     deallocated_blocks: usize,
+    failed_allocations: usize,
 }
 
 impl Heap {
@@ -33,6 +34,7 @@ impl Heap {
             free_head_per_order: [0; constants::NUM_ORDERS],
             allocated_blocks: 0,
             deallocated_blocks: 0,
+            failed_allocations: 0,
         };
         heap.grow_heap(constants::PAGE_SIZE_BYTES)?;
         Ok(heap)
@@ -56,6 +58,11 @@ impl Heap {
     /// Returns the number blocks deallocated since the creation of this heap.
     pub fn total_deallocated_blocks(&self) -> usize {
         self.deallocated_blocks
+    }
+
+    /// Returns the number of failed allocations since the creation of this heap.
+    pub fn failed_allocations(&self) -> usize {
+        self.failed_allocations
     }
 
     /// Allocates a new block of the given `min_size`.
@@ -135,6 +142,7 @@ impl Heap {
     fn grow_heap(&mut self, requested_size: usize) -> Result<(), Error> {
         let mapping_size = self.mapping.len() as usize;
         if requested_size > mapping_size {
+            self.failed_allocations += 1;
             return Err(Error::HeapMaxSizeReached);
         }
         let new_size = min(mapping_size, requested_size);
@@ -260,6 +268,7 @@ mod tests {
         assert_eq!(heap.free_head_per_order[7], 0);
         assert_eq!(heap.get_block(0).unwrap().free_next_index().unwrap(), 128);
         assert_eq!(heap.get_block(128).unwrap().free_next_index().unwrap(), 0);
+        assert_eq!(heap.failed_allocations, 0);
     }
 
     #[test]
@@ -360,6 +369,7 @@ mod tests {
         assert_eq!(heap.free_head_per_order[7], 128);
         assert_eq!(heap.get_block(0).unwrap().free_next_index().unwrap(), 0);
         assert_eq!(heap.get_block(128).unwrap().free_next_index().unwrap(), 0);
+        assert_eq!(heap.failed_allocations, 0);
     }
 
     #[test]
@@ -485,6 +495,7 @@ mod tests {
         assert_eq!(heap.get_block(128).unwrap().free_next_index().unwrap(), 0);
         assert_eq!(heap.get_block(0).unwrap().free_next_index().unwrap(), 640);
         assert_eq!(heap.get_block(640).unwrap().free_next_index().unwrap(), 0);
+        assert_eq!(heap.failed_allocations, 0);
     }
 
     #[test]
@@ -509,7 +520,11 @@ mod tests {
 
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 384);
+        assert_eq!(heap.failed_allocations, 0);
         assert!(heap.allocate_block(2048).is_err());
+        assert_eq!(heap.failed_allocations, 1);
+        assert!(heap.allocate_block(2048).is_err());
+        assert_eq!(heap.failed_allocations, 2);
 
         assert!(heap.free_block(heap.get_block(0).unwrap()).is_ok());
         assert!(heap.free_block(heap.get_block(128).unwrap()).is_ok());
