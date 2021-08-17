@@ -114,6 +114,10 @@ cts_executable("fidl_hlcpp_conformance_tests_bin") {
 
   # TODO(75000): Add GIDL to the CTS archive.
   non_cts_deps = [ ":conformance_test_sources" ]
+
+  # Increase the stack size. This is required to initialize a large number of zxtests.
+  # See fxbug.dev/82409 for more details.
+  ldflags = [ "-Wl,-z,stack-size=0x100000" ]
 }
 
 cts_fuchsia_component("fidl_hlcpp_conformance_tests") {
