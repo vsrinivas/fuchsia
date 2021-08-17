@@ -9,6 +9,7 @@
 
 #include <zircon/types.h>
 
+#include <hwreg/bitfields.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
 
@@ -26,6 +27,7 @@ enum class ExceptionClass : uint8_t {
   SYSTEM_INSTRUCTION  = 0b011000,
   INSTRUCTION_ABORT   = 0b100000,
   DATA_ABORT          = 0b100100,
+  SERROR_INTERRUPT    = 0b101111,
 };
 
 static inline const char* exception_class_name(ExceptionClass exception_class) {
@@ -36,6 +38,7 @@ static inline const char* exception_class_name(ExceptionClass exception_class) {
     EXCEPTION_CLASS_NAME(SYSTEM_INSTRUCTION);
     EXCEPTION_CLASS_NAME(INSTRUCTION_ABORT);
     EXCEPTION_CLASS_NAME(DATA_ABORT);
+    EXCEPTION_CLASS_NAME(SERROR_INTERRUPT);
 #undef EXIT_REASON_NAME
   default:
     return "UNKNOWN";
@@ -87,6 +90,8 @@ enum class SystemRegister : uint16_t {
   DC_CSW          = 0b01010000 << 8 /* op */ | 0b01111010 /* cr */,
 };
 
+// clang-format on
+
 // System instruction that caused a VM exit.
 struct SystemInstruction {
   SystemRegister sysreg;
@@ -119,7 +124,36 @@ struct DataAbort {
   explicit DataAbort(uint32_t iss);
 };
 
-// clang-format on
+// SError interrupt that caused a VM exit.
+struct SError {
+  uint32_t iss;
+
+  enum class ErrorType {
+    kUncontainable = 0b000,
+    kUnrecoverableState = 0b001,
+    kRestartableState = 0b010,
+    kRecoverableState = 0b011,
+    kCorrected = 0b110,
+  };
+
+  enum class DataFaultStatusCode {
+    kUncategorized = 0b000000,
+    kAsyncSError = 0b010001,
+  };
+
+  DEF_SUBBIT(iss, 24, ids);  // Implementation defined syndrome
+  // Bits [23:14] reserved.
+  DEF_SUBBIT(iss, 13, iesb);                       // Implicit error synchronization event.
+  DEF_ENUM_SUBFIELD(iss, ErrorType, 12, 10, aet);  // Asynchronous error type
+  DEF_SUBBIT(iss, 9, ea);                          // External abort type.
+  // Bits [8:6] reserved.
+  DEF_ENUM_SUBFIELD(iss, DataFaultStatusCode, 5, 0, dfsc);  // Data fault status code
+
+  explicit SError(uint32_t iss) : iss(iss) {}
+};
+
+std::string_view ErrorTypeToString(SError::ErrorType type);
+std::string_view DataFaultStatusCodeToString(SError::ErrorType type);
 
 void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state);
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,

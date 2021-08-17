@@ -205,8 +205,8 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   vcpu->el2_state_->ich_state.num_lrs = num_lrs;
   vcpu->el2_state_->ich_state.vmcr = gic_default_gich_vmcr();
   vcpu->el2_state_->ich_state.elrsr = (1ul << num_lrs) - 1;
-  vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_TWI | HCR_EL2_TWE |
-               HCR_EL2_TSC | HCR_EL2_TSW | HCR_EL2_TVM | HCR_EL2_RW;
+  vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_TWI |
+               HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TSW | HCR_EL2_TVM | HCR_EL2_RW;
 
   *out = ktl::move(vcpu);
   return ZX_OK;

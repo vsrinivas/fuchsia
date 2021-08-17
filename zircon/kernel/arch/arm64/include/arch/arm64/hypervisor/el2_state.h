@@ -23,7 +23,7 @@
 #define HCR_EL2_PTW         BIT_64(2)
 #define HCR_EL2_FMO         BIT_64(3)
 #define HCR_EL2_IMO         BIT_64(4)
-#define HCR_EL2_AMO         BIT_64(5)
+#define HCR_EL2_AMO         BIT_64(5)  // Route physical SErrors to EL2, not the guest.
 #define HCR_EL2_VI          BIT_64(7)
 #define HCR_EL2_TWI         BIT_64(13)
 #define HCR_EL2_TWE         BIT_64(14)
@@ -110,6 +110,7 @@
 
 #ifndef __ASSEMBLER__
 
+#include <bits.h>
 #include <zircon/types.h>
 
 #include <arch/defines.h>
@@ -162,6 +163,12 @@ struct GuestState {
   algn32_t esr_el2;
   uint64_t far_el2;
   uint64_t hpfar_el2;
+
+  // Get the guest's exception level (EL).
+  //
+  // We only expect guests to be running in EL0 or EL1, though the
+  // status bits support up to EL2.
+  uint32_t el() const { return BITS_SHIFT(system_state.spsr_el2, 3, 2); }
 };
 
 struct HostState {

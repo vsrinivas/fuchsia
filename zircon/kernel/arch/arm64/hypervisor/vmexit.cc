@@ -79,6 +79,34 @@ DataAbort::DataAbort(uint32_t iss) {
   read = !BIT(iss, 6);
 }
 
+std::string_view ErrorTypeToString(SError::ErrorType type) {
+  switch (type) {
+    case SError::ErrorType::kUncontainable:
+      return "Uncontainable";
+    case SError::ErrorType::kUnrecoverableState:
+      return "Unrecoverable State";
+    case SError::ErrorType::kRestartableState:
+      return "Restartable State";
+    case SError::ErrorType::kRecoverableState:
+      return "Recoverable State";
+    case SError::ErrorType::kCorrected:
+      return "Corrected";
+    default:
+      return "Unknown";
+  }
+}
+
+std::string_view DataFaultStatusCodeToString(SError::DataFaultStatusCode code) {
+  switch (code) {
+    case SError::DataFaultStatusCode::kUncategorized:
+      return "Uncategorized";
+    case SError::DataFaultStatusCode::kAsyncSError:
+      return "Async SError";
+    default:
+      return "Unknown";
+  }
+}
+
 static void next_pc(GuestState* guest_state) { guest_state->system_state.elr_el2 += 4; }
 
 static bool timer_enabled(GuestState* guest_state) {
@@ -382,6 +410,29 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
   }
 }
 
+static zx_status_t handle_serror_interrupt(GuestState* guest_state, uint32_t iss) {
+  // We received a system error (SError) exception.
+  //
+  // This isn't necessarily the guest's fault. It might be the host (kernel or
+  // userspace) triggered the SError, but it wasn't reported until the guest
+  // happened to be running.
+  //
+  // Print out a log and continue.
+  const SError serror(iss);
+  std::string_view aet_string = ErrorTypeToString(serror.aet());
+  std::string_view dfsc_string = DataFaultStatusCodeToString(serror.dfsc());
+  dprintf(CRITICAL,
+          "hypervisor: Received SError while running guest. Ignoring. "
+          "(Guest at EL%u, PC=%#lx. "
+          "CPU: %u, Syndrome: ISS=%#x [IDS=%u; IESB=%u; AET=%#x (%*s); EA=%u; DFSC=%#x (%*s)])\n",
+          guest_state->el(), guest_state->system_state.elr_el2, arch_curr_cpu_num(), serror.iss,
+          serror.ids(), serror.iesb(), static_cast<uint32_t>(serror.aet()),
+          static_cast<int>(aet_string.size()), aet_string.data(), serror.ea(),
+          static_cast<uint32_t>(serror.dfsc()), static_cast<int>(dfsc_string.size()),
+          dfsc_string.data());
+  return ZX_OK;
+}
+
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
                            hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet) {
@@ -422,6 +473,11 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
       ktrace_vcpu_exit(VCPU_DATA_ABORT, guest_state->system_state.elr_el2);
       status = handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
       break;
+    case ExceptionClass::SERROR_INTERRUPT:
+      LTRACEF("handling serror interrupt at %#lx\n", guest_state->hpfar_el2);
+      ktrace_vcpu_exit(VCPU_SERROR_INTERRUPT, guest_state->system_state.elr_el2);
+      status = handle_serror_interrupt(guest_state, syndrome.iss);
+      break;
     default:
       LTRACEF("unhandled exception syndrome, ec %#x iss %#x\n", static_cast<uint32_t>(syndrome.ec),
               syndrome.iss);
@@ -439,8 +495,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     default:
       dprintf(CRITICAL, "VM exit handler for %u (%s) in EL%u at %#lx returned %d\n",
               static_cast<uint32_t>(syndrome.ec), exception_class_name(syndrome.ec),
-              BITS_SHIFT(guest_state->system_state.spsr_el2, 3, 2),
-              guest_state->system_state.elr_el2, status);
+              guest_state->el(), guest_state->system_state.elr_el2, status);
   }
   return status;
 }

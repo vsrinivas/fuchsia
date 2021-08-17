@@ -260,7 +260,7 @@ reg_xa  .req x11
     b el2_hvc_tlbi_el2    // HVC 8:      tlbi EL2
 .endm
 
-.macro entry_irq return_code
+.macro entry_async return_code
 .align 7
     guest_exit \return_code
     b el2_guest_exit
@@ -323,10 +323,10 @@ FUNCTION_LABEL(arm64_el2_exec_table)
     entry_invalid_exception
 
     /* exceptions from lower EL, running arm64 */
-    entry_sync ZX_OK
-    entry_irq ZX_ERR_NEXT
+    entry_sync  ZX_OK          // Exception
+    entry_async ZX_ERR_NEXT    // IRQ
     entry_invalid_exception
-    entry_invalid_exception
+    entry_async ZX_OK          // SError
 
     /* exceptions from lower EL, running arm32 */
     entry_invalid_exception
