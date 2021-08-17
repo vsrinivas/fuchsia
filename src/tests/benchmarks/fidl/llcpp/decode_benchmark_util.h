@@ -40,14 +40,20 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     }
     ZX_ASSERT(encoded.ok());
 
+    // Convert the outgoing message to incoming which is suitable for decoding.
+    // This may involve expensive allocations and copies.
+    // This step does not happen in production (we would receive an incoming message
+    // from the channel), hence not counted as part of decode time.
+    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
+    ZX_ASSERT(converted.ok());
+
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
-      ZX_ASSERT(converted.ok());
       auto decoded = fidl::DecodedMessage<FidlType>(fidl::internal::kLLCPPInMemoryWireFormatVersion,
                                                     std::move(converted.incoming_message()));
       ZX_ASSERT(decoded.ok());
+      // Include time taken to close handles in |FidlType|.
     }
 
     state->NextStep();  // End: Decode. Begin: Teardown.
