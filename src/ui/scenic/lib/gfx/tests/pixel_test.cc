@@ -43,6 +43,9 @@ const std::map<std::string, std::string> LocalServices() {
           {"fuchsia.ui.policy.Presenter",
            "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
           {"fuchsia.ui.composition.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+          {"fuchsia.ui.lifecycle.LifecycleController",
+           "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
           {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
           {"fuchsia.ui.annotation.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
           {"fuchsia.ui.shortcut.Manager",
@@ -81,6 +84,15 @@ void PixelTest::SetUp() {
   TestWithEnvironmentFixture::SetUp();
 
   environment_ = CreateNewEnclosingEnvironment(environment_label_, CreateServices());
+  WaitForEnclosingEnvToStart(environment_.get());
+
+  // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
+  // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
+  // controller.
+  //
+  // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+  environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
+      scenic_lifecycle_controller_.NewRequest());
 
   environment_->ConnectToService(scenic_.NewRequest());
   scenic_.set_error_handler([](zx_status_t status) {
@@ -91,6 +103,18 @@ void PixelTest::SetUp() {
   annotation_registry_.set_error_handler([](zx_status_t status) {
     FAIL() << "Lost connection to Annotation Registry: " << zx_status_get_string(status);
   });
+}
+
+void PixelTest::TearDown() {
+  // Avoid spurious errors since we are about to kill scenic.
+  //
+  // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+  annotation_registry_.set_error_handler(nullptr);
+  scenic_.set_error_handler(nullptr);
+
+  zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
+  FX_CHECK(terminate_status == ZX_OK)
+      << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
 }
 
 std::unique_ptr<sys::testing::EnvironmentServices> PixelTest::CreateServices() {

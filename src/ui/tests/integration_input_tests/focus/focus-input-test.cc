@@ -5,6 +5,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
@@ -17,6 +18,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
+#include <zircon/status.h>
 
 #include <optional>
 
@@ -56,6 +58,9 @@ const std::map<std::string, std::string> LocalServices() {
       {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/focus-input-test#meta/scenic.cmx"},
       {"fuchsia.ui.focus.FocusChainListenerRegistry",
        "fuchsia-pkg://fuchsia.com/focus-input-test#meta/scenic.cmx"},
+      // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+      {"fuchsia.ui.lifecycle.LifecycleController",
+       "fuchsia-pkg://fuchsia.com/focus-input-test#meta/scenic.cmx"},
       // Misc protocols.
       {"fuchsia.cobalt.LoggerFactory",
        "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
@@ -74,7 +79,7 @@ class FocusInputTest : public gtest::TestWithEnvironmentFixture,
                        public test::focus::ResponseListener {
  protected:
   FocusInputTest() : response_listener_(this) {
-    auto services = TestWithEnvironment::CreateServices();
+    auto services = TestWithEnvironmentFixture::CreateServices();
 
     // Key part of service setup: have this test component vend the |ResponseListener| service to
     // the constructed environment.
@@ -99,10 +104,17 @@ class FocusInputTest : public gtest::TestWithEnvironmentFixture,
     }
 
     test_env_ = CreateNewEnclosingEnvironment("focus_input_test_env", std::move(services));
-
     WaitForEnclosingEnvToStart(test_env_.get());
 
     FX_VLOGS(1) << "Created test environment.";
+
+    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
+    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
+    // controller.
+    //
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    test_env_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
+        scenic_lifecycle_controller_.NewRequest());
 
     // Post a "just in case" quit task, if the test hangs.
     async::PostDelayedTask(
@@ -111,8 +123,19 @@ class FocusInputTest : public gtest::TestWithEnvironmentFixture,
         kTimeout);
   }
 
+  ~FocusInputTest() override {
+    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
+    FX_CHECK(terminate_status == ZX_OK)
+        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
+  }
+
   void CreateScenicClientAndTestView(fuchsia::ui::views::ViewToken view_token,
                                      scenic::ViewRefPair view_ref_pair) {
+    auto scenic = test_env_->ConnectToService<fuchsia::ui::scenic::Scenic>();
+    scenic.set_error_handler([](zx_status_t status) {
+      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+    });
+
     fuchsia::ui::scenic::SessionEndpoints endpoints;
     fuchsia::ui::scenic::SessionPtr client_endpoint;
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
@@ -122,8 +145,7 @@ class FocusInputTest : public gtest::TestWithEnvironmentFixture,
         .set_session_listener(std::move(listener_handle))
         .set_view_ref_focused(test_view_focus_watcher_.NewRequest())
         .set_view_focuser(test_view_focuser_control_.NewRequest());
-    test_env_->ConnectToService<fuchsia::ui::scenic::Scenic>()->CreateSessionT(
-        std::move(endpoints), [] { /* don't block, feed forward */ });
+    scenic->CreateSessionT(std::move(endpoints), [] { /* don't block, feed forward */ });
     session_ =
         std::make_unique<scenic::Session>(std::move(client_endpoint), std::move(listener_request));
     session_->SetDebugName("focus-input-test");
@@ -152,6 +174,7 @@ class FocusInputTest : public gtest::TestWithEnvironmentFixture,
   fidl::Binding<test::focus::ResponseListener> response_listener_;
 
   // Scenic state.
+  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   std::unique_ptr<scenic::Session> session_;
   std::unique_ptr<scenic::View> test_view_;
 

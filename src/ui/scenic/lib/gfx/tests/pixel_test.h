@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_PIXEL_TEST_H_
 
 #include <fuchsia/ui/annotation/cpp/fidl.h>
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
@@ -71,12 +72,14 @@ class PixelTest : public gtest::TestWithEnvironmentFixture {
 
   fuchsia::ui::annotation::Registry* annotation_registry() { return annotation_registry_.get(); }
 
-  // Sets up the enclosing environment, calling |CreateServices()| to configure services.
   // |testing::Test|
   void SetUp() override;
 
+  // |testing::Test|
+  void TearDown() override;
+
   // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironment::CreateServices()|. In addition the default
+  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|. In addition the default
   // implementation wires up Scenic, RootPresenter, and their dependencies.
   virtual std::unique_ptr<sys::testing::EnvironmentServices> CreateServices();
 
@@ -116,6 +119,7 @@ class PixelTest : public gtest::TestWithEnvironmentFixture {
   const std::string environment_label_;
 
   fuchsia::ui::annotation::RegistryPtr annotation_registry_;
+  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 };
 

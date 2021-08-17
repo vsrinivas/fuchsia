@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/focus/cpp/fidl.h>
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -41,6 +42,9 @@ const std::map<std::string, std::string> LocalServices() {
           {"fuchsia.ui.scenic.Scenic",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
           {"fuchsia.ui.focus.FocusChainListenerRegistry",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+          {"fuchsia.ui.lifecycle.LifecycleController",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
           {"fuchsia.hardware.display.Provider",
            "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
@@ -108,7 +112,7 @@ struct RootSession {
 // Test fixture that sets up an environment with a Scenic we can connect to.
 class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
                                 public FocusChainListener {
- public:
+ protected:
   GfxFocusIntegrationTest() : focus_chain_listener_(this) {}
 
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
@@ -118,11 +122,32 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
 
     environment_ =
         CreateNewEnclosingEnvironment("gfx_focus_integration_test_environment", CreateServices());
+    WaitForEnclosingEnvToStart(environment_.get());
+
+    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
+    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
+    // controller.
+    //
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
+        scenic_lifecycle_controller_.NewRequest());
 
     environment_->ConnectToService(scenic_.NewRequest());
     scenic_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
+    environment_->ConnectToService(focus_chain_listener_registry_.NewRequest());
+    focus_chain_listener_registry_.set_error_handler([](zx_status_t status) {
+      FAIL() << "Lost connection to FocusChainListener: " << zx_status_get_string(status);
+    });
+
+    // Set up focus chain listener and wait for the initial null focus chain.
+    fidl::InterfaceHandle<FocusChainListener> listener_handle;
+    focus_chain_listener_.Bind(listener_handle.NewRequest());
+    focus_chain_listener_registry_->Register(std::move(listener_handle));
+    EXPECT_EQ(CountReceivedFocusChains(), 0u);
+    RunLoopUntil([this] { return CountReceivedFocusChains() == 1u; });
+    EXPECT_FALSE(LastFocusChain()->has_focus_chain());
 
     // Set up root view.
     fuchsia::ui::scenic::SessionEndpoints endpoints;
@@ -134,18 +159,26 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
     });
     BlockingPresent(root_session_->session);
 
-    // Set up focus chain listener.
-    environment_->ConnectToService(focus_chain_listener_registry_.NewRequest());
-    fidl::InterfaceHandle<FocusChainListener> listener_handle;
-    focus_chain_listener_.Bind(listener_handle.NewRequest());
-    focus_chain_listener_registry_->Register(std::move(listener_handle));
-    // On connection we should get the current focus chain. It should only contain the scene node.
-    EXPECT_EQ(CountReceivedFocusChains(), 0u);
-    RunLoopUntil([this] { return CountReceivedFocusChains() == 1; });
-    EXPECT_EQ(CountReceivedFocusChains(), 1u);
+    // Now that the scene exists, wait for a valid focus chain.  It should only contain the scene
+    // node.
+    RunLoopUntil([this] { return CountReceivedFocusChains() == 2u; });
     EXPECT_TRUE(LastFocusChain()->has_focus_chain());
     EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
-    observed_focus_chains_.clear();  // Make the tests less confusing by starting count at 0.
+
+    // Make the tests less confusing by starting count at 0.
+    observed_focus_chains_.clear();
+  }
+
+  void TearDown() override {
+    // Avoid spurious errors since we are about to kill scenic.
+    //
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    focus_chain_listener_registry_.set_error_handler(nullptr);
+    scenic_.set_error_handler(nullptr);
+
+    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
+    FX_CHECK(terminate_status == ZX_OK)
+        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
   }
 
   void BlockingPresent(scenic::Session& session) {
@@ -179,10 +212,6 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
 
     return services;
   }
-
-  fuchsia::ui::views::FocuserPtr root_focuser_;
-  fuchsia::ui::views::ViewRefFocusedPtr root_focused_;
-  std::unique_ptr<RootSession> root_session_;
 
   bool RequestFocusChange(fuchsia::ui::views::FocuserPtr& view_focuser_ptr, const ViewRef& target) {
     ViewRef clone;
@@ -219,14 +248,18 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
     }
   }
 
+  fuchsia::ui::views::FocuserPtr root_focuser_;
+  fuchsia::ui::views::ViewRefFocusedPtr root_focused_;
+  std::unique_ptr<RootSession> root_session_;
+
  private:
   fuchsia::ui::focus::FocusChainListenerRegistryPtr focus_chain_listener_registry_;
   fidl::Binding<FocusChainListener> focus_chain_listener_;
 
   std::vector<FocusChain> observed_focus_chains_;
 
- private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 };
 

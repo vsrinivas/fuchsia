@@ -64,10 +64,13 @@ constexpr std::array<std::pair<const char*, const char*>, kNumInjectedServices> 
     }, {
       "fuchsia.ui.input.ImeVisibilityService",
       "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
-    }, {
+    },
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    {
       "fuchsia.ui.lifecycle.LifecycleController",
       "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
-    }, {
+    },
+    {
       "fuchsia.ui.pointerinjector.Registry",
       "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
     }, {
@@ -122,6 +125,14 @@ void SemanticsIntegrationTest::SetUp() {
                                                {.inherit_parent_services = true});
   WaitForEnclosingEnvToStart(environment_.get());
 
+  // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
+  // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
+  // controller.
+  //
+  // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+  environment()->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
+      scenic_lifecycle_controller_.NewRequest());
+
   scenic_ = environment()->ConnectToService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([](zx_status_t status) {
     FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
@@ -130,17 +141,18 @@ void SemanticsIntegrationTest::SetUp() {
   // Wait for scenic to get initialized by calling GetDisplayInfo.
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo info) { QuitLoop(); });
   RunLoop();
-
-  // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-  // This ensures the correct ordering of shutdown: first scenic, then the fake display controller.
-  scenic_lifecycle_controller_ =
-      environment()->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>();
-  scenic_lifecycle_controller_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(INFO) << "terminating Scenic with status: " << zx_status_get_string(status);
-  });
 }
 
-void SemanticsIntegrationTest::TearDown() { scenic_lifecycle_controller_->Terminate(); }
+void SemanticsIntegrationTest::TearDown() {
+  // Avoid spurious errors since we are about to kill scenic.
+  //
+  // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+  scenic_.set_error_handler(nullptr);
+
+  zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
+  FX_CHECK(terminate_status == ZX_OK)
+      << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
+}
 
 fuchsia::ui::views::ViewToken SemanticsIntegrationTest::CreatePresentationViewToken() {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();

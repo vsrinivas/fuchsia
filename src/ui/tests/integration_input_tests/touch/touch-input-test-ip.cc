@@ -13,7 +13,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
@@ -29,6 +29,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 #include <zircon/utc.h>
 
@@ -94,8 +95,9 @@ const std::map<std::string, std::string> LocalServices() {
       // Scenic protocols.
       {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/scenic.cmx"},
       {"fuchsia.ui.pointerinjector.Registry",
-       "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/scenic.cmx"},
-      {"fuchsia.ui.focus.FocusChainListenerRegistry",
+       "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/scenic.cmx"},  // For root_presenter
+      // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+      {"fuchsia.ui.lifecycle.LifecycleController",
        "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/scenic.cmx"},
       // Misc protocols.
       {"fuchsia.cobalt.LoggerFactory",
@@ -122,7 +124,7 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
   };
 
   explicit TouchInputBase(const std::vector<LaunchableService>& extra_services) {
-    auto services = TestWithEnvironment::CreateServices();
+    auto services = TestWithEnvironmentFixture::CreateServices();
 
     // Key part of service setup: have this test component vend the |ResponseListener| service in
     // the constructed environment.
@@ -152,7 +154,6 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
     }
 
     test_env_ = CreateNewEnclosingEnvironment("touch_input_test_env", std::move(services));
-
     WaitForEnclosingEnvToStart(test_env_.get());
 
     FX_VLOGS(1) << "Created test environment.";
@@ -171,8 +172,19 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
   }
 
   void SetUp() override {
+    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
+    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
+    // controller.
+    //
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    test_env()->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
+        scenic_lifecycle_controller_.NewRequest());
+
     // Get the display dimensions
     scenic_ = test_env()->ConnectToService<fuchsia::ui::scenic::Scenic>();
+    scenic_.set_error_handler([](zx_status_t status) {
+      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+    });
     scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
       display_width_ = display_info.width_in_px;
       display_height_ = display_info.height_in_px;
@@ -180,6 +192,15 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
                     << " and display_height = " << display_height_;
     });
     RunLoopUntil([this] { return display_width_ != 0 && display_height_ != 0; });
+  }
+
+  // |testing::Test|
+  void TearDown() override {
+    scenic_.set_error_handler(nullptr);
+
+    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
+    FX_CHECK(terminate_status == ZX_OK)
+        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
   }
 
   sys::testing::EnclosingEnvironment* test_env() { return test_env_.get(); }
@@ -454,6 +475,7 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
   fuchsia::input::report::InputDevicePtr input_device_ptr_;
   int injection_count_ = 0;
 
+  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;

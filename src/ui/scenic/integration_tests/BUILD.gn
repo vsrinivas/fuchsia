@@ -17,6 +17,8 @@ source_set("common_deps") {
     "utils.h",
   ]
   public_deps = [
+    # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    "//sdk/fidl/fuchsia.ui.lifecycle",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",

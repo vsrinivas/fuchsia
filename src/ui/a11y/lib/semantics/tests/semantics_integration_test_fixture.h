@@ -80,7 +80,7 @@ class SemanticsIntegrationTest : public gtest::TestWithEnvironmentFixture {
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
+  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
 };
 
 }  // namespace accessibility_test

@@ -155,7 +155,9 @@ source_set("semantics_integration_test_fixture") {
     "semantics_integration_test_fixture.h",
   ]
   public_deps = [
+    # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
     "//sdk/fidl/fuchsia.ui.lifecycle",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

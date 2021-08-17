@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
@@ -74,6 +75,9 @@ const std::map<std::string, std::string> LocalServices() {
           {"fuchsia.ui.scenic.Scenic",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
           {"fuchsia.ui.pointerinjector.Registry",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+          {"fuchsia.ui.lifecycle.LifecycleController",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
           {"fuchsia.hardware.display.Provider",
            "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
@@ -205,8 +209,19 @@ class GfxMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
 
   void SetUp() override {
     TestWithEnvironmentFixture::SetUp();
+
     environment_ =
         CreateNewEnclosingEnvironment("gfx_mouse_integration_test_environment", CreateServices());
+    WaitForEnclosingEnvToStart(environment_.get());
+
+    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
+    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
+    // controller.
+    //
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
+        scenic_lifecycle_controller_.NewRequest());
+
     environment_->ConnectToService(scenic_.NewRequest());
     scenic_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
@@ -220,6 +235,18 @@ class GfxMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
     root_session_ = std::make_unique<RootSession>(scenic());
     root_session_->session->set_error_handler([](auto) { FAIL() << "Root session terminated."; });
     BlockingPresent(*root_session_->session);
+  }
+
+  void TearDown() override {
+    // Avoid spurious errors since we are about to kill scenic.
+    //
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    registry_.set_error_handler(nullptr);
+    scenic_.set_error_handler(nullptr);
+
+    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
+    FX_CHECK(terminate_status == ZX_OK)
+        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
   }
 
   // Configures services available to the test environment. This method is called by |SetUp()|. It
@@ -350,13 +377,14 @@ class GfxMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
     mouse_source->Watch(watch_loops_.at(index));
   }
 
-  bool injector_channel_closed_ = false;
   std::array<std::array<float, 2>, 2> FullScreenExtents() const { return {{{0, 0}, {9, 9}}}; }
 
   std::unique_ptr<RootSession> root_session_;
+  bool injector_channel_closed_ = false;
 
  private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::ui::pointerinjector::RegistryPtr registry_;
   fuchsia::ui::pointerinjector::DevicePtr injector_;

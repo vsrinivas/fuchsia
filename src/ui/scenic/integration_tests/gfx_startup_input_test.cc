@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -26,6 +27,9 @@ const std::map<std::string, std::string> LocalServices() {
   return {{"fuchsia.ui.composition.Allocator",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
           {"fuchsia.ui.scenic.Scenic",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+          {"fuchsia.ui.lifecycle.LifecycleController",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
           {"fuchsia.hardware.display.Provider",
            "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
@@ -55,17 +59,39 @@ scenic::Session CreateSession(fuchsia::ui::scenic::Scenic* scenic,
 
 // Test fixture that sets up an environment with a Scenic we can connect to.
 class GfxStartupInputTest : public gtest::TestWithEnvironmentFixture {
- public:
+ protected:
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
   void SetUp() override {
     TestWithEnvironmentFixture::SetUp();
+
     environment_ = CreateNewEnclosingEnvironment(
         "gfx_view_ref_installed_integration_test_environment", CreateServices());
+    WaitForEnclosingEnvToStart(environment_.get());
+
+    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
+    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
+    // controller.
+    //
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
+        scenic_lifecycle_controller_.NewRequest());
+
     environment_->ConnectToService(scenic_.NewRequest());
     scenic_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
+  }
+
+  void TearDown() override {
+    // Avoid spurious errors since we are about to kill scenic.
+    //
+    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    scenic_.set_error_handler(nullptr);
+
+    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
+    FX_CHECK(terminate_status == ZX_OK)
+        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
   }
 
   void BlockingPresent(scenic::Session& session) {
@@ -105,6 +131,7 @@ class GfxStartupInputTest : public gtest::TestWithEnvironmentFixture {
 
  private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
   uint32_t last_pointer_id_ = 0;

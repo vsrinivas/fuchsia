@@ -81,6 +81,9 @@ source_set("pixel_test") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.annotation",
+
+    # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    "//sdk/fidl/fuchsia.ui.lifecycle",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp/testing:integration_fixture",

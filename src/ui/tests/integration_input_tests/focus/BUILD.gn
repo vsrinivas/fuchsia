@@ -20,6 +20,9 @@ executable("focus-input-test-bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.focus",
+
+    # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
+    "//sdk/fidl/fuchsia.ui.lifecycle",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
