@@ -80,4 +80,4 @@ minfs_enable_dirty_cache = true
 # userspace PCI migration flags
 # fxbug.dev/32978
 platform_enable_user_pci = true
-userspace_pci_enable_msi_x = false
+userspace_pci_enable_msi_x = true
