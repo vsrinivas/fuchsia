@@ -20,7 +20,7 @@ using zx;
 //
 // Later we can add DYNAMIC, as needed.
 type SecureMemoryMode = strict enum : uint32 {
-            // Normal memory.  This is the default if a field of this type is not set.
+    // Normal memory.  This is the default if a field of this type is not set.
     OFF = 0;
     // Secure memory.
     ON = 1;

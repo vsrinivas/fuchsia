@@ -31,7 +31,7 @@ type Value = strict union {
 // TODO: When possible, describe the very limited scenarios in which it would
 // still be reasonable to use a generic Parameter.
 type Parameter = struct {
-            // Some indication of the scope of applicability of this Parameter.
+    // Some indication of the scope of applicability of this Parameter.
     scope string;
     // Specific name of this parameter, without the scope prefix.
     name string;
@@ -103,9 +103,9 @@ type AudioCompressedFormatSbc = struct {};
 // TODO(dustingreen): Keep or discard any non-linear formats for purposes of the
 // Codec interface?
 type AudioPcmMode = strict enum {
-            // 16 bit signed int linear or 32 bit float linear, for now
-            // 1-N channels ok, with "A.B" channels designated as A+B channel_count -
-            // the channel map is separately specified.  So 5.1 becomes channel_count 6.
+    // 16 bit signed int linear or 32 bit float linear, for now
+    // 1-N channels ok, with "A.B" channels designated as A+B channel_count -
+    // the channel map is separately specified.  So 5.1 becomes channel_count 6.
     LINEAR = 0;
     // G.711 8 bit format-defined waveform semantics
     // 1 channel
@@ -155,10 +155,10 @@ type AudioChannelId = strict enum {
 // TODO(dustingreen): Discuss with mpuryear@ re. where definitions for these
 // details go and make sure the common details can specify at least this much.
 type PcmFormat = struct {
-            // Implicit details:
-            //   * For bits_per_sample > 8, host-endian is implied.
-            //   * At least for now, for channel_count >= 2, interleaved layout is
-            //     implied.
+    // Implicit details:
+    //   * For bits_per_sample > 8, host-endian is implied.
+    //   * At least for now, for channel_count >= 2, interleaved layout is
+    //     implied.
 
     pcm_mode AudioPcmMode;
 
@@ -215,11 +215,11 @@ type AudioFormat = strict union {
 // format and is already self-describing given the mime_type + format-defined
 // oob_bytes as appropriate + in-band data.
 type VideoCompressedFormat = strict union {
-            // TODO(dustingreen): Any compressed video formats that aren't sufficiently
-            // self-describing to select and create a Codec instance to decode it?
+    // TODO(dustingreen): Any compressed video formats that aren't sufficiently
+    // self-describing to select and create a Codec instance to decode it?
 
-            // TODO(dustingreen): temp field to make the compiler happy until we have at
-            // least one real field.
+    // TODO(dustingreen): temp field to make the compiler happy until we have at
+    // least one real field.
     1: temp_field_todo_remove uint32;
 };
 
@@ -236,8 +236,8 @@ type VideoColorSpace = strict enum {
 // In progress - see image_format field below which will take the place of this
 // struct/table.
 type VideoUncompressedFormat = struct {
-            // TODO(dustingreen): This will replace VideoUncompressedFormat (after
-            // struct to table change merges).
+    // TODO(dustingreen): This will replace VideoUncompressedFormat (after
+    // struct to table change merges).
     image_format fuchsia.sysmem.ImageFormat_2;
 
     // fourcc
@@ -654,9 +654,9 @@ type EncoderSettings = flexible union {
 //
 // Most decoders can have FormatDetails.domain null.
 type FormatDetails = table {
-            // Particular instances of FormatDetails will set this field to make it
-            // easier for a receiver to determine if any part of the format has changed
-            // vs. the last FormatDetails received for the same context.
+    // Particular instances of FormatDetails will set this field to make it
+    // easier for a receiver to determine if any part of the format has changed
+    // vs. the last FormatDetails received for the same context.
     1: format_details_version_ordinal uint64;
 
     // "mime_type" strings used by particular decoders / encoders so far:

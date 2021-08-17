@@ -160,25 +160,30 @@ void CompositeSpanSequence::Close() {
 
 void CompositeSpanSequence::CloseChildren() {
   if (!IsClosed()) {
-    for (auto& child : children_) {
+    for (size_t i = 0; i < children_.size(); ++i) {
+      const auto& child = children_[i];
       if (!child->IsClosed())
         child->Close();
 
       switch (child->GetKind()) {
         case SpanSequence::Kind::kToken: {
-          has_tokens_= true;
+          has_tokens_ = true;
           break;
         }
-        case SpanSequence::Kind::kInlineComment:
+        case SpanSequence::Kind::kInlineComment: {
+          has_non_leading_comments_ = true;
+          break;
+        }
         case SpanSequence::Kind::kStandaloneComment: {
-          has_comments_ = true;
+          if (i > 0)
+            has_non_leading_comments_ = true;
           break;
         }
         default: {
-          if (child->HasComments())
-            has_comments_= true;
+          if (child->HasNonLeadingComments())
+            has_non_leading_comments_ = true;
           if (child->HasTokens())
-            has_tokens_= true;
+            has_tokens_ = true;
         }
       }
     }
@@ -225,7 +230,7 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
 
         // If the child AtomicSpanSequence had comments, we know that it forces a wrapping, so
         // all future printing for this AtomicSpanSequence must be wrapped as well.
-        if (!wrapped && child->HasComments() && child->HasTokens()) {
+        if (!wrapped && child->HasNonLeadingComments() && child->HasTokens()) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
@@ -363,7 +368,8 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
 
         // If the child AtomicSpanSequence had comments, we know that it forces a wrapping, so
         // all future printing for this AtomicSpanSequence must be wrapped as well.
-        if (!wrapped && child->HasComments() && (child->HasTokens() || starts_with_inline)) {
+        if (!wrapped && child->HasNonLeadingComments() &&
+            (child->HasTokens() || starts_with_inline)) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }

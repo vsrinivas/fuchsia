@@ -31,7 +31,7 @@ protocol Handler {
 //                 llcpp bindings, which would make this API very cumbersome to
 //                 use. When better support lands, move this to a table.
 type ExceptionInfo = struct {
-            // Process ID or pid.
+    // Process ID or pid.
     process_koid zx.koid;
 
     // Thread ID or tid.

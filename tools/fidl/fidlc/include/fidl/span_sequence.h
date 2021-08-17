@@ -54,10 +54,13 @@ class SpanSequence {
 
   virtual ~SpanSequence() = default;
 
-  // TODO(fxbug.dev/73507): investigate whether or not we want to replace the "Close" pattern with
-  //  more opinionated Builder classes.
   virtual void Close();
-  virtual bool HasComments() const = 0;
+
+  // What's a "non-leading" comment, you ask?  It's any comment that is not both a StandaloneComment
+  // and the first leaf token in this SpanSequence's tree.  These should always be treated as
+  // standalone entities that never affect wrapping, so this method ignores them when it asks "are
+  // there comments contained in this SpanSequence?"
+  virtual bool HasNonLeadingComments() const = 0;
   virtual bool HasTokens() const = 0;
   virtual bool IsComment() const = 0;
   virtual bool IsComposite() const = 0;
@@ -171,7 +174,7 @@ class TokenSpanSequence final : public SpanSequence {
         span_(span) {}
 
   void Close() override;
-  bool HasComments() const override { return false; }
+  bool HasNonLeadingComments() const override { return false; }
   bool HasTokens() const override { return false; }
   bool IsComment() const override { return false; }
   bool IsComposite() const override { return false; }
@@ -194,13 +197,13 @@ class CompositeSpanSequence : public SpanSequence {
  protected:
   explicit CompositeSpanSequence(Kind kind, Position position, size_t leading_blank_lines)
       : SpanSequence(kind, position, leading_blank_lines),
-        has_comments_(false),
+        has_non_leading_comments_(false),
         has_tokens_(false) {}
   explicit CompositeSpanSequence(Kind kind, std::vector<std::unique_ptr<SpanSequence>> children,
                                  Position position, size_t leading_blank_lines)
       : SpanSequence(kind, position, leading_blank_lines),
         children_(std::move(children)),
-        has_comments_(false),
+        has_non_leading_comments_(false),
         has_tokens_(false) {}
 
  public:
@@ -210,7 +213,7 @@ class CompositeSpanSequence : public SpanSequence {
   std::vector<std::unique_ptr<SpanSequence>>& EditChildren();
   const std::vector<std::unique_ptr<SpanSequence>>& GetChildren() const;
   SpanSequence* GetLastChild();
-  bool HasComments() const override { return has_comments_; }
+  bool HasNonLeadingComments() const override { return has_non_leading_comments_; }
   bool HasTokens() const override { return has_tokens_; }
   bool IsComment() const override { return false; }
   bool IsComposite() const override { return true; }
@@ -220,7 +223,7 @@ class CompositeSpanSequence : public SpanSequence {
 
  private:
   std::vector<std::unique_ptr<SpanSequence>> children_;
-  bool has_comments_;
+  bool has_non_leading_comments_;
   bool has_tokens_;
 };
 
@@ -345,7 +348,7 @@ class CommentSpanSequence : public SpanSequence {
 
  public:
   void Close() override;
-  bool HasComments() const override { return false; }
+  bool HasNonLeadingComments() const override { return false; }
   bool HasTokens() const override { return false; }
   bool IsComment() const override { return true; }
   bool IsComposite() const override { return false; }
