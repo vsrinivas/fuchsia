@@ -9,7 +9,7 @@ using fuchsia.telephony.snoop as qmi_snoop;
 protocol Qmi {
     /// Give a channel handle that transports bi-directional QMI messages
     SetChannel(resource struct {
-        transport zx.handle:CHANNEL;
+        transport zx.handle:<CHANNEL, zx.rights.WAIT | zx.rights.WRITE | zx.rights.READ>;
     }) -> (struct {}) error zx.status;
 
     /// Configure the network used by the transport
