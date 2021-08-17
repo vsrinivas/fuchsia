@@ -20,12 +20,26 @@ use {
 
 pub struct FakeSavedNetworksManager {
     saved_networks: Mutex<HashMap<NetworkIdentifier, Vec<NetworkConfig>>>,
+    disconnects_recorded: Mutex<Vec<DisconnectRecord>>,
     pub fail_all_stores: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DisconnectRecord {
+    pub id: NetworkIdentifier,
+    pub credential: Credential,
+    pub bssid: client_types::Bssid,
+    pub uptime: zx::Duration,
+    pub curr_time: zx::Time,
 }
 
 impl FakeSavedNetworksManager {
     pub fn new() -> Self {
-        Self { saved_networks: Mutex::new(HashMap::new()), fail_all_stores: false }
+        Self {
+            saved_networks: Mutex::new(HashMap::new()),
+            disconnects_recorded: Mutex::new(vec![]),
+            fail_all_stores: false,
+        }
     }
     /// Create FakeSavedNetworksManager, saving some network configs at init.
     pub fn new_with_saved_configs(network_configs: Vec<(NetworkIdentifier, Credential)>) -> Self {
@@ -35,7 +49,19 @@ impl FakeSavedNetworksManager {
                 NetworkConfig::new(id.clone(), cred, false).ok().map(|config| (id, vec![config]))
             })
             .collect::<HashMap<NetworkIdentifier, Vec<NetworkConfig>>>();
-        Self { saved_networks: Mutex::new(saved_networks), fail_all_stores: false }
+        Self {
+            saved_networks: Mutex::new(saved_networks),
+            disconnects_recorded: Mutex::new(vec![]),
+            fail_all_stores: false,
+        }
+    }
+
+    pub fn drain_recorded_disconnects(&self) -> Vec<DisconnectRecord> {
+        self.disconnects_recorded
+            .try_lock()
+            .expect("expect locking self.disconnects_recorded to succeed")
+            .drain(..)
+            .collect()
     }
 }
 
@@ -102,30 +128,33 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         _connect_result: fidl_sme::ConnectResultCode,
         _discovered_in_scan: Option<fidl_common::ScanType>,
     ) {
-        unimplemented!()
     }
 
     async fn record_disconnect(
         &self,
-        _id: &NetworkIdentifier,
-        _credential: &Credential,
-        _bssid: client_types::Bssid,
-        _uptime: zx::Duration,
-        _curr_time: zx::Time,
+        id: &NetworkIdentifier,
+        credential: &Credential,
+        bssid: client_types::Bssid,
+        uptime: zx::Duration,
+        curr_time: zx::Time,
     ) {
-        unimplemented!()
+        let mut disconnects_recorded = self.disconnects_recorded.lock().await;
+        disconnects_recorded.push(DisconnectRecord {
+            id: id.clone(),
+            credential: credential.clone(),
+            bssid,
+            uptime,
+            curr_time,
+        });
     }
 
-    async fn record_periodic_metrics(&self) {
-        unimplemented!()
-    }
+    async fn record_periodic_metrics(&self) {}
 
     async fn record_scan_result(
         &self,
         _scan_type: ScanResultType,
         _results: Vec<client_types::NetworkIdentifierDetailed>,
     ) {
-        unimplemented!()
     }
 
     async fn get_networks(&self) -> Vec<NetworkConfig> {

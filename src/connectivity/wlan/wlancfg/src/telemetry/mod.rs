@@ -7,6 +7,7 @@ mod windowed_stats;
 use {
     crate::telemetry::windowed_stats::WindowedStats,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_stats::MlmeStats,
     fuchsia_async as fasync,
     fuchsia_inspect::{Inspector, Node as InspectNode, NumericProperty, UintProperty},
@@ -72,6 +73,14 @@ impl TelemetrySender {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct DisconnectInfo {
+    pub connected_duration: zx::Duration,
+    pub is_sme_reconnecting: bool,
+    pub reason_code: u16,
+    pub disconnect_source: fidl_sme::DisconnectSource,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum TelemetryEvent {
     /// Notify the telemetry event loop that network selection is complete.
     NetworkSelectionDecision {
@@ -99,6 +108,7 @@ pub enum TelemetryEvent {
     Disconnected {
         /// Indicates whether subsequent period should be used to increment the downtime counters.
         track_subsequent_downtime: bool,
+        info: DisconnectInfo,
     },
 }
 
@@ -360,8 +370,9 @@ impl Telemetry {
                     ConnectionState::Connected { iface_id, prev_counters: None };
                 self.last_checked_connection_state = now;
             }
-            TelemetryEvent::Disconnected { track_subsequent_downtime } => {
+            TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
                 self.stats_logger.log_stat(StatOp::AddDisconnectCount).await;
+                self.stats_logger.log_stat(StatOp::LogDisconnectInfo(info)).await;
 
                 let duration = now - self.last_checked_connection_state;
                 if let ConnectionState::Connected { .. } = self.connection_state {
@@ -461,15 +472,10 @@ impl StatsLogger {
             StatOp::AddDowntimeNoSavedNeighborDuration(duration) => {
                 StatCounters { downtime_no_saved_neighbor_duration: duration, ..zero }
             }
-            StatOp::AddDisconnectCount => {
-                log_cobalt_1dot1!(
-                    self.cobalt_1dot1_proxy,
-                    log_occurrence,
-                    metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID,
-                    1,
-                    &[],
-                );
-                StatCounters { disconnect_count: 1, ..zero }
+            StatOp::AddDisconnectCount => StatCounters { disconnect_count: 1, ..zero },
+            StatOp::LogDisconnectInfo(info) => {
+                self.log_disconnect_metrics(info).await;
+                zero
             }
             StatOp::AddTxHighPacketDropDuration(duration) => {
                 StatCounters { tx_high_packet_drop_duration: duration, ..zero }
@@ -680,6 +686,69 @@ impl StatsLogger {
             "log_hourly_fleetwise_quality_cobalt_metrics",
         );
     }
+
+    async fn log_disconnect_metrics(&mut self, disconnect_info: DisconnectInfo) {
+        let mut metric_events = vec![];
+        metric_events.push(MetricEvent {
+            metric_id: metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        let device_uptime_dim = {
+            use metrics::DisconnectBreakdownByDeviceUptimeMetricDimensionDeviceUptime::*;
+            match fasync::Time::now() - fasync::Time::from_nanos(0) {
+                x if x < 1.hour() => LessThan1Hour,
+                x if x < 3.hours() => LessThan3Hours,
+                x if x < 12.hours() => LessThan12Hours,
+                x if x < 24.hours() => LessThan1Day,
+                x if x < 48.hours() => LessThan2Days,
+                _ => AtLeast2Days,
+            }
+        };
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DISCONNECT_BREAKDOWN_BY_DEVICE_UPTIME_METRIC_ID,
+            event_codes: vec![device_uptime_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        let connected_duration_dim = {
+            use metrics::DisconnectBreakdownByConnectedDurationMetricDimensionConnectedDuration::*;
+            match disconnect_info.connected_duration {
+                x if x < 30.seconds() => LessThan30Seconds,
+                x if x < 5.minutes() => LessThan5Minutes,
+                x if x < 1.hour() => LessThan1Hour,
+                x if x < 6.hours() => LessThan6Hours,
+                x if x < 24.hours() => LessThan24Hours,
+                _ => AtLeast24Hours,
+            }
+        };
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DISCONNECT_BREAKDOWN_BY_CONNECTED_DURATION_METRIC_ID,
+            event_codes: vec![connected_duration_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        let disconnect_source_dim = {
+            use metrics::ConnectivityWlanMetricDimensionDisconnectSource::*;
+            match disconnect_info.disconnect_source {
+                fidl_sme::DisconnectSource::Ap => Ap,
+                fidl_sme::DisconnectSource::User => User,
+                fidl_sme::DisconnectSource::Mlme => Mlme,
+            }
+        };
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DISCONNECT_BREAKDOWN_BY_REASON_CODE_METRIC_ID,
+            event_codes: vec![disconnect_info.reason_code as u32, disconnect_source_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        log_cobalt_1dot1_batch!(
+            self.cobalt_1dot1_proxy,
+            &mut metric_events.iter_mut(),
+            "log_disconnect_metrics",
+        );
+    }
 }
 
 enum StatOp {
@@ -689,6 +758,7 @@ enum StatOp {
     // Downtime with no saved network in vicinity
     AddDowntimeNoSavedNeighborDuration(zx::Duration),
     AddDisconnectCount,
+    LogDisconnectInfo(DisconnectInfo),
     AddTxHighPacketDropDuration(zx::Duration),
     AddRxHighPacketDropDuration(zx::Duration),
     AddNoRxDuration(zx::Duration),
@@ -841,9 +911,10 @@ mod tests {
         });
 
         // Disconnect now
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(8.hours(), test_fut.as_mut());
@@ -1003,9 +1074,10 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         // Disconnect but not track downtime. Downtime counter should not increase.
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(10.minutes(), test_fut.as_mut());
@@ -1026,9 +1098,10 @@ mod tests {
         });
 
         // Disconnect and track downtime. Downtime counter should now increase
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(15.minutes(), test_fut.as_mut());
@@ -1058,9 +1131,10 @@ mod tests {
         test_helper.advance_by(5.seconds(), test_fut.as_mut());
 
         // Disconnect but not track downtime. Downtime counter should not increase.
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         // The 5 seconds connected duration is not accounted for yet.
@@ -1105,9 +1179,10 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         // Disconnect and track downtime.
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.seconds(), test_fut.as_mut());
@@ -1194,9 +1269,10 @@ mod tests {
         });
 
         // Disconnect but don't track downtime
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
 
         // Indicate that there's no saved neighbor in vicinity
         test_helper.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
@@ -1241,9 +1317,10 @@ mod tests {
             }
         });
 
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
         assert_data_tree!(test_helper.inspector, root: {
@@ -1257,9 +1334,10 @@ mod tests {
             }
         });
 
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
         assert_data_tree!(test_helper.inspector, root: {
@@ -1467,9 +1545,10 @@ mod tests {
 
         test_helper.advance_by(12.hours(), test_fut.as_mut());
 
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(6.hours(), test_fut.as_mut());
@@ -1507,9 +1586,10 @@ mod tests {
 
         test_helper.advance_by(6.hours(), test_fut.as_mut());
 
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(18.hours(), test_fut.as_mut());
@@ -1694,9 +1774,10 @@ mod tests {
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
 
+        let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(15.minutes(), test_fut.as_mut());
@@ -1796,20 +1877,52 @@ mod tests {
     #[fuchsia::test]
     fn test_log_disconnect_metric() {
         let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.advance_by(3.hours(), test_fut.as_mut());
         test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-        test_helper.advance_by(30.minutes(), test_fut.as_mut());
+        test_helper.advance_by(5.hours(), test_fut.as_mut());
 
+        let info = DisconnectInfo {
+            connected_duration: 5.hours(),
+            reason_code: 3,
+            disconnect_source: fidl_sme::DisconnectSource::Mlme,
+            ..fake_disconnect_info()
+        };
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
         let disconnect_counts =
             test_helper.get_logged_metrics(metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID);
         assert_eq!(disconnect_counts.len(), 1);
         assert_eq!(disconnect_counts[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_device_uptime = test_helper
+            .get_logged_metrics(metrics::DISCONNECT_BREAKDOWN_BY_DEVICE_UPTIME_METRIC_ID);
+        assert_eq!(breakdowns_by_device_uptime.len(), 1);
+        assert_eq!(breakdowns_by_device_uptime[0].event_codes, vec![
+            metrics::DisconnectBreakdownByDeviceUptimeMetricDimensionDeviceUptime::LessThan12Hours as u32,
+        ]);
+        assert_eq!(breakdowns_by_device_uptime[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_connected_duration = test_helper
+            .get_logged_metrics(metrics::DISCONNECT_BREAKDOWN_BY_CONNECTED_DURATION_METRIC_ID);
+        assert_eq!(breakdowns_by_connected_duration.len(), 1);
+        assert_eq!(breakdowns_by_connected_duration[0].event_codes, vec![
+            metrics::DisconnectBreakdownByConnectedDurationMetricDimensionConnectedDuration::LessThan6Hours as u32,
+        ]);
+        assert_eq!(breakdowns_by_connected_duration[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_reason =
+            test_helper.get_logged_metrics(metrics::DISCONNECT_BREAKDOWN_BY_REASON_CODE_METRIC_ID);
+        assert_eq!(breakdowns_by_reason.len(), 1);
+        assert_eq!(
+            breakdowns_by_reason[0].event_codes,
+            vec![3u32, metrics::ConnectivityWlanMetricDimensionDisconnectSource::Mlme as u32,]
+        );
+        assert_eq!(breakdowns_by_reason[0].payload, MetricEventPayload::Count(1));
     }
 
     struct TestHelper {
@@ -2117,5 +2230,17 @@ mod tests {
             }],
             invalid_samples: 0,
         }]
+    }
+
+    fn fake_disconnect_info() -> DisconnectInfo {
+        use crate::util::testing::generate_disconnect_info;
+        let is_sme_reconnecting = false;
+        let fidl_disconnect_info = generate_disconnect_info(is_sme_reconnecting);
+        DisconnectInfo {
+            connected_duration: 6.hours(),
+            is_sme_reconnecting: fidl_disconnect_info.is_sme_reconnecting,
+            reason_code: fidl_disconnect_info.reason_code,
+            disconnect_source: fidl_disconnect_info.disconnect_source,
+        }
     }
 }

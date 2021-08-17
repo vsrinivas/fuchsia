@@ -6,7 +6,7 @@ use {
     crate::{
         client::{network_selection, sme_credential_from_policy, types},
         config_management::SavedNetworksManagerApi,
-        telemetry::{TelemetryEvent, TelemetrySender},
+        telemetry::{DisconnectInfo, TelemetryEvent, TelemetrySender},
         util::{
             listener::{
                 ClientListenerMessageSender, ClientNetworkState, ClientStateUpdate,
@@ -628,24 +628,32 @@ async fn connected_state(
     mut options: ConnectedOptions,
 ) -> Result<State, ExitReason> {
     debug!("Entering connected state");
-    let connect_start_time = zx::Time::get_monotonic();
+    let mut connect_start_time = fasync::Time::now();
 
     loop {
         select! {
             event = options.connect_txn_stream.next() => match event {
                 Some(Ok(event)) => {
                     let is_sme_idle = match event {
-                        fidl_sme::ConnectTransactionEvent::OnDisconnect { info } => {
+                        fidl_sme::ConnectTransactionEvent::OnDisconnect { info: fidl_info } => {
                             // Log a disconnect in Cobalt
                             common_options.cobalt_api.log_event(
                                 DISCONNECTION_METRIC_ID,
                                 types::DisconnectReason::DisconnectDetectedFromSme
                             );
-                            common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
-                            !info.is_sme_reconnecting
+                            let now = fasync::Time::now();
+                            let info = DisconnectInfo {
+                                connected_duration: now - connect_start_time,
+                                is_sme_reconnecting: fidl_info.is_sme_reconnecting,
+                                reason_code: fidl_info.reason_code,
+                                disconnect_source: fidl_info.disconnect_source,
+                            };
+                            common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+                            !fidl_info.is_sme_reconnecting
                         }
                         fidl_sme::ConnectTransactionEvent::OnConnectResult { code, .. } => match code {
                             fidl_sme::ConnectResultCode::Success => {
+                                connect_start_time = fasync::Time::now();
                                 common_options.telemetry_sender.send(TelemetryEvent::Connected {
                                     iface_id: common_options.iface_id,
                                 });
@@ -657,14 +665,14 @@ async fn connected_state(
 
                     if is_sme_idle {
                         // Record disconnect for future network selection.
-                        let curr_time = zx::Time::get_monotonic();
+                        let curr_time = fasync::Time::now();
                         let uptime = curr_time - connect_start_time;
                         common_options.saved_networks_manager.record_disconnect(
                             &options.currently_fulfilled_request.target.network.clone().into(),
                             &options.currently_fulfilled_request.target.credential,
                             options.bssid.clone(),
                             uptime,
-                            curr_time
+                            curr_time.into_zx(),
                         ).await;
 
                         let next_connecting_options = ConnectingOptions {
@@ -696,6 +704,7 @@ async fn connected_state(
                 }
             },
             req = common_options.req_stream.next() => {
+                let now = fasync::Time::now();
                 match req {
                     Some(ManualRequest::Disconnect((reason, responder))) => {
                         debug!("Disconnect requested");
@@ -706,7 +715,13 @@ async fn connected_state(
                             reason,
                         };
                         common_options.cobalt_api.log_event(DISCONNECTION_METRIC_ID, options.reason);
-                        common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+                        let info = DisconnectInfo {
+                            connected_duration: now - connect_start_time,
+                            is_sme_reconnecting: false,
+                            reason_code: options.reason as u16,
+                            disconnect_source: fidl_sme::DisconnectSource::User,
+                        };
+                        common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
                         return Ok(disconnecting_state(common_options, options).into_state());
                     }
                     Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
@@ -735,7 +750,13 @@ async fn connected_state(
                             };
                             info!("Connection to new network requested, disconnecting from current network");
                             common_options.cobalt_api.log_event(DISCONNECTION_METRIC_ID, options.reason);
-                            common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+                            let info = DisconnectInfo {
+                                connected_duration: now - connect_start_time,
+                                is_sme_reconnecting: false,
+                                reason_code: options.reason as u16,
+                                disconnect_source: fidl_sme::DisconnectSource::User,
+                            };
+                            common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
                             return Ok(disconnecting_state(common_options, options).into_state())
                         }
                     }
@@ -762,7 +783,7 @@ mod tests {
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
                     generate_disconnect_info, generate_random_bss_description,
                     generate_random_sme_scan_result, poll_sme_req,
-                    validate_sme_scan_request_and_send_results,
+                    validate_sme_scan_request_and_send_results, FakeSavedNetworksManager,
                 },
             },
             validate_cobalt_events, validate_no_cobalt_events,
@@ -773,7 +794,7 @@ mod tests {
         fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_policy as fidl_policy,
         fuchsia_cobalt::CobaltEventExt,
         fuchsia_inspect::{self as inspect},
-        fuchsia_zircon,
+        fuchsia_zircon::prelude::*,
         futures::{task::Poll, Future},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
@@ -785,23 +806,20 @@ mod tests {
     struct TestValues {
         common_options: CommonStateOptions,
         sme_req_stream: fidl_sme::ClientSmeRequestStream,
+        saved_networks_manager: Arc<FakeSavedNetworksManager>,
         client_req_sender: mpsc::Sender<ManualRequest>,
         update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         cobalt_events: mpsc::Receiver<CobaltEvent>,
         telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
-    async fn test_setup() -> TestValues {
+    fn test_setup() -> TestValues {
         let (client_req_sender, client_req_stream) = mpsc::channel(1);
         let (update_sender, update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
-        let saved_networks_manager = Arc::new(
-            SavedNetworksManager::new_for_test()
-                .await
-                .expect("Failed to create saved networks manager"),
-        );
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
         let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
@@ -817,13 +835,14 @@ mod tests {
                 proxy: sme_proxy,
                 req_stream: client_req_stream.fuse(),
                 update_sender: update_sender,
-                saved_networks_manager: saved_networks_manager,
+                saved_networks_manager: saved_networks_manager.clone(),
                 network_selector,
                 cobalt_api,
                 telemetry_sender,
                 iface_id: 1,
             },
             sme_req_stream,
+            saved_networks_manager,
             client_req_sender,
             update_receiver,
             cobalt_events,
@@ -1356,7 +1375,7 @@ mod tests {
     #[fuchsia::test]
     fn connecting_state_fails_to_connect_and_retries() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
 
         let next_network_ssid = "bar";
         let bss_description = generate_random_bss_description();
@@ -1984,7 +2003,7 @@ mod tests {
     #[fuchsia::test]
     fn connecting_state_gets_duplicate_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
 
         let next_network_ssid = "bar";
         let bss_description = generate_random_bss_description();
@@ -2120,7 +2139,7 @@ mod tests {
     #[fuchsia::test]
     fn connecting_state_gets_different_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
 
         let first_network_ssid = "foo";
         let second_network_ssid = "bar";
@@ -2317,7 +2336,7 @@ mod tests {
     #[fuchsia::test]
     fn connecting_state_gets_disconnect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
 
         let first_network_ssid = "foo";
         let bss_description = generate_random_bss_description();
@@ -2431,7 +2450,7 @@ mod tests {
     #[fuchsia::test]
     fn connecting_state_has_broken_sme() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let test_values = test_setup();
 
         let first_network_ssid = "foo";
         let connect_request = types::ConnectRequest {
@@ -2471,8 +2490,11 @@ mod tests {
 
     #[fuchsia::test]
     fn connected_state_gets_disconnect_request() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut exec =
+            fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
+
+        let mut test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = "test";
@@ -2506,6 +2528,8 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        exec.set_fake_time(fasync::Time::after(12.hours()));
 
         // Send a disconnect request
         let mut client = Client::new(test_values.client_req_sender);
@@ -2556,36 +2580,32 @@ mod tests {
 
         // Disconnect telemetry event sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+            assert_variant!(event, TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
+                assert!(!track_subsequent_downtime);
+                assert_eq!(info, DisconnectInfo {
+                    connected_duration: 12.hours(),
+                    is_sme_reconnecting: false,
+                    reason_code: fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest as u16,
+                    disconnect_source: fidl_sme::DisconnectSource::User,
+                });
+            });
         });
     }
 
     #[fuchsia::test]
     fn connected_state_records_unexpected_disconnect() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
-        let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
-        let saved_networks_manager = Arc::new(saved_networks);
-        test_values.common_options.saved_networks_manager = saved_networks_manager.clone();
-        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
-        let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
-            inspect::Inspector::new().root().create_child("network_selector"),
-            TelemetrySender::new(telemetry_sender),
-        ));
-        test_values.common_options.network_selector = network_selector;
+        let mut exec =
+            fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
+
+        let test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = "flaky-network".as_bytes().to_vec();
         let security = types::SecurityType::Wpa2;
         let credential = Credential::Password(b"password".to_vec());
         // Save the network in order to later record the disconnect to it.
-        let save_fut = saved_networks_manager.store(
+        let save_fut = test_values.saved_networks_manager.store(
             network_config::NetworkIdentifier {
                 ssid: network_ssid.clone(),
                 security_type: security.into(),
@@ -2593,8 +2613,6 @@ mod tests {
             credential.clone(),
         );
         pin_mut!(save_fut);
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
-        process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         // Build the values for the connected state.
@@ -2625,37 +2643,122 @@ mod tests {
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
+        exec.set_fake_time(fasync::Time::after(12.hours()));
+
         // SME notifies Policy of disconnection
         let is_sme_reconnecting = false;
+        let mut fidl_disconnect_info = generate_disconnect_info(is_sme_reconnecting);
         connect_txn_handle
-            .send_on_disconnect(&mut generate_disconnect_info(is_sme_reconnecting))
+            .send_on_disconnect(&mut fidl_disconnect_info)
             .expect("failed to send disconnection event");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // The disconnect should have been recorded for the saved network config.
-        let disconnects = exec
-            .run_singlethreaded(
-                saved_networks_manager.lookup(connect_request.target.network.into()),
-            )
-            .pop()
-            .expect("Failed to get saved network")
-            .perf_stats
-            .disconnect_list
-            .get_recent(zx::Time::ZERO);
-        assert_variant!(disconnects.as_slice(), [disconnect] => {
+        assert_variant!(test_values.saved_networks_manager.drain_recorded_disconnects().as_slice(), [disconnect] => {
             assert_eq!(disconnect.bssid, bss_description.bssid);
         });
 
         // Disconnect telemetry event sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+            assert_variant!(event, TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
+                assert!(track_subsequent_downtime);
+                assert_eq!(info, DisconnectInfo {
+                    connected_duration: 12.hours(),
+                    is_sme_reconnecting,
+                    reason_code: fidl_disconnect_info.reason_code,
+                    disconnect_source: fidl_disconnect_info.disconnect_source,
+                });
+            });
+        });
+    }
+
+    #[fuchsia::test]
+    fn connected_state_reconnect_resets_connected_duration() {
+        let mut exec =
+            fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
+
+        let test_values = test_setup();
+        let mut telemetry_receiver = test_values.telemetry_receiver;
+
+        let network_ssid = "test";
+        let bss_description = generate_random_bss_description();
+        let connect_request = types::ConnectRequest {
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss_description: Some(bss_description.clone()),
+                multiple_bss_candidates: Some(true),
+            },
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
+        };
+        let (connect_txn_proxy, connect_txn_stream) =
+            create_proxy_and_stream::<fidl_sme::ConnectTransactionMarker>()
+                .expect("failed to create a connect txn channel");
+        let connect_txn_handle = connect_txn_stream.control_handle();
+        let options = ConnectedOptions {
+            currently_fulfilled_request: connect_request,
+            bssid: bss_description.bssid,
+            connect_txn_stream: connect_txn_proxy.take_event_stream(),
+        };
+        let initial_state = connected_state(test_values.common_options, options);
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        exec.set_fake_time(fasync::Time::after(12.hours()));
+
+        // SME notifies Policy of disconnection with SME-initiated reconnect
+        let is_sme_reconnecting = true;
+        let mut fidl_disconnect_info = generate_disconnect_info(is_sme_reconnecting);
+        connect_txn_handle
+            .send_on_disconnect(&mut fidl_disconnect_info)
+            .expect("failed to send disconnection event");
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Disconnect telemetry event sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::Disconnected { info, .. } => {
+                assert_eq!(info.connected_duration, 12.hours());
+            });
+        });
+
+        // SME notifies Policy of reconnection successful
+        exec.set_fake_time(fasync::Time::after(1.second()));
+        connect_txn_handle
+            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, true)
+            .expect("failed to send connect result event");
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::Connected { .. })));
+
+        // SME notifies Policy of another disconnection
+        exec.set_fake_time(fasync::Time::after(2.hours()));
+        let is_sme_reconnecting = false;
+        let mut fidl_disconnect_info = generate_disconnect_info(is_sme_reconnecting);
+        connect_txn_handle
+            .send_on_disconnect(&mut fidl_disconnect_info)
+            .expect("failed to send disconnection event");
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Another disconnect telemetry event sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::Disconnected { info, .. } => {
+                assert_eq!(info.connected_duration, 2.hours());
+            });
         });
     }
 
     #[fuchsia::test]
     fn connected_state_records_unexpected_disconnect_unspecified_bss() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
         let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
         let tmp_path = temp_dir.path().join(rand_string());
@@ -2787,7 +2890,7 @@ mod tests {
     #[fuchsia::test]
     fn connected_state_gets_duplicate_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = "test";
@@ -2845,8 +2948,11 @@ mod tests {
 
     #[fuchsia::test]
     fn connected_state_gets_different_connect_request() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut exec =
+            fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
+
+        let mut test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let first_network_ssid = "foo";
@@ -2881,6 +2987,8 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        exec.set_fake_time(fasync::Time::after(12.hours()));
 
         // Send a different connect request
         let second_bss_desc = generate_random_bss_description();
@@ -2953,7 +3061,15 @@ mod tests {
 
         // Disconnect telemetry event sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+            assert_variant!(event, TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
+                assert!(!track_subsequent_downtime);
+                assert_eq!(info, DisconnectInfo {
+                    connected_duration: 12.hours(),
+                    is_sme_reconnecting: false,
+                    reason_code: fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch as u16,
+                    disconnect_source: fidl_sme::DisconnectSource::User,
+                });
+            });
         });
 
         // Check the responder was acknowledged
@@ -3216,7 +3332,7 @@ mod tests {
     #[fuchsia::test]
     fn connected_state_notified_of_network_disconnect_sme_reconnect_successfully() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
 
         let network_ssid = "foo";
         let bss_description = generate_random_bss_description();
@@ -3281,7 +3397,7 @@ mod tests {
     #[fuchsia::test]
     fn connected_state_notified_of_network_disconnect_sme_reconnect_unsuccessfully() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
         let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
         let tmp_path = temp_dir.path().join(rand_string());
@@ -3472,7 +3588,7 @@ mod tests {
     #[fuchsia::test]
     fn disconnecting_state_completes_and_exits() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let test_values = test_setup();
 
         let (sender, mut receiver) = oneshot::channel();
         let disconnecting_options = DisconnectingOptions {
@@ -3508,7 +3624,7 @@ mod tests {
     #[fuchsia::test]
     fn disconnecting_state_completes_disconnect_to_connecting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
 
         let previous_network_ssid = "foo";
         let next_network_ssid = "bar";
@@ -3614,7 +3730,7 @@ mod tests {
     #[fuchsia::test]
     fn disconnecting_state_has_broken_sme() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let test_values = test_setup();
 
         let (sender, mut receiver) = oneshot::channel();
         let disconnecting_options = DisconnectingOptions {
@@ -3640,7 +3756,7 @@ mod tests {
     #[fuchsia::test]
     fn serve_loop_handles_startup() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let test_values = test_setup();
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -3693,7 +3809,7 @@ mod tests {
     #[fuchsia::test]
     fn serve_loop_handles_sme_disappearance() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let test_values = test_setup();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
 
         // Make our own SME proxy for this test
@@ -3750,7 +3866,7 @@ mod tests {
         // Run the future again and ensure that it has not exited after receiving the response.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        sme_control_handle.shutdown_with_epitaph(fuchsia_zircon::Status::UNAVAILABLE);
+        sme_control_handle.shutdown_with_epitaph(zx::Status::UNAVAILABLE);
 
         // Ensure the state machine has no further actions and is exited
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
@@ -3759,7 +3875,7 @@ mod tests {
     #[fuchsia::test]
     fn serve_loop_handles_disconnect() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = test_setup();
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();
         let (client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -3862,7 +3978,7 @@ mod tests {
     #[fuchsia::test]
     fn serve_loop_handles_state_machine_error() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let test_values = test_setup();
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
