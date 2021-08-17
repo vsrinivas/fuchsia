@@ -73,7 +73,8 @@ class NoOpVisitor final
     return Status::kSuccess;
   }
 
-  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_source) {
+  Status VisitUnknownEnvelope(EnvelopeType envelope_copy, EnvelopePointer envelope_ptr,
+                              FidlIsResource is_source) {
     return Status::kSuccess;
   }
 

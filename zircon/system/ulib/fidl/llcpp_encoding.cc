@@ -307,7 +307,8 @@ class FidlEncoder final
   // Error when attempting to encode an unknown envelope.
   // This behavior is LLCPP specific, and so assumes that the FidlEncoder is only
   // used in LLCPP.
-  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_resource) {
+  Status VisitUnknownEnvelope(EnvelopeType envelope_copy, EnvelopePointer envelope_ptr,
+                              FidlIsResource is_resource) {
     SetError("Cannot encode unknown union or table");
     return Status::kConstraintViolationError;
   }

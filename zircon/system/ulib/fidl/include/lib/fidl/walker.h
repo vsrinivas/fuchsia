@@ -492,7 +492,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV1(Position envelope_
       auto result = WalkInternal(payload_type, obj_position, obj_depth);
       FIDL_RESULT_GUARD(result);
     } else {
-      status = visitor_->VisitUnknownEnvelope(envelope_copy, is_resource);
+      status = visitor_->VisitUnknownEnvelope(envelope_copy, envelope, is_resource);
       FIDL_STATUS_GUARD(status);
     }
   }
@@ -558,7 +558,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
       auto result = WalkInternal(payload_type, envelope_position, obj_depth);
       FIDL_RESULT_GUARD(result);
     } else {
-      auto status = visitor_->VisitUnknownEnvelope(envelope_copy, is_resource);
+      auto status = visitor_->VisitUnknownEnvelope(envelope_copy, envelope, is_resource);
       FIDL_STATUS_GUARD(status);
     }
 
@@ -584,7 +584,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
       auto result = WalkInternal(payload_type, obj_position, obj_depth);
       FIDL_RESULT_GUARD(result);
     } else {
-      status = visitor_->VisitUnknownEnvelope(envelope_copy, is_resource);
+      status = visitor_->VisitUnknownEnvelope(envelope_copy, envelope, is_resource);
       FIDL_STATUS_GUARD(status);
     }
   }

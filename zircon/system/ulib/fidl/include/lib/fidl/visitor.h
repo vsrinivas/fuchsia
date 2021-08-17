@@ -205,9 +205,14 @@ class Visitor {
   // This takes the place of the continued walk of the internal object that would take place
   // if they type was known.
   //
-  // |envelope| is a fidl_envelope_t or fidl_envelope_v2_t structure containing the envelope.
+  // |envelope_copy| is a fidl_envelope_t or fidl_envelope_v2_t structure containing the original
+  // input envelope. This should be used for reading because it won't have been clobbered by
+  // other calls.
+  // |envelope_ptr| is a fidl_envelope_t* or fidl_envelope_v2_t* pointing to the actual envelope
+  // backed by the message bytes. This is used for converting to an internal unknown represention.
   // |is_resource| indicates whether the type containing this envelope is a resource type.
-  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_resource) {
+  Status VisitUnknownEnvelope(EnvelopeType envelope_copy, EnvelopePointer envelope_ptr,
+                              FidlIsResource is_resource) {
     __builtin_unreachable();
   }
 

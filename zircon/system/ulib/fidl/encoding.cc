@@ -228,7 +228,8 @@ class FidlEncoder final
 
   // Error when attempting to encode an unknown envelope.
   // Unknown envelopes are not supported in C, which is the only user of FidlEncoder.
-  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_resource) {
+  Status VisitUnknownEnvelope(EnvelopeType envelope_copy, EnvelopePointer envelope_ptr,
+                              FidlIsResource is_resource) {
     SetError("Cannot encode unknown union or table");
     return Status::kConstraintViolationError;
   }

@@ -1706,9 +1706,35 @@ TEST(UnknownEnvelope, DecodeEtcSkipUnknownHandle) {
   EXPECT_EQ(zx_handle_close(handles[0].handle), ZX_OK);
 }
 
+#endif
+
+TEST(UnknownEnvelope, V2DecodeUnknownInlineEnvelope) {
+  uint8_t bytes[] = {
+      2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+
+      0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: zero envelope
+      123, 0,   0,   0,   0,   0,   1,   0,  // envelope 2: num bytes / num handles / inlined
+  };
+
+  const char* error = nullptr;
+  auto status = internal__fidl_decode__v2__may_break(
+      &fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes, ArrayCount(bytes), 0, 0,
+      &error);
+
+  EXPECT_EQ(status, ZX_OK);
+
+  // Compare the bytes of the last envelope after they are transformed.
+  uint8_t expected_decoded_envelope[] = {
+      1, 0, 0, 0, 123, 0, 0, 0,  // envelope 2: inlined / num_handles / num_bytes
+  };
+  EXPECT_BYTES_EQ(expected_decoded_envelope, bytes + 24, 8);
+}
+
 // Most fidl_encode_etc code paths are covered by the fidl_encode tests.
 // The FidlDecodeEtc tests cover additional paths.
 
+#ifdef __Fuchsia__
 TEST(FidlDecodeEtc, decode_invalid_handle_info) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;

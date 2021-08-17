@@ -273,6 +273,37 @@ static_assert(sizeof(fidl_envelope_v2_t) == 8, "");
 // Objects <= 4 bytes in size are inlined in envelopes.
 #define FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD 4
 
+// See |fidl_envelope_v2_unknown_data| for more details.
+typedef struct {
+  // Bit-0 of flags will be 1 to indicate that the envelope is stored inline.
+  uint16_t flags;
+
+  // The number of handles in the envelope. Either 0 or 1 since the envelope is inline.
+  uint16_t num_handles;
+
+  // The bytes of the value of the envelope, zero-padded up to 4 bytes.
+  uint8_t inline_value[4];
+} fidl_inline_envelope_v2_unknown_data_t;
+
+// |fidl_envelope_v2_unknown_data| is the decoded, representation of an unknown envelope for
+// the v2 wire format for C-family bindings.
+// This is similar to fidl_envelope_v2_t, but with fields in reversed order. The motivation
+// for reversing field order is so that the lowest bits of |flags| match up with the lowest
+// bits of |data|. This allows bit-0 to be used as an inline flag without colliding with the
+// bits of |data|.
+typedef struct {
+  union {
+    // Pointer to out-of-line value. The lowest bit of this pointer will be 0 to indicate
+    // that the data is stored out-of-line.
+    void* data;
+    // Inline representation.
+    fidl_inline_envelope_v2_unknown_data_t inline_envelope;
+  };
+} fidl_envelope_v2_unknown_data_t;
+
+static_assert(sizeof(fidl_inline_envelope_v2_unknown_data_t) == 8, "");
+static_assert(sizeof(fidl_envelope_v2_unknown_data_t) == 8, "");
+
 // Handle types.
 
 // Handle types are encoded directly. Just like primitive types, there

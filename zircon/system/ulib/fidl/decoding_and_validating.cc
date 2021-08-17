@@ -61,6 +61,37 @@ void AssignInDecode(const T* ptr, U value) {
   // nothing in validate mode
 }
 
+void ConvertEnvelopeToDecodedRepresentation(fidl_envelope_t envelope_copy,
+                                            const fidl_envelope_t* envelope_ptr) {
+  // No conversion is needed for v1.
+}
+void ConvertEnvelopeToDecodedRepresentation(fidl_envelope_t envelope_copy,
+                                            fidl_envelope_t* envelope_ptr) {
+  // No conversion is needed for v1.
+}
+void ConvertEnvelopeToDecodedRepresentation(fidl_envelope_v2_t envelope_copy,
+                                            const fidl_envelope_v2_t* envelope_ptr) {
+  // No conversion is needed for v2 validate.
+}
+void ConvertEnvelopeToDecodedRepresentation(fidl_envelope_v2_t envelope_copy,
+                                            fidl_envelope_v2_t* envelope_ptr) {
+  if ((envelope_copy.flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) == 0) {
+    // Out of line, no conversion needed.
+    return;
+  }
+
+  fidl_envelope_v2_unknown_data_t unknown_data_envelope = {
+      .inline_envelope =
+          {
+              .flags = envelope_copy.flags,
+              .num_handles = envelope_ptr->num_handles,
+          },
+  };
+  memcpy(unknown_data_envelope.inline_envelope.inline_value, envelope_ptr->inline_value,
+         sizeof(envelope_ptr->inline_value));
+  memcpy(envelope_ptr, &unknown_data_envelope, sizeof(unknown_data_envelope));
+}
+
 template <FidlWireFormatVersion WireFormatVersion, typename Byte>
 using BaseVisitor =
     fidl::Visitor<WireFormatVersion,
@@ -272,17 +303,18 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
     return Status::kSuccess;
   }
 
-  Status VisitUnknownEnvelope(EnvelopeType envelope, FidlIsResource is_resource) {
+  Status VisitUnknownEnvelope(EnvelopeType envelope_copy, EnvelopePointer envelope_ptr,
+                              FidlIsResource is_resource) {
     if (mode == Mode::Validate) {
-      handle_idx_ += envelope.num_handles;
+      handle_idx_ += envelope_copy.num_handles;
       return Status::kSuccess;
     }
 
     // If we do not have the coding table for this payload,
     // treat it as unknown and close its contained handles
-    if (unlikely(envelope.num_handles > 0)) {
+    if (unlikely(envelope_copy.num_handles > 0)) {
       uint32_t total_unknown_handles;
-      if (add_overflow(unknown_handle_idx_, envelope.num_handles, &total_unknown_handles)) {
+      if (add_overflow(unknown_handle_idx_, envelope_copy.num_handles, &total_unknown_handles)) {
         SetError("number of unknown handles overflows");
         return Status::kConstraintViolationError;
       }
@@ -291,7 +323,7 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
         return Status::kConstraintViolationError;
       }
       uint32_t end_incoming_handle;
-      if (add_overflow(handle_idx_, envelope.num_handles, &end_incoming_handle)) {
+      if (add_overflow(handle_idx_, envelope_copy.num_handles, &end_incoming_handle)) {
         SetError("number of incoming handles overflows");
         return Status::kConstraintViolationError;
       }
@@ -302,7 +334,7 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
       // If skip_unknown_handles_ is true, leave the unknown handles intact
       // for something else to process (e.g. HLCPP Decode)
       if (skip_unknown_handles_ && is_resource == kFidlIsResource_Resource) {
-        handle_idx_ += envelope.num_handles;
+        handle_idx_ += envelope_copy.num_handles;
         return Status::kSuccess;
       }
       // Receiving unknown handles for a resource type is only an error if
@@ -315,7 +347,7 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
       }
       if (has_handles()) {
         memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
-               envelope.num_handles * sizeof(zx_handle_t));
+               envelope_copy.num_handles * sizeof(zx_handle_t));
         handle_idx_ = end_incoming_handle;
         unknown_handle_idx_ = total_unknown_handles;
       } else if (has_handle_infos()) {
@@ -324,6 +356,8 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
         }
       }
     }
+
+    ConvertEnvelopeToDecodedRepresentation(envelope_copy, envelope_ptr);
 
     return Status::kSuccess;
   }
