@@ -390,9 +390,9 @@ mod tests {
         std::task::Poll,
     };
 
-    fn create_countdown_handler_and_proxy() -> (Rc<FactoryResetHandler>, FactoryResetCountdownProxy)
-    {
-        let reset_handler = FactoryResetHandler::new();
+    fn create_factory_reset_countdown_proxy(
+        reset_handler: Rc<FactoryResetHandler>,
+    ) -> FactoryResetCountdownProxy {
         let (countdown_proxy, countdown_stream) =
             create_proxy_and_stream::<FactoryResetCountdownMarker>()
                 .expect("Failed to create countdown proxy");
@@ -407,7 +407,7 @@ mod tests {
         })
         .detach();
 
-        (reset_handler, countdown_proxy)
+        countdown_proxy
     }
 
     fn create_recovery_policy_proxy(reset_handler: Rc<FactoryResetHandler>) -> DeviceProxy {
@@ -512,16 +512,18 @@ mod tests {
 
     #[fuchsia::test]
     async fn factory_reset_countdown_listener_gets_initial_state() {
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
         assert!(reset_state.scheduled_reset_time.is_none());
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Idle);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn factory_reset_countdown_listener_is_notified_on_state_change() -> Result<(), Error> {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
 
         // The initial state should be no scheduled reset time and the
         // FactoryRestHandler state should be FactoryResetState::Idle
@@ -569,7 +571,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn recovery_policy_requests_update_reset_handler_state() {
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
 
         // Initial state should be FactoryResetState::Idle with no scheduled reset
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -607,7 +610,8 @@ mod tests {
         let mut executor = TestExecutor::new().unwrap();
 
         let reset_event = create_reset_consumer_controls_event();
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
 
         // Initial state should be FactoryResetState::Idle with no scheduled reset
         let reset_state = executor.run_singlethreaded(async {
@@ -633,14 +637,15 @@ mod tests {
 
     #[fuchsia::test]
     async fn handle_allowed_event_wont_change_state_without_reset() {
-        let non_reset_event = create_non_reset_consumer_controls_event();
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
 
         // Initial state should be FactoryResetState::Idle with no scheduled reset
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
         assert!(reset_state.scheduled_reset_time.is_none());
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Idle);
 
+        let non_reset_event = create_non_reset_consumer_controls_event();
         reset_handler.clone().handle_allowed_event(&non_reset_event).await;
 
         // This should result in the reset handler staying in the Allowed state
@@ -649,24 +654,22 @@ mod tests {
 
     #[fuchsia::test]
     async fn handle_disallowed_event_wont_change_state() {
-        let reset_event = create_reset_consumer_controls_event();
-        let non_reset_event = create_non_reset_consumer_controls_event();
         let reset_handler = FactoryResetHandler::new();
-
         *reset_handler.factory_reset_state.borrow_mut() = FactoryResetState::Disallowed;
 
         // Calling handle_disallowed_event shouldn't change the state no matter
         // what the contents of the event are
+        let reset_event = create_reset_consumer_controls_event();
         reset_handler.handle_disallowed_event(&reset_event);
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Disallowed);
 
+        let non_reset_event = create_non_reset_consumer_controls_event();
         reset_handler.handle_disallowed_event(&non_reset_event);
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Disallowed);
     }
 
     #[fuchsia::test]
     async fn handle_button_countdown_event_changes_state_when_reset_no_longer_requested() {
-        let non_reset_event = create_non_reset_consumer_controls_event();
         let reset_handler = FactoryResetHandler::new();
 
         let deadline = Time::after(BUTTON_TIMEOUT);
@@ -675,13 +678,13 @@ mod tests {
 
         // Calling handle_button_countdown_event should reset the handler
         // to the idle state
+        let non_reset_event = create_non_reset_consumer_controls_event();
         reset_handler.handle_button_countdown_event(&non_reset_event);
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Idle);
     }
 
     #[fuchsia::test]
     async fn handle_reset_countdown_event_changes_state_when_reset_no_longer_requested() {
-        let non_reset_event = create_non_reset_consumer_controls_event();
         let reset_handler = FactoryResetHandler::new();
 
         *reset_handler.factory_reset_state.borrow_mut() =
@@ -689,13 +692,15 @@ mod tests {
 
         // Calling handle_reset_countdown_event should reset the handler
         // to the idle state
+        let non_reset_event = create_non_reset_consumer_controls_event();
         reset_handler.handle_reset_countdown_event(&non_reset_event);
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Idle);
     }
 
     #[fuchsia::test]
     async fn factory_reset_disallowed_during_button_countdown() {
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
 
         // Initial state should be FactoryResetState::Idle with no scheduled reset
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -726,7 +731,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn factory_reset_disallowed_during_reset_countdown() {
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
 
         // Initial state should be FactoryResetState::Idle with no scheduled reset
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -765,7 +771,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn factory_reset_cancelled_during_button_countdown() {
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
 
         // Initial state should be FactoryResetState::Idle with no scheduled reset
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
@@ -796,7 +803,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn factory_reset_cancelled_during_reset_countdown() {
-        let (reset_handler, countdown_proxy) = create_countdown_handler_and_proxy();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
 
         // Initial state should be FactoryResetState::Idle with no scheduled reset
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");

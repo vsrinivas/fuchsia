@@ -6,18 +6,19 @@ use {
     fuchsia_component::client::connect_to_protocol,
     input_pipeline as input_pipeline_lib,
     input_pipeline_lib::{
-        media_buttons_handler::MediaButtonsHandler, touch_injector_handler::TouchInjectorHandler,
-        Size,
+        factory_reset_handler::FactoryResetHandler, media_buttons_handler::MediaButtonsHandler,
+        touch_injector_handler::TouchInjectorHandler, Size,
     },
     std::rc::Rc,
 };
 
 pub async fn create(
+    factory_reset_handler: Rc<FactoryResetHandler>,
     media_buttons_handler: Rc<MediaButtonsHandler>,
 ) -> Vec<Rc<dyn input_pipeline_lib::input_handler::InputHandler>> {
     let scenic = connect_to_protocol::<fidl_fuchsia_ui_scenic::ScenicMarker>()
         .expect("Failed to connect to Scenic.");
-    vec![media_buttons_handler, make_touch_injector_handler(&scenic).await]
+    vec![factory_reset_handler, media_buttons_handler, make_touch_injector_handler(&scenic).await]
 }
 
 async fn make_touch_injector_handler(

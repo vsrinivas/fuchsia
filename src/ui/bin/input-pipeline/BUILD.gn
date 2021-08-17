@@ -17,6 +17,8 @@ rustc_binary("input-pipeline-bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
+    "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//src/lib/fidl/rust/fidl",
