@@ -438,7 +438,6 @@ mod tests {
     use super::*;
 
     use crate::device::DeviceId;
-    use crate::testutil::TestIpExt;
 
     impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         /// Print the active and installed forwarding table.
@@ -482,48 +481,52 @@ mod tests {
         }
     }
 
-    #[specialize_ip]
-    fn sub<I: Ip>(v: u8, neg_prefix: u8) -> Subnet<I::Addr> {
-        #[ipv4]
-        return Subnet::new(Ipv4Addr::new([v, 0, 0, 0]), 32 - neg_prefix).unwrap();
+    trait TestIpExt: crate::testutil::TestIpExt {
+        fn subnet(v: u8, neg_prefix: u8) -> Subnet<Self::Addr>;
 
-        #[ipv6]
-        return Subnet::new(
-            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 0]),
-            128 - neg_prefix,
-        )
-        .unwrap();
+        fn next_hop_addr_sub(
+            v: u8,
+            neg_prefix: u8,
+        ) -> (SpecifiedAddr<Self::Addr>, Subnet<Self::Addr>);
+
+        fn next_hop_addr() -> SpecifiedAddr<Self::Addr>;
     }
 
-    #[specialize_ip]
-    fn next_hop_addr_sub<I: Ip>(
-        v: u8,
-        neg_prefix: u8,
-    ) -> (SpecifiedAddr<I::Addr>, Subnet<I::Addr>) {
-        #[ipv4]
-        return (
-            SpecifiedAddr::new(Ipv4Addr::new([v, 0, 0, 1])).unwrap(),
-            sub::<Ipv4>(v, neg_prefix),
-        );
+    impl TestIpExt for Ipv4 {
+        fn subnet(v: u8, neg_prefix: u8) -> Subnet<Ipv4Addr> {
+            Subnet::new(Ipv4Addr::new([v, 0, 0, 0]), 32 - neg_prefix).unwrap()
+        }
 
-        #[ipv6]
-        return (
-            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 1]))
-                .unwrap(),
-            sub::<Ipv6>(v, neg_prefix),
-        );
+        fn next_hop_addr_sub(v: u8, neg_prefix: u8) -> (SpecifiedAddr<Ipv4Addr>, Subnet<Ipv4Addr>) {
+            (SpecifiedAddr::new(Ipv4Addr::new([v, 0, 0, 1])).unwrap(), Ipv4::subnet(v, neg_prefix))
+        }
+
+        fn next_hop_addr() -> SpecifiedAddr<Ipv4Addr> {
+            SpecifiedAddr::new(Ipv4Addr::new([10, 0, 0, 1])).unwrap()
+        }
     }
 
-    #[specialize_ip]
-    fn next_hop_addr<I: Ip>() -> SpecifiedAddr<I::Addr> {
-        #[ipv4]
-        return SpecifiedAddr::new(Ipv4Addr::new([10, 0, 0, 1])).unwrap();
+    impl TestIpExt for Ipv6 {
+        fn subnet(v: u8, neg_prefix: u8) -> Subnet<Ipv6Addr> {
+            Subnet::new(
+                Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 0]),
+                128 - neg_prefix,
+            )
+            .unwrap()
+        }
 
-        #[ipv6]
-        return SpecifiedAddr::new(Ipv6Addr::new([
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1,
-        ]))
-        .unwrap();
+        fn next_hop_addr_sub(v: u8, neg_prefix: u8) -> (SpecifiedAddr<Ipv6Addr>, Subnet<Ipv6Addr>) {
+            (
+                SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 1]))
+                    .unwrap(),
+                Ipv6::subnet(v, neg_prefix),
+            )
+        }
+
+        fn next_hop_addr() -> SpecifiedAddr<Ipv6Addr> {
+            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1]))
+                .unwrap()
+        }
     }
 
     #[ip_test]
@@ -533,7 +536,7 @@ mod tests {
         let config = I::DUMMY_CONFIG;
         let subnet = config.subnet;
         let device = DeviceId::new_ethernet(0);
-        let next_hop = next_hop_addr::<I>();
+        let next_hop = I::next_hop_addr();
         let next_hop_specific_subnet = Subnet::new(next_hop.get(), I::Addr::BYTES * 8).unwrap();
 
         // Should add the route successfully.
@@ -625,15 +628,15 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_max_depth_for_forwarding_table_ip<I: Ip>() {
+    fn test_max_depth_for_forwarding_table_ip<I: Ip + TestIpExt>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let device1 = DeviceId::new_ethernet(1);
-        let (_, sub1) = next_hop_addr_sub::<I>(1, 24);
-        let (addr2, sub2) = next_hop_addr_sub::<I>(2, 24);
-        let (addr3, sub3) = next_hop_addr_sub::<I>(3, 24);
-        let (addr4, sub4) = next_hop_addr_sub::<I>(4, 24);
-        let (addr5, sub5) = next_hop_addr_sub::<I>(5, 24);
+        let (_, sub1) = I::next_hop_addr_sub(1, 24);
+        let (addr2, sub2) = I::next_hop_addr_sub(2, 24);
+        let (addr3, sub3) = I::next_hop_addr_sub(3, 24);
+        let (addr4, sub4) = I::next_hop_addr_sub(4, 24);
+        let (addr5, sub5) = I::next_hop_addr_sub(5, 24);
 
         // Add the following routes:
         //  sub1 -> addr2
@@ -788,15 +791,15 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_find_active_route_if_it_exists_ip<I: Ip>() {
+    fn test_find_active_route_if_it_exists_ip<I: Ip + TestIpExt>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let device1 = DeviceId::new_ethernet(1);
-        let (addr1, sub1_s24) = next_hop_addr_sub::<I>(1, 24);
-        let (addr2, sub2_s24) = next_hop_addr_sub::<I>(2, 24);
-        let (addr3, _) = next_hop_addr_sub::<I>(3, 24);
-        let (addr4, sub4_s24) = next_hop_addr_sub::<I>(4, 24);
-        let (addr5, sub5_s24) = next_hop_addr_sub::<I>(5, 24);
+        let (addr1, sub1_s24) = I::next_hop_addr_sub(1, 24);
+        let (addr2, sub2_s24) = I::next_hop_addr_sub(2, 24);
+        let (addr3, _) = I::next_hop_addr_sub(3, 24);
+        let (addr4, sub4_s24) = I::next_hop_addr_sub(4, 24);
+        let (addr5, sub5_s24) = I::next_hop_addr_sub(5, 24);
 
         // In the following comments, we will use a modified form of prefix
         // notation. Normally to identify the prefix of an address, we do
@@ -904,7 +907,7 @@ mod tests {
         //
         // addr5 should now prefer sub5/-23 over sub5/-24 for addressing as it
         // is a more specific subnet.
-        let sub5_p23 = sub::<I>(5, 23);
+        let sub5_p23 = I::subnet(5, 23);
         table.add_device_route(sub5_p23, device1).unwrap();
         table.print();
         assert_eq!(table.iter_active().count(), 5);
@@ -937,16 +940,16 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_use_most_specific_route_ip<I: Ip>() {
+    fn test_use_most_specific_route_ip<I: Ip + TestIpExt>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let device1 = DeviceId::new_ethernet(1);
-        let (addr7, sub7_s24) = next_hop_addr_sub::<I>(7, 24);
-        let (addr8, sub8_s27) = next_hop_addr_sub::<I>(8, 27);
-        let (addr10, sub10_s25) = next_hop_addr_sub::<I>(10, 25);
-        let (addr12, sub12_s26) = next_hop_addr_sub::<I>(12, 26);
-        let (addr14, sub14_s25) = next_hop_addr_sub::<I>(14, 25);
-        let (addr15, _) = next_hop_addr_sub::<I>(15, 24);
+        let (addr7, sub7_s24) = I::next_hop_addr_sub(7, 24);
+        let (addr8, sub8_s27) = I::next_hop_addr_sub(8, 27);
+        let (addr10, sub10_s25) = I::next_hop_addr_sub(10, 25);
+        let (addr12, sub12_s26) = I::next_hop_addr_sub(12, 26);
+        let (addr14, sub14_s25) = I::next_hop_addr_sub(14, 25);
+        let (addr15, _) = I::next_hop_addr_sub(15, 24);
 
         // In the following comments, we will use a modified form of prefix
         // notation. Normally to identify the prefix of an address, we do
@@ -1273,14 +1276,14 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_cycle_ip<I: Ip>() {
+    fn test_cycle_ip<I: Ip + TestIpExt>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
-        let (addr1, sub1) = next_hop_addr_sub::<I>(1, 24);
-        let (addr2, sub2) = next_hop_addr_sub::<I>(2, 24);
-        let (addr3, sub3) = next_hop_addr_sub::<I>(3, 24);
-        let (addr4, sub4) = next_hop_addr_sub::<I>(4, 24);
-        let (addr5, _) = next_hop_addr_sub::<I>(5, 24);
+        let (addr1, sub1) = I::next_hop_addr_sub(1, 24);
+        let (addr2, sub2) = I::next_hop_addr_sub(2, 24);
+        let (addr3, sub3) = I::next_hop_addr_sub(3, 24);
+        let (addr4, sub4) = I::next_hop_addr_sub(4, 24);
+        let (addr5, _) = I::next_hop_addr_sub(5, 24);
 
         // Add the following routes:
         //  sub1 -> addr2
@@ -1378,12 +1381,12 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_default_route_ip<I: Ip>() {
+    fn test_default_route_ip<I: Ip + TestIpExt>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
-        let (addr1, sub1) = next_hop_addr_sub::<I>(1, 24);
-        let (addr2, _) = next_hop_addr_sub::<I>(2, 24);
-        let (addr3, _) = next_hop_addr_sub::<I>(3, 24);
+        let (addr1, sub1) = I::next_hop_addr_sub(1, 24);
+        let (addr2, _) = I::next_hop_addr_sub(2, 24);
+        let (addr3, _) = I::next_hop_addr_sub(3, 24);
 
         // Add the following routes:
         //  sub1 -> device0

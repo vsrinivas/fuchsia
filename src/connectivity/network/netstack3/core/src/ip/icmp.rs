@@ -2130,7 +2130,7 @@ mod tests {
     use packet_formats::ip::{IpPacketBuilder, IpProto};
     use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
     use packet_formats::udp::UdpPacketBuilder;
-    use specialize_ip_macro::{ip_test, specialize_ip};
+    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::context::testutil::{DummyContext, DummyInstant};
@@ -2140,11 +2140,66 @@ mod tests {
     use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketContext};
     use crate::ip::{receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId};
     use crate::testutil::{
-        DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
-        DUMMY_CONFIG_V6,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };
     use crate::transport::udp::UdpStateBuilder;
     use crate::{Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
+
+    trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
+        fn new_icmp_connection<D: EventDispatcher>(
+            ctx: &mut Context<D>,
+            local_addr: Option<SpecifiedAddr<Self::Addr>>,
+            remote_addr: SpecifiedAddr<Self::Addr>,
+            icmp_id: u16,
+        ) -> Result<IcmpConnId<Self>, SocketError>;
+
+        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
+            ctx: &mut Context<D>,
+            conn: IcmpConnId<Self>,
+            seq_num: u16,
+            body: B,
+        ) -> Result<(), SendError>;
+    }
+
+    impl TestIpExt for Ipv4 {
+        fn new_icmp_connection<D: EventDispatcher>(
+            ctx: &mut Context<D>,
+            local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
+            remote_addr: SpecifiedAddr<Ipv4Addr>,
+            icmp_id: u16,
+        ) -> Result<IcmpConnId<Ipv4>, SocketError> {
+            new_icmpv4_connection(ctx, local_addr, remote_addr, icmp_id)
+        }
+
+        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
+            ctx: &mut Context<D>,
+            conn: IcmpConnId<Ipv4>,
+            seq_num: u16,
+            body: B,
+        ) -> Result<(), SendError> {
+            send_icmpv4_echo_request(ctx, conn, seq_num, body)
+        }
+    }
+
+    impl TestIpExt for Ipv6 {
+        fn new_icmp_connection<D: EventDispatcher>(
+            ctx: &mut Context<D>,
+            local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
+            remote_addr: SpecifiedAddr<Ipv6Addr>,
+            icmp_id: u16,
+        ) -> Result<IcmpConnId<Ipv6>, SocketError> {
+            new_icmpv6_connection(ctx, local_addr, remote_addr, icmp_id)
+        }
+
+        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
+            ctx: &mut Context<D>,
+            conn: IcmpConnId<Ipv6>,
+            seq_num: u16,
+            body: B,
+        ) -> Result<(), SendError> {
+            send_icmpv6_echo_request(ctx, conn, seq_num, body)
+        }
+    }
 
     // Tests that require an entire IP stack.
 
@@ -2739,16 +2794,18 @@ mod tests {
         ));
     }
 
-    #[specialize_ip]
     #[ip_test]
-    fn test_icmp_connections<I: Ip>() {
+    fn test_icmp_connections<I: Ip + TestIpExt>() {
         crate::testutil::set_logger_for_test();
-        #[ipv4]
-        let recv_icmp_packet_name =
-            "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet";
-        #[ipv6]
-        let recv_icmp_packet_name =
-            "<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet";
+
+        let recv_icmp_packet_name = match I::VERSION {
+            IpVersion::V4 => {
+                "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet"
+            }
+            IpVersion::V6 => {
+                "<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet"
+            }
+        };
 
         let config = I::DUMMY_CONFIG;
         let mut net =
@@ -2756,16 +2813,7 @@ mod tests {
 
         let icmp_id = 13;
 
-        #[ipv4]
-        let conn = new_icmpv4_connection(
-            net.context("alice"),
-            Some(config.local_ip),
-            config.remote_ip,
-            icmp_id,
-        )
-        .unwrap();
-        #[ipv6]
-        let conn = new_icmpv6_connection(
+        let conn = I::new_icmp_connection(
             net.context("alice"),
             Some(config.local_ip),
             config.remote_ip,
@@ -2775,11 +2823,7 @@ mod tests {
 
         let echo_body = vec![1, 2, 3, 4];
 
-        #[ipv4]
-        send_icmpv4_echo_request(net.context("alice"), conn, 7, Buf::new(echo_body.clone(), ..))
-            .unwrap();
-        #[ipv6]
-        send_icmpv6_echo_request(net.context("alice"), conn, 7, Buf::new(echo_body.clone(), ..))
+        I::send_icmp_echo_request(net.context("alice"), conn, 7, Buf::new(echo_body.clone(), ..))
             .unwrap();
 
         net.run_until_idle().unwrap();
