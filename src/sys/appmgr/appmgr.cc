@@ -49,7 +49,12 @@ const inspect::StringReference kDynamicLinks("dynamic_links");
 Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     : inspector_(inspect::InspectSettings{.maximum_size = kMaxInspectSize}),
       cpu_watcher_(
-          std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild(kCpuStats), zx::job())),
+
+          std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild(kCpuStats),
+                                       CpuWatcherParameters{
+                                           .sample_period = kCpuSamplePeriod,
+                                       },
+                                       nullptr /* stats_reader */)),
       publish_vfs_(dispatcher),
       publish_dir_(fbl::MakeRefCounted<fs::PseudoDir>()),
       sysmgr_url_(std::move(args.sysmgr_url)),
