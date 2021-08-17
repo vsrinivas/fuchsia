@@ -37,6 +37,7 @@ rustc_binary("tennis_service_bin") {
   deps = [
     "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -45,6 +46,7 @@ rustc_binary("tennis_service_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing",
   ]
 }
 
@@ -63,6 +65,7 @@ rustc_binary("tennis_viewer_bin") {
   deps = [
     "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

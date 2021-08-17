@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Error};
+use anyhow::Error;
 use fidl_fuchsia_game_tennis::{GameState, TennisServiceMarker};
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_component::client::connect_to_protocol;
@@ -16,46 +16,43 @@ const DRAW_HEIGHT: usize = 25;
 const BOARD_WIDTH: f64 = 20.0;
 const BOARD_HEIGHT: f64 = 10.0;
 
-fn main() -> Result<(), Error> {
-    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
+#[fuchsia::component]
+async fn main() -> Result<(), Error> {
     let tennis_service = connect_to_protocol::<TennisServiceMarker>()?;
 
     let mut first_print = true;
 
     println!("connected to tennis service");
-    let resp: Result<(), Error> = executor.run_singlethreaded(async move {
-        loop {
-            let time_step: i64 = 1000 / 20;
-            fuchsia_async::Timer::new(time_step.millis().after_now()).await;
+    loop {
+        let time_step: i64 = 1000 / 20;
+        fasync::Timer::new(time_step.millis().after_now()).await;
 
-            let state = tennis_service.get_state().await?;
-            if state.game_num == 0 {
-                continue;
-            }
-
-            if first_print {
-                first_print = false;
-            } else {
-                // Print the following to stdout:
-                // - ESC
-                // - [
-                // - The number of lines to move the cursor up, in asci
-                // - A
-                // This is using the ECMA-48 CSI sequences as described here:
-                // http://man7.org/linux/man-pages/man4/console_codes.4.html
-                let mut to_print = Vec::new();
-                to_print.push(0x1B);
-                to_print.push(0x5B);
-                to_print.append(&mut format!("{}", DRAW_HEIGHT).into_bytes().to_vec());
-                to_print.push(0x46);
-
-                io::stdout().write(&to_print)?;
-            }
-
-            print_game(state);
+        let state = tennis_service.get_state().await?;
+        if state.game_num == 0 {
+            continue;
         }
-    });
-    resp
+
+        if first_print {
+            first_print = false;
+        } else {
+            // Print the following to stdout:
+            // - ESC
+            // - [
+            // - The number of lines to move the cursor up, in asci
+            // - A
+            // This is using the ECMA-48 CSI sequences as described here:
+            // http://man7.org/linux/man-pages/man4/console_codes.4.html
+            let mut to_print = Vec::new();
+            to_print.push(0x1B);
+            to_print.push(0x5B);
+            to_print.append(&mut format!("{}", DRAW_HEIGHT).into_bytes().to_vec());
+            to_print.push(0x46);
+
+            io::stdout().write(&to_print)?;
+        }
+
+        print_game(state);
+    }
 }
 
 fn print_game(state: GameState) {

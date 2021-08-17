@@ -4,12 +4,11 @@
 
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_examples::EchoServiceMarker;
-use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, launcher};
 
 static SERVER_URL: &str = "fuchsia-pkg://fuchsia.com/echo-rust-service-server#meta/echo-server.cmx";
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let launcher = launcher().context("Failed to open launcher service")?;
     let app =

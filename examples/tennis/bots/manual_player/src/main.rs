@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Error};
+use anyhow::Error;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_game_tennis::{PaddleRequest, TennisServiceMarker};
 use fuchsia_async as fasync;
@@ -11,8 +11,9 @@ use futures::TryStreamExt;
 use parking_lot::Mutex;
 use std::io::{self, Read};
 use std::sync::Arc;
+
+#[fuchsia::component]
 fn main() -> Result<(), Error> {
-    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let tennis_service = connect_to_protocol::<TennisServiceMarker>()?;
     let (client_end, paddle_controller) = create_endpoints()?;
     let (mut prs, paddle_control_handle) = paddle_controller.into_stream_and_control_handle()?;
@@ -32,26 +33,23 @@ fn main() -> Result<(), Error> {
         }
     })
     .detach();
-    let resp: Result<(), Error> = executor.run_singlethreaded(async move {
-        while let Some(input) = io::stdin().lock().bytes().next() {
-            match input {
-                Ok(65) => {
-                    println!("moving up");
-                    paddle_control_handle.send_up()?;
-                }
-                Ok(66) => {
-                    println!("moving down");
-                    paddle_control_handle.send_down()?;
-                }
-                Ok(32) => {
-                    println!("stopping");
-                    paddle_control_handle.send_stop()?;
-                }
-                Ok(_) => (),
-                Err(e) => println!("Error is {:?}", e),
-            };
-        }
-        Ok(())
-    });
-    resp
+    while let Some(input) = io::stdin().lock().bytes().next() {
+        match input {
+            Ok(65) => {
+                println!("moving up");
+                paddle_control_handle.send_up()?;
+            }
+            Ok(66) => {
+                println!("moving down");
+                paddle_control_handle.send_down()?;
+            }
+            Ok(32) => {
+                println!("stopping");
+                paddle_control_handle.send_stop()?;
+            }
+            Ok(_) => (),
+            Err(e) => println!("Error is {:?}", e),
+        };
+    }
+    Ok(())
 }

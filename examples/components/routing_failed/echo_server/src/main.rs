@@ -8,8 +8,8 @@ use {
     futures::{StreamExt, TryStreamExt},
 };
 
-fn main() {
-    let mut executor = fasync::LocalExecutor::new().expect("error creating executor");
+#[fuchsia::component]
+async fn main() {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(async move {
@@ -18,7 +18,7 @@ fn main() {
         .detach();
     });
     fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");
-    executor.run_singlethreaded(fs.collect::<()>());
+    fs.collect::<()>().await;
 }
 
 async fn run_echo_service(mut stream: fecho::EchoRequestStream) {

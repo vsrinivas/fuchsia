@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Error};
+use anyhow::Error;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_game_tennis::{PaddleRequest, TennisServiceMarker};
 use fuchsia_async::{self as fasync, DurationExt};
@@ -12,8 +12,8 @@ use futures::TryStreamExt;
 use parking_lot::Mutex;
 use std::sync::Arc;
 
-fn main() -> Result<(), Error> {
-    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
+#[fuchsia::component]
+async fn main() -> Result<(), Error> {
     let tennis_service = connect_to_protocol::<TennisServiceMarker>()?;
 
     let (client_end, paddle_controller) = create_endpoints()?;
@@ -39,32 +39,29 @@ fn main() -> Result<(), Error> {
     })
     .detach();
 
-    let resp: Result<(), Error> = executor.run_singlethreaded(async move {
-        loop {
-            let time_step: i64 = 1000 / 5;
-            fuchsia_async::Timer::new(time_step.millis().after_now()).await;
+    loop {
+        let time_step: i64 = 1000 / 5;
+        fuchsia_async::Timer::new(time_step.millis().after_now()).await;
 
-            let state = tennis_service.get_state().await?;
-            if state.game_num == 0 {
-                continue;
-            }
-            let my_y;
-            if *i_am_player_2.lock() {
-                my_y = state.player_2_y;
-            } else {
-                my_y = state.player_1_y;
-            }
-            if state.ball_y > my_y {
-                println!("moving down");
-                paddle_control_handle.send_down()?;
-            } else if state.ball_y < my_y {
-                println!("moving up");
-                paddle_control_handle.send_up()?;
-            } else {
-                println!("staying still");
-                paddle_control_handle.send_stop()?;
-            }
+        let state = tennis_service.get_state().await?;
+        if state.game_num == 0 {
+            continue;
         }
-    });
-    resp
+        let my_y;
+        if *i_am_player_2.lock() {
+            my_y = state.player_2_y;
+        } else {
+            my_y = state.player_1_y;
+        }
+        if state.ball_y > my_y {
+            println!("moving down");
+            paddle_control_handle.send_down()?;
+        } else if state.ball_y < my_y {
+            println!("moving up");
+            paddle_control_handle.send_up()?;
+        } else {
+            println!("staying still");
+            paddle_control_handle.send_stop()?;
+        }
+    }
 }

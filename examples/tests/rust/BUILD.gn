@@ -15,6 +15,7 @@ rustc_binary("echo_test_client") {
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test:rust_measure_tape_for_case",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

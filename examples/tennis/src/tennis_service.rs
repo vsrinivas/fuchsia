@@ -22,7 +22,7 @@ impl TennisService {
 
     pub fn bind(&self, mut stream: fidl_tennis::TennisServiceRequestStream) {
         let self_clone = self.clone();
-        fuchsia_async::Task::spawn(
+        fasync::Task::spawn(
             async move {
                 while let Some(msg) = stream
                     .try_next()
@@ -90,7 +90,7 @@ impl TennisService {
                 loop {
                     game_arc.lock().step();
                     let time_step: i64 = (100.0 * game_arc.lock().time_scale_factor()) as i64;
-                    fuchsia_async::Timer::new(time_step.millis().after_now()).await;
+                    fasync::Timer::new(time_step.millis().after_now()).await;
                     if !game_arc.lock().players_ready() {
                         fx_log_info!("someone disconnected!");
                         return;

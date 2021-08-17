@@ -12,7 +12,6 @@ rustc_binary("echo_server") {
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

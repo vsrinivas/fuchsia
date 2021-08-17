@@ -4,7 +4,6 @@
 
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_examples::{EchoRequest, EchoRequestStream, EchoServiceRequest};
-use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
 
@@ -31,7 +30,7 @@ enum IncomingService {
     // ... more services here
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_unified_service(IncomingService::Svc);

@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl, fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client, fuchsia_zircon as zx, matches::assert_matches, tracing::info,
+    fidl, fidl_fidl_examples_routing_echo as fecho, fuchsia_component::client,
+    fuchsia_zircon as zx, matches::assert_matches, tracing::info,
 };
 
-#[fasync::run_singlethreaded]
 #[fuchsia::component]
 async fn main() {
     // The `echo` channel should be closed with an epitaph because routing failed (see

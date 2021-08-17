@@ -9,7 +9,7 @@ use fuchsia_syslog as syslog;
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use futures::{channel::mpsc, prelude::*};
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_example_and_read_hello_world() {
     let url = "fuchsia-pkg://fuchsia.com/rust_logs_example_tests#meta/rust_logs_example.cm";
     // launch our sibling by opening the path, this will cause CM to launch it even though its a dud

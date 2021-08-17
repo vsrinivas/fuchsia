@@ -16,7 +16,6 @@ use {
 /// Example which takes the Lifecycle handle passed by the Runner. The program
 /// waits for a request on the channel to stop, then closes the channel and
 /// exits normally (vs abnormally).
-#[fasync::run_singlethreaded]
 #[fuchsia::component]
 async fn main() {
     match fruntime::take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0)) {

@@ -5,13 +5,12 @@
 use anyhow::{Context as _, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_examples::{EchoLauncherMarker, EchoMarker};
-use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use futures::join;
 use futures::prelude::*;
 
 // [START main]
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let echo_launcher =
         connect_to_protocol::<EchoLauncherMarker>().context("Failed to connect to echo service")?;

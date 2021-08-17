@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow;
-use fuchsia_async as fasync;
 use fuchsia_inspect::{component, health::Reporter};
 use tracing;
 // [START imports]
@@ -11,9 +10,8 @@ use fidl_fidl_examples_routing_echo::EchoMarker;
 use fuchsia_component::client::connect_to_protocol;
 // [END imports]
 
-#[fasync::run_singlethreaded]
 // [START main_body]
-#[fuchsia::component(logging = true)]
+#[fuchsia::component]
 async fn main() -> Result<(), anyhow::Error> {
     component::health().set_starting_up();
 

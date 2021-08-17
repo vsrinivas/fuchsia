@@ -7,7 +7,6 @@
 
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_examples::{EchoRequest, EchoRequestStream};
-use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
 
@@ -48,7 +47,7 @@ enum IncomingService {
 // [END enum]
 
 // [START main]
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     // Initialize the outgoing services provided by this component
     let mut fs = ServiceFs::new_local();

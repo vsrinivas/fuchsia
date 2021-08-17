@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     futures::stream::StreamExt,
@@ -44,7 +43,7 @@ fn validate_vmo_size(size: usize) -> Result<(), String> {
     }
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let args = ProgramArgs::from_args();
 

@@ -38,7 +38,7 @@ mod tests {
     use {
         super::*,
         anyhow::{Context, Error},
-        fidl_fuchsia_sys_test as systest, fuchsia_async as fasync,
+        fidl_fuchsia_sys_test as systest,
         fuchsia_component::client::connect_to_protocol,
         std::path::{Path, PathBuf},
     };
@@ -47,7 +47,7 @@ mod tests {
         fs::read_dir(dir)?.map(|r| r.map(|d| d.path())).collect()
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn my_test() -> Result<(), Error> {
         // Populate the contents of the cache file, and make sure we can read it
         assert_eq!(FILE_CONTENTS, get_contents_of_cache_file());

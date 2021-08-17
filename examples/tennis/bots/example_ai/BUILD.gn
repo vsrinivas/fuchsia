@@ -26,6 +26,7 @@ rustc_binary("tennis_example_ai_bin") {
   deps = [
     "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

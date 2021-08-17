@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
-    fuchsia_async::{self as fasync, futures::StreamExt},
+    anyhow::Error,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, Property},
+    futures::StreamExt,
 };
 
 /// A task represents something that needs to be done. It consists of a bug
@@ -152,8 +152,8 @@ impl Employee {
     }
 }
 
-fn main() -> Result<(), Error> {
-    let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
+#[fuchsia::component]
+async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     // Creates a new inspector object. This will create the "root" node in the
@@ -224,7 +224,7 @@ fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    let () = executor.run_singlethreaded(fs.collect());
+    fs.collect::<()>().await;
     Ok(())
 }
 

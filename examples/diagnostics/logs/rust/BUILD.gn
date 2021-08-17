@@ -20,7 +20,7 @@ rustc_binary("bin") {
 
   deps = [
     "//src/lib/diagnostics/log/rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
@@ -38,6 +38,7 @@ rustc_test("test") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/diagnostics/hierarchy",
     "//src/lib/diagnostics/reader",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

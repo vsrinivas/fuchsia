@@ -7,7 +7,6 @@ use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_examples::{
     EchoLauncherRequest, EchoLauncherRequestStream, EchoMarker, EchoRequest, EchoRequestStream,
 };
-use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
 
@@ -74,7 +73,7 @@ enum IncomingService {
     EchoLauncher(EchoLauncherRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::EchoLauncher);
