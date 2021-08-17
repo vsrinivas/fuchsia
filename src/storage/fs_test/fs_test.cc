@@ -49,6 +49,9 @@
 namespace fs_test {
 namespace {
 
+/// Amount of time to wait for a given device to be available.
+constexpr zx_duration_t kDeviceWaitTime = zx::sec(30).get();
+
 // Creates a ram-disk with an optional FVM partition. Returns the ram-disk and the device path.
 zx::status<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
     const TestFilesystemOptions& options) {
@@ -148,7 +151,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   }
 
   status =
-      zx::make_status(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", zx::sec(10).get()));
+      zx::make_status(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", kDeviceWaitTime));
   if (status.is_error()) {
     std::cout << "Failed waiting for /dev/sys/platform/00:00:2e/nand-ctl to appear: "
               << status.status_string() << std::endl;
@@ -172,7 +175,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   }
 
   std::string ftl_path = std::string(ram_nand->path()) + "/ftl/block";
-  status = zx::make_status(wait_for_device(ftl_path.c_str(), zx::sec(10).get()));
+  status = zx::make_status(wait_for_device(ftl_path.c_str(), kDeviceWaitTime));
   if (status.is_error()) {
     std::cout << "Timed out waiting for RamNand" << std::endl;
     return status.take_error();
@@ -401,7 +404,7 @@ zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystem
     device_path.append("/fvm/fs-test-partition-p-1/block");
   }
 
-  auto status = zx::make_status(wait_for_device(device_path.c_str(), zx::sec(10).get()));
+  auto status = zx::make_status(wait_for_device(device_path.c_str(), kDeviceWaitTime));
   if (status.is_error()) {
     std::cout << "Timed out waiting for partition to show up" << std::endl;
     return status.take_error();
