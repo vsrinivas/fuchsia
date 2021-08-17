@@ -205,23 +205,13 @@ template("icd_config_data") {
     manifest_files += [ manifest_file ]
     manifest_targets += [ ":${manifest_target}" ]
   }
-  if (defined(invoker.resource_target_name)) {
-    resource_target_name = invoker.resource_target_name
-    resource_path = "data/icd.d"
-    if (defined(invoker.resource_path)) {
-      resource_path = invoker.resource_path
-    }
-    resource(resource_target_name) {
-      sources = manifest_files
-      outputs = [ "${resource_path}/{{source_file_part}}" ]
-      deps = [ ":${manifest_target}" ]
-    }
+  resource_path = "data/icd.d"
+  if (defined(invoker.resource_path)) {
+    resource_path = invoker.resource_path
   }
-  config_data(target_name) {
-    forward_variables_from(invoker, "*")
+  resource(target_name) {
     sources = manifest_files
-    deps = manifest_targets
-    for_pkg = "vulkan-icd"
-    outputs = [ "icd.d/{{source_file_part}}" ]
+    outputs = [ "${resource_path}/{{source_file_part}}" ]
+    deps = [ ":${manifest_target}" ]
   }
 }

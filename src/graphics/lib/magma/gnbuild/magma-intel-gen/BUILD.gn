@@ -58,7 +58,7 @@ if (target_cpu == "x64") {
     }
   }
 
-  icd_config_data("libvulkan_intel_config") {
+  icd_config_data("libvulkan_intel_config_resource") {
     icds = [
       {
         lib = "libvulkan_intel.so"
@@ -66,7 +66,6 @@ if (target_cpu == "x64") {
       },
     ]
     resource_path = "meta/icd.d"
-    resource_target_name = "libvulkan_intel_config_resource"
   }
 
   fuchsia_test_component("mesa_unit_tests") {
