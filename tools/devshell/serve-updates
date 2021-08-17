@@ -209,10 +209,6 @@ else
   # 8085.
   if [[ -z "${port}" ]]; then
     port=8085
-  elif [[ "${port}" != "8085" ]]; then
-    fx-error "Flag '--port' is currently required to be 8085 by ffx repository serving"
-    fx-error "See http://fxbug.dev/77146 for more details."
-    exit 1
   fi
 fi
 

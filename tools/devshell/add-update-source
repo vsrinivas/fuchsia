@@ -151,9 +151,19 @@ function main {
 
     if [[ -z "${port}" ]]; then
       port=8085
-    elif [[ "${port}" != "8085" ]]; then
-      fx-error "Flag '--port' is currently required to be 8085 by ffx repository serving"
-      fx-error "See http://fxbug.dev/77146 for more details."
+    fi
+
+    config_addr=$(fx-command-run ffx config get repository.server.listen)
+    err=$?
+    if [[ $err -ne 0 ]]; then
+      fx-error "Unable to get the configured repository server address."
+      return "$err"
+    fi
+
+    if [[ "$config_addr" != "\"[::1]:$port\"" ]]; then
+      fx-error "The repository server is configured to use $config_addr."
+      fx-error "To switch to a different address, run:"
+      fx-error "$ ffx config set repository.server.listen \"[::1]:${port}\" && ffx doctor --restart-daemon"
       return 1
     fi
 
