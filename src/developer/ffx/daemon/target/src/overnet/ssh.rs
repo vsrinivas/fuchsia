@@ -62,8 +62,11 @@ pub async fn build_ssh_command_base(
     c.args(DEFAULT_SSH_OPTIONS);
     if setup_repository_tunnel {
         match listen_addr().await {
-            Ok(addr) => {
+            Ok(Some(addr)) => {
                 c.arg("-R").arg(format!("{}:localhost:{}", addr.port(), addr.port()));
+            }
+            Ok(None) => {
+                log::info!("repository server not configured to run, so not creating tunnel");
             }
             Err(e) => {
                 log::error!(

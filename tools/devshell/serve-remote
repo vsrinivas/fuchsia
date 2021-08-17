@@ -215,12 +215,52 @@ until ssh -q -O check ${ssh_base_args[@]} "${host}"; do
   sleep 1
 done
 
-# If the user requested serving, then we'll check to see if there's a
-# remote server already running and kill it, this prevents most cases where
-# signal propagation seems to sometimes not make it to "pm".
-# TODO(drees) This can be combined with the serve-updates call later to reduce ssh calls.
-if "${serve}" && ssh "${host}" "${ssh_base_args[@]}" 'ss -ln | grep :8083' > /dev/null; then
-  ssh "${ssh_base_args[@]}" "${host}" 'pkill -x -u $USER pm'
+if "${serve}"; then
+  if is_feature_enabled "legacy_serve"; then
+    # If the user requested serving, then we'll check to see if there's a
+    # remote server already running and kill it, this prevents most cases where
+    # signal propagation seems to sometimes not make it to "pm".
+    # TODO(drees) This can be combined with the serve-updates call later to reduce ssh calls.
+    if ssh "${host}" "${ssh_base_args[@]}" 'ss -ln | grep :8083' > /dev/null; then
+      ssh "${ssh_base_args[@]}" "${host}" 'pkill -x -u $USER pm'
+    fi
+  else
+    # FIXME(http://fxbug.dev/82788): Currently ffx will log, but otherwise
+    # ignore, when both a local ffx and a remote ffx are both trying to serve
+    # repositories over the same tunnel port. The first setup will win, even if
+    # that's not what the user expects.
+    #
+    # To work around this, we will error out if both the local and remote ffx
+    # repository servers are trying to use the same port.
+    local_addr=$(fx-command-run ffx config get repository.server.listen)
+    err=$?
+    if [[ $"err" -ne 0 ]]; then
+      fx-error "Unable to get the local configured repository server address."
+      exit "$err"
+    fi
+
+    remote_addr=$(ssh "${host}" "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/ffx config get repository.server.listen")
+    err=$?
+    if [[ "$err" -ne 0 ]]; then
+      fx-error "Unable to get the remote configured repository server address."
+      exit "$err"
+    fi
+
+    # If the local server is running, error out if we're using the same port as the remote server.
+    if [[ "$local_addr" != "null" && "$local_addr" = "$remote_addr" ]]; then
+      fx-error "The local and remote ffx repository servers cannot both be $local_addr."
+      fx-error "Either change the repository port with:"
+      fx-error ""
+      fx-error "$ ffx config set repository.server.listen \"[::1]:8086\" && ffx doctor --restart-daemon"
+      fx-error ""
+      fx-error "Or disable the repository server with:"
+      fx-error ""
+      fx-error "$ ffx config set repository.server.listen null && ffx doctor --restart-daemon"
+      fx-error ""
+      fx-error "See http://fxbug.dev/82788 for more details."
+      exit 1
+    fi
+  fi
 fi
 
 if "${serve}"; then

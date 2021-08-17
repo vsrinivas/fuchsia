@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::{anyhow, Context as _, Result},
+    anyhow::{Context as _, Result},
     async_lock::RwLock,
     async_trait::async_trait,
     ffx_daemon_core::events::{EventHandler, Status as EventStatus},
@@ -248,15 +248,6 @@ async fn create_aliases(
 impl<T: EventHandlerProvider> Repo<T> {
     async fn start_server(&self, addr: net::SocketAddr) -> Result<(), anyhow::Error> {
         log::info!("Starting repository server on {}", addr);
-
-        let required_addr = (net::Ipv6Addr::LOCALHOST, listen_addr().await?.port()).into();
-        if addr != required_addr {
-            return Err(anyhow!(
-                "repository currently only supports {}, not {}",
-                required_addr,
-                addr
-            ));
-        }
 
         let mut server_locked = self.server.write().await;
 
@@ -609,10 +600,13 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlService for Repo<T
             .await;
 
         match listen_addr().await {
-            Ok(address) => {
-                if let Err(err) = self.start_server(address).await {
+            Ok(Some(addr)) => {
+                if let Err(err) = self.start_server(addr).await {
                     log::warn!("Failed to start repository server: {:#?}", err);
                 }
+            }
+            Ok(None) => {
+                log::warn!("repository.server.listen_addr not configured, not starting server");
             }
             Err(err) => {
                 log::warn!("Failed to read server address from config: {:#?}", err);

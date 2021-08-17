@@ -160,6 +160,12 @@ function main {
       return "$err"
     fi
 
+    if [[ "$config_addr" = "null" ]]; then
+      fx-error "Repository server is currently disabled. To re-enable, run:"
+      fx-error "$ ffx config set repository.server.listen \"[::1]:${port}\" && ffx doctor --restart-daemon"
+      return 1
+    fi
+
     if [[ "$config_addr" != "\"[::1]:$port\"" ]]; then
       fx-error "The repository server is configured to use $config_addr."
       fx-error "To switch to a different address, run:"
