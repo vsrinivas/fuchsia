@@ -23,6 +23,8 @@
 #include "range/interval-tree.h"
 #include "src/storage/bin/fvm/mtd.h"
 #include "src/storage/blobfs/format.h"
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/fvm/host/container.h"
 #include "src/storage/fvm/host/file_wrapper.h"
 #include "src/storage/fvm/host/format.h"
@@ -595,10 +597,7 @@ int main(int argc, char** argv) {
         storage::volume_image::fvm_sparse_internal::GetCompressionOptions(header);
     // Decompress the image.
     if (compression_options.schema != storage::volume_image::CompressionSchema::kNone) {
-      std::unique_ptr<SparseContainer> compressedContainer;
-      if (SparseContainer::CreateExisting(input_path, &compressedContainer) != ZX_OK) {
-        return -1;
-      }
+      auto reader_or = storage::volume_image::FdReader::Create(input_path);
       std::string tmp_path = std::filesystem::temp_directory_path().generic_string() +
                              "/decompressed_sparse_fvm_XXXXXX";
 
@@ -609,23 +608,20 @@ int main(int argc, char** argv) {
                 strerror(errno));
         return -1;
       }
-
-      auto cleanup_temp = fit::defer([tmp_path]() {
-        if (unlink(tmp_path.c_str()) < 0) {
-          fprintf(stderr, "Failed to delete temp file '%s': %s\n", tmp_path.c_str(),
-                  strerror(errno));
-        }
-      });
-      if (compressedContainer->Decompress(tmp_path.c_str()) != ZX_OK) {
+      auto writer = storage::volume_image::FdWriter(std::move(created_file));
+      auto decompress_or =
+          storage::volume_image::FvmSparseDecompressImage(0, reader_or.value(), writer);
+      if (decompress_or.is_error()) {
+        std::cout << decompress_or.error();
         return -1;
       }
 
-      auto reader_or = storage::volume_image::FdReader::Create(tmp_path);
+      auto decompressed_reader_or = storage::volume_image::FdReader::Create(tmp_path);
       if (reader_or.is_error()) {
         fprintf(stderr, "%s\n", reader_or.error().c_str());
         return -1;
       }
-      total_size = reader_or.value().length() - header.header_length;
+      total_size = decompressed_reader_or.value().length() - header.header_length;
     }
 
     if (expected_data_length > total_size) {
@@ -818,29 +814,60 @@ int main(int argc, char** argv) {
     const char* input_path = argv[i + 1];
 
     if (!strcmp(input_type, "--default")) {
-      if (!(input_type = DetermineImageInputTypeOption(input_path, offset))) {
-        fprintf(stderr, "Fail to detect input file format\n");
+      // Look at the magic values and update input_type to match the right one.
+      auto reader_or = storage::volume_image::FdReader::Create(input_path);
+      if (reader_or.is_error()) {
+        std::cout << "Failed to read image. " << reader_or.error() << std::endl;
         return -1;
+      }
+
+      // Check the first 16 bytes of the file to try and figure out the input type.
+      std::array<uint8_t, 16> magic_bytes = {};
+      reader_or.value().Read(0, magic_bytes);
+      constexpr uint32_t kLZ4Magic = 0x184D2204;
+
+      if (memcmp(magic_bytes.data(), &fvm::kMagic, sizeof(fvm::kMagic)) == 0) {
+        input_type = "--raw";
+      } else if (memcmp(magic_bytes.data(), &kLZ4Magic, sizeof(kLZ4Magic)) == 0) {
+        input_type = "--lz4";
+      } else if (memcmp(magic_bytes.data(), &fvm::kSparseFormatMagic,
+                        sizeof(fvm::kSparseFormatMagic)) == 0) {
+        input_type = "--sparse";
       }
     }
 
     if (!strcmp(input_type, "--sparse")) {
-      std::unique_ptr<SparseContainer> compressedContainer;
-      if (SparseContainer::CreateExisting(input_path, &compressedContainer) != ZX_OK) {
+      auto sparse_image_reader_or = storage::volume_image::FdReader::Create(input_path);
+      if (sparse_image_reader_or.is_error()) {
+        std::cout << "Failed to read image. " << sparse_image_reader_or.error() << std::endl;
         return -1;
       }
 
-      if (compressedContainer->Decompress(path) != ZX_OK) {
+      auto header_or =
+          storage::volume_image::fvm_sparse_internal::GetHeader(0, sparse_image_reader_or.value());
+      if (header_or.is_error()) {
+        std::cout << "Failed to parse sparse image header. " << header_or.error() << std::endl;
         return -1;
       }
+      auto header = header_or.take_value();
 
-      std::unique_ptr<SparseContainer> sparseContainer;
-      if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
-        return -1;
-      }
+      auto compression_options =
+          storage::volume_image::fvm_sparse_internal::GetCompressionOptions(header);
+      // Decompress the image.
+      if (compression_options.schema != storage::volume_image::CompressionSchema::kNone) {
+        auto reader_or = storage::volume_image::FdReader::Create(input_path);
+        auto writer_or = storage::volume_image::FdWriter::Create(path);
+        if (writer_or.is_error()) {
+          std::cout << writer_or.error() << std::endl;
+          return -1;
+        }
 
-      if (sparseContainer->Verify() != ZX_OK) {
-        return -1;
+        auto decompress_or = storage::volume_image::FvmSparseDecompressImage(0, reader_or.value(),
+                                                                             writer_or.value());
+        if (decompress_or.is_error()) {
+          std::cout << decompress_or.error();
+          return -1;
+        }
       }
     } else if (!strcmp(input_type, "--lz4")) {
       if (fvm::SparseReader::DecompressLZ4File(input_path, path) != ZX_OK) {
