@@ -54,7 +54,8 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
 
   sync_completion_t done;
   auto result = client->TwoWay(fidl::StringView(data),
-                               [&done](fidl::WireResponse<Example::TwoWay>* response) {
+                               [&done](fidl::WireUnownedResult<Example::TwoWay>&& response) {
+                                 ASSERT_OK(response.status());
                                  ASSERT_EQ(strlen(data), response->out.size());
                                  EXPECT_EQ(0, strncmp(response->out.data(), data, strlen(data)));
                                  sync_completion_signal(&done);
@@ -70,11 +71,6 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
    public:
     ResponseContext(sync_completion_t* done, const char* data, size_t size)
         : done_(done), data_(data), size_(size) {}
-
-    void OnCanceled() override {
-      sync_completion_signal(done_);
-      FAIL();
-    }
 
     void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& message) override {
       ASSERT_TRUE(message.ok());
@@ -386,10 +382,8 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
    public:
     explicit TestResponseContext(sync_completion_t* error) : error_(error) {}
 
-    void OnCanceled() override { FAIL(); }
-
     void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& result) override {
-      ASSERT_FALSE(result.ok());
+      ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
       EXPECT_EQ(fidl::Reason::kTransportError, result.reason());
       EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.status());
       sync_completion_signal(error_);
@@ -409,9 +403,9 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
 }
 
 // An integration-style test that verifies that user-supplied async callbacks
-// are not invoked when the binding is torn down by the user (i.e. explicit
-// cancellation) instead of due to errors.
-TEST(GenAPITestCase, SkipCallingInFlightCallbacksDuringCancellation) {
+// that takes |fidl::WireResponse| are not invoked when the binding is torn down
+// by the user (i.e. explicit cancellation) instead of due to errors.
+TEST(GenAPITestCase, SkipCallingInFlightResponseCallbacksDuringCancellation) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
     auto endpoints = fidl::CreateEndpoints<Example>();
@@ -423,8 +417,6 @@ TEST(GenAPITestCase, SkipCallingInFlightCallbacksDuringCancellation) {
     bool destroyed = false;
     auto callback_destruction_observer = fit::defer([&] { destroyed = true; });
 
-    // TODO(fxbug.dev/75324): Test overload that takes a
-    // |void(fidl::WireUnownedResult<T>&)| callback.
     fidl::Result result =
         client->TwoWay("foo", [observer = std::move(callback_destruction_observer)](
                                   fidl::WireResponse<Example::TwoWay>* response) {
@@ -435,6 +427,41 @@ TEST(GenAPITestCase, SkipCallingInFlightCallbacksDuringCancellation) {
     loop.RunUntilIdle();
 
     // The callback should be destroyed without being called.
+    ASSERT_TRUE(destroyed);
+  };
+
+  do_test(fidl::WireClient<Example>{});
+  do_test(fidl::WireSharedClient<Example>{});
+}
+
+// An integration-style test that verifies that user-supplied async callbacks
+// that takes |fidl::WireUnownedResult| are correctly notified when the binding
+// is torn down by the user (i.e. explicit cancellation).
+TEST(GenAPITestCase, NotifyInFlightResultCallbacksDuringCancellation) {
+  auto do_test = [](auto&& client_instance_indicator) {
+    using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
+    auto endpoints = fidl::CreateEndpoints<Example>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = std::move(*endpoints);
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ClientType client(std::move(local), loop.dispatcher());
+    bool called = false;
+    bool destroyed = false;
+    auto callback_destruction_observer = fit::defer([&] { destroyed = true; });
+
+    client->TwoWay("foo", [observer = std::move(callback_destruction_observer),
+                           &called](fidl::WireUnownedResult<Example::TwoWay>&& result) {
+      called = true;
+      EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
+      EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
+    });
+    // Immediately start cancellation.
+    client = {};
+    loop.RunUntilIdle();
+
+    ASSERT_TRUE(called);
+    // The callback should be destroyed after being called.
     ASSERT_TRUE(destroyed);
   };
 

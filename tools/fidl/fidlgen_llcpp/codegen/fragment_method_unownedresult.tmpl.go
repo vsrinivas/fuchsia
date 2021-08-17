@@ -21,6 +21,10 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
     {{ $args = (List $args "uint8_t* _response_bytes" "uint32_t _response_byte_capacity") }}
   {{- end }}
   explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args }});
+  {{- if .HasResponse }}
+  explicit {{ .WireUnownedResult.Self }}({{ .WireResponse }} * response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+  {{- end }}
   explicit {{ .WireUnownedResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
   {{- if .HasResponse }}
   explicit {{ .WireUnownedResult.Self }}(::fidl::DecodedMessage<{{ .WireResponse }}>&& decoded)

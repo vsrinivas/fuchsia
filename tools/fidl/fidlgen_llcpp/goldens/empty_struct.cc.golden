@@ -226,37 +226,63 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
         const ::fidl_test_emptystruct::wire::Empty& e,
-        ::fit::callback<
-            void(::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
-                                          SendAndReceive>* response)>
+        ::fidl::WireClientCallback<
+            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
             _cb) {
+  using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
             ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive> {
    public:
-    ResponseContext(
+    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
+
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&&
+                      result) override {
+      cb_(std::move(result));
+      delete this;
+    }
+
+   private:
+    Callback cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
+                                   _context->Txid(), e);
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
+        const ::fidl_test_emptystruct::wire::Empty& e,
         ::fit::callback<
             void(::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
                                           SendAndReceive>* response)>
-            cb)
-        : cb_(std::move(cb)) {}
+            _cb) {
+  using Callback = decltype(_cb);
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive> {
+   public:
+    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(::fidl::WireUnownedResult<
                   ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&&
                       result) override {
       if (result.ok()) {
-        cb_(result.Unwrap());
+        ::fidl::WireResponse<
+            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* response =
+            result.Unwrap();
+        cb_(std::move(response));
       }
       delete this;
     }
 
-    void OnCanceled() override { delete this; }
-
    private:
-    ::fit::callback<void(
-        ::fidl::WireResponse<
-            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* response)>
-        cb_;
+    Callback cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

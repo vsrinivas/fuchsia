@@ -1206,6 +1206,10 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestStrictResponseFlexible>* response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
@@ -1365,6 +1369,10 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestFlexibleResponseStrict>* response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
@@ -1939,6 +1947,12 @@ class ::fidl::internal::WireClientImpl<
   // The request and callback are allocated on the heap.
   ::fidl::Result RequestStrictResponseFlexible(
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+      ::fidl::WireClientCallback<::fidl_test_requestflexibleenvelope::Protocol::
+                                     RequestStrictResponseFlexible>
+          _cb);
+
+  ::fidl::Result RequestStrictResponseFlexible(
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>* response)>
@@ -1974,6 +1988,12 @@ class ::fidl::internal::WireClientImpl<
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // The request and callback are allocated on the heap.
+  ::fidl::Result RequestFlexibleResponseStrict(
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
+      ::fidl::WireClientCallback<::fidl_test_requestflexibleenvelope::Protocol::
+                                     RequestFlexibleResponseStrict>
+          _cb);
+
   ::fidl::Result RequestFlexibleResponseStrict(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
       ::fit::callback<void(

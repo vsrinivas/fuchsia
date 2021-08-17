@@ -40,9 +40,9 @@ namespace internal {
 //
 // Once a |ResponseContext| is passed to the bindings runtime, ownership is
 // transferred to the bindings (in particular, the |ClientBase| object).
-// Ownership is returned back to the caller when either |OnRawReply| or
-// |OnCanceled| is invoked. This means that the user or generated code must keep
-// the response context object alive for the duration of the async method call.
+// Ownership is returned back to the caller when |OnRawReply|is invoked. This
+// means that the user or generated code must keep the response context object
+// alive for the duration of the async method call.
 //
 // NOTE: |ResponseContext| are additionally referenced with a |list_node_t|
 // in order to safely iterate over outstanding transactions on |ClientBase|
@@ -91,26 +91,14 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   // - Error from the |async_dispatcher_t|.
   // - Error from the underlying transport.
   // - The server sent a malformed message.
+  // - The user explicitly initiated binding teardown.
+  // - The call raced with an external error in the meantime that caused binding
+  //   teardown.
   //
   // Note that |OnRawResult| may be invoked synchronously if there was a
   // synchronous error (e.g. writing the request). In the error path, the user
   // must not re-take locks that are already acquired when making the FIDL call.
   virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(::fidl::IncomingMessage&& result) = 0;
-
-  // Invoked when the FIDL call was canceled while outstanding:
-  //
-  // - The user explicitly initiated binding teardown.
-  // - The call raced with an external error in the meantime that caused binding
-  //   teardown.
-  //
-  // Different from |OnRawResult|, this method is only used to free up resources
-  // without notifying the user of any error. Since this method could be called
-  // as a result of the user destroying a FIDL client, it is quite possible that
-  // relevant user business objects have already been destroyed. Generated
-  // messaging layers should not forward this call to user callbacks.
-  //
-  // |OnCanceled| is allowed to consume the current object.
-  virtual void OnCanceled() = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
   void OnError(::fidl::Result error) { OnRawResult(::fidl::IncomingMessage(error)); }

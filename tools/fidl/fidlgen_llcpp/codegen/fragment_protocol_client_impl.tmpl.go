@@ -22,8 +22,12 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
   // Asynchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{ template "AsyncClientAllocationComment" . }}
   ::fidl::Result {{ .Name }}(
-        {{ RenderParams .RequestArgs
-                        (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
+    {{ RenderParams .RequestArgs
+                    (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }});
+
+  ::fidl::Result {{ .Name }}({{ RenderParams .RequestArgs
+    (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
+
 {{ "" }}
 
     {{- /* Async caller-allocate flavor */}}

@@ -82,13 +82,12 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
         __builtin_abort();
         break;
       case fidl::Reason::kUnbind:
-        // The user explicitly initiated teardown. To prevent use-after-free,
-        // do not propagate the error with |OnRawResult|.
+        // The user explicitly initiated teardown.
       case fidl::Reason::kEncodeError:
       case fidl::Reason::kDecodeError:
         // These errors are specific to one call, whose corresponding context
-        // would have been notified during |Dispatch|.
-        context->OnCanceled();
+        // would have been notified during |Dispatch| or making the call.
+        context->OnError(fidl::Result::Unbound());
         break;
       case fidl::Reason::kPeerClosed:
       case fidl::Reason::kDispatcherError:

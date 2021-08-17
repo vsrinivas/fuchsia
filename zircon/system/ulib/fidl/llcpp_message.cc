@@ -158,7 +158,7 @@ fidl::Result OutgoingMessage::Write(::fidl::internal::ClientBase* client,
   } else {
     SetResult(fidl::Result::Unbound());
     client->ForgetAsyncTxn(context);
-    context->OnCanceled();
+    context->OnError(fidl::Result::Unbound());
   }
   return fidl::Result(*this);
 }

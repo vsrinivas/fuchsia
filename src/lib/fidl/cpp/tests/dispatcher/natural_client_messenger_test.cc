@@ -62,12 +62,14 @@ class MockResponseContext : public fidl::internal::ResponseContext {
       // We never get a response from the server in this test.
       ZX_PANIC("Never used in this test");
     }
+    if (msg.reason() == fidl::Reason::kUnbind) {
+      canceled_ = true;
+      return cpp17::nullopt;
+    }
     num_errors_ += 1;
     last_error_ = msg.error();
     return cpp17::nullopt;
   }
-
-  void OnCanceled() override { canceled_ = true; }
 
   bool canceled() const { return canceled_; }
 

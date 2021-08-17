@@ -100,7 +100,6 @@ class TestResponseContext : public fidl::internal::ResponseContext {
     client_->EraseTxid(this);
     return cpp17::nullopt;
   }
-  void OnCanceled() override {}
 
  private:
   fidl::internal::WireClientImpl<TestProtocol>* client_;

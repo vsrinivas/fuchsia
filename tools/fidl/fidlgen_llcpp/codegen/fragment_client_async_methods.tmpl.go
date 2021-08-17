@@ -18,26 +18,21 @@ The request and callback are allocated on the heap.
 {{- IfdefFuchsia -}}
 
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-        {{ RenderParams .RequestArgs
-                        (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }}) {
+  {{ RenderParams .RequestArgs
+                  (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }}) {
+  using Callback = decltype(_cb);
   class ResponseContext final : public {{ .WireResponseContext }} {
    public:
-    ResponseContext(::fit::callback<void ({{ .WireResponse }}* response)> cb)
+    ResponseContext(Callback cb)
         : cb_(std::move(cb)) {}
 
     void OnResult({{ .WireUnownedResult }}&& result) override {
-      if (result.ok()) {
-        cb_(result.Unwrap());
-      }
-      delete this;
-    }
-
-    void OnCanceled() override {
+      cb_(std::move(result));
       delete this;
     }
 
    private:
-    ::fit::callback<void ({{ .WireResponse }}* response)> cb_;
+    Callback cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -46,6 +41,36 @@ The request and callback are allocated on the heap.
     {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "_context->Txid()" .RequestArgs -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+  {{ RenderParams .RequestArgs
+    (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }}) {
+  using Callback = decltype(_cb);
+  class ResponseContext final : public {{ .WireResponseContext }} {
+   public:
+    ResponseContext(Callback cb)
+        : cb_(std::move(cb)) {}
+
+    void OnResult({{ .WireUnownedResult }}&& result) override {
+      if (result.ok()) {
+        ::fidl::WireResponse<{{ .Marker }}>* response = result.Unwrap();
+        cb_(std::move(response));
+      }
+      delete this;
+    }
+
+   private:
+    Callback cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  {{ .WireRequest }}::OwnedEncodedMessage _request(
+    {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "_context->Txid()" .RequestArgs -}}
+  );
+  return _request.GetOutgoingMessage().Write(this, _context);
+
 }
 
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(

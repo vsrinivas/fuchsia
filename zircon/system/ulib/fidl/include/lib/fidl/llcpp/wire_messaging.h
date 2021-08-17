@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
+#include <lib/fit/function.h>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/message.h>
@@ -59,6 +60,9 @@ class WireResult;
 
 template <typename FidlMethod>
 class WireUnownedResult;
+
+template <typename FidlMethod>
+using WireClientCallback = ::fit::callback<void(::fidl::WireUnownedResult<FidlMethod>&&)>;
 
 namespace internal {
 

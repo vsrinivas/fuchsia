@@ -290,13 +290,15 @@ class OnCanceledTestResponseContext : public internal::ResponseContext {
   explicit OnCanceledTestResponseContext(sync_completion_t* done)
       : internal::ResponseContext(0), done_(done) {}
   cpp17::optional<fidl::UnbindInfo> OnRawResult(fidl::IncomingMessage&& msg) override {
+    if (!msg.ok() && msg.reason() == fidl::Reason::kUnbind) {
+      // We expect cancellation.
+      sync_completion_signal(done_);
+      delete this;
+      return std::nullopt;
+    }
     ADD_FAILURE("Should not be reached");
     delete this;
     return std::nullopt;
-  }
-  void OnCanceled() override {
-    sync_completion_signal(done_);
-    delete this;
   }
   sync_completion_t* done_;
 };
@@ -330,10 +332,6 @@ class OnErrorTestResponseContext : public internal::ResponseContext {
     sync_completion_signal(done_);
     delete this;
     return std::nullopt;
-  }
-  void OnCanceled() override {
-    ADD_FAILURE("Should not be reached");
-    delete this;
   }
   sync_completion_t* done_;
   fidl::Reason expected_reason_;

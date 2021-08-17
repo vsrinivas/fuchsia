@@ -19,12 +19,7 @@ void NaturalClientMessenger::TwoWay(const fidl_type_t* type, HLCPPOutgoingMessag
   fidl::Result result = Send(type, std::move(message));
   if (!result.ok()) {
     client_base_->ForgetAsyncTxn(context);
-    if (result.reason() == fidl::Reason::kUnbind) {
-      context->OnCanceled();
-    } else {
-      // TODO(fxbug.dev/75324): Switch to new hook for propagating send-time errors.
-      context->OnError(result);
-    }
+    context->OnError(result);
   }
 }
 

@@ -123,33 +123,56 @@ fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>::OnRawResult(
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ::fidl::StringView s,
-    ::fit::callback<void(
-        ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)>
-        _cb) {
+    ::fidl::WireClientCallback<::fidl_test_inheritance::Super::Foo> _cb) {
+  using Callback = decltype(_cb);
   class ResponseContext final : public ::fidl::WireResponseContext<
                                     ::fidl_test_inheritance::Super::Foo> {
    public:
-    ResponseContext(
-        ::fit::callback<void(::fidl::WireResponse<
-                             ::fidl_test_inheritance::Super::Foo>* response)>
-            cb)
-        : cb_(std::move(cb)) {}
+    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
+
+    void OnResult(
+        ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>&& result)
+        override {
+      cb_(std::move(result));
+      delete this;
+    }
+
+   private:
+    Callback cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
+      _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
+    ::fidl::StringView s,
+    ::fit::callback<void(
+        ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)>
+        _cb) {
+  using Callback = decltype(_cb);
+  class ResponseContext final : public ::fidl::WireResponseContext<
+                                    ::fidl_test_inheritance::Super::Foo> {
+   public:
+    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(
         ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>&& result)
         override {
       if (result.ok()) {
-        cb_(result.Unwrap());
+        ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response =
+            result.Unwrap();
+        cb_(std::move(response));
       }
       delete this;
     }
 
-    void OnCanceled() override { delete this; }
-
    private:
-    ::fit::callback<void(
-        ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)>
-        cb_;
+    Callback cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -385,32 +408,54 @@ fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>::OnRawResult(
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     ::fidl::StringView s,
-    ::fit::callback<
-        void(::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)>
-        _cb) {
+    ::fidl::WireClientCallback<::fidl_test_inheritance::Sub::Foo> _cb) {
+  using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo> {
    public:
-    ResponseContext(
-        ::fit::callback<void(
-            ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)>
-            cb)
-        : cb_(std::move(cb)) {}
+    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
+
+    void OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&&
+                      result) override {
+      cb_(std::move(result));
+      delete this;
+    }
+
+   private:
+    Callback cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
+      _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
+    ::fidl::StringView s,
+    ::fit::callback<
+        void(::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)>
+        _cb) {
+  using Callback = decltype(_cb);
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo> {
+   public:
+    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&&
                       result) override {
       if (result.ok()) {
-        cb_(result.Unwrap());
+        ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response =
+            result.Unwrap();
+        cb_(std::move(response));
       }
       delete this;
     }
 
-    void OnCanceled() override { delete this; }
-
    private:
-    ::fit::callback<void(
-        ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)>
-        cb_;
+    Callback cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

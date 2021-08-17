@@ -1285,6 +1285,10 @@ class ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>*
+          response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
@@ -1427,6 +1431,10 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+  explicit WireUnownedResult(
+      ::fidl::WireResponse<
+          ::fidl_test_protocolrequest::Parent::GetChildRequest>* response)
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
@@ -2278,6 +2286,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::Result GetChild(
+      ::fidl::WireClientCallback<::fidl_test_protocolrequest::Parent::GetChild>
+          _cb);
+
+  ::fidl::Result GetChild(
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>*
               response)>
@@ -2306,6 +2318,11 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
   // Asynchronous variant of |Parent.GetChildRequest()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::Result GetChildRequest(
+      ::fidl::WireClientCallback<
+          ::fidl_test_protocolrequest::Parent::GetChildRequest>
+          _cb);
+
   ::fidl::Result GetChildRequest(
       ::fit::callback<
           void(::fidl::WireResponse<
