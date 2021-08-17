@@ -82,6 +82,7 @@ gvisor_tests = [
   "pread64_test",
   "read_test",
   "readv_test",
+  "rename_test",
   "sigaction_test",
   "sigprocmask_test",
   "sigaltstack_test",

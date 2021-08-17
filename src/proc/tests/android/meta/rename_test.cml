@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    program: {
+        binary: "/data/tests/rename_test",
+        args: [ "--gunit_filter=-*.DirectoryOverwritesDirectoryLinkCount:*.DirectoryDoesNotOverwriteNonemptyDirectory:*.FailsWhenOldParentNotWritable:*.FailsWhenNewParentNotWritable:*.OverwriteFailsWhenNewParentNotWritable:*.FileDoesNotExistWhenNewParentNotExecutable" ],
+    },
+}

@@ -111,6 +111,7 @@ pub fn dispatch_syscall(
         readlink[3],
         readlinkat[4],
         readv[3],
+        renameat[4],
         rt_sigaction[4],
         rt_sigprocmask[4],
         rt_sigreturn[0],

@@ -11,7 +11,21 @@ use crate::fs::pipe::Pipe;
 use crate::types::*;
 
 pub struct TmpFs(());
-impl FileSystemOps for Arc<TmpFs> {}
+
+impl FileSystemOps for Arc<TmpFs> {
+    fn rename(
+        &self,
+        _fs: &FileSystem,
+        _old_parent: &FsNodeHandle,
+        _old_name: &FsStr,
+        _new_parent: &FsNodeHandle,
+        _new_name: &FsStr,
+        _renamed: &FsNodeHandle,
+        _replaced: Option<&FsNodeHandle>,
+    ) -> Result<(), Errno> {
+        Ok(())
+    }
+}
 
 impl TmpFs {
     pub fn new() -> FileSystemHandle {

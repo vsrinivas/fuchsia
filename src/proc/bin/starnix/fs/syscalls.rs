@@ -192,8 +192,8 @@ where
 {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
-    let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
     strace!(task, "lookup_parent_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
+    let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
     callback(parent, basename)
 }
 
@@ -220,6 +220,7 @@ fn lookup_at(
 ) -> Result<NamespaceNode, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
+    strace!(task, "lookup_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
     if path.is_empty() {
         if options.allow_empty_path {
             let (node, _) = task.resolve_dir_fd(dir_fd, path)?;
@@ -520,6 +521,30 @@ pub fn sys_unlinkat(
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
         parent.unlink(ctx.task, basename, kind)
     })?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_renameat(
+    ctx: &SyscallContext<'_>,
+    old_dir_fd: FdNumber,
+    old_user_path: UserCString,
+    new_dir_fd: FdNumber,
+    new_user_path: UserCString,
+) -> Result<SyscallResult, Errno> {
+    let lookup = |dir_fd, user_path| {
+        lookup_parent_at(ctx.task, dir_fd, user_path, |parent, basename| {
+            Ok((parent, basename.to_vec()))
+        })
+    };
+
+    let (old_parent, old_basename) = lookup(old_dir_fd, old_user_path)?;
+    let (new_parent, new_basename) = lookup(new_dir_fd, new_user_path)?;
+
+    if !NamespaceNode::mount_eq(&old_parent, &new_parent) {
+        return Err(EXDEV);
+    }
+
+    DirEntry::rename(&old_parent.entry, &old_basename, &new_parent.entry, &new_basename)?;
     Ok(SUCCESS)
 }
 

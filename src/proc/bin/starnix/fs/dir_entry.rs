@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockWriteGuard};
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Weak};
@@ -233,6 +233,194 @@ impl DirEntry {
         Ok(())
     }
 
+    /// Rename the file with old_basename in old_parent to new_basename in
+    /// new_parent.
+    ///
+    /// old_parent and new_parent must belong to the same file system.
+    pub fn rename(
+        old_parent: &DirEntryHandle,
+        old_basename: &FsStr,
+        new_parent: &DirEntryHandle,
+        new_basename: &FsStr,
+    ) -> Result<(), Errno> {
+        // If either the old_basename or the new_basename is a reserved name
+        // (e.g., "." or ".."), then we cannot do the rename.
+        if DirEntry::is_reserved_name(old_basename) || DirEntry::is_reserved_name(new_basename) {
+            return Err(EBUSY);
+        }
+
+        // If the names and parents are the same, then there's nothing to do
+        // and we can report success.
+        if Arc::ptr_eq(old_parent, new_parent) && old_basename == new_basename {
+            return Ok(());
+        }
+
+        // We need to hold these DirEntryHandles until after we drop all the
+        // locks so that we do not deadlock when we drop them.
+        let (_renamed, maybe_replaced) = {
+            // The mount_eq check in sys_renameat ensures that the nodes we're
+            // touching are part of the same file system. It doesn't matter
+            // where we grab the FileSystem reference from.
+            let fs = old_parent.node.fs();
+
+            // Before we take any locks, we need to take the rename mutex on
+            // the file system. This lock ensures that no other rename
+            // operations are happening in this file system while we're
+            // analyzing this rename operation.
+            //
+            // For example, we grab writer locks on both old_parent and
+            // new_parent. If there was another rename operation in flight with
+            // old_parent and new_parent reversed, then we could deadlock while
+            // trying to acquire these locks.
+            let _lock = fs.rename_mutex.lock();
+
+            // We cannot simply grab the locks on old_parent and new_parent
+            // independently because old_parent and new_parent might be the
+            // same directory entry. Instead, we use the RenameGuard helper to
+            // grab the appropriate locks.
+            let mut state = RenameGuard::lock(old_parent, new_parent);
+
+            // Now that we know the old_parent child list cannot change, we
+            // establish the DirEntry that we are going to try to rename.
+            let renamed = old_parent.component_lookup_locked(state.old_parent(), old_basename)?;
+
+            // TODO: Check whether renamed is a mount point. (EBUSY)
+
+            // This specialized function ensure that we do not deadlock while
+            // walking the parent chain of the given entry. We need to check
+            // step in case we encounter old_parent or new_parent in the chain.
+            let mut is_descendant_of = |entry: &DirEntryHandle, other: &DirEntryHandle| {
+                let mut current = entry.clone();
+                loop {
+                    if Arc::ptr_eq(&current, &other) {
+                        // We found |other|.
+                        return true;
+                    }
+                    // We cannot use DirEntry::parent because that might take one of
+                    // the locks we already hold on DirEntryState.
+                    let maybe_parent = if Arc::ptr_eq(&current, old_parent) {
+                        state.old_parent().parent.clone()
+                    } else if Arc::ptr_eq(&current, new_parent) {
+                        state.new_parent().parent.clone()
+                    } else {
+                        current.parent()
+                    };
+                    if let Some(next) = maybe_parent {
+                        current = next;
+                    } else {
+                        // We reached the root of the file system.
+                        return false;
+                    }
+                }
+            };
+
+            // If new_parent is a descendant of renamed, the operation would
+            // create a cycle. That's disallowed.
+            if is_descendant_of(&new_parent, &renamed) {
+                return Err(EINVAL);
+            }
+
+            // We need to check if there is already a DirEntry with
+            // new_basename in new_parent. If so, there are additional checks
+            // we need to perform.
+            let maybe_replaced =
+                match new_parent.component_lookup_locked(state.new_parent(), new_basename) {
+                    Ok(replaced) => {
+                        // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
+                        //
+                        // "If oldpath and newpath are existing hard links referring to the
+                        // same file, then rename() does nothing, and returns a success
+                        // status."
+                        if Arc::ptr_eq(&renamed.node, &replaced.node) {
+                            return Ok(());
+                        }
+
+                        // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
+                        //
+                        // "oldpath can specify a directory.  In this case, newpath must"
+                        // either not exist, or it must specify an empty directory."
+                        if replaced.node.is_dir() {
+                            if !renamed.node.is_dir() {
+                                return Err(EISDIR);
+                            }
+
+                            // We are not allowed to replace the old_parent. This check is a
+                            // special case of not being allowed to replace a non-empty
+                            // directory, but we perform the check separately to avoid
+                            // deadlocks while trying to acquire the state lock for the
+                            // replaced entry.
+                            if Arc::ptr_eq(&old_parent, &replaced) {
+                                return Err(ENOTEMPTY);
+                            }
+                            // TODO: This check only covers whether the cache is non-empty.
+                            // We actually need to check whether the underlying directory is
+                            // empty by asking the node. (ENOTEMPTY)
+                            let replaced_state = replaced.state.write();
+                            if !replaced_state.children.is_empty() {
+                                return Err(ENOTEMPTY);
+                            }
+
+                            // TODO: Check whether renamed is a mount point. (EBUSY)
+                        } else if renamed.node.is_dir() {
+                            return Err(ENOTDIR);
+                        }
+                        Some(replaced)
+                    }
+                    // It's fine for the lookup to fail to find a child.
+                    Err(ENOENT) => None,
+                    // However, other errors are fatal.
+                    Err(e) => return Err(e),
+                };
+
+            // We've found all the errors that we know how to find. Ask the
+            // file system to actually execute the rename operation. Once the
+            // file system has executed the rename, we are no longer allowed to
+            // fail because we will not be able to return the system to a
+            // consistent state.
+            fs.rename(
+                &old_parent.node,
+                old_basename,
+                &new_parent.node,
+                new_basename,
+                &renamed.node,
+                maybe_replaced.as_ref().map(|replaced| &replaced.node),
+            )?;
+
+            {
+                // We need to update the parent and local name for the DirEntry
+                // we are renaming to reflect its new parent and its new name.
+                let mut renamed_state = renamed.state.write();
+                renamed_state.parent = Some(new_parent.clone());
+                renamed_state.local_name = new_basename.to_owned();
+            }
+            // Actually add the renamed child to the new_parent's child list.
+            // This operation implicitly removes the replaced child (if any)
+            // from the child list.
+            state.new_parent().children.insert(new_basename.to_owned(), Arc::downgrade(&renamed));
+
+            // Finally, remove the renamed child from the old_parent's child
+            // list.
+            state.old_parent().children.remove(old_basename);
+
+            (renamed, maybe_replaced)
+        };
+
+        if let Some(replaced) = maybe_replaced {
+            replaced.node.fs().will_destroy_dir_entry(&replaced);
+        }
+
+        Ok(())
+    }
+
+    fn component_lookup_locked(
+        self: &DirEntryHandle,
+        state: &mut DirEntryState,
+        name: &FsStr,
+    ) -> Result<DirEntryHandle, Errno> {
+        let (node, _) = self.get_or_create_child_locked(state, name, || self.node.lookup(name))?;
+        Ok(node)
+    }
+
     pub fn get_children<F, T>(&self, callback: F) -> T
     where
         F: FnOnce(&BTreeMap<FsString, Weak<DirEntry>>) -> T,
@@ -262,6 +450,19 @@ impl DirEntry {
         }
         std::mem::drop(state);
 
+        let mut state = self.state.write();
+        self.get_or_create_child_locked(&mut state, name, create_fn)
+    }
+
+    fn get_or_create_child_locked<F>(
+        self: &DirEntryHandle,
+        state: &mut DirEntryState,
+        name: &FsStr,
+        create_fn: F,
+    ) -> Result<(DirEntryHandle, bool), Errno>
+    where
+        F: FnOnce() -> Result<FsNodeHandle, Errno>,
+    {
         let create_child = || {
             let node = create_fn()?;
             assert!(
@@ -271,7 +472,6 @@ impl DirEntry {
             Ok(DirEntry::new(node, Some(self.clone()), name.to_vec()))
         };
 
-        let mut state = self.state.write();
         match state.children.entry(name.to_vec()) {
             Entry::Vacant(entry) => {
                 let child = create_child()?;
@@ -320,6 +520,38 @@ impl DirEntry {
             if std::ptr::eq(weak_child.as_ptr(), child) {
                 state.children.remove(&local_name);
             }
+        }
+    }
+}
+
+struct RenameGuard<'a, 'b> {
+    old_parent_guard: RwLockWriteGuard<'a, DirEntryState>,
+    new_parent_guard: Option<RwLockWriteGuard<'b, DirEntryState>>,
+}
+
+impl<'a, 'b> RenameGuard<'a, 'b> {
+    fn lock(old_parent: &'a DirEntryHandle, new_parent: &'b DirEntryHandle) -> Self {
+        if Arc::ptr_eq(&old_parent, &new_parent) {
+            Self { old_parent_guard: old_parent.state.write(), new_parent_guard: None }
+        } else {
+            // TODO: gVisor takes these locks in ancestor-to-descendant
+            // order. Do we need to do that as well?
+            Self {
+                old_parent_guard: old_parent.state.write(),
+                new_parent_guard: Some(new_parent.state.write()),
+            }
+        }
+    }
+
+    fn old_parent(&mut self) -> &mut DirEntryState {
+        &mut self.old_parent_guard
+    }
+
+    fn new_parent(&mut self) -> &mut DirEntryState {
+        if let Some(new_guard) = self.new_parent_guard.as_mut() {
+            new_guard
+        } else {
+            &mut self.old_parent_guard
         }
     }
 }

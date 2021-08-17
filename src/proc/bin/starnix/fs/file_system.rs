@@ -16,13 +16,23 @@ use crate::types::*;
 pub struct FileSystem {
     root: OnceCell<DirEntryHandle>,
     next_inode: AtomicU64,
-    _ops: Box<dyn FileSystemOps>,
+    ops: Box<dyn FileSystemOps>,
 
     /// Whether DirEntries added to this filesystem should be considered permanent, instead of a
     /// cache of the backing storage. An example is tmpfs: the DirEntry tree *is* the backing
     /// storage, as opposed to ext4, which uses the DirEntry tree as a cache and removes unused
     /// nodes from it.
     permanent_entries: bool,
+
+    /// A file-system global mutex to serialize rename operations.
+    ///
+    /// This mutex is useful because the invariants enforced during a rename
+    /// operation involve many DirEntry objects. In the future, we might be
+    /// able to remove this mutex, but we will need to think carefully about
+    /// how rename operations can interleave.
+    ///
+    /// See DirEntry::rename.
+    pub rename_mutex: Mutex<()>,
 
     /// The FsNode cache for this file system.
     ///
@@ -74,8 +84,9 @@ impl FileSystem {
         Arc::new(FileSystem {
             root: OnceCell::new(),
             next_inode: AtomicU64::new(0),
-            _ops: Box::new(ops),
+            ops: Box::new(ops),
             permanent_entries,
+            rename_mutex: Mutex::new(()),
             nodes: Mutex::new(HashMap::new()),
             entries: Mutex::new(HashMap::new()),
         })
@@ -150,6 +161,18 @@ impl FileSystem {
         self.next_inode.fetch_add(1, Ordering::Relaxed)
     }
 
+    pub fn rename(
+        &self,
+        old_parent: &FsNodeHandle,
+        old_name: &FsStr,
+        new_parent: &FsNodeHandle,
+        new_name: &FsStr,
+        renamed: &FsNodeHandle,
+        replaced: Option<&FsNodeHandle>,
+    ) -> Result<(), Errno> {
+        self.ops.rename(self, old_parent, old_name, new_parent, new_name, renamed, replaced)
+    }
+
     pub fn did_create_dir_entry(&self, entry: &DirEntryHandle) {
         if self.permanent_entries {
             self.entries.lock().insert(Arc::as_ptr(&entry) as usize, entry.clone());
@@ -164,6 +187,33 @@ impl FileSystem {
 }
 
 /// The filesystem-implementation-specific data for FileSystem.
-pub trait FileSystemOps: Send + Sync {}
+pub trait FileSystemOps: Send + Sync {
+    // Rename the given node.
+    //
+    // The node to be renamed is passed as "renamed". It currently has
+    // old_name in old_parent. After the rename operation, it should have
+    // new_name in new_parent.
+    //
+    // If new_parent already has a child named new_name, that node is passed as
+    // "replaced". In that case, both "renamed" and "replaced" will be
+    // directories and the rename operation should succeed only if "replaced"
+    // is empty. The VFS will check that there are no children of "replaced" in
+    // the DirEntry cache, but the implementation of this function is
+    // responsible for checking that there are no children of replaced that are
+    // known only to the file system implementation (e.g., present on-disk but
+    // not in the DirEntry cache).
+    fn rename(
+        &self,
+        _fs: &FileSystem,
+        _old_parent: &FsNodeHandle,
+        _old_name: &FsStr,
+        _new_parent: &FsNodeHandle,
+        _new_name: &FsStr,
+        _renamed: &FsNodeHandle,
+        _replaced: Option<&FsNodeHandle>,
+    ) -> Result<(), Errno> {
+        Err(EROFS)
+    }
+}
 
 pub type FileSystemHandle = Arc<FileSystem>;

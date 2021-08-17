@@ -157,7 +157,7 @@ pub fn load_executable(
 
     // TODO(tbodt): implement MAP_GROWSDOWN and then reset this to 1 page. The current value of
     // this is based on adding 0x1000 each time a segfault appears.
-    let stack_size: usize = 0x5000;
+    let stack_size: usize = 0x7000;
     let stack_vmo = Arc::new(zx::Vmo::create(stack_size as u64).map_err(|_| ENOMEM)?);
     stack_vmo
         .as_ref()
