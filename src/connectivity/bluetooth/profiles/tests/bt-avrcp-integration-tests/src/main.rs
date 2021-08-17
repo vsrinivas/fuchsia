@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Context},
+    bt_avctp::{AvcPeer, AvcResponseType},
     fidl::encoding::Decodable,
     fidl::endpoints::{
         create_endpoints, create_proxy, create_request_stream, DiscoverableProtocolMarker,
@@ -19,7 +20,7 @@ use {
     fuchsia_bluetooth::types::{Channel, Uuid},
     fuchsia_component_test::builder::Capability,
     fuchsia_zircon as zx,
-    futures::{pin_mut, select, stream::StreamExt, FutureExt, TryFutureExt},
+    futures::{join, stream::StreamExt, TryFutureExt},
     mock_piconet_client::v2::{PiconetHarness, PiconetMember},
     std::convert::TryInto,
 };
@@ -393,45 +394,41 @@ async fn avrcp_remote_receives_set_absolute_volume_request(mut tf: AvrcpIntegrat
         .unwrap()
         .expect("Failed to get controller for mock peer");
 
-    // Expect new SetAbsoluteVolume request on mock peer
-    let mut vec = Vec::new();
+    // Mock peer receives SetAbsoluteVolume request and responds with the actual volume which was set
     let desired_vol: u8 = 0x7F; // Valid volume range is 0x00 - 0x7F
-    let datagram_len = async {
-        let set_av_fut = c_proxy.set_absolute_volume(desired_vol).fuse();
+    let actual_vol: u8 = 0x7E; // Volume actually set on the target
+    let mut avc_command_stream = AvcPeer::new(channel).take_command_stream();
+    async {
+        let set_av_fut = c_proxy.set_absolute_volume(desired_vol);
         let receive_av_fut = async {
-            loop {
-                match channel.read_datagram(&mut vec).await {
-                    Err(e) => return Err(e),
-                    Ok(n) => {
-                        if n > 0 {
-                            return Ok(n);
-                        }
-                    }
+            match avc_command_stream.next().await.expect("Mock peer did not receive a command") {
+                Ok(command) => {
+                    // Command and response structure described in AVRCP spec 25.16
+                    let body = command.body();
+                    assert_eq!(body.len(), 5);
+                    // TODO(nickchee): Define PDUs in bt-avrcp and reference them instead of using
+                    // magic numbers
+                    assert_eq!(body[0], 0x50); // Confirm PDU is 0x50 (SetAbsoluteVolume)
+                    assert_eq!(body[4], desired_vol); // Confirm the requested volume was received unmodified
+
+                    // Respond with the actual volume set on the target
+                    command
+                        .send_response(
+                            AvcResponseType::Accepted,
+                            &[0x50, 0x00, 0x00, 0x01, actual_vol],
+                        )
+                        .unwrap();
                 }
+                Err(e) => panic!("{}", e),
             }
-        }
-        .fuse();
-        pin_mut!(set_av_fut, receive_av_fut);
-        loop {
-            select! {
-                ret = set_av_fut => { let _ = ret.expect("SetAbsoluteVolume failed"); },
-                ret = receive_av_fut => return ret.expect("Mock peer failed to receive command"),
+        };
+        match join!(set_av_fut, receive_av_fut) {
+            (Ok(Ok(vol)), _) => assert_eq!(vol, actual_vol),
+            (Ok(Err(e)), _) => {
+                panic!("Received ControllerError from AVRCP: {}", e.into_primitive())
             }
+            (Err(e), _) => panic!("SetAbsoluteVolume FIDL call failed: {}", e),
         }
     }
     .await;
-
-    // TODO(fxbug.dev/79580): Find more idiomatic way of unpacking request datagrams
-    // Expecting 3 octet AVC header (AVCTP spec 6.1.1)
-    // followed by 11 octet SetAbsoluteVolume command (AVRCP spec 25.16)
-    assert_eq!(datagram_len, 14);
-
-    // Confirm AVC header's PID is A/V remote control (Assigned numbers, 16-bit UUIDs)
-    assert_eq!(vec[1..3], [0x11, 0x0e]);
-
-    // PDU ID is stored in 9th octet
-    assert_eq!(vec[9], 0x50);
-
-    // Confirm the requested volume the peer received is the same as what the AVH sent
-    assert_eq!(vec[datagram_len - 1], desired_vol);
 }
