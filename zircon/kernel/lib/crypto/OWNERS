@@ -1,4 +1,11 @@
+# Changes to the PRNG are security sensitive and are difficult to automate tests for.
+# As a result, we'd like all changes to be reviewed by someone on the Security team.
+set noparent
+
 aarongreen@google.com
+bryanhenry@google.com
+eep@google.com
+mvanotti@google.com
 zarvox@google.com
 
 # COMPONENT: Security
