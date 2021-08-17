@@ -70,7 +70,6 @@ base_package_labels += [
   "//src/connectivity/wlan:packages",
   "//src/developer/build_info:build-info-service",
   "//src/developer/forensics:pkg",
-  "//src/developer/forensics/feedback_data:sysmgr_config",
   "//src/developer/forensics/snapshot:pkg",
   "//src/developer/memory/monitor",
   "//src/devices/sysmem/bin/sysmem_connector",

@@ -255,15 +255,3 @@ source_set("main") {
 
   visibility += [ "//src/developer/forensics:*" ]
 }
-
-###############################################################################
-# CONFIGS
-###############################################################################
-config_data("sysmgr_config") {
-  for_pkg = "sysmgr"
-
-  sources = [ "configs/sysmgr.config" ]
-  outputs = [ "device_id_provider.config" ]
-
-  visibility += [ "*" ]
-}
