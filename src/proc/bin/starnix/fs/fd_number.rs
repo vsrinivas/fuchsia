@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::cmp::Ordering;
 use std::fmt;
 use zerocopy::{AsBytes, FromBytes};
 
@@ -25,5 +26,17 @@ impl FdNumber {
 impl fmt::Display for FdNumber {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "fd({})", self.0)
+    }
+}
+
+impl Ord for FdNumber {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl PartialOrd for FdNumber {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }

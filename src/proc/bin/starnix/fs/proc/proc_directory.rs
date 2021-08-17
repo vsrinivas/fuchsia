@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::inode_generation::*;
+use super::inode_numbers::*;
 use super::node_holder::*;
-use super::task_directory::*;
+use super::pid_directory::*;
 use crate::fd_impl_directory;
 use crate::fs::*;
 use crate::task::*;
@@ -59,7 +59,7 @@ impl FsNodeOps for ProcDirectory {
                 if let Some(task) = self.kernel.upgrade().unwrap().pids.read().get_task(pid) {
                     node.fs().get_or_create_node(Some(dir_inode_num(pid)), |inode_num| {
                         Ok(FsNode::new(
-                            Box::new(TaskDirectory::new(task)),
+                            Box::new(PidDirectory::new(task)),
                             &node.fs(),
                             inode_num,
                             FileMode::IFDIR | FileMode::ALLOW_ALL,
@@ -97,20 +97,7 @@ impl FileOps for DirectoryFileOps {
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
-        let mut current_offset = file.offset.lock();
-        let new_offset = match whence {
-            SeekOrigin::SET => Some(offset),
-            SeekOrigin::CUR => (*current_offset).checked_add(offset),
-            SeekOrigin::END => Some(MAX_LFS_FILESIZE as i64),
-        }
-        .ok_or(EINVAL)?;
-
-        if new_offset < 0 {
-            return Err(EINVAL);
-        }
-
-        *current_offset = new_offset;
-        Ok(*current_offset)
+        file.unbounded_seek(offset, whence)
     }
 
     fn readdir(

@@ -17,8 +17,8 @@ bitflags! {
 }
 
 #[derive(Clone)]
-struct FdTableEntry {
-    file: FileHandle,
+pub struct FdTableEntry {
+    pub file: FileHandle,
 
     // Rather than using a separate "flags" field, we could maintain this data
     // as a bitfield over the file descriptors because there is only one flag
@@ -133,6 +133,11 @@ impl FdTable {
             fd = FdNumber::from_raw(fd.raw() + 1);
         }
         fd
+    }
+
+    /// Returns a vector of all current file descriptors in the table.
+    pub fn get_all_fds(&self) -> Vec<FdNumber> {
+        self.table.read().keys().cloned().collect()
     }
 }
 

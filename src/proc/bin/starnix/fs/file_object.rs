@@ -557,6 +557,31 @@ impl FileObject {
     pub fn set_async_owner(&self, owner: pid_t) {
         *self.async_owner.lock() = owner;
     }
+
+    /// Updates the file's seek offset without an upper bound on the resulting offset.
+    ///
+    /// This is useful for files without a defined size.
+    ///
+    /// Errors if `whence` is invalid, or the calculated offset is invalid.
+    ///
+    /// - `offset`: The target offset from `whence`.
+    /// - `whence`: The location from which to compute the updated offset.
+    pub fn unbounded_seek(&self, offset: off_t, whence: SeekOrigin) -> Result<off_t, Errno> {
+        let mut current_offset = self.offset.lock();
+        let new_offset = match whence {
+            SeekOrigin::SET => Some(offset),
+            SeekOrigin::CUR => (*current_offset).checked_add(offset),
+            SeekOrigin::END => Some(MAX_LFS_FILESIZE as i64),
+        }
+        .ok_or(EINVAL)?;
+
+        if new_offset < 0 {
+            return Err(EINVAL);
+        }
+
+        *current_offset = new_offset;
+        Ok(*current_offset)
+    }
 }
 
 impl Drop for FileObject {

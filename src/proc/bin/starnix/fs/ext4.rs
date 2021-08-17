@@ -155,20 +155,7 @@ impl FileOps for ExtDirFileObject {
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
-        let mut current_offset = file.offset.lock();
-        let new_offset = match whence {
-            SeekOrigin::SET => Some(offset),
-            SeekOrigin::CUR => (*current_offset).checked_add(offset),
-            SeekOrigin::END => Some(MAX_LFS_FILESIZE as i64),
-        }
-        .ok_or(EINVAL)?;
-
-        if new_offset < 0 {
-            return Err(EINVAL);
-        }
-
-        *current_offset = new_offset;
-        Ok(*current_offset)
+        file.unbounded_seek(offset, whence)
     }
 
     fn readdir(

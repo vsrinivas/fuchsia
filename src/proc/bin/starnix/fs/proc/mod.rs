@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 mod fs;
-mod inode_generation;
+mod inode_numbers;
 mod node_holder;
+mod pid_directory;
 mod proc_directory;
-mod task_directory;
 
 pub use fs::*;
