@@ -119,7 +119,7 @@ TEST_F(AudioRendererTest, MinLeadTimePadding) {
   // our output's PresentationDelay, fully expecting this value to be reflected as-is to
   // renderer+clients.
   context().route_graph().AddRenderer(std::move(renderer_));
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
 
   // SetPcmStreamType triggers the routing preparation completion, which connects output(s) to
   // renderer. Renderers react to new outputs in `OnLinkAdded` by recalculating minimum lead time.
@@ -137,7 +137,7 @@ TEST_F(AudioRendererTest, MinLeadTimePadding) {
 
 TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   context().route_graph().AddRenderer(std::move(renderer_));
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
 
   fidl_renderer_->SetPcmStreamType(PcmStreamType());
   AddPayloadBuffer(0, zx_system_get_page_size(), fidl_renderer_.get());
@@ -170,7 +170,7 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
 
 TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   context().route_graph().AddRenderer(std::move(renderer_));
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
 
   fidl_renderer_->SetPcmStreamType(PcmStreamType());
   AddPayloadBuffer(0, zx_system_get_page_size(), fidl_renderer_.get());
@@ -245,7 +245,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
       vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
       ZX_OK);
 
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   auto* renderer_raw = renderer_.get();
@@ -266,7 +266,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 
 // AudioRenderer should survive, if it calls Play while already playing.
 TEST_F(AudioRendererTest, DoublePlay) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -292,7 +292,7 @@ TEST_F(AudioRendererTest, DoublePlay) {
 // AudioRenderer should survive, if it calls Pause for a second time before calling Play.
 // Timestamps returned from this second Pause should be the same as those from the first.
 TEST_F(AudioRendererTest, DoublePause) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -332,7 +332,7 @@ TEST_F(AudioRendererTest, DoublePause) {
 // AudioRenderer should survive if calling Pause before ever calling Play.
 // We return timestamps that try to indicate that no previous timeline transform was established.
 TEST_F(AudioRendererTest, PauseBeforePlay) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -350,7 +350,7 @@ TEST_F(AudioRendererTest, PauseBeforePlay) {
 }
 
 TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -386,7 +386,7 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
 
 // AudioCore should survive, if a renderer is unbound between a Play call and its callback.
 TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -407,7 +407,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
 // AudioCore should survive, if a renderer is unbound immediately after PlayNoReply, as AudioCore
 // may kick off deferred actions that need to be safely retired.
 TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -423,7 +423,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
 
 // AudioCore should survive, if a renderer is unbound between a Pause call and its callback.
 TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -444,7 +444,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
 // AudioCore should survive, if a renderer is unbound immediately after PauseNoReply, as AudioCore
 // may kick off deferred actions that need to be safely retired.
 TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -461,7 +461,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
 }
 
 TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -533,7 +533,7 @@ TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
   RunLoopUntilIdle();
   ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
 
-  context().route_graph().AddDevice(fake_output_.get());
+  context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
   ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
@@ -543,8 +543,8 @@ TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
 
   // Remove the device and validate that the reference clock received from the renderer remains
   // valid, even after the device is removed (and thus renderer is rerouted to a ThrottleOutput)
-  context().route_graph().RemoveDevice(fake_output_.get());
-  // RemoveDevice(fake_output_.get()) will be called again during TearDown, which is benign
+  context().route_graph().RemoveDeviceFromRoutes(fake_output_.get());
+  // device_manager will call RemoveDevice again during TearDown, which is benign
 
   RunLoopUntilIdle();
   ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);

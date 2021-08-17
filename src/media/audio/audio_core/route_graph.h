@@ -17,6 +17,7 @@
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/device_config.h"
+#include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/idle_policy.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/threading_model.h"
@@ -37,7 +38,7 @@ struct RoutingProfile {
 // Renderers are routed by Usage to the most recently plugged output that supports their Usage.
 //
 // Capturers are routed to the most recently plugged device that supports their usage.
-class RouteGraph {
+class RouteGraph : public DeviceRouter {
  public:
   // Constructs a graph from the given config and link matrix. Each parameter must outlive the
   // RouteGraph.
@@ -45,18 +46,23 @@ class RouteGraph {
 
   ~RouteGraph();
 
+  // DeviceRouter implementation
+  //
+  // Adds an |AudioInput| or |AudioOutput| to the route graph. An audio input may be connected to
+  // transmit samples to an |AudioCapturer|; an audio output receives samples from an
+  // |AudioRenderer|.
+  void AddDeviceToRoutes(AudioDevice* input) final;
+
+  // Removes an |AudioInput| or |AudioOutput| from the route graph. Any connected |AudioCapturer|s
+  // or |AudioRenderer|s will be rerouted.
+  void RemoveDeviceFromRoutes(AudioDevice* input) final;
+
+  //
   // TODO(fxbug.dev/13339): Remove throttle_output_.
   // Sets a throttle output which is linked to all AudioRenderers to throttle the rate at which we
   // return packets to clients.
   void SetThrottleOutput(ThreadingModel* threading_model,
                          std::shared_ptr<AudioOutput> throttle_output);
-
-  // Adds an |AudioInput| to the route graph. An audio input may be connected to transmit samples
-  // to an |AudioCapturer|.
-  void AddDevice(AudioDevice* input);
-
-  // Removes an |AudioInput| from the route graph. Any connected |AudioCapturer|s will be rerouted.
-  void RemoveDevice(AudioDevice* input);
 
   // Returns a boolean indicating if a |device| is contained in the route graph.
   bool ContainsDevice(const AudioDevice* device);

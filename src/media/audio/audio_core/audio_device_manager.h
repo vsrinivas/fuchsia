@@ -24,7 +24,6 @@
 #include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/plug_detector.h"
-#include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
@@ -34,9 +33,8 @@ class BaseCapturer;
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
   AudioDeviceManager(ThreadingModel& threading_model, std::unique_ptr<PlugDetector> plug_detector,
-                     RouteGraph& route_graph, LinkMatrix& link_matrix,
-                     ProcessConfig& process_config,
-                     std::shared_ptr<AudioClockFactory> clock_factory);
+                     LinkMatrix& link_matrix, ProcessConfig& process_config,
+                     std::shared_ptr<AudioClockFactory> clock_factory, DeviceRouter& device_router);
   ~AudioDeviceManager();
 
   fidl::InterfaceRequestHandler<fuchsia::media::AudioDeviceEnumerator> GetFidlRequestHandler() {
@@ -131,11 +129,11 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void UpdateDefaultDevice(bool input);
 
   ThreadingModel& threading_model_;
-  RouteGraph& route_graph_;
   std::unique_ptr<PlugDetector> plug_detector_;
   LinkMatrix& link_matrix_;
   ProcessConfig& process_config_;
   std::shared_ptr<AudioClockFactory> clock_factory_;
+  DeviceRouter& device_router_;
 
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> bindings_;

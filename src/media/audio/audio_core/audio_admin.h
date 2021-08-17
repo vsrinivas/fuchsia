@@ -118,7 +118,8 @@ class AudioAdmin {
   // Used to ensure we are on the thread where we constructed the class (should be the FIDL thread).
   async_dispatcher_t* fidl_dispatcher() { return fidl_dispatcher_; }
 
-  // For static thread annotation to work properly, subclasses must directly access this member.
+  // For static thread annotation to work properly, subclasses must directly access this member,
+  // so it must be protected (despite guidance to make class member variables private).
   fit::thread_checker fidl_thread_checker_;
 
  private:

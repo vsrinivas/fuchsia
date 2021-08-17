@@ -22,15 +22,15 @@ namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(ThreadingModel& threading_model,
                                        std::unique_ptr<PlugDetector> plug_detector,
-                                       RouteGraph& route_graph, LinkMatrix& link_matrix,
-                                       ProcessConfig& process_config,
-                                       std::shared_ptr<AudioClockFactory> clock_factory)
+                                       LinkMatrix& link_matrix, ProcessConfig& process_config,
+                                       std::shared_ptr<AudioClockFactory> clock_factory,
+                                       DeviceRouter& device_router)
     : threading_model_(threading_model),
-      route_graph_(route_graph),
       plug_detector_(std::move(plug_detector)),
       link_matrix_(link_matrix),
       process_config_(process_config),
-      clock_factory_(clock_factory) {}
+      clock_factory_(clock_factory),
+      device_router_(device_router) {}
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
@@ -154,7 +154,7 @@ fpromise::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
   // UpdatePipelineConfig is only valid on a device without links (for the purpose of effects
   // tuning). As such, the device is removed from route_graph to ensure all links are removed.
   if (device->plugged()) {
-    route_graph_.RemoveDevice(device.get());
+    device_router_.RemoveDeviceFromRoutes(device.get());
   }
   FX_DCHECK(link_matrix_.DestLinkCount(*device) == 0);
   FX_DCHECK(link_matrix_.SourceLinkCount(*device) == 0);
@@ -165,7 +165,7 @@ fpromise::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
   return device->UpdateDeviceProfile(profile_params).and_then([this, device]() {
     device->UpdateRoutableState(true);
     if (device->plugged()) {
-      route_graph_.AddDevice(device.get());
+      device_router_.AddDeviceToRoutes(device.get());
     }
   });
 }
@@ -398,7 +398,7 @@ void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& d
   device->UpdatePlugState(/*plugged=*/false, plug_time);
 
   if (device->routable()) {
-    route_graph_.RemoveDevice(device.get());
+    device_router_.RemoveDeviceFromRoutes(device.get());
   }
   UpdateDefaultDevice(device->is_input());
 }
@@ -413,7 +413,7 @@ void AudioDeviceManager::OnDevicePlugged(const std::shared_ptr<AudioDevice>& dev
   device->UpdatePlugState(/*plugged=*/true, plug_time);
 
   if (device->routable()) {
-    route_graph_.AddDevice(device.get());
+    device_router_.AddDeviceToRoutes(device.get());
   }
   UpdateDefaultDevice(device->is_input());
 }

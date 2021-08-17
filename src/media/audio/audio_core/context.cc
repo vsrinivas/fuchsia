@@ -41,11 +41,11 @@ class ContextImpl : public Context {
         process_config_(std::move(process_config)),
         route_graph_(&link_matrix_),
         clock_factory_(clock_factory),
-        device_manager_(*threading_model_, std::move(plug_detector), route_graph_, link_matrix_,
-                        process_config_, clock_factory_),
+        idle_policy_(this),
+        device_manager_(*threading_model_, std::move(plug_detector), link_matrix_, process_config_,
+                        clock_factory_, idle_policy_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
                                process_config_.default_render_usage_volumes()),
-        idle_policy_(this),
         audio_admin_(&stream_volume_manager_, &usage_reporter_, &activity_dispatcher_,
                      &idle_policy_, threading_model_->FidlDomain().dispatcher()),
         vmar_manager_(
@@ -107,13 +107,13 @@ class ContextImpl : public Context {
   // Manages clock creation.
   std::shared_ptr<AudioClockFactory> clock_factory_;
 
+  IdlePolicy idle_policy_;
+
   // State for dealing with devices.
   AudioDeviceManager device_manager_;
 
   // Router for volume changes.
   StreamVolumeManager stream_volume_manager_;
-
-  IdlePolicy idle_policy_;
 
   UsageReporterImpl usage_reporter_;
 

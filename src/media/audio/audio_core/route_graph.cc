@@ -53,19 +53,19 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 
   throttle_release_fence_ = {std::move(bridge.completer)};
   throttle_output_ = throttle_output;
-  AddDevice(throttle_output_.get());
+  AddDeviceToRoutes(throttle_output_.get());
 }
 
-void RouteGraph::AddDevice(AudioDevice* device) {
-  TRACE_DURATION("audio", "RouteGraph::AddDevice");
+void RouteGraph::AddDeviceToRoutes(AudioDevice* device) {
+  TRACE_DURATION("audio", "RouteGraph::AddDeviceToRoutes");
   FX_LOGS(DEBUG) << "Added device to route graph: " << device;
 
   devices_.push_front(device);
   UpdateGraphForDeviceChange();
 }
 
-void RouteGraph::RemoveDevice(AudioDevice* device) {
-  TRACE_DURATION("audio", "RouteGraph::RemoveDevice");
+void RouteGraph::RemoveDeviceFromRoutes(AudioDevice* device) {
+  TRACE_DURATION("audio", "RouteGraph::RemoveDeviceFromRoutes");
   FX_LOGS(DEBUG) << "Removing device from graph: " << device;
 
   auto it = std::find(devices_.begin(), devices_.end(), device);
@@ -303,7 +303,7 @@ std::unordered_set<AudioDevice*> RouteGraph::TargetsForRenderUsage(const RenderU
     return {};
   }
 
-  if constexpr (IdlePolicy::kDebugActivityCounts) {
+  if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
     FX_LOGS(INFO) << __FUNCTION__ << " (" << RenderUsageToString(usage) << ") returning "
                   << target.device;
   }
