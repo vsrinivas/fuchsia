@@ -15,6 +15,7 @@ use {
 
 mod meta_file;
 mod meta_subdir;
+mod non_meta_subdir;
 mod root_dir;
 
 #[derive(thiserror::Error, Debug)]

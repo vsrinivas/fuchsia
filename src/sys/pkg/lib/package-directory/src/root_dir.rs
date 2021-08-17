@@ -6,6 +6,7 @@ use {
     crate::{
         meta_file::{MetaFile, MetaFileLocation},
         meta_subdir::MetaSubdir,
+        non_meta_subdir::NonMetaSubdir,
         Error,
     },
     anyhow::{anyhow, Context as _},
@@ -38,7 +39,7 @@ use {
 
 #[allow(dead_code)]
 pub(crate) struct RootDir {
-    blobfs: blobfs::Client,
+    pub(crate) blobfs: blobfs::Client,
     hash: fuchsia_hash::Hash,
     pub(crate) meta_far: FileProxy,
     // The keys are object relative path expressions.
@@ -189,7 +190,7 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
         let subdir_prefix = canonical_path.to_string() + "/";
         for k in self.non_meta_files.keys() {
             if k.starts_with(&subdir_prefix) {
-                let () = Arc::new(NonMetaSubdir::new(self, canonical_path.to_string())).open(
+                let () = Arc::new(NonMetaSubdir::new(self, subdir_prefix)).open(
                     scope,
                     flags,
                     mode,
@@ -300,38 +301,6 @@ impl vfs::directory::entry::DirectoryEntry for Meta {
     }
 }
 
-#[allow(dead_code)]
-struct NonMetaSubdir {
-    root_dir: Arc<RootDir>,
-    path: String,
-}
-
-impl NonMetaSubdir {
-    pub fn new(root_dir: Arc<RootDir>, path: String) -> Self {
-        NonMetaSubdir { root_dir, path }
-    }
-}
-
-// TODO(fxbug.dev/75603)
-impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
-    fn open(
-        self: Arc<Self>,
-        _: ExecutionScope,
-        _: u32,
-        _: u32,
-        _: VfsPath,
-        _: ServerEnd<NodeMarker>,
-    ) {
-        todo!()
-    }
-    fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
-    }
-    fn can_hardlink(&self) -> bool {
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -355,6 +324,7 @@ mod tests {
         async fn new() -> (Self, RootDir) {
             let pkg = PackageBuilder::new("base-package-0")
                 .add_resource_at("resource", "blob-contents".as_bytes())
+                .add_resource_at("dir/file", "bloblob".as_bytes())
                 .add_resource_at("meta/file", "meta-contents0".as_bytes())
                 .add_resource_at("meta/dir/file", "meta-contents1".as_bytes())
                 .build()
@@ -377,7 +347,7 @@ mod tests {
         let (_env, root_dir) = TestEnv::new().await;
 
         let meta_files: HashMap<String, MetaFileLocation> = [
-            (String::from("meta/contents"), MetaFileLocation { offset: 4096, length: 74 }),
+            (String::from("meta/contents"), MetaFileLocation { offset: 4096, length: 148 }),
             (String::from("meta/package"), MetaFileLocation { offset: 16384, length: 39 }),
             (String::from("meta/file"), MetaFileLocation { offset: 12288, length: 14 }),
             (String::from("meta/dir/file"), MetaFileLocation { offset: 8192, length: 14 }),
@@ -387,12 +357,20 @@ mod tests {
         .collect();
         assert_eq!(root_dir.meta_files, meta_files);
 
-        let non_meta_files: HashMap<String, fuchsia_hash::Hash> = [(
-            String::from("resource"),
-            "bd905f783ceae4c5ba8319703d7505ab363733c2db04c52c8405603a02922b15"
-                .parse::<fuchsia_hash::Hash>()
-                .unwrap(),
-        )]
+        let non_meta_files: HashMap<String, fuchsia_hash::Hash> = [
+            (
+                String::from("resource"),
+                "bd905f783ceae4c5ba8319703d7505ab363733c2db04c52c8405603a02922b15"
+                    .parse::<fuchsia_hash::Hash>()
+                    .unwrap(),
+            ),
+            (
+                String::from("dir/file"),
+                "5f615dd575994fcbcc174974311d59de258d93cd523d5cb51f0e139b53c33201"
+                    .parse::<fuchsia_hash::Hash>()
+                    .unwrap(),
+            ),
+        ]
         .iter()
         .cloned()
         .collect();
@@ -454,7 +432,7 @@ mod tests {
         let (pos, sealed) = Directory::read_dirents(
             &root_dir,
             &TraversalPosition::Start,
-            Box::new(crate::tests::FakeSink::new(3)),
+            Box::new(crate::tests::FakeSink::new(4)),
         )
         .await
         .expect("read_dirents failed");
@@ -463,6 +441,7 @@ mod tests {
             crate::tests::FakeSink::from_sealed(sealed).entries,
             vec![
                 (".".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
+                ("dir".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
                 ("meta".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
                 ("resource".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE))
             ]
@@ -542,6 +521,10 @@ mod tests {
             files_async::readdir(&proxy).await.unwrap(),
             vec![
                 files_async::DirEntry {
+                    name: "dir".to_string(),
+                    kind: files_async::DirentKind::Directory
+                },
+                files_async::DirEntry {
                     name: "meta".to_string(),
                     kind: files_async::DirentKind::Directory
                 },
@@ -606,6 +589,33 @@ mod tests {
         let root_dir = Arc::new(root_dir);
 
         for path in ["meta/dir", "meta/dir/"] {
+            let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+
+            DirectoryEntry::open(
+                Arc::clone(&root_dir),
+                ExecutionScope::new(),
+                OPEN_RIGHT_READABLE,
+                0,
+                VfsPath::validate_and_split(path).unwrap(),
+                server_end.into_channel().into(),
+            );
+
+            assert_eq!(
+                files_async::readdir(&proxy).await.unwrap(),
+                vec![files_async::DirEntry {
+                    name: "file".to_string(),
+                    kind: files_async::DirentKind::File
+                }]
+            );
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_non_meta_subdir() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
+
+        for path in ["dir", "dir/"] {
             let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
 
             DirectoryEntry::open(

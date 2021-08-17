@@ -46,6 +46,7 @@ rustc_library("package-directory") {
     "src/lib.rs",
     "src/meta_file.rs",
     "src/meta_subdir.rs",
+    "src/non_meta_subdir.rs",
     "src/root_dir.rs",
   ]
 }
