@@ -443,6 +443,11 @@ class FlatlandTest : public gtest::TestLoopFixture {
     child->CreateView(std::move(child_token), parent_viewport_watcher->NewRequest());
     PRESENT(parent, true);
     PRESENT(child, true);
+
+    // After View creation the child should have an associated ViewRef.
+    auto child_uber_struct = GetUberStruct(child);
+    ASSERT_NE(child_uber_struct, nullptr);
+    EXPECT_NE(child_uber_struct->view_ref, nullptr);
   }
 
   void SetDisplayContent(FlatlandDisplay* display, Flatland* child,

@@ -35,6 +35,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   ChildCountVector child_counts;
   ParentIndexVector parent_indices;
   std::unordered_set<TransformHandle> live_transforms;
+  std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
 
   // If we don't have the root in the map, the topology will be empty.
   const auto root_uber_struct_kv = uber_structs.find(root.GetInstanceId());
@@ -90,6 +91,8 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
         continue;
       }
 
+      view_refs.emplace(current_entry.handle, uber_struct_kv->second->view_ref);
+
       // Thanks to one-view-per-session semantics, we should never cycle through the
       // topological vectors, so we don't need to handle cycles. We DCHECK here just to be sure.
       FX_DCHECK(std::find_if(vector_stack.cbegin(), vector_stack.cend(),
@@ -134,7 +137,8 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   return {.topology_vector = std::move(topology_vector),
           .child_counts = std::move(child_counts),
           .parent_indices = std::move(parent_indices),
-          .live_handles = std::move(live_transforms)};
+          .live_handles = std::move(live_transforms),
+          .view_refs = std::move(view_refs)};
 }
 
 }  // namespace flatland

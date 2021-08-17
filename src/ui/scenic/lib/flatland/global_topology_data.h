@@ -43,6 +43,9 @@ struct GlobalTopologyData {
   // The set of TransformHandles in the |topology_vector| (provided for convenience).
   std::unordered_set<TransformHandle> live_handles;
 
+  // ViewRef for each TransformHandle.
+  std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
+
   // Computes the GlobalTopologyData consisting of all TransformHandles reachable from |root|.
   //
   // |root.GetInstanceId()| must be a key in |uber_structs|, and |root| must also be the first

@@ -55,6 +55,10 @@ struct UberStruct {
 
   // The images associated with each TransformHandle.
   std::unordered_map<TransformHandle, allocation::ImageMetadata> images;
+
+  // The ViewRef for the root (View) of this Flatland instance.
+  // Can be nullptr when not attached to the scene, otherwise must be set.
+  std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref = nullptr;
 };
 
 }  // namespace flatland

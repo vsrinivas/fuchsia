@@ -209,6 +209,10 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
 
   uber_struct->images = image_metadatas_;
 
+  if (parent_link_.has_value()) {
+    uber_struct->view_ref = parent_link_->view_ref;
+  }
+
   // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
   // waiting on the acquire fences to indicate that a Present is pending.
   auto present_id =
