@@ -37,9 +37,9 @@ plugin!(
             "/routes" => RoutesGraphController::default(),
             "/blob" => BlobController::default(),
             "/sysmgr/services" => SysmgrServicesController::default(),
-            "/zbi/sections" => ZbiSectionsController::default(),
-            "/zbi/bootfs" => BootfsPathsController::default(),
-            "/zbi/cmdline" => ZbiCmdlineController::default(),
+            "/update/zbi/sections" => ZbiSectionsController::default(),
+            "/update/zbi/bootfs" => BootfsPathsController::default(),
+            "/update/zbi/cmdline" => ZbiCmdlineController::default(),
         }
     ),
     vec![]
