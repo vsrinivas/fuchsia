@@ -73,9 +73,16 @@ ControllerPtr FindTilesService(bool use_flatland) {
   fbl::unique_fd tile_component(
       openat(dirfd(sys.get()), tiles_name.c_str(), O_DIRECTORY | O_RDONLY));
   if (!tile_component.is_valid()) {
-    fprintf(stderr,
-            "Couldn't find tiles component in realm\n"
-            "To start a new instance of tiles, run 'tiles_ctl start'\n");
+    if (use_flatland) {
+      fprintf(stderr,
+              "Couldn't find flatline tiles component in realm\n"
+              "To start a new instance of tiles, run 'tiles_ctl --flatland start'\n");
+
+    } else {
+      fprintf(stderr,
+              "Couldn't find tiles component in realm\n"
+              "To start a new instance of tiles, run 'tiles_ctl start'\n");
+    }
     return {};
   }
 
