@@ -1,5 +1,9 @@
 {
     "include": [
+        "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_hardware_video_decoder.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_view.shard.cmx",
         "//src/lib/vulkan/application-container.shard.cmx"
     ],
     "program": {
@@ -7,28 +11,16 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.accessibility.semantics.SemanticsManager",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.device.NameProvider",
-            "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
             "fuchsia.media.SessionAudioConsumerFactory",
-            "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.memorypressure.Provider",
-            "fuchsia.net.NameLookup",
-            "fuchsia.net.interfaces.State",
-            "fuchsia.netstack.Netstack",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
-            "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Registry",
             "fuchsia.web.ContextProvider"
         ]
