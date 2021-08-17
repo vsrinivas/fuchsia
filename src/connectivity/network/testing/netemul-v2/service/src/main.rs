@@ -81,16 +81,50 @@ impl Into<zx::Status> for CreateRealmError {
             | CreateRealmError::NameNotProvided
             | CreateRealmError::CapabilitySourceNotProvided
             | CreateRealmError::CapabilityNameNotProvided
-            | CreateRealmError::DuplicateCapabilityUse(_, _)
-            | CreateRealmError::ModifiedNonexistentProgram(_)
-            | CreateRealmError::RealmBuilderError(fcomponent::error::Error::FailedToRoute(
-                frealmbuilder::RealmBuilderError::MissingRouteSource,
-            ))
+            | CreateRealmError::DuplicateCapabilityUse(String { .. }, String { .. })
+            | CreateRealmError::ModifiedNonexistentProgram(String { .. })
             | CreateRealmError::StorageCapabilityVariantNotProvided
             | CreateRealmError::StorageCapabilityPathNotProvided
             | CreateRealmError::DevfsCapabilityNameNotProvided
-            | CreateRealmError::InvalidDevfsSubdirectory(_) => zx::Status::INVALID_ARGS,
-            CreateRealmError::RealmBuilderError(_) => zx::Status::INTERNAL,
+            | CreateRealmError::InvalidDevfsSubdirectory(String { .. }) => zx::Status::INVALID_ARGS,
+            CreateRealmError::RealmBuilderError(error) => match error {
+                // The following types of errors from the realm builder library are likely due to
+                // client error (e.g. attempting to create a realm with an invalid configuration).
+                fcomponent::error::Error::Builder(e) => {
+                    let _: fcomponent::error::BuilderError = e;
+                    zx::Status::INVALID_ARGS
+                }
+                fcomponent::error::Error::Event(e) => {
+                    let _: fcomponent::error::EventError = e;
+                    zx::Status::INVALID_ARGS
+                }
+                fcomponent::error::Error::FailedToSetDecl(fcomponent::Moniker { .. }, e)
+                | fcomponent::error::Error::FailedToGetDecl(fcomponent::Moniker { .. }, e)
+                | fcomponent::error::Error::FailedToMarkAsEager(fcomponent::Moniker { .. }, e)
+                | fcomponent::error::Error::FailedToCommit(e)
+                | fcomponent::error::Error::FailedToRoute(e) => {
+                    let _: frealmbuilder::RealmBuilderError = e;
+                    zx::Status::INVALID_ARGS
+                }
+                // The following types of realm builder errors are unlikely to be attributable to
+                // the client, and are more likely to indicate e.g. a transport error or an
+                // unexpected failure in the underlying system.
+                fcomponent::error::Error::Realm(e) => {
+                    let _: fcomponent::error::RealmError = e;
+                    zx::Status::INTERNAL
+                }
+                fcomponent::error::Error::FidlError(e) => {
+                    let _: fidl::Error = e;
+                    zx::Status::INTERNAL
+                }
+                fcomponent::error::Error::FailedToSetPkgDir(e) => {
+                    let _: frealmbuilder::RealmBuilderError = e;
+                    zx::Status::INTERNAL
+                }
+                fcomponent::error::Error::FailedToOpenPkgDir(anyhow::Error { .. }) => {
+                    zx::Status::INTERNAL
+                }
+            },
         }
     }
 }
@@ -367,53 +401,6 @@ async fn create_realm_instance(
         rights: Some(fio2::R_STAR_DIR),
         subdir: None,
     }));
-    // Mark all dependencies between components in the test realm as weak, to allow for dependency
-    // cycles.
-    //
-    // TODO(https://fxbug.dev/74977): once we can specify weak dependencies directly with the
-    // RealmBuilder API, only mark dependencies as `weak` that originated from a `ChildUses.all`
-    // configuration.
-    for offer in &mut *offers {
-        match offer {
-            cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                dependency_type,
-                source,
-                source_name: _,
-                target: _,
-                target_name: _,
-            })
-            | cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
-                dependency_type,
-                source,
-                source_name: _,
-                target: _,
-                target_name: _,
-                rights: _,
-                subdir: _,
-            }) => {
-                // No need to mark dependencies on the built-in netemul services component as weak,
-                // since it doesn't depend on any capabilities exposed by other components in the
-                // test realm.
-                match source {
-                    cm_rust::OfferSource::Child(name)
-                        if name == NETEMUL_SERVICES_COMPONENT_NAME =>
-                    {
-                        continue;
-                    }
-                    _ => (),
-                }
-                *dependency_type = cm_rust::DependencyType::Weak;
-            }
-            // Storage declarations do not support weak dependencies.
-            cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl { .. }) => (),
-            offer => {
-                error!(
-                    "unexpected type of capability offer from the root of the managed realm; found \
-                    {:?}", offer,
-                );
-            }
-        }
-    }
     for DevfsUsage { component, capability_name, subdir } in components_using_devfs {
         let () = offers.push(cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
             source: cm_rust::OfferSource::Child(NETEMUL_SERVICES_COMPONENT_NAME.to_string()),
@@ -1704,7 +1691,7 @@ mod tests {
                         ..fnetemul::ChildDef::EMPTY
                     },
                 ],
-                epitaph: zx::Status::INTERNAL,
+                epitaph: zx::Status::INVALID_ARGS,
             },
             TestCase {
                 name: "storage capabilities use duplicate paths",
@@ -1758,13 +1745,42 @@ mod tests {
                 }],
                 epitaph: zx::Status::INVALID_ARGS,
             },
+            TestCase {
+                name: "dependency cycle between child components",
+                children: vec![
+                    fnetemul::ChildDef {
+                        name: Some("counter-a".to_string()),
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                                name: Some("counter-b".to_string()),
+                                capability: Some(fnetemul::ExposedCapability::Protocol(
+                                    CounterMarker::PROTOCOL_NAME.to_string(),
+                                )),
+                                ..fnetemul::ChildDep::EMPTY
+                            }),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                    fnetemul::ChildDef {
+                        name: Some("counter-b".to_string()),
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                                name: Some("counter-a".to_string()),
+                                capability: Some(fnetemul::ExposedCapability::Protocol(
+                                    CounterMarker::PROTOCOL_NAME.to_string(),
+                                )),
+                                ..fnetemul::ChildDep::EMPTY
+                            }),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                ],
+                epitaph: zx::Status::INVALID_ARGS,
+            },
             // TODO(https://fxbug.dev/72043): once we allow duplicate protocols, verify that a child
             // exposing duplicate protocols results in a ZX_ERR_INTERNAL epitaph.
-            //
-            // TODO(https://fxbug.dev/74977): once we only mark dependencies as `weak` that
-            // originated from a `ChildUses.all` configuration, verify that an explicit dependency
-            // cycle between components in a test realm (not using `ChildUses.all`) results in a
-            // ZX_ERR_INTERNAL epitaph.
         ];
         for TestCase { name, children, epitaph } in std::array::IntoIter::new(cases) {
             let TestRealm { realm } = TestRealm::new(
