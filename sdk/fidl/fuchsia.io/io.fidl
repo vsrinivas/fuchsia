@@ -395,11 +395,13 @@ protocol File {
     compose Node;
     compose fuchsia.io2.AdvisoryLocking;
 
-    /// Reads `count` bytes at the seek offset.
+    /// Reads up to `count` bytes at the seek offset.
     /// The seek offset is moved forward by the number of bytes read.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_READABLE`, otherwise returns
+    /// This method requires the following rights: `OPEN_RIGHT_READABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    ///
+    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
     Read(struct {
         count uint64;
     }) -> (struct {
@@ -407,11 +409,13 @@ protocol File {
         data vector<uint8>:MAX_BUF;
     });
 
-    /// Reads `count` bytes at the provided offset.
+    /// Reads up to `count` bytes at the provided offset.
     /// Does not affect the seek offset.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_READABLE`, otherwise returns
+    /// This method requires the following rights: `OPEN_RIGHT_READABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    ///
+    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
     ReadAt(struct {
         count uint64;
         offset uint64;

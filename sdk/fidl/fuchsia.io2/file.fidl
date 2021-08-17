@@ -53,6 +53,8 @@ protocol File {
     ///   `data` vector.
     ///
     /// This method requires the [`Rights.READ_BYTES`] right.
+    ///
+    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
     Read(struct {
         count uint64;
     }) -> (struct {
@@ -101,6 +103,8 @@ protocol File {
     ///   `data` vector.
     ///
     /// This method requires the [`Rights.READ_BYTES`] right.
+    ///
+    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
     ReadAt(struct {
         count uint64;
         offset uint64;
