@@ -9,6 +9,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mmio-ptr/fake.h>
+#include <zircon/pixelformat.h>
 
 #include <type_traits>
 #include <vector>
@@ -48,6 +49,7 @@ TEST(IntelI915Display, SysmemRequirements) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   image_t image = {};
+  image.pixel_format = ZX_PIXEL_FORMAT_ARGB_8888;
   ASSERT_OK(
       fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
 
@@ -56,6 +58,47 @@ TEST(IntelI915Display, SysmemRequirements) {
 
   loop.RunUntilIdle();
   EXPECT_TRUE(collection.set_constraints_called());
+}
+
+TEST(IntelI915Display, SysmemInvalidFormat) {
+  i915::Controller display(nullptr);
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  MockNoCpuBufferCollection collection;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  image_t image = {};
+  image.pixel_format = UINT32_MAX;
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
+
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, display.DisplayControllerImplSetBufferCollectionConstraints(
+                                     &image, client_channel.get()));
+
+  loop.RunUntilIdle();
+  EXPECT_FALSE(collection.set_constraints_called());
+}
+
+TEST(IntelI915Display, SysmemInvalidType) {
+  i915::Controller display(nullptr);
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  MockNoCpuBufferCollection collection;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  image_t image = {};
+  image.pixel_format = ZX_PIXEL_FORMAT_ARGB_8888;
+  image.type = 1000000;
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
+
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, display.DisplayControllerImplSetBufferCollectionConstraints(
+                                     &image, client_channel.get()));
+
+  loop.RunUntilIdle();
+  EXPECT_FALSE(collection.set_constraints_called());
 }
 
 TEST(IntelI915Display, SetInterruptCallback) {

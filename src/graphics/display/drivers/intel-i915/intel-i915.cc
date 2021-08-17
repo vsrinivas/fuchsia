@@ -411,10 +411,11 @@ bool Controller::ResetTrans(registers::Trans trans) {
 
   // Disable transcoder and wait for it to stop.
   //
-  // Per https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-icllp-vol12-displayengine_0.pdf,
-  // page 131, "DSI Transcoder Disable Sequence", we should only be turning off the transcoder once the
-  // associated backlight, audio, and image planes are disabled. Because this is a logical "reset", we only
-  // log failures rather than crashing the driver.
+  // Per
+  // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-icllp-vol12-displayengine_0.pdf,
+  // page 131, "DSI Transcoder Disable Sequence", we should only be turning off the transcoder once
+  // the associated backlight, audio, and image planes are disabled. Because this is a logical
+  // "reset", we only log failures rather than crashing the driver.
   auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
   trans_conf.set_transcoder_enable(0);
   trans_conf.WriteTo(mmio_space());
@@ -1721,6 +1722,9 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
       case ZX_PIXEL_FORMAT_BGR_888x:
         image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8;
         break;
+      default:
+        zxlogf(ERROR, "Config has unsupported pixel format %d", config->pixel_format);
+        return ZX_ERR_INVALID_ARGS;
     }
     image_constraints.pixel_format.has_format_modifier = true;
     switch (image_types[i]) {
@@ -1751,6 +1755,10 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
     }
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::kSrgb;
+  }
+  if (image_constraints_count == 0) {
+    zxlogf(ERROR, "Config has unsupported type %d", config->type);
+    return ZX_ERR_INVALID_ARGS;
   }
   constraints.image_format_constraints_count = image_constraints_count;
 
