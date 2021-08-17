@@ -1,0 +1,2 @@
+# The Rust API rubric is currently maintained by the Rust on Fuchsia Working Group.
+per-file rust.md = adamperry@google.com, tmandry@google.com

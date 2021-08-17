@@ -28,3 +28,5 @@ toc:
   path: /docs/concepts/api/tools.md
 - title: "Go rubric"
   path: /docs/concepts/api/go.md
+- title: "Rust rubric"
+  path: /docs/concepts/api/rust.md
