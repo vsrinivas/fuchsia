@@ -34,7 +34,13 @@ graphics_compute_vulkan_executable("radix-sort-vk-bench") {
       "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/arm/bifrost8/u32:arm_bifrost8_u32",
       "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/arm/bifrost8/u64:arm_bifrost8_u64",
     ]
-  } else {
+  } else if (is_fuchsia) {  # Default `is_fuchsia` assumes an Intel GEN GPU
+                            # (x86) board_name
+    deps += [
+      "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/intel/gen8/u32:intel_gen8_u32",
+      "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/intel/gen8/u64:intel_gen8_u64",
+    ]
+  } else {  # Otherwise, this is a host build
     is_target_archive_linkable = true
     if (defined(is_target_archive_linkable) && is_target_archive_linkable) {
       #
@@ -70,5 +76,12 @@ graphics_compute_vulkan_executable("radix-sort-vk-bench") {
         "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u64:nvidia_sm35_u64",
       ]
     }
+  }
+
+  #
+  # Ensure that a host executable is build on Linux hosts
+  #
+  if (is_fuchsia && host_os == "linux") {
+    data_deps = [ ":radix-sort-vk-bench($host_toolchain)" ]
   }
 }

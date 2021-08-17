@@ -413,7 +413,8 @@ rs_usage(char const * const argv[])
     "[count step "
     "[iterations "
     "[warmup "
-    "[validate?] ] ] ] ] ]\n\n"
+    "[validate? "
+    "[validation?] ] ] ] ] ]\n\n"
 
     "  <vendorID>:<deviceID> : Execute on a specific Vulkan physical device.\n"
 #if defined(__Fuchsia__) && !defined(RS_TARGET_ARCHIVE_LINKABLE)
@@ -427,7 +428,8 @@ rs_usage(char const * const argv[])
     "  <count step>          : Keyval step size.\n"
     "  <iterations>          : Number of times each step is executed in the benchmark.\n"
     "  <warmup>              : Number of times each step is executed before starting the benchmark.\n"
-    "  <validate?>           : If 0 then skip validating the device sorted results against a CPU sorting algorithm.\n\n",
+    "  <verify?>             : If 0 then skip verifying the device sorted results against a CPU sorting algorithm. Default 1.\n"
+    "  <validate?>           : If 0 then skip loading the Vulkan Validation layers. Default 0.\n\n",
     argv[0]);
 
 #ifdef RS_TARGET_ARCHIVE_LINKABLE
@@ -448,15 +450,23 @@ main(int argc, char const * argv[])
 
   if (argc > 1)
     {
-      vendor_id = (uint32_t)strtoul(argv[1], NULL, 16);  // returns 0 on error
+      char * str_end;
 
-      char const * colon = strchr(argv[1], ':');
+      vendor_id = (uint32_t)strtoul(argv[1], &str_end, 16);  // returns 0 on error
 
-      if (colon != NULL)
+      if (str_end != argv[1])
         {
-          device_id = (uint32_t)strtoul(strchr(argv[1], ':') + 1, NULL, 16);  // returns 0 on error
+          if (*str_end == ':')
+            {
+              device_id = (uint32_t)strtoul(str_end + 1, NULL, 16);  // returns 0 on error
+            }
         }
     }
+
+  //
+  // don't load validation layers
+  //
+  bool const is_validate = (argc <= 10) ? false : strtoul(argv[10], NULL, 0) != 0;
 
   //
   // create a Vulkan 1.2 instance
@@ -472,8 +482,11 @@ main(int argc, char const * argv[])
     .apiVersion         = VK_API_VERSION_1_2
   };
 
-  char const * const instance_enabled_layers[]     = { "VK_LAYER_KHRONOS_validation" };
-  char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME };
+  char const * const instance_layers[]     = { "VK_LAYER_KHRONOS_validation" };
+  char const * const instance_extensions[] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME };
+
+  uint32_t const instance_layer_count     = ARRAY_LENGTH_MACRO(instance_layers);
+  uint32_t const instance_extension_count = ARRAY_LENGTH_MACRO(instance_extensions);
 
   VkInstanceCreateInfo const instance_info = {
 
@@ -481,10 +494,10 @@ main(int argc, char const * argv[])
     .pNext                   = NULL,
     .flags                   = 0,
     .pApplicationInfo        = &app_info,
-    .enabledLayerCount       = ARRAY_LENGTH_MACRO(instance_enabled_layers),
-    .ppEnabledLayerNames     = instance_enabled_layers,
-    .enabledExtensionCount   = ARRAY_LENGTH_MACRO(instance_enabled_extensions),
-    .ppEnabledExtensionNames = instance_enabled_extensions
+    .enabledLayerCount       = is_validate ? instance_layer_count : instance_layer_count - 1,
+    .ppEnabledLayerNames     = instance_layers,
+    .enabledExtensionCount   = instance_extension_count,
+    .ppEnabledExtensionNames = instance_extensions
   };
 
   VkInstance instance;
@@ -520,8 +533,9 @@ main(int argc, char const * argv[])
                             (tmp.deviceID == device_id);
 
       fprintf(stdout,
-              "%c %8X : %-8X : %s\n",
+              "%c %c %8X : %-8X : %s\n",
               is_match ? '*' : ' ',
+              is_match && is_validate ? 'V' : ' ',
               tmp.vendorID,
               tmp.deviceID,
               tmp.deviceName);
@@ -622,14 +636,12 @@ main(int argc, char const * argv[])
   //
   // get rest of command line
   //
-  // clang-format on
   uint32_t const count_lo   = (argc <= 4) ? 1024 : (uint32_t)strtoul(argv[4], NULL, 0);
   uint32_t const count_hi   = (argc <= 5) ? count_lo : (uint32_t)strtoul(argv[5], NULL, 0);
   uint32_t const count_step = (argc <= 6) ? count_lo : (uint32_t)strtoul(argv[6], NULL, 0);
   uint32_t const loops      = (argc <= 7) ? RS_BENCH_LOOPS : (uint32_t)strtoul(argv[7], NULL, 0);
   uint32_t const warmup     = (argc <= 8) ? RS_BENCH_WARMUP : (uint32_t)strtoul(argv[8], NULL, 0);
-  bool const     verify     = (argc <= 9) ? true : strtoul(argv[9], NULL, 0) != 0;
-  // clang-format on
+  bool const     is_verify  = (argc <= 9) ? true : strtoul(argv[9], NULL, 0) != 0;
 
   //
   // arg validation
@@ -1470,7 +1482,7 @@ main(int argc, char const * argv[])
       double       cpu_ns   = 0.0;
       bool         verified = true;
 
-      if (verify)
+      if (is_verify)
         {
           //
           // get the internals buffer from the device
@@ -1619,12 +1631,12 @@ main(int argc, char const * argv[])
               VK_VERSION_PATCH(pdp.driverVersion),
               is_direct ? "direct" : "indirect",
               (rs_mr.keyval_size == sizeof(uint32_t)) ? "uint" : "ulong",
-              verify ? (verified ? "  OK  " : "*FAIL*") : "UNVERIFIED",
+              is_verify ? (verified ? "  OK  " : "*FAIL*") : "UNVERIFIED",
               count,
               // CPU
-              verify ? cpu_algo : "UNVERIFIED",
-              verify ? (cpu_ns / 1000000.0) : 0.0,       // milliseconds
-              verify ? (1000.0 * count / cpu_ns) : 0.0,  // mkeys / sec
+              is_verify ? cpu_algo : "UNVERIFIED",
+              is_verify ? (cpu_ns / 1000000.0) : 0.0,       // milliseconds
+              is_verify ? (1000.0 * count / cpu_ns) : 0.0,  // mkeys / sec
               loops);
 
       {

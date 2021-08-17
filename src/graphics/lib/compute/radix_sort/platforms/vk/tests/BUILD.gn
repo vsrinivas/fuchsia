@@ -5,11 +5,4 @@
 group("tests") {
   testonly = true
   public_deps = [ "radix_sort_vk_bench:radix-sort-vk-bench" ]
-
-  #
-  # Ensure that host tests are always rebuilt with device ones on Linux hosts.
-  #
-  if (is_fuchsia && host_os == "linux") {
-    data_deps = [ ":tests($host_toolchain)" ]
-  }
 }
