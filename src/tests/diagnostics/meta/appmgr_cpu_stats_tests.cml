@@ -19,11 +19,11 @@
             // Appmgr exposes the number of tracked tasks.
             "core/appmgr:root/cpu_stats:task_count WHERE [a] a > 0",
 
-            // Appmgr is using less than 256K of inspect space.
-            "core/appmgr:root/inspect_stats:current_size WHERE [a] a < 256*1024",
+            // Appmgr is using less than 2MB of inspect space.
+            "core/appmgr:root/inspect_stats:current_size WHERE [a] a < 2*1024*1024",
 
-            // Appmgr has at least 256K of inspect space.
-            "core/appmgr:root/inspect_stats:maximum_size WHERE [a] a >= 256*1024",
+            // Appmgr has at least 2MB of inspect space.
+            "core/appmgr:root/inspect_stats:maximum_size WHERE [a] a >= 2*1024*1024",
         ],
     },
 }
