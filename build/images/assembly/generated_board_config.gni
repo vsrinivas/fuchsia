@@ -27,9 +27,6 @@ import("//build/zbi/zbi.gni")
 #     [bool] Whether to include ESP bootloaders in the update package.
 #
 # MinFS arguments
-#   minfs (optional)
-#     [path] Path to prebuilt MinFS block file.
-#
 #   minfs_minimum_inodes, minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
 #     [int] Size options for minfs to pass to the fvm tool.
 #
@@ -117,25 +114,21 @@ template("generated_board_config") {
     }
 
     if (generate_fvm) {
-      if (defined(invoker.minfs)) {
-        minfs_parameters = {
-          MinFS = {
-            path = invoker.minfs
-            name = "data"
+      minfs_parameters = {
+        MinFS = {
+          name = "data"
 
-            if (defined(invoker.minfs_minimum_inodes)) {
-              minimum_inodes = invoker.minfs_minimum_inodes
-            }
-            if (defined(invoker.minfs_minimum_data_bytes)) {
-              minimum_data_bytes = invoker.minfs_minimum_data_bytes
-            }
-            if (defined(invoker.minfs_maximum_bytes)) {
-              maximum_bytes = invoker.minfs_maximum_bytes
-            }
+          if (defined(invoker.minfs_minimum_inodes)) {
+            minimum_inodes = invoker.minfs_minimum_inodes
+          }
+          if (defined(invoker.minfs_minimum_data_bytes)) {
+            minimum_data_bytes = invoker.minfs_minimum_data_bytes
+          }
+          if (defined(invoker.minfs_maximum_bytes)) {
+            maximum_bytes = invoker.minfs_maximum_bytes
           }
         }
       }
-
       blobfs_parameters = {
         BlobFS = {
           name = "blob"
@@ -233,14 +226,10 @@ template("generated_board_config") {
             }
           }
 
-          if (defined(invoker.minfs)) {
-            filesystems = [
-              minfs_parameters,
-              blobfs_parameters,
-            ]
-          } else {
-            filesystems = [ blobfs_parameters ]
-          }
+          filesystems = [
+            minfs_parameters,
+            blobfs_parameters,
+          ]
         }
       }
 

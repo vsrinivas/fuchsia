@@ -63,10 +63,6 @@ declare_args() {
   # Typically useful for initially flashing a device from zero-state.
   gpt_image = ""
 
-  # Path to manifest file containing data to place into the initial /data
-  # partition.
-  data_partition_manifest = ""
-
   # Whether to build the netboot zbi by default.
   #
   # You can still build //build/images:netboot explicitly even if enable_netboot is false.
