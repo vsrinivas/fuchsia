@@ -409,6 +409,70 @@ success("UnionEnvelopeInlining_HandleValue_Inlined") {
     }
 }
 
+success("UnionEnvelopeInlining_UnknownSmallValue_Inlined") {
+    bindings_allowlist = [go,rust,transformer],
+    value = EnvelopeInliningTestUnionStruct {
+        u: EnvelopeInliningTestUnion {
+            10: {
+                bytes = [num(100):4]
+            }
+        },
+    },
+    bytes = {
+        v2 = [
+            // primary object
+            num(10):8, // ordinal
+            num(100):4, num(0):2, num(1):2, // inlined envelope
+        ],
+    },
+}
+
+success("UnionEnvelopeInlining_UnknownLargeValue_Outlined") {
+    bindings_allowlist = [go,rust,transformer],
+    value = EnvelopeInliningTestUnionStruct {
+        u: EnvelopeInliningTestUnion {
+            10: {
+                bytes = [num(100):8]
+            }
+        },
+    },
+    bytes = {
+        v2 = [
+            // primary object
+            num(10):8, // ordinal
+            num(8):4, num(0):2, num(0):2, // present
+
+            // secondary object
+            num(100):8,
+        ],
+    },
+}
+
+success("UnionEnvelopeInlining_UnknownHandleValue_Inlined") {
+    bindings_allowlist = [go,rust,transformer],
+    handle_defs = {
+        #0 = event(),
+    },
+    value = EnvelopeInliningTestUnionStruct {
+        u: EnvelopeInliningTestUnion {
+            10: {
+                bytes = [repeat(0xff):4],
+                handles = [#0],
+            }
+        },
+    },
+    bytes = {
+        v2 = [
+            // primary object
+            num(10):8, // ordinal
+            repeat(0xff):4, num(1):2, num(1):2, // inlined envelope
+        ],
+    },
+    handles = {
+        v2 = [#0]
+    }
+}
+
 // Tests decode of a value in a union that can be represented inline in the
 // envelope but is incorrectly using the out of line representation.
 decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {

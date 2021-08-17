@@ -94,8 +94,7 @@ success("TableFieldOutOfLine") {
 }
 
 // Tests a table in which a value is inlined into an unknown field.
-// TODO(fxbug.dev/81712) Change this to success case once GIDL supports inline unknowns.
-decode_success("TableFieldUnknownInlined") {
+success("TableFieldUnknownInlined") {
     bindings_allowlist = [go,rust,transformer],
     value = TableFieldUnknownStruct {
         t: TableFieldUnknown {
@@ -115,8 +114,7 @@ decode_success("TableFieldUnknownInlined") {
 }
 
 // Tests a table in which a handle value is inlined into an unknown field.
-// TODO(fxbug.dev/81712) Change this to success case once GIDL supports inline unknowns.
-decode_success("TableFieldUnknownInlinedHandle") {
+success("TableFieldUnknownInlinedHandle") {
     bindings_allowlist = [go,rust,transformer],
     handle_defs = {
         #0 = channel(),

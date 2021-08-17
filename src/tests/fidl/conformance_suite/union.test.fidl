@@ -51,7 +51,7 @@ type MutualRecursionUnionStruct = struct {
     u MutualRecursionUnion:optional;
 };
 
-type EnvelopeInliningTestUnion = strict resource union {
+type EnvelopeInliningTestUnion = flexible resource union {
     1: small uint32;
     2: large uint64;
     3: handle handle;
