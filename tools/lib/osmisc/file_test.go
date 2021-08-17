@@ -20,17 +20,20 @@ func TestCopyFile(t *testing.T) {
 		t.Fatalf("failed to write contents to src: %v", err)
 	}
 
-	dest := filepath.Join(tmpdir, "dest")
-	if err := CopyFile(src, dest); err != nil {
-		t.Fatalf("failed to copy file: %v", err)
-	}
+	for _, path := range []string{"dest", "subdir/dest"} {
 
-	out, err := ioutil.ReadFile(dest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bytes.Compare(in, out) != 0 {
-		t.Fatalf("bytes read from dest not as expected: %q != %q", in, out)
+		dest := filepath.Join(tmpdir, path)
+		if err := CopyFile(src, dest); err != nil {
+			t.Fatalf("failed to copy file: %v", err)
+		}
+
+		out, err := ioutil.ReadFile(dest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if bytes.Compare(in, out) != 0 {
+			t.Fatalf("bytes read from dest not as expected: %q != %q", in, out)
+		}
 	}
 }
 

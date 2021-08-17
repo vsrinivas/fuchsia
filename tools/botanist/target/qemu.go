@@ -237,7 +237,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		}
 	}()
 
-	if err := copyImagesToDir(ctx, workdir, &qemuKernel, &zirconA, &storageFull); err != nil {
+	if err := copyImagesToDir(ctx, workdir, false, &qemuKernel, &zirconA, &storageFull); err != nil {
 		return err
 	}
 
@@ -393,22 +393,26 @@ func (t *QEMUTarget) Wait(ctx context.Context) error {
 	}
 }
 
-func copyImagesToDir(ctx context.Context, dir string, imgs ...*bootserver.Image) error {
+func copyImagesToDir(ctx context.Context, dir string, preservePath bool, imgs ...*bootserver.Image) error {
 	// Copy each in a goroutine for efficiency's sake.
 	eg, ctx := errgroup.WithContext(ctx)
 	for _, img := range imgs {
 		if img.Reader != nil {
 			img := img
 			eg.Go(func() error {
-				return copyImageToDir(ctx, dir, img)
+				return copyImageToDir(ctx, dir, preservePath, img)
 			})
 		}
 	}
 	return eg.Wait()
 }
 
-func copyImageToDir(ctx context.Context, dir string, img *bootserver.Image) error {
-	dest := filepath.Join(dir, img.Name)
+func copyImageToDir(ctx context.Context, dir string, preservePath bool, img *bootserver.Image) error {
+	base := img.Name
+	if preservePath {
+		base = img.Path
+	}
+	dest := filepath.Join(dir, base)
 
 	f, ok := img.Reader.(*os.File)
 	if ok {
@@ -419,7 +423,7 @@ func copyImageToDir(ctx context.Context, dir string, img *bootserver.Image) erro
 		return nil
 	}
 
-	f, err := os.Create(dest)
+	f, err := osmisc.CreateFile(dest)
 	if err != nil {
 		return err
 	}
@@ -438,6 +442,12 @@ func copyImageToDir(ctx context.Context, dir string, img *bootserver.Image) erro
 		return fmt.Errorf("%s (%q): %w", constants.FailedToCopyImageMsg, img.Name, err)
 	}
 	img.Path = dest
+
+	if img.IsExecutable {
+		if err := os.Chmod(img.Path, os.ModePerm); err != nil {
+			return fmt.Errorf("failed to make %s executable: %w", img.Path, err)
+		}
+	}
 
 	// We no longer need the reader at this point.
 	c, ok := img.Reader.(io.Closer)

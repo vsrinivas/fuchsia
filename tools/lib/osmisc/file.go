@@ -22,6 +22,9 @@ func CopyFile(src, dest string) error {
 	if err != nil {
 		return err
 	}
+	if err := os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to make parent dirs of %s: %w", dest, err)
+	}
 	out, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, info.Mode().Perm())
 	if err != nil {
 		return err

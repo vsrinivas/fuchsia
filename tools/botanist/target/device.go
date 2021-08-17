@@ -242,15 +242,16 @@ func (t *DeviceTarget) flash(ctx context.Context, images []bootserver.Image) err
 	}
 	var imgs []*bootserver.Image
 	for _, img := range images {
+		img := img
 		imgs = append(imgs, &img)
 	}
-	if err := copyImagesToDir(ctx, wd, imgs...); err != nil {
+	if err := copyImagesToDir(ctx, wd, true, imgs...); err != nil {
 		return err
 	}
 
 	flashScript := ""
 	for _, img := range imgs {
-		if img.Name == "flash-script" {
+		if img.Name == "script_flash-script" {
 			flashScript = img.Path
 			break
 		}
@@ -271,7 +272,7 @@ func (t *DeviceTarget) flash(ctx context.Context, images []bootserver.Image) err
 		if _, err := pubkey.Write(ssh.MarshalAuthorizedKey(t.signers[0].PublicKey())); err != nil {
 			return err
 		}
-		flashArgs = append(flashArgs, fmt.Sprintf("--ssh-key=%s", pubkey.Name()))
+		flashArgs = append([]string{fmt.Sprintf("--ssh-key=%s", pubkey.Name())}, flashArgs...)
 	}
 
 	cmd := exec.CommandContext(ctx, flashScript, flashArgs...)

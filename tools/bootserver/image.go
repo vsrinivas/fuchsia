@@ -31,8 +31,8 @@ type Image struct {
 	// Name is an identifier for this image that usually derives from its target partition.
 	// TODO(fxbug.dev/38517): Remove when BootZedbootShim is deprecated.
 	Name string
-	// Path is the location of the image on disk.
-	// TODO(ihuh): Remove when bootserver/cmd/main.go no longer uses it.
+	// Path is the relative location of the image with respect to the image manifest
+	// or the absolute location of the image on disk.
 	Path string
 	// Reader is a reader to the image.
 	Reader io.ReaderAt
@@ -40,6 +40,8 @@ type Image struct {
 	Size int64
 	// Args correspond to the bootserver args that map to this image type.
 	Args []string
+	// IsExecutable is true if the image is actually a script or executable.
+	IsExecutable bool
 }
 
 func getImageArgs(img build.Image, bootMode Mode) []string {
@@ -52,6 +54,10 @@ func getImageArgs(img build.Image, bootMode Mode) []string {
 		return img.PaveZedbootArgs
 	}
 	return nil
+}
+
+func isExecutable(imgType string) bool {
+	return imgType == "script" || imgType == "exe.linux-x64"
 }
 
 // ConvertFromBuildImages filters and returns Images corresponding to build Images of a given bootMode.
@@ -76,11 +82,12 @@ func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode, imageDir s
 			return nil, closeFunc, err
 		}
 		imgs = append(imgs, Image{
-			Name:   buildImg.Type + "_" + buildImg.Name,
-			Path:   buildImg.Path,
-			Reader: reader,
-			Size:   fi.Size(),
-			Args:   args,
+			Name:         buildImg.Type + "_" + buildImg.Name,
+			Path:         buildImg.Path,
+			Reader:       reader,
+			Size:         fi.Size(),
+			Args:         args,
+			IsExecutable: isExecutable(buildImg.Type),
 		})
 	}
 	closeFunc = func() error {
@@ -208,10 +215,12 @@ func ImagesFromGCS(ctx context.Context, manifest *url.URL, bootMode Mode) ([]Ima
 		}
 
 		imgs = append(imgs, Image{
-			Name:   buildImg.Type + "_" + buildImg.Name,
-			Reader: &gcsReader{obj: obj},
-			Size:   objAttrs.Size,
-			Args:   args,
+			Name:         buildImg.Type + "_" + buildImg.Name,
+			Path:         buildImg.Path,
+			Reader:       &gcsReader{obj: obj},
+			Size:         objAttrs.Size,
+			Args:         args,
+			IsExecutable: isExecutable(buildImg.Type),
 		})
 	}
 
