@@ -649,7 +649,7 @@ impl From<&StartCommand> for VDLArgs {
             tuntap: cmd.tuntap,
             enable_hidpi_scaling: cmd.hidpi_scaling,
             upscript: cmd.upscript.as_ref().unwrap_or(&String::from("")).to_string(),
-            start_package_server: !cmd.nopackageserver,
+            start_package_server: cmd.start_package_server,
             packages_to_serve: cmd
                 .packages_to_serve
                 .as_ref()
@@ -718,7 +718,7 @@ mod tests {
         assert_eq!(vdl_args.image_size, "2G");
         assert_eq!(vdl_args.device_proto, "");
         assert_eq!(vdl_args.gpu, "host");
-        assert_eq!(vdl_args.start_package_server, true);
+        assert_eq!(vdl_args.start_package_server, false);
         assert_eq!(vdl_args.acceleration, true);
         assert_eq!(vdl_args.package_server_port, "0");
         assert_eq!(vdl_args.amber_unpack_root, "");

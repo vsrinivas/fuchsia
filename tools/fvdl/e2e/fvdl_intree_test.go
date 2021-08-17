@@ -18,7 +18,7 @@ func TestStartFVDLInTree_GrpcWebProxy(t *testing.T) {
 		t,
 		[]string{
 			"start", "--nointeractive", "-V",
-			"--nopackageserver", "--grpcwebproxy", "0", "--image-size", "10G",
+			"--grpcwebproxy", "0", "--image-size", "10G",
 			// Note: for real in-tree use case, we'll default to parsing images.json file to locate
 			// build artifacts. For this test, we'll specify the image files locations via cmd args.
 			"--fvm-image", fvm,
@@ -47,7 +47,7 @@ func TestStartFVDLInTree_Headless_ServePackages_Tuntap(t *testing.T) {
 		context.Background(),
 		t,
 		[]string{
-			"start", "--nointeractive", "-V",
+			"start", "--nointeractive", "-V", "--start-package-server",
 			"--headless", "-N", "--image-size", "10G",
 			"--fvm-image", fvm,
 			"--zbi-image", zbi,

@@ -302,6 +302,14 @@ impl VDLFiles {
     }
 
     pub fn check_start_command(&self, command: &StartCommand) -> Result<()> {
+        // TODO(fxb/82804) Remove after a month.
+        if command.nopackageserver {
+            println!(
+                "{}",
+                Yellow
+                    .paint("WARNING: --nopackageserver will be removed soon, the default behavior no longer starts package server.")
+            );
+        }
         if command.nointeractive && command.vdl_output.is_none() {
             ffx_bail!(
                 "--vdl-ouput must be specified for --nointeractive mode.\n\

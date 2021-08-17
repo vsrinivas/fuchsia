@@ -72,6 +72,7 @@ func TestStartFVDLSDK_noDownload(t *testing.T) {
 		// Specify aemu and device_launcher path to prevent fvdl from downloading them from CIPD
 		"-e", mustAbs(t, filepath.Join(emulatorPath, "emulator")),
 		"-d", mustAbs(t, filepath.Join(deviceLauncher, "device_launcher")),
+		"--start-package-server",
 		// Giving this a garbage value, to make sure the test didn't actually try to download sdk 'x.x.x' from GCS
 		"--sdk-version", "x.x.x",
 		"--gcs-bucket", "fuchsia",

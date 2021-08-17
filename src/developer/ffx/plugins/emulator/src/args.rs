@@ -182,17 +182,21 @@ pub struct StartCommand {
     #[argh(switch)]
     pub emu_only: bool,
 
-    /// bool, disable automatically launching package server.
+    /// deprecated, does nothing, will soon be removed.
     #[argh(switch)]
     pub nopackageserver: bool,
 
+    /// bool, enables automatically launching package server.
+    #[argh(switch, short = 'P')]
+    pub start_package_server: bool,
+
     /// comma separated string of fuchsia package urls, extra packages to serve after starting FEMU.
-    /// Requires --nopackageserver=false
+    /// Requires --start_package_server=true
     #[argh(option)]
     pub packages_to_serve: Option<String>,
 
     /// file path to store package server log. Default is a stdout.
-    /// Requires --nopackageserver=false
+    /// Requires --start_package_server=true
     #[argh(option)]
     pub package_server_log: Option<String>,
 
