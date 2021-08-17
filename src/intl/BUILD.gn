@@ -11,6 +11,7 @@ group("intl") {
     "intl_services",
     "strings_to_fidl",
     "strings_to_json",
+    "time_zone_info_service",
   ]
 }
 
@@ -20,6 +21,7 @@ group("tests") {
     "intl_services:tests",
     "strings_to_fidl:tests",
     "strings_to_json:tests",
+    "time_zone_info_service:tests",
   ]
 }
 
