@@ -13,13 +13,6 @@ using fuchsia.wlan.minstrel;
 // The primitives defined here are not part of the official 802.11 MLME SAP interface specification,
 // but follow the same principle for the sake of consistency.
 
-// SIGNAL_REPORT.indication
-
-type SignalReportIndication = struct {
-    rssi_dbm int8;
-    snr_db int8;
-};
-
 // EAPOL.indication
 
 type EapolIndication = struct {
@@ -120,15 +113,6 @@ type StartCaptureFramesResponse = struct {
 
 type CapturedFrameResult = struct {
     frame bytes;
-};
-
-// IEEE 802.11-2016 9.4.2.19
-// Unlike a normal channel switch announcement, a ChannelSwitchInfo is sent at the time the channel
-// changes and does not include a delay field.
-type ChannelSwitchInfo = struct {
-    new_channel uint8;
-// The operating class/country may also be modified by an extended channel switch request, but
-// we do not currently support this.
 };
 
 /// Non-IEEE custom structure to inform a SoftMAC device about the association negotiation outcome.

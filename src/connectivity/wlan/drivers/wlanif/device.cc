@@ -966,7 +966,7 @@ void Device::OnChannelSwitched(const wlanif_channel_switch_info_t* info) {
     return;
   }
 
-  wlan_mlme::ChannelSwitchInfo fidl_info;
+  ::fuchsia::wlan::internal::ChannelSwitchInfo fidl_info;
   fidl_info.new_channel = info->new_channel;
 
   binding_->events().OnChannelSwitched(fidl_info);
@@ -1012,7 +1012,7 @@ void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {
     return;
   }
 
-  wlan_mlme::SignalReportIndication fidl_ind{
+  ::fuchsia::wlan::internal::SignalReportIndication fidl_ind{
       .rssi_dbm = ind->rssi_dbm,
       .snr_db = ind->snr_db,
   };

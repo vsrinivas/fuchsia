@@ -765,7 +765,7 @@ impl Associated {
         self.process_link_state_update(resp, LinkState::on_eapol_conf, context, state_change_ctx)
     }
 
-    fn on_channel_switched(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
+    fn on_channel_switched(&mut self, info: fidl_internal::ChannelSwitchInfo) {
         self.bss.channel.primary = info.new_channel;
         self.last_channel_switch_time.replace(now());
     }
@@ -2576,8 +2576,9 @@ mod tests {
         ));
         let state = link_up_state(cmd);
 
-        let switch_ind =
-            MlmeEvent::OnChannelSwitched { info: fidl_mlme::ChannelSwitchInfo { new_channel: 36 } };
+        let switch_ind = MlmeEvent::OnChannelSwitched {
+            info: fidl_internal::ChannelSwitchInfo { new_channel: 36 },
+        };
 
         assert_variant!(&state, ClientState::Associated(state) => {
             assert_eq!(state.bss.channel.primary, 1);
@@ -3394,6 +3395,6 @@ mod tests {
     }
 
     fn signal_report_with_rssi_snr(rssi_dbm: i8, snr_db: i8) -> MlmeEvent {
-        MlmeEvent::SignalReport { ind: fidl_mlme::SignalReportIndication { rssi_dbm, snr_db } }
+        MlmeEvent::SignalReport { ind: fidl_internal::SignalReportIndication { rssi_dbm, snr_db } }
     }
 }

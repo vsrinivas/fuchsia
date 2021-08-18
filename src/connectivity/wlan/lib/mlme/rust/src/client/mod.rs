@@ -1473,7 +1473,7 @@ mod tests {
             me.handle_timed_event(id);
             assert_eq!(m.fake_device.wlan_queue.len(), 0);
             m.fake_device
-                .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+                .next_mlme_msg::<fidl_internal::SignalReportIndication>()
                 .expect("error reading SignalReport.indication");
         }
     }
@@ -1497,7 +1497,7 @@ mod tests {
         m.fake_scheduler.set_time(deadline);
         me.handle_timed_event(id);
         m.fake_device
-            .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+            .next_mlme_msg::<fidl_internal::SignalReportIndication>()
             .expect("error reading SignalReport.indication");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -1551,7 +1551,7 @@ mod tests {
         m.fake_scheduler.set_time(deadline2);
         me.handle_timed_event(id2);
         m.fake_device
-            .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+            .next_mlme_msg::<fidl_internal::SignalReportIndication>()
             .expect("error reading SignalReport.indication");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]

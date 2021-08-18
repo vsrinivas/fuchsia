@@ -273,6 +273,8 @@ fn connect_txn_event_name(event: &fidl_sme::ConnectTransactionEvent) -> &'static
     match event {
         fidl_sme::ConnectTransactionEvent::OnConnectResult { .. } => "OnConnectResult",
         fidl_sme::ConnectTransactionEvent::OnDisconnect { .. } => "OnDisconnect",
+        fidl_sme::ConnectTransactionEvent::OnSignalReport { .. } => "OnSignalReport",
+        fidl_sme::ConnectTransactionEvent::OnChannelSwitched { .. } => "OnChannelSwitched",
     }
 }
 
@@ -660,6 +662,12 @@ async fn connected_state(
                                 false
                             }
                             _ => true,
+                        }
+                        fidl_sme::ConnectTransactionEvent::OnSignalReport { .. } => {
+                            false
+                        }
+                        fidl_sme::ConnectTransactionEvent::OnChannelSwitched { .. } => {
+                            false
                         }
                     };
 

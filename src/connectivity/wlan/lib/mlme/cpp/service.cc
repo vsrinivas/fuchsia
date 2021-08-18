@@ -119,7 +119,7 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
 
 zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm) {
   debugfn();
-  wlan_mlme::SignalReportIndication ind;
+  ::fuchsia::wlan::internal::SignalReportIndication ind;
   ind.rssi_dbm = rssi_dbm.val;
   return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_SignalReport_Ordinal);
 }

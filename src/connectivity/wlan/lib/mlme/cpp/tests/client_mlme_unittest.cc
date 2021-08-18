@@ -145,7 +145,7 @@ struct ClientTest : public ::testing::Test {
       bool was_on_channel = client.OnChannel();
       TriggerTimeout();
       if (was_on_channel) {
-        device.AssertNextMsgFromSmeChannel<wlan_mlme::SignalReportIndication>();
+        device.AssertNextMsgFromSmeChannel<::fuchsia::wlan::internal::SignalReportIndication>();
       }
     }
   }

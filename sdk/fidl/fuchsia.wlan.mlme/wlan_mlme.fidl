@@ -662,7 +662,7 @@ protocol MLME {
     });
 
     -> SignalReport(struct {
-        ind SignalReportIndication;
+        ind internal.SignalReportIndication;
     });
 
     -> EapolInd(struct {
@@ -701,7 +701,7 @@ protocol MLME {
     });
 
     -> OnChannelSwitched(struct {
-        info ChannelSwitchInfo;
+        info internal.ChannelSwitchInfo;
     });
 
     -> OnPmkAvailable(struct {

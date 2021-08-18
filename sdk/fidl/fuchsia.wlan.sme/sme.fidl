@@ -132,6 +132,16 @@ protocol ConnectTransaction {
     -> OnDisconnect(struct {
         info DisconnectInfo;
     });
+
+    /// Give an update of the latest signal report.
+    -> OnSignalReport(struct {
+        ind fuchsia.wlan.internal.SignalReportIndication;
+    });
+
+    /// Give an update of the channel switching.
+    -> OnChannelSwitched(struct {
+        info fuchsia.wlan.internal.ChannelSwitchInfo;
+    });
 };
 
 type RadioConfig = struct {

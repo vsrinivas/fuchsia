@@ -589,7 +589,7 @@ impl InfraBss {
         }
     }
 
-    fn handle_channel_switch(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
+    fn handle_channel_switch(&mut self, info: fidl_internal::ChannelSwitchInfo) {
         info!("Channel switch for AP {:?}", info);
         self.op_radio_cfg.channel.primary = info.new_channel;
     }
@@ -840,7 +840,9 @@ mod tests {
     }
 
     fn create_channel_switch_ind(channel: u8) -> MlmeEvent {
-        MlmeEvent::OnChannelSwitched { info: fidl_mlme::ChannelSwitchInfo { new_channel: channel } }
+        MlmeEvent::OnChannelSwitched {
+            info: fidl_internal::ChannelSwitchInfo { new_channel: channel },
+        }
     }
 
     #[test]

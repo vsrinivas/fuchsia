@@ -765,7 +765,7 @@ impl Associated {
         // timeout should have been cancelled at this point, this is almost always a no-op.
         sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
         if let Err(e) = sta.ctx.device.access_sme_sender(|sender| {
-            sender.send_signal_report(&mut fidl_mlme::SignalReportIndication {
+            sender.send_signal_report(&mut fidl_internal::SignalReportIndication {
                 rssi_dbm: self.0.signal_strength_average.avg_dbm().0,
                 snr_db: 0,
             })
@@ -3268,7 +3268,7 @@ mod tests {
 
         let signal_ind = m
             .fake_device
-            .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+            .next_mlme_msg::<fidl_internal::SignalReportIndication>()
             .expect("should see a signal report");
 
         // -128 is the default value, equivalent to 0 watt.
@@ -3298,7 +3298,7 @@ mod tests {
 
         let signal_ind = m
             .fake_device
-            .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+            .next_mlme_msg::<fidl_internal::SignalReportIndication>()
             .expect("should see a signal report");
 
         assert_eq!(signal_ind.rssi_dbm, EXPECTED_DBM);
