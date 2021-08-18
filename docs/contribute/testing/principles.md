@@ -560,7 +560,7 @@ accepted principles of software testing that apply on Fuchsia as well.
 [fidl-wire-format]: /docs/reference/fidl/language/wire-format
 [fonts-tests-integration]: /src/fonts/tests/integration/README.md
 [fsi]: /docs/concepts/system/abi/system.md
-[fuchsia.pkg.fontresolver]: https://fuchsia.dev/reference/fidl/fuchsia.pkg?hl=en#FontResolver
+[fuchsia.pkg.fontresolver]: https://fuchsia.dev/reference/fidl/fuchsia.pkg#FontResolver
 [fuzzing]: /docs/development/testing/fuzzing/overview.md
 [gidl]: /tools/fidl/gidl/README.md
 [glossary.capability-routing]: /docs/glossary/README.md#capability-routing
