@@ -35,6 +35,7 @@ use {
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, DiagnosticsData,
         InlineData, RemoteControlMarker, RemoteControlProxy,
     },
+    fidl_fuchsia_overnet::Peer,
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{Task, TimeoutExt, Timer},
@@ -43,6 +44,8 @@ use {
     rcs::RcsConnection,
     services::{DaemonServiceProvider, ServiceError, ServiceRegister},
     std::cell::Cell,
+    std::collections::HashSet,
+    std::hash::{Hash, Hasher},
     std::net::SocketAddr,
     std::rc::Rc,
     std::sync::Arc,
@@ -479,6 +482,8 @@ impl Daemon {
 
     fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
         fuchsia_async::Task::local(async move {
+            let mut known_peers: HashSet<PeerSetElement> = Default::default();
+
             loop {
                 let svc = match hoist().connect_as_service_consumer() {
                     Ok(svc) => svc,
@@ -489,8 +494,11 @@ impl Daemon {
                     }
                 };
                 loop {
-                    let peers = match svc.list_peers().await {
-                        Ok(peers) => peers,
+                    match svc.list_peers().await {
+                        Ok(new_peers) => {
+                            known_peers =
+                                Self::handle_overnet_peers(&queue, known_peers, new_peers);
+                        }
                         Err(err) => {
                             log::info!("Overnet peer discovery failed: {}, will retry", err);
                             Timer::new(Duration::from_secs(1)).await;
@@ -500,26 +508,42 @@ impl Daemon {
                             break;
                         }
                     };
-                    for peer in peers {
-                        let peer_has_rcs = peer.description.services.map_or(false, |s| {
-                            s.iter().find(|name| *name == RemoteControlMarker::NAME).is_some()
-                        });
-                        if peer_has_rcs {
-                            queue.push(DaemonEvent::OvernetPeer(peer.id.id)).unwrap_or_else(
-                                |err| {
-                                    log::warn!(
-                                        "Overnet discovery failed to enqueue event: {}",
-                                        err
-                                    );
-                                },
-                            );
-                        }
-                    }
-                    Timer::new(Duration::from_millis(100)).await;
                 }
             }
         })
         .detach();
+    }
+
+    fn handle_overnet_peers(
+        queue: &events::Queue<DaemonEvent>,
+        known_peers: HashSet<PeerSetElement>,
+        peers: Vec<Peer>,
+    ) -> HashSet<PeerSetElement> {
+        let mut new_peers: HashSet<PeerSetElement> = Default::default();
+        for peer in peers {
+            new_peers.insert(PeerSetElement(peer));
+        }
+
+        for peer in new_peers.difference(&known_peers) {
+            let peer = &peer.0;
+            let peer_has_rcs = peer
+                .description
+                .services
+                .as_ref()
+                .map(|v| v.contains(&RemoteControlMarker::NAME.to_string()))
+                .unwrap_or(false);
+            if peer_has_rcs {
+                queue.push(DaemonEvent::OvernetPeer(peer.id.id)).unwrap_or_else(|err| {
+                    log::warn!("Overnet discovery failed to enqueue event: {}", err);
+                });
+            }
+        }
+
+        for _peer in known_peers.difference(&new_peers) {
+            // TODO: tell the daemon that this overnet peer has gone away!
+        }
+
+        new_peers
     }
 
     async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
@@ -967,6 +991,22 @@ impl Daemon {
     }
 }
 
+// PeerSetElement wraps an overnet Peer object for inclusion in a Set
+// or other collection reliant on Eq and HAsh, using the NodeId as the
+// discriminator.
+struct PeerSetElement(Peer);
+impl PartialEq for PeerSetElement {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.id == other.0.id
+    }
+}
+impl Eq for PeerSetElement {}
+impl Hash for PeerSetElement {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.id.hash(state);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use {
@@ -979,8 +1019,10 @@ mod test {
             self as rcs, RemoteControlMarker, RemoteControlProxy,
         },
         fidl_fuchsia_net::{IpAddress, Ipv6Address, Subnet},
+        fidl_fuchsia_overnet_protocol::PeerDescription,
         fuchsia_async::Task,
         matches::assert_matches,
+        std::cell::RefCell,
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::net::SocketAddr,
@@ -1432,5 +1474,130 @@ mod test {
         }
 
         assert_eq!(TargetConnectionState::Disconnected, target.get_connection_state());
+    }
+
+    struct NullDaemonEventSynthesizer();
+
+    #[async_trait(?Send)]
+    impl events::EventSynthesizer<DaemonEvent> for NullDaemonEventSynthesizer {
+        async fn synthesize_events(&self) -> Vec<DaemonEvent> {
+            return Default::default();
+        }
+    }
+
+    #[test]
+    fn test_handle_overnet_peers_known_peer_exclusion() {
+        let queue = events::Queue::<DaemonEvent>::new(&Rc::new(NullDaemonEventSynthesizer {}));
+        let mut known_peers: HashSet<PeerSetElement> = Default::default();
+
+        let peer1 = Peer {
+            description: PeerDescription {
+                services: None,
+                unknown_data: None,
+                ..PeerDescription::EMPTY
+            },
+            id: NodeId { id: 1 },
+            is_self: false,
+        };
+        let peer2 = Peer {
+            description: PeerDescription {
+                services: None,
+                unknown_data: None,
+                ..PeerDescription::EMPTY
+            },
+            id: NodeId { id: 2 },
+            is_self: false,
+        };
+
+        let new_peers =
+            Daemon::handle_overnet_peers(&queue, known_peers, vec![peer1.clone(), peer2.clone()]);
+        assert!(new_peers.contains(&PeerSetElement(peer1.clone())));
+        assert!(new_peers.contains(&PeerSetElement(peer2.clone())));
+
+        known_peers = new_peers;
+
+        let new_peers = Daemon::handle_overnet_peers(&queue, known_peers, vec![]);
+        assert!(!new_peers.contains(&PeerSetElement(peer1.clone())));
+        assert!(!new_peers.contains(&PeerSetElement(peer2.clone())));
+    }
+
+    struct DaemonEventRecorder {
+        /// All events observed by the handler will be logged into this field.
+        event_log: Rc<RefCell<Vec<DaemonEvent>>>,
+    }
+    #[async_trait(?Send)]
+    impl EventHandler<DaemonEvent> for DaemonEventRecorder {
+        async fn on_event(&self, event: DaemonEvent) -> Result<events::Status> {
+            self.event_log.borrow_mut().push(event);
+            Ok(events::Status::Waiting)
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_handle_overnet_peer_leave_and_return() {
+        let queue = events::Queue::<DaemonEvent>::new(&Rc::new(NullDaemonEventSynthesizer {}));
+        let mut known_peers: HashSet<PeerSetElement> = Default::default();
+
+        let peer1 = Peer {
+            description: PeerDescription {
+                services: Some(vec![RemoteControlMarker::NAME.to_string()]),
+                unknown_data: None,
+                ..PeerDescription::EMPTY
+            },
+            id: NodeId { id: 1 },
+            is_self: false,
+        };
+        let peer2 = Peer {
+            description: PeerDescription {
+                services: Some(vec![RemoteControlMarker::NAME.to_string()]),
+                unknown_data: None,
+                ..PeerDescription::EMPTY
+            },
+            id: NodeId { id: 2 },
+            is_self: false,
+        };
+
+        // First the targets are discovered:
+        let new_peers =
+            Daemon::handle_overnet_peers(&queue, known_peers, vec![peer1.clone(), peer2.clone()]);
+        assert!(new_peers.contains(&PeerSetElement(peer1.clone())));
+        assert!(new_peers.contains(&PeerSetElement(peer2.clone())));
+
+        known_peers = new_peers;
+
+        // Next the targets are lost:
+        let new_peers = Daemon::handle_overnet_peers(&queue, known_peers, vec![]);
+        assert!(!new_peers.contains(&PeerSetElement(peer1.clone())));
+        assert!(!new_peers.contains(&PeerSetElement(peer2.clone())));
+
+        known_peers = new_peers;
+
+        assert_eq!(known_peers.len(), 0);
+
+        // Make a new queue so we don't get any of the historical events.
+        let queue = events::Queue::<DaemonEvent>::new(&Rc::new(NullDaemonEventSynthesizer {}));
+        let event_log = Rc::new(RefCell::new(Vec::<DaemonEvent>::new()));
+
+        // Now wire up the event handler, we want to assert that we observe NewTarget events for the returning targets.
+        queue.add_handler(DaemonEventRecorder { event_log: event_log.clone() }).await;
+
+        // Now the targets return:
+        let new_peers =
+            Daemon::handle_overnet_peers(&queue, known_peers, vec![peer1.clone(), peer2.clone()]);
+        assert!(new_peers.contains(&PeerSetElement(peer1.clone())));
+        assert!(new_peers.contains(&PeerSetElement(peer2.clone())));
+
+        let start = Instant::now();
+        while event_log.borrow().len() != 2 {
+            if Instant::now().duration_since(start) > Duration::from_secs(1) {
+                break;
+            }
+            futures_lite::future::yield_now().await;
+        }
+
+        // Ensure that we observed a new target event for each target that returned.
+        assert_eq!(event_log.borrow().len(), 2);
+        assert_matches!(event_log.borrow()[0], DaemonEvent::OvernetPeer(_));
+        assert_matches!(event_log.borrow()[1], DaemonEvent::OvernetPeer(_));
     }
 }
