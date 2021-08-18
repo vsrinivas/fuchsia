@@ -3096,7 +3096,7 @@ From //build/images/args.gni:135
 ### recovery_logo_path
 Path to file to use for recovery logo
 
-**Current value (from the default):** `"//src/recovery/system/res/fuchsia-logo.shed"`
+**Current value (from the default):** `"//src/recovery/system/res/fuchsia-logo.riv"`
 
 From //src/recovery/system/system_recovery_args.gni:7
 
@@ -3338,7 +3338,7 @@ The directories to search for parts of the SDK.
 By default, we search the public directories for the various layers.
 In the future, we'll search a pre-built SDK as well.
 
-**Current value (from the default):** `["//garnet/public"]`
+**Current value (from the default):** `["//garnet/public", "//topaz/public"]`
 
 From //build/config/fuchsia/sdk.gni:10
 
@@ -3510,7 +3510,7 @@ size_checker_input = {
   components = [
     {
       component = "Foo"
-      src = [ "sdk/runtime/foo_runner" ]
+      src = [ "topaz/runtime/foo_runner" ]
       limit = 10240
     },
     {
