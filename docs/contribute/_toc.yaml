@@ -23,6 +23,9 @@ toc:
 - title: "Contributing to Netstack"
   section:
     - include: /docs/contribute/contributing-to-netstack/_toc.yaml
+- title: "Testing"
+  section:
+    - include: /docs/contribute/testing/_toc.yaml
 - title: "Documentation"
   section:
   - include: /docs/contribute/docs/_toc.yaml
