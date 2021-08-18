@@ -5,8 +5,11 @@
         args: [ "-i" ],
         mounts: [
             "/:ext4:data/system.img",
-            "/data:tmpfs",
+            "/data:remotefs:data",
+            "/data/tmp:tmpfs",
+            "/dev:devfs",
             "/proc:proc",
         ],
+        apex_hack: [ "com.android.runtime" ],
     },
 }
