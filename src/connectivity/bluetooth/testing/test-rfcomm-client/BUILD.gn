@@ -1,12 +1,11 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_binary("bin") {
-  output_name = "bt-bredr-profile"
+rustc_library("test-rfcomm-client") {
   with_unit_tests = true
 
   deps = [
@@ -15,40 +14,38 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.rfcomm.test:fuchsia.bluetooth.rfcomm.test-rustc",
     "//src/connectivity/bluetooth/lib/bt-rfcomm",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/testing/test-rfcomm-client",
+    "//src/connectivity/bluetooth/lib/packet-encoding",
+    "//src/connectivity/bluetooth/lib/profile-client",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates/compat/rustyline",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
+    "//src/lib/async-utils",
     "//src/lib/fuchsia",
+    "//src/lib/testing/fixture",
     "//third_party/rust_crates:matches",
   ]
 
-  sources = [
-    "src/commands.rs",
-    "src/main.rs",
-    "src/types.rs",
-  ]
+  sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_shell_package("bt-bredr-profile") {
-  deps = [ ":bin" ]
-}
-
-fuchsia_unittest_package("bt-bredr-profile-unittests") {
-  deps = [ ":bin_test" ]
+fuchsia_unittest_package("test-rfcomm-client-tests") {
+  deps = [ ":test-rfcomm-client_test" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":bt-bredr-profile-unittests" ]
+  deps = [ ":test-rfcomm-client-tests" ]
 }

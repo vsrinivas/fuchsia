@@ -83,12 +83,13 @@ It must correspond to a connected channel listed by the `channels` command.
 
 ### disconnect-rfcomm
 Drops the socket corresponding to `server-channel`, which will disconnect the rfcomm
-channel.
+channel connected to the remote peer.
 
 #### Usage
-`disconnect-rfcomm <server-channel>`
+`disconnect-rfcomm <peer-id> <server-channel>`
 
 ##### Arguments
+- `peer-id` maps to the `PeerId` of the peer.
 - `server-channel` is the Server Channel number assigned to the RFCOMM channel.
 
 ### disconnect-rfcomm-session
@@ -131,12 +132,13 @@ Write data on an L2CAP socket/channel.
 Write data on the RFCOMM channel identified by `server-channel`.
 
 #### Usage
-`write-rfcomm <server-channel> <data>`
+`write-rfcomm <peer-id> <server-channel> <data>`
 
 ##### Arguments
-- `server-channel` is the integer Server Channel identifying the RFCOMM channel. For
-  channels that were established by the peer, use the identifier printed in the REPL.
-  For channels that were initiated by the tool, use the same identifier as used in the
+- `peer-id` maps to the `PeerId` of the peer.
+- `server-channel` is the integer Server Channel number identifying the RFCOMM channel. For
+  channels that were established by the peer, use the number printed by the tool in `fx log`.
+  For channels that were initiated by the tool, use the same channel number as used in the
   `connect-rfcomm` command.
 - `data` is a string of characters that will be written on the channel.
 

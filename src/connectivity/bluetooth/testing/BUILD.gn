@@ -10,6 +10,7 @@ group("testing") {
     "mock-piconet-server",
     "test-call-manager",
     "test-harness",
+    "test-rfcomm-client",
   ]
 }
 
@@ -20,5 +21,6 @@ group("tests") {
     "mock-piconet-server:tests",
     "test-call-manager:tests",
     "test-harness-tests:test-harness-crate-tests",
+    "test-rfcomm-client:tests",
   ]
 }

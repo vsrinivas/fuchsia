@@ -103,9 +103,9 @@ gen_commands! {
                             \t\t'channel-id' must correspond to a connected channel listed by the \n\
                             \t\t'channels' command\n\n\
                             \t\tExample: disconnect-l2cap 0"),
-        DisconnectRfcomm = ("disconnect-rfcomm", ["server-channel"],
+        DisconnectRfcomm = ("disconnect-rfcomm", ["peer-id", "server-channel"],
                            "\n\t\tDisconnect the RFCOMM channel corresponding to `server-channel`.\n\
-                            \t\tExample: disconnect-rfcomm 5"),
+                            \t\tExample: disconnect-rfcomm 028565803f1368b2 5"),
         DisconnectRfcommSession = ("disconnect-rfcomm-session", ["peer-id"],
                            "\n\t\tDisconnect the RFCOMM Session with the connected remote device `peer-id`.\n\
                             \t\tExample: disconnect-rfcomm-session 028565803f1368b2"),
@@ -113,9 +113,9 @@ gen_commands! {
         WriteL2cap = ("write-l2cap", ["channel-id", "data"],
                 "\n\t\tWrite 'data' on the L2CAP socket/channel represented by 'channel-id'\n\n\
                  \t\tExample: write 0 0123456789abcd"),
-        WriteRfcomm = ("write-rfcomm", ["channel-id", "data"],
+        WriteRfcomm = ("write-rfcomm", ["peer-id", "channel-id", "data"],
                 "\n\t\tWrite 'data' on the RFCOMM channel represented by 'server-channel'\n\n\
-                 \t\tExample: write 1 0123456789abcd"),
+                 \t\tExample: write 028565803f1368b2 1 myexampleuserdata"),
         Help = ("help", [], "Print command help"),
         Exit = ("exit", [], "Remove all services, close all channels, and exit the REPL."),
         Quit = ("quit", [], "Alias for 'exit'."),

@@ -11,28 +11,27 @@ use {
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestMarker,
     fuchsia_async::{self as fasync, futures::select},
-    fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
+    fuchsia_bluetooth::types::{PeerId, Uuid},
     fuchsia_component::client::connect_to_protocol,
     futures::{
         channel::{
             mpsc::{channel, SendError},
             oneshot,
         },
+        lock::Mutex,
         FutureExt, Sink, SinkExt, Stream, StreamExt, TryStreamExt,
     },
-    parking_lot::RwLock,
     rustyline::{error::ReadlineError, CompletionType, Config, Editor},
     std::{convert::TryFrom, sync::Arc, thread},
+    test_rfcomm_client::RfcommManager,
 };
 
 use crate::{
     commands::{Cmd, CmdHelper, ReplControl},
-    rfcomm::{handle_profile_events, rfcomm_channel_task, spp_service_definition},
     types::*,
 };
 
 mod commands;
-mod rfcomm;
 mod types;
 
 /// Prompt to be shown for tool's REPL
@@ -42,8 +41,8 @@ pub static PROMPT: &str = "\x1b[34mprofile>\x1b[0m ";
 /// Used when evented output is intermingled with the REPL prompt.
 pub static RESET_LINE: &str = "\x1b[2K\r";
 
-fn channels(state: Arc<RwLock<ProfileState>>) {
-    for (chan_id, chan) in state.read().l2cap_channels.map() {
+async fn channels(state: Arc<Mutex<ProfileState>>) {
+    for (chan_id, chan) in state.lock().await.l2cap_channels.map() {
         print!(
             "Channel:\n  Id: {}\n  Mode: {:?}\n  Max Tx Sdu Size: {}\n",
             chan_id, chan.mode, chan.max_tx_sdu_size
@@ -85,7 +84,7 @@ fn security_requirements_from_str(s: &str) -> Result<Option<SecurityRequirements
 async fn connection_receiver(
     mut connection_requests: ConnectionReceiverRequestStream,
     end_ad_receiver: oneshot::Receiver<()>,
-    state: Arc<RwLock<ProfileState>>,
+    state: Arc<Mutex<ProfileState>>,
     service_id: u32,
 ) -> Result<(), Error> {
     let tag = "ConnectionReceiver";
@@ -102,7 +101,7 @@ async fn connection_receiver(
             let socket = channel.socket.ok_or(anyhow!("{}: missing socket", tag))?;
             let mode = channel.channel_mode.ok_or(anyhow!("{}: missing channel mode", tag))?;
             let max_tx_sdu_size = channel.max_tx_sdu_size.ok_or(anyhow!("{}: missing max tx sdu", tag))?;
-            let chan_id = state.write().l2cap_channels.insert(L2capChannel { socket, mode, max_tx_sdu_size });
+            let chan_id = state.lock().await.l2cap_channels.insert(L2capChannel { socket, mode, max_tx_sdu_size });
             print!("{} Channel Connected to service {}:\n  Channel:\n    Id: {}\n    Mode: {:?}\n    Max Tx Sdu Size: {}\n", RESET_LINE, service_id, chan_id, mode, max_tx_sdu_size);
 
         },
@@ -112,37 +111,16 @@ async fn connection_receiver(
     }
     print!("{} ConnectionReceiver closed for service {}", RESET_LINE, service_id);
     let args = vec![format!("{}", service_id)];
-    remove_service(state, &args)
+    remove_service(state, &args).await
 }
 
-fn setup_rfcomm(profile_svc: &ProfileProxy, state: Arc<RwLock<ProfileState>>) -> Result<(), Error> {
-    let service_defs = vec![spp_service_definition()];
-    let (connect_client, connect_requests) =
-        create_request_stream().context("ConnectionReceiver creation")?;
-    let _ = profile_svc
-        .advertise(&mut service_defs.into_iter(), ChannelParameters::new_empty(), connect_client)
-        .check()?;
-
-    let (results_client, results_requests) =
-        create_request_stream().context("SearchResults creation")?;
-    profile_svc.search(ServiceClassProfileIdentifier::SerialPort, &[], results_client)?;
-
-    // Spawn the RFCOMM task to handle profile events.
-    let state_clone = state.clone();
-    let rfcomm_task = fasync::Task::spawn(async move {
-        if let Err(e) = handle_profile_events(state_clone, connect_requests, results_requests).await
-        {
-            println!("Rfcomm task ended: {:?}", e);
-        }
-    });
-    state.write().rfcomm.service = Some(rfcomm_task);
-    println!("Successfully added RFCOMM service advertisement and search");
-    Ok(())
+async fn setup_rfcomm(state: Arc<Mutex<ProfileState>>) -> Result<(), Error> {
+    state.lock().await.rfcomm.advertise()
 }
 
 async fn advertise(
     profile_svc: &ProfileProxy,
-    state: Arc<RwLock<ProfileState>>,
+    state: Arc<Mutex<ProfileState>>,
     args: &Vec<String>,
 ) -> Result<(), Error> {
     if args.len() != 3 {
@@ -181,7 +159,7 @@ async fn advertise(
     let _ = profile_svc.advertise(&mut svc_defs.into_iter(), params, connect_client).check()?;
 
     let (end_ad_sender, end_ad_receiver) = oneshot::channel::<()>();
-    let service_id = state.write().services.insert(SdpService {
+    let service_id = state.lock().await.services.insert(SdpService {
         advertisement_stopper: end_ad_sender,
         params: ChannelParameters {
             channel_mode: Some(channel_mode),
@@ -205,7 +183,7 @@ async fn advertise(
     Ok(())
 }
 
-fn remove_service(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+async fn remove_service(state: Arc<Mutex<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 1 {
         return Err(anyhow!("Invalid number of arguments"));
     }
@@ -213,12 +191,12 @@ fn remove_service(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Resul
     let service_id =
         args[0].parse::<u32>().map_err(|_| anyhow!("service-id must be a positive number"))?;
 
-    state.write().services.remove(&service_id).ok_or(anyhow!("Unknown service"))?;
+    state.lock().await.services.remove(&service_id).ok_or(anyhow!("Unknown service"))?;
     Ok(())
 }
 
-fn services(state: Arc<RwLock<ProfileState>>) {
-    for (id, service) in &state.read().services {
+async fn services(state: Arc<Mutex<ProfileState>>) {
+    for (id, service) in &state.lock().await.services {
         print!(
             "Service:\n  Id: {}\n  Mode: {:?}, Max Rx Sdu Size: {}",
             id,
@@ -230,7 +208,7 @@ fn services(state: Arc<RwLock<ProfileState>>) {
 
 async fn connect_l2cap(
     profile_svc: &ProfileProxy,
-    state: Arc<RwLock<ProfileState>>,
+    state: Arc<Mutex<ProfileState>>,
     args: &Vec<String>,
 ) -> Result<(), Error> {
     if args.len() != 5 {
@@ -276,7 +254,7 @@ async fn connect_l2cap(
 
     let chan_id = match channel.socket {
         Some(socket) => {
-            state.write().l2cap_channels.insert(L2capChannel { socket, mode, max_tx_sdu_size })
+            state.lock().await.l2cap_channels.insert(L2capChannel { socket, mode, max_tx_sdu_size })
         }
         None => {
             println!("Error: failed to receive a socket");
@@ -293,11 +271,7 @@ async fn connect_l2cap(
 }
 
 /// Attempts to make an outbound RFCOMM connection to the peer specified in `args`.
-async fn connect_rfcomm(
-    profile_svc: &ProfileProxy,
-    state: Arc<RwLock<ProfileState>>,
-    args: &Vec<String>,
-) -> Result<(), Error> {
+async fn connect_rfcomm(state: Arc<Mutex<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 2 {
         return Err(anyhow!("Invalid number of arguments"));
     }
@@ -306,72 +280,30 @@ async fn connect_rfcomm(
         args[1].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
     let server_channel = ServerChannel::try_from(server_channel)?;
 
-    let res = profile_svc
-        .connect(
-            &mut peer_id.into(),
-            &mut ConnectParameters::Rfcomm(RfcommParameters {
-                channel: Some(server_channel.into()),
-                ..RfcommParameters::EMPTY
-            }),
-        )
-        .await?;
-    let channel = res.map_err(|e| anyhow!("Error establishing channel: {:?}", e))?;
-    let channel = Channel::try_from(channel).unwrap();
-    let receiver = state.write().rfcomm.create_channel(server_channel);
-    fasync::Task::spawn(rfcomm_channel_task(server_channel, state.clone(), channel, receiver))
-        .detach();
-    println!("Established outbound Rfcomm channel: {:?}", server_channel);
-    Ok(())
+    state.lock().await.rfcomm.outgoing_rfcomm_channel(peer_id, server_channel).await
 }
 
-fn disconnect_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+async fn disconnect_l2cap(
+    state: Arc<Mutex<ProfileState>>,
+    args: &Vec<String>,
+) -> Result<(), Error> {
     if args.len() != 1 {
         return Err(anyhow!("Invalid number of arguments"));
     }
 
     let chan_id = args[0].parse::<u32>().map_err(|_| anyhow!("channel-id must be an integer"))?;
 
-    match state.write().l2cap_channels.remove(&chan_id) {
+    match state.lock().await.l2cap_channels.remove(&chan_id) {
         Some(_) => println!("Channel {} disconnected", chan_id),
         None => println!("No channel with id {} exists", chan_id),
     }
     Ok(())
 }
 
-fn disconnect_rfcomm(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
-    if args.len() != 1 {
-        return Err(anyhow!("Invalid number of arguments"));
-    }
-
-    let server_channel =
-        args[0].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
-    let server_channel = ServerChannel::try_from(server_channel)?;
-
-    if state.write().rfcomm.remove_channel(server_channel) {
-        println!("RFCOMM Channel {:?} disconnected", server_channel);
-    } else {
-        println!("No RFCOMM channel with id {:?} exists", server_channel);
-    }
-    Ok(())
-}
-
-fn disconnect_rfcomm_session(
-    state: Arc<RwLock<ProfileState>>,
+async fn disconnect_rfcomm(
+    state: Arc<Mutex<ProfileState>>,
     args: &Vec<String>,
 ) -> Result<(), Error> {
-    if args.len() != 1 {
-        return Err(anyhow!("Invalid number of arguments"));
-    }
-
-    let peer_id: PeerId = args[0].parse()?;
-    match state.write().rfcomm.close_session(peer_id) {
-        Ok(_) => println!("Closed RFCOMM Session with peer {:?}", peer_id),
-        Err(e) => println!("Error closing RFCOMM Session with peer {:?}: {:?}", peer_id, e),
-    }
-    Ok(())
-}
-
-fn send_rls(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 2 {
         return Err(anyhow!("Invalid number of arguments"));
     }
@@ -381,14 +313,47 @@ fn send_rls(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), 
         args[1].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
     let server_channel = ServerChannel::try_from(server_channel)?;
 
-    match state.write().rfcomm.send_rls(peer_id, server_channel) {
+    match state.lock().await.rfcomm.close_rfcomm_channel(peer_id, server_channel) {
+        Ok(()) => println!("RFCOMM Channel {:?} disconnected", server_channel),
+        Err(e) => println!("Couldn't close RFCOMM channel: {:?}", e),
+    }
+    Ok(())
+}
+
+async fn disconnect_rfcomm_session(
+    state: Arc<Mutex<ProfileState>>,
+    args: &Vec<String>,
+) -> Result<(), Error> {
+    if args.len() != 1 {
+        return Err(anyhow!("Invalid number of arguments"));
+    }
+
+    let peer_id: PeerId = args[0].parse()?;
+    match state.lock().await.rfcomm.close_session(peer_id) {
+        Ok(_) => println!("Closed RFCOMM Session with peer {:?}", peer_id),
+        Err(e) => println!("Error closing RFCOMM Session with peer {:?}: {:?}", peer_id, e),
+    }
+    Ok(())
+}
+
+async fn send_rls(state: Arc<Mutex<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+    if args.len() != 2 {
+        return Err(anyhow!("Invalid number of arguments"));
+    }
+
+    let peer_id: PeerId = args[0].parse()?;
+    let server_channel =
+        args[1].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
+    let server_channel = ServerChannel::try_from(server_channel)?;
+
+    match state.lock().await.rfcomm.send_rls(peer_id, server_channel) {
         Ok(_) => println!("Sent RLS to peer {:?}", peer_id),
         Err(e) => println!("Error sending RLS to peer {:?}: {:?}", peer_id, e),
     }
     Ok(())
 }
 
-fn write_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+async fn write_l2cap(state: Arc<Mutex<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 2 {
         return Err(anyhow!("Invalid number of arguments"));
     }
@@ -396,7 +361,7 @@ fn write_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(
     let chan_id = args[0].parse::<u32>().map_err(|_| anyhow!("channel-id must be an integer"))?;
     let bytes = args[1].as_bytes();
 
-    let num_bytes = match state.read().l2cap_channels.map().get(&chan_id) {
+    let num_bytes = match state.lock().await.l2cap_channels.map().get(&chan_id) {
         Some(chan) => chan.socket.write(bytes).map_err(|_| anyhow!("error writing data"))?,
         None => return Err(anyhow!("No channel with id {} exists", chan_id)),
     };
@@ -406,20 +371,21 @@ fn write_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(
 }
 
 /// Sends a user data payload to the ServerChannel specified in `args`.
-fn write_rfcomm(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
-    if args.len() != 2 {
+async fn write_rfcomm(state: Arc<Mutex<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+    if args.len() != 3 {
         return Err(anyhow!("Invalid number of arguments"));
     }
 
+    let peer_id: PeerId = args[0].parse()?;
     let server_channel =
-        args[0].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
+        args[1].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
     let server_channel = ServerChannel::try_from(server_channel)?;
-    let bytes = args[1].as_bytes().to_vec();
-    state.write().rfcomm.send_user_data(server_channel, bytes)
+    let bytes = args[2].as_bytes().to_vec();
+    state.lock().await.rfcomm.send_user_data(peer_id, server_channel, bytes)
 }
 
-fn cleanup(state: Arc<RwLock<ProfileState>>) {
-    state.write().reset();
+async fn cleanup(state: Arc<Mutex<ProfileState>>) {
+    state.lock().await.reset();
 }
 
 enum ParsedCmd {
@@ -444,27 +410,27 @@ fn parse_cmd(line: String) -> Result<ParsedCmd, Error> {
 
 async fn handle_cmd(
     profile_svc: &ProfileProxy,
-    state: Arc<RwLock<ProfileState>>,
+    state: Arc<Mutex<ProfileState>>,
     cmd: Cmd,
     args: Vec<String>,
 ) -> Result<ReplControl, Error> {
     match cmd {
         Cmd::Advertise => advertise(profile_svc, state.clone(), &args).await?,
-        Cmd::RemoveService => remove_service(state.clone(), &args)?,
-        Cmd::Services => services(state.clone()),
-        Cmd::Channels => channels(state.clone()),
+        Cmd::RemoveService => remove_service(state.clone(), &args).await?,
+        Cmd::Services => services(state.clone()).await,
+        Cmd::Channels => channels(state.clone()).await,
         Cmd::ConnectL2cap => connect_l2cap(profile_svc, state.clone(), &args).await?,
-        Cmd::ConnectRfcomm => connect_rfcomm(profile_svc, state.clone(), &args).await?,
-        Cmd::DisconnectL2cap => disconnect_l2cap(state.clone(), &args)?,
-        Cmd::DisconnectRfcomm => disconnect_rfcomm(state.clone(), &args)?,
-        Cmd::DisconnectRfcommSession => disconnect_rfcomm_session(state.clone(), &args)?,
-        Cmd::SetupRfcomm => setup_rfcomm(profile_svc, state.clone())?,
-        Cmd::SendRls => send_rls(state.clone(), &args)?,
-        Cmd::WriteL2cap => write_l2cap(state.clone(), &args)?,
-        Cmd::WriteRfcomm => write_rfcomm(state.clone(), &args)?,
+        Cmd::ConnectRfcomm => connect_rfcomm(state.clone(), &args).await?,
+        Cmd::DisconnectL2cap => disconnect_l2cap(state.clone(), &args).await?,
+        Cmd::DisconnectRfcomm => disconnect_rfcomm(state.clone(), &args).await?,
+        Cmd::DisconnectRfcommSession => disconnect_rfcomm_session(state.clone(), &args).await?,
+        Cmd::SetupRfcomm => setup_rfcomm(state.clone()).await?,
+        Cmd::SendRls => send_rls(state.clone(), &args).await?,
+        Cmd::WriteL2cap => write_l2cap(state.clone(), &args).await?,
+        Cmd::WriteRfcomm => write_rfcomm(state.clone(), &args).await?,
         Cmd::Help => println!("{}", Cmd::help_msg()),
         Cmd::Exit | Cmd::Quit => {
-            cleanup(state.clone());
+            cleanup(state.clone()).await;
             return Ok(ReplControl::Break);
         }
     };
@@ -525,10 +491,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
 }
 
 /// Wait for raw commands from rustyline thread, and then parse and handle them.
-async fn run_repl(
-    profile_svc: ProfileProxy,
-    state: Arc<RwLock<ProfileState>>,
-) -> Result<(), Error> {
+async fn run_repl(profile_svc: ProfileProxy, state: Arc<Mutex<ProfileState>>) -> Result<(), Error> {
     // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream();
@@ -554,12 +517,15 @@ async fn run_repl(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["bt-bredr-profile"]).expect("Can't init logger");
+
     let profile_svc = connect_to_protocol::<ProfileMarker>()
         .context("failed to connect to bluetooth profile service")?;
     let rfcomm_test_svc = connect_to_protocol::<RfcommTestMarker>()
         .context("failed to connect to RFCOMM Test protocol")?;
 
-    let state = Arc::new(RwLock::new(ProfileState::new(rfcomm_test_svc)));
+    let rfcomm_mgr = RfcommManager::from_proxy(profile_svc.clone(), rfcomm_test_svc);
+    let state = Arc::new(Mutex::new(ProfileState::new(rfcomm_mgr)));
 
     run_repl(profile_svc, state.clone()).await
 }
@@ -568,48 +534,33 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn disconnect_l2cap_channel_succeeds() {
-        let _exec = fasync::TestExecutor::new().unwrap();
-
+    #[fuchsia::test]
+    async fn disconnect_l2cap_channel_succeeds() {
+        let (profile, _profile_server) =
+            fidl::endpoints::create_proxy_and_stream::<ProfileMarker>().unwrap();
         let (rfcomm_test, _rfcomm_test_server) =
             fidl::endpoints::create_proxy_and_stream::<RfcommTestMarker>().unwrap();
-        let state = Arc::new(RwLock::new(ProfileState::new(rfcomm_test)));
+        let state = Arc::new(Mutex::new(ProfileState::new(RfcommManager::from_proxy(
+            profile,
+            rfcomm_test,
+        ))));
 
         let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         assert_eq!(
             0,
-            state.write().l2cap_channels.insert(L2capChannel {
+            state.lock().await.l2cap_channels.insert(L2capChannel {
                 socket: s,
                 mode: ChannelMode::Basic,
                 max_tx_sdu_size: 672
             })
         );
-        assert_eq!(1, state.read().l2cap_channels.map().len());
+        assert_eq!(1, state.lock().await.l2cap_channels.map().len());
         let args = vec!["0".to_string()];
-        assert!(disconnect_l2cap(state.clone(), &args).is_ok());
-        assert!(state.read().l2cap_channels.map().is_empty());
+        assert!(disconnect_l2cap(state.clone(), &args).await.is_ok());
+        assert!(state.lock().await.l2cap_channels.map().is_empty());
 
         // Disconnecting an already disconnected channel should not fail.
         // (It should only print a message)
-        assert!(disconnect_l2cap(state.clone(), &args).is_ok());
-    }
-
-    #[test]
-    fn disconnect_rfcomm_channel_succeeds() {
-        let _exec = fasync::TestExecutor::new().unwrap();
-
-        let (rfcomm_test, _rfcomm_test_server) =
-            fidl::endpoints::create_proxy_and_stream::<RfcommTestMarker>().unwrap();
-        let state = Arc::new(RwLock::new(ProfileState::new(rfcomm_test)));
-
-        let server_channel = ServerChannel::try_from(10).expect("valid server channel number");
-        let _receiver = state.write().rfcomm.create_channel(server_channel);
-        let args = vec!["10".to_string()];
-        assert!(disconnect_rfcomm(state.clone(), &args).is_ok());
-
-        // Disconnecting an already disconnected channel should not fail.
-        // (It should only print a message)
-        assert!(disconnect_rfcomm(state.clone(), &args).is_ok());
+        assert!(disconnect_l2cap(state.clone(), &args).await.is_ok());
     }
 }
