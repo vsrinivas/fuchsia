@@ -6,6 +6,7 @@ pub mod blobfs;
 pub mod bootfs;
 pub mod env;
 pub mod fvm;
+pub mod golden;
 pub mod usage;
 pub mod zbi;
 pub mod zstd;

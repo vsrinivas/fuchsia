@@ -5,3 +5,4 @@
 pub mod blobfs;
 pub mod fvm;
 pub mod zbi;
+pub mod zbi_cmdline;

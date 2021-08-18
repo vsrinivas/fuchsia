@@ -7,6 +7,7 @@ mod controller;
 use {
     crate::toolkit::controller::{
         blobfs::BlobFsExtractController, fvm::FvmExtractController, zbi::ZbiExtractController,
+        zbi_cmdline::ZbiExtractCmdlineController,
     },
     scrutiny::prelude::*,
     std::sync::Arc,
@@ -20,6 +21,7 @@ plugin!(
             "/tool/blobfs/extract" => BlobFsExtractController::default(),
             "/tool/fvm/extract" => FvmExtractController::default(),
             "/tool/zbi/extract" => ZbiExtractController::default(),
+            "/tool/zbi/extract/cmdline" => ZbiExtractCmdlineController::default(),
         }
     ),
     // The toolkit plugin takes no dependencies on the model. It is just a set
@@ -31,7 +33,9 @@ plugin!(
 mod tests {
     use {
         super::*,
-        crate::toolkit::controller::{fvm::FvmExtractRequest, zbi::ZbiExtractRequest},
+        crate::toolkit::controller::{
+            fvm::FvmExtractRequest, zbi::ZbiExtractRequest, zbi_cmdline::ZbiExtractCmdlineRequest,
+        },
         scrutiny_testing::fake::*,
         tempfile::tempdir,
     };
@@ -48,6 +52,18 @@ mod tests {
             input: input_path.to_str().unwrap().to_string(),
             output: output_path.to_str().unwrap().to_string(),
         };
+        let query = serde_json::to_value(request).unwrap();
+        let response = zbi_controller.query(model, query);
+        assert_eq!(response.is_ok(), false);
+    }
+
+    #[test]
+    fn test_zbi_cmdline_extractor_empty_zbi() {
+        let model = fake_data_model();
+        let zbi_controller = ZbiExtractCmdlineController::default();
+        let input_dir = tempdir().unwrap();
+        let input_path = input_dir.path().join("empty-zbi");
+        let request = ZbiExtractCmdlineRequest { input: input_path.to_str().unwrap().to_string() };
         let query = serde_json::to_value(request).unwrap();
         let response = zbi_controller.query(model, query);
         assert_eq!(response.is_ok(), false);
