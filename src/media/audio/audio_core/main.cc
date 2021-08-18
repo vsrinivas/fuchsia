@@ -56,7 +56,6 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
                                  std::make_shared<AudioClockFactory>());
   context->PublishOutgoingServices();
 
-  AudioCoreImpl audio_core(context.get());
   auto thermal_agent = ThermalAgent::CreateAndServe(context.get());
   auto ultrasound_factory = UltrasoundFactory::CreateAndServe(context.get());
 
