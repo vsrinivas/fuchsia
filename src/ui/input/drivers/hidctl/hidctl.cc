@@ -88,6 +88,11 @@ HidDevice::HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl::wire::H
   ZX_DEBUG_ASSERT(data_.is_valid());
 }
 
+HidDevice::~HidDevice() {
+  int ret = thrd_join(thread_, nullptr);
+  ZX_DEBUG_ASSERT(ret == thrd_success);
+}
+
 void HidDevice::DdkInit(ddk::InitTxn txn) {
   int ret = thrd_create_with_name(&thread_, hid_device_thread, reinterpret_cast<void*>(this),
                                   "hidctl-thread");
@@ -97,8 +102,6 @@ void HidDevice::DdkInit(ddk::InitTxn txn) {
 
 void HidDevice::DdkRelease() {
   zxlogf(DEBUG, "hidctl: DdkRelease");
-  int ret = thrd_join(thread_, nullptr);
-  ZX_DEBUG_ASSERT(ret == thrd_success);
   delete this;
 }
 

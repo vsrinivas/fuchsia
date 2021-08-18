@@ -38,6 +38,7 @@ class HidDevice : public ddk::Device<HidDevice, ddk::Initializable, ddk::Unbinda
  public:
   HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl::wire::HidCtlConfig& config,
             fbl::Array<const uint8_t> report_desc, zx::socket data);
+  ~HidDevice();
 
   void DdkRelease();
   void DdkInit(ddk::InitTxn txn);
