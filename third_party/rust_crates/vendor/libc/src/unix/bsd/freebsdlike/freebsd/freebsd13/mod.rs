@@ -26,6 +26,17 @@ s! {
         pub udata: *mut ::c_void,
         pub ext: [u64; 4],
     }
+
+    pub struct sockcred2 {
+        pub sc_version: ::c_int,
+        pub sc_pid: ::pid_t,
+        pub sc_uid: ::uid_t,
+        pub sc_euid: ::uid_t,
+        pub sc_gid: ::gid_t,
+        pub sc_egid: ::gid_t,
+        pub sc_ngroups: ::c_int,
+        pub sc_groups: [::gid_t; 1],
+    }
 }
 
 s_no_extra_traits! {
@@ -208,15 +219,25 @@ pub const EINTEGRITY: ::c_int = 97;
 pub const ELAST: ::c_int = 97;
 pub const GRND_INSECURE: ::c_uint = 0x4;
 
+pub const LOCAL_CREDS_PERSISTENT: ::c_int = 3;
+pub const SCM_CREDS2: ::c_int = 0x08;
+
+f! {
+    pub fn SOCKCRED2SIZE(ngrps: usize) -> usize {
+        let ngrps = if ngrps > 0 {
+            ngrps - 1
+        } else {
+            0
+        };
+        ::mem::size_of::<sockcred2>() + ::mem::size_of::<::gid_t>() * ngrps
+    }
+}
+
 extern "C" {
     pub fn aio_readv(aiocbp: *mut ::aiocb) -> ::c_int;
     pub fn aio_writev(aiocbp: *mut ::aiocb) -> ::c_int;
     pub fn setgrent();
-    pub fn mprotect(
-        addr: *mut ::c_void,
-        len: ::size_t,
-        prot: ::c_int,
-    ) -> ::c_int;
+    pub fn mprotect(addr: *mut ::c_void, len: ::size_t, prot: ::c_int) -> ::c_int;
     pub fn freelocale(loc: ::locale_t);
     pub fn msgrcv(
         msqid: ::c_int,
@@ -234,11 +255,12 @@ extern "C" {
 
     pub fn fdatasync(fd: ::c_int) -> ::c_int;
 
-    pub fn getrandom(
-        buf: *mut ::c_void,
-        buflen: ::size_t,
-        flags: ::c_uint,
-    ) -> ::ssize_t;
+    pub fn getrandom(buf: *mut ::c_void, buflen: ::size_t, flags: ::c_uint) -> ::ssize_t;
+    pub fn getentropy(buf: *mut ::c_void, buflen: ::size_t) -> ::c_int;
+    pub fn elf_aux_info(aux: ::c_int, buf: *mut ::c_void, buflen: ::c_int) -> ::c_int;
+    pub fn setproctitle_fast(fmt: *const ::c_char, ...);
+    pub fn timingsafe_bcmp(a: *const ::c_void, b: *const ::c_void, len: ::size_t) -> ::c_int;
+    pub fn timingsafe_memcmp(a: *const ::c_void, b: *const ::c_void, len: ::size_t) -> ::c_int;
 }
 
 cfg_if! {

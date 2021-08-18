@@ -1,6 +1,6 @@
 #![warn(rust_2018_idioms)]
 
-use tokio::{prelude::*, stream::StreamExt};
+use tokio_stream::StreamExt;
 use tokio_test::assert_ok;
 use tokio_util::codec::{Decoder, Encoder, Framed, FramedParts};
 
@@ -51,12 +51,12 @@ impl Read for DontReadIntoThis {
     }
 }
 
-impl AsyncRead for DontReadIntoThis {
+impl tokio::io::AsyncRead for DontReadIntoThis {
     fn poll_read(
         self: Pin<&mut Self>,
         _cx: &mut Context<'_>,
-        _buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        _buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         unreachable!()
     }
 }

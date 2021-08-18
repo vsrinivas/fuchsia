@@ -14,6 +14,7 @@ pub type __u64 = ::c_ulonglong;
 pub type __fsword_t = i32;
 pub type fsblkcnt64_t = u64;
 pub type fsfilcnt64_t = u64;
+pub type __syscall_ulong_t = ::c_ulong;
 
 cfg_if! {
     if #[cfg(target_arch = "riscv32")] {
@@ -138,11 +139,24 @@ s! {
         pub imr_address: ::in_addr,
         pub imr_ifindex: ::c_int,
     }
-}
 
-pub const SO_PRIORITY: ::c_int = 12;
-pub const SO_BSDCOMPAT: ::c_int = 14;
-pub const SO_TIMESTAMP: ::c_int = 29;
+    pub struct semid_ds {
+        pub sem_perm: ipc_perm,
+        #[cfg(target_arch = "powerpc")]
+        __reserved: ::__syscall_ulong_t,
+        pub sem_otime: ::time_t,
+        #[cfg(not(any(target_arch = "mips", target_arch = "powerpc")))]
+        __reserved: ::__syscall_ulong_t,
+        #[cfg(target_arch = "powerpc")]
+        __reserved2: ::__syscall_ulong_t,
+        pub sem_ctime: ::time_t,
+        #[cfg(not(any(target_arch = "mips", target_arch = "powerpc")))]
+        __reserved2: ::__syscall_ulong_t,
+        pub sem_nsems: ::__syscall_ulong_t,
+        __glibc_reserved3: ::__syscall_ulong_t,
+        __glibc_reserved4: ::__syscall_ulong_t,
+    }
+}
 
 pub const POSIX_FADV_DONTNEED: ::c_int = 4;
 pub const POSIX_FADV_NOREUSE: ::c_int = 5;
@@ -162,11 +176,6 @@ cfg_if! {
         pub const O_NOATIME: ::c_int = 0x200000;
         pub const O_PATH: ::c_int = 0x1000000;
         pub const O_TMPFILE: ::c_int = 0x2000000 | O_DIRECTORY;
-        pub const SO_BINDTODEVICE: ::c_int = 0x000d;
-        pub const SO_MARK: ::c_int = 0x0022;
-        pub const SO_RXQ_OVFL: ::c_int = 0x0024;
-        pub const SO_PEEK_OFF: ::c_int = 0x0026;
-        pub const SO_BUSY_POLL: ::c_int = 0x0030;
 
         pub const SA_ONSTACK: ::c_int = 1;
 
@@ -213,11 +222,6 @@ cfg_if! {
         pub const O_NOATIME: ::c_int = 0o1000000;
         pub const O_PATH: ::c_int = 0o10000000;
         pub const O_TMPFILE: ::c_int = 0o20000000 | O_DIRECTORY;
-        pub const SO_BINDTODEVICE: ::c_int = 25;
-        pub const SO_MARK: ::c_int = 36;
-        pub const SO_RXQ_OVFL: ::c_int = 40;
-        pub const SO_PEEK_OFF: ::c_int = 42;
-        pub const SO_BUSY_POLL: ::c_int = 46;
 
         pub const SA_ONSTACK: ::c_int = 0x08000000;
 

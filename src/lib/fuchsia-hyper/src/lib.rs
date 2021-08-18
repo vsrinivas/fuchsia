@@ -16,6 +16,7 @@ use {
         Body,
     },
     std::pin::Pin,
+    tokio::io::ReadBuf,
 };
 
 #[cfg(not(target_os = "fuchsia"))]
@@ -70,9 +71,12 @@ impl tokio::io::AsyncRead for TcpStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
-        Pin::new(&mut self.stream).poll_read(cx, buf)
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.stream).poll_read(cx, buf.initialize_unfilled()).map_ok(|sz| {
+            buf.advance(sz);
+            ()
+        })
     }
 
     // TODO: override poll_read_buf and call readv on the underlying stream

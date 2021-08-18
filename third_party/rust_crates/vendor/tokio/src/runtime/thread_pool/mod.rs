@@ -9,12 +9,10 @@ use self::idle::Idle;
 mod worker;
 pub(crate) use worker::Launch;
 
-cfg_blocking! {
-    pub(crate) use worker::block_in_place;
-}
+pub(crate) use worker::block_in_place;
 
 use crate::loom::sync::Arc;
-use crate::runtime::task::{self, JoinHandle};
+use crate::runtime::task::JoinHandle;
 use crate::runtime::Parker;
 
 use std::fmt;
@@ -32,7 +30,7 @@ pub(crate) struct ThreadPool {
 ///
 /// The `Spawner` handle is *only* used for spawning new futures. It does not
 /// impact the lifecycle of the thread pool in any way. The thread pool may
-/// shutdown while there are outstanding `Spawner` instances.
+/// shut down while there are outstanding `Spawner` instances.
 ///
 /// `Spawner` instances are obtained by calling [`ThreadPool::spawner`].
 ///
@@ -61,15 +59,6 @@ impl ThreadPool {
         &self.spawner
     }
 
-    /// Spawns a task
-    pub(crate) fn spawn<F>(&self, future: F) -> JoinHandle<F::Output>
-    where
-        F: Future + Send + 'static,
-        F::Output: Send + 'static,
-    {
-        self.spawner.spawn(future)
-    }
-
     /// Blocks the current thread waiting for the future to complete.
     ///
     /// The future will execute on the current thread, but all spawned tasks
@@ -91,7 +80,7 @@ impl fmt::Debug for ThreadPool {
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
-        self.spawner.shared.close();
+        self.spawner.shutdown();
     }
 }
 
@@ -101,12 +90,14 @@ impl Spawner {
     /// Spawns a future onto the thread pool
     pub(crate) fn spawn<F>(&self, future: F) -> JoinHandle<F::Output>
     where
-        F: Future + Send + 'static,
+        F: crate::future::Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        let (task, handle) = task::joinable(future);
-        self.shared.schedule(task, false);
-        handle
+        worker::Shared::bind_new_task(&self.shared, future)
+    }
+
+    pub(crate) fn shutdown(&mut self) {
+        self.shared.close();
     }
 }
 

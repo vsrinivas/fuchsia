@@ -2,8 +2,8 @@ use rustls::ClientConfig;
 use std::io;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio::prelude::*;
 use tokio_rustls::{client::TlsStream, TlsConnector};
 
 async fn get(

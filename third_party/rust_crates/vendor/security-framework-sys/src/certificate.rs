@@ -1,11 +1,16 @@
+#[cfg(target_os = "macos")]
 use core_foundation_sys::array::CFArrayRef;
 use core_foundation_sys::base::{CFAllocatorRef, CFTypeID, OSStatus};
 use core_foundation_sys::data::CFDataRef;
+#[cfg(target_os = "macos")]
 use core_foundation_sys::dictionary::CFDictionaryRef;
+#[cfg(target_os = "macos")]
 use core_foundation_sys::error::CFErrorRef;
 use core_foundation_sys::string::CFStringRef;
 
-use crate::base::{SecCertificateRef, SecKeyRef};
+use crate::base::SecCertificateRef;
+#[cfg(target_os = "macos")]
+use crate::base::SecKeyRef;
 
 extern "C" {
     #[cfg(target_os = "macos")]

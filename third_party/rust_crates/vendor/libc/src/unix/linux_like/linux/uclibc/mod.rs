@@ -41,6 +41,8 @@ pub const MCL_FUTURE: ::c_int = 0x0002;
 
 pub const SIGEV_THREAD_ID: ::c_int = 4;
 
+pub const AF_VSOCK: ::c_int = 40;
+
 pub const ADFS_SUPER_MAGIC: ::c_long = 0x0000adf5;
 pub const AFFS_SUPER_MAGIC: ::c_long = 0x0000adff;
 pub const AFS_SUPER_MAGIC: ::c_long = 0x5346414f;
@@ -147,8 +149,7 @@ pub const LC_ALL: ::c_int = 6;
 // end different section
 
 // MS_ flags for mount(2)
-pub const MS_RMT_MASK: ::c_ulong =
-    ::MS_RDONLY | ::MS_SYNCHRONOUS | ::MS_MANDLOCK | ::MS_I_VERSION;
+pub const MS_RMT_MASK: ::c_ulong = ::MS_RDONLY | ::MS_SYNCHRONOUS | ::MS_MANDLOCK | ::MS_I_VERSION;
 
 pub const ENOTSUP: ::c_int = EOPNOTSUPP;
 

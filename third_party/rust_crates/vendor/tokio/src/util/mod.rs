@@ -3,24 +3,50 @@ cfg_io_driver! {
     pub(crate) mod slab;
 }
 
-#[cfg(any(feature = "sync", feature = "rt-core"))]
+#[cfg(any(
+    feature = "fs",
+    feature = "net",
+    feature = "process",
+    feature = "rt",
+    feature = "sync",
+    feature = "signal",
+    feature = "time",
+))]
 pub(crate) mod linked_list;
 
-#[cfg(any(feature = "rt-threaded", feature = "macros", feature = "stream"))]
+#[cfg(any(feature = "rt-multi-thread", feature = "macros"))]
 mod rand;
 
-mod wake;
-pub(crate) use wake::{waker_ref, Wake};
+cfg_rt! {
+    mod wake;
+    pub(crate) use wake::WakerRef;
+    pub(crate) use wake::{waker_ref, Wake};
 
-cfg_rt_threaded! {
-    pub(crate) use rand::FastRand;
+    mod sync_wrapper;
+    pub(crate) use sync_wrapper::SyncWrapper;
+
+    mod vec_deque_cell;
+    pub(crate) use vec_deque_cell::VecDequeCell;
+}
+
+cfg_rt_multi_thread! {
+    pub(crate) use self::rand::FastRand;
 
     mod try_lock;
     pub(crate) use try_lock::TryLock;
 }
 
-#[cfg(any(feature = "macros", feature = "stream"))]
-#[cfg_attr(not(feature = "macros"), allow(unreachable_pub))]
-pub use rand::thread_rng_n;
+pub(crate) mod trace;
 
-pub(crate) mod intrusive_double_linked_list;
+#[cfg(any(feature = "macros"))]
+#[cfg_attr(not(feature = "macros"), allow(unreachable_pub))]
+pub use self::rand::thread_rng_n;
+
+#[cfg(any(
+    feature = "rt",
+    feature = "time",
+    feature = "net",
+    feature = "process",
+    all(unix, feature = "signal")
+))]
+pub(crate) mod error;

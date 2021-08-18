@@ -337,7 +337,15 @@ pub const F_RDLCK: ::c_short = 1;
 pub const F_UNLCK: ::c_short = 2;
 pub const F_WRLCK: ::c_short = 3;
 
-pub const MNT_FORCE: ::c_int = 0x80000;
+pub const MNT_RDONLY: ::c_int = 0x00000001;
+pub const MNT_SYNCHRONOUS: ::c_int = 0x00000002;
+pub const MNT_NOEXEC: ::c_int = 0x00000004;
+pub const MNT_NOSUID: ::c_int = 0x00000008;
+pub const MNT_ASYNC: ::c_int = 0x00000040;
+pub const MNT_EXPORTED: ::c_int = 0x00000100;
+pub const MNT_UPDATE: ::c_int = 0x00010000;
+pub const MNT_RELOAD: ::c_int = 0x00040000;
+pub const MNT_FORCE: ::c_int = 0x00080000;
 
 pub const Q_SYNC: ::c_int = 0x600;
 pub const Q_QUOTAON: ::c_int = 0x100;
@@ -533,7 +541,7 @@ f! {
         return
     }
 
-    pub fn FD_ISSET(fd: ::c_int, set: *mut fd_set) -> bool {
+    pub fn FD_ISSET(fd: ::c_int, set: *const fd_set) -> bool {
         let bits = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         let fd = fd as usize;
         return ((*set).fds_bits[fd / bits] & (1 << (fd % bits))) != 0
@@ -587,11 +595,7 @@ extern "C" {
     )]
     pub fn setrlimit(resource: ::c_int, rlim: *const ::rlimit) -> ::c_int;
 
-    pub fn strerror_r(
-        errnum: ::c_int,
-        buf: *mut c_char,
-        buflen: ::size_t,
-    ) -> ::c_int;
+    pub fn strerror_r(errnum: ::c_int, buf: *mut c_char, buflen: ::size_t) -> ::c_int;
     pub fn abs(i: ::c_int) -> ::c_int;
     pub fn atof(s: *const ::c_char) -> ::c_double;
     pub fn labs(i: ::c_long) -> ::c_long;
@@ -626,11 +630,7 @@ extern "C" {
     pub fn if_nameindex() -> *mut if_nameindex;
     pub fn if_freenameindex(ptr: *mut if_nameindex);
 
-    pub fn getpeereid(
-        socket: ::c_int,
-        euid: *mut ::uid_t,
-        egid: *mut ::gid_t,
-    ) -> ::c_int;
+    pub fn getpeereid(socket: ::c_int, euid: *mut ::uid_t, egid: *mut ::gid_t) -> ::c_int;
 
     #[cfg_attr(
         all(target_os = "macos", not(target_arch = "aarch64")),
@@ -644,9 +644,7 @@ extern "C" {
     pub fn glob(
         pattern: *const ::c_char,
         flags: ::c_int,
-        errfunc: ::Option<
-            extern "C" fn(epath: *const ::c_char, errno: ::c_int) -> ::c_int,
-        >,
+        errfunc: ::Option<extern "C" fn(epath: *const ::c_char, errno: ::c_int) -> ::c_int>,
         pglob: *mut ::glob_t,
     ) -> ::c_int;
     #[cfg_attr(target_os = "netbsd", link_name = "__globfree30")]
@@ -656,11 +654,7 @@ extern "C" {
     )]
     pub fn globfree(pglob: *mut ::glob_t);
 
-    pub fn posix_madvise(
-        addr: *mut ::c_void,
-        len: ::size_t,
-        advice: ::c_int,
-    ) -> ::c_int;
+    pub fn posix_madvise(addr: *mut ::c_void, len: ::size_t, advice: ::c_int) -> ::c_int;
 
     pub fn shm_unlink(name: *const ::c_char) -> ::c_int;
 
@@ -683,22 +677,14 @@ extern "C" {
         link_name = "telldir$INODE64$UNIX2003"
     )]
     pub fn telldir(dirp: *mut ::DIR) -> ::c_long;
-    pub fn madvise(
-        addr: *mut ::c_void,
-        len: ::size_t,
-        advice: ::c_int,
-    ) -> ::c_int;
+    pub fn madvise(addr: *mut ::c_void, len: ::size_t, advice: ::c_int) -> ::c_int;
 
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
         link_name = "msync$UNIX2003"
     )]
     #[cfg_attr(target_os = "netbsd", link_name = "__msync13")]
-    pub fn msync(
-        addr: *mut ::c_void,
-        len: ::size_t,
-        flags: ::c_int,
-    ) -> ::c_int;
+    pub fn msync(addr: *mut ::c_void, len: ::size_t, flags: ::c_int) -> ::c_int;
 
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
@@ -721,49 +707,29 @@ extern "C" {
         all(target_os = "macos", target_arch = "x86"),
         link_name = "bind$UNIX2003"
     )]
-    pub fn bind(
-        socket: ::c_int,
-        address: *const ::sockaddr,
-        address_len: ::socklen_t,
-    ) -> ::c_int;
+    pub fn bind(socket: ::c_int, address: *const ::sockaddr, address_len: ::socklen_t) -> ::c_int;
 
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
         link_name = "writev$UNIX2003"
     )]
-    pub fn writev(
-        fd: ::c_int,
-        iov: *const ::iovec,
-        iovcnt: ::c_int,
-    ) -> ::ssize_t;
+    pub fn writev(fd: ::c_int, iov: *const ::iovec, iovcnt: ::c_int) -> ::ssize_t;
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
         link_name = "readv$UNIX2003"
     )]
-    pub fn readv(
-        fd: ::c_int,
-        iov: *const ::iovec,
-        iovcnt: ::c_int,
-    ) -> ::ssize_t;
+    pub fn readv(fd: ::c_int, iov: *const ::iovec, iovcnt: ::c_int) -> ::ssize_t;
 
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
         link_name = "sendmsg$UNIX2003"
     )]
-    pub fn sendmsg(
-        fd: ::c_int,
-        msg: *const ::msghdr,
-        flags: ::c_int,
-    ) -> ::ssize_t;
+    pub fn sendmsg(fd: ::c_int, msg: *const ::msghdr, flags: ::c_int) -> ::ssize_t;
     #[cfg_attr(
         all(target_os = "macos", target_arch = "x86"),
         link_name = "recvmsg$UNIX2003"
     )]
-    pub fn recvmsg(
-        fd: ::c_int,
-        msg: *mut ::msghdr,
-        flags: ::c_int,
-    ) -> ::ssize_t;
+    pub fn recvmsg(fd: ::c_int, msg: *mut ::msghdr, flags: ::c_int) -> ::ssize_t;
 
     pub fn sync();
     pub fn getgrgid_r(
@@ -792,11 +758,7 @@ extern "C" {
         all(target_os = "macos", target_arch = "x86"),
         link_name = "pthread_sigmask$UNIX2003"
     )]
-    pub fn pthread_sigmask(
-        how: ::c_int,
-        set: *const sigset_t,
-        oldset: *mut sigset_t,
-    ) -> ::c_int;
+    pub fn pthread_sigmask(how: ::c_int, set: *const sigset_t, oldset: *mut sigset_t) -> ::c_int;
     pub fn sem_open(name: *const ::c_char, oflag: ::c_int, ...) -> *mut sem_t;
     pub fn getgrnam(name: *const ::c_char) -> *mut ::group;
     #[cfg_attr(
@@ -880,11 +842,7 @@ extern "C" {
         old_value: *mut ::itimerval,
     ) -> ::c_int;
 
-    pub fn regcomp(
-        preg: *mut regex_t,
-        pattern: *const ::c_char,
-        cflags: ::c_int,
-    ) -> ::c_int;
+    pub fn regcomp(preg: *mut regex_t, pattern: *const ::c_char, cflags: ::c_int) -> ::c_int;
 
     pub fn regexec(
         preg: *const regex_t,
@@ -902,6 +860,10 @@ extern "C" {
     ) -> ::size_t;
 
     pub fn regfree(preg: *mut regex_t);
+
+    pub fn arc4random() -> u32;
+    pub fn arc4random_buf(buf: *mut ::c_void, size: ::size_t);
+    pub fn arc4random_uniform(l: u32) -> u32;
 }
 
 cfg_if! {

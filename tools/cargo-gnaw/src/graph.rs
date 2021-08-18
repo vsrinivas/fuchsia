@@ -7,7 +7,7 @@ use {
         target::{CustomBuildTarget, GnTarget},
         types::*,
     },
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context as _, Error},
     cargo_metadata::{DependencyKind, Metadata, Package, PackageId},
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
@@ -66,7 +66,7 @@ impl<'a> GnBuildGraph<'a> {
         {
             // check if this crate has a build script in it
             let mut build_script = package.targets.iter().find_map(|target| {
-                if GnRustType::try_from(&target.kind).unwrap() == GnRustType::BuildScript {
+                if GnRustType::try_from(&target.kind).with_context(|| format!("Failed to resolve GN target type for: {:?}", &target)).unwrap() == GnRustType::BuildScript {
                     return Some(CustomBuildTarget {
                         dependencies: vec![],
                         path: target.src_path.clone(),

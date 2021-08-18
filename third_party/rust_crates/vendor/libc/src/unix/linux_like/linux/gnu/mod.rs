@@ -128,6 +128,19 @@ s! {
         pub keepcost: ::c_int,
     }
 
+    pub struct mallinfo2 {
+        pub arena: ::size_t,
+        pub ordblks: ::size_t,
+        pub smblks: ::size_t,
+        pub hblks: ::size_t,
+        pub hblkhd: ::size_t,
+        pub usmblks: ::size_t,
+        pub fsmblks: ::size_t,
+        pub uordblks: ::size_t,
+        pub fordblks: ::size_t,
+        pub keepcost: ::size_t,
+    }
+
     pub struct nlmsghdr {
         pub nlmsg_len: u32,
         pub nlmsg_type: u16,
@@ -299,6 +312,19 @@ s! {
         pub ch_type: ::Elf32_Word,
         pub ch_size: ::Elf32_Word,
         pub ch_addralign: ::Elf32_Word,
+    }
+
+    pub struct seminfo {
+        pub semmap: ::c_int,
+        pub semmni: ::c_int,
+        pub semmns: ::c_int,
+        pub semmnu: ::c_int,
+        pub semmsl: ::c_int,
+        pub semopm: ::c_int,
+        pub semume: ::c_int,
+        pub semusz: ::c_int,
+        pub semvmx: ::c_int,
+        pub semaem: ::c_int,
     }
 }
 
@@ -541,6 +567,7 @@ pub const RLIMIT_NICE: ::__rlimit_resource_t = 13;
 pub const RLIMIT_RTPRIO: ::__rlimit_resource_t = 14;
 pub const RLIMIT_RTTIME: ::__rlimit_resource_t = 15;
 pub const RLIMIT_NLIMITS: ::__rlimit_resource_t = 16;
+pub const RLIM_NLIMITS: ::__rlimit_resource_t = RLIMIT_NLIMITS;
 
 pub const PRIO_PROCESS: ::__priority_which_t = 0;
 pub const PRIO_PGRP: ::__priority_which_t = 1;
@@ -620,18 +647,6 @@ pub const ENOTSUP: ::c_int = EOPNOTSUPP;
 pub const SOCK_SEQPACKET: ::c_int = 5;
 pub const SOCK_DCCP: ::c_int = 6;
 pub const SOCK_PACKET: ::c_int = 10;
-
-pub const TCP_COOKIE_TRANSACTIONS: ::c_int = 15;
-pub const TCP_THIN_LINEAR_TIMEOUTS: ::c_int = 16;
-pub const TCP_THIN_DUPACK: ::c_int = 17;
-pub const TCP_USER_TIMEOUT: ::c_int = 18;
-pub const TCP_REPAIR: ::c_int = 19;
-pub const TCP_REPAIR_QUEUE: ::c_int = 20;
-pub const TCP_QUEUE_SEQ: ::c_int = 21;
-pub const TCP_REPAIR_OPTIONS: ::c_int = 22;
-pub const TCP_FASTOPEN: ::c_int = 23;
-pub const TCP_TIMESTAMP: ::c_int = 24;
-pub const TCP_FASTOPEN_CONNECT: ::c_int = 30;
 
 pub const FAN_MARK_INODE: ::c_uint = 0x0000_0000;
 pub const FAN_MARK_MOUNT: ::c_uint = 0x0000_0010;
@@ -959,12 +974,6 @@ pub const TIOCM_RTS: ::c_int = 0x004;
 pub const TIOCM_CD: ::c_int = TIOCM_CAR;
 pub const TIOCM_RI: ::c_int = TIOCM_RNG;
 
-pub const NF_NETDEV_INGRESS: ::c_int = 0;
-pub const NF_NETDEV_NUMHOOKS: ::c_int = 1;
-
-pub const NFPROTO_INET: ::c_int = 1;
-pub const NFPROTO_NETDEV: ::c_int = 5;
-
 // linux/keyctl.h
 pub const KEYCTL_DH_COMPUTE: u32 = 23;
 pub const KEYCTL_PKEY_QUERY: u32 = 24;
@@ -995,193 +1004,6 @@ cfg_if! {
         pub const KEYCTL_CAPS1_NS_KEY_TAG: u32 = 0x02;
     }
 }
-
-// linux/netfilter/nf_tables.h
-pub const NFT_TABLE_MAXNAMELEN: ::c_int = 256;
-pub const NFT_CHAIN_MAXNAMELEN: ::c_int = 256;
-pub const NFT_SET_MAXNAMELEN: ::c_int = 256;
-pub const NFT_OBJ_MAXNAMELEN: ::c_int = 256;
-pub const NFT_USERDATA_MAXLEN: ::c_int = 256;
-
-pub const NFT_REG_VERDICT: ::c_int = 0;
-pub const NFT_REG_1: ::c_int = 1;
-pub const NFT_REG_2: ::c_int = 2;
-pub const NFT_REG_3: ::c_int = 3;
-pub const NFT_REG_4: ::c_int = 4;
-pub const __NFT_REG_MAX: ::c_int = 5;
-pub const NFT_REG32_00: ::c_int = 8;
-pub const NFT_REG32_01: ::c_int = 9;
-pub const NFT_REG32_02: ::c_int = 10;
-pub const NFT_REG32_03: ::c_int = 11;
-pub const NFT_REG32_04: ::c_int = 12;
-pub const NFT_REG32_05: ::c_int = 13;
-pub const NFT_REG32_06: ::c_int = 14;
-pub const NFT_REG32_07: ::c_int = 15;
-pub const NFT_REG32_08: ::c_int = 16;
-pub const NFT_REG32_09: ::c_int = 17;
-pub const NFT_REG32_10: ::c_int = 18;
-pub const NFT_REG32_11: ::c_int = 19;
-pub const NFT_REG32_12: ::c_int = 20;
-pub const NFT_REG32_13: ::c_int = 21;
-pub const NFT_REG32_14: ::c_int = 22;
-pub const NFT_REG32_15: ::c_int = 23;
-
-pub const NFT_REG_SIZE: ::c_int = 16;
-pub const NFT_REG32_SIZE: ::c_int = 4;
-
-pub const NFT_CONTINUE: ::c_int = -1;
-pub const NFT_BREAK: ::c_int = -2;
-pub const NFT_JUMP: ::c_int = -3;
-pub const NFT_GOTO: ::c_int = -4;
-pub const NFT_RETURN: ::c_int = -5;
-
-pub const NFT_MSG_NEWTABLE: ::c_int = 0;
-pub const NFT_MSG_GETTABLE: ::c_int = 1;
-pub const NFT_MSG_DELTABLE: ::c_int = 2;
-pub const NFT_MSG_NEWCHAIN: ::c_int = 3;
-pub const NFT_MSG_GETCHAIN: ::c_int = 4;
-pub const NFT_MSG_DELCHAIN: ::c_int = 5;
-pub const NFT_MSG_NEWRULE: ::c_int = 6;
-pub const NFT_MSG_GETRULE: ::c_int = 7;
-pub const NFT_MSG_DELRULE: ::c_int = 8;
-pub const NFT_MSG_NEWSET: ::c_int = 9;
-pub const NFT_MSG_GETSET: ::c_int = 10;
-pub const NFT_MSG_DELSET: ::c_int = 11;
-pub const NFT_MSG_NEWSETELEM: ::c_int = 12;
-pub const NFT_MSG_GETSETELEM: ::c_int = 13;
-pub const NFT_MSG_DELSETELEM: ::c_int = 14;
-pub const NFT_MSG_NEWGEN: ::c_int = 15;
-pub const NFT_MSG_GETGEN: ::c_int = 16;
-pub const NFT_MSG_TRACE: ::c_int = 17;
-cfg_if! {
-    if #[cfg(not(target_arch = "sparc64"))] {
-        pub const NFT_MSG_NEWOBJ: ::c_int = 18;
-        pub const NFT_MSG_GETOBJ: ::c_int = 19;
-        pub const NFT_MSG_DELOBJ: ::c_int = 20;
-        pub const NFT_MSG_GETOBJ_RESET: ::c_int = 21;
-    }
-}
-pub const NFT_MSG_MAX: ::c_int = 25;
-
-pub const NFT_SET_ANONYMOUS: ::c_int = 0x1;
-pub const NFT_SET_CONSTANT: ::c_int = 0x2;
-pub const NFT_SET_INTERVAL: ::c_int = 0x4;
-pub const NFT_SET_MAP: ::c_int = 0x8;
-pub const NFT_SET_TIMEOUT: ::c_int = 0x10;
-pub const NFT_SET_EVAL: ::c_int = 0x20;
-
-pub const NFT_SET_POL_PERFORMANCE: ::c_int = 0;
-pub const NFT_SET_POL_MEMORY: ::c_int = 1;
-
-pub const NFT_SET_ELEM_INTERVAL_END: ::c_int = 0x1;
-
-pub const NFT_DATA_VALUE: ::c_uint = 0;
-pub const NFT_DATA_VERDICT: ::c_uint = 0xffffff00;
-
-pub const NFT_DATA_RESERVED_MASK: ::c_uint = 0xffffff00;
-
-pub const NFT_DATA_VALUE_MAXLEN: ::c_int = 64;
-
-pub const NFT_BYTEORDER_NTOH: ::c_int = 0;
-pub const NFT_BYTEORDER_HTON: ::c_int = 1;
-
-pub const NFT_CMP_EQ: ::c_int = 0;
-pub const NFT_CMP_NEQ: ::c_int = 1;
-pub const NFT_CMP_LT: ::c_int = 2;
-pub const NFT_CMP_LTE: ::c_int = 3;
-pub const NFT_CMP_GT: ::c_int = 4;
-pub const NFT_CMP_GTE: ::c_int = 5;
-
-pub const NFT_RANGE_EQ: ::c_int = 0;
-pub const NFT_RANGE_NEQ: ::c_int = 1;
-
-pub const NFT_LOOKUP_F_INV: ::c_int = 1 << 0;
-
-pub const NFT_DYNSET_OP_ADD: ::c_int = 0;
-pub const NFT_DYNSET_OP_UPDATE: ::c_int = 1;
-
-pub const NFT_DYNSET_F_INV: ::c_int = 1 << 0;
-
-pub const NFT_PAYLOAD_LL_HEADER: ::c_int = 0;
-pub const NFT_PAYLOAD_NETWORK_HEADER: ::c_int = 1;
-pub const NFT_PAYLOAD_TRANSPORT_HEADER: ::c_int = 2;
-
-pub const NFT_PAYLOAD_CSUM_NONE: ::c_int = 0;
-pub const NFT_PAYLOAD_CSUM_INET: ::c_int = 1;
-
-pub const NFT_META_LEN: ::c_int = 0;
-pub const NFT_META_PROTOCOL: ::c_int = 1;
-pub const NFT_META_PRIORITY: ::c_int = 2;
-pub const NFT_META_MARK: ::c_int = 3;
-pub const NFT_META_IIF: ::c_int = 4;
-pub const NFT_META_OIF: ::c_int = 5;
-pub const NFT_META_IIFNAME: ::c_int = 6;
-pub const NFT_META_OIFNAME: ::c_int = 7;
-pub const NFT_META_IIFTYPE: ::c_int = 8;
-pub const NFT_META_OIFTYPE: ::c_int = 9;
-pub const NFT_META_SKUID: ::c_int = 10;
-pub const NFT_META_SKGID: ::c_int = 11;
-pub const NFT_META_NFTRACE: ::c_int = 12;
-pub const NFT_META_RTCLASSID: ::c_int = 13;
-pub const NFT_META_SECMARK: ::c_int = 14;
-pub const NFT_META_NFPROTO: ::c_int = 15;
-pub const NFT_META_L4PROTO: ::c_int = 16;
-pub const NFT_META_BRI_IIFNAME: ::c_int = 17;
-pub const NFT_META_BRI_OIFNAME: ::c_int = 18;
-pub const NFT_META_PKTTYPE: ::c_int = 19;
-pub const NFT_META_CPU: ::c_int = 20;
-pub const NFT_META_IIFGROUP: ::c_int = 21;
-pub const NFT_META_OIFGROUP: ::c_int = 22;
-pub const NFT_META_CGROUP: ::c_int = 23;
-pub const NFT_META_PRANDOM: ::c_int = 24;
-
-pub const NFT_CT_STATE: ::c_int = 0;
-pub const NFT_CT_DIRECTION: ::c_int = 1;
-pub const NFT_CT_STATUS: ::c_int = 2;
-pub const NFT_CT_MARK: ::c_int = 3;
-pub const NFT_CT_SECMARK: ::c_int = 4;
-pub const NFT_CT_EXPIRATION: ::c_int = 5;
-pub const NFT_CT_HELPER: ::c_int = 6;
-pub const NFT_CT_L3PROTOCOL: ::c_int = 7;
-pub const NFT_CT_SRC: ::c_int = 8;
-pub const NFT_CT_DST: ::c_int = 9;
-pub const NFT_CT_PROTOCOL: ::c_int = 10;
-pub const NFT_CT_PROTO_SRC: ::c_int = 11;
-pub const NFT_CT_PROTO_DST: ::c_int = 12;
-pub const NFT_CT_LABELS: ::c_int = 13;
-pub const NFT_CT_PKTS: ::c_int = 14;
-pub const NFT_CT_BYTES: ::c_int = 15;
-
-pub const NFT_LIMIT_PKTS: ::c_int = 0;
-pub const NFT_LIMIT_PKT_BYTES: ::c_int = 1;
-
-pub const NFT_LIMIT_F_INV: ::c_int = 1 << 0;
-
-pub const NFT_QUEUE_FLAG_BYPASS: ::c_int = 0x01;
-pub const NFT_QUEUE_FLAG_CPU_FANOUT: ::c_int = 0x02;
-pub const NFT_QUEUE_FLAG_MASK: ::c_int = 0x03;
-
-pub const NFT_QUOTA_F_INV: ::c_int = 1 << 0;
-
-pub const NFT_REJECT_ICMP_UNREACH: ::c_int = 0;
-pub const NFT_REJECT_TCP_RST: ::c_int = 1;
-pub const NFT_REJECT_ICMPX_UNREACH: ::c_int = 2;
-
-pub const NFT_REJECT_ICMPX_NO_ROUTE: ::c_int = 0;
-pub const NFT_REJECT_ICMPX_PORT_UNREACH: ::c_int = 1;
-pub const NFT_REJECT_ICMPX_HOST_UNREACH: ::c_int = 2;
-pub const NFT_REJECT_ICMPX_ADMIN_PROHIBITED: ::c_int = 3;
-
-pub const NFT_NAT_SNAT: ::c_int = 0;
-pub const NFT_NAT_DNAT: ::c_int = 1;
-
-pub const NFT_TRACETYPE_UNSPEC: ::c_int = 0;
-pub const NFT_TRACETYPE_POLICY: ::c_int = 1;
-pub const NFT_TRACETYPE_RETURN: ::c_int = 2;
-pub const NFT_TRACETYPE_RULE: ::c_int = 3;
-
-pub const NFT_NG_INCREMENTAL: ::c_int = 0;
-pub const NFT_NG_RANDOM: ::c_int = 1;
 
 pub const M_MXFAST: ::c_int = 1;
 pub const M_NLBLKS: ::c_int = 2;
@@ -1222,33 +1044,6 @@ pub const STATX_ATTR_APPEND: ::c_int = 0x0020;
 pub const STATX_ATTR_NODUMP: ::c_int = 0x0040;
 pub const STATX_ATTR_ENCRYPTED: ::c_int = 0x0800;
 pub const STATX_ATTR_AUTOMOUNT: ::c_int = 0x1000;
-
-// sys/auxv.h
-pub const AT_NULL: ::c_ulong = 0;
-pub const AT_IGNORE: ::c_ulong = 1;
-pub const AT_EXECFD: ::c_ulong = 2;
-pub const AT_PHDR: ::c_ulong = 3;
-pub const AT_PHENT: ::c_ulong = 4;
-pub const AT_PHNUM: ::c_ulong = 5;
-pub const AT_PAGESZ: ::c_ulong = 6;
-pub const AT_BASE: ::c_ulong = 7;
-pub const AT_FLAGS: ::c_ulong = 8;
-pub const AT_ENTRY: ::c_ulong = 9;
-pub const AT_NOTELF: ::c_ulong = 10;
-pub const AT_UID: ::c_ulong = 11;
-pub const AT_EUID: ::c_ulong = 12;
-pub const AT_GID: ::c_ulong = 13;
-pub const AT_EGID: ::c_ulong = 14;
-pub const AT_PLATFORM: ::c_ulong = 15;
-pub const AT_HWCAP: ::c_ulong = 16;
-pub const AT_CLKTCK: ::c_ulong = 17;
-// AT_* values 18 through 22 are reserved
-pub const AT_SECURE: ::c_ulong = 23;
-pub const AT_BASE_PLATFORM: ::c_ulong = 24;
-pub const AT_RANDOM: ::c_ulong = 25;
-pub const AT_HWCAP2: ::c_ulong = 26;
-
-pub const AT_EXECFN: ::c_ulong = 31;
 
 //sys/timex.h
 pub const ADJ_OFFSET: ::c_uint = 0x0001;
@@ -1362,11 +1157,7 @@ extern "C" {
         num: ::size_t,
         size: ::size_t,
         compar: ::Option<
-            unsafe extern "C" fn(
-                *const ::c_void,
-                *const ::c_void,
-                *mut ::c_void,
-            ) -> ::c_int,
+            unsafe extern "C" fn(*const ::c_void, *const ::c_void, *mut ::c_void) -> ::c_int,
         >,
         arg: *mut ::c_void,
     );
@@ -1384,22 +1175,10 @@ extern "C" {
         timeout: *mut ::timespec,
     ) -> ::c_int;
 
-    pub fn getrlimit64(
-        resource: ::__rlimit_resource_t,
-        rlim: *mut ::rlimit64,
-    ) -> ::c_int;
-    pub fn setrlimit64(
-        resource: ::__rlimit_resource_t,
-        rlim: *const ::rlimit64,
-    ) -> ::c_int;
-    pub fn getrlimit(
-        resource: ::__rlimit_resource_t,
-        rlim: *mut ::rlimit,
-    ) -> ::c_int;
-    pub fn setrlimit(
-        resource: ::__rlimit_resource_t,
-        rlim: *const ::rlimit,
-    ) -> ::c_int;
+    pub fn getrlimit64(resource: ::__rlimit_resource_t, rlim: *mut ::rlimit64) -> ::c_int;
+    pub fn setrlimit64(resource: ::__rlimit_resource_t, rlim: *const ::rlimit64) -> ::c_int;
+    pub fn getrlimit(resource: ::__rlimit_resource_t, rlim: *mut ::rlimit) -> ::c_int;
+    pub fn setrlimit(resource: ::__rlimit_resource_t, rlim: *const ::rlimit) -> ::c_int;
     pub fn prlimit(
         pid: ::pid_t,
         resource: ::__rlimit_resource_t,
@@ -1430,11 +1209,7 @@ extern "C" {
         mask: ::c_uint,
         statxbuf: *mut statx,
     ) -> ::c_int;
-    pub fn getrandom(
-        buf: *mut ::c_void,
-        buflen: ::size_t,
-        flags: ::c_uint,
-    ) -> ::ssize_t;
+    pub fn getrandom(buf: *mut ::c_void, buflen: ::size_t, flags: ::c_uint) -> ::ssize_t;
 
     pub fn memmem(
         haystack: *const ::c_void,
@@ -1477,6 +1252,32 @@ extern "C" {
         offset: ::off_t,
         flags: ::c_int,
     ) -> ::ssize_t;
+    pub fn preadv64v2(
+        fd: ::c_int,
+        iov: *const ::iovec,
+        iovcnt: ::c_int,
+        offset: ::off64_t,
+        flags: ::c_int,
+    ) -> ::ssize_t;
+    pub fn pwritev64v2(
+        fd: ::c_int,
+        iov: *const ::iovec,
+        iovcnt: ::c_int,
+        offset: ::off64_t,
+        flags: ::c_int,
+    ) -> ::ssize_t;
+    pub fn renameat2(
+        olddirfd: ::c_int,
+        oldpath: *const ::c_char,
+        newdirfd: ::c_int,
+        newpath: *const ::c_char,
+        flags: ::c_uint,
+    ) -> ::c_int;
+
+    // Added in `glibc` 2.25
+    pub fn explicit_bzero(s: *mut ::c_void, len: ::size_t);
+    // Added in `glibc` 2.29
+    pub fn reallocarray(ptr: *mut ::c_void, nmemb: ::size_t, size: ::size_t) -> *mut ::c_void;
 }
 
 extern "C" {
@@ -1485,9 +1286,7 @@ extern "C" {
     pub fn glob64(
         pattern: *const ::c_char,
         flags: ::c_int,
-        errfunc: ::Option<
-            extern "C" fn(epath: *const ::c_char, errno: ::c_int) -> ::c_int,
-        >,
+        errfunc: ::Option<extern "C" fn(epath: *const ::c_char, errno: ::c_int) -> ::c_int>,
         pglob: *mut glob64_t,
     ) -> ::c_int;
     pub fn globfree64(pglob: *mut glob64_t);
@@ -1503,11 +1302,7 @@ extern "C" {
         cpuset: *const ::cpu_set_t,
     ) -> ::c_int;
     pub fn getpriority(which: ::__priority_which_t, who: ::id_t) -> ::c_int;
-    pub fn setpriority(
-        which: ::__priority_which_t,
-        who: ::id_t,
-        prio: ::c_int,
-    ) -> ::c_int;
+    pub fn setpriority(which: ::__priority_which_t, who: ::id_t, prio: ::c_int) -> ::c_int;
     pub fn pthread_getaffinity_np(
         thread: ::pthread_t,
         cpusetsize: ::size_t,
@@ -1528,6 +1323,7 @@ extern "C" {
     ) -> ::c_int;
     pub fn sched_getcpu() -> ::c_int;
     pub fn mallinfo() -> ::mallinfo;
+    pub fn mallinfo2() -> ::mallinfo2;
     pub fn malloc_usable_size(ptr: *mut ::c_void) -> ::size_t;
     pub fn getpwent_r(
         pwd: *mut ::passwd,
@@ -1541,27 +1337,18 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut ::group,
     ) -> ::c_int;
-    pub fn pthread_getname_np(
-        thread: ::pthread_t,
-        name: *mut ::c_char,
-        len: ::size_t,
-    ) -> ::c_int;
-    pub fn pthread_setname_np(
-        thread: ::pthread_t,
-        name: *const ::c_char,
-    ) -> ::c_int;
+    pub fn pthread_getname_np(thread: ::pthread_t, name: *mut ::c_char, len: ::size_t) -> ::c_int;
+    pub fn pthread_setname_np(thread: ::pthread_t, name: *const ::c_char) -> ::c_int;
 }
 
 extern "C" {
-    pub fn dlmopen(
-        lmid: Lmid_t,
-        filename: *const ::c_char,
-        flag: ::c_int,
-    ) -> *mut ::c_void;
-    pub fn dlinfo(
-        handle: *mut ::c_void,
-        request: ::c_int,
-        info: *mut ::c_void,
+    pub fn dlmopen(lmid: Lmid_t, filename: *const ::c_char, flag: ::c_int) -> *mut ::c_void;
+    pub fn dlinfo(handle: *mut ::c_void, request: ::c_int, info: *mut ::c_void) -> ::c_int;
+    pub fn dladdr1(
+        addr: *const ::c_void,
+        info: *mut ::Dl_info,
+        extra_info: *mut *mut ::c_void,
+        flags: ::c_int,
     ) -> ::c_int;
 }
 

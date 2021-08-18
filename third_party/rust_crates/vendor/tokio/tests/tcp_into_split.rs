@@ -3,7 +3,6 @@
 
 use std::io::{Error, ErrorKind, Result};
 use std::io::{Read, Write};
-use std::sync::{Arc, Barrier};
 use std::{net, thread};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -14,7 +13,7 @@ use tokio::try_join;
 async fn split() -> Result<()> {
     const MSG: &[u8] = b"split";
 
-    let mut listener = TcpListener::bind("127.0.0.1:0").await?;
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
     let addr = listener.local_addr()?;
 
     let (stream1, (mut stream2, _)) = try_join! {
@@ -89,12 +88,9 @@ async fn drop_write() -> Result<()> {
     let listener = net::TcpListener::bind("127.0.0.1:0")?;
     let addr = listener.local_addr()?;
 
-    let barrier = Arc::new(Barrier::new(2));
-    let barrier2 = barrier.clone();
-
     let handle = thread::spawn(move || {
         let (mut stream, _) = listener.accept().unwrap();
-        stream.write(MSG).unwrap();
+        stream.write_all(MSG).unwrap();
 
         let mut read_buf = [0u8; 32];
         let res = match stream.read(&mut read_buf) {
@@ -105,8 +101,6 @@ async fn drop_write() -> Result<()> {
             )),
             Err(err) => Err(err),
         };
-
-        barrier2.wait();
 
         drop(stream);
 
@@ -122,7 +116,7 @@ async fn drop_write() -> Result<()> {
 
     // drop it while the read is in progress
     std::thread::spawn(move || {
-        thread::sleep(std::time::Duration::from_millis(50));
+        thread::sleep(std::time::Duration::from_millis(10));
         drop(write_half);
     });
 
@@ -131,8 +125,6 @@ async fn drop_write() -> Result<()> {
         Ok(len) => panic!("Unexpected read: {} bytes.", len),
         Err(err) => panic!("Unexpected error: {}.", err),
     }
-
-    barrier.wait();
 
     handle.join().unwrap().unwrap();
     Ok(())

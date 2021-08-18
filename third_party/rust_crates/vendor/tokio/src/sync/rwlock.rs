@@ -1,14 +1,31 @@
-use crate::sync::batch_semaphore::{AcquireError, Semaphore};
+use crate::sync::batch_semaphore::{Semaphore, TryAcquireError};
+use crate::sync::mutex::TryLockError;
 use std::cell::UnsafeCell;
-use std::ops;
+use std::marker;
+use std::marker::PhantomData;
+use std::mem::ManuallyDrop;
+use std::sync::Arc;
+
+pub(crate) mod owned_read_guard;
+pub(crate) mod owned_write_guard;
+pub(crate) mod owned_write_guard_mapped;
+pub(crate) mod read_guard;
+pub(crate) mod write_guard;
+pub(crate) mod write_guard_mapped;
+pub(crate) use owned_read_guard::OwnedRwLockReadGuard;
+pub(crate) use owned_write_guard::OwnedRwLockWriteGuard;
+pub(crate) use owned_write_guard_mapped::OwnedRwLockMappedWriteGuard;
+pub(crate) use read_guard::RwLockReadGuard;
+pub(crate) use write_guard::RwLockWriteGuard;
+pub(crate) use write_guard_mapped::RwLockMappedWriteGuard;
 
 #[cfg(not(loom))]
-const MAX_READS: usize = 32;
+const MAX_READS: u32 = std::u32::MAX >> 3;
 
 #[cfg(loom)]
-const MAX_READS: usize = 10;
+const MAX_READS: u32 = 10;
 
-/// An asynchronous reader-writer lock
+/// An asynchronous reader-writer lock.
 ///
 /// This type of lock allows a number of readers or at most one writer at any
 /// point in time. The write portion of this lock typically allows modification
@@ -31,8 +48,8 @@ const MAX_READS: usize = 10;
 ///
 /// The type parameter `T` represents the data that this lock protects. It is
 /// required that `T` satisfies [`Send`] to be shared across threads. The RAII guards
-/// returned from the locking methods implement [`Deref`](https://doc.rust-lang.org/std/ops/trait.Deref.html)
-/// (and [`DerefMut`](https://doc.rust-lang.org/std/ops/trait.DerefMut.html)
+/// returned from the locking methods implement [`Deref`](trait@std::ops::Deref)
+/// (and [`DerefMut`](trait@std::ops::DerefMut)
 /// for the `write` methods) to allow access to the content of the lock.
 ///
 /// # Examples
@@ -65,65 +82,18 @@ const MAX_READS: usize = 10;
 /// [`RwLock`]: struct@RwLock
 /// [`RwLockReadGuard`]: struct@RwLockReadGuard
 /// [`RwLockWriteGuard`]: struct@RwLockWriteGuard
-/// [`Send`]: https://doc.rust-lang.org/std/marker/trait.Send.html
+/// [`Send`]: trait@std::marker::Send
 /// [_write-preferring_]: https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock#Priority_policies
 #[derive(Debug)]
-pub struct RwLock<T> {
+pub struct RwLock<T: ?Sized> {
+    // maximum number of concurrent readers
+    mr: u32,
+
     //semaphore to coordinate read and write access to T
     s: Semaphore,
 
     //inner data T
     c: UnsafeCell<T>,
-}
-
-/// RAII structure used to release the shared read access of a lock when
-/// dropped.
-///
-/// This structure is created by the [`read`] method on
-/// [`RwLock`].
-///
-/// [`read`]: method@RwLock::read
-#[derive(Debug)]
-pub struct RwLockReadGuard<'a, T> {
-    permit: ReleasingPermit<'a, T>,
-    lock: &'a RwLock<T>,
-}
-
-/// RAII structure used to release the exclusive write access of a lock when
-/// dropped.
-///
-/// This structure is created by the [`write`] and method
-/// on [`RwLock`].
-///
-/// [`write`]: method@RwLock::write
-/// [`RwLock`]: struct@RwLock
-#[derive(Debug)]
-pub struct RwLockWriteGuard<'a, T> {
-    permit: ReleasingPermit<'a, T>,
-    lock: &'a RwLock<T>,
-}
-
-// Wrapper arround Permit that releases on Drop
-#[derive(Debug)]
-struct ReleasingPermit<'a, T> {
-    num_permits: u16,
-    lock: &'a RwLock<T>,
-}
-
-impl<'a, T> ReleasingPermit<'a, T> {
-    async fn acquire(
-        lock: &'a RwLock<T>,
-        num_permits: u16,
-    ) -> Result<ReleasingPermit<'a, T>, AcquireError> {
-        lock.s.acquire(num_permits).await?;
-        Ok(Self { num_permits, lock })
-    }
-}
-
-impl<'a, T> Drop for ReleasingPermit<'a, T> {
-    fn drop(&mut self) {
-        self.lock.s.release(self.num_permits as usize);
-    }
 }
 
 #[test]
@@ -139,26 +109,85 @@ fn bounds() {
     check_sync::<RwLock<u32>>();
     check_unpin::<RwLock<u32>>();
 
+    check_send::<RwLockReadGuard<'_, u32>>();
     check_sync::<RwLockReadGuard<'_, u32>>();
     check_unpin::<RwLockReadGuard<'_, u32>>();
 
+    check_send::<OwnedRwLockReadGuard<u32, i32>>();
+    check_sync::<OwnedRwLockReadGuard<u32, i32>>();
+    check_unpin::<OwnedRwLockReadGuard<u32, i32>>();
+
+    check_send::<RwLockWriteGuard<'_, u32>>();
     check_sync::<RwLockWriteGuard<'_, u32>>();
     check_unpin::<RwLockWriteGuard<'_, u32>>();
 
-    let rwlock = RwLock::new(0);
+    check_send::<RwLockMappedWriteGuard<'_, u32>>();
+    check_sync::<RwLockMappedWriteGuard<'_, u32>>();
+    check_unpin::<RwLockMappedWriteGuard<'_, u32>>();
+
+    check_send::<OwnedRwLockWriteGuard<u32>>();
+    check_sync::<OwnedRwLockWriteGuard<u32>>();
+    check_unpin::<OwnedRwLockWriteGuard<u32>>();
+
+    check_send::<OwnedRwLockMappedWriteGuard<u32, i32>>();
+    check_sync::<OwnedRwLockMappedWriteGuard<u32, i32>>();
+    check_unpin::<OwnedRwLockMappedWriteGuard<u32, i32>>();
+
+    let rwlock = Arc::new(RwLock::new(0));
     check_send_sync_val(rwlock.read());
+    check_send_sync_val(Arc::clone(&rwlock).read_owned());
     check_send_sync_val(rwlock.write());
+    check_send_sync_val(Arc::clone(&rwlock).write_owned());
 }
 
 // As long as T: Send + Sync, it's fine to send and share RwLock<T> between threads.
 // If T were not Send, sending and sharing a RwLock<T> would be bad, since you can access T through
 // RwLock<T>.
-unsafe impl<T> Send for RwLock<T> where T: Send {}
-unsafe impl<T> Sync for RwLock<T> where T: Send + Sync {}
-unsafe impl<'a, T> Sync for RwLockReadGuard<'a, T> where T: Send + Sync {}
-unsafe impl<'a, T> Sync for RwLockWriteGuard<'a, T> where T: Send + Sync {}
+unsafe impl<T> Send for RwLock<T> where T: ?Sized + Send {}
+unsafe impl<T> Sync for RwLock<T> where T: ?Sized + Send + Sync {}
+// NB: These impls need to be explicit since we're storing a raw pointer.
+// Safety: Stores a raw pointer to `T`, so if `T` is `Sync`, the lock guard over
+// `T` is `Send`.
+unsafe impl<T> Send for RwLockReadGuard<'_, T> where T: ?Sized + Sync {}
+unsafe impl<T> Sync for RwLockReadGuard<'_, T> where T: ?Sized + Send + Sync {}
+// T is required to be `Send` because an OwnedRwLockReadGuard can be used to drop the value held in
+// the RwLock, unlike RwLockReadGuard.
+unsafe impl<T, U> Send for OwnedRwLockReadGuard<T, U>
+where
+    T: ?Sized + Send + Sync,
+    U: ?Sized + Sync,
+{
+}
+unsafe impl<T, U> Sync for OwnedRwLockReadGuard<T, U>
+where
+    T: ?Sized + Send + Sync,
+    U: ?Sized + Send + Sync,
+{
+}
+unsafe impl<T> Sync for RwLockWriteGuard<'_, T> where T: ?Sized + Send + Sync {}
+unsafe impl<T> Sync for OwnedRwLockWriteGuard<T> where T: ?Sized + Send + Sync {}
+unsafe impl<T> Sync for RwLockMappedWriteGuard<'_, T> where T: ?Sized + Send + Sync {}
+unsafe impl<T, U> Sync for OwnedRwLockMappedWriteGuard<T, U>
+where
+    T: ?Sized + Send + Sync,
+    U: ?Sized + Send + Sync,
+{
+}
+// Safety: Stores a raw pointer to `T`, so if `T` is `Sync`, the lock guard over
+// `T` is `Send` - but since this is also provides mutable access, we need to
+// make sure that `T` is `Send` since its value can be sent across thread
+// boundaries.
+unsafe impl<T> Send for RwLockWriteGuard<'_, T> where T: ?Sized + Send + Sync {}
+unsafe impl<T> Send for OwnedRwLockWriteGuard<T> where T: ?Sized + Send + Sync {}
+unsafe impl<T> Send for RwLockMappedWriteGuard<'_, T> where T: ?Sized + Send + Sync {}
+unsafe impl<T, U> Send for OwnedRwLockMappedWriteGuard<T, U>
+where
+    T: ?Sized + Send + Sync,
+    U: ?Sized + Send + Sync,
+{
+}
 
-impl<T> RwLock<T> {
+impl<T: ?Sized> RwLock<T> {
     /// Creates a new instance of an `RwLock<T>` which is unlocked.
     ///
     /// # Examples
@@ -168,19 +197,113 @@ impl<T> RwLock<T> {
     ///
     /// let lock = RwLock::new(5);
     /// ```
-    pub fn new(value: T) -> RwLock<T> {
+    pub fn new(value: T) -> RwLock<T>
+    where
+        T: Sized,
+    {
         RwLock {
+            mr: MAX_READS,
             c: UnsafeCell::new(value),
-            s: Semaphore::new(MAX_READS),
+            s: Semaphore::new(MAX_READS as usize),
         }
     }
 
-    /// Locks this rwlock with shared read access, causing the current task
+    /// Creates a new instance of an `RwLock<T>` which is unlocked
+    /// and allows a maximum of `max_reads` concurrent readers.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tokio::sync::RwLock;
+    ///
+    /// let lock = RwLock::with_max_readers(5, 1024);
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if `max_reads` is more than `u32::MAX >> 3`.
+    pub fn with_max_readers(value: T, max_reads: u32) -> RwLock<T>
+    where
+        T: Sized,
+    {
+        assert!(
+            max_reads <= MAX_READS,
+            "a RwLock may not be created with more than {} readers",
+            MAX_READS
+        );
+        RwLock {
+            mr: max_reads,
+            c: UnsafeCell::new(value),
+            s: Semaphore::new(max_reads as usize),
+        }
+    }
+
+    /// Creates a new instance of an `RwLock<T>` which is unlocked.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tokio::sync::RwLock;
+    ///
+    /// static LOCK: RwLock<i32> = RwLock::const_new(5);
+    /// ```
+    #[cfg(all(feature = "parking_lot", not(all(loom, test))))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "parking_lot")))]
+    pub const fn const_new(value: T) -> RwLock<T>
+    where
+        T: Sized,
+    {
+        RwLock {
+            mr: MAX_READS,
+            c: UnsafeCell::new(value),
+            s: Semaphore::const_new(MAX_READS as usize),
+        }
+    }
+
+    /// Creates a new instance of an `RwLock<T>` which is unlocked
+    /// and allows a maximum of `max_reads` concurrent readers.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tokio::sync::RwLock;
+    ///
+    /// static LOCK: RwLock<i32> = RwLock::const_with_max_readers(5, 1024);
+    /// ```
+    #[cfg(all(feature = "parking_lot", not(all(loom, test))))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "parking_lot")))]
+    pub const fn const_with_max_readers(value: T, mut max_reads: u32) -> RwLock<T>
+    where
+        T: Sized,
+    {
+        max_reads &= MAX_READS;
+        RwLock {
+            mr: max_reads,
+            c: UnsafeCell::new(value),
+            s: Semaphore::const_new(max_reads as usize),
+        }
+    }
+
+    /// Locks this `RwLock` with shared read access, causing the current task
     /// to yield until the lock has been acquired.
     ///
-    /// The calling task will yield until there are no more writers which
-    /// hold the lock. There may be other readers currently inside the lock when
-    /// this method returns.
+    /// The calling task will yield until there are no writers which hold the
+    /// lock. There may be other readers inside the lock when the task resumes.
+    ///
+    /// Note that under the priority policy of [`RwLock`], read locks are not
+    /// granted until prior write locks, to prevent starvation. Therefore
+    /// deadlock may occur if a read lock is held by the current task, a write
+    /// lock attempt is made, and then a subsequent read lock attempt is made
+    /// by the current task.
+    ///
+    /// Returns an RAII guard which will drop this read access of the `RwLock`
+    /// when dropped.
+    ///
+    /// # Cancel safety
+    ///
+    /// This method uses a queue to fairly distribute locks in the order they
+    /// were requested. Cancelling a call to `read` makes you lose your place in
+    /// the queue.
     ///
     /// # Examples
     ///
@@ -200,29 +323,201 @@ impl<T> RwLock<T> {
     ///         // While main has an active read lock, we acquire one too.
     ///         let r = c_lock.read().await;
     ///         assert_eq!(*r, 1);
-    ///     }).await.expect("The spawned task has paniced");
+    ///     }).await.expect("The spawned task has panicked");
     ///
     ///     // Drop the guard after the spawned task finishes.
     ///     drop(n);
     ///}
     /// ```
     pub async fn read(&self) -> RwLockReadGuard<'_, T> {
-        let permit = ReleasingPermit::acquire(self, 1).await.unwrap_or_else(|_| {
+        self.s.acquire(1).await.unwrap_or_else(|_| {
             // The semaphore was closed. but, we never explicitly close it, and we have a
             // handle to it through the Arc, which means that this can never happen.
             unreachable!()
         });
-        RwLockReadGuard { lock: self, permit }
+        RwLockReadGuard {
+            s: &self.s,
+            data: self.c.get(),
+            marker: marker::PhantomData,
+        }
     }
 
-    /// Locks this rwlock with exclusive write access, causing the current task
+    /// Locks this `RwLock` with shared read access, causing the current task
     /// to yield until the lock has been acquired.
     ///
-    /// This function will not return while other writers or other readers
-    /// currently have access to the lock.
+    /// The calling task will yield until there are no writers which hold the
+    /// lock. There may be other readers inside the lock when the task resumes.
     ///
-    /// Returns an RAII guard which will drop the write access of this rwlock
+    /// This method is identical to [`RwLock::read`], except that the returned
+    /// guard references the `RwLock` with an [`Arc`] rather than by borrowing
+    /// it. Therefore, the `RwLock` must be wrapped in an `Arc` to call this
+    /// method, and the guard will live for the `'static` lifetime, as it keeps
+    /// the `RwLock` alive by holding an `Arc`.
+    ///
+    /// Note that under the priority policy of [`RwLock`], read locks are not
+    /// granted until prior write locks, to prevent starvation. Therefore
+    /// deadlock may occur if a read lock is held by the current task, a write
+    /// lock attempt is made, and then a subsequent read lock attempt is made
+    /// by the current task.
+    ///
+    /// Returns an RAII guard which will drop this read access of the `RwLock`
     /// when dropped.
+    ///
+    /// # Cancel safety
+    ///
+    /// This method uses a queue to fairly distribute locks in the order they
+    /// were requested. Cancelling a call to `read_owned` makes you lose your
+    /// place in the queue.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tokio::sync::RwLock;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let lock = Arc::new(RwLock::new(1));
+    ///     let c_lock = lock.clone();
+    ///
+    ///     let n = lock.read_owned().await;
+    ///     assert_eq!(*n, 1);
+    ///
+    ///     tokio::spawn(async move {
+    ///         // While main has an active read lock, we acquire one too.
+    ///         let r = c_lock.read_owned().await;
+    ///         assert_eq!(*r, 1);
+    ///     }).await.expect("The spawned task has panicked");
+    ///
+    ///     // Drop the guard after the spawned task finishes.
+    ///     drop(n);
+    ///}
+    /// ```
+    pub async fn read_owned(self: Arc<Self>) -> OwnedRwLockReadGuard<T> {
+        self.s.acquire(1).await.unwrap_or_else(|_| {
+            // The semaphore was closed. but, we never explicitly close it, and we have a
+            // handle to it through the Arc, which means that this can never happen.
+            unreachable!()
+        });
+        OwnedRwLockReadGuard {
+            data: self.c.get(),
+            lock: ManuallyDrop::new(self),
+            _p: PhantomData,
+        }
+    }
+
+    /// Attempts to acquire this `RwLock` with shared read access.
+    ///
+    /// If the access couldn't be acquired immediately, returns [`TryLockError`].
+    /// Otherwise, an RAII guard is returned which will release read access
+    /// when dropped.
+    ///
+    /// [`TryLockError`]: TryLockError
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tokio::sync::RwLock;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let lock = Arc::new(RwLock::new(1));
+    ///     let c_lock = lock.clone();
+    ///
+    ///     let v = lock.try_read().unwrap();
+    ///     assert_eq!(*v, 1);
+    ///
+    ///     tokio::spawn(async move {
+    ///         // While main has an active read lock, we acquire one too.
+    ///         let n = c_lock.read().await;
+    ///         assert_eq!(*n, 1);
+    ///     }).await.expect("The spawned task has panicked");
+    ///
+    ///     // Drop the guard when spawned task finishes.
+    ///     drop(v);
+    /// }
+    /// ```
+    pub fn try_read(&self) -> Result<RwLockReadGuard<'_, T>, TryLockError> {
+        match self.s.try_acquire(1) {
+            Ok(permit) => permit,
+            Err(TryAcquireError::NoPermits) => return Err(TryLockError(())),
+            Err(TryAcquireError::Closed) => unreachable!(),
+        }
+
+        Ok(RwLockReadGuard {
+            s: &self.s,
+            data: self.c.get(),
+            marker: marker::PhantomData,
+        })
+    }
+
+    /// Attempts to acquire this `RwLock` with shared read access.
+    ///
+    /// If the access couldn't be acquired immediately, returns [`TryLockError`].
+    /// Otherwise, an RAII guard is returned which will release read access
+    /// when dropped.
+    ///
+    /// This method is identical to [`RwLock::try_read`], except that the
+    /// returned guard references the `RwLock` with an [`Arc`] rather than by
+    /// borrowing it. Therefore, the `RwLock` must be wrapped in an `Arc` to
+    /// call this method, and the guard will live for the `'static` lifetime,
+    /// as it keeps the `RwLock` alive by holding an `Arc`.
+    ///
+    /// [`TryLockError`]: TryLockError
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tokio::sync::RwLock;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let lock = Arc::new(RwLock::new(1));
+    ///     let c_lock = lock.clone();
+    ///
+    ///     let v = lock.try_read_owned().unwrap();
+    ///     assert_eq!(*v, 1);
+    ///
+    ///     tokio::spawn(async move {
+    ///         // While main has an active read lock, we acquire one too.
+    ///         let n = c_lock.read_owned().await;
+    ///         assert_eq!(*n, 1);
+    ///     }).await.expect("The spawned task has panicked");
+    ///
+    ///     // Drop the guard when spawned task finishes.
+    ///     drop(v);
+    /// }
+    /// ```
+    pub fn try_read_owned(self: Arc<Self>) -> Result<OwnedRwLockReadGuard<T>, TryLockError> {
+        match self.s.try_acquire(1) {
+            Ok(permit) => permit,
+            Err(TryAcquireError::NoPermits) => return Err(TryLockError(())),
+            Err(TryAcquireError::Closed) => unreachable!(),
+        }
+
+        Ok(OwnedRwLockReadGuard {
+            data: self.c.get(),
+            lock: ManuallyDrop::new(self),
+            _p: PhantomData,
+        })
+    }
+
+    /// Locks this `RwLock` with exclusive write access, causing the current
+    /// task to yield until the lock has been acquired.
+    ///
+    /// The calling task will yield while other writers or readers currently
+    /// have access to the lock.
+    ///
+    /// Returns an RAII guard which will drop the write access of this `RwLock`
+    /// when dropped.
+    ///
+    /// # Cancel safety
+    ///
+    /// This method uses a queue to fairly distribute locks in the order they
+    /// were requested. Cancelling a call to `write` makes you lose your place
+    /// in the queue.
     ///
     /// # Examples
     ///
@@ -238,42 +533,181 @@ impl<T> RwLock<T> {
     ///}
     /// ```
     pub async fn write(&self) -> RwLockWriteGuard<'_, T> {
-        let permit = ReleasingPermit::acquire(self, MAX_READS as u16)
-            .await
-            .unwrap_or_else(|_| {
-                // The semaphore was closed. but, we never explicitly close it, and we have a
-                // handle to it through the Arc, which means that this can never happen.
-                unreachable!()
-            });
+        self.s.acquire(self.mr).await.unwrap_or_else(|_| {
+            // The semaphore was closed. but, we never explicitly close it, and we have a
+            // handle to it through the Arc, which means that this can never happen.
+            unreachable!()
+        });
+        RwLockWriteGuard {
+            permits_acquired: self.mr,
+            s: &self.s,
+            data: self.c.get(),
+            marker: marker::PhantomData,
+        }
+    }
 
-        RwLockWriteGuard { lock: self, permit }
+    /// Locks this `RwLock` with exclusive write access, causing the current
+    /// task to yield until the lock has been acquired.
+    ///
+    /// The calling task will yield while other writers or readers currently
+    /// have access to the lock.
+    ///
+    /// This method is identical to [`RwLock::write`], except that the returned
+    /// guard references the `RwLock` with an [`Arc`] rather than by borrowing
+    /// it. Therefore, the `RwLock` must be wrapped in an `Arc` to call this
+    /// method, and the guard will live for the `'static` lifetime, as it keeps
+    /// the `RwLock` alive by holding an `Arc`.
+    ///
+    /// Returns an RAII guard which will drop the write access of this `RwLock`
+    /// when dropped.
+    ///
+    /// # Cancel safety
+    ///
+    /// This method uses a queue to fairly distribute locks in the order they
+    /// were requested. Cancelling a call to `write_owned` makes you lose your
+    /// place in the queue.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tokio::sync::RwLock;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///   let lock = Arc::new(RwLock::new(1));
+    ///
+    ///   let mut n = lock.write_owned().await;
+    ///   *n = 2;
+    ///}
+    /// ```
+    pub async fn write_owned(self: Arc<Self>) -> OwnedRwLockWriteGuard<T> {
+        self.s.acquire(self.mr).await.unwrap_or_else(|_| {
+            // The semaphore was closed. but, we never explicitly close it, and we have a
+            // handle to it through the Arc, which means that this can never happen.
+            unreachable!()
+        });
+        OwnedRwLockWriteGuard {
+            permits_acquired: self.mr,
+            data: self.c.get(),
+            lock: ManuallyDrop::new(self),
+            _p: PhantomData,
+        }
+    }
+
+    /// Attempts to acquire this `RwLock` with exclusive write access.
+    ///
+    /// If the access couldn't be acquired immediately, returns [`TryLockError`].
+    /// Otherwise, an RAII guard is returned which will release write access
+    /// when dropped.
+    ///
+    /// [`TryLockError`]: TryLockError
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tokio::sync::RwLock;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let rw = RwLock::new(1);
+    ///
+    ///     let v = rw.read().await;
+    ///     assert_eq!(*v, 1);
+    ///
+    ///     assert!(rw.try_write().is_err());
+    /// }
+    /// ```
+    pub fn try_write(&self) -> Result<RwLockWriteGuard<'_, T>, TryLockError> {
+        match self.s.try_acquire(self.mr) {
+            Ok(permit) => permit,
+            Err(TryAcquireError::NoPermits) => return Err(TryLockError(())),
+            Err(TryAcquireError::Closed) => unreachable!(),
+        }
+
+        Ok(RwLockWriteGuard {
+            permits_acquired: self.mr,
+            s: &self.s,
+            data: self.c.get(),
+            marker: marker::PhantomData,
+        })
+    }
+
+    /// Attempts to acquire this `RwLock` with exclusive write access.
+    ///
+    /// If the access couldn't be acquired immediately, returns [`TryLockError`].
+    /// Otherwise, an RAII guard is returned which will release write access
+    /// when dropped.
+    ///
+    /// This method is identical to [`RwLock::try_write`], except that the
+    /// returned guard references the `RwLock` with an [`Arc`] rather than by
+    /// borrowing it. Therefore, the `RwLock` must be wrapped in an `Arc` to
+    /// call this method, and the guard will live for the `'static` lifetime,
+    /// as it keeps the `RwLock` alive by holding an `Arc`.
+    ///
+    /// [`TryLockError`]: TryLockError
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tokio::sync::RwLock;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let rw = Arc::new(RwLock::new(1));
+    ///
+    ///     let v = Arc::clone(&rw).read_owned().await;
+    ///     assert_eq!(*v, 1);
+    ///
+    ///     assert!(rw.try_write_owned().is_err());
+    /// }
+    /// ```
+    pub fn try_write_owned(self: Arc<Self>) -> Result<OwnedRwLockWriteGuard<T>, TryLockError> {
+        match self.s.try_acquire(self.mr) {
+            Ok(permit) => permit,
+            Err(TryAcquireError::NoPermits) => return Err(TryLockError(())),
+            Err(TryAcquireError::Closed) => unreachable!(),
+        }
+
+        Ok(OwnedRwLockWriteGuard {
+            permits_acquired: self.mr,
+            data: self.c.get(),
+            lock: ManuallyDrop::new(self),
+            _p: PhantomData,
+        })
+    }
+
+    /// Returns a mutable reference to the underlying data.
+    ///
+    /// Since this call borrows the `RwLock` mutably, no actual locking needs to
+    /// take place -- the mutable borrow statically guarantees no locks exist.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tokio::sync::RwLock;
+    ///
+    /// fn main() {
+    ///     let mut lock = RwLock::new(1);
+    ///
+    ///     let n = lock.get_mut();
+    ///     *n = 2;
+    /// }
+    /// ```
+    pub fn get_mut(&mut self) -> &mut T {
+        unsafe {
+            // Safety: This is https://github.com/rust-lang/rust/pull/76936
+            &mut *self.c.get()
+        }
     }
 
     /// Consumes the lock, returning the underlying data.
-    pub fn into_inner(self) -> T {
+    pub fn into_inner(self) -> T
+    where
+        T: Sized,
+    {
         self.c.into_inner()
-    }
-}
-
-impl<T> ops::Deref for RwLockReadGuard<'_, T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        unsafe { &*self.lock.c.get() }
-    }
-}
-
-impl<T> ops::Deref for RwLockWriteGuard<'_, T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        unsafe { &*self.lock.c.get() }
-    }
-}
-
-impl<T> ops::DerefMut for RwLockWriteGuard<'_, T> {
-    fn deref_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.lock.c.get() }
     }
 }
 
@@ -283,7 +717,7 @@ impl<T> From<T> for RwLock<T> {
     }
 }
 
-impl<T> Default for RwLock<T>
+impl<T: ?Sized> Default for RwLock<T>
 where
     T: Default,
 {

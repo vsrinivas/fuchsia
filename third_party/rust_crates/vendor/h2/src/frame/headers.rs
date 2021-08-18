@@ -10,7 +10,7 @@ use bytes::{Bytes, BytesMut};
 use std::fmt;
 use std::io::Cursor;
 
-type EncodeBuf<'a> = bytes::buf::ext::Limit<&'a mut BytesMut>;
+type EncodeBuf<'a> = bytes::buf::Limit<&'a mut BytesMut>;
 
 // Minimum MAX_FRAME_SIZE is 16kb, so save some arbitrary space for frame
 // head and other header bits.
@@ -153,7 +153,7 @@ impl Headers {
         let flags = HeadersFlag(head.flag());
         let mut pad = 0;
 
-        log::trace!("loading headers; flags={:?}", flags);
+        tracing::trace!("loading headers; flags={:?}", flags);
 
         // Read the padding length
         if flags.is_padded() {
@@ -252,6 +252,11 @@ impl Headers {
     #[cfg(feature = "unstable")]
     pub fn pseudo_mut(&mut self) -> &mut Pseudo {
         &mut self.header_block.pseudo
+    }
+
+    /// Whether it has status 1xx
+    pub(crate) fn is_informational(&self) -> bool {
+        self.header_block.pseudo.is_informational()
     }
 
     pub fn fields(&self) -> &HeaderMap {
@@ -547,15 +552,19 @@ impl Pseudo {
             .map(|v| Bytes::copy_from_slice(v.as_str().as_bytes()))
             .unwrap_or_else(Bytes::new);
 
-        if path.is_empty() && method != Method::OPTIONS {
-            path = Bytes::from_static(b"/");
+        match method {
+            Method::OPTIONS | Method::CONNECT => {}
+            _ if path.is_empty() => {
+                path = Bytes::from_static(b"/");
+            }
+            _ => {}
         }
 
         let mut pseudo = Pseudo {
             method: Some(method),
             scheme: None,
             authority: None,
-            path: Some(unsafe { BytesStr::from_utf8_unchecked(path) }),
+            path: Some(unsafe { BytesStr::from_utf8_unchecked(path) }).filter(|p| !p.is_empty()),
             status: None,
         };
 
@@ -598,6 +607,12 @@ impl Pseudo {
 
     pub fn set_authority(&mut self, authority: BytesStr) {
         self.authority = Some(authority);
+    }
+
+    /// Whether it has status 1xx
+    pub(crate) fn is_informational(&self) -> bool {
+        self.status
+            .map_or(false, |status| status.is_informational())
     }
 }
 
@@ -817,19 +832,19 @@ impl HeaderBlock {
         macro_rules! set_pseudo {
             ($field:ident, $val:expr) => {{
                 if reg {
-                    log::trace!("load_hpack; header malformed -- pseudo not at head of block");
+                    tracing::trace!("load_hpack; header malformed -- pseudo not at head of block");
                     malformed = true;
                 } else if self.pseudo.$field.is_some() {
-                    log::trace!("load_hpack; header malformed -- repeated pseudo");
+                    tracing::trace!("load_hpack; header malformed -- repeated pseudo");
                     malformed = true;
                 } else {
                     let __val = $val;
                     headers_size +=
-                        decoded_header_size(stringify!($ident).len() + 1, __val.as_str().len());
+                        decoded_header_size(stringify!($field).len() + 1, __val.as_str().len());
                     if headers_size < max_header_list_size {
                         self.pseudo.$field = Some(__val);
                     } else if !self.is_over_size {
-                        log::trace!("load_hpack; header list size over max");
+                        tracing::trace!("load_hpack; header list size over max");
                         self.is_over_size = true;
                     }
                 }
@@ -856,10 +871,13 @@ impl HeaderBlock {
                         || name == "keep-alive"
                         || name == "proxy-connection"
                     {
-                        log::trace!("load_hpack; connection level header");
+                        tracing::trace!("load_hpack; connection level header");
                         malformed = true;
                     } else if name == header::TE && value != "trailers" {
-                        log::trace!("load_hpack; TE header not set to trailers; val={:?}", value);
+                        tracing::trace!(
+                            "load_hpack; TE header not set to trailers; val={:?}",
+                            value
+                        );
                         malformed = true;
                     } else {
                         reg = true;
@@ -868,7 +886,7 @@ impl HeaderBlock {
                         if headers_size < max_header_list_size {
                             self.fields.append(name, value);
                         } else if !self.is_over_size {
-                            log::trace!("load_hpack; header list size over max");
+                            tracing::trace!("load_hpack; header list size over max");
                             self.is_over_size = true;
                         }
                     }
@@ -882,12 +900,12 @@ impl HeaderBlock {
         });
 
         if let Err(e) = res {
-            log::trace!("hpack decoding error; err={:?}", e);
+            tracing::trace!("hpack decoding error; err={:?}", e);
             return Err(e.into());
         }
 
         if malformed {
-            log::trace!("malformed message");
+            tracing::trace!("malformed message");
             return Err(Error::MalformedMessage);
         }
 

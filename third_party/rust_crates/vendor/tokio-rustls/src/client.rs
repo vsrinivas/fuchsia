@@ -52,16 +52,11 @@ impl<IO> AsyncRead for TlsStream<IO>
 where
     IO: AsyncRead + AsyncWrite + Unpin,
 {
-    #[cfg(feature = "unstable")]
-    unsafe fn prepare_uninitialized_buffer(&self, _buf: &mut [std::mem::MaybeUninit<u8>]) -> bool {
-        false
-    }
-
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         match self.state {
             #[cfg(feature = "early-data")]
             TlsState::EarlyData(..) => Poll::Pending,
@@ -69,25 +64,24 @@ where
                 let this = self.get_mut();
                 let mut stream =
                     Stream::new(&mut this.io, &mut this.session).set_eof(!this.state.readable());
+                let prev = buf.remaining();
 
                 match stream.as_mut_pin().poll_read(cx, buf) {
-                    Poll::Ready(Ok(0)) => {
-                        this.state.shutdown_read();
-                        Poll::Ready(Ok(0))
+                    Poll::Ready(Ok(())) => {
+                        if prev == buf.remaining() {
+                            this.state.shutdown_read();
+                        }
+
+                        Poll::Ready(Ok(()))
                     }
-                    Poll::Ready(Ok(n)) => Poll::Ready(Ok(n)),
                     Poll::Ready(Err(ref e)) if e.kind() == io::ErrorKind::ConnectionAborted => {
                         this.state.shutdown_read();
-                        if this.state.writeable() {
-                            stream.session.send_close_notify();
-                            this.state.shutdown_write();
-                        }
-                        Poll::Ready(Ok(0))
+                        Poll::Ready(Ok(()))
                     }
                     output => output,
                 }
             }
-            TlsState::ReadShutdown | TlsState::FullyShutdown => Poll::Ready(Ok(0)),
+            TlsState::ReadShutdown | TlsState::FullyShutdown => Poll::Ready(Ok(())),
         }
     }
 }
@@ -107,10 +101,10 @@ where
         let mut stream =
             Stream::new(&mut this.io, &mut this.session).set_eof(!this.state.readable());
 
+        #[allow(clippy::match_single_binding)]
         match this.state {
             #[cfg(feature = "early-data")]
             TlsState::EarlyData(ref mut pos, ref mut data) => {
-                use futures_core::ready;
                 use std::io::Write;
 
                 // write early data
@@ -156,8 +150,6 @@ where
 
         #[cfg(feature = "early-data")]
         {
-            use futures_core::ready;
-
             if let TlsState::EarlyData(ref mut pos, ref mut data) = this.state {
                 // complete handshake
                 while stream.session.is_handshaking() {

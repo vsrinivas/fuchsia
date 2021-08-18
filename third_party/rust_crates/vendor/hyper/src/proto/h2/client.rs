@@ -2,17 +2,21 @@ use std::error::Error as StdError;
 #[cfg(feature = "runtime")]
 use std::time::Duration;
 
+use bytes::Bytes;
 use futures_channel::{mpsc, oneshot};
 use futures_util::future::{self, Either, FutureExt as _, TryFutureExt as _};
 use futures_util::stream::StreamExt as _;
 use h2::client::{Builder, SendRequest};
+use http::{Method, StatusCode};
 use tokio::io::{AsyncRead, AsyncWrite};
 
-use super::{decode_content_length, ping, PipeToSendStream, SendBuf};
+use super::{ping, H2Upgraded, PipeToSendStream, SendBuf};
 use crate::body::HttpBody;
-use crate::common::{task, Exec, Future, Never, Pin, Poll};
+use crate::common::{exec::Exec, task, Future, Never, Pin, Poll};
 use crate::headers;
+use crate::proto::h2::UpgradedSendStream;
 use crate::proto::Dispatched;
+use crate::upgrade::Upgraded;
 use crate::{Body, Request, Response};
 
 type ClientRx<B> = crate::client::dispatch::Receiver<Request<B>, Response<Body>>;
@@ -44,6 +48,7 @@ pub(crate) struct Config {
     pub(crate) keep_alive_timeout: Duration,
     #[cfg(feature = "runtime")]
     pub(crate) keep_alive_while_idle: bool,
+    pub(crate) max_concurrent_reset_streams: Option<usize>,
 }
 
 impl Default for Config {
@@ -59,7 +64,37 @@ impl Default for Config {
             keep_alive_timeout: Duration::from_secs(20),
             #[cfg(feature = "runtime")]
             keep_alive_while_idle: false,
+            max_concurrent_reset_streams: None,
         }
+    }
+}
+
+fn new_builder(config: &Config) -> Builder {
+    let mut builder = Builder::default();
+    builder
+        .initial_window_size(config.initial_stream_window_size)
+        .initial_connection_window_size(config.initial_conn_window_size)
+        .max_frame_size(config.max_frame_size)
+        .enable_push(false);
+    if let Some(max) = config.max_concurrent_reset_streams {
+        builder.max_concurrent_reset_streams(max);
+    }
+    builder
+}
+
+fn new_ping_config(config: &Config) -> ping::Config {
+    ping::Config {
+        bdp_initial_window: if config.adaptive_window {
+            Some(config.initial_stream_window_size)
+        } else {
+            None
+        },
+        #[cfg(feature = "runtime")]
+        keep_alive_interval: config.keep_alive_interval,
+        #[cfg(feature = "runtime")]
+        keep_alive_timeout: config.keep_alive_timeout,
+        #[cfg(feature = "runtime")]
+        keep_alive_while_idle: config.keep_alive_while_idle,
     }
 }
 
@@ -74,11 +109,7 @@ where
     B: HttpBody,
     B::Data: Send + 'static,
 {
-    let (h2_tx, mut conn) = Builder::default()
-        .initial_window_size(config.initial_stream_window_size)
-        .initial_connection_window_size(config.initial_conn_window_size)
-        .max_frame_size(config.max_frame_size)
-        .enable_push(false)
+    let (h2_tx, mut conn) = new_builder(config)
         .handshake::<_, SendBuf<B::Data>>(io)
         .await
         .map_err(crate::Error::new_h2)?;
@@ -96,21 +127,9 @@ where
         }
     });
 
-    let ping_config = ping::Config {
-        bdp_initial_window: if config.adaptive_window {
-            Some(config.initial_stream_window_size)
-        } else {
-            None
-        },
-        #[cfg(feature = "runtime")]
-        keep_alive_interval: config.keep_alive_interval,
-        #[cfg(feature = "runtime")]
-        keep_alive_timeout: config.keep_alive_timeout,
-        #[cfg(feature = "runtime")]
-        keep_alive_while_idle: config.keep_alive_while_idle,
-    };
+    let ping_config = new_ping_config(&config);
 
-    let ping = if ping_config.is_enabled() {
+    let (conn, ping) = if ping_config.is_enabled() {
         let pp = conn.ping_pong().expect("conn.ping_pong");
         let (recorder, mut ponger) = ping::channel(pp, ping_config);
 
@@ -130,16 +149,13 @@ where
 
             Pin::new(&mut conn).poll(cx)
         });
-        let conn = conn.map_err(|e| debug!("connection error: {}", e));
-
-        exec.execute(conn_task(conn, conn_drop_rx, cancel_tx));
-        recorder
+        (Either::Left(conn), recorder)
     } else {
-        let conn = conn.map_err(|e| debug!("connection error: {}", e));
-
-        exec.execute(conn_task(conn, conn_drop_rx, cancel_tx));
-        ping::disabled()
+        (Either::Right(conn), ping::disabled())
     };
+    let conn = conn.map_err(|e| debug!("connection error: {}", e));
+
+    exec.execute(conn_task(conn, conn_drop_rx, cancel_tx));
 
     Ok(ClientTask {
         ping,
@@ -206,7 +222,7 @@ where
                 }
             };
 
-            match Pin::new(&mut self.req_rx).poll_next(cx) {
+            match self.req_rx.poll_recv(cx) {
                 Poll::Ready(Some((req, cb))) => {
                     // check that future hasn't been canceled already
                     if cb.is_canceled() {
@@ -221,8 +237,25 @@ where
                             headers::set_content_length_if_missing(req.headers_mut(), len);
                         }
                     }
+
+                    let is_connect = req.method() == Method::CONNECT;
                     let eos = body.is_end_stream();
-                    let (fut, body_tx) = match self.h2_tx.send_request(req, eos) {
+                    let ping = self.ping.clone();
+
+                    if is_connect {
+                        if headers::content_length_parse_all(req.headers())
+                            .map_or(false, |len| len != 0)
+                        {
+                            warn!("h2 connect request with non-zero body not supported");
+                            cb.send(Err((
+                                crate::Error::new_h2(h2::Reason::INTERNAL_ERROR.into()),
+                                None,
+                            )));
+                            continue;
+                        }
+                    }
+
+                    let (fut, body_tx) = match self.h2_tx.send_request(req, !is_connect && eos) {
                         Ok(ok) => ok,
                         Err(err) => {
                             debug!("client send request error: {}", err);
@@ -231,45 +264,81 @@ where
                         }
                     };
 
-                    let ping = self.ping.clone();
-                    if !eos {
-                        let mut pipe = Box::pin(PipeToSendStream::new(body, body_tx)).map(|res| {
-                            if let Err(e) = res {
-                                debug!("client request body error: {}", e);
-                            }
-                        });
-
-                        // eagerly see if the body pipe is ready and
-                        // can thus skip allocating in the executor
-                        match Pin::new(&mut pipe).poll(cx) {
-                            Poll::Ready(_) => (),
-                            Poll::Pending => {
-                                let conn_drop_ref = self.conn_drop_ref.clone();
-                                // keep the ping recorder's knowledge of an
-                                // "open stream" alive while this body is
-                                // still sending...
-                                let ping = ping.clone();
-                                let pipe = pipe.map(move |x| {
-                                    drop(conn_drop_ref);
-                                    drop(ping);
-                                    x
+                    let send_stream = if !is_connect {
+                        if !eos {
+                            let mut pipe =
+                                Box::pin(PipeToSendStream::new(body, body_tx)).map(|res| {
+                                    if let Err(e) = res {
+                                        debug!("client request body error: {}", e);
+                                    }
                                 });
-                                self.executor.execute(pipe);
+
+                            // eagerly see if the body pipe is ready and
+                            // can thus skip allocating in the executor
+                            match Pin::new(&mut pipe).poll(cx) {
+                                Poll::Ready(_) => (),
+                                Poll::Pending => {
+                                    let conn_drop_ref = self.conn_drop_ref.clone();
+                                    // keep the ping recorder's knowledge of an
+                                    // "open stream" alive while this body is
+                                    // still sending...
+                                    let ping = ping.clone();
+                                    let pipe = pipe.map(move |x| {
+                                        drop(conn_drop_ref);
+                                        drop(ping);
+                                        x
+                                    });
+                                    self.executor.execute(pipe);
+                                }
                             }
                         }
-                    }
+
+                        None
+                    } else {
+                        Some(body_tx)
+                    };
 
                     let fut = fut.map(move |result| match result {
                         Ok(res) => {
                             // record that we got the response headers
                             ping.record_non_data();
 
-                            let content_length = decode_content_length(res.headers());
-                            let res = res.map(|stream| {
-                                let ping = ping.for_stream(&stream);
-                                crate::Body::h2(stream, content_length, ping)
-                            });
-                            Ok(res)
+                            let content_length = headers::content_length_parse_all(res.headers());
+                            if let (Some(mut send_stream), StatusCode::OK) =
+                                (send_stream, res.status())
+                            {
+                                if content_length.map_or(false, |len| len != 0) {
+                                    warn!("h2 connect response with non-zero body not supported");
+
+                                    send_stream.send_reset(h2::Reason::INTERNAL_ERROR);
+                                    return Err((
+                                        crate::Error::new_h2(h2::Reason::INTERNAL_ERROR.into()),
+                                        None,
+                                    ));
+                                }
+                                let (parts, recv_stream) = res.into_parts();
+                                let mut res = Response::from_parts(parts, Body::empty());
+
+                                let (pending, on_upgrade) = crate::upgrade::pending();
+                                let io = H2Upgraded {
+                                    ping,
+                                    send_stream: unsafe { UpgradedSendStream::new(send_stream) },
+                                    recv_stream,
+                                    buf: Bytes::new(),
+                                };
+                                let upgraded = Upgraded::new(io, Bytes::new());
+
+                                pending.fulfill(upgraded);
+                                res.extensions_mut().insert(on_upgrade);
+
+                                Ok(res)
+                            } else {
+                                let res = res.map(|stream| {
+                                    let ping = ping.for_stream(&stream);
+                                    crate::Body::h2(stream, content_length.into(), ping)
+                                });
+                                Ok(res)
+                            }
                         }
                         Err(err) => {
                             ping.ensure_not_timed_out().map_err(|e| (e, None))?;

@@ -2,7 +2,7 @@ use std::io;
 
 use crate::codec::UserError::*;
 use crate::codec::{RecvError, UserError};
-use crate::frame::Reason;
+use crate::frame::{self, Reason};
 use crate::proto::{self, PollReset};
 
 use self::Inner::*;
@@ -133,9 +133,9 @@ impl State {
     /// Opens the receive-half of the stream when a HEADERS frame is received.
     ///
     /// Returns true if this transitions the state to Open.
-    pub fn recv_open(&mut self, eos: bool) -> Result<bool, RecvError> {
-        let remote = Streaming;
+    pub fn recv_open(&mut self, frame: &frame::Headers) -> Result<bool, RecvError> {
         let mut initial = false;
+        let eos = frame.is_end_stream();
 
         self.inner = match self.inner {
             Idle => {
@@ -146,7 +146,12 @@ impl State {
                 } else {
                     Open {
                         local: AwaitingHeaders,
-                        remote,
+                        remote: if frame.is_informational() {
+                            tracing::trace!("skipping 1xx response headers");
+                            AwaitingHeaders
+                        } else {
+                            Streaming
+                        },
                     }
                 }
             }
@@ -155,6 +160,9 @@ impl State {
 
                 if eos {
                     Closed(Cause::EndStream)
+                } else if frame.is_informational() {
+                    tracing::trace!("skipping 1xx response headers");
+                    ReservedRemote
                 } else {
                     HalfClosedLocal(Streaming)
                 }
@@ -166,14 +174,25 @@ impl State {
                 if eos {
                     HalfClosedRemote(local)
                 } else {
-                    Open { local, remote }
+                    Open {
+                        local,
+                        remote: if frame.is_informational() {
+                            tracing::trace!("skipping 1xx response headers");
+                            AwaitingHeaders
+                        } else {
+                            Streaming
+                        },
+                    }
                 }
             }
             HalfClosedLocal(AwaitingHeaders) => {
                 if eos {
                     Closed(Cause::EndStream)
+                } else if frame.is_informational() {
+                    tracing::trace!("skipping 1xx response headers");
+                    HalfClosedLocal(AwaitingHeaders)
                 } else {
-                    HalfClosedLocal(remote)
+                    HalfClosedLocal(Streaming)
                 }
             }
             state => {
@@ -216,12 +235,12 @@ impl State {
         match self.inner {
             Open { local, .. } => {
                 // The remote side will continue to receive data.
-                log::trace!("recv_close: Open => HalfClosedRemote({:?})", local);
+                tracing::trace!("recv_close: Open => HalfClosedRemote({:?})", local);
                 self.inner = HalfClosedRemote(local);
                 Ok(())
             }
             HalfClosedLocal(..) => {
-                log::trace!("recv_close: HalfClosedLocal => Closed");
+                tracing::trace!("recv_close: HalfClosedLocal => Closed");
                 self.inner = Closed(Cause::EndStream);
                 Ok(())
             }
@@ -257,7 +276,7 @@ impl State {
             // previous state with the received RST_STREAM, so that the queue
             // will be cleared by `Prioritize::pop_frame`.
             state => {
-                log::trace!(
+                tracing::trace!(
                     "recv_reset; reason={:?}; state={:?}; queued={:?}",
                     reason,
                     state,
@@ -275,7 +294,7 @@ impl State {
         match self.inner {
             Closed(..) => {}
             _ => {
-                log::trace!("recv_err; err={:?}", err);
+                tracing::trace!("recv_err; err={:?}", err);
                 self.inner = Closed(match *err {
                     Proto(reason) => Cause::LocallyReset(reason),
                     Io(..) => Cause::Io,
@@ -288,7 +307,7 @@ impl State {
         match self.inner {
             Closed(..) => {}
             s => {
-                log::trace!("recv_eof; state={:?}", s);
+                tracing::trace!("recv_eof; state={:?}", s);
                 self.inner = Closed(Cause::Io);
             }
         }
@@ -299,11 +318,11 @@ impl State {
         match self.inner {
             Open { remote, .. } => {
                 // The remote side will continue to receive data.
-                log::trace!("send_close: Open => HalfClosedLocal({:?})", remote);
+                tracing::trace!("send_close: Open => HalfClosedLocal({:?})", remote);
                 self.inner = HalfClosedLocal(remote);
             }
             HalfClosedRemote(..) => {
-                log::trace!("send_close: HalfClosedRemote => Closed");
+                tracing::trace!("send_close: HalfClosedRemote => Closed");
                 self.inner = Closed(Cause::EndStream);
             }
             state => panic!("send_close: unexpected state {:?}", state),

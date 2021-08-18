@@ -1,4 +1,5 @@
 use core_foundation_sys::base::OSStatus;
+#[cfg(target_os = "macos")]
 use core_foundation_sys::string::CFStringRef;
 use std::os::raw::c_void;
 

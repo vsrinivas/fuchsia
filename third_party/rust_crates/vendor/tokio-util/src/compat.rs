@@ -1,5 +1,6 @@
 //! Compatibility between the `tokio::io` and `futures-io` versions of the
 //! `AsyncRead` and `AsyncWrite` traits.
+use futures_core::ready;
 use pin_project_lite::pin_project;
 use std::io;
 use std::pin::Pin;
@@ -19,7 +20,7 @@ pin_project! {
 /// `futures_io::AsyncRead` to implement `tokio::io::AsyncRead`.
 pub trait FuturesAsyncReadCompatExt: futures_io::AsyncRead {
     /// Wraps `self` with a compatibility layer that implements
-    /// `tokio_io::AsyncWrite`.
+    /// `tokio_io::AsyncRead`.
     fn compat(self) -> Compat<Self>
     where
         Self: Sized,
@@ -47,7 +48,7 @@ impl<T: futures_io::AsyncWrite> FuturesAsyncWriteCompatExt for T {}
 
 /// Extension trait that allows converting a type implementing
 /// `tokio::io::AsyncRead` to implement `futures_io::AsyncRead`.
-pub trait Tokio02AsyncReadCompatExt: tokio::io::AsyncRead {
+pub trait TokioAsyncReadCompatExt: tokio::io::AsyncRead {
     /// Wraps `self` with a compatibility layer that implements
     /// `futures_io::AsyncRead`.
     fn compat(self) -> Compat<Self>
@@ -58,11 +59,11 @@ pub trait Tokio02AsyncReadCompatExt: tokio::io::AsyncRead {
     }
 }
 
-impl<T: tokio::io::AsyncRead> Tokio02AsyncReadCompatExt for T {}
+impl<T: tokio::io::AsyncRead> TokioAsyncReadCompatExt for T {}
 
 /// Extension trait that allows converting a type implementing
 /// `tokio::io::AsyncWrite` to implement `futures_io::AsyncWrite`.
-pub trait Tokio02AsyncWriteCompatExt: tokio::io::AsyncWrite {
+pub trait TokioAsyncWriteCompatExt: tokio::io::AsyncWrite {
     /// Wraps `self` with a compatibility layer that implements
     /// `futures_io::AsyncWrite`.
     fn compat_write(self) -> Compat<Self>
@@ -73,7 +74,7 @@ pub trait Tokio02AsyncWriteCompatExt: tokio::io::AsyncWrite {
     }
 }
 
-impl<T: tokio::io::AsyncWrite> Tokio02AsyncWriteCompatExt for T {}
+impl<T: tokio::io::AsyncWrite> TokioAsyncWriteCompatExt for T {}
 
 // === impl Compat ===
 
@@ -107,9 +108,18 @@ where
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
-        futures_io::AsyncRead::poll_read(self.project().inner, cx, buf)
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        // We can't trust the inner type to not peak at the bytes,
+        // so we must defensively initialize the buffer.
+        let slice = buf.initialize_unfilled();
+        let n = ready!(futures_io::AsyncRead::poll_read(
+            self.project().inner,
+            cx,
+            slice
+        ))?;
+        buf.advance(n);
+        Poll::Ready(Ok(()))
     }
 }
 
@@ -120,9 +130,15 @@ where
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
+        slice: &mut [u8],
     ) -> Poll<io::Result<usize>> {
-        tokio::io::AsyncRead::poll_read(self.project().inner, cx, buf)
+        let mut buf = tokio::io::ReadBuf::new(slice);
+        ready!(tokio::io::AsyncRead::poll_read(
+            self.project().inner,
+            cx,
+            &mut buf
+        ))?;
+        Poll::Ready(Ok(buf.filled().len()))
     }
 }
 
@@ -197,5 +213,19 @@ where
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         tokio::io::AsyncWrite::poll_shutdown(self.project().inner, cx)
+    }
+}
+
+#[cfg(unix)]
+impl<T: std::os::unix::io::AsRawFd> std::os::unix::io::AsRawFd for Compat<T> {
+    fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
+        self.inner.as_raw_fd()
+    }
+}
+
+#[cfg(windows)]
+impl<T: std::os::windows::io::AsRawHandle> std::os::windows::io::AsRawHandle for Compat<T> {
+    fn as_raw_handle(&self) -> std::os::windows::io::RawHandle {
+        self.inner.as_raw_handle()
     }
 }

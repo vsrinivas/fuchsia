@@ -1,15 +1,11 @@
 mod handshake;
 
-#[cfg(feature = "unstable")]
-mod vecbuf;
-
-use futures_core as futures;
 pub(crate) use handshake::{IoSession, MidHandshake};
 use rustls::Session;
-use std::io::{self, Read};
+use std::io::{self, IoSlice, Read, Write};
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 #[derive(Debug)]
 pub enum TlsState {
@@ -40,27 +36,18 @@ impl TlsState {
 
     #[inline]
     pub fn writeable(&self) -> bool {
-        match *self {
-            TlsState::WriteShutdown | TlsState::FullyShutdown => false,
-            _ => true,
-        }
+        !matches!(*self, TlsState::WriteShutdown | TlsState::FullyShutdown)
     }
 
     #[inline]
     pub fn readable(&self) -> bool {
-        match self {
-            TlsState::ReadShutdown | TlsState::FullyShutdown => false,
-            _ => true,
-        }
+        !matches!(*self, TlsState::ReadShutdown | TlsState::FullyShutdown)
     }
 
     #[inline]
     #[cfg(feature = "early-data")]
     pub fn is_early_data(&self) -> bool {
-        match self {
-            TlsState::EarlyData(..) => true,
-            _ => false,
-        }
+        matches!(self, TlsState::EarlyData(..))
     }
 
     #[inline]
@@ -96,17 +83,6 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> Stream<'a, IO, S> {
         Pin::new(self)
     }
 
-    pub fn process_new_packets(&mut self, cx: &mut Context) -> io::Result<()> {
-        self.session.process_new_packets().map_err(|err| {
-            // In case we have an alert to send describing this error,
-            // try a last-gasp write -- but don't predate the primary
-            // error.
-            let _ = self.write_io(cx);
-
-            io::Error::new(io::ErrorKind::InvalidData, err)
-        })
-    }
-
     pub fn read_io(&mut self, cx: &mut Context) -> Poll<io::Result<usize>> {
         struct Reader<'a, 'b, T> {
             io: &'a mut T,
@@ -114,9 +90,12 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> Stream<'a, IO, S> {
         }
 
         impl<'a, 'b, T: AsyncRead + Unpin> Read for Reader<'a, 'b, T> {
+            #[inline]
             fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-                match Pin::new(&mut self.io).poll_read(self.cx, buf) {
-                    Poll::Ready(result) => result,
+                let mut buf = ReadBuf::new(buf);
+                match Pin::new(&mut self.io).poll_read(self.cx, &mut buf) {
+                    Poll::Ready(Ok(())) => Ok(buf.filled().len()),
+                    Poll::Ready(Err(err)) => Err(err),
                     Poll::Pending => Err(io::ErrorKind::WouldBlock.into()),
                 }
             }
@@ -130,67 +109,56 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> Stream<'a, IO, S> {
             Err(err) => return Poll::Ready(Err(err)),
         };
 
+        self.session.process_new_packets().map_err(|err| {
+            // In case we have an alert to send describing this error,
+            // try a last-gasp write -- but don't predate the primary
+            // error.
+            let _ = self.write_io(cx);
+
+            io::Error::new(io::ErrorKind::InvalidData, err)
+        })?;
+
         Poll::Ready(Ok(n))
     }
 
-    #[cfg(not(feature = "unstable"))]
     pub fn write_io(&mut self, cx: &mut Context) -> Poll<io::Result<usize>> {
-        use std::io::Write;
-
         struct Writer<'a, 'b, T> {
             io: &'a mut T,
             cx: &'a mut Context<'b>,
         }
 
-        impl<'a, 'b, T: AsyncWrite + Unpin> Write for Writer<'a, 'b, T> {
-            fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-                match Pin::new(&mut self.io).poll_write(self.cx, buf) {
+        impl<'a, 'b, T: Unpin> Writer<'a, 'b, T> {
+            #[inline]
+            fn poll_with<U>(
+                &mut self,
+                f: impl FnOnce(Pin<&mut T>, &mut Context<'_>) -> Poll<io::Result<U>>,
+            ) -> io::Result<U> {
+                match f(Pin::new(&mut self.io), self.cx) {
                     Poll::Ready(result) => result,
                     Poll::Pending => Err(io::ErrorKind::WouldBlock.into()),
                 }
             }
+        }
+
+        impl<'a, 'b, T: AsyncWrite + Unpin> Write for Writer<'a, 'b, T> {
+            #[inline]
+            fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+                self.poll_with(|io, cx| io.poll_write(cx, buf))
+            }
+
+            #[inline]
+            fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
+                self.poll_with(|io, cx| io.poll_write_vectored(cx, bufs))
+            }
 
             fn flush(&mut self) -> io::Result<()> {
-                match Pin::new(&mut self.io).poll_flush(self.cx) {
-                    Poll::Ready(result) => result,
-                    Poll::Pending => Err(io::ErrorKind::WouldBlock.into()),
-                }
+                self.poll_with(|io, cx| io.poll_flush(cx))
             }
         }
 
         let mut writer = Writer { io: self.io, cx };
 
         match self.session.write_tls(&mut writer) {
-            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => Poll::Pending,
-            result => Poll::Ready(result),
-        }
-    }
-
-    #[cfg(feature = "unstable")]
-    pub fn write_io(&mut self, cx: &mut Context) -> Poll<io::Result<usize>> {
-        use rustls::WriteV;
-
-        struct Writer<'a, 'b, T> {
-            io: &'a mut T,
-            cx: &'a mut Context<'b>,
-        }
-
-        impl<'a, 'b, T: AsyncWrite + Unpin> WriteV for Writer<'a, 'b, T> {
-            fn writev(&mut self, vbuf: &[&[u8]]) -> io::Result<usize> {
-                use vecbuf::VecBuf;
-
-                let mut vbuf = VecBuf::new(vbuf);
-
-                match Pin::new(&mut self.io).poll_write_buf(self.cx, &mut vbuf) {
-                    Poll::Ready(result) => result,
-                    Poll::Pending => Err(io::ErrorKind::WouldBlock.into()),
-                }
-            }
-        }
-
-        let mut writer = Writer { io: self.io, cx };
-
-        match self.session.writev_tls(&mut writer) {
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => Poll::Pending,
             result => Poll::Ready(result),
         }
@@ -218,10 +186,7 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> Stream<'a, IO, S> {
             while !self.eof && self.session.wants_read() {
                 match self.read_io(cx) {
                     Poll::Ready(Ok(0)) => self.eof = true,
-                    Poll::Ready(Ok(n)) => {
-                        rdlen += n;
-                        self.process_new_packets(cx)?;
-                    }
+                    Poll::Ready(Ok(n)) => rdlen += n,
                     Poll::Pending => {
                         read_would_block = true;
                         break;
@@ -252,12 +217,12 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> Stream<'a, IO, S> {
 impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> AsyncRead for Stream<'a, IO, S> {
     fn poll_read(
         mut self: Pin<&mut Self>,
-        cx: &mut Context,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
-        let mut pos = 0;
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        let prev = buf.remaining();
 
-        while pos != buf.len() {
+        while buf.remaining() != 0 {
             let mut would_block = false;
 
             // read a packet
@@ -267,7 +232,7 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> AsyncRead for Stream<'a
                         self.eof = true;
                         break;
                     }
-                    Poll::Ready(Ok(_)) => self.process_new_packets(cx)?,
+                    Poll::Ready(Ok(_)) => (),
                     Poll::Pending => {
                         would_block = true;
                         break;
@@ -276,22 +241,28 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> AsyncRead for Stream<'a
                 }
             }
 
-            return match self.session.read(&mut buf[pos..]) {
-                Ok(0) if pos == 0 && would_block => Poll::Pending,
-                Ok(n) if self.eof || would_block => Poll::Ready(Ok(pos + n)),
+            return match self.session.read(buf.initialize_unfilled()) {
+                Ok(0) if prev == buf.remaining() && would_block => Poll::Pending,
                 Ok(n) => {
-                    pos += n;
-                    continue;
+                    buf.advance(n);
+
+                    if self.eof || would_block {
+                        break;
+                    } else {
+                        continue;
+                    }
                 }
-                Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => Poll::Pending,
-                Err(ref err) if err.kind() == io::ErrorKind::ConnectionAborted && pos != 0 => {
-                    Poll::Ready(Ok(pos))
+                Err(ref err)
+                    if err.kind() == io::ErrorKind::ConnectionAborted
+                        && prev != buf.remaining() =>
+                {
+                    break
                 }
                 Err(err) => Poll::Ready(Err(err)),
             };
         }
 
-        Poll::Ready(Ok(pos))
+        Poll::Ready(Ok(()))
     }
 }
 
@@ -308,7 +279,6 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> AsyncWrite for Stream<'
 
             match self.session.write(&buf[pos..]) {
                 Ok(n) => pos += n,
-                Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => (),
                 Err(err) => return Poll::Ready(Err(err)),
             };
 
@@ -336,14 +306,14 @@ impl<'a, IO: AsyncRead + AsyncWrite + Unpin, S: Session> AsyncWrite for Stream<'
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<io::Result<()>> {
         self.session.flush()?;
         while self.session.wants_write() {
-            futures::ready!(self.write_io(cx))?;
+            ready!(self.write_io(cx))?;
         }
         Pin::new(&mut self.io).poll_flush(cx)
     }
 
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         while self.session.wants_write() {
-            futures::ready!(self.write_io(cx))?;
+            ready!(self.write_io(cx))?;
         }
         Pin::new(&mut self.io).poll_shutdown(cx)
     }

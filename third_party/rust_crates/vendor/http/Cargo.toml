@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "http"
-version = "0.2.1"
+version = "0.2.4"
 authors = ["Alex Crichton <alex@alexcrichton.com>", "Carl Lerche <me@carllerche.com>", "Sean McArthur <sean@seanmonstar.com>"]
 description = "A set of types for representing HTTP requests and responses.\n"
 documentation = "https://docs.rs/http"
@@ -36,10 +36,14 @@ name = "header_value"
 path = "benches/header_value.rs"
 
 [[bench]]
+name = "method"
+path = "benches/method.rs"
+
+[[bench]]
 name = "uri"
 path = "benches/uri.rs"
 [dependencies.bytes]
-version = "0.5"
+version = "1"
 
 [dependencies.fnv]
 version = "1.0.5"

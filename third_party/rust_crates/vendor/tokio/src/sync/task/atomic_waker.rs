@@ -29,7 +29,7 @@ pub(crate) struct AtomicWaker {
 
 // `AtomicWaker` is a multi-consumer, single-producer transfer cell. The cell
 // stores a `Waker` value produced by calls to `register` and many threads can
-// race to take the waker by calling `wake.
+// race to take the waker by calling `wake`.
 //
 // If a new `Waker` instance is produced by calling `register` before an existing
 // one is consumed, then the existing one is overwritten.
@@ -141,13 +141,12 @@ impl AtomicWaker {
         }
     }
 
+    /*
     /// Registers the current waker to be notified on calls to `wake`.
-    ///
-    /// This is the same as calling `register_task` with `task::current()`.
-    #[cfg(feature = "io-driver")]
     pub(crate) fn register(&self, waker: Waker) {
         self.do_register(waker);
     }
+    */
 
     /// Registers the provided waker to be notified on calls to `wake`.
     ///
@@ -172,7 +171,11 @@ impl AtomicWaker {
     where
         W: WakerRef,
     {
-        match self.state.compare_and_swap(WAITING, REGISTERING, Acquire) {
+        match self
+            .state
+            .compare_exchange(WAITING, REGISTERING, Acquire, Acquire)
+            .unwrap_or_else(|x| x)
+        {
             WAITING => {
                 unsafe {
                     // Locked acquired, update the waker cell
@@ -220,6 +223,8 @@ impl AtomicWaker {
                 waker.wake();
 
                 // This is equivalent to a spin lock, so use a spin hint.
+                // TODO: once we bump MSRV to 1.49+, use `hint::spin_loop` instead.
+                #[allow(deprecated)]
                 atomic::spin_loop_hint();
             }
             state => {

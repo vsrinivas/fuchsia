@@ -3,7 +3,7 @@
 //!
 //! This can be extended to additional types/methods as required.
 
-use std::sync::{LockResult, TryLockError, TryLockResult};
+use std::sync::LockResult;
 use std::time::Duration;
 
 // Types that do not need wrapping
@@ -27,16 +27,25 @@ impl<T> Mutex<T> {
     }
 
     #[inline]
-    pub(crate) fn lock(&self) -> LockResult<MutexGuard<'_, T>> {
-        Ok(self.0.lock())
+    #[cfg(all(feature = "parking_lot", not(all(loom, test)),))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "parking_lot",))))]
+    pub(crate) const fn const_new(t: T) -> Mutex<T> {
+        Mutex(parking_lot::const_mutex(t))
     }
 
     #[inline]
-    pub(crate) fn try_lock(&self) -> TryLockResult<MutexGuard<'_, T>> {
-        match self.0.try_lock() {
-            Some(guard) => Ok(guard),
-            None => Err(TryLockError::WouldBlock),
-        }
+    pub(crate) fn lock(&self) -> MutexGuard<'_, T> {
+        self.0.lock()
+    }
+
+    #[inline]
+    pub(crate) fn try_lock(&self) -> Option<MutexGuard<'_, T>> {
+        self.0.try_lock()
+    }
+
+    #[inline]
+    pub(crate) fn get_mut(&mut self) -> &mut T {
+        self.0.get_mut()
     }
 
     // Note: Additional methods `is_poisoned` and `into_inner`, can be

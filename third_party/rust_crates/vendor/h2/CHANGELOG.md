@@ -1,3 +1,36 @@
+# 0.3.3 (April 29, 2021)
+
+* Fix client being able to make `CONNECT` requests without a `:path`.
+* Expose `RecvStream::poll_data`.
+* Fix some docs.
+
+# 0.3.2 (March 24, 2021)
+
+* Fix incorrect handling of received 1xx responses on the client when the request body is still streaming.
+
+# 0.3.1 (February 26, 2021)
+
+* Add `Connection::max_concurrent_recv_streams()` getter.
+* Add `Connection::max_concurrent_send_streams()` getter.
+* Fix client to ignore receipt of 1xx headers frames.
+* Fix incorrect calculation of pseudo header lengths when determining if a received header is too big.
+* Reduce monomorphized code size of internal code.
+
+# 0.3.0 (December 23, 2020)
+
+* Update to Tokio v1 and Bytes v1.
+* Disable `tracing`'s `log` feature. (It can still be enabled by a user in their own `Cargo.toml`.)
+
+# 0.2.7 (October 22, 2020)
+
+* Fix stream ref count when sending a push promise
+* Fix receiving empty DATA frames in response to a HEAD request
+* Fix handling of client disabling SERVER_PUSH
+
+# 0.2.6 (July 13, 2020)
+
+* Integrate `tracing` directly where `log` was used. (For 0.2.x, `log`s are still emitted by default.)
+
 # 0.2.5 (May 6, 2020)
 
 * Fix rare debug assert failure in store shutdown.

@@ -1,7 +1,7 @@
 use super::table::{Index, Table};
 use super::{huffman, Header};
 
-use bytes::{buf::ext::Limit, BufMut, BytesMut};
+use bytes::{buf::Limit, BufMut, BytesMut};
 use http::header::{HeaderName, HeaderValue};
 
 type DstBuf<'a> = Limit<&'a mut BytesMut>;
@@ -86,7 +86,11 @@ impl Encoder {
     where
         I: Iterator<Item = Header<Option<HeaderName>>>,
     {
+        let span = tracing::trace_span!("hpack::encode");
+        let _e = span.enter();
+
         let pos = position(dst);
+        tracing::trace!(pos, "encoding at");
 
         if let Err(e) = self.encode_size_updates(dst) {
             if e == EncoderError::BufferOverflow {
@@ -320,7 +324,7 @@ fn encode_str(val: &[u8], dst: &mut DstBuf<'_>) -> Result<(), EncoderError> {
             // Write the string head
             dst.get_mut()[idx] = 0x80 | huff_len as u8;
         } else {
-            // Write the head to a placeholer
+            // Write the head to a placeholder
             const PLACEHOLDER_LEN: usize = 8;
             let mut buf = [0u8; PLACEHOLDER_LEN];
 
@@ -424,7 +428,7 @@ fn rewind(buf: &mut DstBuf<'_>, pos: usize) {
 mod test {
     use super::*;
     use crate::hpack::Header;
-    use bytes::buf::BufMutExt;
+    use bytes::buf::BufMut;
     use http::*;
 
     #[test]

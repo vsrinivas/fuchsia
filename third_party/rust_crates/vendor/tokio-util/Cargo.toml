@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "tokio-util"
-version = "0.3.1"
+version = "0.6.7"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "Additional utilities for working with Tokio.\n"
 homepage = "https://tokio.rs"
-documentation = "https://docs.rs/tokio-util/0.3.1/tokio_util"
+documentation = "https://docs.rs/tokio-util/0.6.7/tokio_util"
 categories = ["asynchronous"]
 license = "MIT"
 repository = "https://github.com/tokio-rs/tokio"
@@ -25,7 +25,7 @@ repository = "https://github.com/tokio-rs/tokio"
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 [dependencies.bytes]
-version = "0.5.0"
+version = "1.0.0"
 
 [dependencies.futures-core]
 version = "0.3.0"
@@ -37,27 +37,49 @@ optional = true
 [dependencies.futures-sink]
 version = "0.3.0"
 
+[dependencies.futures-util]
+version = "0.3.0"
+optional = true
+
 [dependencies.log]
 version = "0.4"
 
 [dependencies.pin-project-lite]
-version = "0.1.4"
+version = "0.2.0"
+
+[dependencies.slab]
+version = "0.4.1"
+optional = true
 
 [dependencies.tokio]
-version = "0.2.5"
+version = "1.0.0"
+features = ["sync"]
+[dev-dependencies.async-stream]
+version = "0.3.0"
+
 [dev-dependencies.futures]
 version = "0.3.0"
 
+[dev-dependencies.futures-test]
+version = "0.3.5"
+
 [dev-dependencies.tokio]
-version = "0.2.0"
+version = "1.0.0"
 features = ["full"]
 
+[dev-dependencies.tokio-stream]
+version = "0.1"
+
 [dev-dependencies.tokio-test]
-version = "0.2.0"
+version = "0.4.0"
 
 [features]
-codec = ["tokio/stream"]
+__docs_rs = ["futures-util"]
+codec = []
 compat = ["futures-io"]
 default = []
-full = ["codec", "udp", "compat"]
-udp = ["tokio/udp"]
+full = ["codec", "compat", "io", "time", "net", "rt"]
+io = []
+net = ["tokio/net"]
+rt = ["tokio/rt"]
+time = ["tokio/time", "slab"]

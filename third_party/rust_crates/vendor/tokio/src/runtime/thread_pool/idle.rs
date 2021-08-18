@@ -42,11 +42,11 @@ impl Idle {
     /// worker currently sleeping.
     pub(super) fn worker_to_notify(&self) -> Option<usize> {
         // If at least one worker is spinning, work being notified will
-        // eventully be found. A searching thread will find **some** work and
+        // eventually be found. A searching thread will find **some** work and
         // notify another worker, eventually leading to our work being found.
         //
         // For this to happen, this load must happen before the thread
-        // transitioning `num_searching` to zero. Acquire / Relese does not
+        // transitioning `num_searching` to zero. Acquire / Release does not
         // provide sufficient guarantees, so this load is done with `SeqCst` and
         // will pair with the `fetch_sub(1)` when transitioning out of
         // searching.
@@ -55,7 +55,7 @@ impl Idle {
         }
 
         // Acquire the lock
-        let mut sleepers = self.sleepers.lock().unwrap();
+        let mut sleepers = self.sleepers.lock();
 
         // Check again, now that the lock is acquired
         if !self.notify_should_wakeup() {
@@ -77,7 +77,7 @@ impl Idle {
     /// work.
     pub(super) fn transition_worker_to_parked(&self, worker: usize, is_searching: bool) -> bool {
         // Acquire the lock
-        let mut sleepers = self.sleepers.lock().unwrap();
+        let mut sleepers = self.sleepers.lock();
 
         // Decrement the number of unparked threads
         let ret = State::dec_num_unparked(&self.state, is_searching);
@@ -112,13 +112,13 @@ impl Idle {
     /// Unpark a specific worker. This happens if tasks are submitted from
     /// within the worker's park routine.
     pub(super) fn unpark_worker_by_id(&self, worker_id: usize) {
-        let mut sleepers = self.sleepers.lock().unwrap();
+        let mut sleepers = self.sleepers.lock();
 
         for index in 0..sleepers.len() {
             if sleepers[index] == worker_id {
                 sleepers.swap_remove(index);
 
-                // Update the state accordingly whle the lock is held.
+                // Update the state accordingly while the lock is held.
                 State::unpark_one(&self.state);
 
                 return;
@@ -128,7 +128,7 @@ impl Idle {
 
     /// Returns `true` if `worker_id` is contained in the sleep set
     pub(super) fn is_parked(&self, worker_id: usize) -> bool {
-        let sleepers = self.sleepers.lock().unwrap();
+        let sleepers = self.sleepers.lock();
         sleepers.contains(&worker_id)
     }
 

@@ -7,9 +7,12 @@ pub type fsfilcnt_t = u64;
 pub type idtype_t = ::c_int;
 pub type mqd_t = ::c_int;
 type __pthread_spin_t = __cpu_simple_lock_nv_t;
-pub type vm_size_t = ::uintptr_t;
+pub type vm_size_t = ::uintptr_t; // FIXME: deprecated since long time
 pub type lwpid_t = ::c_uint;
 pub type shmatt_t = ::c_uint;
+pub type cpuid_t = u64;
+pub type cpuset_t = _cpuset;
+pub type pthread_spin_t = ::c_uchar;
 
 // elf.h
 
@@ -44,6 +47,10 @@ cfg_if! {
 }
 
 impl siginfo_t {
+    pub unsafe fn si_addr(&self) -> *mut ::c_void {
+        self.si_addr
+    }
+
     pub unsafe fn si_value(&self) -> ::sigval {
         #[repr(C)]
         struct siginfo_timer {
@@ -56,6 +63,23 @@ impl siginfo_t {
             value: ::sigval,
         }
         (*(self as *const siginfo_t as *const siginfo_timer)).value
+    }
+
+    pub unsafe fn si_status(&self) -> ::c_int {
+        #[repr(C)]
+        struct siginfo_timer {
+            _si_signo: ::c_int,
+            _si_errno: ::c_int,
+            _si_code: ::c_int,
+            __pad1: ::c_int,
+            _pid: ::pid_t,
+            _uid: ::uid_t,
+            _value: ::sigval,
+            _cpid: ::pid_t,
+            _cuid: ::uid_t,
+            status: ::c_int,
+        }
+        (*(self as *const siginfo_t as *const siginfo_timer)).status
     }
 }
 
@@ -203,13 +227,19 @@ s! {
         ptr_private: *mut ::c_void,
     }
 
+    pub struct pthread_spinlock_t {
+        pts_magic: ::c_uint,
+        pts_spin: ::pthread_spin_t,
+        pts_flags: ::c_int,
+    }
+
     pub struct kevent {
         pub ident: ::uintptr_t,
         pub filter: u32,
         pub flags: u32,
         pub fflags: u32,
         pub data: i64,
-        pub udata: ::intptr_t,
+        pub udata: ::intptr_t, /* FIXME: NetBSD 10.0 will finally have same layout as other BSD */
     }
 
     pub struct dqblk {
@@ -297,6 +327,12 @@ s! {
         pub sc_egid: ::gid_t,
         pub sc_ngroups: ::c_int,
         pub sc_groups: [::gid_t; 1],
+    }
+
+    pub struct unpcbid {
+        pub unp_pid: ::pid_t,
+        pub unp_euid: ::uid_t,
+        pub unp_egid: ::gid_t,
     }
 
     pub struct sockaddr_dl {
@@ -397,6 +433,16 @@ s! {
         pub p_align: Elf64_Xword,
     }
 
+    pub struct Aux32Info {
+        pub a_type: Elf32_Word,
+        pub a_v: Elf32_Word,
+    }
+
+    pub struct Aux64Info {
+        pub a_type: Elf64_Word,
+        pub a_v: Elf64_Xword,
+    }
+
     // link.h
 
     pub struct dl_phdr_info {
@@ -408,6 +454,42 @@ s! {
         pub dlpi_subs: ::c_ulonglong,
         pub dlpi_tls_modid: usize,
         pub dlpi_tls_data: *mut ::c_void,
+    }
+
+    pub struct _cpuset {
+        bits: [u32; 0]
+    }
+
+    pub struct accept_filter_arg {
+        pub af_name: [::c_char; 16],
+        af_arg: [[::c_char; 10]; 24],
+    }
+
+    pub struct sched_param {
+        pub sched_priority: ::c_int,
+    }
+
+    pub struct kinfo_vmentry {
+        pub kve_start: u64,
+        pub kve_end: u64,
+        pub kve_offset: u64,
+        pub kve_type: u32,
+        pub kve_flags: u32,
+        pub kve_count: u32,
+        pub kve_wired_count: u32,
+        pub kve_advice: u32,
+        pub kve_attributes: u32,
+        pub kve_protection: u32,
+        pub kve_max_protection: u32,
+        pub kve_ref_count: u32,
+        pub kve_inheritance: u32,
+        pub kve_vn_fileid: u64,
+        pub kve_vn_size: u64,
+        pub kve_vn_fsid: u64,
+        pub kve_vn_rdev: u64,
+        pub kve_vn_type: u32,
+        pub kve_vn_mode: u32,
+        pub kve_path: [[::c_char; 32]; 32],
     }
 }
 
@@ -421,7 +503,7 @@ s_no_extra_traits! {
         pub ut_session: u16,
         pub ut_type: u16,
         pub ut_pid: ::pid_t,
-        pub ut_exit: __exit_status,
+        pub ut_exit: __exit_status, // FIXME: when anonymous struct are supported
         pub ut_ss: sockaddr_storage,
         pub ut_tv: ::timeval,
         pub ut_pad: [u8; _UTX_PADSIZE],
@@ -439,7 +521,6 @@ s_no_extra_traits! {
         pub ipi_ifindex: ::c_uint,
     }
 
-    #[repr(packed)]
     pub struct arphdr {
         pub ar_hrd: u16,
         pub ar_pro: u16,
@@ -448,7 +529,6 @@ s_no_extra_traits! {
         pub ar_op: u16,
     }
 
-    #[repr(packed)]
     pub struct in_addr {
         pub s_addr: ::in_addr_t,
     }
@@ -1047,6 +1127,12 @@ pub const SO_TIMESTAMP: ::c_int = 0x2000;
 pub const SO_OVERFLOWED: ::c_int = 0x1009;
 pub const SO_NOHEADER: ::c_int = 0x100a;
 
+// http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/sys/un.h?annotate
+pub const LOCAL_OCREDS: ::c_int = 0x0001; // pass credentials to receiver
+pub const LOCAL_CONNWAIT: ::c_int = 0x0002; // connects block until accepted
+pub const LOCAL_PEEREID: ::c_int = 0x0003; // get peer identification
+pub const LOCAL_CREDS: ::c_int = 0x0004; // pass credentials to receiver
+
 // https://github.com/NetBSD/src/blob/trunk/sys/net/if.h#L373
 pub const IFF_UP: ::c_int = 0x0001; // interface is up
 pub const IFF_BROADCAST: ::c_int = 0x0002; // broadcast address valid
@@ -1180,6 +1266,8 @@ pub const MAP_RENAME: ::c_int = 0x20;
 pub const MAP_NORESERVE: ::c_int = 0x40;
 pub const MAP_HASSEMAPHORE: ::c_int = 0x200;
 pub const MAP_WIRED: ::c_int = 0x800;
+// mremap flag
+pub const MAP_REMAPDUP: ::c_int = 0x004;
 
 pub const DCCP_TYPE_REQUEST: ::c_int = 0;
 pub const DCCP_TYPE_RESPONSE: ::c_int = 1;
@@ -1388,6 +1476,9 @@ pub const TIME_OOP: ::c_int = 3;
 pub const TIME_WAIT: ::c_int = 4;
 pub const TIME_ERROR: ::c_int = 5;
 
+pub const LITTLE_ENDIAN: ::c_int = 1234;
+pub const BIG_ENDIAN: ::c_int = 4321;
+
 cfg_if! {
     if #[cfg(any(target_arch = "sparc", target_arch = "sparc64",
                  target_arch = "x86", target_arch = "x86_64"))] {
@@ -1482,6 +1573,15 @@ pub const NOTE_CHILD: u32 = 0x00000004;
 pub const TMP_MAX: ::c_uint = 308915776;
 
 pub const NI_MAXHOST: ::socklen_t = 1025;
+pub const NI_MAXSERV: ::socklen_t = 32;
+
+pub const NI_NOFQDN: ::c_int = 0x00000001;
+pub const NI_NUMERICHOST: ::c_int = 0x000000002;
+pub const NI_NAMEREQD: ::c_int = 0x000000004;
+pub const NI_NUMERICSERV: ::c_int = 0x000000008;
+pub const NI_DGRAM: ::c_int = 0x00000010;
+pub const NI_WITHSCOPEID: ::c_int = 0x00000020;
+pub const NI_NUMERICSCOPE: ::c_int = 0x00000040;
 
 pub const RTLD_NOLOAD: ::c_int = 0x2000;
 pub const RTLD_LOCAL: ::c_int = 0x200;
@@ -1635,6 +1735,8 @@ pub const KERN_PROC_NARGV: ::c_int = 2;
 pub const KERN_PROC_ENV: ::c_int = 3;
 pub const KERN_PROC_NENV: ::c_int = 4;
 pub const KERN_PROC_PATHNAME: ::c_int = 5;
+pub const VM_PROC: ::c_int = 16;
+pub const VM_PROC_MAP: ::c_int = 1;
 
 pub const EAI_AGAIN: ::c_int = 2;
 pub const EAI_BADFLAGS: ::c_int = 3;
@@ -1736,8 +1838,22 @@ pub const SF_SNAPSHOT: ::c_ulong = 0x00200000;
 pub const SF_LOG: ::c_ulong = 0x00400000;
 pub const SF_SNAPINVAL: ::c_ulong = 0x00800000;
 
-fn _ALIGN(p: usize) -> usize {
-    (p + _ALIGNBYTES) & !_ALIGNBYTES
+// sys/sysctl.h
+pub const KVME_PROT_READ: ::c_int = 0x00000001;
+pub const KVME_PROT_WRITE: ::c_int = 0x00000002;
+pub const KVME_PROT_EXEC: ::c_int = 0x00000004;
+
+pub const KVME_FLAG_COW: ::c_int = 0x00000001;
+pub const KVME_FLAG_NEEDS_COPY: ::c_int = 0x00000002;
+pub const KVME_FLAG_NOCOREDUMP: ::c_int = 0x000000004;
+pub const KVME_FLAG_PAGEABLE: ::c_int = 0x000000008;
+pub const KVME_FLAG_GROWS_UP: ::c_int = 0x000000010;
+pub const KVME_FLAG_GROWS_DOWN: ::c_int = 0x000000020;
+
+const_fn! {
+    {const} fn _ALIGN(p: usize) -> usize {
+        (p + _ALIGNBYTES) & !_ALIGNBYTES
+    }
 }
 
 f! {
@@ -1768,7 +1884,7 @@ f! {
         }
     }
 
-    pub fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
+    pub {const} fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
         (_ALIGN(::mem::size_of::<::cmsghdr>()) + _ALIGN(length as usize))
             as ::c_uint
     }
@@ -1817,6 +1933,8 @@ extern "C" {
         rqtp: *const ::timespec,
         rmtp: *mut ::timespec,
     ) -> ::c_int;
+
+    pub fn reallocarr(ptr: *mut ::c_void, number: ::size_t, size: ::size_t) -> ::c_int;
 }
 
 #[link(name = "rt")]
@@ -1925,11 +2043,7 @@ extern "C" {
         sevlen: ::socklen_t,
         flags: ::c_int,
     ) -> ::c_int;
-    pub fn mprotect(
-        addr: *mut ::c_void,
-        len: ::size_t,
-        prot: ::c_int,
-    ) -> ::c_int;
+    pub fn mprotect(addr: *mut ::c_void, len: ::size_t, prot: ::c_int) -> ::c_int;
     pub fn sysctl(
         name: *const ::c_int,
         namelen: ::c_uint,
@@ -1965,8 +2079,7 @@ extern "C" {
     pub fn mq_open(name: *const ::c_char, oflag: ::c_int, ...) -> ::mqd_t;
     pub fn mq_close(mqd: ::mqd_t) -> ::c_int;
     pub fn mq_getattr(mqd: ::mqd_t, attr: *mut ::mq_attr) -> ::c_int;
-    pub fn mq_notify(mqd: ::mqd_t, notification: *const ::sigevent)
-        -> ::c_int;
+    pub fn mq_notify(mqd: ::mqd_t, notification: *const ::sigevent) -> ::c_int;
     pub fn mq_receive(
         mqd: ::mqd_t,
         msg_ptr: *mut ::c_char,
@@ -1979,11 +2092,7 @@ extern "C" {
         msg_len: ::size_t,
         msg_prio: ::c_uint,
     ) -> ::c_int;
-    pub fn mq_setattr(
-        mqd: ::mqd_t,
-        newattr: *const ::mq_attr,
-        oldattr: *mut ::mq_attr,
-    ) -> ::c_int;
+    pub fn mq_setattr(mqd: ::mqd_t, newattr: *const ::mq_attr, oldattr: *mut ::mq_attr) -> ::c_int;
     #[link_name = "__mq_timedreceive50"]
     pub fn mq_timedreceive(
         mqd: ::mqd_t,
@@ -2001,25 +2110,14 @@ extern "C" {
         abs_timeout: *const ::timespec,
     ) -> ::c_int;
     pub fn mq_unlink(name: *const ::c_char) -> ::c_int;
-    pub fn ptrace(
-        request: ::c_int,
-        pid: ::pid_t,
-        addr: *mut ::c_void,
-        data: ::c_int,
-    ) -> ::c_int;
+    pub fn ptrace(request: ::c_int, pid: ::pid_t, addr: *mut ::c_void, data: ::c_int) -> ::c_int;
     pub fn pthread_setname_np(
         t: ::pthread_t,
         name: *const ::c_char,
         arg: *const ::c_void,
     ) -> ::c_int;
-    pub fn pthread_attr_get_np(
-        thread: ::pthread_t,
-        attr: *mut ::pthread_attr_t,
-    ) -> ::c_int;
-    pub fn pthread_getattr_np(
-        native: ::pthread_t,
-        attr: *mut ::pthread_attr_t,
-    ) -> ::c_int;
+    pub fn pthread_attr_get_np(thread: ::pthread_t, attr: *mut ::pthread_attr_t) -> ::c_int;
+    pub fn pthread_getattr_np(native: ::pthread_t, attr: *mut ::pthread_attr_t) -> ::c_int;
     pub fn pthread_attr_getguardsize(
         attr: *const ::pthread_attr_t,
         guardsize: *mut ::size_t,
@@ -2029,6 +2127,24 @@ extern "C" {
         stackaddr: *mut *mut ::c_void,
         stacksize: *mut ::size_t,
     ) -> ::c_int;
+    pub fn pthread_getaffinity_np(
+        thread: ::pthread_t,
+        size: ::size_t,
+        set: *mut cpuset_t,
+    ) -> ::c_int;
+    pub fn pthread_setaffinity_np(
+        thread: ::pthread_t,
+        size: ::size_t,
+        set: *mut cpuset_t,
+    ) -> ::c_int;
+
+    pub fn _cpuset_create() -> *mut cpuset_t;
+    pub fn _cpuset_destroy(set: *mut cpuset_t);
+    pub fn _cpuset_clr(cpu: cpuid_t, set: *mut cpuset_t) -> ::c_int;
+    pub fn _cpuset_set(cpu: cpuid_t, set: *mut cpuset_t) -> ::c_int;
+    pub fn _cpuset_isset(cpu: cpuid_t, set: *const cpuset_t) -> ::c_int;
+    pub fn _cpuset_size(set: *const cpuset_t) -> ::size_t;
+    pub fn _cpuset_zero(set: *mut cpuset_t);
     #[link_name = "__sigtimedwait50"]
     pub fn sigtimedwait(
         set: *const sigset_t,
@@ -2036,18 +2152,23 @@ extern "C" {
         timeout: *const ::timespec,
     ) -> ::c_int;
     pub fn sigwaitinfo(set: *const sigset_t, info: *mut siginfo_t) -> ::c_int;
+    pub fn waitid(
+        idtype: idtype_t,
+        id: ::id_t,
+        infop: *mut ::siginfo_t,
+        options: ::c_int,
+    ) -> ::c_int;
+
     pub fn duplocale(base: ::locale_t) -> ::locale_t;
     pub fn freelocale(loc: ::locale_t);
     pub fn localeconv_l(loc: ::locale_t) -> *mut lconv;
-    pub fn newlocale(
-        mask: ::c_int,
-        locale: *const ::c_char,
-        base: ::locale_t,
-    ) -> ::locale_t;
+    pub fn newlocale(mask: ::c_int, locale: *const ::c_char, base: ::locale_t) -> ::locale_t;
     #[link_name = "__settimeofday50"]
     pub fn settimeofday(tv: *const ::timeval, tz: *const ::c_void) -> ::c_int;
 
     pub fn dup3(src: ::c_int, dst: ::c_int, flags: ::c_int) -> ::c_int;
+
+    pub fn kqueue1(flags: ::c_int) -> ::c_int;
 
     pub fn sendmmsg(
         sockfd: ::c_int,
@@ -2084,10 +2205,11 @@ extern "C" {
         data: *mut ::c_void,
     ) -> ::c_int;
 
-    pub fn iconv_open(
-        tocode: *const ::c_char,
-        fromcode: *const ::c_char,
-    ) -> iconv_t;
+    // dlfcn.h
+
+    pub fn _dlauxinfo() -> *mut ::c_void;
+
+    pub fn iconv_open(tocode: *const ::c_char, fromcode: *const ::c_char) -> iconv_t;
     pub fn iconv(
         cd: iconv_t,
         inbuf: *mut *mut ::c_char,
@@ -2096,6 +2218,22 @@ extern "C" {
         outbytesleft: *mut ::size_t,
     ) -> ::size_t;
     pub fn iconv_close(cd: iconv_t) -> ::c_int;
+
+    // Added in `NetBSD` 7.0
+    pub fn explicit_memset(b: *mut ::c_void, c: ::c_int, len: ::size_t);
+    pub fn consttime_memequal(a: *const ::c_void, b: *const ::c_void, len: ::size_t) -> ::c_int;
+
+    pub fn setproctitle(fmt: *const ::c_char, ...);
+    pub fn mremap(
+        oldp: *mut ::c_void,
+        oldsize: ::size_t,
+        newp: *mut ::c_void,
+        newsize: ::size_t,
+        flags: ::c_int,
+    ) -> *mut ::c_void;
+
+    pub fn sched_setparam(pid: ::pid_t, param: *const sched_param) -> ::c_int;
+    pub fn sched_getparam(pid: ::pid_t, param: *mut sched_param) -> ::c_int;
 }
 
 #[link(name = "util")]
@@ -2115,16 +2253,8 @@ extern "C" {
     ) -> ::c_int;
 
     pub fn updwtmpx(file: *const ::c_char, ut: *const utmpx) -> ::c_int;
-    pub fn getlastlogx(
-        fname: *const ::c_char,
-        uid: ::uid_t,
-        ll: *mut lastlogx,
-    ) -> *mut lastlogx;
-    pub fn updlastlogx(
-        fname: *const ::c_char,
-        uid: ::uid_t,
-        ll: *mut lastlogx,
-    ) -> ::c_int;
+    pub fn getlastlogx(fname: *const ::c_char, uid: ::uid_t, ll: *mut lastlogx) -> *mut lastlogx;
+    pub fn updlastlogx(fname: *const ::c_char, uid: ::uid_t, ll: *mut lastlogx) -> ::c_int;
     pub fn utmpxname(file: *const ::c_char) -> ::c_int;
     pub fn getutxent() -> *mut utmpx;
     pub fn getutxid(ut: *const utmpx) -> *mut utmpx;
@@ -2140,6 +2270,83 @@ extern "C" {
     pub fn setutent();
     pub fn endutent();
     pub fn getutent() -> *mut utmp;
+
+    pub fn efopen(p: *const ::c_char, m: *const ::c_char) -> ::FILE;
+    pub fn emalloc(n: ::size_t) -> *mut ::c_void;
+    pub fn ecalloc(n: ::size_t, c: ::size_t) -> *mut ::c_void;
+    pub fn erealloc(p: *mut ::c_void, n: ::size_t) -> *mut ::c_void;
+    pub fn estrdup(s: *const ::c_char) -> *mut ::c_char;
+    pub fn estrndup(s: *const ::c_char, len: ::size_t) -> *mut ::c_char;
+    pub fn estrlcpy(dst: *mut ::c_char, src: *const ::c_char, len: ::size_t) -> ::size_t;
+    pub fn estrlcat(dst: *mut ::c_char, src: *const ::c_char, len: ::size_t) -> ::size_t;
+    pub fn easprintf(string: *mut *mut ::c_char, fmt: *const ::c_char, ...) -> ::c_int;
+    pub fn evasprintf(string: *mut *mut ::c_char, fmt: *const ::c_char, ...) -> ::c_int;
+    pub fn esetfunc(
+        cb: ::Option<unsafe extern "C" fn(::c_int, *const ::c_char, ...)>,
+    ) -> ::Option<unsafe extern "C" fn(::c_int, *const ::c_char, ...)>;
+    pub fn secure_path(path: *const ::c_char) -> ::c_int;
+    pub fn snprintb(
+        buf: *mut ::c_char,
+        buflen: ::size_t,
+        fmt: *const ::c_char,
+        val: u64,
+    ) -> ::c_int;
+    pub fn snprintb_m(
+        buf: *mut ::c_char,
+        buflen: ::size_t,
+        fmt: *const ::c_char,
+        val: u64,
+        max: ::size_t,
+    ) -> ::c_int;
+
+    pub fn getbootfile() -> *const ::c_char;
+    pub fn getbyteorder() -> ::c_int;
+    pub fn getdiskrawname(
+        buf: *mut ::c_char,
+        buflen: ::size_t,
+        name: *const ::c_char,
+    ) -> *const ::c_char;
+    pub fn getdiskcookedname(
+        buf: *mut ::c_char,
+        buflen: ::size_t,
+        name: *const ::c_char,
+    ) -> *const ::c_char;
+    pub fn getfsspecname(
+        buf: *mut ::c_char,
+        buflen: ::size_t,
+        spec: *const ::c_char,
+    ) -> *const ::c_char;
+
+    pub fn strpct(
+        buf: *mut ::c_char,
+        bufsiz: ::size_t,
+        numerator: ::uintmax_t,
+        denominator: ::uintmax_t,
+        precision: ::size_t,
+    ) -> *mut ::c_char;
+    pub fn strspct(
+        buf: *mut ::c_char,
+        bufsiz: ::size_t,
+        numerator: ::intmax_t,
+        denominator: ::intmax_t,
+        precision: ::size_t,
+    ) -> *mut ::c_char;
+    #[link_name = "__login50"]
+    pub fn login(ut: *const utmp);
+    #[link_name = "__loginx50"]
+    pub fn loginx(ut: *const utmpx);
+    pub fn logout(line: *const ::c_char);
+    pub fn logoutx(line: *const ::c_char, status: ::c_int, tpe: ::c_int);
+    pub fn logwtmp(line: *const ::c_char, name: *const ::c_char, host: *const ::c_char);
+    pub fn logwtmpx(
+        line: *const ::c_char,
+        name: *const ::c_char,
+        host: *const ::c_char,
+        status: ::c_int,
+        tpe: ::c_int,
+    );
+
+    pub fn kinfo_getvmmap(pid: ::pid_t, cntp: *mut ::size_t) -> *mut kinfo_vmentry;
 }
 
 cfg_if! {

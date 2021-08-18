@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "full"), allow(dead_code))]
+
 use crate::park::{Park, Unpark};
 
 use std::fmt;
@@ -34,6 +36,13 @@ where
         match self {
             Either::A(a) => a.park_timeout(duration).map_err(Either::A),
             Either::B(b) => b.park_timeout(duration).map_err(Either::B),
+        }
+    }
+
+    fn shutdown(&mut self) {
+        match self {
+            Either::A(a) => a.shutdown(),
+            Either::B(b) => b.shutdown(),
         }
     }
 }

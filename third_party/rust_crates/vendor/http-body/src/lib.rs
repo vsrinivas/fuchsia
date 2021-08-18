@@ -1,5 +1,10 @@
-#![doc(html_root_url = "https://docs.rs/http-body/0.3.1")]
-#![deny(missing_debug_implementations, missing_docs, unreachable_pub)]
+#![doc(html_root_url = "https://docs.rs/http-body/0.4.3")]
+#![deny(
+    missing_debug_implementations,
+    missing_docs,
+    unreachable_pub,
+    broken_intra_doc_links
+)]
 #![cfg_attr(test, deny(warnings))]
 
 //! Asynchronous HTTP request or response body.
@@ -8,12 +13,19 @@
 //!
 //! [`Body`]: trait.Body.html
 
+mod empty;
+mod full;
 mod next;
 mod size_hint;
 
+pub mod combinators;
+
+pub use self::empty::Empty;
+pub use self::full::Full;
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
+use self::combinators::{BoxBody, MapData, MapErr};
 use bytes::Buf;
 use http::HeaderMap;
 use std::ops;
@@ -82,6 +94,33 @@ pub trait Body {
         Self: Unpin + Sized,
     {
         Trailers(self)
+    }
+
+    /// Maps this body's data value to a different value.
+    fn map_data<F, B>(self, f: F) -> MapData<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(Self::Data) -> B,
+        B: Buf,
+    {
+        MapData::new(self, f)
+    }
+
+    /// Maps this body's error value to a different value.
+    fn map_err<F, E>(self, f: F) -> MapErr<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(Self::Error) -> E,
+    {
+        MapErr::new(self, f)
+    }
+
+    /// Turn this body into a boxed trait object.
+    fn boxed(self) -> BoxBody<Self::Data, Self::Error>
+    where
+        Self: Sized + Send + Sync + 'static,
+    {
+        BoxBody::new(self)
     }
 }
 

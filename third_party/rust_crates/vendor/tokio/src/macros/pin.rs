@@ -43,8 +43,8 @@
 /// Pinning is useful when using `select!` and stream operators that require `T:
 /// Stream + Unpin`.
 ///
-/// [`Future`]: https://doc.rust-lang.org/std/future/trait.Future.html
-/// [`Box::pin`]: #
+/// [`Future`]: trait@std::future::Future
+/// [`Box::pin`]: std::boxed::Box::pin
 ///
 /// # Usage
 ///
@@ -71,7 +71,7 @@
 ///
 /// ```
 /// use tokio::{pin, select};
-/// use tokio::stream::{self, StreamExt};
+/// use tokio_stream::{self as stream, StreamExt};
 ///
 /// async fn my_async_fn() {
 ///     // async logic here

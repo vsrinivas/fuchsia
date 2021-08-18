@@ -1,5 +1,5 @@
 use crate::io::blocking::Blocking;
-use crate::io::AsyncRead;
+use crate::io::{AsyncRead, ReadBuf};
 
 use std::io;
 use std::pin::Pin;
@@ -66,8 +66,8 @@ impl AsyncRead for Stdin {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         Pin::new(&mut self.std).poll_read(cx, buf)
     }
 }

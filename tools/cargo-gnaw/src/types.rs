@@ -28,8 +28,9 @@ impl TryFrom<&Vec<String>> for GnRustType {
     type Error = Error;
 
     fn try_from(value: &Vec<String>) -> Result<Self, Self::Error> {
-        if value.len() != 1 {
-            return Err(anyhow!("malformed crate type description. Expects vector of length 1"));
+        // XXX: hyper now provides 3 types, lib, staticlib and cdylib, and this plus calling code needs to deal.
+        if value.len() < 1 {
+            return Err(anyhow!("malformed crate type description ({:?}). Expects vector of length 1", value));
         }
         let internal = &value[0];
         match internal.as_str() {

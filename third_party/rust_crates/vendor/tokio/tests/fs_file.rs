@@ -2,7 +2,7 @@
 #![cfg(feature = "full")]
 
 use tokio::fs::File;
-use tokio::prelude::*;
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio_test::task;
 
 use std::io::prelude::*;
@@ -32,6 +32,19 @@ async fn basic_write() {
 
     file.write_all(HELLO).await.unwrap();
     file.flush().await.unwrap();
+
+    let file = std::fs::read(tempfile.path()).unwrap();
+    assert_eq!(file, HELLO);
+}
+
+#[tokio::test]
+async fn basic_write_and_shutdown() {
+    let tempfile = tempfile();
+
+    let mut file = File::create(tempfile.path()).await.unwrap();
+
+    file.write_all(HELLO).await.unwrap();
+    file.shutdown().await.unwrap();
 
     let file = std::fs::read(tempfile.path()).unwrap();
     assert_eq!(file, HELLO);

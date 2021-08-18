@@ -379,9 +379,12 @@ impl tokio::io::AsyncRead for HyperStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
-        Pin::new(&mut self.0).poll_read(cx, buf)
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.0).poll_read(cx, buf.initialize_unfilled()).map_ok(|sz| {
+            buf.advance(sz);
+            ()
+        })
     }
 }
 

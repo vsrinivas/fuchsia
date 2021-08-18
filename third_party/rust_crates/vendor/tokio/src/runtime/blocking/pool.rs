@@ -4,11 +4,13 @@ use crate::loom::sync::{Arc, Condvar, Mutex};
 use crate::loom::thread;
 use crate::runtime::blocking::schedule::NoopSchedule;
 use crate::runtime::blocking::shutdown;
-use crate::runtime::blocking::task::BlockingTask;
+use crate::runtime::builder::ThreadNameFn;
+use crate::runtime::context;
 use crate::runtime::task::{self, JoinHandle};
 use crate::runtime::{Builder, Callback, Handle};
+use crate::util::error::CONTEXT_MISSING_ERROR;
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::time::Duration;
 
@@ -30,7 +32,7 @@ struct Inner {
     condvar: Condvar,
 
     /// Spawned threads use this name
-    thread_name: String,
+    thread_name: ThreadNameFn,
 
     /// Spawned thread stack size
     stack_size: Option<usize>,
@@ -41,7 +43,11 @@ struct Inner {
     /// Call before a thread stops
     before_stop: Option<Callback>,
 
+    // Maximum number of threads
     thread_cap: usize,
+
+    // Customizable wait timeout
+    keep_alive: Duration,
 }
 
 struct Shared {
@@ -51,9 +57,21 @@ struct Shared {
     num_notify: u32,
     shutdown: bool,
     shutdown_tx: Option<shutdown::Sender>,
+    /// Prior to shutdown, we clean up JoinHandles by having each timed-out
+    /// thread join on the previous timed-out thread. This is not strictly
+    /// necessary but helps avoid Valgrind false positives, see
+    /// <https://github.com/tokio-rs/tokio/commit/646fbae76535e397ef79dbcaacb945d4c829f666>
+    /// for more information.
+    last_exiting_thread: Option<thread::JoinHandle<()>>,
+    /// This holds the JoinHandles for all running threads; on shutdown, the thread
+    /// calling shutdown handles joining on these.
+    worker_threads: HashMap<usize, thread::JoinHandle<()>>,
+    /// This is a counter used to iterate worker_threads in a consistent order (for loom's
+    /// benefit)
+    worker_thread_index: usize,
 }
 
-type Task = task::Notified<NoopSchedule>;
+type Task = task::UnownedTask<NoopSchedule>;
 
 const KEEP_ALIVE: Duration = Duration::from_secs(10);
 
@@ -61,23 +79,10 @@ const KEEP_ALIVE: Duration = Duration::from_secs(10);
 pub(crate) fn spawn_blocking<F, R>(func: F) -> JoinHandle<R>
 where
     F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
 {
-    let rt = Handle::current();
-
-    let (task, handle) = task::joinable(BlockingTask::new(func));
-    let _ = rt.blocking_spawner.spawn(task, &rt);
-    handle
-}
-
-#[allow(dead_code)]
-pub(crate) fn try_spawn_blocking<F, R>(func: F) -> Result<(), ()>
-where
-    F: FnOnce() -> R + Send + 'static,
-{
-    let rt = Handle::current();
-
-    let (task, _handle) = task::joinable(BlockingTask::new(func));
-    rt.blocking_spawner.spawn(task, &rt)
+    let rt = context::current().expect(CONTEXT_MISSING_ERROR);
+    rt.spawn_blocking(func)
 }
 
 // ===== impl BlockingPool =====
@@ -85,6 +90,7 @@ where
 impl BlockingPool {
     pub(crate) fn new(builder: &Builder, thread_cap: usize) -> BlockingPool {
         let (shutdown_tx, shutdown_rx) = shutdown::channel();
+        let keep_alive = builder.keep_alive.unwrap_or(KEEP_ALIVE);
 
         BlockingPool {
             spawner: Spawner {
@@ -96,6 +102,9 @@ impl BlockingPool {
                         num_notify: 0,
                         shutdown: false,
                         shutdown_tx: Some(shutdown_tx),
+                        last_exiting_thread: None,
+                        worker_threads: HashMap::new(),
+                        worker_thread_index: 0,
                     }),
                     condvar: Condvar::new(),
                     thread_name: builder.thread_name.clone(),
@@ -103,6 +112,7 @@ impl BlockingPool {
                     after_start: builder.after_start.clone(),
                     before_stop: builder.before_stop.clone(),
                     thread_cap,
+                    keep_alive,
                 }),
             },
             shutdown_rx,
@@ -114,7 +124,7 @@ impl BlockingPool {
     }
 
     pub(crate) fn shutdown(&mut self, timeout: Option<Duration>) {
-        let mut shared = self.spawner.inner.shared.lock().unwrap();
+        let mut shared = self.spawner.inner.shared.lock();
 
         // The function can be called multiple times. First, by explicitly
         // calling `shutdown` then by the drop handler calling `shutdown`. This
@@ -127,9 +137,23 @@ impl BlockingPool {
         shared.shutdown_tx = None;
         self.spawner.inner.condvar.notify_all();
 
+        let last_exited_thread = std::mem::take(&mut shared.last_exiting_thread);
+        let workers = std::mem::take(&mut shared.worker_threads);
+
         drop(shared);
 
-        self.shutdown_rx.wait(timeout);
+        if self.shutdown_rx.wait(timeout) {
+            let _ = last_exited_thread.map(|th| th.join());
+
+            // Loom requires that execution be deterministic, so sort by thread ID before joining.
+            // (HashMaps use a randomly-seeded hash function, so the order is nondeterministic)
+            let mut workers: Vec<(usize, thread::JoinHandle<()>)> = workers.into_iter().collect();
+            workers.sort_by_key(|(id, _)| *id);
+
+            for (_id, handle) in workers.into_iter() {
+                let _ = handle.join();
+            }
+        }
     }
 }
 
@@ -150,7 +174,7 @@ impl fmt::Debug for BlockingPool {
 impl Spawner {
     pub(crate) fn spawn(&self, task: Task, rt: &Handle) -> Result<(), ()> {
         let shutdown_tx = {
-            let mut shared = self.inner.shared.lock().unwrap();
+            let mut shared = self.inner.shared.lock();
 
             if shared.shutdown {
                 // Shutdown the task
@@ -187,14 +211,26 @@ impl Spawner {
         };
 
         if let Some(shutdown_tx) = shutdown_tx {
-            self.spawn_thread(shutdown_tx, rt);
+            let mut shared = self.inner.shared.lock();
+
+            let id = shared.worker_thread_index;
+            shared.worker_thread_index += 1;
+
+            let handle = self.spawn_thread(shutdown_tx, rt, id);
+
+            shared.worker_threads.insert(id, handle);
         }
 
         Ok(())
     }
 
-    fn spawn_thread(&self, shutdown_tx: shutdown::Sender, rt: &Handle) {
-        let mut builder = thread::Builder::new().name(self.inner.thread_name.clone());
+    fn spawn_thread(
+        &self,
+        shutdown_tx: shutdown::Sender,
+        rt: &Handle,
+        id: usize,
+    ) -> thread::JoinHandle<()> {
+        let mut builder = thread::Builder::new().name((self.inner.thread_name)());
 
         if let Some(stack_size) = self.inner.stack_size {
             builder = builder.stack_size(stack_size);
@@ -205,23 +241,22 @@ impl Spawner {
         builder
             .spawn(move || {
                 // Only the reference should be moved into the closure
-                let rt = &rt;
-                rt.enter(move || {
-                    rt.blocking_spawner.inner.run();
-                    drop(shutdown_tx);
-                })
+                let _enter = crate::runtime::context::enter(rt.clone());
+                rt.blocking_spawner.inner.run(id);
+                drop(shutdown_tx);
             })
-            .unwrap();
+            .unwrap()
     }
 }
 
 impl Inner {
-    fn run(&self) {
+    fn run(&self, worker_thread_id: usize) {
         if let Some(f) = &self.after_start {
             f()
         }
 
-        let mut shared = self.shared.lock().unwrap();
+        let mut shared = self.shared.lock();
+        let mut join_on_thread = None;
 
         'main: loop {
             // BUSY
@@ -229,14 +264,14 @@ impl Inner {
                 drop(shared);
                 task.run();
 
-                shared = self.shared.lock().unwrap();
+                shared = self.shared.lock();
             }
 
             // IDLE
             shared.num_idle += 1;
 
             while !shared.shutdown {
-                let lock_result = self.condvar.wait_timeout(shared, KEEP_ALIVE).unwrap();
+                let lock_result = self.condvar.wait_timeout(shared, self.keep_alive).unwrap();
 
                 shared = lock_result.0;
                 let timeout_result = lock_result.1;
@@ -252,6 +287,12 @@ impl Inner {
                 // Even if the condvar "timed out", if the pool is entering the
                 // shutdown phase, we want to perform the cleanup logic.
                 if !shared.shutdown && timeout_result.timed_out() {
+                    // We'll join the prior timed-out thread's JoinHandle after dropping the lock.
+                    // This isn't done when shutting down, because the thread calling shutdown will
+                    // handle joining everything.
+                    let my_handle = shared.worker_threads.remove(&worker_thread_id);
+                    join_on_thread = std::mem::replace(&mut shared.last_exiting_thread, my_handle);
+
                     break 'main;
                 }
 
@@ -264,7 +305,7 @@ impl Inner {
                     drop(shared);
                     task.shutdown();
 
-                    shared = self.shared.lock().unwrap();
+                    shared = self.shared.lock();
                 }
 
                 // Work was produced, and we "took" it (by decrementing num_notify).
@@ -296,6 +337,10 @@ impl Inner {
 
         if let Some(f) = &self.before_stop {
             f()
+        }
+
+        if let Some(handle) = join_on_thread {
+            let _ = handle.join();
         }
     }
 }

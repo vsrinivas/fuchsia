@@ -2,6 +2,9 @@ use crate::base::SecCertificateRef;
 use crate::base::SecKeyRef;
 use core_foundation_sys::array::CFArrayRef;
 use core_foundation_sys::base::{Boolean, CFIndex, CFTypeID, CFTypeRef, OSStatus};
+#[cfg(any(feature = "OSX_10_13", target_os = "ios"))]
+use core_foundation_sys::error::CFErrorRef;
+
 pub type SecTrustResultType = u32;
 
 pub const kSecTrustResultInvalid: SecTrustResultType = 0;
@@ -29,6 +32,9 @@ extern "C" {
         anchorCertificatesOnly: Boolean,
     ) -> OSStatus;
     pub fn SecTrustEvaluate(trust: SecTrustRef, result: *mut SecTrustResultType) -> OSStatus;
+    // it should have been OSX_10_14, but due to back-compat it can't rely on the newer feature flag
+    #[cfg(any(feature = "OSX_10_13", target_os = "ios"))]
+    pub fn SecTrustEvaluateWithError(trust: SecTrustRef, error: *mut CFErrorRef) -> bool;
     pub fn SecTrustCreateWithCertificates(
         certificates: CFTypeRef,
         policies: CFTypeRef,

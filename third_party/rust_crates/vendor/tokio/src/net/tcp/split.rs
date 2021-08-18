@@ -9,42 +9,38 @@
 //! level.
 
 use crate::future::poll_fn;
-use crate::io::{AsyncRead, AsyncWrite};
+use crate::io::{AsyncRead, AsyncWrite, ReadBuf};
 use crate::net::TcpStream;
 
-use bytes::Buf;
 use std::io;
-use std::mem::MaybeUninit;
 use std::net::Shutdown;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-/// Read half of a [`TcpStream`], created by [`split`].
+/// Borrowed read half of a [`TcpStream`], created by [`split`].
 ///
 /// Reading from a `ReadHalf` is usually done using the convenience methods found on the
-/// [`AsyncReadExt`] trait. Examples import this trait through [the prelude].
+/// [`AsyncReadExt`] trait.
 ///
 /// [`TcpStream`]: TcpStream
 /// [`split`]: TcpStream::split()
 /// [`AsyncReadExt`]: trait@crate::io::AsyncReadExt
-/// [the prelude]: crate::prelude
 #[derive(Debug)]
 pub struct ReadHalf<'a>(&'a TcpStream);
 
-/// Write half of a [`TcpStream`], created by [`split`].
+/// Borrowed write half of a [`TcpStream`], created by [`split`].
 ///
-/// Note that in the [`AsyncWrite`] implemenation of this type, [`poll_shutdown`] will
+/// Note that in the [`AsyncWrite`] implementation of this type, [`poll_shutdown`] will
 /// shut down the TCP stream in the write direction.
 ///
-/// Writing to an `OwnedWriteHalf` is usually done using the convenience methods found
-/// on the [`AsyncWriteExt`] trait. Examples import this trait through [the prelude].
+/// Writing to an `WriteHalf` is usually done using the convenience methods found
+/// on the [`AsyncWriteExt`] trait.
 ///
 /// [`TcpStream`]: TcpStream
 /// [`split`]: TcpStream::split()
 /// [`AsyncWrite`]: trait@crate::io::AsyncWrite
 /// [`poll_shutdown`]: fn@crate::io::AsyncWrite::poll_shutdown
 /// [`AsyncWriteExt`]: trait@crate::io::AsyncWriteExt
-/// [the prelude]: crate::prelude
 #[derive(Debug)]
 pub struct WriteHalf<'a>(&'a TcpStream);
 
@@ -57,12 +53,16 @@ impl ReadHalf<'_> {
     /// the queue, registering the current task for wakeup if data is not yet
     /// available.
     ///
-    /// See the [`TcpStream::poll_peek`] level documenation for more details.
+    /// Note that on multiple calls to `poll_peek` or `poll_read`, only the
+    /// `Waker` from the `Context` passed to the most recent call is scheduled
+    /// to receive a wakeup.
+    ///
+    /// See the [`TcpStream::poll_peek`] level documentation for more details.
     ///
     /// # Examples
     ///
     /// ```no_run
-    /// use tokio::io;
+    /// use tokio::io::{self, ReadBuf};
     /// use tokio::net::TcpStream;
     ///
     /// use futures::future::poll_fn;
@@ -72,6 +72,7 @@ impl ReadHalf<'_> {
     ///     let mut stream = TcpStream::connect("127.0.0.1:8000").await?;
     ///     let (mut read_half, _) = stream.split();
     ///     let mut buf = [0; 10];
+    ///     let mut buf = ReadBuf::new(&mut buf);
     ///
     ///     poll_fn(|cx| {
     ///         read_half.poll_peek(cx, &mut buf)
@@ -82,15 +83,19 @@ impl ReadHalf<'_> {
     /// ```
     ///
     /// [`TcpStream::poll_peek`]: TcpStream::poll_peek
-    pub fn poll_peek(&mut self, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<io::Result<usize>> {
-        self.0.poll_peek2(cx, buf)
+    pub fn poll_peek(
+        &mut self,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<usize>> {
+        self.0.poll_peek(cx, buf)
     }
 
     /// Receives data on the socket from the remote address to which it is
     /// connected, without removing that data from the queue. On success,
     /// returns the number of bytes peeked.
     ///
-    /// See the [`TcpStream::peek`] level documenation for more details.
+    /// See the [`TcpStream::peek`] level documentation for more details.
     ///
     /// [`TcpStream::peek`]: TcpStream::peek
     ///
@@ -98,7 +103,7 @@ impl ReadHalf<'_> {
     ///
     /// ```no_run
     /// use tokio::net::TcpStream;
-    /// use tokio::prelude::*;
+    /// use tokio::io::AsyncReadExt;
     /// use std::error::Error;
     ///
     /// #[tokio::main]
@@ -126,20 +131,17 @@ impl ReadHalf<'_> {
     /// [`read`]: fn@crate::io::AsyncReadExt::read
     /// [`AsyncReadExt`]: trait@crate::io::AsyncReadExt
     pub async fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        poll_fn(|cx| self.poll_peek(cx, buf)).await
+        let mut buf = ReadBuf::new(buf);
+        poll_fn(|cx| self.poll_peek(cx, &mut buf)).await
     }
 }
 
 impl AsyncRead for ReadHalf<'_> {
-    unsafe fn prepare_uninitialized_buffer(&self, _: &mut [MaybeUninit<u8>]) -> bool {
-        false
-    }
-
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         self.0.poll_read_priv(cx, buf)
     }
 }
@@ -153,12 +155,16 @@ impl AsyncWrite for WriteHalf<'_> {
         self.0.poll_write_priv(cx, buf)
     }
 
-    fn poll_write_buf<B: Buf>(
+    fn poll_write_vectored(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut B,
+        bufs: &[io::IoSlice<'_>],
     ) -> Poll<io::Result<usize>> {
-        self.0.poll_write_buf_priv(cx, buf)
+        self.0.poll_write_vectored_priv(cx, bufs)
+    }
+
+    fn is_write_vectored(&self) -> bool {
+        self.0.is_write_vectored()
     }
 
     #[inline]
@@ -169,7 +175,7 @@ impl AsyncWrite for WriteHalf<'_> {
 
     // `poll_shutdown` on a write half shutdowns the stream in the "write" direction.
     fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        self.0.shutdown(Shutdown::Write).into()
+        self.0.shutdown_std(Shutdown::Write).into()
     }
 }
 

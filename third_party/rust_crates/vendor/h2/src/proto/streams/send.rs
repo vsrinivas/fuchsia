@@ -32,6 +32,8 @@ pub(super) struct Send {
 
     /// Prioritization layer
     prioritize: Prioritize,
+
+    is_push_enabled: bool,
 }
 
 /// A value to detect which public API has called `poll_reset`.
@@ -49,6 +51,7 @@ impl Send {
             max_stream_id: StreamId::MAX,
             next_stream_id: Ok(config.local_next_stream_id),
             prioritize: Prioritize::new(config),
+            is_push_enabled: true,
         }
     }
 
@@ -77,11 +80,11 @@ impl Send {
             || fields.contains_key("keep-alive")
             || fields.contains_key("proxy-connection")
         {
-            log::debug!("illegal connection-specific headers found");
+            tracing::debug!("illegal connection-specific headers found");
             return Err(UserError::MalformedHeaders);
         } else if let Some(te) = fields.get(http::header::TE) {
             if te != "trailers" {
-                log::debug!("illegal connection-specific headers found");
+                tracing::debug!("illegal connection-specific headers found");
                 return Err(UserError::MalformedHeaders);
             }
         }
@@ -95,7 +98,11 @@ impl Send {
         stream: &mut store::Ptr,
         task: &mut Option<Waker>,
     ) -> Result<(), UserError> {
-        log::trace!(
+        if !self.is_push_enabled {
+            return Err(UserError::PeerDisabledServerPush);
+        }
+
+        tracing::trace!(
             "send_push_promise; frame={:?}; init_window={:?}",
             frame,
             self.init_window_sz
@@ -118,7 +125,7 @@ impl Send {
         counts: &mut Counts,
         task: &mut Option<Waker>,
     ) -> Result<(), UserError> {
-        log::trace!(
+        tracing::trace!(
             "send_headers; frame={:?}; init_window={:?}",
             frame,
             self.init_window_sz
@@ -167,7 +174,7 @@ impl Send {
         let is_closed = stream.state.is_closed();
         let is_empty = stream.pending_send.is_empty();
 
-        log::trace!(
+        tracing::trace!(
             "send_reset(..., reason={:?}, stream={:?}, ..., \
              is_reset={:?}; is_closed={:?}; pending_send.is_empty={:?}; \
              state={:?} \
@@ -182,7 +189,7 @@ impl Send {
 
         if is_reset {
             // Don't double reset
-            log::trace!(
+            tracing::trace!(
                 " -> not sending RST_STREAM ({:?} is already reset)",
                 stream.id
             );
@@ -195,7 +202,7 @@ impl Send {
         // If closed AND the send queue is flushed, then the stream cannot be
         // reset explicitly, either. Implicit resets can still be queued.
         if is_closed && is_empty {
-            log::trace!(
+            tracing::trace!(
                 " -> not sending explicit RST_STREAM ({:?} was closed \
                  and send queue was flushed)",
                 stream.id
@@ -211,7 +218,7 @@ impl Send {
 
         let frame = frame::Reset::new(stream.id, reason);
 
-        log::trace!("send_reset -- queueing; frame={:?}", frame);
+        tracing::trace!("send_reset -- queueing; frame={:?}", frame);
         self.prioritize
             .queue_frame(frame.into(), buffer, stream, task);
         self.prioritize.reclaim_all_capacity(stream, counts);
@@ -269,7 +276,7 @@ impl Send {
 
         stream.state.send_close();
 
-        log::trace!("send_trailers -- queuing; frame={:?}", frame);
+        tracing::trace!("send_trailers -- queuing; frame={:?}", frame);
         self.prioritize
             .queue_frame(frame.into(), buffer, stream, task);
 
@@ -370,7 +377,7 @@ impl Send {
         task: &mut Option<Waker>,
     ) -> Result<(), Reason> {
         if let Err(e) = self.prioritize.recv_stream_window_update(sz, stream) {
-            log::debug!("recv_stream_window_update !!; err={:?}", e);
+            tracing::debug!("recv_stream_window_update !!; err={:?}", e);
 
             self.send_reset(Reason::FLOW_CONTROL_ERROR, buffer, stream, counts, task);
 
@@ -443,7 +450,7 @@ impl Send {
             if val < old_val {
                 // We must decrease the (remote) window on every open stream.
                 let dec = old_val - val;
-                log::trace!("decrementing all windows; dec={}", dec);
+                tracing::trace!("decrementing all windows; dec={}", dec);
 
                 let mut total_reclaimed = 0;
                 store.for_each(|mut stream| {
@@ -469,7 +476,7 @@ impl Send {
                         0
                     };
 
-                    log::trace!(
+                    tracing::trace!(
                         "decremented stream window; id={:?}; decr={}; reclaimed={}; flow={:?}",
                         stream.id,
                         dec,
@@ -494,6 +501,10 @@ impl Send {
                         .map_err(RecvError::Connection)
                 })?;
             }
+        }
+
+        if let Some(val) = settings.is_push_enabled() {
+            self.is_push_enabled = val
         }
 
         Ok(())
