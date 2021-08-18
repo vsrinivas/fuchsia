@@ -79,8 +79,22 @@ impl VirtualCameraFacade {
     }
 
     pub async fn add_to_device_watcher(&self) -> Result<Value, Error> {
-        fx_log_info!("VirtualCameraFacade.add_to_device_watcher unimplemented. see b/195761854");
-        Ok(to_value(true)?)
+        // Use the test proxy if one was provided, otherwise connect to the discoverable
+        // Virtual Camera service.
+        let camera_proxy = match self.camera_proxy.as_ref() {
+            Some(proxy) => proxy.clone(),
+            None => match connect_to_protocol::<VirtualCameraDeviceMarker>() {
+                Ok(proxy) => proxy,
+                Err(e) => bail!("Failed to connect to VirtualCameraDevice FIDL service {:?}.", e),
+            },
+        };
+
+        fx_log_info!("AddToDeviceWatcher FIDL protocol connected");
+
+        match camera_proxy.add_to_device_watcher().await? {
+            Ok(_) => Ok(to_value(true)?),
+            Err(e) => Err(format_err!("AddToDeviceWatcher failed with err {:?}", e)),
+        }
     }
 
     // TODO(b/195762320) Add remaining method parsing for AddDataSource,
@@ -143,6 +157,8 @@ mod tests {
         future::join(facade_fut, stream_fut).await;
     }
 
+    /// Tests that the `add_stream_config` method does not send the index, width and
+    /// height to the FIDL because format is incorrect.
     #[fasync::run_singlethreaded(test)]
     async fn test_add_stream_config_with_parameter_error() {
         // Incorrectly set AddStreamConfig parameters to strings.
@@ -165,5 +181,60 @@ mod tests {
                 .is_ok(),
             false
         );
+    }
+
+    /// Tests that the `add_to_device_watcher` method correctly returns true
+    /// after calling the FIDL service.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_to_device_watcher() {
+        let (proxy, mut stream) = create_proxy_and_stream::<VirtualCameraDeviceMarker>().unwrap();
+
+        // Create a facade future that sends a request to `proxy`.
+        let facade = VirtualCameraFacade { camera_proxy: Some(proxy) };
+
+        // Set Parameters and expect a return value of true from `add_to_device_watcher`.
+        let facade_fut = async move {
+            assert_eq!(facade.add_to_device_watcher().await.unwrap(), to_value(true).unwrap());
+        };
+
+        // Verify stream contents from `AddToDeviceWatcher` match arguments passed into facade.
+        let stream_fut = async move {
+            match stream.try_next().await {
+                Ok(Some(VirtualCameraDeviceRequest::AddToDeviceWatcher { responder })) => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                err => panic!("Err in request handler: {:?}", err),
+            }
+        };
+        future::join(facade_fut, stream_fut).await;
+    }
+
+    /// Tests that the `add_to_device_watcher` method correctly returns false
+    /// after calling the FIDL service with an error response.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_to_device_watcher_on_error() {
+        let (proxy, mut stream) = create_proxy_and_stream::<VirtualCameraDeviceMarker>().unwrap();
+
+        // Create a facade future that sends a request to `proxy`.
+        let facade = VirtualCameraFacade { camera_proxy: Some(proxy) };
+
+        // Set parameters and expect a return value of true from `add_to_device_watcher`.
+        let facade_fut = async move {
+            assert_eq!(facade.add_to_device_watcher().await.is_ok(), false);
+        };
+
+        // Verify stream contents from `AddToDeviceWatcher` match arguments passed into facade.
+        let stream_fut = async move {
+            match stream.try_next().await {
+                Ok(Some(VirtualCameraDeviceRequest::AddToDeviceWatcher { responder })) => {
+                    responder.send(
+                      &mut Err(fidl_fuchsia_camera_test_virtualcamera::
+                        Error::AlreadyAddedToDeviceWatcher
+                      )).unwrap();
+                }
+                err => panic!("Err in request handler: {:?}", err),
+            }
+        };
+        future::join(facade_fut, stream_fut).await;
     }
 }
