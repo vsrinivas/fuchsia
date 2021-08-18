@@ -258,6 +258,7 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceRequestStream) -> anyhow::Result<()> {
         use futures::lock::Mutex;
         let watcher = Mutex::new(self.watch_device_state());
+        let request_control_handle = request_stream.control_handle();
 
         let closure = |command| async {
             match command {
@@ -333,16 +334,9 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
         {
             fx_log_err!("Error serving DeviceRequestStream: {:?}", err);
 
-            // TODO: Properly route epitaph codes. This is tricky to do because
-            //       `request_stream` is consumed by `try_for_each_concurrent`,
-            //       which means that code like the code below will not work:
-            //
-            // ```
-            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-            //     request_stream.into_inner().0
-            //         .shutdown_with_epitaph(*epitaph);
-            // }
-            // ```
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
 
             Err(err)
         } else {
@@ -356,6 +350,7 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceExtraRequestStream) -> anyhow::Result<()> {
         use futures::lock::Mutex;
         let watcher = Mutex::new(self.watch_identity());
+        let request_control_handle = request_stream.control_handle();
 
         let closure = |command| {
             async {
@@ -613,16 +608,9 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
         {
             fx_log_err!("Error serving DeviceExtraRequestStream: {:?}", err);
 
-            // TODO: Properly route epitaph codes. This is tricky to do because
-            //       `request_stream` is consumed by `try_for_each_concurrent`,
-            //       which means that code like the code below will not work:
-            //
-            // ```
-            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-            //     request_stream.into_inner().0
-            //         .shutdown_with_epitaph(*epitaph);
-            // }
-            // ```
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
 
             Err(err)
         } else {
@@ -634,6 +622,8 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
 #[async_trait()]
 impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceTestRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
         let closure = |command| async {
             match command {
                 DeviceTestRequest::Reset { responder, .. } => {
@@ -736,16 +726,9 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
         {
             fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
 
-            // TODO: Properly route epitaph codes. This is tricky to do because
-            //       `request_stream` is consumed by `try_for_each_concurrent`,
-            //       which means that code like the code below will not work:
-            //
-            // ```
-            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-            //     request_stream.into_inner().0
-            //         .shutdown_with_epitaph(*epitaph);
-            // }
-            // ```
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
 
             Err(err)
         } else {
@@ -757,6 +740,8 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
 #[async_trait()]
 impl<T: Driver> ServeTo<DeviceRouteRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceRouteRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
         let closure = |command| async {
             match command {
                 DeviceRouteRequest::RegisterOnMeshPrefix { prefix, responder, .. } => {
@@ -797,16 +782,9 @@ impl<T: Driver> ServeTo<DeviceRouteRequestStream> for T {
         {
             fx_log_err!("Error serving DeviceRouteRequestStream: {:?}", err);
 
-            // TODO: Properly route epitaph codes. This is tricky to do because
-            //       `request_stream` is consumed by `try_for_each_concurrent`,
-            //       which means that code like the code below will not work:
-            //
-            // ```
-            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-            //     request_stream.into_inner().0
-            //         .shutdown_with_epitaph(*epitaph);
-            // }
-            // ```
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
 
             Err(err)
         } else {
@@ -818,6 +796,8 @@ impl<T: Driver> ServeTo<DeviceRouteRequestStream> for T {
 #[async_trait()]
 impl<T: Driver> ServeTo<DeviceRouteExtraRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceRouteExtraRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
         let closure = |command| async {
             match command {
                 DeviceRouteExtraRequest::GetLocalOnMeshPrefixes { responder, .. } => {
@@ -847,16 +827,9 @@ impl<T: Driver> ServeTo<DeviceRouteExtraRequestStream> for T {
         {
             fx_log_err!("Error serving DeviceRouteExtraRequestStream: {:?}", err);
 
-            // TODO: Properly route epitaph codes. This is tricky to do because
-            //       `request_stream` is consumed by `try_for_each_concurrent`,
-            //       which means that code like the code below will not work:
-            //
-            // ```
-            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-            //     request_stream.into_inner().0
-            //         .shutdown_with_epitaph(*epitaph);
-            // }
-            // ```
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
 
             Err(err)
         } else {
@@ -868,6 +841,8 @@ impl<T: Driver> ServeTo<DeviceRouteExtraRequestStream> for T {
 #[async_trait()]
 impl<T: Driver> ServeTo<FactoryDeviceRequestStream> for T {
     async fn serve_to(&self, request_stream: FactoryDeviceRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
         let closure = |command| async {
             match command {
                 FactoryDeviceRequest::SendMfgCommand { responder, command, .. } => {
@@ -886,16 +861,9 @@ impl<T: Driver> ServeTo<FactoryDeviceRequestStream> for T {
         {
             fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
 
-            // TODO: Properly route epitaph codes. This is tricky to do because
-            //       `request_stream` is consumed by `try_for_each_concurrent`,
-            //       which means that code like the code below will not work:
-            //
-            // ```
-            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-            //     request_stream.into_inner().0
-            //         .shutdown_with_epitaph(*epitaph);
-            // }
-            // ```
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
 
             Err(err)
         } else {
@@ -907,6 +875,8 @@ impl<T: Driver> ServeTo<FactoryDeviceRequestStream> for T {
 #[async_trait()]
 impl<T: Driver> ServeTo<CountersRequestStream> for T {
     async fn serve_to(&self, request_stream: CountersRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
         let closure = |command| async {
             match command {
                 CountersRequest::Get { responder, .. } => {
@@ -932,16 +902,9 @@ impl<T: Driver> ServeTo<CountersRequestStream> for T {
         {
             fx_log_err!("Error serving CountersRequestStream: {:?}", err);
 
-            // TODO: Properly route epitaph codes. This is tricky to do because
-            //       `request_stream` is consumed by `try_for_each_concurrent`,
-            //       which means that code like the code below will not work:
-            //
-            // ```
-            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-            //     request_stream.into_inner().0
-            //         .shutdown_with_epitaph(*epitaph);
-            // }
-            // ```
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
 
             Err(err)
         } else {
@@ -953,6 +916,8 @@ impl<T: Driver> ServeTo<CountersRequestStream> for T {
 #[async_trait()]
 impl<T: Driver> ServeTo<LegacyJoiningRequestStream> for T {
     async fn serve_to(&self, request_stream: LegacyJoiningRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
         let closure = |command| async {
             match command {
                 LegacyJoiningRequest::MakeJoinable { duration, port, responder, .. } => {
@@ -971,16 +936,9 @@ impl<T: Driver> ServeTo<LegacyJoiningRequestStream> for T {
         {
             fx_log_err!("Error serving LegacyJoiningRequestStream: {:?}", err);
 
-            // TODO: Properly route epitaph codes. This is tricky to do because
-            //       `request_stream` is consumed by `try_for_each_concurrent`,
-            //       which means that code like the code below will not work:
-            //
-            // ```
-            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-            //     request_stream.into_inner().0
-            //         .shutdown_with_epitaph(*epitaph);
-            // }
-            // ```
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
 
             Err(err)
         } else {
