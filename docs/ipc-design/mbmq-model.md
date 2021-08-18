@@ -73,7 +73,7 @@ used to read or write the MBO, so the caller cannot modify the message
 after it has been sent.
 
 The callee process can read the MBO from its MsgQueue using
-`zx_msgqueue_read()`, supplying a CMH object.  This removes the MBO
+`zx_msgqueue_wait()`, supplying a CMH object.  This removes the MBO
 from the message queue, sets the CMH to point to the MBO, and sets the
 MBO's state to `owned_by_callee`.  This state gives the callee the
 ability to read and write the MBO's contents using the CMH handle.
@@ -88,14 +88,14 @@ reply to the caller by passing the CMH handle to
 MsgQueue, drops the CMH's reference to the MBO (putting the CMH back
 in the "unused" state), and sets the MBO's state to
 `enqueued_as_reply`.  The callee can now reuse this CMH object in
-later calls to `zx_msgqueue_read()`.
+later calls to `zx_msgqueue_wait()`.
 
 The caller process can then read the MBO from its MsgQueue using
-`zx_msgqueue_read()`.  The caller supplies a CMH object but in this
-case the CMH is not used.  The `zx_msgqueue_read()` syscall removes
+`zx_msgqueue_wait()`.  The caller supplies a CMH object but in this
+case the CMH is not used.  The `zx_msgqueue_wait()` syscall removes
 the MBO from the MsgQueue and sets the MBO's state back to
 `owned_by_callee`.  The caller can use the key value returned by
-`zx_msgqueue_read()` to determine which MBO was returned, if
+`zx_msgqueue_wait()` to determine which MBO was returned, if
 necessary.  The caller can now read the reply message from the MBO
 using `zx_mbo_read()`.
 
@@ -147,7 +147,7 @@ a different callee.
 
     Creates a new MsgQueue.
 
-*   `zx_msgqueue_read(msgqueue, cmh) -> key`
+*   `zx_msgqueue_wait(msgqueue, cmh) -> key`
 
     Reads an MBO from a MsgQueue.  If the MsgQueue is empty, this
     first blocks until the MsgQueue is non-empty.
@@ -242,7 +242,7 @@ are dropped:
     CMH.  If the handles to an MBO are closed while the MBO is
     enqueued as a request on a MsgQueue, the MBO remains in the
     MsgQueue, and it can still be read into a CMH and sent as a reply,
-    but it will be freed when `zx_msgqueue_read()` returns the MBO to
+    but it will be freed when `zx_msgqueue_wait()` returns the MBO to
     the `owned_by_caller` state.
 
     This means it is possible to do a "fire-and-forget" send with an
@@ -292,7 +292,7 @@ MBO:
 *   `key`: 64-bit integer.  This is set when the MBO is enqueued onto
     a MsgQueue by either `zx_channel_write_mbo()` or
     `zx_cmh_send_reply()`.  Its value is returned by
-    `zx_msgqueue_read()`.
+    `zx_msgqueue_wait()`.
 *   `reply_queue`: This is the MsgQueue that `zx_cmh_send_reply()`
     will enqueue the MBO onto when it is sent as a reply.
 *   `reply_key`: 64-bit integer.  `zx_cmh_send_reply()` will set the
@@ -302,7 +302,7 @@ MBO:
     Note that in practice we do not need to distinguish between
     `enqueued_as_request` and `owned_by_callee`.  Operations on MBO
     handles need to check for `owned_by_caller`, whereas
-    `zx_msgqueue_read()` needs to check for `enqueued_as_request`
+    `zx_msgqueue_wait()` needs to check for `enqueued_as_request`
     versus `enqueued_as_reply`.
 
 CMH:
@@ -339,7 +339,7 @@ syscall invocations that comes from entering and leaving kernel mode.
 More importantly, it allows the kernel to optimise the cases where it
 is possible to do a direct context switch to the receiver process.  If
 the "send message" step wakes a thread, and if the
-`zx_msgqueue_read()` step would block, the kernel can switch directly
+`zx_msgqueue_wait()` step would block, the kernel can switch directly
 to the thread that was woken.
 
 Furthermore, if the message being sent fits into the buffer provided
@@ -360,13 +360,13 @@ struct zx_mbmq_multiop {
   zx_handle_t channel;   // for zx_channel_write_mbo() (if is_req is true)
 
   // Inputs for wait+read:
-  zx_handle_t msgqueue;  // for zx_msgqueue_read()
-  zx_handle_t cmh;       // for zx_msgqueue_read()
+  zx_handle_t msgqueue;  // for zx_msgqueue_wait()
+  zx_handle_t cmh;       // for zx_msgqueue_wait()
 
   buffer_info buf;       // for zx_mbo_write() and zx_mbo_read()
 
   // Output:
-  uint64_t key;          // from zx_msgqueue_read()
+  uint64_t key;          // from zx_msgqueue_wait()
 };
 
 zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
@@ -382,10 +382,10 @@ zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
         on `channel`.
     *   If `is_req` is false, do `zx_cmh_send_reply()` on `mbo` to
         send the message as a reply.
-*   Do `zx_msgqueue_read()` on `msgqueue` and `cmh`.  Returns the
+*   Do `zx_msgqueue_wait()` on `msgqueue` and `cmh`.  Returns the
     resulting key value in `key`.
 *   Do `zx_mbo_read()` to read the message from the MBO that was
-    unqueued by `zx_msgqueue_read()` into `buffer`.
+    unqueued by `zx_msgqueue_wait()` into `buffer`.
     *   If the message was fully read into the buffer, the MBO is
         truncated (i.e. its copy of the message is dropped).  This is
         to allow the direct-copy optimisation.
@@ -651,7 +651,7 @@ could be reordered or done in parallel:
 To simplify the work of converting servers to accept requests via both
 MBOs and legacy messages, we can temporarily extend CMHs with a
 "legacy reply mode": When a legacy request message is read into a CMH
-using `zx_msgqueue_read()`, the CMH will store a reference to the
+using `zx_msgqueue_wait()`, the CMH will store a reference to the
 channel endpoint that the request was written to.  Calling
 `zx_cmh_send_reply()` on that CMH will then enqueue the reply as a
 legacy message so that it is readable from that channel endpoint.
