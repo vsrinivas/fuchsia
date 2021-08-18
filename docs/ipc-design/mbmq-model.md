@@ -137,9 +137,9 @@ a different callee.
     `enqueued_as_request`.
 
     If the channel has an associated destination MsgQueue, as set by
-    `zx_channel_redirect()`, the MBO will be enqueued onto that
+    `zx_object_set_msgqueue()`, the MBO will be enqueued onto that
     MsgQueue and its `key` field will be set to the key value that was
-    set by `zx_channel_redirect()`.  Otherwise, the MBO will be
+    set by `zx_object_set_msgqueue()`.  Otherwise, the MBO will be
     enqueued on the channel so that it is readable from the channel's
     opposite endpoint.
 
@@ -166,7 +166,7 @@ a different callee.
     process to determine which channel the message was sent on (for
     requests) or which request this is a reply to (for replies).
 
-*   `zx_channel_redirect(channel_or_mbo, msgqueue, key)`
+*   `zx_object_set_msgqueue(channel_or_mbo, msgqueue, key)`
 
     Sets the associated destination MsgQueue for a channel or an MBO.
 
@@ -612,8 +612,8 @@ could be reordered or done in parallel:
 *   Switch processes over to using MsgQueues instead of Zircon ports.
     An initial conversion can replace uses of `zx_object_wait_async()`
     with `zx_object_wait_async_mbo()`, but a later version should use
-    `zx_channel_redirect()` for waiting on channels, which should give
-    some performance improvements.
+    `zx_object_set_msgqueue()` for waiting on channels, which should
+    give some performance improvements.
 
 *   Change all server processes to accept requests via both MBO
     messages and legacy messages.  Servers will send replies via
@@ -698,9 +698,9 @@ In the MBMQ model, a key value is used by a process to identify which
 of its incoming channels a message came from, or which of its earlier
 requests an incoming reply corresponds to.  A process can use whatever
 key values it wants when passing them to `zx_object_wait_async()` or
-`zx_channel_redirect()`.  We expect that the typical usage will be for
-a process to treat a key as being a pointer to some data structure in
-its address space.
+`zx_object_set_msgqueue()`.  We expect that the typical usage will be
+for a process to treat a key as being a pointer to some data structure
+in its address space.
 
 ### "Caller" and "callee"
 
