@@ -35,8 +35,8 @@ use {
     fuchsia_component_test::builder::*,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
-    log::*,
     std::sync::Arc,
+    tracing::*,
 };
 
 const DETECT_PROGRAM_URL: &str =

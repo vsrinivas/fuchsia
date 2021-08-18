@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/diagnostics/log/encoding/rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

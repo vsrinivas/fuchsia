@@ -19,16 +19,16 @@ rustc_binary("bin") {
   deps = [
     "//src/developer/fuchsia-criterion",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracint",
   ]
 }

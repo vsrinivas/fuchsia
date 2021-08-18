@@ -9,11 +9,11 @@ use fuchsia_async::futures::StreamExt;
 use fuchsia_component::client::{launcher, App, AppBuilder};
 use fuchsia_zircon::{Duration, Time};
 use inspect_fetcher::InspectFetcher;
-use log::*;
 use serde_json::{self, Value};
 use std::fs::{create_dir, File};
 use std::io::Read;
 use std::{thread, time};
+use tracing::*;
 
 // When to give up on polling for a change and fail the test. DNS if less than 120 sec.
 static GIVE_UP_POLLING_SECS: i64 = 120;

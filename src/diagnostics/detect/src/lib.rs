@@ -22,10 +22,10 @@ use {
     futures::StreamExt,
     glob::glob,
     injectable_time::MonotonicTime,
-    log::{error, info, warn},
     serde_derive::Deserialize,
     snapshot::SnapshotRequest,
     std::collections::HashMap,
+    tracing::{error, info, warn},
 };
 
 const MINIMUM_CHECK_TIME_NANOS: i64 = 60 * 1_000_000_000;

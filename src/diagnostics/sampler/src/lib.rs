@@ -9,8 +9,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, health::Reporter},
     futures::{StreamExt, TryStreamExt},
-    log::{info, warn},
     sampler_config as config,
+    tracing::{info, warn},
 };
 
 mod diagnostics;

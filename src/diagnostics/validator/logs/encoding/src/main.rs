@@ -8,8 +8,8 @@ use fidl_fuchsia_diagnostics::Severity;
 use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
 use fidl_fuchsia_validate_logs::EncodingPuppetMarker;
 use fuchsia_component::client::{launch, launcher};
-use log::*;
 use std::convert::TryInto;
+use tracing::*;
 
 /// Validate Log VMO formats written by 'puppet' programs controlled by
 /// this Validator program.
@@ -20,9 +20,8 @@ struct Opt {
     puppet_url: String,
 }
 
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&[]).unwrap();
     let Opt { puppet_url } = argh::from_env();
     let app = launch(&launcher().unwrap(), puppet_url.to_string(), None)?;
     let proxy = app.connect_to_protocol::<EncodingPuppetMarker>()?;

@@ -566,6 +566,7 @@ async fn launch_v1_v2_bridge_test() {
     assert_eq!(
         logs,
         vec![
+            "Logging initialized".to_string(),
             "my debug message.".to_string(),
             "my info message.".to_string(),
             "my warn message.".to_string()

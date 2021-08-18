@@ -4,7 +4,7 @@
 
 use {
     anyhow::{bail, Error},
-    log::warn,
+    tracing::warn,
 };
 
 /// Loads an argh struct from the command line.

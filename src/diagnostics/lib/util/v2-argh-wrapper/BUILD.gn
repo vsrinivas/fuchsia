@@ -13,7 +13,7 @@ rustc_library("v2-argh-wrapper") {
   deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/lib.rs" ]

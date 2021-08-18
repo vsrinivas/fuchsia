@@ -5,8 +5,6 @@
 
 //! Publish diagnostics as a stream of log messages.
 
-use diagnostics_log_encoding::Severity;
-use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fuchsia_component::client::connect_to_protocol;
@@ -26,6 +24,9 @@ mod sink;
 
 use filter::InterestFilter;
 use sink::Sink;
+
+// Publicly export `Interest` and `Severity` since they are part of the `PublishOptions` API.
+pub use fidl_fuchsia_diagnostics::{Interest, Severity};
 
 /// Calls [init_publishing`] and spawns the interest listener future as a `fuchsia_async::Task`.
 ///

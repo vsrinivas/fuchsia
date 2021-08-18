@@ -177,7 +177,7 @@ mod tests {
     use super::*;
     use futures::{prelude::*, stream::iter as iter2stream};
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn empty_multiplexer_terminates() {
         let (mux, handle) = Multiplexer::<i32>::new();
         handle.close();
@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(observed, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn empty_input_streams_terminate() {
         let (mux, handle) = Multiplexer::<i32>::new();
 
@@ -200,7 +200,7 @@ mod tests {
         assert_eq!(observed, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn outputs_are_ordered() {
         let (mux, handle) = Multiplexer::<i32>::new();
         handle.send("first", Box::pin(iter2stream(vec![1, 3, 5, 7])) as PinStream<i32>);
@@ -213,7 +213,7 @@ mod tests {
         assert_eq!(observed, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn semi_sorted_substream_semi_sorted() {
         let (mux, handle) = Multiplexer::<i32>::new();
         handle.send("unordered", Box::pin(iter2stream(vec![1, 7, 3, 5])) as PinStream<i32>);
@@ -226,7 +226,7 @@ mod tests {
         assert_eq!(observed, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn single_stream() {
         let (mut send, recv) = futures::channel::mpsc::unbounded();
         let (mut mux, handle) = Multiplexer::<i32>::new();
@@ -249,7 +249,7 @@ mod tests {
         assert_eq!(observed, vec![2, 3, 4, 5, 6]);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn two_streams_merged() {
         let (mut send1, recv1) = futures::channel::mpsc::unbounded();
         let (mut send2, recv2) = futures::channel::mpsc::unbounded();
@@ -285,7 +285,7 @@ mod tests {
         assert!(mux.next().await.is_none());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn new_sub_streams_are_merged() {
         let (mut send1, recv1) = futures::channel::mpsc::unbounded();
         let (mut send2, recv2) = futures::channel::mpsc::unbounded();
@@ -318,7 +318,7 @@ mod tests {
         assert!(mux.next().await.is_none(), "all substreams terminated, now we can close");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn snapshot_with_stopped_substream() {
         let (mut send1, recv1) = futures::channel::mpsc::unbounded();
         let (mut send2, recv2) = futures::channel::mpsc::unbounded();

@@ -33,10 +33,16 @@ use tracing::{debug, info, trace};
 const TEST_PACKET_LEN: usize = 49;
 const MAX_PUPPETS: usize = 5;
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test(logging = false)]
 async fn test_budget() {
-    fuchsia_syslog::init().unwrap();
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
+    let _ = diagnostics_log::init_publishing(diagnostics_log::PublishOptions {
+        interest: diagnostics_log::Interest {
+            min_severity: Some(diagnostics_log::Severity::Debug),
+            ..diagnostics_log::Interest::EMPTY
+        },
+        ..Default::default()
+    })
+    .unwrap();
 
     info!("testing that the archivist's log buffers correctly enforce their budget");
 

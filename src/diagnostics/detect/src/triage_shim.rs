@@ -67,9 +67,8 @@ mod test {
         }
     ]"#;
 
-    #[test]
+    #[fuchsia::test(logging_tags = ["detect"])]
     fn library_calls_work() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&["detect"]).unwrap();
         let configs = hashmap! { "foo.triage".to_string() => CONFIG.to_string() };
         let lib = TriageLib::new(configs)?;
         let data = vec![DiagnosticData::new(
