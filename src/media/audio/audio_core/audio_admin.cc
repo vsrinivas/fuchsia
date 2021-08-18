@@ -4,7 +4,6 @@
 
 #include "src/media/audio/audio_core/audio_admin.h"
 
-#include <fcntl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
@@ -18,12 +17,14 @@ namespace media::audio {
 
 AudioAdmin::AudioAdmin(StreamVolumeManager* stream_volume_manager,
                        PolicyActionReporter* policy_action_reporter,
-                       ActivityDispatcher* activity_dispatcher, async_dispatcher_t* fidl_dispatcher,
-                       BehaviorGain behavior_gain)
+                       ActivityDispatcher* activity_dispatcher,
+                       ActiveStreamCountReporter* active_stream_count_reporter,
+                       async_dispatcher_t* fidl_dispatcher, BehaviorGain behavior_gain)
     : behavior_gain_(behavior_gain),
       stream_volume_manager_(*stream_volume_manager),
       policy_action_reporter_(*policy_action_reporter),
       activity_dispatcher_(*activity_dispatcher),
+      active_stream_count_reporter_(active_stream_count_reporter),
       fidl_dispatcher_(fidl_dispatcher) {
   FX_DCHECK(stream_volume_manager);
   FX_DCHECK(policy_action_reporter);
@@ -55,17 +56,17 @@ void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Us
   });
 }
 
-bool AudioAdmin::IsActive(fuchsia::media::AudioRenderUsage usage) {
+bool AudioAdmin::IsActive(RenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::IsActive(Render)");
   std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
-  auto usage_index = fidl::ToUnderlying(usage);
+  auto usage_index = static_cast<std::underlying_type_t<RenderUsage>>(usage);
   return active_streams_playback_[usage_index].size() > 0;
 }
 
-bool AudioAdmin::IsActive(fuchsia::media::AudioCaptureUsage usage) {
+bool AudioAdmin::IsActive(CaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::IsActive(Capture)");
   std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
-  auto usage_index = fidl::ToUnderlying(usage);
+  auto usage_index = static_cast<std::underlying_type_t<CaptureUsage>>(usage);
   return active_streams_capture_[usage_index].size() > 0;
 }
 
@@ -185,17 +186,17 @@ void AudioAdmin::UpdatePolicy() {
   // Store |active_usages| for Reporter logging.
   std::vector<fuchsia::media::Usage> active_usages;
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; ++i) {
-    auto usage = static_cast<fuchsia::media::AudioRenderUsage>(i);
-    if (IsActive(usage)) {
-      active_usages.push_back(fuchsia::media::Usage::WithRenderUsage(std::move(usage)));
-      set_new_policies(usage);
+    if (IsActive(static_cast<RenderUsage>(i))) {
+      active_usages.push_back(
+          fuchsia::media::Usage::WithRenderUsage(static_cast<fuchsia::media::AudioRenderUsage>(i)));
+      set_new_policies(static_cast<fuchsia::media::AudioRenderUsage>(i));
     }
   }
   for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; ++i) {
-    auto usage = static_cast<fuchsia::media::AudioCaptureUsage>(i);
-    if (IsActive(usage)) {
-      active_usages.push_back(fuchsia::media::Usage::WithCaptureUsage(std::move(usage)));
-      set_new_policies(usage);
+    if (IsActive(static_cast<CaptureUsage>(i))) {
+      active_usages.push_back(fuchsia::media::Usage::WithCaptureUsage(
+          static_cast<fuchsia::media::AudioCaptureUsage>(i)));
+      set_new_policies(static_cast<fuchsia::media::AudioCaptureUsage>(i));
     }
   }
   ApplyNewPolicies(new_renderer_policies, new_capturer_policies);
@@ -203,63 +204,98 @@ void AudioAdmin::UpdatePolicy() {
                                                 new_capturer_policies);
 }
 
+// As needed by the ActivityReporter, "activity" counts FIDL usages (not ultrasound).
 void AudioAdmin::UpdateRenderActivity() {
   TRACE_DURATION("audio", "AudioAdmin::UpdateRenderActivity");
   std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
 
   std::bitset<fuchsia::media::RENDER_USAGE_COUNT> render_activity;
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
-    if (IsActive(static_cast<fuchsia::media::AudioRenderUsage>(i))) {
+    if (IsActive(kRenderUsages[i])) {
       render_activity.set(i);
     }
   }
   activity_dispatcher_.OnRenderActivityChanged(render_activity);
 }
 
+// As needed by ActivityReporter, "activity" counts FIDL usages (not loopback or ultrasound).
 void AudioAdmin::UpdateCaptureActivity() {
   TRACE_DURATION("audio", "AudioAdmin::UpdateCaptureActivity");
   std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
 
   std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> capture_activity;
   for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
-    if (IsActive(static_cast<fuchsia::media::AudioCaptureUsage>(i))) {
+    if (IsActive(kCaptureUsages[i])) {
       capture_activity.set(i);
     }
   }
   activity_dispatcher_.OnCaptureActivityChanged(capture_activity);
 }
 
-void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
+void AudioAdmin::UpdateActiveStreamCount(StreamUsage stream_usage) {
+  if (active_stream_count_reporter_) {
+    if (stream_usage.is_capture_usage()) {
+      auto usage = stream_usage.capture_usage();
+      auto usage_index = static_cast<std::underlying_type_t<CaptureUsage>>(usage);
+      active_stream_count_reporter_->OnActiveCaptureCountChanged(
+          usage, active_streams_capture_[usage_index].size());
+    } else {
+      auto usage = stream_usage.render_usage();
+      auto usage_index = static_cast<std::underlying_type_t<RenderUsage>>(usage);
+      active_stream_count_reporter_->OnActiveRenderCountChanged(
+          usage, active_streams_playback_[usage_index].size());
+    }
+  }
+}
+
+void AudioAdmin::UpdateRendererState(RenderUsage usage, bool active,
                                      fuchsia::media::AudioRenderer* renderer) {
   async::PostTask(fidl_dispatcher_, [this, usage = usage, active = active, renderer = renderer] {
     TRACE_DURATION("audio", "AudioAdmin::UpdateRendererState");
     std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
-    auto usage_index = fidl::ToUnderlying(usage);
-    FX_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT);
+
+    auto usage_index = static_cast<std::underlying_type_t<RenderUsage>>(usage);
     if (active) {
-      active_streams_playback_[usage_index].insert(renderer);
+      auto result = active_streams_playback_[usage_index].insert(renderer);
+      if (!result.second) {
+        FX_LOGS(ERROR) << "Renderer " << renderer
+                       << " NOT inserted:  " << RenderUsageToString(usage);
+      }
     } else {
-      active_streams_playback_[usage_index].erase(renderer);
+      if (!active_streams_playback_[usage_index].erase(renderer)) {
+        // Unrecognized renderer, or it was already destroyed. This is generally a logic error.
+        FX_LOGS(ERROR) << "Unrecognized renderer " << renderer
+                       << " NOT removed :  " << RenderUsageToString(usage);
+      }
     }
 
+    UpdateActiveStreamCount(StreamUsage::WithRenderUsage(usage));
     UpdatePolicy();
     UpdateRenderActivity();
   });
 }
 
-void AudioAdmin::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
+void AudioAdmin::UpdateCapturerState(CaptureUsage usage, bool active,
                                      fuchsia::media::AudioCapturer* capturer) {
   async::PostTask(fidl_dispatcher_, [this, usage = usage, active = active, capturer = capturer] {
     TRACE_DURATION("audio", "AudioAdmin::UpdateCapturerState");
     std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
-    auto usage_index = fidl::ToUnderlying(usage);
-    FX_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT);
+
+    auto usage_index = static_cast<std::underlying_type_t<CaptureUsage>>(usage);
     if (active) {
-      active_streams_capture_[usage_index].insert(capturer);
+      auto result = active_streams_capture_[usage_index].insert(capturer);
+      if (!result.second) {
+        FX_LOGS(ERROR) << "Capturer " << capturer
+                       << " NOT inserted: " << CaptureUsageToString(usage);
+      }
     } else {
-      active_streams_capture_[usage_index].erase(capturer);
+      if (!active_streams_capture_[usage_index].erase(capturer)) {
+        FX_LOGS(ERROR) << "Unrecognized capturer " << capturer
+                       << " NOT removed:  " << CaptureUsageToString(usage);
+      }
     }
 
+    UpdateActiveStreamCount(StreamUsage::WithCaptureUsage(usage));
     UpdatePolicy();
     UpdateCaptureActivity();
   });

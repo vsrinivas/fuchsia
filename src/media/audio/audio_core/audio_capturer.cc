@@ -49,16 +49,14 @@ AudioCapturer::~AudioCapturer() {
 void AudioCapturer::ReportStart() {
   BaseCapturer::ReportStart();
   if (!loopback_) {
-    context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
-                                                true, this);
+    context().audio_admin().UpdateCapturerState(usage_, true, this);
   }
 }
 
 void AudioCapturer::ReportStop() {
   BaseCapturer::ReportStop();
   if (!loopback_) {
-    context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
-                                                false, this);
+    context().audio_admin().UpdateCapturerState(usage_, false, this);
   }
 }
 
@@ -168,16 +166,18 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
     return;
   }
 
-  context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
-                                              false, this);
+  State state = capture_state();
+  if (state == State::SyncOperating || state == State::AsyncOperating) {
+    context().audio_admin().UpdateCapturerState(usage_, false, this);
+  }
+
   usage_ = CaptureUsageFromFidlCaptureUsage(usage);
   reporter().SetUsage(usage_);
   context().volume_manager().NotifyStreamChanged(this);
-  State state = capture_state();
   SetRoutingProfile(StateIsRoutable(state));
+
   if (state == State::SyncOperating || state == State::AsyncOperating) {
-    context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
-                                                true, this);
+    context().audio_admin().UpdateCapturerState(usage_, true, this);
   }
 }
 

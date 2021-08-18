@@ -5,18 +5,17 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_ADMIN_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_ADMIN_H_
 
-#include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/thread_checker.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <unordered_set>
 
-#include <fbl/unique_fd.h>
-
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/policy_loader.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 
 namespace media {
 namespace audio {
@@ -55,6 +54,15 @@ class AudioAdmin {
         std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity) = 0;
   };
 
+  // An interface by which |AudioAdmin| reports changes in active stream counts, by Usage. This
+  // includes non-FIDL usages such as ULTRASOUND.
+  class ActiveStreamCountReporter {
+   public:
+    // To be overridden by child implementations
+    virtual void OnActiveRenderCountChanged(RenderUsage usage, uint32_t active_count) {}
+    virtual void OnActiveCaptureCountChanged(CaptureUsage usage, uint32_t active_count) {}
+  };
+
   static constexpr BehaviorGain kDefaultGainBehavior = {
       .none_gain_db = 0.0f,
       .duck_gain_db = -35.0f,
@@ -69,7 +77,9 @@ class AudioAdmin {
   //
   // |gain_adjustment| must be non-null.
   AudioAdmin(StreamVolumeManager* volume_manager, PolicyActionReporter* policy_action_reporter,
-             ActivityDispatcher* activity_dispatcher, async_dispatcher_t* fidl_dispatcher,
+             ActivityDispatcher* activity_dispatcher,
+             ActiveStreamCountReporter* active_stream_count_reporter,
+             async_dispatcher_t* fidl_dispatcher,
              BehaviorGain behavior_gain = kDefaultGainBehavior);
 
   // Sets the interaction behavior between |active| and |affected| usages.
@@ -85,14 +95,13 @@ class AudioAdmin {
   // Clears all configured behaviors and then applies the rules in the provided AudioPolicy.
   void SetInteractionsFromAudioPolicy(AudioPolicy policy);
 
-  // Interface used by AudiolCoreImpl for accounting
-  void UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
-                           fuchsia::media::AudioRenderer* renderer);
-  void UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
+  // Interfaces used by AudioCoreImpl for active-stream accounting
+  void UpdateRendererState(RenderUsage usage, bool active, fuchsia::media::AudioRenderer* renderer);
+  void UpdateCapturerState(CaptureUsage usage, bool active,
                            fuchsia::media::AudioCapturer* capturer);
 
-  bool IsActive(fuchsia::media::AudioRenderUsage usage);
-  bool IsActive(fuchsia::media::AudioCaptureUsage usage);
+  bool IsActive(RenderUsage usage);
+  bool IsActive(CaptureUsage usage);
 
  protected:
   using RendererPolicies = std::array<fuchsia::media::Behavior, fuchsia::media::RENDER_USAGE_COUNT>;
@@ -106,6 +115,7 @@ class AudioAdmin {
   StreamVolumeManager& stream_volume_manager_ FXL_GUARDED_BY(fidl_thread_checker_);
   PolicyActionReporter& policy_action_reporter_ FXL_GUARDED_BY(fidl_thread_checker_);
   ActivityDispatcher& activity_dispatcher_ FXL_GUARDED_BY(fidl_thread_checker_);
+  ActiveStreamCountReporter* active_stream_count_reporter_ FXL_GUARDED_BY(fidl_thread_checker_);
 
   // Ensures we are always on the thread on which the class was constructed, which should
   // be the FIDL thread.
@@ -115,6 +125,8 @@ class AudioAdmin {
   void UpdatePolicy();
   void UpdateRenderActivity();
   void UpdateCaptureActivity();
+  void UpdateActiveStreamCount(StreamUsage stream_usage)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(fidl_thread_checker_);
 
   // Helpers to make the control of streams cleaner.
   void SetUsageNone(fuchsia::media::AudioRenderUsage usage);
@@ -159,11 +171,9 @@ class AudioAdmin {
   PolicyRules active_rules_ FXL_GUARDED_BY(fidl_thread_checker_);
 
   std::unordered_set<fuchsia::media::AudioRenderer*>
-      active_streams_playback_[fuchsia::media::RENDER_USAGE_COUNT] FXL_GUARDED_BY(
-          fidl_thread_checker_);
+      active_streams_playback_[kStreamRenderUsageCount] FXL_GUARDED_BY(fidl_thread_checker_);
   std::unordered_set<fuchsia::media::AudioCapturer*>
-      active_streams_capture_[fuchsia::media::CAPTURE_USAGE_COUNT] FXL_GUARDED_BY(
-          fidl_thread_checker_);
+      active_streams_capture_[kStreamCaptureUsageCount] FXL_GUARDED_BY(fidl_thread_checker_);
 };
 
 }  // namespace audio

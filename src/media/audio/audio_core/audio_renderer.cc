@@ -26,10 +26,9 @@ AudioRenderer::AudioRenderer(
 }
 
 AudioRenderer::~AudioRenderer() {
-  // This happens in ReportStop, which is called via BaseRenderer::~BaseRenderer(),
-  // however that destructor does not call AudioRenderer::ReportStop because the subclass
-  // (AudioRenderer) has already been destructed.
-  context().audio_admin().UpdateRendererState(usage_, false, this);
+  // We (not ~BaseRenderer) must call this, because our ReportStop is gone when parent dtor runs
+  ReportStopIfStarted();
+
   context().volume_manager().RemoveStream(this);
 }
 
@@ -42,12 +41,12 @@ void AudioRenderer::OnLinkAdded() {
 
 void AudioRenderer::ReportStart() {
   BaseRenderer::ReportStart();
-  context().audio_admin().UpdateRendererState(usage_, true, this);
+  context().audio_admin().UpdateRendererState(RenderUsageFromFidlRenderUsage(usage_), true, this);
 }
 
 void AudioRenderer::ReportStop() {
   BaseRenderer::ReportStop();
-  context().audio_admin().UpdateRendererState(usage_, false, this);
+  context().audio_admin().UpdateRendererState(RenderUsageFromFidlRenderUsage(usage_), false, this);
 }
 
 void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {

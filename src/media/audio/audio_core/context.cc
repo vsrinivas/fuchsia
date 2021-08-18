@@ -44,7 +44,7 @@ class ContextImpl : public Context {
                         process_config_, clock_factory_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
                                process_config_.default_render_usage_volumes()),
-        audio_admin_(&stream_volume_manager_, &usage_reporter_, &activity_dispatcher_,
+        audio_admin_(&stream_volume_manager_, &usage_reporter_, &activity_dispatcher_, nullptr,
                      threading_model_->FidlDomain().dispatcher()),
         vmar_manager_(
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
@@ -53,7 +53,6 @@ class ContextImpl : public Context {
         audio_tuner_(*this),
         audio_(this) {
     FX_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
-
     zx_status_t res = device_manager_.Init();
     FX_DCHECK(res == ZX_OK);
 
@@ -111,6 +110,8 @@ class ContextImpl : public Context {
 
   // Router for volume changes.
   StreamVolumeManager stream_volume_manager_;
+
+  // AudioAdmin::ActiveStreamCountReporter active_stream_count_reporter_;
 
   UsageReporterImpl usage_reporter_;
 

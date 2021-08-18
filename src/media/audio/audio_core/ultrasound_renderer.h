@@ -25,7 +25,7 @@ class UltrasoundRenderer : public BaseRenderer {
   UltrasoundRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request,
                      Context* context,
                      fuchsia::ultrasound::Factory::CreateRendererCallback callback);
-  ~UltrasoundRenderer() override = default;
+  ~UltrasoundRenderer() override;
 
  private:
   // |media::audio::AudioObject|
@@ -37,7 +37,11 @@ class UltrasoundRenderer : public BaseRenderer {
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
 
-  // |fuchsia::media::AudioRenderer|
+  // |fuchsia::media::BaseRenderer|
+  void ReportStart() final;
+  void ReportStop() final;
+
+  // |fuchsia::media::BaseRenderer| but unsupported by UltrasoundRenderer
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
   void SetUsage(fuchsia::media::AudioRenderUsage usage) final;
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;

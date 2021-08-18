@@ -76,6 +76,9 @@ class BaseRenderer : public AudioObject,
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
 
+  void ReportStartIfStopped();
+  void ReportStopIfStarted();
+  // Extensible by children, but the parent must also be called
   virtual void ReportStart();
   virtual void ReportStop();
 
