@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+declare_args() {
+  # Optional display id that will be used by scenic instead of the first
+  # display available.
+  # TODO(fxb/76985): Remove this when we have proper multi-display support.
+  scenic_chromebook_i_can_haz_display_id = ""
+}
+
+config_data("chromebook") {
+  for_pkg = "scenic"
+  if (scenic_chromebook_i_can_haz_display_id != "") {
+    sources = [ rebase_path("chromebook_i_can_haz_display_id_" +
+                            scenic_chromebook_i_can_haz_display_id) ]
+  } else {
+    sources = [ rebase_path("chromebook") ]
+  }
+  outputs = [ "scenic_config" ]
+}

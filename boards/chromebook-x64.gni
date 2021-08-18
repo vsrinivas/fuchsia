@@ -46,7 +46,7 @@ board_bootfs_labels -= [ "//src/power/power-manager:base_config" ]
 board_bootfs_labels += [ "//src/power/power-manager:chromebook_config" ]
 
 board_package_labels += [
-  "//src/ui/scenic:frame-scheduler-min-predicted-frame-duration-in-us--15000",
+  "//src/ui/scenic/config:chromebook",
   "//src/chromium/web_engine/config:force-device-scale-factor--1_25",
 ]
 

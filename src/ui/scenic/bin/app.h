@@ -8,6 +8,7 @@
 #include <lib/async/cpp/executor.h>
 
 #include <memory>
+#include <optional>
 
 #include "lib/async/dispatcher.h"
 #include "src/lib/async-watchdog/watchdog.h"
@@ -60,6 +61,8 @@ struct ConfigValues {
   bool pointer_auto_focus_on = true;
   flatland::BufferCollectionImportMode flatland_buffer_collection_import_mode =
       flatland::BufferCollectionImportMode::AttemptDisplayConstraints;
+  // TODO(fxb/76985): Remove this when we have proper multi-display support.
+  std::optional<uint64_t> i_can_haz_display_id;
 };
 
 class App {

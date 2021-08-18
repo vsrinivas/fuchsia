@@ -67,6 +67,12 @@ scenic_impl::ConfigValues ReadConfig() {
       values.flatland_buffer_collection_import_mode =
           flatland::StringToBufferCollectionImportMode(flatland_buffer_collection_import_mode_str);
     }
+
+    if (document.HasMember("i_can_haz_display_id")) {
+      auto& val = document["i_can_haz_display_id"];
+      FX_CHECK(val.IsUint()) << "i_can_haz_display_id must be an integer";
+      values.i_can_haz_display_id = val.GetUint();
+    }
   } else {
     FX_LOGS(INFO) << "No config file found at /config/data/scenic_config; using default values";
   }
@@ -79,6 +85,7 @@ scenic_impl::ConfigValues ReadConfig() {
                 << (flatland_buffer_collection_import_mode_str.empty()
                         ? "attempt_display_constraints"
                         : flatland_buffer_collection_import_mode_str);
+  FX_LOGS(INFO) << "Scenic i_can_haz_display_id: " << values.i_can_haz_display_id.value_or(0);
 
   return values;
 }
@@ -185,6 +192,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
   // Instantiate DisplayManager and schedule a task to inject the display controller into it, once
   // it becomes available.
   display_manager_ = std::make_unique<display::DisplayManager>(
+      config_values_.i_can_haz_display_id,
       [this, completer = std::move(display_bridge.completer)]() mutable {
         completer.complete_ok(display_manager_->default_display_shared());
       });

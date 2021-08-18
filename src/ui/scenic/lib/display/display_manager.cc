@@ -13,7 +13,12 @@ namespace scenic_impl {
 namespace display {
 
 DisplayManager::DisplayManager(fit::closure display_available_cb)
-    : display_available_cb_(std::move(display_available_cb)) {}
+    : DisplayManager(std::nullopt, std::move(display_available_cb)) {}
+
+DisplayManager::DisplayManager(std::optional<uint64_t> i_can_haz_display_id,
+                               fit::closure display_available_cb)
+    : i_can_haz_display_id_(i_can_haz_display_id),
+      display_available_cb_(std::move(display_available_cb)) {}
 
 void DisplayManager::BindDefaultDisplayController(
     fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller,
@@ -40,28 +45,34 @@ void DisplayManager::BindDefaultDisplayController(
 
 void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
                                        std::vector<uint64_t> removed) {
-  if (!default_display_) {
-    FX_DCHECK(added.size());
-
-    auto& display = added[0];
+  for (auto& display : added) {
     auto& mode = display.modes[0];
 
-    default_display_ =
-        std::make_unique<Display>(display.id, mode.horizontal_resolution, mode.vertical_resolution,
-                                  std::move(display.pixel_format));
-    OnClientOwnershipChange(owns_display_controller_);
-
-    if (display_available_cb_) {
-      display_available_cb_();
-      display_available_cb_ = nullptr;
+    // Ignore display if |i_can_haz_display_id| is set and it doesn't match ID.
+    if (i_can_haz_display_id_.has_value() && display.id != *i_can_haz_display_id_) {
+      FX_LOGS(INFO) << "Ignoring display with id=" << display.id
+                    << " ... waiting for display with id=" << *i_can_haz_display_id_;
+      continue;
     }
-  } else {
-    for (uint64_t id : removed) {
-      if (default_display_->display_id() == id) {
-        // TODO(fxbug.dev/23490): handle this more robustly.
-        FX_CHECK(false) << "Display disconnected";
-        return;
+
+    if (!default_display_) {
+      default_display_ =
+          std::make_unique<Display>(display.id, mode.horizontal_resolution,
+                                    mode.vertical_resolution, std::move(display.pixel_format));
+      OnClientOwnershipChange(owns_display_controller_);
+
+      if (display_available_cb_) {
+        display_available_cb_();
+        display_available_cb_ = nullptr;
       }
+    }
+  }
+
+  for (uint64_t id : removed) {
+    if (default_display_->display_id() == id) {
+      // TODO(fxbug.dev/23490): handle this more robustly.
+      FX_CHECK(false) << "Display disconnected";
+      return;
     }
   }
 }
@@ -100,7 +111,6 @@ void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp,
     return;
   }
   if (default_display_->display_id() != display_id) {
-    FX_LOGS(INFO) << "DisplayManager received Vsync for unknown display: " << display_id;
     return;
   }
   default_display_->OnVsync(zx::time(timestamp), std::move(image_ids));
