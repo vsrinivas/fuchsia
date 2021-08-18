@@ -258,11 +258,15 @@ function get-image-src-path {
 # Run gsutil from the directory of this script if it exists, otherwise
 # use the path.
 function run-gsutil {
+  # Locate the gsutil program.
+  # Give the highest precedence to gsutil in our SCRIPT_SRC_DIR.
   GSUTIL_BIN="${SCRIPT_SRC_DIR}/gsutil"
   if [[ ! -e "${GSUTIL_BIN}" ]]; then
+    # Since it isn't in SCRIPT_SRC_DIR, try the $PATH.
     GSUTIL_BIN="$(command -v gsutil)"
   fi
   if [[ ! -e "${GSUTIL_BIN}" ]]; then
+    # As a fallback, let the gsutil.py determine where gsutil is.
     GSUTIL_BIN="$(command -v gsutil.py)"
   fi
 
