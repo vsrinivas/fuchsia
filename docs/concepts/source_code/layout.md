@@ -1,9 +1,15 @@
 # Source code layout
 
-## Status
+## Searching source code
 
-We are currently migrating to this source code layout. Some aspects of this
-document reflect the current reality, but some aspects are still aspirational.
+To view and search the Fuchsia source code, there are the following options:
+
+* [Download the Fuchsia source code](/docs/get-started/get_fuchsia_source.md):
+  Requires cloning the git repo locally.
+* [View in Code Source](https://cs.opensource.google/fuchsia/fuchsia):
+  Feature rich source viewer that supports full navigation and edit features.
+* [View in Fuchsia git repository](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main):
+  Basic repository viewer.
 
 ## Overview
 
