@@ -1,6 +1,8 @@
 # Out-of-tree system testing support
 
-- Project leads: shayba@google.com, scottbyer@google.com, TODO more
+- Project leads: shayba@google.com, ananthak@google.com, fsamuel@google.com
+- Project partners: borthakur@google.com, jasoncampbell@google.com,
+  lite@google.com, ppi@google.com
 - Area: Testing
 
 ## Problem statement
