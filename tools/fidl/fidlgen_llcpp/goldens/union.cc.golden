@@ -146,6 +146,7 @@ extern "C" const fidl_type_t
                        StrictXUnionHenceResponseMayBeStackAllocated>::
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>>
@@ -163,6 +164,7 @@ extern "C" const fidl_type_t
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
         zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>>
@@ -185,6 +187,7 @@ namespace fidl_test_union {
         ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>>
@@ -205,6 +208,7 @@ namespace fidl_test_union {
                        FlexibleXUnionHenceResponseMustBeHeapAllocated>::
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
@@ -222,6 +226,7 @@ namespace fidl_test_union {
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
         zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
@@ -244,6 +249,7 @@ namespace fidl_test_union {
         ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
@@ -362,6 +368,7 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                           StrictXUnionHenceResponseMayBeStackAllocated>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
@@ -403,6 +410,7 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                           StrictXUnionHenceResponseMayBeStackAllocated>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
@@ -417,6 +425,7 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                 StrictXUnionHenceResponseMayBeStackAllocated>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                           StrictXUnionHenceResponseMayBeStackAllocated>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
@@ -529,6 +538,7 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                           FlexibleXUnionHenceResponseMustBeHeapAllocated>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
@@ -571,6 +581,7 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                           FlexibleXUnionHenceResponseMustBeHeapAllocated>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
@@ -585,6 +596,7 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                 FlexibleXUnionHenceResponseMustBeHeapAllocated>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                           FlexibleXUnionHenceResponseMustBeHeapAllocated>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
@@ -679,6 +691,7 @@ fidl::WireServer<::fidl_test_union::TestProtocol>::dispatch_message(
     ::fidl_test_union::TestProtocol::
         StrictXUnionHenceResponseMayBeStackAllocated>::
     Reply(::fidl_test_union::wire::StrictBoundedXUnion xu) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>>
@@ -706,6 +719,7 @@ fidl::WireServer<::fidl_test_union::TestProtocol>::dispatch_message(
     ::fidl_test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocated>::
     Reply(::fidl_test_union::wire::OlderSimpleUnion xu) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>>

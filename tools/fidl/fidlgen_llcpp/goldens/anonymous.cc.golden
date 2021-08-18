@@ -69,6 +69,7 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> _client,
     ::fidl_test_anonymous::wire::UnionMember union_member,
     ::fidl_test_anonymous::wire::TableMember table_member) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
@@ -85,6 +86,7 @@ extern "C" const fidl_type_t
     ::fidl_test_anonymous::wire::UnionMember union_member,
     ::fidl_test_anonymous::wire::TableMember table_member,
     zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
@@ -215,6 +217,7 @@ fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::SomeMethod(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid(), union_member,
@@ -254,6 +257,7 @@ fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::SomeMethod(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid(), union_member,
@@ -344,6 +348,7 @@ fidl::WireServer<::fidl_test_anonymous::SomeProtocol>::dispatch_message(
 ::fidl::Result fidl::internal::
     WireCompleterBase<::fidl_test_anonymous::SomeProtocol::SomeMethod>::Reply(
         ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
       _response{::fidl::internal::AllowUnownedInputRef{}, result};

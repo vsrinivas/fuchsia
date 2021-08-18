@@ -53,6 +53,7 @@ extern "C" const fidl_type_t
                    ::fidl_test_placementofattributes::ExampleProtocol>
                    _client,
                const ::exampleusing::wire::Empty& arg) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), arg);

@@ -39,16 +39,15 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
     return PerformTeardown(UnbindInfo::DispatcherError(dispatcher_status));
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
-    uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-    zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
+    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
       fidl_trace(WillLLCPPAsyncChannelRead);
-      IncomingMessage msg = fidl::ChannelReadEtc(
-          handle(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+      IncomingMessage msg = fidl::ChannelReadEtc(handle(), 0, bytes.view(), cpp20::span(handles));
       if (!msg.ok()) {
         return PerformTeardown(fidl::UnbindInfo{msg});
       }
-      fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.byte_actual(),
+      fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes.data(), msg.byte_actual(),
                  msg.handle_actual());
 
       // Flag indicating whether this thread still has access to the binding.

@@ -44,6 +44,7 @@ extern "C" const fidl_type_t
 }  // namespace fidl_test_protocolrequest
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
@@ -57,6 +58,7 @@ extern "C" const fidl_type_t
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
     zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
@@ -76,6 +78,7 @@ namespace fidl_test_protocolrequest {
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
@@ -93,6 +96,7 @@ namespace fidl_test_protocolrequest {
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>::
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
@@ -107,6 +111,7 @@ namespace fidl_test_protocolrequest {
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
@@ -127,6 +132,7 @@ namespace fidl_test_protocolrequest {
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
@@ -144,6 +150,7 @@ namespace fidl_test_protocolrequest {
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
     ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
@@ -179,6 +186,7 @@ namespace fidl_test_protocolrequest {
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
@@ -294,6 +302,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid());
@@ -330,6 +339,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid());
@@ -342,6 +352,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
         _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid());
@@ -438,6 +449,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid());
@@ -475,6 +487,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid());
@@ -487,6 +500,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
             ::fidl_test_protocolrequest::Parent::GetChildRequest>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid());
@@ -680,6 +694,7 @@ fidl::WireServer<::fidl_test_protocolrequest::Parent>::dispatch_message(
 ::fidl::Result fidl::internal::
     WireCompleterBase<::fidl_test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>
       _response{::fidl::internal::AllowUnownedInputRef{}, std::move(c)};
@@ -703,6 +718,7 @@ fidl::WireServer<::fidl_test_protocolrequest::Parent>::dispatch_message(
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::
     Reply(::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>
       _response{::fidl::internal::AllowUnownedInputRef{}, std::move(r)};

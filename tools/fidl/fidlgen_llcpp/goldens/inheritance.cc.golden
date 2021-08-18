@@ -15,6 +15,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super> _client,
     ::fidl::StringView s) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
@@ -27,6 +28,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super> _client,
     ::fidl::StringView s, zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
@@ -143,6 +145,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
@@ -177,6 +180,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
@@ -259,6 +263,7 @@ fidl::WireServer<::fidl_test_inheritance::Super>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_inheritance::Super::Foo>::Reply(int64_t y) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>
       _response{::fidl::internal::AllowUnownedInputRef{}, y};
@@ -301,6 +306,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub> _client,
     ::fidl::StringView s) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
@@ -313,6 +319,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub> _client,
     ::fidl::StringView s, zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
@@ -427,6 +434,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
@@ -460,6 +468,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
@@ -541,6 +550,7 @@ fidl::WireServer<::fidl_test_inheritance::Sub>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_inheritance::Sub::Foo>::Reply(int64_t y) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>
       _response{::fidl::internal::AllowUnownedInputRef{}, y};

@@ -31,6 +31,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 }  // namespace fidl_test_doccomments
 ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
@@ -204,6 +205,7 @@ void ::fidl::WireResponse<
 
 zx_status_t fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent()
     const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
       _response{::fidl::internal::AllowUnownedInputRef{}};

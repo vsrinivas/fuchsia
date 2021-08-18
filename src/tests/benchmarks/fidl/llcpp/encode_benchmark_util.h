@@ -35,6 +35,7 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Encode.
 
     {
+      FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
       ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
                                                     &aligned_value);
       if (!encoded.ok()) {

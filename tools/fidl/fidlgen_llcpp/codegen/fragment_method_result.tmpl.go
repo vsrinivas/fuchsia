@@ -74,6 +74,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
     {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
                           .RequestArgs }})
    {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
       {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "zx_txid_t(0)" .RequestArgs }});
   auto& _outgoing = _request.GetOutgoingMessage();
@@ -93,6 +94,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
     {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
                            .RequestArgs "zx_time_t _deadline" }})
    {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
 	  {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "zx_txid_t(0)" .RequestArgs }});
   auto& _outgoing = _request.GetOutgoingMessage();

@@ -20,7 +20,7 @@
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/internal/server_details.h": "a4bbd93eaa26ba5a6ecff57f3a26b2d0",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/internal/thread_checker.h": "e5aa52fc1efc9dd1abbe286f98d065f8",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/message.h": "32abea8a8d61a9cff81ab38a582e8478",
-  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/message_storage.h": "8ee978f9048c8f4a586bf347a6e8340d",
+  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/message_storage.h": "691d535ab7b0994c2bf74c97c0d71312",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/object_view.h": "3d02fdc85fd22c144376ce11d738331b",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/result.h": "9da06d8bac54d556b7c9159d9e1029b1",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/server.h": "40ceb0134f52344eda70be9596bed423",

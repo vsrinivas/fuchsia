@@ -22,6 +22,7 @@ extern "C" const fidl_type_t
             _client,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
@@ -205,6 +206,7 @@ extern "C" const fidl_type_t
             _client,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_inheritancewithrecursivedecl::Child::First>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
@@ -247,6 +249,7 @@ namespace fidl_test_inheritancewithrecursivedecl {
             _client,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),

@@ -49,6 +49,7 @@ const fragmentMethodCompleterBaseTmpl = `
 {{- IfdefFuchsia -}}
 ::fidl::Result
 {{ .WireCompleterBase.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
     {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .ResponseArgs -}}
   };

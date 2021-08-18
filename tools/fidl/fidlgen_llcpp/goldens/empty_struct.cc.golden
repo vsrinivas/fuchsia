@@ -36,6 +36,7 @@ extern "C" const fidl_type_t
 ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client,
     const ::fidl_test_emptystruct::wire::Empty& e) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), e);
@@ -70,6 +71,7 @@ namespace fidl_test_emptystruct {
     WireResult(::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
                    _client,
                const ::fidl_test_emptystruct::wire::Empty& e) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), e);
@@ -85,6 +87,7 @@ namespace fidl_test_emptystruct {
                    _client,
                const ::fidl_test_emptystruct::wire::Empty& e,
                zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), e);
@@ -249,6 +252,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid(), e);
@@ -287,6 +291,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid(), e);
@@ -475,6 +480,7 @@ fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
     Reply(const ::fidl_test_emptystruct::wire::Empty& e) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
       _response{::fidl::internal::AllowUnownedInputRef{}, e};
@@ -523,6 +529,7 @@ void ::fidl::WireResponse<
 zx_status_t
 fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
     const ::fidl_test_emptystruct::wire::Empty& e) const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
       _response{::fidl::internal::AllowUnownedInputRef{}, e};

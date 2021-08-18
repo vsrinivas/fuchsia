@@ -18,6 +18,7 @@ extern "C" const fidl_type_t
 ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>::
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
@@ -126,6 +127,7 @@ extern "C" const fidl_type_t
 ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>::
     WireResult(
         ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));

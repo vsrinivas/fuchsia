@@ -42,6 +42,7 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client,
     int32_t a, int32_t b) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), a, b);
@@ -55,6 +56,7 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client,
     int32_t a, int32_t b, zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), a, b);
@@ -173,6 +175,7 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid(), a, b);
@@ -208,6 +211,7 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    _context->Txid(), a, b);
@@ -294,6 +298,7 @@ fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_nullable::SimpleProtocol::Add>::Reply(int32_t sum) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>
       _response{::fidl::internal::AllowUnownedInputRef{}, sum};

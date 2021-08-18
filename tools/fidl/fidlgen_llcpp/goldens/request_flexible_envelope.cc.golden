@@ -61,6 +61,7 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>>
@@ -80,6 +81,7 @@ extern "C" const fidl_type_t
             _client,
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
         zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>>
@@ -127,6 +129,7 @@ namespace fidl_test_requestflexibleenvelope {
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>>
@@ -146,6 +149,7 @@ namespace fidl_test_requestflexibleenvelope {
             _client,
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
         zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>>
@@ -293,6 +297,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestStrictResponseFlexible>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
@@ -333,6 +338,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestStrictResponseFlexible>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
@@ -464,6 +470,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestFlexibleResponseStrict>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
@@ -504,6 +511,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestFlexibleResponseStrict>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
@@ -622,6 +630,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 fidl::internal::WireCompleterBase<::fidl_test_requestflexibleenvelope::
                                       Protocol::RequestStrictResponseFlexible>::
     Reply(::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                RequestStrictResponseFlexible>>
@@ -649,6 +658,7 @@ fidl::internal::WireCompleterBase<::fidl_test_requestflexibleenvelope::
 fidl::internal::WireCompleterBase<::fidl_test_requestflexibleenvelope::
                                       Protocol::RequestFlexibleResponseStrict>::
     Reply(::fidl_test_requestflexibleenvelope::wire::StrictFoo f) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                RequestFlexibleResponseStrict>>

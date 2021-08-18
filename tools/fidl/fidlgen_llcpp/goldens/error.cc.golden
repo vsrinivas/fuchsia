@@ -24,6 +24,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 ::fidl::WireResult<::fidl_test_error::Example::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
     ::fidl::StringView s) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
@@ -36,6 +37,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 ::fidl::WireResult<::fidl_test_error::Example::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
     ::fidl::StringView s, zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
       _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
@@ -148,6 +150,7 @@ fidl::WireResponseContext<::fidl_test_error::Example::Foo>::OnRawResult(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
@@ -180,6 +183,7 @@ fidl::WireResponseContext<::fidl_test_error::Example::Foo>::OnRawResult(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
@@ -261,6 +265,7 @@ fidl::WireServer<::fidl_test_error::Example>::dispatch_message(
 ::fidl::Result
 fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
     ::fidl_test_error::wire::ExampleFooResult result) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_error::Example::Foo>>
       _response{::fidl::internal::AllowUnownedInputRef{}, result};

@@ -13,6 +13,19 @@
 #include <memory>
 #include <type_traits>
 
+#if defined(__clang__) && __has_attribute(uninitialized)
+// Attribute "uninitialized" disables -ftrivial-auto-var-init=pattern
+// (automatic variable initialization) for the specified variable.
+// This is a security measure to better reveal memory corruptions and
+// reduce leaking sensitive bits, but FIDL generated code/runtime can
+// sometimes prove that a buffer is always overwritten. In those cases
+// we can use this attribute to disable the compiler-inserted initialization
+// and avoid the performance hit of writing to a large buffer.
+#define FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT __attribute__((uninitialized))
+#else
+#define FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+#endif
+
 namespace fidl {
 
 // Holds a reference to any storage buffer. This is independent of the allocation.
@@ -26,11 +39,16 @@ struct BufferSpan {
 
 namespace internal {
 
-// An stack allocated uninitialized array of |kSize| bytes, guaranteed to follow FIDL alignment.
+// A stack allocated uninitialized array of |kSize| bytes, guaranteed to follow
+// FIDL alignment.
+//
+// To properly ensure uninitialization, always declare objects of this type with
+// FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT.
 template <size_t kSize>
 struct InlineMessageBuffer {
   static_assert(kSize % FIDL_ALIGNMENT == 0, "kSize must be FIDL-aligned");
 
+  // NOLINTNEXTLINE
   InlineMessageBuffer() {}
   InlineMessageBuffer(InlineMessageBuffer&&) = delete;
   InlineMessageBuffer(const InlineMessageBuffer&) = delete;
@@ -49,26 +67,28 @@ struct InlineMessageBuffer {
 static_assert(sizeof(InlineMessageBuffer<40>) == 40);
 
 static_assert(alignof(std::max_align_t) % FIDL_ALIGNMENT == 0,
-              "AlignedBuffer should follow FIDL alignment when allocated on the heap.");
+              "BoxedMessageBuffer should follow FIDL alignment when allocated on the heap.");
 
-// An heap allocated uninitialized array of |kSize| bytes, guaranteed to follow FIDL alignment.
+// A heap allocated uninitialized array of |kSize| bytes, guaranteed to follow
+// FIDL alignment.
 template <size_t kSize>
 struct BoxedMessageBuffer {
   static_assert(kSize % FIDL_ALIGNMENT == 0, "kSize must be FIDL-aligned");
 
-  BoxedMessageBuffer() { ZX_DEBUG_ASSERT(FidlIsAligned(bytes_.get())); }
+  BoxedMessageBuffer() { ZX_DEBUG_ASSERT(FidlIsAligned(bytes_)); }
+  ~BoxedMessageBuffer() { delete[] bytes_; }
   BoxedMessageBuffer(BoxedMessageBuffer&&) = delete;
   BoxedMessageBuffer(const BoxedMessageBuffer&) = delete;
   BoxedMessageBuffer& operator=(BoxedMessageBuffer&&) = delete;
   BoxedMessageBuffer& operator=(const BoxedMessageBuffer&) = delete;
 
   BufferSpan view() { return BufferSpan(data(), kSize); }
-  uint8_t* data() { return bytes_.get(); }
-  const uint8_t* data() const { return bytes_.get(); }
+  uint8_t* data() { return bytes_; }
+  const uint8_t* data() const { return bytes_; }
   constexpr size_t size() const { return kSize; }
 
  private:
-  std::unique_ptr<uint8_t[]> bytes_ = std::make_unique<uint8_t[]>(kSize);
+  uint8_t* bytes_ = new uint8_t[kSize];
 };
 
 }  // namespace internal

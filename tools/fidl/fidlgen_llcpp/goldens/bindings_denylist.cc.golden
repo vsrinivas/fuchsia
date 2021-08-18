@@ -29,6 +29,7 @@ extern "C" const fidl_type_t
     WireResult(::fidl::UnownedClientEnd<
                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
                    _client) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                               LibfuzzerNeedsNonemptyProtocol>>
@@ -47,6 +48,7 @@ extern "C" const fidl_type_t
                    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
                    _client,
                zx_time_t _deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                               LibfuzzerNeedsNonemptyProtocol>>
@@ -145,6 +147,7 @@ fidl::internal::WireClientImpl<
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid());
@@ -185,6 +188,7 @@ fidl::internal::WireClientImpl<
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid());
@@ -199,6 +203,7 @@ fidl::internal::WireClientImpl<
                 LibfuzzerNeedsNonemptyProtocol>* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid());
@@ -273,6 +278,7 @@ fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>::Reply() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>>

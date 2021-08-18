@@ -89,6 +89,7 @@ class {{ .WireWeakEventSender }} {
   {{- range .Events }}
     {{- /* Managed */}}
 zx_status_t {{ $.WireEventSender.NoLeading }}::{{ .Name }}({{ RenderParams .ResponseArgs }}) const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
       {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .ResponseArgs -}}
   };
