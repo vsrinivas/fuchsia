@@ -117,6 +117,7 @@ if (target_cpu == "x64") {
       "signals/signal_handling.rs",
       "signals/syscalls.rs",
       "signals/types.rs",
+      "signals/waiting.rs",
       "syscalls/decls.rs",
       "syscalls/mod.rs",
       "syscalls/syscall_context.rs",

@@ -5,6 +5,7 @@
 use std::convert::TryFrom;
 use std::sync::Arc;
 
+use super::waiting::*;
 use crate::not_implemented;
 use crate::signals::signal_handling::*;
 use crate::signals::*;
@@ -336,6 +337,46 @@ where
     }
 }
 
+pub fn sys_waitid(
+    ctx: &SyscallContext<'_>,
+    id_type: u32,
+    id: i32,
+    user_info: UserRef<siginfo_t>,
+    options: u32,
+) -> Result<SyscallResult, Errno> {
+    // waitid requires at least one option to be provided.
+    if options == 0 {
+        return Err(EINVAL);
+    }
+    if options & !(WSTOPPED | WCONTINUED | WNOWAIT) != 0 {
+        not_implemented!("Waitid does support options: {:?}", options);
+        return Err(EINVAL);
+    }
+
+    match id_type {
+        P_PID => {
+            // wait_on_pid returns None if the task was not waited on. In that case, no siginfo is
+            // returned.
+            if let Some(zombie_task) = wait_on_pid(ctx.task, id, (options & WNOHANG) == 0)? {
+                let status = exit_code_to_status(zombie_task.exit_code);
+
+                let mut siginfo = siginfo_t::default();
+                siginfo.si_signo = SIGCHLD as i32;
+                siginfo.si_code = CLD_EXITED;
+                siginfo.si_status = status;
+                ctx.task.mm.write_object(user_info, &siginfo)?;
+            }
+
+            Ok(SUCCESS)
+        }
+        P_ALL | P_PIDFD | P_PGID => {
+            not_implemented!("waitid currently only supports P_ID");
+            Err(ENOSYS)
+        }
+        _ => Err(EINVAL),
+    }
+}
+
 pub fn sys_wait4(
     ctx: &SyscallContext<'_>,
     pid: pid_t,
@@ -347,45 +388,26 @@ pub fn sys_wait4(
         return Err(EINVAL);
     }
 
-    let zombie_task = match ctx.task.get_zombie_task(pid) {
-        Some(zombie_task) => zombie_task,
-        None => {
-            if options & WNOHANG != 0 {
-                return Ok(SUCCESS);
-            }
-            ctx.task
-                .thread_group
-                .kernel
-                .scheduler
-                .write()
-                .add_exit_waiter(pid, ctx.task.waiter.clone());
-            ctx.task.waiter.wait()?;
-            // It would be an error for more than one task to remove the zombie task,
-            // so `expect` that it is present.
-            ctx.task
-                .get_zombie_task(pid)
-                .expect("Waited for task to exit, but it is not present in zombie tasks.")
+    if let Some(zombie_task) = wait_on_pid(ctx.task, pid, (options & WNOHANG) == 0)? {
+        let status = exit_code_to_status(zombie_task.exit_code);
+
+        if !user_rusage.is_null() {
+            let usage = rusage::default();
+            // TODO(fxb/76976): Return proper usage information.
+            ctx.task.mm.write_object(user_rusage, &usage)?;
+            not_implemented!("wait4 does not set rusage info");
         }
-    };
 
-    if !user_rusage.is_null() {
-        let usage = rusage::default();
-        // TODO(fxb/76976): Return proper usage information.
-        ctx.task.mm.write_object(user_rusage, &usage)?;
-        not_implemented!("wait4 does not set rusage info");
+        if !user_wstatus.is_null() {
+            // TODO(fxb/76976): Return proper status.
+            not_implemented!("wait4 does not set signal info in wstatus");
+            ctx.task.mm.write_object(user_wstatus, &status)?;
+        }
+
+        Ok(zombie_task.id.into())
+    } else {
+        Ok(SUCCESS)
     }
-
-    if !user_wstatus.is_null() {
-        // TODO(fxb/76976): Return proper status.
-        let status = match zombie_task.exit_code {
-            Some(exit_code) => (exit_code & 0xff) << 8,
-            _ => 0,
-        };
-        not_implemented!("wait4 does not set signal info in wstatus");
-        ctx.task.mm.write_object(user_wstatus, &status)?;
-    }
-
-    Ok(zombie_task.id.into())
 }
 
 #[cfg(test)]

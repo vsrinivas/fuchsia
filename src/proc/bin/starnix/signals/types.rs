@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use zerocopy::{AsBytes, FromBytes};
 
 /// An unchecked signal represents a signal that has not been through verification, and may
 /// represent an invalid signal number.
@@ -281,6 +282,24 @@ pub fn default_signal_action(signal: &Signal) -> SignalAction {
         SIGRTMIN..=Signal::NUM_SIGNALS => SignalAction::Ignore,
         _ => panic!("Getting default value for invalid signal"),
     }
+}
+
+pub const CLD_EXITED: i32 = 1;
+pub const CLD_KILLED: i32 = 2;
+pub const CLD_DUMPED: i32 = 3;
+pub const CLD_TRAPPED: i32 = 4;
+pub const CLD_STOPPED: i32 = 5;
+pub const CLD_CONTINUED: i32 = 6;
+
+/// `siginfo_t` is defined here to avoid gnarly bindgen union generation.
+#[repr(C)]
+#[derive(AsBytes, FromBytes, Debug, Default)]
+pub struct siginfo_t {
+    pub si_signo: c_int,
+    pub si_errno: c_int,
+    pub si_code: c_int,
+    padding1: [u8; 12],
+    pub si_status: c_int,
 }
 
 #[cfg(test)]

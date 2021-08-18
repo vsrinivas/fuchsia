@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    program: {
+        binary: "/data/tests/wait_test",
+        args: [ "--gunit_filter=WaitTest.WaitidOptions" ],
+    },
+}

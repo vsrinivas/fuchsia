@@ -130,6 +130,7 @@ pub fn dispatch_syscall(
         umask[1],
         uname[1],
         unlinkat[3],
+        waitid[4],
         wait4[4],
         write[3],
         writev[3],

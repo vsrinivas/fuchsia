@@ -89,6 +89,7 @@ gvisor_tests = [
   "stat_test",
   "symlink_test",
   "uidgid_test",
+  "wait_test",
 ]
 
 foreach(test_name, gvisor_tests) {
