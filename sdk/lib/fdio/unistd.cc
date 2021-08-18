@@ -1751,8 +1751,16 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
 
   // TODO(https://fxbug.dev/71558): investigate VLA alternatives.
   fdio_ptr ios[n];
+  // |items| is the set of handles to wait on and will contain up to |n| entries. Some
+  // FDs do not contain a handle or do not have any applicable Zircon signals, so we
+  // won't populate an entry in |items| for these FDs. Thus |items| may have fewer
+  // entries than |n|.
   zx_wait_item_t items[n];
+  // |nitems| tracks the number of populated entries in |items|.
   size_t nitems = 0;
+  // |items_set| keeps track of which entries in |fds| have a corresponding
+  // entry in |items|. It is true for FDs that have an entry in |items|.
+  bool items_set[n];
 
   for (nfds_t i = 0; i < n; ++i) {
     auto& pfd = fds[i];
@@ -1760,28 +1768,30 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
     if ((io = fd_to_io(pfd.fd)) == nullptr) {
       // fd is not opened
       pfd.revents = POLLNVAL;
+      items_set[i] = false;
       continue;
     }
 
-    zx_handle_t h;
-    zx_signals_t sigs;
+    zx_handle_t h = ZX_HANDLE_INVALID;
+    zx_signals_t sigs = ZX_SIGNAL_NONE;
     io->wait_begin(pfd.events, &h, &sigs);
-    if (h == ZX_HANDLE_INVALID) {
-      // wait operation is not applicable to the handle
-      return ERROR(ZX_ERR_INVALID_ARGS);
-    }
     if (sigs == ZX_SIGNAL_NONE) {
       // Skip waiting on this fd as there are no waitable signals.
       uint32_t events;
       io->wait_end(sigs, &events);
       pfd.revents = static_cast<int16_t>(events);
+      items_set[i] = false;
       continue;
+    }
+    if (h == ZX_HANDLE_INVALID) {
+      return ERROR(ZX_ERR_INVALID_ARGS);
     }
     pfd.revents = 0;
     items[nitems] = {
         .handle = h,
         .waitfor = sigs,
     };
+    items_set[i] = true;
     ++nitems;
   }
 
@@ -1794,16 +1804,20 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
   }
 
   nfds_t nfds = 0;
-  size_t j = 0;
+  // |items_index| is the index into the next entry in the |items| array. As not
+  // all FDs in the wait set correspond to a kernel wait, the |items_index|
+  // value corresponding to a particular FD can be lower than the index of that
+  // FD in the |fds| array.
+  size_t items_index = 0;
   for (nfds_t i = 0; i < n; ++i) {
     auto& pfd = fds[i];
     auto& io = ios[i];
 
-    if (pfd.revents == 0) {
+    if (items_set[i]) {
       uint32_t events;
-      io->wait_end(items[j].pending, &events);
+      io->wait_end(items[items_index].pending, &events);
       pfd.revents = static_cast<int16_t>(events);
-      ++j;
+      ++items_index;
     }
     // Mask unrequested events. Avoid clearing events that are ignored in pollfd::events.
     pfd.revents &= static_cast<int16_t>(pfd.events | POLLNVAL | POLLHUP | POLLERR);
