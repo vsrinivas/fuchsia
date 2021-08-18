@@ -136,6 +136,14 @@ rustc_binary("triage_bin") {
   deps = lib_deps + [ ":triage_app_lib" ]
 
   sources = [ "src/main.rs" ]
+
+  if (!is_fuchsia) {
+    exclude_toolchain_tags = [
+      # Triage host tool performs poorly when built with asan or profile.
+      "asan",
+      "profile",
+    ]
+  }
 }
 
 install_host_tools("install") {

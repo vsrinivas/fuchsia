@@ -289,10 +289,11 @@ template("rustc_binary") {
     # pass through these variables unmodified
     forward_variables_from(invoker,
                            [
-                             "testonly",
-                             "visibility",
+                             "exclude_toolchain_tags",
                              "output_dir",
                              "output_extension",
+                             "testonly",
+                             "visibility",
                            ])
     inputs = _local_rbe_inputs
     if (_use_rbe && _remote_rbe_inputs != []) {
