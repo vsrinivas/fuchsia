@@ -254,13 +254,13 @@ async fn handle_client_request_connect(
         .ok_or_else(|| format_err!("Requested network not found in saved networks"))?;
 
     let network_id = fidl_policy::NetworkIdentifier {
-        ssid: network_config.ssid,
+        ssid: network_config.ssid.into(),
         type_: fidl_policy::SecurityType::from(network_config.security_type),
     };
     let connect_req = client_types::ConnectRequest {
         target: client_types::ConnectionCandidate {
-            network: network_id,
-            credential: network_config.credential.clone(),
+            network: network_id.into(),
+            credential: network_config.credential,
             bss_description: None,
             observed_in_passive_scan: None,
             multiple_bss_candidates: None,
@@ -316,7 +316,8 @@ async fn handle_client_request_save_network(
 ) -> Result<(), NetworkConfigError> {
     // The FIDL network config fields are defined as Options, and we consider it an error if either
     // field is missing (ie None) here.
-    let net_id = network_config.id.ok_or_else(|| NetworkConfigError::ConfigMissingId)?;
+    let net_id: client_types::NetworkIdentifier =
+        network_config.id.ok_or_else(|| NetworkConfigError::ConfigMissingId)?.into();
     let credential = Credential::try_from(
         network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
     )?;
@@ -326,9 +327,9 @@ async fn handle_client_request_save_network(
     // If a config was removed, disconnect from that network.
     let mut iface_manager = iface_manager.lock().await;
     if let Some(config) = evicted_config {
-        let net_id = fidl_policy::NetworkIdentifier {
+        let net_id = client_types::NetworkIdentifier {
             ssid: config.ssid,
-            type_: config.security_type.into(),
+            security_type: config.security_type.into(),
         };
         match iface_manager
             .disconnect(net_id, client_types::DisconnectReason::NetworkConfigUpdated)
@@ -383,10 +384,7 @@ async fn handle_client_request_remove_network(
         match iface_manager
             .lock()
             .await
-            .disconnect(
-                fidl_policy::NetworkIdentifier::from(net_id),
-                client_types::DisconnectReason::NetworkUnsaved,
-            )
+            .disconnect(net_id, client_types::DisconnectReason::NetworkUnsaved)
             .await
         {
             Ok(()) => {}
@@ -505,7 +503,7 @@ mod tests {
     /// don't need to worry about the implementation logic in the FakeIfaceManager.
     #[derive(Debug)]
     enum IfaceManagerRequest {
-        Disconnect(fidl_policy::NetworkIdentifier, client_types::DisconnectReason),
+        Disconnect(client_types::NetworkIdentifier, client_types::DisconnectReason),
     }
 
     struct FakeIfaceManager {
@@ -553,7 +551,7 @@ mod tests {
     impl IfaceManagerApi for FakeIfaceManager {
         async fn disconnect(
             &mut self,
-            network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            network_id: client_types::NetworkIdentifier,
             reason: client_types::DisconnectReason,
         ) -> Result<(), Error> {
             self.command_sender
@@ -657,7 +655,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+        async fn stop_ap(&mut self, _ssid: Ssid, _password: Vec<u8>) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -708,13 +706,13 @@ mod tests {
     // test will have a unique persistent store behind it.
     fn test_setup(connect_succeeds: bool) -> TestValues {
         let presaved_default_configs = vec![
-            (NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None), Credential::None),
+            (NetworkIdentifier::new("foobar", SecurityType::None), Credential::None),
             (
-                NetworkIdentifier::new(b"foobar-protected".to_vec(), SecurityType::Wpa2),
+                NetworkIdentifier::new("foobar-protected", SecurityType::Wpa2),
                 Credential::Password(b"supersecure".to_vec()),
             ),
             (
-                NetworkIdentifier::new(b"foobar-psk".to_vec(), SecurityType::Wpa2),
+                NetworkIdentifier::new("foobar-psk", SecurityType::Wpa2),
                 Credential::Psk(vec![64; WPA_PSK_BYTE_LEN].to_vec()),
             ),
         ];
@@ -1473,7 +1471,7 @@ mod tests {
 
         // Check that the iface manager was asked to disconnect from some network
         assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id, reason))) => {
-            assert_eq!(net_id,fidl_policy::NetworkIdentifier::from(network_id.clone()));
+            assert_eq!(net_id, network_id.clone());
             assert_eq!(reason, client_types::DisconnectReason::NetworkConfigUpdated);
         });
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
@@ -1613,7 +1611,7 @@ mod tests {
         // which will know whether we are connected to the network to disconnect from. This checks
         // that the IfaceManager is told to disconnect (if connected).
         assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id, reason))) => {
-            assert_eq!(net_id,fidl_policy::NetworkIdentifier::from(network_id.clone()));
+            assert_eq!(net_id, network_id.clone());
             assert_eq!(reason, client_types::DisconnectReason::NetworkUnsaved);
         });
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
@@ -1631,7 +1629,7 @@ mod tests {
     #[fuchsia::test]
     fn get_saved_network() {
         // save a network
-        let network_id = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new("foobar", SecurityType::Wpa2);
         let credential = Credential::Password(b"password".to_vec());
         let saved_networks = vec![(network_id.clone(), credential.clone())];
 
@@ -1943,7 +1941,7 @@ mod tests {
     impl IfaceManagerApi for FakeIfaceManagerNoIfaces {
         async fn disconnect(
             &mut self,
-            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            _network_id: client_types::NetworkIdentifier,
             _reason: client_types::DisconnectReason,
         ) -> Result<(), Error> {
             Err(format_err!("No ifaces"))
@@ -2003,7 +2001,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+        async fn stop_ap(&mut self, _ssid: Ssid, _password: Vec<u8>) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -2094,7 +2092,7 @@ mod tests {
     #[fuchsia::test]
     async fn get_correct_config() {
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
-        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         let cfg = NetworkConfig::new(
             network_id.clone(),
             Credential::Password(b"password".to_vec()),
@@ -2121,7 +2119,7 @@ mod tests {
             None,
             get_config(
                 saved_networks.clone(),
-                NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2),
+                NetworkIdentifier::new("foo", SecurityType::Wpa2),
                 Credential::Password(b"not-saved".to_vec())
             )
             .await

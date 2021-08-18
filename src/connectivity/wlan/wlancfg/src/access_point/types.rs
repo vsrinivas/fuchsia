@@ -4,7 +4,8 @@
 
 use fidl_fuchsia_wlan_policy as fidl_policy;
 
-pub type NetworkIdentifier = fidl_policy::NetworkIdentifier;
+pub type NetworkIdentifier = crate::config_management::network_config::NetworkIdentifier;
+pub type SecurityType = crate::config_management::network_config::SecurityType;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OperatingState {

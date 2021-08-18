@@ -11,6 +11,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_wlan_sme,
     futures::channel::oneshot,
+    ieee80211::Ssid,
 };
 
 #[derive(Debug)]
@@ -79,7 +80,7 @@ pub struct StartApRequest {
 
 #[derive(Debug)]
 pub struct StopApRequest {
-    pub ssid: Vec<u8>,
+    pub ssid: Ssid,
     pub password: Vec<u8>,
     pub responder: oneshot::Sender<Result<(), Error>>,
 }

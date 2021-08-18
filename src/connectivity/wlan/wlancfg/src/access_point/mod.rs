@@ -17,6 +17,7 @@ use {
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
         FutureExt, TryFutureExt,
     },
+    ieee80211::Ssid,
     log::{error, info, warn},
     std::sync::Arc,
     wlan_common::{
@@ -205,7 +206,7 @@ impl AccessPoint {
                     responder,
                 } => {
                     let ssid = match config.id {
-                        Some(id) => id.ssid,
+                        Some(id) => Ssid::from(id.ssid),
                         None => {
                             warn!("received disconnect request with no SSID specified");
                             responder.send(fidl_common::RequestStatus::RejectedNotSupported)?;
@@ -327,7 +328,7 @@ fn derive_ap_config(
     let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, channel);
 
     Ok(state_machine::ApConfig {
-        id: network_id,
+        id: network_id.into(),
         credential,
         radio_config,
         mode: types::ConnectivityMode::from(mode),
@@ -458,7 +459,7 @@ mod tests {
             }
         }
 
-        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+        async fn stop_ap(&mut self, _ssid: Ssid, _password: Vec<u8>) -> Result<(), Error> {
             if self.stop_succeeds {
                 Ok(())
             } else {

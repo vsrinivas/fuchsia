@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    ieee80211::Bssid,
+    ieee80211::{Bssid, Ssid},
     std::collections::HashMap,
 };
 
@@ -68,7 +68,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
 
     async fn lookup_compatible(
         &self,
-        _ssid: &client_types::Ssid,
+        _ssid: &Ssid,
         _scan_security: client_types::SecurityTypeDetailed,
     ) -> Vec<NetworkConfig> {
         unimplemented!()

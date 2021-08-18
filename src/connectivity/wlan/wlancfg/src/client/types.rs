@@ -6,7 +6,7 @@ use {
     crate::config_management,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
-    ieee80211::Bssid,
+    ieee80211::{Bssid, Ssid},
     wlan_metrics_registry::{
         PolicyConnectionAttemptMetricDimensionReason, PolicyDisconnectionMetricDimensionReason,
     },
@@ -15,14 +15,13 @@ use {
 #[cfg(test)]
 pub(crate) use crate::regulatory_manager::REGION_CODE_LEN;
 
-pub type NetworkIdentifier = fidl_policy::NetworkIdentifier;
+pub type NetworkIdentifier = config_management::network_config::NetworkIdentifier;
 pub type SecurityTypeDetailed = fidl_sme::Protection;
-pub type SecurityType = fidl_policy::SecurityType;
+pub type SecurityType = config_management::network_config::SecurityType;
 pub type ConnectionState = fidl_policy::ConnectionState;
 pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
 pub type WlanChan = fidl_common::WlanChannel;
-pub type Ssid = Vec<u8>;
 pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;
 pub type ConnectReason = PolicyConnectionAttemptMetricDimensionReason;
 pub type ScanError = fidl_policy::ScanErrorCode;

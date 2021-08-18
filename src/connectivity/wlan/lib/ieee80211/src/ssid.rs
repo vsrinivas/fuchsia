@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{
-    ops::{Deref, Index},
-    slice::SliceIndex,
+use {
+    arbitrary::Arbitrary,
+    std::{
+        ops::{Deref, Index},
+        slice::SliceIndex,
+    },
 };
 
+#[derive(Arbitrary)] // Derive Arbitrary for fuzzer
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Ssid(Box<[u8]>);
 

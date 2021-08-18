@@ -78,6 +78,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:void",
   ]
 
+  test_deps = [ "//third_party/rust_crates:lazy_static" ]
+
   sources = [
     "src/access_point/mod.rs",
     "src/access_point/state_machine.rs",

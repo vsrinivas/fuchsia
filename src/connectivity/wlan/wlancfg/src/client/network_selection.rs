@@ -15,8 +15,7 @@ use {
         telemetry::{self, TelemetryEvent, TelemetrySender},
     },
     async_trait::async_trait,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::Node as InspectNode,
     fuchsia_inspect_contrib::{
@@ -26,7 +25,7 @@ use {
     },
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    ieee80211::{Bssid, Ssid},
+    ieee80211::Bssid,
     log::{debug, error, info, trace},
     rand::Rng,
     std::{collections::HashMap, convert::TryInto as _, sync::Arc},
@@ -160,12 +159,12 @@ impl InternalBss<'_> {
     }
 
     fn saved_security_type_to_string(&self) -> String {
-        match self.saved_network_info.network_id.type_ {
-            fidl_policy::SecurityType::None => "open",
-            fidl_policy::SecurityType::Wep => "WEP",
-            fidl_policy::SecurityType::Wpa => "WPA",
-            fidl_policy::SecurityType::Wpa2 => "WPA2",
-            fidl_policy::SecurityType::Wpa3 => "WPA3",
+        match self.saved_network_info.network_id.security_type {
+            types::SecurityType::None => "open",
+            types::SecurityType::Wep => "WEP",
+            types::SecurityType::Wpa => "WPA",
+            types::SecurityType::Wpa2 => "WPA2",
+            types::SecurityType::Wpa3 => "WPA3",
         }
         .to_string()
     }
@@ -177,7 +176,7 @@ impl InternalBss<'_> {
         let recent_short_connection_count = self.recent_short_connections();
         format!(
             "{}({:4}), {}, {:>4}dBm, channel {:8}, score {:4}{}{}{}{}",
-            self.hasher.hash_ssid(&Ssid::from(&self.saved_network_info.network_id.ssid)),
+            self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
             self.saved_security_type_to_string(),
             self.hasher.hash_mac_addr(&self.scanned_bss.bssid.0),
             rssi,
@@ -201,7 +200,7 @@ impl InternalBss<'_> {
 impl<'a> WriteInspect for InternalBss<'a> {
     fn write_inspect(&self, writer: &InspectNode, key: &str) {
         inspect_insert!(writer, var key: {
-            ssid_hash: self.hasher.hash_ssid(&Ssid::from(&self.saved_network_info.network_id.ssid)),
+            ssid_hash: self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
             bssid_hash: self.hasher.hash_mac_addr(&self.scanned_bss.bssid.0),
             rssi: self.scanned_bss.rssi,
             score: self.score(),
@@ -434,7 +433,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
                     saved_network_info: InternalSavedNetworkData {
                         network_id: types::NetworkIdentifier {
                             ssid: saved_config.ssid.clone(),
-                            type_: saved_config.security_type.into(),
+                            security_type: saved_config.security_type.into(),
                         },
                         credential: saved_config.credential.clone(),
                         has_ever_connected: saved_config.has_ever_connected,
@@ -693,6 +692,7 @@ mod tests {
             prelude::*,
             task::Poll,
         },
+        ieee80211::Ssid,
         pin_utils::pin_mut,
         rand::Rng,
         std::{convert::TryInto, sync::Arc},
@@ -753,7 +753,7 @@ mod tests {
     impl IfaceManagerApi for FakeIfaceManager {
         async fn disconnect(
             &mut self,
-            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            _network_id: types::NetworkIdentifier,
             _reason: types::DisconnectReason,
         ) -> Result<(), Error> {
             unimplemented!()
@@ -815,7 +815,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+        async fn stop_ap(&mut self, _ssid: Ssid, _password: Vec<u8>) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -866,17 +866,19 @@ mod tests {
         let test_values = test_setup().await;
 
         // create some identifiers
-        let test_ssid_1 = "foo".as_bytes().to_vec();
+        let test_ssid_1 = Ssid::from("foo");
         let test_security_1 = types::SecurityTypeDetailed::Wpa3Personal;
         let test_id_1 = types::NetworkIdentifier {
             ssid: test_ssid_1.clone(),
-            type_: types::SecurityType::Wpa3,
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let test_ssid_2 = "bar".as_bytes().to_vec();
+        let test_ssid_2 = Ssid::from("bar");
         let test_security_2 = types::SecurityTypeDetailed::Wpa1;
-        let test_id_2 =
-            types::NetworkIdentifier { ssid: test_ssid_2.clone(), type_: types::SecurityType::Wpa };
+        let test_id_2 = types::NetworkIdentifier {
+            ssid: test_ssid_2.clone(),
+            security_type: types::SecurityType::Wpa,
+        };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
         // insert the saved networks
@@ -1029,8 +1031,8 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let network_id = types::NetworkIdentifier {
-            ssid: "test".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("test"),
+            security_type: types::SecurityType::Wpa3,
         };
         let internal_bss = InternalBss {
             saved_network_info: InternalSavedNetworkData {
@@ -1175,13 +1177,13 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: "bar".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa,
+            ssid: Ssid::from("bar"),
+            security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
@@ -1295,13 +1297,13 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: "bar".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa,
+            ssid: Ssid::from("bar"),
+            security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
@@ -1420,13 +1422,13 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: "bar".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa,
+            ssid: Ssid::from("bar"),
+            security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
@@ -1541,13 +1543,13 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: "bar".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa,
+            ssid: Ssid::from("bar"),
+            security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
@@ -1631,13 +1633,13 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: "bar".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa,
+            ssid: Ssid::from("bar"),
+            security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
@@ -1734,8 +1736,7 @@ mod tests {
                         },
                     },
                     "selected": {
-                        ssid_hash: networks[2].hasher.hash_ssid(
-                            &Ssid::from(&networks[2].saved_network_info.network_id.ssid)),
+                        ssid_hash: networks[2].hasher.hash_ssid(&networks[2].saved_network_info.network_id.ssid),
                         bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].scanned_bss.bssid.0),
                         rssi: i64::from(networks[2].scanned_bss.rssi),
                         score: i64::from(networks[2].score()),
@@ -1851,7 +1852,7 @@ mod tests {
             zx::Time::get_monotonic() - (STALE_SCAN_AGE + zx::Duration::from_seconds(1));
         // Add some stale/old results to the cache
         scan_result_guard.results = vec![types::ScanResult {
-            ssid: "foo".as_bytes().to_vec(),
+            ssid: Ssid::from("foo"),
             security_type_detailed: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
             entries: vec![],
             compatibility: types::Compatibility::Supported,
@@ -1894,8 +1895,8 @@ mod tests {
         let test_values = exec.run_singlethreaded(test_setup());
 
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let bss_1 = types::Bss {
@@ -1932,8 +1933,8 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let bss_1 = types::Bss {
@@ -1963,14 +1964,14 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![test_id_1.ssid.clone()],
+            ssids: vec![test_id_1.ssid.to_vec()],
             channels: vec![36],
         });
         let new_bss_desc = generate_random_bss_description();
         let mock_scan_results = vec![
             fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
-                ssid: test_id_1.ssid.clone(),
+                ssid: test_id_1.ssid.to_vec(),
                 rssi_dbm: 10,
                 snr_db: 10,
                 channel: fidl_common::WlanChannel {
@@ -1984,7 +1985,7 @@ mod tests {
             },
             fidl_sme::ScanResult {
                 bssid: bss_1.bssid.0,
-                ssid: test_id_1.ssid.clone(),
+                ssid: test_id_1.ssid.to_vec(),
                 rssi_dbm: 0,
                 snr_db: 0,
                 channel: fidl_common::WlanChannel {
@@ -2029,15 +2030,15 @@ mod tests {
 
         // create some identifiers
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let bss_desc1 = generate_random_bss_description();
         let bss_desc1_active = generate_random_bss_description();
         let test_id_2 = types::NetworkIdentifier {
-            ssid: "bar".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa,
+            ssid: Ssid::from("bar"),
+            security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
         let bss_desc2 = generate_random_bss_description();
@@ -2089,7 +2090,7 @@ mod tests {
         let mock_scan_results = vec![
             fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0],
-                ssid: test_id_1.ssid.clone(),
+                ssid: test_id_1.ssid.to_vec(),
                 rssi_dbm: 10,
                 snr_db: 10,
                 channel: fidl_common::WlanChannel {
@@ -2103,7 +2104,7 @@ mod tests {
             },
             fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0],
-                ssid: test_id_2.ssid.clone(),
+                ssid: test_id_2.ssid.to_vec(),
                 rssi_dbm: 0,
                 snr_db: 0,
                 channel: fidl_common::WlanChannel {
@@ -2128,12 +2129,12 @@ mod tests {
 
         // An additional directed active scan should be made for the selected network
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![test_id_1.ssid.clone()],
+            ssids: vec![test_id_1.ssid.to_vec()],
             channels: vec![1],
         });
         let mock_active_scan_results = vec![fidl_sme::ScanResult {
             bssid: [0, 0, 0, 0, 0, 0],
-            ssid: test_id_1.ssid.clone(),
+            ssid: test_id_1.ssid.to_vec(),
             rssi_dbm: 10,
             snr_db: 10,
             channel: fidl_common::WlanChannel {
@@ -2196,12 +2197,12 @@ mod tests {
 
         // An additional directed active scan should be made for the selected network
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![test_id_2.ssid.clone()],
+            ssids: vec![test_id_2.ssid.to_vec()],
             channels: vec![1],
         });
         let mock_active_scan_results = vec![fidl_sme::ScanResult {
             bssid: [0, 0, 0, 0, 0, 0],
-            ssid: test_id_2.ssid.clone(),
+            ssid: test_id_2.ssid.to_vec(),
             rssi_dbm: 10,
             snr_db: 10,
             channel: fidl_common::WlanChannel {
@@ -2295,9 +2296,11 @@ mod tests {
         let network_selector = test_values.network_selector;
 
         // Save networks with WPA and WPA3 security, same SSIDs, and different passwords.
-        let ssid = "foo".as_bytes().to_vec();
-        let wpa_network_id =
-            types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa };
+        let ssid = Ssid::from("foo");
+        let wpa_network_id = types::NetworkIdentifier {
+            ssid: ssid.clone(),
+            security_type: types::SecurityType::Wpa,
+        };
         let credential = Credential::Password("foo_password".as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(
@@ -2307,8 +2310,10 @@ mod tests {
             )
             .expect("Failed to save network")
             .is_none());
-        let wpa3_network_id =
-            types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa3 };
+        let wpa3_network_id = types::NetworkIdentifier {
+            ssid: ssid.clone(),
+            security_type: types::SecurityType::Wpa3,
+        };
         let wpa3_credential = Credential::Password("wpa3_only_password".as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(
@@ -2393,8 +2398,8 @@ mod tests {
 
         // create identifiers
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let bss_desc_1 = generate_random_bss_description();
@@ -2423,13 +2428,13 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![test_id_1.ssid.clone()],
+            ssids: vec![test_id_1.ssid.to_vec()],
             channels: vec![],
         });
         let mock_scan_results = vec![
             fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0],
-                ssid: test_id_1.ssid.clone(),
+                ssid: test_id_1.ssid.to_vec(),
                 rssi_dbm: 10,
                 snr_db: 10,
                 channel: fidl_common::WlanChannel {
@@ -2444,7 +2449,7 @@ mod tests {
             },
             fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0],
-                ssid: "other ssid".as_bytes().to_vec(),
+                ssid: Ssid::from("other ssid").to_vec(),
                 rssi_dbm: 0,
                 snr_db: 0,
                 channel: fidl_common::WlanChannel {
@@ -2498,8 +2503,8 @@ mod tests {
 
         // create identifiers
         let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            ssid: Ssid::from("foo"),
+            security_type: types::SecurityType::Wpa3,
         };
 
         // get the sme proxy
@@ -2571,9 +2576,8 @@ mod tests {
 
     fn generate_random_scan_result() -> types::ScanResult {
         let mut rng = rand::thread_rng();
-        let ssid = format!("scan result rand {}", rng.gen::<i32>()).as_bytes().to_vec();
         types::ScanResult {
-            ssid: ssid,
+            ssid: Ssid::from(format!("scan result rand {}", rng.gen::<i32>())),
             security_type_detailed: types::SecurityTypeDetailed::Wpa1,
             entries: vec![generate_random_bss(), generate_random_bss()],
             compatibility: match rng.gen_range(0, 2) {
@@ -2588,8 +2592,8 @@ mod tests {
     fn generate_random_saved_network() -> (types::NetworkIdentifier, InternalSavedNetworkData) {
         let mut rng = rand::thread_rng();
         let net_id = types::NetworkIdentifier {
-            ssid: format!("saved network rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa,
+            ssid: Ssid::from(format!("saved network rand {}", rng.gen::<i32>())),
+            security_type: types::SecurityType::Wpa,
         };
         (
             net_id.clone(),
@@ -2610,14 +2614,16 @@ mod tests {
         let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
         // create some identifiers
-        let test_ssid_1 = "foo".as_bytes().to_vec();
+        let test_ssid_1 = Ssid::from("foo");
         let test_id_1 = types::NetworkIdentifier {
             ssid: test_ssid_1.clone(),
-            type_: types::SecurityType::Wpa3,
+            security_type: types::SecurityType::Wpa3,
         };
-        let test_ssid_2 = "bar".as_bytes().to_vec();
-        let test_id_2 =
-            types::NetworkIdentifier { ssid: test_ssid_2.clone(), type_: types::SecurityType::Wpa };
+        let test_ssid_2 = Ssid::from("bar");
+        let test_id_2 = types::NetworkIdentifier {
+            ssid: test_ssid_2.clone(),
+            security_type: types::SecurityType::Wpa,
+        };
 
         let hasher = WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes());
         let mut mock_scan_results = vec![];

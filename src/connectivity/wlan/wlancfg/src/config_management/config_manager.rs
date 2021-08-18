@@ -21,7 +21,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    ieee80211::Bssid,
+    ieee80211::{Bssid, Ssid},
     log::{error, info, warn},
     rand::Rng,
     std::{
@@ -84,7 +84,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
     /// provided detailed security type.
     async fn lookup_compatible(
         &self,
-        ssid: &types::Ssid,
+        ssid: &Ssid,
         scan_security: types::SecurityTypeDetailed,
     ) -> Vec<NetworkConfig>;
 
@@ -374,7 +374,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                     .await
                     .map_err(|_| NetworkConfigError::StashWriteError)?;
                 self.legacy_store
-                    .remove(network_id.ssid, credential.into_bytes())
+                    .remove(network_id.ssid.to_vec(), credential.into_bytes())
                     .map_err(|_| NetworkConfigError::LegacyWriteError)?;
                 return Ok(true);
             } else {
@@ -396,7 +396,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
 
     async fn lookup_compatible(
         &self,
-        ssid: &types::Ssid,
+        ssid: &Ssid,
         scan_security: types::SecurityTypeDetailed,
     ) -> Vec<NetworkConfig> {
         let mut saved_networks_guard = self.saved_networks.lock().await;
@@ -455,7 +455,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         {
             let ess = KnownEss { password: credential.into_bytes() };
             self.legacy_store
-                .store(network_id.ssid, ess)
+                .store(network_id.ssid.to_vec(), ess)
                 .map_err(|_| NetworkConfigError::LegacyWriteError)?;
         }
         Ok(evicted_config)
@@ -637,7 +637,7 @@ pub fn select_subset_potentially_hidden_networks(
         })
         .map(|network| types::NetworkIdentifier {
             ssid: network.ssid,
-            type_: network.security_type.into(),
+            security_type: network.security_type.into(),
         })
         .collect()
 }
@@ -842,7 +842,7 @@ mod tests {
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
 
         assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
@@ -992,7 +992,7 @@ mod tests {
 
         // Store a couple of network configs that could both be use to connect to a WPA2/WPA3
         // network.
-        let ssid = b"foo".to_vec();
+        let ssid = Ssid::from("foo");
         let network_id_wpa2 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa2);
         let network_id_wpa3 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
         let credential_wpa2 = Credential::Password(b"password".to_vec());
@@ -1044,7 +1044,7 @@ mod tests {
 
         // Store a WPA3 config with a password that will match and a PSK config that won't match
         // to a WPA3 network.
-        let ssid = b"foo".to_vec();
+        let ssid = Ssid::from("foo");
         let network_id_psk = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa2);
         let network_id_password = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
         let credential_psk = Credential::Psk(vec![5; 32]);
@@ -1511,7 +1511,7 @@ mod tests {
         }];
         let target = vec![types::NetworkIdentifier {
             ssid: id.ssid.clone(),
-            type_: types::SecurityType::Wpa,
+            security_type: types::SecurityType::Wpa,
         }];
         saved_networks.record_scan_result(ScanResultType::Directed(target), seen_networks).await;
 
@@ -1547,7 +1547,7 @@ mod tests {
         // though security is compatible, since the security type is not compatible with the PSK.
         let target = vec![types::NetworkIdentifier {
             ssid: id.ssid.clone(),
-            type_: types::SecurityType::Wpa2,
+            security_type: types::SecurityType::Wpa2,
         }];
         let seen_networks = vec![types::NetworkIdentifierDetailed {
             ssid: id.ssid.clone(),
@@ -1572,7 +1572,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         let credential = Credential::Psk(vec![11; 32]);
-        let diff_ssid = b"other-ssid".to_vec();
+        let diff_ssid = Ssid::from("other-ssid");
 
         // Save the networks
         assert!(saved_networks
@@ -1587,7 +1587,7 @@ mod tests {
         // Record directed scan results. We target the saved network but see a different one.
         let target = vec![types::NetworkIdentifier {
             ssid: id.ssid.clone(),
-            type_: types::SecurityType::Wpa2,
+            security_type: types::SecurityType::Wpa2,
         }];
         let seen_networks = vec![types::NetworkIdentifierDetailed {
             ssid: diff_ssid,
@@ -1626,7 +1626,7 @@ mod tests {
         // and one that does match.
         let target = vec![types::NetworkIdentifier {
             ssid: id.ssid.clone(),
-            type_: types::SecurityType::Wpa2,
+            security_type: types::SecurityType::Wpa2,
         }];
         let seen_networks = vec![
             types::NetworkIdentifierDetailed {
@@ -1689,7 +1689,7 @@ mod tests {
 
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
-        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
         assert!(saved_networks
@@ -1745,7 +1745,7 @@ mod tests {
         assert!(!path.exists());
         // Writing an entry should not create the file yet because networks configs don't persist.
         assert_eq!(0, saved_networks.known_network_count().await);
-        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
@@ -1786,14 +1786,14 @@ mod tests {
 
         // Network bar should have been read into the saved networks manager because it is valid
         assert_eq!(1, saved_networks.known_network_count().await);
-        let bar_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
+        let bar_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
         let bar_config =
             NetworkConfig::new(bar_id.clone(), Credential::Password(b"password".to_vec()), false)
                 .expect("failed to create network config");
         assert_eq!(vec![bar_config], saved_networks.lookup(bar_id).await);
 
         // Network foo should not have been read into saved networks manager because it is invalid.
-        let foo_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
+        let foo_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         assert!(saved_networks.lookup(foo_id).await.is_empty());
 
         assert!(path.exists());
@@ -1825,7 +1825,7 @@ mod tests {
         assert!(path.exists());
 
         // Verify the network config loaded from legacy storage
-        let net_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
+        let net_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
         let net_config =
             NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
                 .expect("failed to create network config");
@@ -1885,7 +1885,7 @@ mod tests {
         assert!(path.exists());
 
         // Verify the network config loaded from legacy storage
-        let net_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
+        let net_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
         let net_config =
             NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
                 .expect("failed to create network config");
@@ -1931,7 +1931,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
         // Save a network, which should write to the legacy store
-        let net_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
+        let net_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
         assert!(saved_networks
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
             .await
@@ -1967,7 +1967,7 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
 
-        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::None);
+        let network_id = NetworkIdentifier::new("foo", SecurityType::None);
         let save_fut = saved_networks.store(network_id, Credential::None);
         pin_mut!(save_fut);
 
@@ -2008,7 +2008,7 @@ mod tests {
     /// Convience function for creating network configs with default values as they would be
     /// initialized when read from KnownEssStore. Credential is password or none, and security
     /// type is WPA2 or none.
-    fn network_config(ssid: impl Into<Vec<u8>>, password: impl Into<Vec<u8>>) -> NetworkConfig {
+    fn network_config(ssid: impl Into<Ssid>, password: impl Into<Vec<u8>>) -> NetworkConfig {
         let credential = Credential::from_bytes(password.into());
         let id = NetworkIdentifier::new(ssid.into(), credential.derived_security_type());
         let has_ever_connected = false;
@@ -2170,8 +2170,10 @@ mod tests {
     #[fuchsia::test]
     async fn probabilistic_choosing_of_hidden_networks() {
         // Create three networks with 1, 0, 0.5 hidden probability
-        let id_hidden =
-            types::NetworkIdentifier { ssid: b"hidden".to_vec(), type_: types::SecurityType::Wpa2 };
+        let id_hidden = types::NetworkIdentifier {
+            ssid: Ssid::from("hidden"),
+            security_type: types::SecurityType::Wpa2,
+        };
         let mut net_config_hidden = NetworkConfig::new(
             id_hidden.clone().into(),
             Credential::Password(b"password".to_vec()),
@@ -2181,8 +2183,8 @@ mod tests {
         net_config_hidden.hidden_probability = 1.0;
 
         let id_not_hidden = types::NetworkIdentifier {
-            ssid: b"not_hidden".to_vec(),
-            type_: types::SecurityType::Wpa2,
+            ssid: Ssid::from("not_hidden"),
+            security_type: types::SecurityType::Wpa2,
         };
         let mut net_config_not_hidden = NetworkConfig::new(
             id_not_hidden.clone().into(),
@@ -2193,8 +2195,8 @@ mod tests {
         net_config_not_hidden.hidden_probability = 0.0;
 
         let id_maybe_hidden = types::NetworkIdentifier {
-            ssid: b"maybe_hidden".to_vec(),
-            type_: types::SecurityType::Wpa2,
+            ssid: Ssid::from("maybe_hidden"),
+            security_type: types::SecurityType::Wpa2,
         };
         let mut net_config_maybe_hidden = NetworkConfig::new(
             id_maybe_hidden.clone().into(),
