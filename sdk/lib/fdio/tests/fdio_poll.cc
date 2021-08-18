@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <poll.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <thread>
@@ -204,6 +205,31 @@ TEST_F(Pipe, Pipe) {
     );
     EXPECT_EQ(pfds[1].revents, POLLNVAL);
   }
+}
+
+TEST(Poll, ManyPipesNoEvents) {
+  int pipe_one_fds[2];
+  ASSERT_SUCCESS(pipe(pipe_one_fds));
+  fbl::unique_fd pipe_one_read_end(pipe_one_fds[0]);
+  fbl::unique_fd pipe_one_write_end(pipe_one_fds[1]);
+
+  int pipe_two_fds[2];
+  ASSERT_SUCCESS(pipe(pipe_two_fds));
+  fbl::unique_fd pipe_two_read_end(pipe_two_fds[0]);
+  fbl::unique_fd pipe_two_write_end(pipe_two_fds[1]);
+
+  struct pollfd pfds[] = {
+      {
+          .fd = pipe_one_write_end.get(),
+          .events = 0,
+      },
+      {
+          .fd = pipe_two_write_end.get(),
+          .events = 0,
+      },
+  };
+
+  EXPECT_EQ(poll(pfds, std::size(pfds), 5), 0, "error: %s", strerror(errno));
 }
 
 }  // namespace
