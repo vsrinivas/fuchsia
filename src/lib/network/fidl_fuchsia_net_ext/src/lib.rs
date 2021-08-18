@@ -54,7 +54,7 @@ pub trait IpExt {
 
 impl IpExt for fidl::Ipv6Address {
     fn is_unicast_linklocal(&self) -> bool {
-        ip::Ipv6Addr::new(self.addr).is_unicast_linklocal()
+        ip::Ipv6Addr::from_bytes(self.addr).is_unicast_linklocal()
     }
 }
 

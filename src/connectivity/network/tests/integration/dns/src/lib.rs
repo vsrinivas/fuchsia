@@ -246,7 +246,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
 async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result {
     /// DHCPv6 server IP.
     const DHCPV6_SERVER: net_types_ip::Ipv6Addr =
-        net_types_ip::Ipv6Addr::new(std_ip_v6!("fe80::1").octets());
+        net_types_ip::Ipv6Addr::from_bytes(std_ip_v6!("fe80::1").octets());
     /// DNS server served by DHCPv6.
     const DHCPV6_DNS_SERVER: fnet::Ipv6Address = fidl_ip_v6!("20a::1234:5678");
 

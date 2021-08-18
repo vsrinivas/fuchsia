@@ -312,14 +312,14 @@ impl TestIpExt for Ipv6 {
     fn get_other_ip_address(last: u8) -> SpecifiedAddr<Ipv6Addr> {
         let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv6_bytes();
         bytes[bytes.len() - 1] = last;
-        SpecifiedAddr::new(Ipv6Addr::new(bytes)).unwrap()
+        SpecifiedAddr::new(Ipv6Addr::from(bytes)).unwrap()
     }
 
     fn get_other_remote_ip_address(last: u8) -> SpecifiedAddr<Self::Addr> {
         let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv6_bytes();
         bytes[bytes.len() - 3] += 1;
         bytes[bytes.len() - 1] = last;
-        SpecifiedAddr::new(Ipv6Addr::new(bytes)).unwrap()
+        SpecifiedAddr::new(Ipv6Addr::from(bytes)).unwrap()
     }
 }
 
@@ -357,14 +357,14 @@ pub(crate) const DUMMY_CONFIG_V4: DummyEventDispatcherConfig<Ipv4Addr> = unsafe 
 pub(crate) const DUMMY_CONFIG_V6: DummyEventDispatcherConfig<Ipv6Addr> = unsafe {
     DummyEventDispatcherConfig {
         subnet: Subnet::new_unchecked(
-            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
+            Ipv6Addr::from_bytes([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
             112,
         ),
-        local_ip: SpecifiedAddr::new_unchecked(Ipv6Addr::new([
+        local_ip: SpecifiedAddr::new_unchecked(Ipv6Addr::from_bytes([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1,
         ])),
         local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
-        remote_ip: SpecifiedAddr::new_unchecked(Ipv6Addr::new([
+        remote_ip: SpecifiedAddr::new_unchecked(Ipv6Addr::from_bytes([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2,
         ])),
         remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),

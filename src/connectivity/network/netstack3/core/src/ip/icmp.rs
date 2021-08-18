@@ -2520,8 +2520,10 @@ mod tests {
                 let _: &mut Ipv6StateBuilder = sb.ipv6_builder().forward(true);
             },
             &mut [0u8; 128],
-            SpecifiedAddr::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]))
-                .unwrap(),
+            SpecifiedAddr::new(Ipv6Addr::from_bytes([
+                1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8,
+            ]))
+            .unwrap(),
             64,
             IpProto::Udp.into(),
             &["send_icmpv6_net_unreachable", "send_icmp_error_message"],
@@ -2706,11 +2708,9 @@ mod tests {
         let dst_ip = DUMMY_CONFIG_V6.remote_ip;
         let frame_dst = FrameDestination::Unicast;
         let multicast_ip_1 =
-            SpecifiedAddr::new(Ipv6Addr::new([255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]))
-                .unwrap();
+            SpecifiedAddr::new(Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 1])).unwrap();
         let multicast_ip_2 =
-            SpecifiedAddr::new(Ipv6Addr::new([255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]))
-                .unwrap();
+            SpecifiedAddr::new(Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 2])).unwrap();
         let allow_dst_multicast = ShouldSendIcmpv6ErrorInfo { allow_dst_multicast: true };
         let disallow_dst_multicast = ShouldSendIcmpv6ErrorInfo { allow_dst_multicast: false };
 

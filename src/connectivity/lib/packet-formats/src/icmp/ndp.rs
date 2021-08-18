@@ -1006,7 +1006,7 @@ mod tests {
             false,
             100,
             100,
-            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
+            Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
         );
         let options = &[options::NdpOptionBuilder::PrefixInformation(expected_prefix_info.clone())];
         let serialized = OptionsSerializer::<_>::new(options.iter())
@@ -1064,18 +1064,18 @@ mod tests {
             assert_eq!(parsed.len(), 1);
             assert_eq!(options::NdpOption::RecursiveDnsServer(expected_rdnss), parsed[0]);
         };
-        test(&[Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])]);
+        test(&[Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])]);
         test(&[
-            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
-            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]),
+            Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+            Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]),
         ]);
     }
 
     #[test]
     fn parse_serialize_rdnss_option_error() {
         let addrs = [
-            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
-            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]),
+            Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+            Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]),
         ];
         let lifetime = 120;
         // 8 bytes for the kind, length, reserved and lifetime bytes + the bytes for
@@ -1310,9 +1310,9 @@ mod tests {
         } = test;
 
         const SRC_IP: Ipv6Addr =
-            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+            Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
         const DST_IP: Ipv6Addr =
-            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]);
+            Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]);
         let serialized = packet::EmptyBuf
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 SRC_IP,
@@ -1438,10 +1438,8 @@ mod tests {
             expected_option_length: 24,
         }; "prefix_length_128")]
     fn serialize_route_information_option(test: SerializeRioTest) {
-        const IPV6ADDR: Ipv6Addr = Ipv6Addr::new([
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff,
-        ]);
+        const IPV6ADDR: Ipv6Addr =
+            Ipv6Addr::new([0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff]);
 
         let SerializeRioTest {
             prefix_length,

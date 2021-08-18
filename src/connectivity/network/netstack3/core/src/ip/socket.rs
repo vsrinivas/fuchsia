@@ -1153,15 +1153,18 @@ mod tests {
             )
         }
 
-        let remote =
-            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1]))
-                .unwrap();
-        let local0 =
-            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2]))
-                .unwrap();
-        let local1 =
-            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3]))
-                .unwrap();
+        let remote = SpecifiedAddr::new(Ipv6Addr::from_bytes([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1,
+        ]))
+        .unwrap();
+        let local0 = SpecifiedAddr::new(Ipv6Addr::from_bytes([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2,
+        ]))
+        .unwrap();
+        let local1 = SpecifiedAddr::new(Ipv6Addr::from_bytes([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3,
+        ]))
+        .unwrap();
         let dev0 = DeviceId::new_ethernet(0);
         let dev1 = DeviceId::new_ethernet(1);
         let dev2 = DeviceId::new_ethernet(2);

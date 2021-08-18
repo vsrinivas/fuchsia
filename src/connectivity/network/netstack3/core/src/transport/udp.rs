@@ -2285,7 +2285,7 @@ mod tests {
                     ctx, src_ip, dst_ip, body, error_code,
                 )
             },
-            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),
+            Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),
         );
     }
 }

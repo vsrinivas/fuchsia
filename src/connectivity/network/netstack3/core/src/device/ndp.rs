@@ -3643,7 +3643,7 @@ fn generate_global_address(
     let mut address = prefix.network().ipv6_bytes();
     address[prefix_len..].copy_from_slice(&iid);
 
-    let address = AddrSubnet::new(Ipv6Addr::new(address), prefix.prefix()).unwrap();
+    let address = AddrSubnet::new(Ipv6Addr::from_bytes(address), prefix.prefix()).unwrap();
     assert_eq!(address.subnet(), *prefix);
 
     address
@@ -4241,7 +4241,7 @@ mod tests {
             false,
             500,
             400,
-            Ipv6Addr::new([51, 52, 53, 54, 55, 56, 57, 58, 0, 0, 0, 0, 0, 0, 0, 0]),
+            Ipv6Addr::from_bytes([51, 52, 53, 54, 55, 56, 57, 58, 0, 0, 0, 0, 0, 0, 0, 0]),
         )];
         c.set_advertised_prefix_list(prefix.clone());
         check_router_config(
@@ -4939,7 +4939,7 @@ mod tests {
     #[test]
     fn test_receiving_router_solicitation_validity_check() {
         let config = Ipv6::DUMMY_CONFIG;
-        let src_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
+        let src_ip = Ipv6Addr::from_bytes([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
         let src_mac = [10, 11, 12, 13, 14, 15];
         let options = vec![NdpOptionBuilder::SourceLinkLayerAddress(&src_mac[..])];
 
@@ -5023,7 +5023,7 @@ mod tests {
     fn test_receiving_router_advertisement_validity_check() {
         let config = Ipv6::DUMMY_CONFIG;
         let src_mac = [10, 11, 12, 13, 14, 15];
-        let src_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
+        let src_ip = Ipv6Addr::from_bytes([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device_id = DeviceId::new_ethernet(0);
@@ -5691,7 +5691,7 @@ mod tests {
         let device_id = device.id().into();
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]);
         let prefix_length = 120;
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
 
@@ -6464,7 +6464,7 @@ mod tests {
             false,
             500,
             400,
-            Ipv6Addr::new([51, 52, 53, 54, 55, 56, 57, 58, 0, 0, 0, 0, 0, 0, 0, 0]),
+            Ipv6Addr::from_bytes([51, 52, 53, 54, 55, 56, 57, 58, 0, 0, 0, 0, 0, 0, 0, 0]),
         );
         let prefix2 = PrefixInformation::new(
             70,
@@ -6472,7 +6472,7 @@ mod tests {
             true,
             501,
             401,
-            Ipv6Addr::new([51, 52, 53, 54, 55, 56, 57, 59, 0, 0, 0, 0, 0, 0, 0, 0]),
+            Ipv6Addr::from_bytes([51, 52, 53, 54, 55, 56, 57, 59, 0, 0, 0, 0, 0, 0, 0, 0]),
         );
         router_configs.set_advertised_prefix_list(vec![prefix1.clone(), prefix2.clone()]);
         send_router_advertisement::<EthernetLinkDevice, _>(
@@ -7612,7 +7612,7 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&src_mac.to_eui64()[..]);
@@ -7661,12 +7661,12 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::from_bytes(expected_addr)).unwrap();
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
@@ -7923,12 +7923,12 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::from_bytes(expected_addr)).unwrap();
 
         // Enable DAD for future IPs.
         let mut ndp_configs = NdpConfigurations::default();
@@ -8028,12 +8028,12 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::from_bytes(expected_addr)).unwrap();
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
@@ -8430,11 +8430,11 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::from_bytes(expected_addr)).unwrap();
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Manually give the device the expected address/subnet
@@ -8508,11 +8508,11 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let mut manual_addr_sub = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         manual_addr_sub[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let manual_addr_sub = UnicastAddr::new(Ipv6Addr::new(manual_addr_sub)).unwrap();
+        let manual_addr_sub = UnicastAddr::new(Ipv6Addr::from_bytes(manual_addr_sub)).unwrap();
         let manual_addr_sub =
             AddrSubnet::from_witness(manual_addr_sub, prefix_length + 10).unwrap();
         // Manually give the device the expected address but with a different
@@ -8586,14 +8586,14 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let manual_addr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-        let manual_addr = UnicastAddr::new(Ipv6Addr::new(manual_addr)).unwrap();
+        let manual_addr = UnicastAddr::new(Ipv6Addr::from_bytes(manual_addr)).unwrap();
         let manual_addr_sub = AddrSubnet::from_witness(manual_addr, prefix_length).unwrap();
         let mut slaac_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         slaac_addr[8..].copy_from_slice(&config.local_mac.to_eui64());
-        let slaac_addr = Ipv6Addr::new(slaac_addr);
+        let slaac_addr = Ipv6Addr::from_bytes(slaac_addr);
         let slaac_addr_sub = AddrSubnet::new(slaac_addr, prefix_length).unwrap();
         // Manually give the device the expected address with the same prefix.
         add_ip_addr_subnet(&mut ctx, device, manual_addr_sub.into_witness()).unwrap();
@@ -8669,7 +8669,7 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
 
         assert_eq!(
@@ -8725,11 +8725,11 @@ mod tests {
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::from_bytes(expected_addr)).unwrap();
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
@@ -8939,12 +8939,12 @@ mod tests {
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let dst_ip = config.local_ip;
-        let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix = Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let subnet = Subnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
-        let expected_addr = UnicastAddr::new(Ipv6Addr::new(expected_addr)).unwrap();
+        let expected_addr = UnicastAddr::new(Ipv6Addr::from_bytes(expected_addr)).unwrap();
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.

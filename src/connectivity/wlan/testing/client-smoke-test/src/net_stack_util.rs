@@ -36,7 +36,7 @@ pub fn dhcp_ip_filter(ip_addr: Subnet) -> bool {
     fuchsia_syslog::fx_log_info!("checking validity of ip address: {:?}", ip_addr);
     match ip_addr.addr {
         Ipv4(Ipv4Address { addr }) => valid_ip_filter(&Ipv4Addr::new(addr)),
-        Ipv6(Ipv6Address { addr }) => valid_ip_filter(&Ipv6Addr::new(addr)),
+        Ipv6(Ipv6Address { addr }) => valid_ip_filter(&Ipv6Addr::from(addr)),
     }
 }
 

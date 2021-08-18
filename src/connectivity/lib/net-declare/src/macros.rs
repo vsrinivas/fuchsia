@@ -439,7 +439,7 @@ impl Generator<Ipv6Addr> for NetGen {
     fn generate(input: Ipv6Addr) -> TokenStream {
         let octets = input.octets();
         quote! {
-            net_types::ip::Ipv6Addr::new([#(#octets),*])
+            net_types::ip::Ipv6Addr::from_bytes([#(#octets),*])
         }
     }
 }

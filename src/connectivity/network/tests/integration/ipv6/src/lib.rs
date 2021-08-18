@@ -404,7 +404,7 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
                             net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
                                 // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
                                 ipv6_consts::PREFIX
-                                    .contains(&net_types_ip::Ipv6Addr::new(addr))
+                                    .contains(&net_types_ip::Ipv6Addr::from_bytes(addr))
                                     .then(|| ())
                             }
                         }
@@ -614,7 +614,9 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
                  }| {
                     match addr {
                         net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
-                            if ipv6_consts::LINK_LOCAL_ADDR == net_types_ip::Ipv6Addr::new(addr) {
+                            if ipv6_consts::LINK_LOCAL_ADDR
+                                == net_types_ip::Ipv6Addr::from_bytes(addr)
+                            {
                                 Some(())
                             } else {
                                 None
@@ -649,9 +651,7 @@ async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
 ) {
     pub const SUBNET_WITH_MORE_SPECIFIC_ROUTE: net_types_ip::Subnet<net_types_ip::Ipv6Addr> = unsafe {
         net_types_ip::Subnet::new_unchecked(
-            net_types_ip::Ipv6Addr::new([
-                0xa0, 0x01, 0xf1, 0xf0, 0x40, 0x60, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0,
-            ]),
+            net_types_ip::Ipv6Addr::new([0xa001, 0xf1f0, 0x4060, 0x0001, 0, 0, 0, 0]),
             64,
         )
     };
@@ -884,7 +884,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
                  }| {
                     match addr {
                         net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
-                            let configured_addr = net_types_ip::Ipv6Addr::new(addr);
+                            let configured_addr = net_types_ip::Ipv6Addr::from_bytes(addr);
                             assert_ne!(
                                 configured_addr, tried_address,
                                 "address which previously failed DAD was assigned"

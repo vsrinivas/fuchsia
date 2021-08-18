@@ -52,7 +52,7 @@ pub fn is_globally_routable(
             }
             fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
                 has_default_ipv6_route
-                    && net_types::ip::Ipv6Addr::new(*addr).scope()
+                    && net_types::ip::Ipv6Addr::from_bytes(*addr).scope()
                         == net_types::ip::Ipv6Scope::Global
             }
         },

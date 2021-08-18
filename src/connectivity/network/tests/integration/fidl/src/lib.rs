@@ -1378,8 +1378,8 @@ fn test_forwarding_v6(
         // TODO(https://fxbug.dev/77901): Use `std_ip_v6!(..).into()`.
         // TODO(https://fxbug.dev/77965): Use `net_declare` macros to create
         // `net_types` addresses.
-        src_ip: net_types::ip::Ipv6Addr::new(std_ip_v6!("a::2").octets()),
-        dst_ip: net_types::ip::Ipv6Addr::new(std_ip_v6!("b::2").octets()),
+        src_ip: net_types::ip::Ipv6Addr::from_bytes(std_ip_v6!("a::2").octets()),
+        dst_ip: net_types::ip::Ipv6Addr::from_bytes(std_ip_v6!("b::2").octets()),
         expect_forward,
     }
 }

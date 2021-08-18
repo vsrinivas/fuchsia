@@ -336,11 +336,11 @@ pub mod dns_request_v6 {
             ecn: 0,
             flowlabel: 0xea528,
             hop_limit: 64,
-            src_ip: Ipv6Addr::new([
+            src_ip: Ipv6Addr::from_bytes([
                 0x26, 0x20, 0x00, 0x00, 0x10, 0x00, 0x50, 0x10, 0x69, 0xb4, 0xab, 0xc9, 0x7b, 0x21,
                 0x92, 0x15,
             ]),
-            dst_ip: Ipv6Addr::new([
+            dst_ip: Ipv6Addr::from_bytes([
                 0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                 0x88, 0x88,
             ]),
@@ -404,11 +404,11 @@ pub mod syn_v6 {
             ecn: 0,
             flowlabel: 0x8c55d,
             hop_limit: 64,
-            src_ip: Ipv6Addr::new([
+            src_ip: Ipv6Addr::from_bytes([
                 0x26, 0x20, 0x00, 0x00, 0x10, 0x00, 0x50, 0x10, 0x69, 0xb4, 0xab, 0xc9, 0x7b, 0x21,
                 0x92, 0x15,
             ]),
-            dst_ip: Ipv6Addr::new([
+            dst_ip: Ipv6Addr::from_bytes([
                 0x26, 0x07, 0xf8, 0xb0, 0x40, 0x05, 0x08, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                 0x20, 0x12,
             ]),
@@ -604,12 +604,11 @@ pub mod mld_router_query {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
 
-    pub const HOST_GROUP_ADDRESS: Ipv6Addr = Ipv6Addr::new([0; 16]);
+    pub const HOST_GROUP_ADDRESS: Ipv6Addr = Ipv6Addr::new([0; 8]);
     pub const MAX_RESP_CODE: u16 = 1000;
 
-    pub const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 16]);
-    pub const DST_IP: Ipv6Addr =
-        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    pub const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 8]);
+    pub const DST_IP: Ipv6Addr = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 1]);
 }
 
 /// An MLD Router Report packet.
@@ -628,12 +627,10 @@ pub mod mld_router_report {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
     ];
 
-    pub const HOST_GROUP_ADDRESS: Ipv6Addr =
-        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+    pub const HOST_GROUP_ADDRESS: Ipv6Addr = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 2]);
 
-    pub const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 16]);
-    pub const DST_IP: Ipv6Addr =
-        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    pub const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 8]);
+    pub const DST_IP: Ipv6Addr = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 1]);
 }
 
 /// An MLD Router Done packet.
@@ -652,12 +649,10 @@ pub mod mld_router_done {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
     ];
 
-    pub const HOST_GROUP_ADDRESS: Ipv6Addr =
-        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+    pub const HOST_GROUP_ADDRESS: Ipv6Addr = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 2]);
 
-    pub const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 16]);
-    pub const DST_IP: Ipv6Addr =
-        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    pub const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 8]);
+    pub const DST_IP: Ipv6Addr = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 1]);
 }
 
 /// IGMPv2 Membership packets.

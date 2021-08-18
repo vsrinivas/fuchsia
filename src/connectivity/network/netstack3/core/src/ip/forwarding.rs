@@ -509,7 +509,7 @@ mod tests {
     impl TestIpExt for Ipv6 {
         fn subnet(v: u8, neg_prefix: u8) -> Subnet<Ipv6Addr> {
             Subnet::new(
-                Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 0]),
+                Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 0]),
                 128 - neg_prefix,
             )
             .unwrap()
@@ -517,14 +517,16 @@ mod tests {
 
         fn next_hop_addr_sub(v: u8, neg_prefix: u8) -> (SpecifiedAddr<Ipv6Addr>, Subnet<Ipv6Addr>) {
             (
-                SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 1]))
-                    .unwrap(),
+                SpecifiedAddr::new(Ipv6Addr::from([
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 1,
+                ]))
+                .unwrap(),
                 Ipv6::subnet(v, neg_prefix),
             )
         }
 
         fn next_hop_addr() -> SpecifiedAddr<Ipv6Addr> {
-            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1]))
+            SpecifiedAddr::new(Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1]))
                 .unwrap()
         }
     }

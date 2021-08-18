@@ -476,7 +476,7 @@ macro_rules! decl_policy {
             // test_valid_policy_table.
             prefix: unsafe {
                 net_types::ip::Subnet::new_unchecked(
-                    net_types::ip::Ipv6Addr::new(fidl_ip_v6!($ip).addr),
+                    net_types::ip::Ipv6Addr::from_bytes(fidl_ip_v6!($ip).addr),
                     $prefix,
                 )
             },
@@ -554,7 +554,7 @@ impl DasCmpInfo {
                 net_types::ip::Ipv6Addr::from(net_types::ip::Ipv4Addr::new(*addr))
             }
             fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-                net_types::ip::Ipv6Addr::new(*addr)
+                net_types::ip::Ipv6Addr::from_bytes(*addr)
             }
         }
     }

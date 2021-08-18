@@ -529,17 +529,14 @@ mod tests {
     }
 
     const MY_IP: SpecifiedAddr<Ipv6Addr> = unsafe {
-        SpecifiedAddr::new_unchecked(Ipv6Addr::new([
+        SpecifiedAddr::new_unchecked(Ipv6Addr::from_bytes([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3,
         ]))
     };
     const MY_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
     const ROUTER_MAC: Mac = Mac::new([6, 5, 4, 3, 2, 1]);
-    const GROUP_ADDR: MulticastAddr<Ipv6Addr> = unsafe {
-        MulticastAddr::new_unchecked(Ipv6Addr::new([
-            0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
-        ]))
-    };
+    const GROUP_ADDR: MulticastAddr<Ipv6Addr> =
+        unsafe { MulticastAddr::new_unchecked(Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 3])) };
 
     fn receive_mld_query(
         ctx: &mut DummyContext,
@@ -609,7 +606,7 @@ mod tests {
     fn ensure_slice_addr(frame: &[u8], start: usize, end: usize, ip: Ipv6Addr) {
         let mut bytes = [0u8; 16];
         bytes.copy_from_slice(&frame[start..end]);
-        assert_eq!(Ipv6Addr::new(bytes), ip);
+        assert_eq!(Ipv6Addr::from_bytes(bytes), ip);
     }
 
     // Ensure the destination address field in the ICMPv6 packet is correct.
@@ -872,10 +869,10 @@ mod tests {
         let mut bytes = Ipv6::MULTICAST_SUBNET.network().ipv6_bytes();
         // Manually set the "scope" field to 0.
         bytes[1] = bytes[1] & 0xF0;
-        let reserved0 = MulticastAddr::new(Ipv6Addr::new(bytes)).unwrap();
+        let reserved0 = MulticastAddr::new(Ipv6Addr::from_bytes(bytes)).unwrap();
         // Manually set the "scope" field to 1 (interface-local).
         bytes[1] = (bytes[1] & 0xF0) | 1;
-        let iface_local = MulticastAddr::new(Ipv6Addr::new(bytes)).unwrap();
+        let iface_local = MulticastAddr::new(Ipv6Addr::from_bytes(bytes)).unwrap();
         test(DummyContext::default(), reserved0);
         test(DummyContext::default(), iface_local);
 

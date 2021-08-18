@@ -558,8 +558,8 @@ async fn test_ip_endpoint_packets() {
     );
 
     // Manually build a V6 ping frame and see it come back out of the stack.
-    let src_ip = Ipv6Addr::new(BOB_ADDR_V6.addr);
-    let dst_ip = Ipv6Addr::new(ALICE_ADDR_V6.addr);
+    let src_ip = Ipv6Addr::from_bytes(BOB_ADDR_V6.addr);
+    let dst_ip = Ipv6Addr::from_bytes(ALICE_ADDR_V6.addr);
     let packet = packet::Buf::new(&mut payload[..], ..)
         .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
             src_ip,

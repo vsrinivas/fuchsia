@@ -108,7 +108,7 @@ mod tests {
         // fails, and with matching ones succeeds.
         let subnet_v4 = Subnet::new(Ipv4Addr::new([192, 168, 0, 0]), 24).unwrap().into();
         let subnet_v6 =
-            Subnet::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
+            Subnet::new(Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
                 .unwrap()
                 .into();
         let entry_v4: EntryDest<_, ()> = EntryDest::Remote {
@@ -116,7 +116,7 @@ mod tests {
         }
         .into_ip_addr();
         let entry_v6: EntryDest<_, ()> = EntryDest::Remote {
-            next_hop: SpecifiedAddr::new(Ipv6Addr::new([
+            next_hop: SpecifiedAddr::new(Ipv6Addr::from_bytes([
                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
             ]))
             .unwrap(),

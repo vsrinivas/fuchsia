@@ -2238,10 +2238,7 @@ mod tests {
         return MulticastAddr::new(Ipv4Addr::new([224, 0, 0, 1])).unwrap();
 
         #[ipv6]
-        return MulticastAddr::new(Ipv6Addr::new([
-            0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-        ]))
-        .unwrap();
+        return MulticastAddr::new(Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 1])).unwrap();
     }
 
     /// Test that we can join and leave a multicast group, but we only truly
@@ -2322,13 +2319,9 @@ mod tests {
             ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
-        let ip1 =
-            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1]))
-                .unwrap();
-        let ip2 =
-            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1]))
-                .unwrap();
-        let from_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 1]);
+        let ip1 = SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 1, 0, 0, 0, 1])).unwrap();
+        let ip2 = SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 2, 0, 0, 0, 1])).unwrap();
+        let from_ip = Ipv6Addr::new([0, 0, 0, 3, 0, 0, 0, 1]);
 
         // ip1 and ip2 are not equal but their solicited node addresses are the
         // same.

@@ -125,7 +125,7 @@ impl Mac {
         // TODO(ghanan): Investigate whether this unwrap is optimized out in
         //               practice as this code will be on the hot path.
         AddrSubnet::new(
-            Ipv6Addr::new(ipv6_addr),
+            Ipv6Addr::from(ipv6_addr),
             Ipv6Addr::BYTES * 8 - Ipv6::UNICAST_INTERFACE_IDENTIFIER_BITS,
         )
         .unwrap()
@@ -284,9 +284,9 @@ mod tests {
             Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local(),
             AddrSubnet::new(
                 Ipv6Addr::new([
-                    0xfe, 0x80, // IPv6 link-local prefix
-                    0, 0, 0, 0, 0, 0, // Padding zeroes
-                    0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56, // EUI-64
+                    0xfe80, // IPv6 link-local prefix
+                    0, 0, 0, // Padding zeroes
+                    0x021a, 0xaaff, 0xfe12, 0x3456, // EUI-64
                 ]),
                 64
             )
@@ -297,9 +297,9 @@ mod tests {
                 .to_ipv6_link_local_with_magic([0xfe, 0xfe]),
             AddrSubnet::new(
                 Ipv6Addr::new([
-                    0xfe, 0x80, // IPv6 link-local prefix
-                    0, 0, 0, 0, 0, 0, // Padding zeroes
-                    0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56, // EUI-64
+                    0xfe80, // IPv6 link-local prefix
+                    0, 0, 0, // Padding zeroes
+                    0x021a, 0xaafe, 0xfe12, 0x3456, // EUI-64
                 ]),
                 64
             )
@@ -319,13 +319,13 @@ mod tests {
         let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
         assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
 
-        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3]);
+        let ipv6 = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 3]);
         let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
         assert_eq!(mac, Mac::new([0x33, 0x33, 0, 0, 0, 3]));
-        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3]);
+        let ipv6 = Ipv6Addr::new([0xff02, 0, 0, 1, 0, 0, 0, 3]);
         let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
         assert_eq!(mac, Mac::new([0x33, 0x33, 0, 0, 0, 3]));
-        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 3]);
+        let ipv6 = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0x100, 3]);
         let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
         assert_eq!(mac, Mac::new([0x33, 0x33, 1, 0, 0, 3]));
     }

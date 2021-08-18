@@ -558,7 +558,7 @@ fn local_routes(
             net_types::ip::IpAddr::V4(net_types::ip::Ipv4Addr::new(addr).mask(prefix_len))
         }
         fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-            net_types::ip::IpAddr::V6(net_types::ip::Ipv6Addr::new(addr).mask(prefix_len))
+            net_types::ip::IpAddr::V6(net_types::ip::Ipv6Addr::from_bytes(addr).mask(prefix_len))
         }
     };
     let subnet = net_types::ip::SubnetEither::new(addr, prefix_len).unwrap_or_else(|e| {
@@ -579,7 +579,7 @@ fn local_routes(
                     fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => match subnet {
                         net_types::ip::SubnetEither::V4(_) => false,
                         net_types::ip::SubnetEither::V6(subnet) => {
-                            net_types::ip::Ipv6Addr::new(addr).is_unicast_in_subnet(&subnet)
+                            net_types::ip::Ipv6Addr::from_bytes(addr).is_unicast_in_subnet(&subnet)
                         }
                     },
                 })
@@ -621,7 +621,7 @@ async fn network_layer_state(
                             )))
                         }
                         .or_else(|| {
-                            if net_types::ip::Ipv6Addr::new(v6.octets()).scope()
+                            if net_types::ip::Ipv6Addr::from_bytes(v6.octets()).scope()
                                 != net_types::ip::Ipv6Scope::Global
                             {
                                 warn!(

@@ -2755,9 +2755,10 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());
-        let extra_ip =
-            UnicastAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100]))
-                .unwrap();
+        let extra_ip = UnicastAddr::new(Ipv6Addr::from_bytes([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100,
+        ]))
+        .unwrap();
         let extra_mac = Mac::new([13, 14, 15, 16, 17, 18]);
         dispatcher_builder.add_ndp_table_entry(0, extra_ip, extra_mac);
         dispatcher_builder.add_ndp_table_entry(
@@ -3202,7 +3203,7 @@ mod tests {
             return Ipv4Addr::new([224, 0, 0, 1]);
 
             #[ipv6addr]
-            return Ipv6Addr::new([255, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+            return Ipv6Addr::new([0xff11, 0, 0, 0, 0, 0, 0, 1]);
         }
 
         // Test receiving a packet destined to a multicast IP (and corresponding

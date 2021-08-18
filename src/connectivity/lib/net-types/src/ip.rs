@@ -356,20 +356,13 @@ impl sealed::Sealed for Ipv6 {}
 
 impl Ip for Ipv6 {
     const VERSION: IpVersion = IpVersion::V6;
-    const UNSPECIFIED_ADDRESS: Ipv6Addr = Ipv6Addr::new([0; 16]);
-    const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv6Addr> = unsafe {
-        SpecifiedAddr::new_unchecked(Ipv6Addr::new([
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-        ]))
-    };
-    const LOOPBACK_SUBNET: Subnet<Ipv6Addr> = Subnet {
-        network: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
-        prefix: 128,
-    };
-    const MULTICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
-        network: Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        prefix: 8,
-    };
+    const UNSPECIFIED_ADDRESS: Ipv6Addr = Ipv6Addr::new([0; 8]);
+    const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv6Addr> =
+        unsafe { SpecifiedAddr::new_unchecked(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 1])) };
+    const LOOPBACK_SUBNET: Subnet<Ipv6Addr> =
+        Subnet { network: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 1]), prefix: 128 };
+    const MULTICAST_SUBNET: Subnet<Ipv6Addr> =
+        Subnet { network: Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 0]), prefix: 8 };
     /// The subnet of link-local unicast addresses, defined in [RFC 4291 Section
     /// 2.4].
     ///
@@ -379,10 +372,8 @@ impl Ip for Ipv6 {
     ///
     /// [RFC 4291 Section 2.4]: https://tools.ietf.org/html/rfc4291#section-2.4
     /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
-    const LINK_LOCAL_UNICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
-        network: Ipv6Addr::new([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        prefix: 10,
-    };
+    const LINK_LOCAL_UNICAST_SUBNET: Subnet<Ipv6Addr> =
+        Subnet { network: Ipv6Addr::new([0xfe80, 0, 0, 0, 0, 0, 0, 0]), prefix: 10 };
     const NAME: &'static str = "IPv6";
     /// The IPv6 minimum link MTU.
     ///
@@ -414,21 +405,15 @@ impl Ipv6 {
     /// [RFC 4291 Section 2.7.1].
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
-    pub const ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS: MulticastAddr<Ipv6Addr> = unsafe {
-        MulticastAddr::new_unchecked(Ipv6Addr::new([
-            0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-        ]))
-    };
+    pub const ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS: MulticastAddr<Ipv6Addr> =
+        unsafe { MulticastAddr::new_unchecked(Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 1])) };
 
     /// The IPv6 All Routers multicast address in link-local scope, as defined
     /// in [RFC 4291 Section 2.7.1].
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
-    pub const ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS: MulticastAddr<Ipv6Addr> = unsafe {
-        MulticastAddr::new_unchecked(Ipv6Addr::new([
-            0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-        ]))
-    };
+    pub const ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS: MulticastAddr<Ipv6Addr> =
+        unsafe { MulticastAddr::new_unchecked(Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 2])) };
 
     /// The (deprecated) subnet of site-local unicast addresses, defined in [RFC
     /// 3513 Section 2.5.6].
@@ -443,10 +428,8 @@ impl Ipv6 {
     ///
     /// [RFC 3513 Section 2.5.6]: https://tools.ietf.org/html/rfc3513#section-2.5.6
     /// [RFC 3879]: https://tools.ietf.org/html/rfc3879
-    pub const SITE_LOCAL_UNICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
-        network: Ipv6Addr::new([0xfe, 0xC0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        prefix: 10,
-    };
+    pub const SITE_LOCAL_UNICAST_SUBNET: Subnet<Ipv6Addr> =
+        Subnet { network: Ipv6Addr::new([0xfec0, 0, 0, 0, 0, 0, 0, 0]), prefix: 10 };
 
     /// The length, in bits, of the interface identifier portion of unicast IPv6
     /// addresses *except* for addresses which start with the binary value 000.
@@ -1113,7 +1096,7 @@ impl Ipv4Addr {
     #[inline]
     pub fn to_ipv6_compatible(self) -> Ipv6Addr {
         let Self([a, b, c, d]) = self;
-        Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, a, b, c, d])
+        Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, a, b, c, d])
     }
 
     /// Converts the address to an IPv4-mapped IPv6 address according to [RFC
@@ -1136,7 +1119,7 @@ impl Ipv4Addr {
     #[inline]
     pub fn to_ipv6_mapped(self) -> Ipv6Addr {
         let Self([a, b, c, d]) = self;
-        Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, a, b, c, d])
+        Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, a, b, c, d])
     }
 }
 
@@ -1241,7 +1224,22 @@ pub struct Ipv6Addr([u8; 16]);
 impl Ipv6Addr {
     /// Creates a new IPv6 address.
     #[inline]
-    pub const fn new(bytes: [u8; 16]) -> Self {
+    pub const fn new(segments: [u16; 8]) -> Ipv6Addr {
+        let [a, b, c, d, e, f, g, h] = segments;
+        let [aa, ab] = a.to_be_bytes();
+        let [ba, bb] = b.to_be_bytes();
+        let [ca, cb] = c.to_be_bytes();
+        let [da, db] = d.to_be_bytes();
+        let [ea, eb] = e.to_be_bytes();
+        let [fa, fb] = f.to_be_bytes();
+        let [ga, gb] = g.to_be_bytes();
+        let [ha, hb] = h.to_be_bytes();
+        Ipv6Addr([aa, ab, ba, bb, ca, cb, da, db, ea, eb, fa, fb, ga, gb, ha, hb])
+    }
+
+    /// Creates a new IPv6 address from raw bytes.
+    #[inline]
+    pub const fn from_bytes(bytes: [u8; 16]) -> Ipv6Addr {
         Ipv6Addr(bytes)
     }
 
@@ -1256,7 +1254,7 @@ impl Ipv6Addr {
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
     #[inline]
-    pub const fn to_solicited_node_address(&self) -> MulticastAddr<Self> {
+    pub const fn to_solicited_node_address(&self) -> MulticastAddr<Ipv6Addr> {
         // TODO(brunodalbo) benchmark this generation and evaluate if using
         //  bit operations with u128 could be faster. This is very likely
         //  going to be on a hot path.
@@ -1265,7 +1263,7 @@ impl Ipv6Addr {
         // when calling `new_unchecked` because the address we provide it is
         // a multicast address as defined by RFC 4291 section 2.7.1.
         unsafe {
-            MulticastAddr::new_unchecked(Self::new([
+            MulticastAddr::new_unchecked(Ipv6Addr::from_bytes([
                 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, self.0[13], self.0[14],
                 self.0[15],
             ]))
@@ -1368,7 +1366,7 @@ impl sealed::Sealed for Ipv6Addr {}
 /// [`Ipv4Addr`] is convertible into [`Ipv6Addr`] through
 /// [`Ipv4Addr::to_ipv6_mapped`].
 impl From<Ipv4Addr> for Ipv6Addr {
-    fn from(addr: Ipv4Addr) -> Self {
+    fn from(addr: Ipv4Addr) -> Ipv6Addr {
         addr.to_ipv6_mapped()
     }
 }
@@ -1379,14 +1377,14 @@ impl IpAddress for Ipv6Addr {
     type Version = Ipv6;
 
     #[inline]
-    fn mask(&self, bits: u8) -> Self {
+    fn mask(&self, bits: u8) -> Ipv6Addr {
         assert!(bits <= 128);
         if bits == 0 {
             // shifting left by the size of the value is undefined
             Ipv6Addr([0; 16])
         } else {
             let mask = <u128>::max_value() << (128 - bits);
-            Self::new((u128::from_be_bytes(self.0) & mask).to_be_bytes())
+            Ipv6Addr::from((u128::from_be_bytes(self.0) & mask).to_be_bytes())
         }
     }
 
@@ -1435,7 +1433,7 @@ impl From<[u8; 16]> for Ipv6Addr {
 impl From<net::Ipv6Addr> for Ipv6Addr {
     #[inline]
     fn from(ip: net::Ipv6Addr) -> Ipv6Addr {
-        Ipv6Addr::new(ip.octets())
+        Ipv6Addr(ip.octets())
     }
 }
 
@@ -2326,7 +2324,7 @@ mod tests {
         );
         assert!(
             AddrSubnet::<_, SpecifiedAddr<_>>::new(
-                Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+                Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
                 129,
             ) == Err(AddrSubnetError::PrefixTooLong)
         );
@@ -2347,7 +2345,7 @@ mod tests {
         );
         assert!(
             AddrSubnet::<_, SpecifiedAddr<_>>::new(
-                Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+                Ipv6Addr::from([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
                 64,
             ) == Err(AddrSubnetError::NotUnicastInSubnet)
         );
@@ -2370,11 +2368,11 @@ mod tests {
         assert!(!Ipv4Addr::new([2, 2, 3, 4]).is_unicast_in_subnet(&subnet));
 
         let subnet =
-            Subnet::new(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
+            Subnet::new(Ipv6Addr::from([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
                 .expect("1::/64 is a valid subnet");
-        assert!(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+        assert!(Ipv6Addr::from([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
             .is_unicast_in_subnet(&subnet));
-        assert!(!Ipv6Addr::new([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+        assert!(!Ipv6Addr::from([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
             .is_unicast_in_subnet(&subnet));
 
         // Unspecified address
@@ -2410,7 +2408,7 @@ mod tests {
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 255, 255]), 32).unwrap()));
         // Multicast
         assert!(!Ipv4Addr::new([224, 0, 0, 1]).is_unicast_in_subnet(&Ipv4::MULTICAST_SUBNET));
-        assert!(!Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+        assert!(!Ipv6Addr::from([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
             .is_unicast_in_subnet(&Ipv6::MULTICAST_SUBNET));
         // Class E (IPv4 only)
         assert!(!Ipv4Addr::new([240, 0, 0, 1]).is_unicast_in_subnet(&Ipv4::CLASS_E_SUBNET));
@@ -2422,8 +2420,8 @@ mod tests {
             }) => {
                 #[test]
                 fn $name() {
-                    let from = $addr::new($from_ip);
-                    $(assert_eq!(from.mask($mask), $addr::new($to_ip), "(`{}`.mask({}))", from, $mask);)*
+                    let from = $addr::from($from_ip);
+                    $(assert_eq!(from.mask($mask), $addr::from($to_ip), "(`{}`.mask({}))", from, $mask);)*
                 }
             };
             ($name:ident, $addr:ident, $from_ip:expr => {
@@ -2462,32 +2460,24 @@ mod tests {
 
     #[test]
     fn test_ipv6_solicited_node() {
-        let addr = Ipv6Addr::new([
-            0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x52, 0xe5, 0x49, 0xff, 0xfe, 0xb5, 0x5a, 0xa0,
-        ]);
-        let solicited =
-            Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, 0xb5, 0x5a, 0xa0]);
+        let addr = Ipv6Addr::new([0xfe80, 0, 0, 0, 0x52e5, 0x49ff, 0xfeb5, 0x5aa0]);
+        let solicited = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0x01, 0xffb5, 0x5aa0]);
         assert_eq!(addr.to_solicited_node_address().get(), solicited);
     }
 
     #[test]
     fn test_ipv6_address_types() {
-        assert!(!Ipv6Addr::new([0; 16]).is_specified());
-        assert!(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]).is_loopback());
-        let link_local = Ipv6Addr::new([
-            0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x52, 0xe5, 0x49, 0xff, 0xfe, 0xb5, 0x5a, 0xa0,
-        ]);
+        assert!(!Ipv6Addr::from([0; 16]).is_specified());
+        assert!(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 1]).is_loopback());
+        let link_local = Ipv6Addr::new([0xfe80, 0, 0, 0, 0x52e5, 0x49ff, 0xfeb5, 0x5aa0]);
         assert!(link_local.is_linklocal());
         assert!(link_local.is_valid_unicast());
         assert!(link_local.to_solicited_node_address().is_multicast());
-        let global_unicast = Ipv6Addr::new([
-            0x00, 0x80, 0, 0, 0, 0, 0, 0, 0x52, 0xe5, 0x49, 0xff, 0xfe, 0xb5, 0x5a, 0xa0,
-        ]);
+        let global_unicast = Ipv6Addr::new([0x80, 0, 0, 0, 0x52e5, 0x49ff, 0xfeb5, 0x5aa0]);
         assert!(global_unicast.is_valid_unicast());
         assert!(global_unicast.to_solicited_node_address().is_multicast());
 
-        let multi =
-            Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, 0xb5, 0x5a, 0xa0]);
+        let multi = Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0x01, 0xffb5, 0x5aa0]);
         assert!(multi.is_multicast());
         assert!(!multi.is_valid_unicast());
     }
@@ -2571,18 +2561,18 @@ mod tests {
 
         assert_eq!(
             Ipv4Addr::new([1, 2, 3, 4]).to_ipv6_compatible(),
-            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4])
+            Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4])
         );
         assert_eq!(
             Ipv4Addr::new([1, 2, 3, 4]).to_ipv6_mapped(),
-            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 1, 2, 3, 4]),
+            Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 1, 2, 3, 4]),
         );
 
         // Test Ipv6Addr's to_ipv4_compatible and to_ipv4_mapped methods.
 
-        let compatible = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4]);
-        let mapped = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 1, 2, 3, 4]);
-        let not_embedded = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 1, 2, 3, 4]);
+        let compatible = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4]);
+        let mapped = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 1, 2, 3, 4]);
+        let not_embedded = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 1, 2, 3, 4]);
         let v4 = Ipv4Addr::new([1, 2, 3, 4]);
 
         assert_eq!(compatible.to_ipv4_compatible(), Some(v4));
@@ -2597,10 +2587,10 @@ mod tests {
 
     #[test]
     fn test_common_prefix_len_ipv6() {
-        let ip1 = Ipv6Addr::new([0xFF, 0xFF, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        let ip2 = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        let ip3 = Ipv6Addr::new([0xFF, 0xFF, 0x80, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        let ip4 = Ipv6Addr::new([0xFF, 0xFF, 0xC0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let ip1 = Ipv6Addr::from([0xFF, 0xFF, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let ip2 = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let ip3 = Ipv6Addr::from([0xFF, 0xFF, 0x80, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let ip4 = Ipv6Addr::from([0xFF, 0xFF, 0xC0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         let compare_with_ip1 = |target, expect| {
             assert_eq!(ip1.common_prefix_len(&target), expect, "{} <=> {}", ip1, target);
         };

@@ -306,7 +306,7 @@ mod tests {
 
         assert_eq!(
             net_types::ip::IpAddr::from(net_types::ip::Ipv6Addr::new([
-                0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02
+                0xFF01, 0, 0, 0, 0, 0, 0, 0x0102
             ])),
             net_ip!("ff01::0102"),
         );
@@ -320,9 +320,7 @@ mod tests {
     #[test]
     fn test_net_ip_v6() {
         assert_eq!(
-            net_types::ip::Ipv6Addr::new([
-                0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02
-            ]),
+            net_types::ip::Ipv6Addr::new([0xFF01, 0, 0, 0, 0, 0, 0, 0x0102]),
             net_ip_v6!("ff01::0102"),
         );
     }

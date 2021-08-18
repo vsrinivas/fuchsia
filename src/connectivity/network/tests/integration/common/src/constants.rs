@@ -22,9 +22,7 @@ pub mod ipv6 {
     /// 2001:f1f0:4060:1::/64
     pub const PREFIX: net_types_ip::Subnet<net_types_ip::Ipv6Addr> = unsafe {
         net_types_ip::Subnet::new_unchecked(
-            net_types_ip::Ipv6Addr::new([
-                0x20, 0x01, 0xf1, 0xf0, 0x40, 0x60, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0,
-            ]),
+            net_types_ip::Ipv6Addr::new([0x2001, 0xf1f0, 0x4060, 0x0001, 0, 0, 0, 0]),
             64,
         )
     };
@@ -33,7 +31,7 @@ pub mod ipv6 {
     ///
     /// fe80::1
     pub const LINK_LOCAL_ADDR: net_types_ip::Ipv6Addr =
-        net_types_ip::Ipv6Addr::new([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        net_types_ip::Ipv6Addr::new([0xfe80, 0, 0, 0, 0, 0, 0, 1]);
 }
 
 /// Ethernet constants.
