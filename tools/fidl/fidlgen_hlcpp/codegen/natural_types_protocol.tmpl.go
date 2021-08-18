@@ -44,7 +44,7 @@ class {{ .RequestEncoder.Name }} {
         _encoder->Alloc({{ .Request.TypeShapeV1.InlineSize }} - sizeof(fidl_message_header_t));
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc({{ .Request.TypeShapeV1.InlineSize }} - sizeof(fidl_message_header_t));
+        _encoder->Alloc({{ .Request.TypeShapeV2.InlineSize }} - sizeof(fidl_message_header_t));
         break;
     }
 

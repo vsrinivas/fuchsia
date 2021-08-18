@@ -251,7 +251,7 @@ class Protocol_RequestEncoder {
         _encoder->Alloc(40 - sizeof(fidl_message_header_t));
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
         break;
     }
 
@@ -280,7 +280,7 @@ class Protocol_RequestEncoder {
         _encoder->Alloc(40 - sizeof(fidl_message_header_t));
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
         break;
     }
 
