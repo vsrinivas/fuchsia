@@ -18,9 +18,7 @@
 
 
 #### Request {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated_Response}
@@ -38,9 +36,7 @@
 
 
 #### Request {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated_Response}
@@ -63,9 +59,7 @@
 
 
 
-<table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr>
-</table>
+&lt;EMPTY&gt;
 
 ### NullableUnionStruct  {#NullableUnionStruct data-text="NullableUnionStruct"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=66)*

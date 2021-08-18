@@ -18,9 +18,7 @@
 
 
 #### Request {#FirstProtocol.MethodOnFirst_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 
@@ -34,9 +32,7 @@
 
 
 #### Request {#SecondProtocol.MethodOnSecond_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 

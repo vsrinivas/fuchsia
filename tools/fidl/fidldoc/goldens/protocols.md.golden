@@ -126,9 +126,7 @@
 
 
 #### Response {#ChannelProtocol.TakeHandle_Response}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 ## DiscoverableProtocol {#DiscoverableProtocol}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=118)*
@@ -140,9 +138,7 @@
 
 
 #### Request {#DiscoverableProtocol.Method_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 
@@ -418,24 +414,18 @@
 
 
 #### Request {#WithAndWithoutRequestResponse.NoRequestEmptyResponse_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#WithAndWithoutRequestResponse.NoRequestEmptyResponse_Response}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 ### NoRequestNoResponse {#WithAndWithoutRequestResponse.NoRequestNoResponse}
 
 
 
 #### Request {#WithAndWithoutRequestResponse.NoRequestNoResponse_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 
@@ -444,9 +434,7 @@
 
 
 #### Request {#WithAndWithoutRequestResponse.NoRequestWithResponse_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#WithAndWithoutRequestResponse.NoRequestWithResponse_Response}
@@ -466,9 +454,7 @@
 
 
 #### Response {#WithAndWithoutRequestResponse.OnEmptyResponse_Response}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 ### OnWithResponse {#WithAndWithoutRequestResponse.OnWithResponse}
 
@@ -502,9 +488,7 @@
 
 
 #### Response {#WithAndWithoutRequestResponse.WithRequestEmptyResponse_Response}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 ### WithRequestNoResponse {#WithAndWithoutRequestResponse.WithRequestNoResponse}
 
@@ -557,9 +541,7 @@
 
 
 #### Request {#WithErrorSyntax.ErrorAsEnum_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#WithErrorSyntax.ErrorAsEnum_Response}
@@ -577,9 +559,7 @@
 
 
 #### Request {#WithErrorSyntax.ErrorAsPrimitive_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#WithErrorSyntax.ErrorAsPrimitive_Response}
@@ -597,9 +577,7 @@
 
 
 #### Request {#WithErrorSyntax.HandleInResult_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#WithErrorSyntax.HandleInResult_Response}
@@ -617,9 +595,7 @@
 
 
 #### Request {#WithErrorSyntax.ResponseAsStruct_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#WithErrorSyntax.ResponseAsStruct_Response}
@@ -764,9 +740,7 @@
 
 
 
-<table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr>
-</table>
+&lt;EMPTY&gt;
 
 ### WithErrorSyntax_ErrorAsPrimitive_Response  {#WithErrorSyntax_ErrorAsPrimitive_Response data-text="WithErrorSyntax_ErrorAsPrimitive_Response"}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=57)*
@@ -774,9 +748,7 @@
 
 
 
-<table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr>
-</table>
+&lt;EMPTY&gt;
 
 ### WithErrorSyntax_HandleInResult_Response [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#WithErrorSyntax_HandleInResult_Response data-text="WithErrorSyntax_HandleInResult_Response"}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=59)*

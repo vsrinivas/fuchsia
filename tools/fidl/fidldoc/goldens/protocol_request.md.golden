@@ -23,9 +23,7 @@
 
 
 #### Request {#Parent.GetChild_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#Parent.GetChild_Response}
@@ -43,9 +41,7 @@
 
 
 #### Request {#Parent.GetChildRequest_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#Parent.GetChildRequest_Response}

@@ -24,9 +24,7 @@
 
 
 #### Request {#Interface.Method_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 
@@ -39,9 +37,7 @@
 
 
 #### Response {#Interface.OnEvent_Response}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 

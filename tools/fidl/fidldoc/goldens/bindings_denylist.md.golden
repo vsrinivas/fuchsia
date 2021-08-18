@@ -23,15 +23,11 @@
 
 
 #### Request {#OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol_Request}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 #### Response {#OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol_Response}
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
+&lt;EMPTY&gt;
 
 
 
@@ -43,9 +39,7 @@
 
 
 
-<table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr>
-</table>
+&lt;EMPTY&gt;
 
 
 

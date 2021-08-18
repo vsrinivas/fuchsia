@@ -13,6 +13,7 @@
 
 {{#if has_request}}
 #### Request {#{{methodId (rpn name) (rpn ../name)}}_Request}
+{{#if maybe_request ~}}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     {{#each maybe_request ~}}
@@ -26,10 +27,14 @@
         </tr>
     {{~ /each ~}}
 </table>
+{{~ else ~}}
+&lt;EMPTY&gt;
+{{~ /if}}
 {{~ /if}}
 
 {{#if has_response}}
 #### Response {#{{methodId (rpn name) (rpn ../name)}}_Response}
+{{#if maybe_response ~}}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     {{#each maybe_response ~}}
@@ -43,6 +48,9 @@
         </tr>
     {{~ /each ~}}
 </table>
+{{~ else ~}}
+&lt;EMPTY&gt;
+{{~ /if}}
 {{~ /if}}
 {{/each ~}}
 {{~ /each ~}}
