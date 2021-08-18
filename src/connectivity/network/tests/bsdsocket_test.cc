@@ -1720,14 +1720,14 @@ TEST_P(HangupTest, DuringConnect) {
                 .fd = connecting_client.get(),
                 .events = POLLIN,
             };
-            int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+            int n = poll(&pfd, 1, 0);
             EXPECT_GE(n, 0) << strerror(errno);
             EXPECT_EQ(n, 1);
 #if !defined(__Fuchsia__)
-            // TODO(https://fxbug.dev/76353): Fuchsia doesn't distinguish between
-            // connected-and-shutdown and unconnected-and-shutdown.
             EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
 #else
+            // TODO(https://fxbug.dev/76353): Fuchsia doesn't distinguish between
+            // connected-and-shutdown and unconnected-and-shutdown.
             EXPECT_EQ(pfd.revents, POLLIN);
 #endif
           }
@@ -1768,9 +1768,24 @@ TEST_P(HangupTest, DuringConnect) {
         case HangupMethod::kClose:
           ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
           break;
-        case HangupMethod::kShutdown:
+        case HangupMethod::kShutdown: {
           ASSERT_EQ(shutdown(listener.get(), SHUT_RD), 0) << strerror(errno);
+          pollfd pfd = {
+              .fd = listener.get(),
+              .events = POLLOUT | POLLIN,
+          };
+          int n = poll(&pfd, 1, 0);
+          EXPECT_GE(n, 0) << strerror(errno);
+          EXPECT_EQ(n, 1);
+#if !defined(__Fuchsia__)
+          EXPECT_EQ(pfd.revents, POLLOUT | POLLHUP);
+#else
+          // TODO(https://fxbug.dev/76353): When a listening endpoint is Shutdown(READ), netstack
+          // closes the endpoint.
+          EXPECT_EQ(pfd.revents, POLLIN | POLLOUT | POLLERR | POLLHUP);
+#endif
           break;
+        }
       }
 
       const struct {
