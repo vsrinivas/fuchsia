@@ -13,8 +13,7 @@ use bindings::Netstack;
 
 fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init()?;
-    // Severity is set to debug during development.
-    fuchsia_syslog::set_severity(-1);
+    fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
 
     let mut executor = fuchsia_async::LocalExecutor::new()?;
 
