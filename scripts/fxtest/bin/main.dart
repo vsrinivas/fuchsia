@@ -40,6 +40,9 @@ Examples:
   - Multiple test names can be supplied in the same invocation, e.g.:
   fx test //subtree/path //another/path fuchsia-pkg://...
 
+  - Print help for a test:
+  fx test -o testName -- --help
+
 The value(s) supplied for `testName` can be fully-formed Fuchsia Package URLs,
 Fuchsia package names, or Fuchsia-tree directories. Partial tree paths
 will execute all descendent tests.
