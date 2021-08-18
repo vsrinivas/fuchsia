@@ -23,7 +23,8 @@ zx_status_t zx_vmo_op_range(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_vmo_op_range()` performs cache and memory operations against pages held by the VMO.
+`zx_vmo_op_range()` performs cache and memory operations against pages held by the [virtual memory
+object](/docs/reference/kernel_objects/vm_object.md) (VMO).
 
 *offset* byte offset specifying the starting location for *op* in the VMO's held memory.
 

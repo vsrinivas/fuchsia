@@ -21,7 +21,8 @@ zx_status_t zx_vmo_create_physical(zx_handle_t resource,
 
 ## DESCRIPTION
 
-`zx_vmo_create_physical()` creates a new virtual memory object (VMO), which represents the
+`zx_vmo_create_physical()` creates a new [virtual memory
+object](/docs/reference/kernel_objects/vm_object.md) (VMO), which represents the
 *size* bytes of physical memory beginning at physical address *paddr*.
 
 The content size of the VMO will be initialized to the given (unrounded) size.
@@ -35,23 +36,21 @@ size.
 
 The following rights will be set on the handle by default:
 
-**ZX_RIGHT_DUPLICATE** - The handle may be duplicated.
+  - **ZX_RIGHT_DUPLICATE** - The handle may be duplicated.
 
-**ZX_RIGHT_TRANSFER** - The handle may be transferred to another process.
+  - **ZX_RIGHT_TRANSFER** - The handle may be transferred to another process.
 
-**ZX_RIGHT_READ** - May be read from or mapped with read permissions.
+  - **ZX_RIGHT_READ** - May be read from or mapped with read permissions.
 
-**ZX_RIGHT_WRITE** - May be written to or mapped with write permissions.
+  - **ZX_RIGHT_WRITE** - May be written to or mapped with write permissions.
 
-**ZX_RIGHT_EXECUTE** - May be mapped with execute permissions.
+  - **ZX_RIGHT_EXECUTE** - May be mapped with execute permissions.
 
-**ZX_RIGHT_MAP** - May be mapped.
+  - **ZX_RIGHT_MAP** - May be mapped.
 
-**ZX_RIGHT_GET_PROPERTY** - May get its properties using
-[`zx_object_get_property()`].
+  - **ZX_RIGHT_GET_PROPERTY** - May get its properties using [`zx_object_get_property()`].
 
-**ZX_RIGHT_SET_PROPERTY** - May set its properties using
-[`zx_object_set_property()`].
+  - **ZX_RIGHT_SET_PROPERTY** - May set its properties using [`zx_object_set_property()`].
 
 The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
 inactive whenever a child of the VMO is created and becomes active again when

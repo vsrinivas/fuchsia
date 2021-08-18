@@ -22,8 +22,9 @@ zx_status_t zx_vmo_create_child(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_vmo_create_child()` creates a new virtual memory object (VMO) a child of
-an existing vmo. The behavior of the semantics depends on the type of the child.
+`zx_vmo_create_child()` creates a new [virtual memory
+object](/docs/reference/kernel_objects/vm_object.md) (VMO) a child of an existing vmo. The behavior
+of the semantics depends on the type of the child.
 
 One handle is returned on success, representing an object with the requested
 size.

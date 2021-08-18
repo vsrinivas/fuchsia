@@ -18,7 +18,8 @@ zx_status_t zx_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy);
 
 ## DESCRIPTION
 
-`zx_vmo_set_cache_policy()` sets caching policy for a VMO. Generally used on VMOs
+`zx_vmo_set_cache_policy()` sets caching policy for a [virtual memory
+object](/docs/reference/kernel_objects/vm_object.md) (VMO). Generally used on VMOs
 that point directly at physical memory. Such VMOs are generally only handed to
 userspace via bus protocol interfaces, so this syscall will typically only be
 used by drivers dealing with device memory. This call can also be used on a
@@ -32,20 +33,19 @@ cleaned and invalidated.
 
 *cache_policy* cache flags to use:
 
-**ZX_CACHE_POLICY_CACHED** - Use hardware caching. On Aarch64 this corresponds
-to the Normal Memory, Outer Write-back non-transient Read and Write allocate, Inner
-Write-back non-transient Read and Write allocate memory attributes
+  - **ZX_CACHE_POLICY_CACHED** - Use hardware caching. On Aarch64 this corresponds to the Normal
+    Memory, Outer Write-back non-transient Read and Write allocate, Inner Write-back non-transient
+    Read and Write allocate memory attributes
 
-**ZX_CACHE_POLICY_UNCACHED** - Disable caching. On Aarch64 this corresponds to
-the Device-nGnRnE memory attributes.
+  - **ZX_CACHE_POLICY_UNCACHED** - Disable caching. On Aarch64 this corresponds to the Device-nGnRnE
+    memory attributes.
 
-**ZX_CACHE_POLICY_UNCACHED_DEVICE** - Disable cache and treat as device memory.
-This is architecture dependent and may be equivalent to
-**ZX_CACHE_POLICY_UNCACHED** on some architectures. On Aarch64 this corresponds to
-the Device-nGnRE memory attributes.
+  - **ZX_CACHE_POLICY_UNCACHED_DEVICE** - Disable cache and treat as device memory. This is
+    architecture dependent and may be equivalent to **ZX_CACHE_POLICY_UNCACHED** on some
+    architectures. On Aarch64 this corresponds to the Device-nGnRE memory attributes.
 
-**ZX_CACHE_POLICY_WRITE_COMBINING** - Uncached with write combining. On Aarch64
-this corresponds to the Normal memory, uncached memory attributes.
+  - **ZX_CACHE_POLICY_WRITE_COMBINING** - Uncached with write combining. On Aarch64 this corresponds
+    to the Normal memory, uncached memory attributes.
 
 
 ## RIGHTS
