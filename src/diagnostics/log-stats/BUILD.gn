@@ -90,6 +90,7 @@ rustc_test("test-bin") {
   testonly = true
   name = "log_stats_integration_tests"
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
