@@ -173,39 +173,12 @@ fuchsia_test_component(
   manifest = "meta/netstack_bsdsocket_c_api_legacy_shutdown2_fidl_test.cmx"
 }
 
-# Same as netstack_bsdsocket_c_api_test but with its environment set to use the
-# deprecated `fuchsia.posix.socket/BaseSocket.*` fidl methods.
-#
-# TODO(https://fxbug.dev/82723): Remove after ABI transition.
-fuchsia_test_component(
-    "netstack_bsdsocket_c_api_legacy_basesocket_fidl_methods_test_component") {
-  component_name =
-      "netstack_bsdsocket_c_api_legacy_basesocket_fidl_methods_test"
-  deps = [ ":netstack_bsdsocket_c_api_test" ]
-  manifest =
-      "meta/netstack_bsdsocket_c_api_legacy_basesocket_fidl_methods_test.cmx"
-}
-
-# Same as netstack_bsdsocket_c_api_test but with its environment set to use the
-# deprecated Shutdown2 fidl method and `fuchsia.posix.socket/BaseSocket.*` fidl
-# methods.
-#
-# TODO(https://fxbug.dev/82723 OR https://fxbug.dev/78129): Remove after ABI transition.
-fuchsia_test_component(
-    "netstack_bsdsocket_c_api_legacy_basesocket_fidl_methods_and_shutdown2_fidl_test_component") {
-  component_name = "netstack_bsdsocket_c_api_legacy_basesocket_fidl_methods_and_shutdown2_fidl_test"
-  deps = [ ":netstack_bsdsocket_c_api_test" ]
-  manifest = "meta/netstack_bsdsocket_c_api_legacy_basesocket_fidl_methods_and_shutdown2_fidl_test.cmx"
-}
-
 fuchsia_test_package("netstack-c-api-tests-inner") {
   package_name = "netstack-c-api-tests"
 
   test_components = [
     ":connect_test",
     ":netstack_bsdsocket_c_api_legacy_shutdown2_fidl_test_component",
-    ":netstack_bsdsocket_c_api_legacy_basesocket_fidl_methods_test_component",
-    ":netstack_bsdsocket_c_api_legacy_basesocket_fidl_methods_and_shutdown2_fidl_test_component",
     ":netstack_external_network_test",
   ]
   foreach(test, tests) {
