@@ -46,6 +46,7 @@ impl FsNodeOps for TmpfsDirectory {
     }
 
     fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        node.info_write().link_count += 1;
         Ok(node.fs().create_node(Box::new(TmpfsDirectory), FileMode::IFDIR))
     }
 
@@ -74,7 +75,10 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(())
     }
 
-    fn unlink(&self, _node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+    fn unlink(&self, node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+        if child.is_dir() {
+            node.info_write().link_count -= 1;
+        }
         child.info_write().link_count -= 1;
         Ok(())
     }

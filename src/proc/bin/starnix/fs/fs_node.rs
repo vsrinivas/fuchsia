@@ -169,7 +169,7 @@ impl FsNode {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
             mode,
-            link_count: 1,
+            link_count: if mode.is_dir() { 2 } else { 1 },
             time_create: now,
             time_access: now,
             time_modify: now,

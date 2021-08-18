@@ -6,6 +6,7 @@
             "/data:remotefs:data",
             "/dev:devfs",
             "/data/tmp:tmpfs",
+            "/proc:proc",
         ],
         apex_hack: [ "com.android.runtime" ],
         environ: [
