@@ -89,14 +89,34 @@ impl Seeder {
 
 /// The types of errors for [Jobs](Job). This is a single, unified set over all Job source
 /// related-errors. This enumeration should be expanded to capture any future error variant.
-#[derive(ThisError, Debug, Clone, PartialEq)]
+#[derive(ThisError)]
 pub enum Error {
     #[error("Unknown error")]
     Unknown,
     #[error("Invalid input")]
-    InvalidInput,
+    InvalidInput(Box<dyn ErrorResponder + Send>),
     #[error("Unsupported API call")]
     Unsupported,
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Unknown => f.write_str("Unknown"),
+            Error::InvalidInput(_) => f.write_str("InvalidInput(..)"),
+            Error::Unsupported => f.write_str("Unsupported"),
+        }
+    }
+}
+
+/// Abstract over how to respond with a settings fidl error.
+pub trait ErrorResponder {
+    /// Unique identifier for the API this responder is responsible for.
+    fn id(&self) -> &'static str;
+
+    /// Respond with the supplied error. Returns any fidl errors that occur when
+    /// trying to send the response.
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error>;
 }
 
 // This implementation is necessary when converting into a Job is infallible. This can happen if an

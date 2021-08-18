@@ -21,10 +21,10 @@ use crate::service::{self, message};
 use crate::trace;
 use crate::trace::TracingNonce;
 
-use ::futures::FutureExt;
 use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_warn;
 use futures::stream::{FuturesUnordered, StreamFuture};
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -208,10 +208,21 @@ impl Manager {
                 self.job_futures.push(source_stream.into_future());
                 self.process_next_job(nonce).await;
             }
-            Some(Err(Error::InvalidInput)) => {
+            Some(Err(Error::InvalidInput(error_responder))) => {
                 // When the stream failed to produce a job due to bad input, just skip to the next
                 // job in the queue. The client should have use its responder (if any) to notify the
                 // client of the error.
+                let id = error_responder.id();
+                if let Err(e) = error_responder.respond(fidl_fuchsia_settings::Error::Failed) {
+                    fx_log_warn!(
+                        "Failed to report invalid input error to caller on API {} with id {:?}: \
+                            {:?}",
+                        id,
+                        source,
+                        e
+                    );
+                }
+
                 self.job_futures.push(source_stream.into_future());
                 self.process_next_job(nonce).await;
             }
@@ -313,6 +324,21 @@ mod tests {
     // from running.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_manager_job_processing_handles_errored_conversions() {
+        struct TestResponder;
+        impl source::ErrorResponder for TestResponder {
+            fn id(&self) -> &'static str {
+                "Test"
+            }
+
+            fn respond(
+                self: Box<Self>,
+                error: fidl_fuchsia_settings::Error,
+            ) -> Result<(), fidl::Error> {
+                assert_eq!(error, fidl_fuchsia_settings::Error::Failed);
+                Ok(())
+            }
+        }
+
         // Create delegate for communication between components.
         let message_hub_delegate = MessageHub::create_hub();
 
@@ -338,7 +364,7 @@ mod tests {
 
         // Send an error (conversion failed) before a valid job.
         requests_tx
-            .unbounded_send(Err(Error::InvalidInput))
+            .unbounded_send(Err(Error::InvalidInput(Box::new(TestResponder))))
             .expect("Should be able to queue requests");
 
         // Now send a valid job, which should be processed after the error.

@@ -7,6 +7,7 @@ use crate::fidl_hanging_get_responder;
 use crate::handler::base::{Request, Response};
 use crate::ingress::Scoped;
 use crate::ingress::{request, watch};
+use crate::job::source::ErrorResponder;
 use crate::job::{Job, Signature};
 use fidl_fuchsia_settings::{
     Error, FactoryResetMarker, FactoryResetRequest, FactoryResetSetResponder,
@@ -20,6 +21,16 @@ use crate::job::source::Error as JobError;
 const WATCH_JOB_SIGNATURE: usize = 1;
 
 fidl_hanging_get_responder!(FactoryResetMarker, FactoryResetSettings, FactoryResetWatchResponder,);
+
+impl ErrorResponder for FactoryResetSetResponder {
+    fn id(&self) -> &'static str {
+        "FactoryReset_Set"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
 
 impl From<Response> for Scoped<FactoryResetSetResult> {
     fn from(response: Response) -> Self {
@@ -55,13 +66,7 @@ impl TryFrom<FactoryResetRequest> for Job {
                 Some(request) => {
                     Ok(request::Work::new(SettingType::FactoryReset, request, responder).into())
                 }
-                None => {
-                    if let Err(e) = responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)) {
-                        fx_log_warn!("Failed to respond to a bad set for factory reset: {:?}", e);
-                    }
-
-                    Err(JobError::InvalidInput)
-                }
+                None => Err(JobError::InvalidInput(Box::new(responder))),
             },
             FactoryResetRequest::Watch { responder } => Ok(watch::Work::new(
                 SettingType::FactoryReset,
@@ -122,7 +127,7 @@ mod tests {
             .expect("should have on request before stream is closed")
             .expect("should have gotten a request");
         let job = Job::try_from(request);
-        assert_matches!(job, Err(crate::job::source::Error::InvalidInput));
+        assert_matches!(job, Err(crate::job::source::Error::InvalidInput(_)));
     }
 
     #[fuchsia_async::run_until_stalled(test)]
