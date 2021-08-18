@@ -70,7 +70,7 @@ bool DescriptorListMemory::Iterator::Next() {
   // is that we are holding a USB descriptor list in RAM whose size is within
   // 256 bytes of our entire 64 bit address space.  This really should be
   // impossible, so we don't bother to check.
-  offset_ += h->bLength;
+  offset_ += h->b_length;
   return ValidateOffset();
 }
 
@@ -95,16 +95,16 @@ bool DescriptorListMemory::Iterator::ValidateOffset() {
 
   auto tmp = reinterpret_cast<uintptr_t>(mem_->data());
   auto h = reinterpret_cast<const usb_descriptor_header_t*>(tmp + offset_);
-  if (h->bLength > space) {
+  if (h->b_length > space) {
     GLOBAL_LOG(WARNING,
                "Malformed USB descriptor header (type %u) at offset %zu.  "
                "Header indicates that it is %u bytes long, but there %zu bytes remaining",
-               h->bDescriptorType, offset_, h->bLength, space);
+               h->b_descriptor_type, offset_, h->b_length, space);
     return false;
   }
 
   GLOBAL_LOG(TRACE, "Found Descriptor [type 0x%02x, len 0x%02x] at offset 0x%zx/0x%zx",
-             h->bDescriptorType, h->bLength, offset_, mem_->size());
+             h->b_descriptor_type, h->b_length, offset_, mem_->size());
 
   cleanup.cancel();
   return true;

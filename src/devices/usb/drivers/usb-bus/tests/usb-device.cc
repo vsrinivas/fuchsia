@@ -135,8 +135,8 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
           case USB_DT_CONFIG: {
             usb_configuration_descriptor_t* descriptor;
             request.Mmap(reinterpret_cast<void**>(&descriptor));
-            descriptor->wTotalLength = sizeof(*descriptor);
-            descriptor->bConfigurationValue = static_cast<uint8_t>(index + 1);
+            descriptor->w_total_length = sizeof(*descriptor);
+            descriptor->b_configuration_value = static_cast<uint8_t>(index + 1);
             request.Complete(ZX_OK, sizeof(*descriptor));
           }
             return;
@@ -145,10 +145,10 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
               // Fetch language table
               usb_langid_desc_t* languages;
               request.Mmap(reinterpret_cast<void**>(&languages));
-              languages->bLength = 2 + (2 * 2);
-              languages->wLangIds[0] = MakeConstant<uint16_t, 2>("EN");
-              languages->wLangIds[1] = MakeConstant<uint16_t, 2>("ES");
-              request.Complete(ZX_OK, languages->bLength);
+              languages->b_length = 2 + (2 * 2);
+              languages->w_lang_ids[0] = MakeConstant<uint16_t, 2>("EN");
+              languages->w_lang_ids[1] = MakeConstant<uint16_t, 2>("ES");
+              request.Complete(ZX_OK, languages->b_length);
               return;
             }
             index--;
@@ -164,11 +164,11 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
             if ((index < 2) && (lang < 2)) {
               usb_string_desc_t* descriptor;
               request.Mmap(reinterpret_cast<void**>(&descriptor));
-              descriptor->bLength = static_cast<uint8_t>(
+              descriptor->b_length = static_cast<uint8_t>(
                   2 + (2 * std::char_traits<char16_t>::length(kStringDescriptors[index][lang])));
               memcpy(descriptor->code_points, kStringDescriptors[index][lang],
-                     descriptor->bLength - 2);
-              request.Complete(ZX_OK, descriptor->bLength);
+                     descriptor->b_length - 2);
+              request.Complete(ZX_OK, descriptor->b_length);
               return;
             }
           }
@@ -516,8 +516,8 @@ TEST_F(DeviceTest, GetConfigurationDescriptor) {
   ASSERT_OK(usb.GetConfigurationDescriptor(1, reinterpret_cast<uint8_t*>(&descriptor),
                                            sizeof(descriptor), &actual));
   ASSERT_EQ(actual, sizeof(descriptor));
-  ASSERT_EQ(descriptor.bConfigurationValue, 1);
-  ASSERT_EQ(descriptor.wTotalLength, sizeof(descriptor));
+  ASSERT_EQ(descriptor.b_configuration_value, 1);
+  ASSERT_EQ(descriptor.w_total_length, sizeof(descriptor));
 }
 
 TEST_F(DeviceTest, GetDescriptorsLength) {
@@ -531,8 +531,8 @@ TEST_F(DeviceTest, GetDescriptors) {
   size_t actual;
   usb.GetDescriptors(reinterpret_cast<uint8_t*>(&descriptor), sizeof(descriptor), &actual);
   ASSERT_EQ(actual, sizeof(descriptor));
-  ASSERT_EQ(descriptor.bConfigurationValue, 1);
-  ASSERT_EQ(descriptor.wTotalLength, sizeof(descriptor));
+  ASSERT_EQ(descriptor.b_configuration_value, 1);
+  ASSERT_EQ(descriptor.w_total_length, sizeof(descriptor));
 }
 
 TEST_F(DeviceTest, GetCurrentFrame) {
@@ -580,8 +580,8 @@ TEST_F(DeviceTest, FidlGetConfigurationDescriptor) {
   ASSERT_OK(result->s);
   ASSERT_EQ(result->desc.count(), sizeof(*descriptor));
   descriptor = reinterpret_cast<const usb_configuration_descriptor_t*>(result->desc.data());
-  ASSERT_EQ(descriptor->bConfigurationValue, 1);
-  ASSERT_EQ(descriptor->wTotalLength, sizeof(*descriptor));
+  ASSERT_EQ(descriptor->b_configuration_value, 1);
+  ASSERT_EQ(descriptor->w_total_length, sizeof(*descriptor));
 }
 
 TEST_F(DeviceTest, FidlGetStringDescriptor_Empty) {
@@ -804,11 +804,11 @@ class EvilFakeHci : public ddk::UsbHciProtocol<EvilFakeHci> {
             request.Mmap(reinterpret_cast<void**>(&descriptor));
             // Use the config descriptor lengths described in the constructor
             // arguments.
-            descriptor->wTotalLength =
+            descriptor->w_total_length =
                 (config_descriptor_request_count_ % 2 == 0 ? initial_config_length_
                                                            : subsequent_config_length_);
             config_descriptor_request_count_++;
-            descriptor->bConfigurationValue = static_cast<uint8_t>(index + 1);
+            descriptor->b_configuration_value = static_cast<uint8_t>(index + 1);
             request.Complete(ZX_OK, sizeof(*descriptor));
           }
             return;

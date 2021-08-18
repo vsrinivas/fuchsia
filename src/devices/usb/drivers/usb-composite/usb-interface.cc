@@ -19,7 +19,7 @@ namespace usb_composite {
 
 static inline const usb_descriptor_header_t* NextDescriptor(const usb_descriptor_header_t* header) {
   return reinterpret_cast<const usb_descriptor_header_t*>(reinterpret_cast<const uint8_t*>(header) +
-                                                          header->bLength);
+                                                          header->b_length);
 }
 
 zx_status_t UsbInterface::Create(zx_device_t* parent, UsbComposite* composite,
@@ -76,19 +76,19 @@ zx_status_t UsbInterface::Create(zx_device_t* parent, UsbComposite* composite,
   auto* device_desc = composite->device_descriptor();
   uint8_t usb_class, usb_subclass, usb_protocol;
 
-  if (assoc_desc->bFunctionClass == 0) {
+  if (assoc_desc->b_function_class == 0) {
     usb_class = device_desc->b_device_class;
     usb_subclass = device_desc->b_device_sub_class;
     usb_protocol = device_desc->b_device_protocol;
   } else {
     // class/subclass/protocol defined per-interface
-    usb_class = assoc_desc->bFunctionClass;
-    usb_subclass = assoc_desc->bFunctionSubClass;
-    usb_protocol = assoc_desc->bFunctionProtocol;
+    usb_class = assoc_desc->b_function_class;
+    usb_subclass = assoc_desc->b_function_sub_class;
+    usb_protocol = assoc_desc->b_function_protocol;
   }
 
   // Interfaces in an IAD interface collection must be contiguous.
-  auto last_interface_id = assoc_desc->bFirstInterface + assoc_desc->bInterfaceCount - 1;
+  auto last_interface_id = assoc_desc->b_first_interface + assoc_desc->b_interface_count - 1;
   auto status = interface->Init(assoc_desc, desc_length, static_cast<uint8_t>(last_interface_id),
                                 usb_class, usb_subclass, usb_protocol);
   if (status != ZX_OK) {
@@ -100,7 +100,7 @@ zx_status_t UsbInterface::Create(zx_device_t* parent, UsbComposite* composite,
       reinterpret_cast<const uint8_t*>(assoc_desc) + desc_length);
 
   while (header < end) {
-    if (header->bDescriptorType == USB_DT_INTERFACE) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE) {
       auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
       if (intf_desc->b_alternate_setting == 0) {
         zx_status_t status = interface->ConfigureEndpoints(intf_desc->b_interface_number, 0);
@@ -178,11 +178,11 @@ zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_s
 
   bool enable_endpoints = false;
   while (header < end) {
-    if (header->bDescriptorType == USB_DT_INTERFACE) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE) {
       auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
       cur_interface = intf_desc->b_interface_number;
       enable_endpoints = (intf_desc->b_alternate_setting == alt_setting);
-    } else if (header->bDescriptorType == USB_DT_ENDPOINT && cur_interface == interface_id) {
+    } else if (header->b_descriptor_type == USB_DT_ENDPOINT && cur_interface == interface_id) {
       usb_endpoint_descriptor_t* ep = (usb_endpoint_descriptor_t*)header;
       auto ep_index = GetEndpointIndex(ep);
       interface_endpoints[ep_index] = true;
@@ -210,7 +210,7 @@ zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_s
           usb_descriptor_header_t* next =
               (usb_descriptor_header_t*)((uint8_t*)new_ep + new_ep->b_length);
           if (next + sizeof(*ss_comp_desc) <= end &&
-              next->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+              next->b_descriptor_type == USB_DT_SS_EP_COMPANION) {
             ss_comp_desc = (usb_ss_ep_comp_descriptor_t*)next;
           }
           zx_status_t ret = usb_.EnableEndpoint(new_ep, ss_comp_desc, true);
@@ -305,11 +305,11 @@ size_t UsbInterface::UsbCompositeGetAdditionalDescriptorLength() {
   auto* config = composite_->GetConfigurationDescriptor();
   auto* header = NextDescriptor(reinterpret_cast<const usb_descriptor_header_t*>(config));
   auto* end = reinterpret_cast<const usb_descriptor_header_t*>(
-      reinterpret_cast<const uint8_t*>(config) + le16toh(config->wTotalLength));
+      reinterpret_cast<const uint8_t*>(config) + le16toh(config->w_total_length));
 
   const usb_interface_descriptor_t* interface = nullptr;
   while (header < end) {
-    if (header->bDescriptorType == USB_DT_INTERFACE) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE) {
       usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)header;
       // We are only interested in descriptors past the last stored descriptor
       // for the current interface.
@@ -377,7 +377,7 @@ bool UsbInterface::ContainsInterface(uint8_t interface_id) {
       reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.data() + descriptors_.size());
 
   while (header < end) {
-    if (header->bDescriptorType == USB_DT_INTERFACE) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE) {
       auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
       if (intf_desc->b_interface_number == interface_id) {
         return true;

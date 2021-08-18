@@ -152,9 +152,9 @@ void UsbAudioDevice::Probe() {
     auto hdr = iter.hdr();
 
     // We are only prepared to find interface descriptors at this point.
-    if (hdr->bDescriptorType != USB_DT_INTERFACE) {
-      LOG(WARNING, "Skipping unexpected descriptor (len = %u, type = %u)", hdr->bLength,
-          hdr->bDescriptorType);
+    if (hdr->b_descriptor_type != USB_DT_INTERFACE) {
+      LOG(WARNING, "Skipping unexpected descriptor (len = %u, type = %u)", hdr->b_length,
+          hdr->b_descriptor_type);
       continue;
     }
 
@@ -359,7 +359,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
   while (iter->Next()) {
     auto hdr = iter->hdr();
 
-    switch (hdr->bDescriptorType) {
+    switch (hdr->b_descriptor_type) {
       // Generic interface
       case USB_DT_INTERFACE: {
         auto ihdr = iter->hdr_as<usb_interface_descriptor_t>();

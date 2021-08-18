@@ -237,10 +237,10 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
   usb_dfu_func_desc_t func_desc = {};
   usb_descriptor_header_t* header;
   while ((header = usb_desc_iter_peek(&iter)) != nullptr) {
-    if (header->bDescriptorType == USB_DFU_CS_FUNCTIONAL) {
-      if (header->bLength < sizeof(func_desc)) {
+    if (header->b_descriptor_type == USB_DFU_CS_FUNCTIONAL) {
+      if (header->b_length < sizeof(func_desc)) {
         zxlogf(ERROR, "DFU func desc should be at least %lu long, got %u", sizeof(func_desc),
-               header->bLength);
+               header->b_length);
       } else {
         usb_dfu_func_desc_t* desc =
             (usb_dfu_func_desc_t*)usb_desc_iter_get_structure(&iter, sizeof(func_desc));

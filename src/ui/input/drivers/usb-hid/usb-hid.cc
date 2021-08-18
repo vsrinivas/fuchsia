@@ -252,9 +252,9 @@ void UsbHidbus::FindDescriptors(usb::Interface interface, usb_hid_descriptor_t**
                                 const usb_endpoint_descriptor_t** endptin,
                                 const usb_endpoint_descriptor_t** endptout) {
   for (auto& descriptor : interface.GetDescriptorList()) {
-    if (descriptor.bDescriptorType == USB_DT_HID) {
+    if (descriptor.b_descriptor_type == USB_DT_HID) {
       *hid_desc = (usb_hid_descriptor_t*)&descriptor;
-    } else if (descriptor.bDescriptorType == USB_DT_ENDPOINT) {
+    } else if (descriptor.b_descriptor_type == USB_DT_ENDPOINT) {
       if (usb_ep_direction((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_IN &&
           usb_ep_type((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_INTERRUPT) {
         *endptin = (usb_endpoint_descriptor_t*)&descriptor;

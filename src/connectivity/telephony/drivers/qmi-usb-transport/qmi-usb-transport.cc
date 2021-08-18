@@ -812,7 +812,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
   usb_descriptor_header_t* desc;
   while ((desc = usb_desc_iter_peek(&iter)) != NULL) {
-    if (desc->bDescriptorType == USB_DT_ENDPOINT) {
+    if (desc->b_descriptor_type == USB_DT_ENDPOINT) {
       usb_endpoint_descriptor_t* endp = reinterpret_cast<usb_endpoint_descriptor_t*>(
           usb_desc_iter_get_structure(&iter, sizeof(usb_endpoint_descriptor_t)));
       if (endp == NULL) {

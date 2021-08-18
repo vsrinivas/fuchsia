@@ -214,7 +214,7 @@ void UsbDevice::SetHubInterface(const usb_hub_interface_protocol_t* hub_intf) {
 const usb_configuration_descriptor_t* UsbDevice::GetConfigDesc(uint8_t config) {
   for (auto& desc_array : config_descs_) {
     auto* desc = reinterpret_cast<usb_configuration_descriptor_t*>(desc_array.data());
-    if (desc->bConfigurationValue == config) {
+    if (desc->b_configuration_value == config) {
       return desc;
     }
   }
@@ -436,14 +436,14 @@ uint8_t UsbDevice::UsbGetConfiguration() {
   fbl::AutoLock lock(&state_lock_);
   auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(
       config_descs_[current_config_index_].data());
-  return descriptor->bConfigurationValue;
+  return descriptor->b_configuration_value;
 }
 
 zx_status_t UsbDevice::UsbSetConfiguration(uint8_t configuration) {
   uint8_t index = 0;
   for (auto& desc_array : config_descs_) {
     auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(desc_array.data());
-    if (descriptor->bConfigurationValue == configuration) {
+    if (descriptor->b_configuration_value == configuration) {
       fbl::AutoLock lock(&state_lock_);
 
       zx_status_t status;
@@ -498,8 +498,8 @@ zx_status_t UsbDevice::UsbGetConfigurationDescriptorLength(uint8_t configuration
                                                            size_t* out_length) {
   for (auto& desc_array : config_descs_) {
     auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(desc_array.data());
-    if (config_desc->bConfigurationValue == configuration) {
-      *out_length = le16toh(config_desc->wTotalLength);
+    if (config_desc->b_configuration_value == configuration) {
+      *out_length = le16toh(config_desc->w_total_length);
       return ZX_OK;
     }
   }
@@ -512,8 +512,8 @@ zx_status_t UsbDevice::UsbGetConfigurationDescriptor(uint8_t configuration,
                                                      size_t* out_desc_actual) {
   for (auto& desc_array : config_descs_) {
     auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(desc_array.data());
-    if (config_desc->bConfigurationValue == configuration) {
-      size_t length = le16toh(config_desc->wTotalLength);
+    if (config_desc->b_configuration_value == configuration) {
+      size_t length = le16toh(config_desc->w_total_length);
       if (length > desc_size) {
         length = desc_size;
       }
@@ -529,7 +529,7 @@ size_t UsbDevice::UsbGetDescriptorsLength() {
   fbl::AutoLock lock(&state_lock_);
   auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(
       config_descs_[current_config_index_].data());
-  return le16toh(config_desc->wTotalLength);
+  return le16toh(config_desc->w_total_length);
 }
 
 void UsbDevice::UsbGetDescriptors(uint8_t* out_descs_buffer, size_t descs_size,
@@ -537,7 +537,7 @@ void UsbDevice::UsbGetDescriptors(uint8_t* out_descs_buffer, size_t descs_size,
   fbl::AutoLock lock(&state_lock_);
   auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(
       config_descs_[current_config_index_].data());
-  size_t length = le16toh(config_desc->wTotalLength);
+  size_t length = le16toh(config_desc->w_total_length);
   if (length > descs_size) {
     length = descs_size;
   }
@@ -563,24 +563,24 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
       // in that case assume US English (0x0409)
       result = hci_.ResetEndpoint(device_id_, 0);
       zxlogf(INFO, "Reset endpoint complete with status %s", zx_status_get_string(result));
-      id_desc.bLength = 4;
-      id_desc.wLangIds[0] = htole16(0x0409);
+      id_desc.b_length = 4;
+      id_desc.w_lang_ids[0] = htole16(0x0409);
       actual = 4;
     } else if ((result == ZX_OK) &&
-               ((actual < 4) || (actual != id_desc.bLength) || (actual & 0x1))) {
+               ((actual < 4) || (actual != id_desc.b_length) || (actual & 0x1))) {
       return ZX_ERR_INTERNAL;
     }
 
     // So, if we have managed to fetch/synthesize a language ID table,
-    // go ahead and perform a bit of fixup.  Redefine bLength to be the
-    // valid number of entires in the table, and fixup the endianness of
-    // all the entires in the table.  Then, attempt to swap in the new
+    // go ahead and perform a bit of fixup.  Redefine b_length to be the
+    // valid number of entries in the table, and fixup the endianness of
+    // all the entries in the table.  Then, attempt to swap in the new
     // language ID table.
     if (result == ZX_OK) {
-      id_desc.bLength = static_cast<uint8_t>((id_desc.bLength - 2) >> 1);
+      id_desc.b_length = static_cast<uint8_t>((id_desc.b_length - 2) >> 1);
 #if BYTE_ORDER != LITTLE_ENDIAN
-      for (uint8_t i = 0; i < id_desc.bLength; ++i) {
-        id_desc.wLangIds[i] = letoh16(id_desc.wLangIds[i]);
+      for (uint8_t i = 0; i < id_desc.b_length; ++i) {
+        id_desc.w_lang_ids[i] = letoh16(id_desc.w_lang_ids[i]);
       }
 #endif
     }
@@ -589,25 +589,25 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
 
   // Handle the special case that the user asked for the language ID table.
   if (desc_id == 0) {
-    size_t table_sz = (lang_ids_->bLength << 1);
+    size_t table_sz = (lang_ids_->b_length << 1);
     buflen &= ~1;
     size_t actual = (table_sz < buflen ? table_sz : buflen);
-    memcpy(buf, lang_ids_->wLangIds, actual);
+    memcpy(buf, lang_ids_->w_lang_ids, actual);
     *out_actual = actual;
     return ZX_OK;
   }
   // Search for the requested language ID.
   uint32_t lang_ndx;
-  for (lang_ndx = 0; lang_ndx < lang_ids_->bLength; ++lang_ndx) {
-    if (lang_id == lang_ids_->wLangIds[lang_ndx]) {
+  for (lang_ndx = 0; lang_ndx < lang_ids_->b_length; ++lang_ndx) {
+    if (lang_id == lang_ids_->w_lang_ids[lang_ndx]) {
       break;
     }
   }
 
   // If we didn't find it, default to the first entry in the table.
-  if (lang_ndx >= lang_ids_->bLength) {
-    ZX_DEBUG_ASSERT(lang_ids_->bLength >= 1);
-    lang_id = lang_ids_->wLangIds[0];
+  if (lang_ndx >= lang_ids_->b_length) {
+    ZX_DEBUG_ASSERT(lang_ids_->b_length >= 1);
+    lang_id = lang_ids_->w_lang_ids[0];
   }
 
   usb_string_desc_t string_desc;
@@ -641,7 +641,7 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
     return result;
   }
 
-  if ((actual < 2) || (actual != string_desc.bLength)) {
+  if ((actual < 2) || (actual != string_desc.b_length)) {
     result = ZX_ERR_INTERNAL;
   } else {
     // Success! Convert this result from UTF16LE to UTF8 and store the
@@ -652,7 +652,7 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
     // communicated back via out_actual.
     size_t utf8_actual = buflen;
     *out_actual_lang_id = lang_id;
-    result = utf16_to_utf8(string_desc.code_points, (string_desc.bLength >> 1) - 1,
+    result = utf16_to_utf8(string_desc.code_points, (string_desc.b_length >> 1) - 1,
                            static_cast<uint8_t*>(buf), &utf8_actual,
                            UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN);
 
@@ -730,7 +730,7 @@ void UsbDevice::GetConfigurationDescriptorSize(
     completer.Reply(ZX_ERR_INVALID_ARGS, 0);
   }
 
-  auto length = le16toh(descriptor->wTotalLength);
+  auto length = le16toh(descriptor->w_total_length);
   completer.Reply(ZX_OK, length);
 }
 
@@ -742,7 +742,7 @@ void UsbDevice::GetConfigurationDescriptor(GetConfigurationDescriptorRequestView
     return;
   }
 
-  size_t length = le16toh(descriptor->wTotalLength);
+  size_t length = le16toh(descriptor->w_total_length);
   completer.Reply(ZX_OK,
                   fidl::VectorView<uint8_t>::FromExternal(
                       const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(descriptor)), length));
@@ -778,7 +778,7 @@ void UsbDevice::GetConfiguration(GetConfigurationRequestView request,
 
   auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(
       config_descs_[current_config_index_].data());
-  completer.Reply(descriptor->bConfigurationValue);
+  completer.Reply(descriptor->b_configuration_value);
 }
 
 void UsbDevice::SetConfiguration(SetConfigurationRequestView request,
@@ -854,7 +854,7 @@ zx_status_t UsbDevice::Init() {
       zxlogf(ERROR, "%s: GetDescriptor(USB_DT_CONFIG) failed", __func__);
       return status;
     }
-    uint16_t config_desc_size = letoh16(config_desc_header.wTotalLength);
+    uint16_t config_desc_size = letoh16(config_desc_header.w_total_length);
     if (config_desc_size < sizeof(config_desc_header)) {
       zxlogf(ERROR,
              "%s: GetDescriptor(USB_DT_CONFIG) gave length shorter than self: "
@@ -890,7 +890,7 @@ zx_status_t UsbDevice::Init() {
     // inside the descriptor we just read says that it's a different size from
     // what we expected or what we read the first time, return an error.
     uint16_t config_desc_size_on_second_read =
-        letoh16(reinterpret_cast<usb_configuration_descriptor_t*>(config_desc)->wTotalLength);
+        letoh16(reinterpret_cast<usb_configuration_descriptor_t*>(config_desc)->w_total_length);
     if (actual != config_desc_size_on_second_read) {
       zxlogf(ERROR,
              "%s GetDescriptor(USB_DT_CONFIG) config %u length changed between reads: "
@@ -921,7 +921,7 @@ zx_status_t UsbDevice::Init() {
       config_descs_[current_config_index_].data());
   status =
       UsbControlOut(USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_SET_CONFIGURATION,
-                    config_desc->bConfigurationValue, 0, ZX_TIME_INFINITE, nullptr, 0);
+                    config_desc->b_configuration_value, 0, ZX_TIME_INFINITE, nullptr, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION failed", __func__);
     return status;
@@ -967,10 +967,10 @@ zx_status_t UsbDevice::Reinitialize() {
       config_descs_[current_config_index_].data());
   auto status =
       UsbControlOut(USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_SET_CONFIGURATION,
-                    descriptor->bConfigurationValue, 0, ZX_TIME_INFINITE, nullptr, 0);
+                    descriptor->b_configuration_value, 0, ZX_TIME_INFINITE, nullptr, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not restore configuration to %u, got err: %d",
-           descriptor->bConfigurationValue, status);
+           descriptor->b_configuration_value, status);
     return status;
   }
 

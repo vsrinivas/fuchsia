@@ -910,15 +910,15 @@ void RndisFunction::NotificationComplete(usb_request_t* usb_request) {
 }
 
 zx_status_t RndisFunction::Bind() {
-  descriptors_.assoc = {
-      .bLength = sizeof(usb_interface_assoc_descriptor_t),
-      .bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
-      .bFirstInterface = 0,  // set later
-      .bInterfaceCount = 2,
-      .bFunctionClass = USB_CLASS_WIRELESS,
-      .bFunctionSubClass = USB_SUBCLASS_WIRELESS_MISC,
-      .bFunctionProtocol = USB_PROTOCOL_WIRELESS_MISC_RNDIS,
-      .iFunction = 0,  // set later
+  descriptors_.assoc = usb_interface_assoc_descriptor_t{
+      .b_length = sizeof(usb_interface_assoc_descriptor_t),
+      .b_descriptor_type = USB_DT_INTERFACE_ASSOCIATION,
+      .b_first_interface = 0,  // set later
+      .b_interface_count = 2,
+      .b_function_class = USB_CLASS_WIRELESS,
+      .b_function_sub_class = USB_SUBCLASS_WIRELESS_MISC,
+      .b_function_protocol = USB_PROTOCOL_WIRELESS_MISC_RNDIS,
+      .i_function = 0,  // set later
   };
   descriptors_.communication_interface = usb_interface_descriptor_t{
       .b_length = sizeof(usb_interface_descriptor_t),
@@ -1010,7 +1010,7 @@ zx_status_t RndisFunction::Bind() {
     return status;
   }
 
-  status = function_.AllocStringDesc("RNDIS", &descriptors_.assoc.iFunction);
+  status = function_.AllocStringDesc("RNDIS", &descriptors_.assoc.i_function);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to allocate string descriptor: %s", zx_status_get_string(status));
     return status;
@@ -1027,7 +1027,7 @@ zx_status_t RndisFunction::Bind() {
     zxlogf(ERROR, "Failed to allocate data interface: %s", zx_status_get_string(status));
     return status;
   }
-  descriptors_.assoc.bFirstInterface = descriptors_.communication_interface.b_interface_number;
+  descriptors_.assoc.b_first_interface = descriptors_.communication_interface.b_interface_number;
   descriptors_.cdc_union.bControlInterface =
       descriptors_.communication_interface.b_interface_number;
   descriptors_.cdc_union.bSubordinateInterface = descriptors_.data_interface.b_interface_number;

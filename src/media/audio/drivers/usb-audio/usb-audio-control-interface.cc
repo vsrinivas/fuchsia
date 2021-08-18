@@ -66,7 +66,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
   while (iter->Next()) {
     {
       auto hdr = iter->hdr();
-      if (!hdr || (hdr->bDescriptorType != USB_AUDIO_CS_INTERFACE)) {
+      if (!hdr || (hdr->b_descriptor_type != USB_AUDIO_CS_INTERFACE)) {
         break;
       }
     }

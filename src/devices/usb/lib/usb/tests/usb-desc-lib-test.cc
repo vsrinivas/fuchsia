@@ -10,8 +10,8 @@
 namespace {
 
 constexpr usb_descriptor_header_t kTestDescriptorHeader = {
-    .bLength = sizeof(usb_descriptor_header_t),
-    .bDescriptorType = 0,
+    .b_length = sizeof(usb_descriptor_header_t),
+    .b_descriptor_type = 0,
 };
 
 constexpr usb_interface_descriptor_t kTestUsbInterfaceDescriptor = {
@@ -99,7 +99,7 @@ TEST_F(UsbLibTest, TestUsbDescPeekOverflow) {
   usb_desc_iter_t iter;
   usb_descriptor_header_t desc = kTestDescriptorHeader;
   // Length is invalid and longer than the actual length.
-  desc.bLength++;
+  desc.b_length++;
   SetDescriptors((void*)&desc);
   SetDescriptorLength(sizeof(desc));
   ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));

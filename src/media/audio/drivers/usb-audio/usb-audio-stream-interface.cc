@@ -451,7 +451,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
       break;
     }
 
-    if (hdr->bDescriptorType == USB_AUDIO_CS_INTERFACE) {
+    if (hdr->b_descriptor_type == USB_AUDIO_CS_INTERFACE) {
       // Stop parsing if this is not an audio format type descriptor
       auto ihdr = iter->hdr_as<usb_audio_desc_header>();
       if ((ihdr == nullptr) || (ihdr->bDescriptorSubtype != USB_AUDIO_AS_FORMAT_TYPE)) {
@@ -483,7 +483,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
       // Stash the pointer, we'll sanity check a bit more once we are finished finding
       // headers.
       fmt_desc_ = fmt_desc;
-    } else if (hdr->bDescriptorType == USB_DT_ENDPOINT) {
+    } else if (hdr->b_descriptor_type == USB_DT_ENDPOINT) {
       auto ep_desc = iter->hdr_as<usb_endpoint_descriptor_t>();
       if (ep_desc == nullptr) {
         LOG(ERROR,
@@ -516,7 +516,7 @@ zx_status_t UsbAudioStreamInterface::Format::Init(DescriptorListMemory::Iterator
           ep_desc_ = ep_desc;
         }
       }
-    } else if (hdr->bDescriptorType == USB_AUDIO_CS_ENDPOINT) {
+    } else if (hdr->b_descriptor_type == USB_AUDIO_CS_ENDPOINT) {
       // Stop parsing if this is not a class specific AS isochronous endpoint descriptor
       auto ihdr = iter->hdr_as<usb_audio_desc_header>();
       if ((ihdr == nullptr) || (ihdr->bDescriptorSubtype != USB_AUDIO_EP_GENERAL)) {

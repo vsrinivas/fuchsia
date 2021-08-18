@@ -40,7 +40,7 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
 
   // Convert MAC address to something more machine-friendly
   usb_string_descriptor_t* str_desc = (usb_string_descriptor_t*)str_desc_buf;
-  uint8_t* str = str_desc->bString;
+  uint8_t* str = str_desc->b_string;
   size_t ndx;
   for (ndx = 0; ndx < ETH_MAC_SIZE * 4; ndx++) {
     if (ndx % 2 == 1) {
@@ -86,7 +86,7 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
   *default_ifc = NULL;
   *data_ifc = NULL;
   while ((desc = usb_desc_iter_peek(iter)) != NULL) {
-    if (desc->bDescriptorType == USB_DT_INTERFACE) {
+    if (desc->b_descriptor_type == USB_DT_INTERFACE) {
       usb_interface_descriptor_t* ifc_desc =
           usb_desc_iter_get_structure(iter, sizeof(usb_interface_descriptor_t));
       if (ifc_desc == NULL) {
@@ -107,20 +107,20 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
           *data_ifc = ifc_desc;
         }
       }
-    } else if (desc->bDescriptorType == USB_DT_CS_INTERFACE) {
+    } else if (desc->b_descriptor_type == USB_DT_CS_INTERFACE) {
       usb_cs_interface_descriptor_t* cs_ifc_desc =
           usb_desc_iter_get_structure(iter, sizeof(usb_cs_interface_descriptor_t));
       if (cs_ifc_desc == NULL) {
         goto fail;
       }
-      if (cs_ifc_desc->bDescriptorSubType == USB_CDC_DST_HEADER) {
+      if (cs_ifc_desc->b_descriptor_sub_type == USB_CDC_DST_HEADER) {
         if (cdc_header_desc != NULL) {
           zxlogf(ERROR, "%s: multiple CDC headers", module_name);
           goto fail;
         }
         cdc_header_desc =
             usb_desc_iter_get_structure(iter, sizeof(usb_cs_header_interface_descriptor_t));
-      } else if (cs_ifc_desc->bDescriptorSubType == USB_CDC_DST_ETHERNET) {
+      } else if (cs_ifc_desc->b_descriptor_sub_type == USB_CDC_DST_ETHERNET) {
         if (cdc_eth_desc != NULL) {
           zxlogf(ERROR, "%s: multiple CDC ethernet descriptors", module_name);
           goto fail;
@@ -128,7 +128,7 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
         cdc_eth_desc =
             usb_desc_iter_get_structure(iter, sizeof(usb_cs_ethernet_interface_descriptor_t));
       }
-    } else if (desc->bDescriptorType == USB_DT_ENDPOINT) {
+    } else if (desc->b_descriptor_type == USB_DT_ENDPOINT) {
       usb_endpoint_descriptor_t* endpoint_desc =
           usb_desc_iter_get_structure(iter, sizeof(usb_endpoint_descriptor_t));
       if (endpoint_desc == NULL) {

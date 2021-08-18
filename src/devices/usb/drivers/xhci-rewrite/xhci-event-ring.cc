@@ -458,7 +458,7 @@ std::variant<bool, std::unique_ptr<TRBContext>> EventRing::StallWorkaroundForDef
     usb_device_qualifier_descriptor_t* desc;
     if ((context->request->Mmap(reinterpret_cast<void**>(&desc)) == ZX_OK) &&
         (request->header.length >= sizeof(desc))) {
-      desc->bDeviceProtocol =
+      desc->b_device_protocol =
           0;  // Don't support multi-TT unless we're sure the device supports it.
       hci_->ScheduleTask(hci_->UsbHciResetEndpointAsync(request->header.device_id, 0)
                              .and_then([ctx = std::move(context)](TRB*& result) {

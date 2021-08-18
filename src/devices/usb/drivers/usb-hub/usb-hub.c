@@ -349,8 +349,8 @@ static int usb_hub_thread(void* arg) {
       zxlogf(ERROR, "get device_qualifier descriptor failed: %d", result);
       device_init_reply(hub->zxdev, result, NULL);
       return result;
-    } else if (qual_desc.bLength != out_length) {
-      zxlogf(ERROR, "usb_device_qualifier_descriptor_t.bLength != out_length");
+    } else if (qual_desc.b_length != out_length) {
+      zxlogf(ERROR, "usb_device_qualifier_descriptor_t.b_length != out_length");
       result = ZX_ERR_BAD_STATE;
       device_init_reply(hub->zxdev, result, NULL);
       return result;
@@ -361,7 +361,7 @@ static int usb_hub_thread(void* arg) {
       device_init_reply(hub->zxdev, result, NULL);
       return result;
     }
-    multi_tt = qual_desc.bDeviceProtocol == 2;
+    multi_tt = qual_desc.b_device_protocol == 2;
   } else if (hub->hub_speed == USB_SPEED_HIGH) {
     usb_device_descriptor_t dev_desc;
     result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE, 0, (void*)&dev_desc,
@@ -371,7 +371,7 @@ static int usb_hub_thread(void* arg) {
       device_init_reply(hub->zxdev, result, NULL);
       return result;
     } else if (dev_desc.b_length != out_length) {
-      zxlogf(ERROR, "usb_device_descriptor_t.bLength != out_length");
+      zxlogf(ERROR, "usb_device_descriptor_t.b_length != out_length");
       result = ZX_ERR_BAD_STATE;
       device_init_reply(hub->zxdev, result, NULL);
       return result;
@@ -526,7 +526,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
 
   usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
   usb_descriptor_header_t* desc = usb_desc_iter_peek(&iter);
-  if (desc && desc->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+  if (desc && desc->b_descriptor_type == USB_DT_SS_EP_COMPANION) {
     ss_comp_desc = usb_desc_iter_get_structure(&iter, sizeof(usb_ss_ep_comp_descriptor_t));
   }
   usb_desc_iter_advance(&iter);

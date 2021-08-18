@@ -121,7 +121,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
     }
     memcpy(&hub_descriptor, result.value().data(), request_size);
     auto* usb_descriptor = reinterpret_cast<usb_descriptor_header_t*>(&hub_descriptor);
-    if (usb_descriptor->bLength != request_size) {
+    if (usb_descriptor->b_length != request_size) {
       zxlogf(ERROR, "Mismatched descriptor length");
       return zx::error(ZX_ERR_BAD_STATE);
     }

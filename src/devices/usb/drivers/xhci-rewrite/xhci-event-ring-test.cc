@@ -486,7 +486,7 @@ TEST_F(EventRingHarness, BadHubStallOnDtDeviceQualifier) {
 
   ASSERT_EQ(transfer_status, ZX_OK);
   ASSERT_EQ(transfer_len, sizeof(usb_device_qualifier_descriptor_t));
-  ASSERT_EQ(descriptor.bDeviceProtocol, 0);
+  ASSERT_EQ(descriptor.b_device_protocol, 0);
 }
 
 TEST_F(EventRingHarness, USB2DeviceAttach) {

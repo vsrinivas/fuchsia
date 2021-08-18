@@ -86,10 +86,10 @@ class InterfaceBuilder {
 class ConfigurationBuilder {
  public:
   explicit ConfigurationBuilder(uint8_t config_num) {
-    base_desc_.bNumInterfaces = 0;
-    base_desc_.iConfiguration = config_num;
-    base_desc_.bLength = sizeof(base_desc_);
-    base_desc_.bDescriptorType = USB_DT_CONFIG;
+    base_desc_.b_num_interfaces = 0;
+    base_desc_.i_configuration = config_num;
+    base_desc_.b_length = sizeof(base_desc_);
+    base_desc_.b_descriptor_type = USB_DT_CONFIG;
   }
 
   void AddInterface(const InterfaceBuilder& builder) {
@@ -98,7 +98,7 @@ class ConfigurationBuilder {
   }
   void AddInterface(void* interface_desc, size_t interface_desc_length) {
     VectorAppend(descriptors_, interface_desc, interface_desc_length);
-    base_desc_.bNumInterfaces++;
+    base_desc_.b_num_interfaces++;
   }
 
   std::vector<uint8_t> Generate() const {

@@ -46,7 +46,7 @@ class DescriptorListMemory : public fbl::RefCounted<DescriptorListMemory> {
     const T* hdr_as() const {
       auto h = hdr();
       ZX_DEBUG_ASSERT(offset_ <= mem_->size());
-      return ((h != nullptr) && (h->bLength <= (mem_->size() - offset_)))
+      return ((h != nullptr) && (h->b_length <= (mem_->size() - offset_)))
                  ? reinterpret_cast<const T*>(h)
                  : nullptr;
     }

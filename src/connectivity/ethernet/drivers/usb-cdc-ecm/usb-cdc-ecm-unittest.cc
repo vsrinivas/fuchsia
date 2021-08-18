@@ -56,8 +56,8 @@ class UsbCdcEcmTest : public zxtest::Test {
     }
     *out_read_actual = expected_str_size;
     usb_string_descriptor_t usb_str;
-    usb_str.bLength = expected_str_size;
-    usb_str.bDescriptorType = USB_DT_STRING;
+    usb_str.b_length = expected_str_size;
+    usb_str.b_descriptor_type = USB_DT_STRING;
     memcpy(out_read_buffer, &usb_str, sizeof(usb_string_descriptor_t));
     uint8_t* ptr = reinterpret_cast<uint8_t*>(out_read_buffer) + sizeof(usb_string_descriptor_t);
     for (size_t i = 0; i < ETH_MAC_SIZE; i++) {

@@ -83,7 +83,7 @@ void EndpointList::iterator::ReadEp(usb_desc_iter_t* iter, usb_iter_endpoint_des
 
   // A SuperSpeed companion descriptor may optionally follow.
   const usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
-  if (header && header->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+  if (header && header->b_descriptor_type == USB_DT_SS_EP_COMPANION) {
     out->ss_companion = *usb_desc_iter_next_ss_ep_comp(iter);
     out->has_companion = true;
   }
@@ -120,7 +120,7 @@ void DescriptorList::iterator::ReadHeader(usb_desc_iter_t* iter,
                                           const usb_descriptor_header_t** out) {
   const usb_descriptor_header_t* ptr = usb_desc_iter_peek(iter);
   usb_desc_iter_advance(iter);
-  if (ptr && ptr->bDescriptorType != USB_DT_INTERFACE) {
+  if (ptr && ptr->b_descriptor_type != USB_DT_INTERFACE) {
     *out = ptr;
   } else {
     *out = nullptr;

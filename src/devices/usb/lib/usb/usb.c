@@ -122,7 +122,7 @@ __EXPORT bool usb_desc_iter_advance(usb_desc_iter_t* iter) {
   usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
   if (!header)
     return false;
-  iter->current += header->bLength;
+  iter->current += header->b_length;
   return true;
 }
 
@@ -138,13 +138,13 @@ __EXPORT usb_descriptor_header_t* usb_desc_iter_peek(usb_desc_iter_t* iter) {
     return NULL;
   }
   usb_descriptor_header_t* header = (usb_descriptor_header_t*)iter->current;
-  if (!safe_add(iter->current, header->bLength, &end)) {
+  if (!safe_add(iter->current, header->b_length, &end)) {
     return NULL;
   }
   if (end > iter->desc_end) {
     return NULL;
   }
-  if (header->bLength == 0) {
+  if (header->b_length == 0) {
     // An descriptor must not have 0 length, otherwise, it might cause infinite loop.
     return NULL;
   }
@@ -171,7 +171,7 @@ __EXPORT usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_
                                                                   bool skip_alt) {
   usb_descriptor_header_t* header;
   while ((header = usb_desc_iter_peek(iter)) != NULL) {
-    if (header->bDescriptorType == USB_DT_INTERFACE) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE) {
       usb_interface_descriptor_t* desc =
           usb_desc_iter_get_structure(iter, sizeof(usb_interface_descriptor_t));
       if (desc == NULL) {
@@ -192,11 +192,11 @@ __EXPORT usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_
 __EXPORT usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t* iter) {
   usb_descriptor_header_t* header;
   while ((header = usb_desc_iter_peek(iter)) != NULL) {
-    if (header->bDescriptorType == USB_DT_INTERFACE) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE) {
       // we are at end of previous interface
       return NULL;
     }
-    if (header->bDescriptorType == USB_DT_ENDPOINT) {
+    if (header->b_descriptor_type == USB_DT_ENDPOINT) {
       usb_endpoint_descriptor_t* desc =
           usb_desc_iter_get_structure(iter, sizeof(usb_endpoint_descriptor_t));
       if (desc == NULL) {
@@ -217,12 +217,12 @@ __EXPORT usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t*
 __EXPORT usb_ss_ep_comp_descriptor_t* usb_desc_iter_next_ss_ep_comp(usb_desc_iter_t* iter) {
   usb_descriptor_header_t* header;
   while ((header = usb_desc_iter_peek(iter)) != NULL) {
-    uint8_t desc_type = header->bDescriptorType;
+    uint8_t desc_type = header->b_descriptor_type;
     if (desc_type == USB_DT_ENDPOINT || desc_type == USB_DT_INTERFACE) {
       // we are either at next endpoint or end of previous interface
       return NULL;
     }
-    if (header->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+    if (header->b_descriptor_type == USB_DT_SS_EP_COMPANION) {
       usb_ss_ep_comp_descriptor_t* desc =
           usb_desc_iter_get_structure(iter, sizeof(usb_ss_ep_comp_descriptor_t));
       if (desc == NULL) {

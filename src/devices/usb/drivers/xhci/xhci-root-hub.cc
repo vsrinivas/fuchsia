@@ -128,14 +128,14 @@ static const struct {
 } xhci_rh_config_desc = {
     .config =
         {
-            .bLength = sizeof(usb_configuration_descriptor_t),
-            .bDescriptorType = USB_DT_CONFIG,
-            .wTotalLength = htole16(sizeof(xhci_rh_config_desc)),
-            .bNumInterfaces = 1,
-            .bConfigurationValue = 1,
-            .iConfiguration = 0,
-            .bmAttributes = 0xE0,  // self powered
-            .bMaxPower = 0,
+            .b_length = sizeof(usb_configuration_descriptor_t),
+            .b_descriptor_type = USB_DT_CONFIG,
+            .w_total_length = htole16(sizeof(xhci_rh_config_desc)),
+            .b_num_interfaces = 1,
+            .b_configuration_value = 1,
+            .i_configuration = 0,
+            .bm_attributes = 0xE0,  // self powered
+            .b_max_power = 0,
         },
     .intf =
         {
@@ -390,7 +390,7 @@ static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xh
       usb_request_complete(req, ZX_OK, length, &req_int->complete_cb);
       return ZX_OK;
     } else if (desc_type == USB_DT_CONFIG && index == 0) {
-      uint16_t desc_length = le16toh(rh->config_desc->wTotalLength);
+      uint16_t desc_length = le16toh(rh->config_desc->w_total_length);
       if (length > desc_length)
         length = desc_length;
       size_t copy_size = usb_request_copy_to(req, rh->config_desc, length, 0);

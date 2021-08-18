@@ -16,7 +16,7 @@ namespace usb_composite {
 static inline const usb_descriptor_header_t* NextDescriptor(const void* header) {
   auto* desc = reinterpret_cast<const usb_descriptor_header_t*>(header);
   return reinterpret_cast<const usb_descriptor_header_t*>(reinterpret_cast<const uint8_t*>(desc) +
-                                                          desc->bLength);
+                                                          desc->b_length);
 }
 
 zx_status_t UsbComposite::Create(void* ctx, zx_device_t* parent) {
@@ -103,7 +103,7 @@ zx_status_t UsbComposite::AddInterfaceAssoc(const usb_interface_assoc_descriptor
   }
 
   char name[20];
-  snprintf(name, sizeof(name), "asc-%03d", assoc_desc->iFunction);
+  snprintf(name, sizeof(name), "asc-%03d", assoc_desc->i_function);
 
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_INTERFACE},
@@ -130,22 +130,22 @@ zx_status_t UsbComposite::AddInterfaces() {
   auto* header = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.data());
   auto* config = reinterpret_cast<const usb_configuration_descriptor_t*>(header);
   auto* end = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.data() +
-                                                               le16toh(config->wTotalLength));
+                                                               le16toh(config->w_total_length));
   header = NextDescriptor(header);
 
   zx_status_t result = ZX_OK;
 
   while (header < end) {
-    if (header->bDescriptorType == USB_DT_INTERFACE_ASSOCIATION) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE_ASSOCIATION) {
       auto* assoc_desc = reinterpret_cast<const usb_interface_assoc_descriptor_t*>(header);
-      int interface_count = assoc_desc->bInterfaceCount;
+      int interface_count = assoc_desc->b_interface_count;
 
       // find end of this interface association
       auto* next = NextDescriptor(assoc_desc);
       while (next < end) {
-        if (next->bDescriptorType == USB_DT_INTERFACE_ASSOCIATION) {
+        if (next->b_descriptor_type == USB_DT_INTERFACE_ASSOCIATION) {
           break;
-        } else if (next->bDescriptorType == USB_DT_INTERFACE) {
+        } else if (next->b_descriptor_type == USB_DT_INTERFACE) {
           auto* test_intf = reinterpret_cast<const usb_interface_descriptor_t*>(next);
 
           if (test_intf->b_alternate_setting == 0) {
@@ -165,12 +165,12 @@ zx_status_t UsbComposite::AddInterfaces() {
       }
 
       header = next;
-    } else if (header->bDescriptorType == USB_DT_INTERFACE) {
+    } else if (header->b_descriptor_type == USB_DT_INTERFACE) {
       auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
       // find end of current interface descriptor
       auto* next = NextDescriptor(intf_desc);
       while (next < end) {
-        if (next->bDescriptorType == USB_DT_INTERFACE) {
+        if (next->b_descriptor_type == USB_DT_INTERFACE) {
           auto* test_intf = reinterpret_cast<const usb_interface_descriptor_t*>(next);
           // Iterate until we find the next top-level interface
           // Include alternate interfaces in the current interface
@@ -268,12 +268,12 @@ zx_status_t UsbComposite::GetAdditionalDescriptorList(uint8_t last_interface_id,
   auto* header = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.data());
   auto* config = reinterpret_cast<const usb_configuration_descriptor_t*>(header);
   auto* end = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.data() +
-                                                               le16toh(config->wTotalLength));
+                                                               le16toh(config->w_total_length));
   header = NextDescriptor(header);
 
   usb_interface_descriptor_t* result = NULL;
   while (header < end) {
-    if (header->bDescriptorType == USB_DT_INTERFACE) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE) {
       usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)header;
       // We are only interested in descriptors past the last stored descriptor
       // for the current interface.

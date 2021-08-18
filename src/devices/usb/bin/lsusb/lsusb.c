@@ -86,16 +86,16 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
   }
 
   FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
-  get_string_desc(svc, device_desc.iManufacturer, manufacturer, sizeof(manufacturer));
+  get_string_desc(svc, device_desc.i_manufacturer, manufacturer, sizeof(manufacturer));
 
   FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
-  get_string_desc(svc, device_desc.iProduct, product, sizeof(product));
+  get_string_desc(svc, device_desc.i_product, product, sizeof(product));
 
   FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   int left_pad = depth * 4;
   int right_pad = (max_depth - depth) * 4;
   printf("%*s%3s  %*s%04X:%04X  %-5s  %s %s\n", left_pad, "", devname, right_pad, "",
-         le16toh(device_desc.idVendor), le16toh(device_desc.idProduct), usb_speeds[speed],
+         le16toh(device_desc.id_vendor), le16toh(device_desc.id_product), usb_speeds[speed],
          manufacturer, product);
 
   if (verbose) {
@@ -103,23 +103,23 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
 
     // print device descriptor
     printf("Device Descriptor:\n");
-    printf("  bLength                         %d\n", device_desc.bLength);
-    printf("  bDescriptorType                 %d\n", device_desc.bDescriptorType);
-    printf("  bcdUSB                          %x.%x\n", le16toh(device_desc.bcdUSB) >> 8,
-           le16toh(device_desc.bcdUSB) & 0xFF);
-    printf("  bDeviceClass                    %d\n", device_desc.bDeviceClass);
-    printf("  bDeviceSubClass                 %d\n", device_desc.bDeviceSubClass);
-    printf("  bDeviceProtocol                 %d\n", device_desc.bDeviceProtocol);
-    printf("  bMaxPacketSize0                 %d\n", device_desc.bMaxPacketSize0);
-    printf("  idVendor                        0x%04X\n", le16toh(device_desc.idVendor));
-    printf("  idProduct                       0x%04X\n", le16toh(device_desc.idProduct));
-    printf("  bcdDevice                       %x.%x\n", le16toh(device_desc.bcdDevice) >> 8,
-           le16toh(device_desc.bcdDevice) & 0xFF);
-    printf("  iManufacturer                   %d %s\n", device_desc.iManufacturer, manufacturer);
-    printf("  iProduct                        %d %s\n", device_desc.iProduct, product);
-    get_string_desc(svc, device_desc.iSerialNumber, string_buf, sizeof(string_buf));
-    printf("  iSerialNumber                   %d %s\n", device_desc.iSerialNumber, string_buf);
-    printf("  bNumConfigurations              %d\n", device_desc.bNumConfigurations);
+    printf("  bLength                         %d\n", device_desc.b_length);
+    printf("  bDescriptorType                 %d\n", device_desc.b_descriptor_type);
+    printf("  bcdUSB                          %x.%x\n", le16toh(device_desc.bcd_usb) >> 8,
+           le16toh(device_desc.bcd_usb) & 0xFF);
+    printf("  bDeviceClass                    %d\n", device_desc.b_device_class);
+    printf("  bDeviceSubClass                 %d\n", device_desc.b_device_sub_class);
+    printf("  bDeviceProtocol                 %d\n", device_desc.b_device_protocol);
+    printf("  bMaxPacketSize0                 %d\n", device_desc.b_max_packet_size0);
+    printf("  idVendor                        0x%04X\n", le16toh(device_desc.id_vendor));
+    printf("  idProduct                       0x%04X\n", le16toh(device_desc.id_product));
+    printf("  bcdDevice                       %x.%x\n", le16toh(device_desc.bcd_device) >> 8,
+           le16toh(device_desc.bcd_device) & 0xFF);
+    printf("  iManufacturer                   %d %s\n", device_desc.i_manufacturer, manufacturer);
+    printf("  iProduct                        %d %s\n", device_desc.i_product, product);
+    get_string_desc(svc, device_desc.i_serial_number, string_buf, sizeof(string_buf));
+    printf("  iSerialNumber                   %d %s\n", device_desc.i_serial_number, string_buf);
+    printf("  bNumConfigurations              %d\n", device_desc.b_num_configurations);
 
     if (configuration == -1) {
       uint8_t config;
@@ -171,47 +171,47 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
     // print configuration descriptor
     usb_configuration_descriptor_t* config_desc = (usb_configuration_descriptor_t*)desc;
     printf("  Configuration Descriptor:\n");
-    printf("    bLength                       %d\n", config_desc->bLength);
-    printf("    bDescriptorType               %d\n", config_desc->bDescriptorType);
-    printf("    wTotalLength                  %d\n", le16toh(config_desc->wTotalLength));
-    printf("    bNumInterfaces                %d\n", config_desc->bNumInterfaces);
-    printf("    bConfigurationValue           %d\n", config_desc->bConfigurationValue);
-    get_string_desc(svc, config_desc->iConfiguration, string_buf, sizeof(string_buf));
-    printf("    iConfiguration                %d %s\n", config_desc->iConfiguration, string_buf);
-    printf("    bmAttributes                  0x%02X\n", config_desc->bmAttributes);
-    printf("    bMaxPower                     %d\n", config_desc->bMaxPower);
+    printf("    bLength                       %d\n", config_desc->b_length);
+    printf("    bDescriptorType               %d\n", config_desc->b_descriptor_type);
+    printf("    wTotalLength                  %d\n", le16toh(config_desc->w_total_length));
+    printf("    bNumInterfaces                %d\n", config_desc->b_num_interfaces);
+    printf("    bConfigurationValue           %d\n", config_desc->b_configuration_value);
+    get_string_desc(svc, config_desc->i_configuration, string_buf, sizeof(string_buf));
+    printf("    iConfiguration                %d %s\n", config_desc->i_configuration, string_buf);
+    printf("    bmAttributes                  0x%02X\n", config_desc->bm_attributes);
+    printf("    bMaxPower                     %d\n", config_desc->b_max_power);
 
     // print remaining descriptors
     usb_descriptor_header_t* header =
         (usb_descriptor_header_t*)(desc + sizeof(usb_configuration_descriptor_t));
     while (header < desc_end) {
-      if (header->bLength == 0) {
+      if (header->b_length == 0) {
         printf("zero length header, bailing\n");
         break;
       }
-      if (header->bDescriptorType == USB_DT_INTERFACE) {
+      if (header->b_descriptor_type == USB_DT_INTERFACE) {
         usb_interface_info_descriptor_t* desc = (usb_interface_info_descriptor_t*)header;
         printf("    Interface Descriptor:\n");
-        printf("      bLength                     %d\n", desc->bLength);
-        printf("      bDescriptorType             %d\n", desc->bDescriptorType);
-        printf("      bInterfaceNumber            %d\n", desc->bInterfaceNumber);
-        printf("      bAlternateSetting           %d\n", desc->bAlternateSetting);
-        printf("      bNumEndpoints               %d\n", desc->bNumEndpoints);
-        printf("      bInterfaceClass             %d\n", desc->bInterfaceClass);
-        printf("      bInterfaceSubClass          %d\n", desc->bInterfaceSubClass);
-        printf("      bInterfaceProtocol          %d\n", desc->bInterfaceProtocol);
-        get_string_desc(svc, desc->iInterface, string_buf, sizeof(string_buf));
-        printf("      iInterface                  %d %s\n", desc->iInterface, string_buf);
-      } else if (header->bDescriptorType == USB_DT_ENDPOINT) {
+        printf("      bLength                     %d\n", desc->b_length);
+        printf("      bDescriptorType             %d\n", desc->b_descriptor_type);
+        printf("      bInterfaceNumber            %d\n", desc->b_interface_number);
+        printf("      bAlternateDetting           %d\n", desc->b_alternate_setting);
+        printf("      bNumEndpoints               %d\n", desc->b_num_endpoints);
+        printf("      bInterfaceClass             %d\n", desc->b_interface_class);
+        printf("      bInterfaceSubClass          %d\n", desc->b_interface_sub_class);
+        printf("      bInterfaceProtocol          %d\n", desc->b_interface_protocol);
+        get_string_desc(svc, desc->i_interface, string_buf, sizeof(string_buf));
+        printf("      i_interface                  %d %s\n", desc->i_interface, string_buf);
+      } else if (header->b_descriptor_type == USB_DT_ENDPOINT) {
         usb_endpoint_info_descriptor_t* desc = (usb_endpoint_info_descriptor_t*)header;
         printf("      Endpoint Descriptor:\n");
-        printf("        bLength                   %d\n", desc->bLength);
-        printf("        bDescriptorType           %d\n", desc->bDescriptorType);
-        printf("        bEndpointAddress          0x%02X\n", desc->bEndpointAddress);
-        printf("        bmAttributes              0x%02X\n", desc->bmAttributes);
-        printf("        wMaxPacketSize            %d\n", le16toh(desc->wMaxPacketSize));
-        printf("        bInterval                 %d\n", desc->bInterval);
-      } else if (header->bDescriptorType == USB_DT_HID) {
+        printf("        bLength                   %d\n", desc->b_length);
+        printf("        bDescriptorType           %d\n", desc->b_descriptor_type);
+        printf("        bEndpointAddress          0x%02X\n", desc->b_endpoint_address);
+        printf("        bmAttributes              0x%02X\n", desc->bm_attributes);
+        printf("        wMaxPacketSize            %d\n", le16toh(desc->w_max_packet_size));
+        printf("        bInterval                 %d\n", desc->b_interval);
+      } else if (header->b_descriptor_type == USB_DT_HID) {
         usb_hid_descriptor_t* desc = (usb_hid_descriptor_t*)header;
         printf("      HID Descriptor:\n");
         printf("        bLength                   %d\n", desc->bLength);
@@ -225,41 +225,41 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
           printf("          bDescriptorType         %d\n", entry->bDescriptorType);
           printf("          wDescriptorLength       %d\n", le16toh(entry->wDescriptorLength));
         }
-      } else if (header->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+      } else if (header->b_descriptor_type == USB_DT_SS_EP_COMPANION) {
         usb_ss_ep_comp_descriptor_info_t* desc = (usb_ss_ep_comp_descriptor_info_t*)header;
         printf("        SuperSpeed Endpoint Companion Descriptor:\n");
-        printf("          bLength                 %d\n", desc->bLength);
-        printf("          bDescriptorType         %d\n", desc->bDescriptorType);
-        printf("          bMaxBurst               0x%02X\n", desc->bMaxBurst);
-        printf("          bmAttributes            0x%02X\n", desc->bmAttributes);
-        printf("          wBytesPerInterval       %d\n", le16toh(desc->wBytesPerInterval));
-      } else if (header->bDescriptorType == USB_DT_SS_ISOCH_EP_COMPANION) {
+        printf("          bLength                 %d\n", desc->b_length);
+        printf("          bDescriptorType         %d\n", desc->b_descriptor_type);
+        printf("          bMaxBurst               0x%02X\n", desc->b_max_burst);
+        printf("          bmAttributes            0x%02X\n", desc->bm_attributes);
+        printf("          wBytesPerInterval       %d\n", le16toh(desc->w_bytes_per_interval));
+      } else if (header->b_descriptor_type == USB_DT_SS_ISOCH_EP_COMPANION) {
         usb_ss_isoch_ep_comp_descriptor_t* desc = (usb_ss_isoch_ep_comp_descriptor_t*)header;
         printf("        SuperSpeed Isochronous Endpoint Companion Descriptor:\n");
-        printf("          bLength                 %d\n", desc->bLength);
-        printf("          bDescriptorType         %d\n", desc->bDescriptorType);
-        printf("          wReserved               %d\n", le16toh(desc->wReserved));
-        printf("          dwBytesPerInterval      %d\n", le32toh(desc->dwBytesPerInterval));
-      } else if (header->bDescriptorType == USB_DT_INTERFACE_ASSOCIATION) {
+        printf("          bLength                 %d\n", desc->b_length);
+        printf("          bDescriptorType         %d\n", desc->b_descriptor_type);
+        printf("          wReserved               %d\n", le16toh(desc->w_reserved));
+        printf("          dwBytesPerInterval      %d\n", le32toh(desc->dw_bytes_per_interval));
+      } else if (header->b_descriptor_type == USB_DT_INTERFACE_ASSOCIATION) {
         usb_interface_assoc_descriptor_t* desc = (usb_interface_assoc_descriptor_t*)header;
         printf("    Interface Association Descriptor:\n");
-        printf("      bLength                     %d\n", desc->bLength);
-        printf("      bDescriptorType             %d\n", desc->bDescriptorType);
-        printf("      bFirstInterface             %d\n", desc->bFirstInterface);
-        printf("      bInterfaceCount             %d\n", desc->bInterfaceCount);
-        printf("      bFunctionClass              %d\n", desc->bFunctionClass);
-        printf("      bFunctionSubClass           %d\n", desc->bFunctionSubClass);
-        printf("      bFunctionProtocol           %d\n", desc->bFunctionProtocol);
-        printf("      iFunction                   %d\n", desc->iFunction);
+        printf("      bLength                     %d\n", desc->b_length);
+        printf("      bDescriptorType             %d\n", desc->b_descriptor_type);
+        printf("      bFirstInterface             %d\n", desc->b_first_interface);
+        printf("      bInterfaceCount             %d\n", desc->b_interface_count);
+        printf("      bFunctionClass              %d\n", desc->b_function_class);
+        printf("      bFunctionSubClass           %d\n", desc->b_function_sub_class);
+        printf("      bFunctionProtocol           %d\n", desc->b_function_protocol);
+        printf("      iFunction                   %d\n", desc->i_function);
       } else {
         // FIXME - support other descriptor types
         printf("      Unknown Descriptor:\n");
-        printf("        bLength                   %d\n", header->bLength);
-        printf("        bDescriptorType           %d\n", header->bDescriptorType);
-        hexdump8_ex(header, header->bLength, 0);
+        printf("        bLength                   %d\n", header->b_length);
+        printf("        bDescriptorType           %d\n", header->b_descriptor_type);
+        hexdump8_ex(header, header->b_length, 0);
       }
 
-      header = (usb_descriptor_header_t*)((uint8_t*)header + header->bLength);
+      header = (usb_descriptor_header_t*)((uint8_t*)header + header->b_length);
     }
 
   free_out:

@@ -231,7 +231,7 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
   auto* header = reinterpret_cast<const usb_descriptor_header_t*>(descriptors);
 
   while (header < end) {
-    if (header->bDescriptorType == USB_DT_INTERFACE) {
+    if (header->b_descriptor_type == USB_DT_INTERFACE) {
       auto* desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
       ZX_ASSERT(function->configuration() < configurations_.size());
       auto configuration = configurations_[function->configuration()];
@@ -247,7 +247,7 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
         }
         (*out_num_interfaces)++;
       }
-    } else if (header->bDescriptorType == USB_DT_ENDPOINT) {
+    } else if (header->b_descriptor_type == USB_DT_ENDPOINT) {
       auto* desc = reinterpret_cast<const usb_endpoint_descriptor_t*>(header);
       auto index = EpAddressToIndex(desc->b_endpoint_address);
       if (index == 0 || index >= countof(endpoint_map_) || endpoint_map_[index] != function) {
@@ -257,12 +257,12 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
       }
     }
 
-    if (header->bLength == 0) {
+    if (header->b_length == 0) {
       zxlogf(ERROR, "usb_func_set_interface: zero length descriptor");
       return ZX_ERR_INVALID_ARGS;
     }
     header = reinterpret_cast<const usb_descriptor_header_t*>(
-        reinterpret_cast<const uint8_t*>(header) + header->bLength);
+        reinterpret_cast<const uint8_t*>(header) + header->b_length);
   }
 
   return ZX_OK;
@@ -306,15 +306,15 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
     }
     auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(config_desc_bytes);
 
-    config_desc->bLength = sizeof(*config_desc);
-    config_desc->bDescriptorType = USB_DT_CONFIG;
-    config_desc->wTotalLength = htole16(length);
-    config_desc->bNumInterfaces = 0;
-    config_desc->bConfigurationValue = static_cast<uint8_t>(1 + config_idx);
-    config_desc->iConfiguration = 0;
-    // TODO(voydanoff) add a way to configure bmAttributes and bMaxPower
-    config_desc->bmAttributes = USB_CONFIGURATION_SELF_POWERED | USB_CONFIGURATION_RESERVED_7;
-    config_desc->bMaxPower = 0;
+    config_desc->b_length = sizeof(*config_desc);
+    config_desc->b_descriptor_type = USB_DT_CONFIG;
+    config_desc->w_total_length = htole16(length);
+    config_desc->b_num_interfaces = 0;
+    config_desc->b_configuration_value = static_cast<uint8_t>(1 + config_idx);
+    config_desc->i_configuration = 0;
+    // TODO(voydanoff) add a way to configure bm_attributes and bMaxPower
+    config_desc->bm_attributes = USB_CONFIGURATION_SELF_POWERED | USB_CONFIGURATION_RESERVED_7;
+    config_desc->b_max_power = 0;
 
     uint8_t* dest = reinterpret_cast<uint8_t*>(config_desc + 1);
     for (size_t i = 0; i < functions.size(); i++) {
@@ -323,8 +323,8 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
       auto* descriptors = function->GetDescriptors(&descriptors_length);
       memcpy(dest, descriptors, descriptors_length);
       dest += descriptors_length;
-      config_desc->bNumInterfaces =
-          static_cast<uint8_t>(config_desc->bNumInterfaces + function->GetNumInterfaces());
+      config_desc->b_num_interfaces =
+          static_cast<uint8_t>(config_desc->b_num_interfaces + function->GetNumInterfaces());
     }
     config->config_desc.reset(config_desc_bytes, length);
     config_idx++;
@@ -440,12 +440,12 @@ zx_status_t UsbPeripheral::GetDescriptor(uint8_t request_type, uint16_t value, u
   } else if (value >> 8 == USB_DT_STRING) {
     uint8_t desc[255];
     auto* header = reinterpret_cast<usb_descriptor_header_t*>(desc);
-    header->bDescriptorType = USB_DT_STRING;
+    header->b_descriptor_type = USB_DT_STRING;
 
     auto string_index = static_cast<uint8_t>(value & 0xFF);
     if (string_index == 0) {
       // special case - return language list
-      header->bLength = 4;
+      header->b_length = 4;
       desc[2] = 0x09;  // language ID
       desc[3] = 0x04;
     } else {
@@ -464,11 +464,11 @@ zx_status_t UsbPeripheral::GetDescriptor(uint8_t request_type, uint16_t value, u
           desc[index++] = 0;
         }
       }
-      header->bLength = static_cast<uint8_t>(index);
+      header->b_length = static_cast<uint8_t>(index);
     }
 
-    if (header->bLength < length)
-      length = header->bLength;
+    if (header->b_length < length)
+      length = header->b_length;
     memcpy(buffer, desc, length);
     *out_actual = length;
     return ZX_OK;

@@ -192,8 +192,8 @@ static void EXPECT_SS_EP_COMP_EQ(usb_ss_ep_comp_descriptor_t a, usb_ss_ep_comp_d
 
 static void EXPECT_DESCRIPTOR_EQ(const usb_descriptor_header_t* a,
                                  const usb_descriptor_header_t* b) {
-  EXPECT_EQ(a->bDescriptorType, b->bDescriptorType);
-  EXPECT_EQ(a->bLength, b->bLength);
+  EXPECT_EQ(a->b_descriptor_type, b->b_descriptor_type);
+  EXPECT_EQ(a->b_length, b->b_length);
 }
 
 // HighSpeedWrapperTest tests an InterfaceList's ability to process interface descriptors
@@ -578,12 +578,12 @@ TEST_F(BinaryHidDescriptorTest, TestBinaryHidDescriptor) {
       break;
     }
     for (auto& descriptor : interface.GetDescriptorList()) {
-      if (descriptor.bDescriptorType == USB_DT_HID) {
+      if (descriptor.b_descriptor_type == USB_DT_HID) {
         hid_desc = (usb_hid_descriptor_t*)&descriptor;
         if (endpt) {
           break;
         }
-      } else if (descriptor.bDescriptorType == USB_DT_ENDPOINT) {
+      } else if (descriptor.b_descriptor_type == USB_DT_ENDPOINT) {
         if (usb_ep_direction((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_IN &&
             usb_ep_type((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_INTERRUPT) {
           endpt = (usb_endpoint_descriptor_t*)&descriptor;
