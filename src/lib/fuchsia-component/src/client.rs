@@ -322,7 +322,7 @@ pub async fn open_childs_exposed_directory(
         fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
     let name: String = child_name.into();
     realm_proxy
-        .bind_child(
+        .open_exposed_dir(
             &mut ChildRef { name: name.clone(), collection: collection_name.clone() },
             server_end,
         )
