@@ -54,7 +54,7 @@ void DeviceAdapter::NetworkDeviceImplStart(network_device_impl_start_callback ca
     fbl::AutoLock lock(&tx_lock_);
     tx_available_ = true;
   }
-  callback(cookie);
+  callback(cookie, ZX_OK);
 }
 
 void DeviceAdapter::NetworkDeviceImplStop(network_device_impl_stop_callback callback,

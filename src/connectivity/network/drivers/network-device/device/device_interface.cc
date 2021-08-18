@@ -26,6 +26,21 @@ static_assert(offsetof(buffer_descriptor_t, offset) == 16);
 static_assert(offsetof(buffer_descriptor_t, head_length) == 24);
 static_assert(offsetof(buffer_descriptor_t, inbound_flags) == 32);
 
+namespace {
+const char* DeviceStatusToString(network::internal::DeviceStatus status) {
+  switch (status) {
+    case network::internal::DeviceStatus::STARTING:
+      return "STARTING";
+    case network::internal::DeviceStatus::STARTED:
+      return "STARTED";
+    case network::internal::DeviceStatus::STOPPING:
+      return "STOPPING";
+    case network::internal::DeviceStatus::STOPPED:
+      return "STOPPED";
+  }
+}
+}  // namespace
+
 namespace network {
 
 zx::status<std::unique_ptr<NetworkDeviceInterface>> NetworkDeviceInterface::Create(
@@ -578,8 +593,42 @@ void DeviceInterface::StartDevice() {
 
 void DeviceInterface::StartDeviceInner() {
   LOGF_TRACE("network-device: %s", __FUNCTION__);
-  device_.Start([](void* cookie) { reinterpret_cast<DeviceInterface*>(cookie)->DeviceStarted(); },
-                this);
+  device_.Start(
+      [](void* cookie, zx_status_t status) {
+        auto device = reinterpret_cast<DeviceInterface*>(cookie);
+        {
+          fbl::AutoLock lock(&device->control_lock_);
+          ZX_ASSERT_MSG(device->device_status_ == DeviceStatus::STARTING,
+                        "device not in starting status: %s",
+                        DeviceStatusToString(device->device_status_));
+          if (status != ZX_OK) {
+            LOGF_ERROR("network-device: failed to start implementation: %s",
+                       zx_status_get_string(status));
+            switch (device->SetDeviceStatus(DeviceStatus::STOPPED)) {
+              case PendingDeviceOperation::STOP:
+              case PendingDeviceOperation::NONE:
+                break;
+              case PendingDeviceOperation::START:
+                ZX_PANIC("unexpected start pending while starting already");
+                break;
+            }
+            if (device->primary_session_) {
+              LOGF_ERROR("killing session '%s' because device failed to start",
+                         device->primary_session_->name());
+              device->primary_session_->Kill();
+            }
+            for (auto& s : device->sessions_) {
+              LOGF_ERROR("killing session '%s' because device failed to start", s.name());
+              s.Kill();
+            }
+            // We have effectively shut down the device, so finish tearing it down.
+            device->ContinueTeardown(TeardownState::SESSIONS);
+            return;
+          }
+        }
+        device->DeviceStarted();
+      },
+      this);
 }
 
 void DeviceInterface::StopDevice(std::optional<TeardownState> continue_teardown) {

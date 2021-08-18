@@ -262,7 +262,7 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
     return std::nullopt;
   }
 
-  void set_auto_start(bool auto_start) { auto_start_ = auto_start; }
+  void set_auto_start(std::optional<zx_status_t> auto_start) { auto_start_ = auto_start; }
 
   void set_auto_stop(bool auto_stop) { auto_stop_ = auto_stop; }
 
@@ -290,7 +290,7 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   fbl::SizedDoublyLinkedList<std::unique_ptr<RxBuffer>> rx_buffers_ __TA_GUARDED(lock_);
   fbl::SizedDoublyLinkedList<std::unique_ptr<TxBuffer>> tx_buffers_ __TA_GUARDED(lock_);
   zx::event event_;
-  bool auto_start_ = true;
+  std::optional<zx_status_t> auto_start_ = ZX_OK;
   bool auto_stop_ = true;
   bool immediate_return_tx_ = false;
   bool immediate_return_rx_ = false;

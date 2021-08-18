@@ -130,19 +130,24 @@ void NetdeviceMigration::NetworkDeviceImplStart(network_device_impl_start_callba
     fbl::AutoLock lock(&lock_);
     if (started_) {
       zxlogf(WARNING, "netdevice-migration: device already started\n");
-      callback(cookie);
+      callback(cookie, ZX_ERR_ALREADY_BOUND);
       return;
     }
   }
-  zx_status_t status = ethernet_.Start(this, &ethernet_ifc_protocol_ops_);
-  // TODO(https://fxbug.dev/78873): Return error status once NetworkDeviceImplStart is fallible.
-  ZX_ASSERT_MSG(status == ZX_OK, "netdevice-migration: failed to start device: %s\n",
-                zx_status_get_string(status));
+  // Do not hold the lock across the ethernet_.Start() call because the Netdevice contract ensures
+  // that a subsequent Start() or Stop() call will not occur until after this one has returned via
+  // the callback.
+  if (zx_status_t status = ethernet_.Start(this, &ethernet_ifc_protocol_ops_); status != ZX_OK) {
+    zxlogf(WARNING, "netdevice-migration: failed to start device: %s\n",
+           zx_status_get_string(status));
+    callback(cookie, status);
+    return;
+  }
   {
     fbl::AutoLock lock(&lock_);
     started_ = true;
   }
-  callback(cookie);
+  callback(cookie, ZX_OK);
 }
 
 void NetdeviceMigration::NetworkDeviceImplStop(network_device_impl_stop_callback callback,

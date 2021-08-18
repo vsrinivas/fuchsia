@@ -36,7 +36,7 @@ class FakeDeviceImpl : public ddk::NetworkPortProtocol<FakeDeviceImpl>,
     return ZX_OK;
   }
   void NetworkDeviceImplStart(network_device_impl_start_callback callback, void* cookie) {
-    callback(cookie);
+    callback(cookie, ZX_OK);
   }
   void NetworkDeviceImplStop(network_device_impl_stop_callback callback, void* cookie) {
     callback(cookie);

@@ -492,12 +492,18 @@ protocol NetworkDeviceImpl {
     /// `start` signals to the device implementation that it should bring up its data path and be
     /// ready to receive tx frames and `iface` will start accepting rx frames.
     ///
-    /// The device is only considered started once `Start` returns. Until then, the contract
-    /// guarantees that no other data-path calls will be made to the device (`QueueTx`,
-    /// `RxAvailable`, `Stop`), implementers can safely assume or assert that this contract is
-    /// upheld.
+    /// The device is only considered started once `Start` returns successfully. Until then, the
+    /// contract guarantees that no other data-path calls will be made to the device (`QueueTx`,
+    /// `RxAvailable`, `Stop`, or a second call to `Start`), so implementers can safely assume or
+    /// assert that this contract is upheld.
+    ///
+    /// - response `s` start status. `ZX_OK` indicates a successful start.
+    ///     `ZX_ERR_ALREADY_BOUND` indicates that the device has already been successfully started.
+    ///     Any other status value indicates an implementation specific error.
     @async
-    Start() -> ();
+    Start() -> (struct {
+        s zx.status;
+    });
     /// Stops the network device.
     ///
     /// The device implementation must return all outstanding Tx and Rx buffers upon receiving this

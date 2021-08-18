@@ -809,7 +809,7 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
 
 TEST_F(NetworkDeviceTest, DelayedStart) {
   ASSERT_OK(CreateDeviceWithPort13());
-  impl_.set_auto_start(false);
+  impl_.set_auto_start(std::nullopt);
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
@@ -2471,6 +2471,28 @@ TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
     offset += rx_desc.data_length;
   }
   ASSERT_EQ(offset, kTxLen);
+}
+
+TEST_F(NetworkDeviceTest, SessionsClosedOnStartFailure) {
+  ASSERT_OK(CreateDeviceWithPort13());
+  impl_.set_auto_start(ZX_ERR_INTERNAL);
+  TestSession primary;
+  ASSERT_OK(OpenSession(&primary, netdev::wire::SessionFlags::kPrimary, kDefaultDescriptorCount,
+                        kDefaultBufferLength, "primary"));
+  ASSERT_OK(AttachSessionPort(primary, port13_));
+  TestSession secondary;
+  ASSERT_OK(OpenSession(&secondary, netdev::wire::SessionFlags::kMask, kDefaultDescriptorCount,
+                        kDefaultBufferLength, "secondary"));
+  ASSERT_OK(AttachSessionPort(secondary, port13_));
+  TestSession tertiary;
+  ASSERT_OK(OpenSession(&tertiary, netdev::wire::SessionFlags::kMask, kDefaultDescriptorCount,
+                        kDefaultBufferLength, "tertiary"));
+  ASSERT_OK(AttachSessionPort(tertiary, port13_));
+
+  auto* device = static_cast<internal::DeviceInterface*>(device_.get());
+  fbl::AutoLock lock(&device->control_lock());
+  ASSERT_TRUE(device->sessions_unsafe().is_empty());
+  ASSERT_FALSE(device->IsDataPlaneOpen());
 }
 
 INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxParamTest,
