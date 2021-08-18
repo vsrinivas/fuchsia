@@ -19,6 +19,7 @@
             rights: [ "rw*" ],
             path: "/dev",
         },
+        { protocol: "fuchsia.nand.flashmap.Manager" },
     ],
     expose: [
         {

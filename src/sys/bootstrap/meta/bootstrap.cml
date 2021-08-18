@@ -718,7 +718,10 @@
         {
             protocol: "fuchsia.nand.flashmap.Manager",
             from: "#flashmap",
-            to: "#miscsvc",
+            to: [
+                "#miscsvc",
+                "#vboot-fwparam",
+            ],
         },
         {
             protocol: [ "fuchsia.fshost.BlockWatcher" ],

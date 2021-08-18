@@ -33,11 +33,14 @@ rustc_binary("bin") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.nvram:fuchsia.hardware.nvram-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.nand.flashmap:fuchsia.nand.flashmap-rustc",
     "//sdk/fidl/fuchsia.vboot.fwparam:fuchsia.vboot.fwparam-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -46,6 +49,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
@@ -57,6 +61,7 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/nvdata.rs",
     "src/nvdata/fields.rs",
+    "src/nvdata/flash.rs",
   ]
 }
 

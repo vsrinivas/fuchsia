@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 mod fields;
+pub mod flash;
 
-use crate::error::NvdataError;
+use crate::{error::NvdataError, nvdata::flash::Flash};
 use anyhow::{Context, Error};
 use fidl_fuchsia_hardware_nvram as nvram;
 use fidl_fuchsia_vboot_fwparam::{FirmwareParamRequest, FirmwareParamRequestStream, Key};
-use fuchsia_inspect as inspect;
+use fuchsia_inspect::{self as inspect, Property};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::{lock::Mutex, TryStreamExt};
@@ -43,6 +44,7 @@ pub struct Nvdata {
     version: NvdataVersionInfo,
     inner: Mutex<NvdataInner>,
     device: nvram::DeviceProxy,
+    flash: Flash,
     inspect: inspect::Node,
 }
 
@@ -51,6 +53,7 @@ struct NvdataInner {
     data: Vec<u8>,
     inspect_state: Vec<Option<inspect::UintProperty>>,
     version: NvdataVersionInfo,
+    modified: bool,
     header: fields::Header,
     boot: fields::Boot,
     boot2: fields::Boot2,
@@ -137,6 +140,7 @@ impl Nvdata {
         base: u32,
         size: u32,
         device: nvram::DeviceProxy,
+        flash: Flash,
         inspect: inspect::Node,
     ) -> Result<Self, NvdataError> {
         let fidl_result = device
@@ -157,7 +161,8 @@ impl Nvdata {
             return Err(NvdataError::NotEnoughSpace(version.size_needed));
         }
         let inner = NvdataInner::new(data, version);
-        let nvdata = Nvdata { base, size, version, inner: Mutex::new(inner), device, inspect };
+        let nvdata =
+            Nvdata { base, size, version, inner: Mutex::new(inner), device, flash, inspect };
         if let Err(e) = nvdata.verify_crc().await {
             // TODO(fxbug.dev/82832): wipe nvram when this happens.
             fx_log_err!("Nvdata had invalid CRC. https://fxbug.dev/82832");
@@ -205,9 +210,15 @@ impl Nvdata {
                         }))
                         .context("Responding to get()")?;
                 }
-                FirmwareParamRequest::Set { responder, .. } => {
+                FirmwareParamRequest::Set { key, value, responder } => {
                     responder
-                        .send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))
+                        .send(&mut self.set(key, value).await.map_err(|e| match e {
+                            NvdataError::UnknownKey => zx::Status::NOT_SUPPORTED.into_raw(),
+                            NvdataError::NotWritable => zx::Status::IO_REFUSED.into_raw(),
+                            NvdataError::ExpectedBool => zx::Status::INVALID_ARGS.into_raw(),
+                            NvdataError::ClearOnly => zx::Status::INVALID_ARGS.into_raw(),
+                            _ => zx::Status::INTERNAL.into_raw(),
+                        }))
                         .context("Responding to set()")?;
                 }
             }
@@ -237,6 +248,30 @@ impl Nvdata {
     async fn get(&self, key: Key) -> Result<u32, NvdataError> {
         self.inner.lock().await.get(key)
     }
+
+    async fn set(&self, key: Key, value: u32) -> Result<(), NvdataError> {
+        let mut inner = self.inner.lock().await;
+        inner.set(key, value)?;
+        if !inner.modified {
+            return Ok(());
+        }
+
+        // Write to the various storage devices.
+        // In the future, we could try and coalesce writes to reduce flash wear.
+        self.device
+            .write(self.base, inner.data.as_slice())
+            .await
+            .context("sending fidl write")
+            .map_err(NvdataError::Other)?
+            .map_err(zx::Status::from_raw)
+            .context("doing write")
+            .map_err(NvdataError::Other)?;
+
+        self.flash.save(inner.data.as_slice()).await.context("Writing to flash")?;
+        inner.modified = false;
+
+        Ok(())
+    }
 }
 
 impl NvdataInner {
@@ -252,6 +287,7 @@ impl NvdataInner {
             data,
             inspect_state: Vec::new(),
             version,
+            modified: false,
             header,
             boot,
             boot2,
@@ -351,12 +387,120 @@ impl NvdataInner {
 
         Ok(value)
     }
+
+    pub fn set(&mut self, key: Key, value: u32) -> Result<(), NvdataError> {
+        let as_bool = |value: u32| match value {
+            1 => Ok(true),
+            0 => Ok(false),
+            _ => Err(NvdataError::ExpectedBool),
+        };
+        let as_bool_clear_only = |value: u32| match value {
+            0 => Ok(false),
+            1 => Err(NvdataError::ClearOnly),
+            _ => Err(NvdataError::ExpectedBool),
+        };
+        // First - avoid doing anything if we don't have to.
+        if self.get(key)? == value {
+            return Ok(());
+        }
+        let data = &mut self.data;
+        match key {
+            Key::FirmwareSettingsReset => return Err(NvdataError::NotWritable),
+            Key::KernelSettingsReset => {
+                self.header.set_kernel_settings_reset(as_bool_clear_only(value)?)
+            }
+            Key::DebugResetMode => self.boot.set_debug_reset(as_bool(value)?),
+            Key::TryNext => self.boot2.set_try_next(as_bool(value)?),
+            Key::TryCount => {
+                self.boot.set_try_count(value.try_into().map_err(NvdataError::InvalidValue)?)
+            }
+            Key::RecoveryRequest => {
+                data[NvdataOffset::Recovery.val()] =
+                    value.try_into().map_err(NvdataError::InvalidValue)?;
+            }
+            Key::LocalizationIndex => {
+                data[NvdataOffset::Localization.val()] =
+                    value.try_into().map_err(NvdataError::InvalidValue)?;
+            }
+            Key::KernelField => {
+                let u16_val: u16 = value.try_into().map_err(NvdataError::InvalidValue)?;
+                data[NvdataOffset::Kernel1.val()] = (u16_val & 0xff) as u8;
+                data[NvdataOffset::Kernel2.val()] = (u16_val >> 8) as u8;
+            }
+            Key::DevBootExternal => self.dev.set_allow_external(as_bool(value)?),
+            Key::DevBootAltfw => self.dev.set_allow_altfw(as_bool(value)?),
+            Key::DevBootSignedOnly => self.dev.set_allow_signed_only(as_bool(value)?),
+            Key::DevDefaultBoot => self
+                .dev
+                .set_default_boot_source(value.try_into().map_err(NvdataError::InvalidValue)?),
+            Key::DevEnableUdc => self.dev.set_enable_udc(as_bool(value)?),
+            Key::DisableDevRequest => self.boot.set_disable_dev_mode(as_bool(value)?),
+            Key::DisplayRequest => self.boot.set_display_request(as_bool(value)?),
+            Key::ClearTpmOwnerRequest => self.tpm.set_clear_owner_request(as_bool(value)?),
+            Key::ClearTpmOwnerDone => self.tpm.set_clear_owner_done(as_bool_clear_only(value)?),
+            Key::TpmRequestedReboot => return Err(NvdataError::NotWritable),
+            Key::RecoverySubcode => {
+                data[NvdataOffset::RecoverySubcode.val()] =
+                    value.try_into().map_err(NvdataError::InvalidValue)?
+            }
+            Key::BackupNvramRequest => self.boot.set_backup_nvram(as_bool(value)?),
+            Key::FwTried => return Err(NvdataError::NotWritable),
+            Key::FwResult => return Err(NvdataError::NotWritable),
+            Key::FwPrevTried => return Err(NvdataError::NotWritable),
+            Key::FwPrevResult => return Err(NvdataError::NotWritable),
+            Key::ReqWipeout => self.header.set_wipeout(as_bool_clear_only(value)?),
+            Key::BootOnAcDetect => self.misc.set_boot_on_ac(as_bool(value)?),
+            Key::TryRoSync => self.misc.set_try_ro_sync(as_bool(value)?),
+            Key::BatteryCutoffRequest => self.misc.set_battery_cutoff(as_bool(value)?),
+            Key::KernelMaxRollforward => {
+                data[NvdataOffset::KernelMaxRollForward1.val()] = (value & 0xff) as u8;
+                data[NvdataOffset::KernelMaxRollForward2.val()] = ((value >> 8) & 0xff) as u8;
+                data[NvdataOffset::KernelMaxRollForward3.val()] = ((value >> 16) & 0xff) as u8;
+                data[NvdataOffset::KernelMaxRollForward4.val()] = ((value >> 24) & 0xff) as u8;
+            }
+            Key::FwMaxRollforward => {
+                if self.version.version == NvdataVersion::V1 {
+                    return Err(NvdataError::NotWritable);
+                } else {
+                    data[NvdataOffset::FirmwareMaxRollForward1.val()] = (value & 0xff) as u8;
+                    data[NvdataOffset::FirmwareMaxRollForward2.val()] = ((value >> 8) & 0xff) as u8;
+                    data[NvdataOffset::FirmwareMaxRollForward3.val()] =
+                        ((value >> 16) & 0xff) as u8;
+                    data[NvdataOffset::FirmwareMaxRollForward4.val()] =
+                        ((value >> 24) & 0xff) as u8;
+                }
+            }
+            Key::PostEcSyncDelay => self.misc.set_post_ec_sync_delay(as_bool(value)?),
+            Key::DiagRequest => self.boot2.set_req_diag(as_bool(value)?),
+            Key::MiniosPriority => self.misc.set_minios_priority(as_bool(value)?),
+            _ => return Err(NvdataError::UnknownKey),
+        };
+
+        if let Some(prop) = self.inspect_state[key.into_primitive() as usize].as_ref() {
+            prop.set(value.into());
+        }
+
+        data[NvdataOffset::Header.val()] = self.header.0;
+        data[NvdataOffset::Boot.val()] = self.boot.0;
+        data[NvdataOffset::Boot2.val()] = self.boot2.0;
+        data[NvdataOffset::Tpm.val()] = self.tpm.0;
+        data[NvdataOffset::Dev.val()] = self.dev.0;
+        data[NvdataOffset::Misc.val()] = self.misc.0;
+
+        let new_crc = Self::calculate_crc(&self.data[0..self.version.crc_offset]);
+        // Update the CRC.
+        self.data[self.version.crc_offset] = new_crc;
+        self.modified = true;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use fidl_fuchsia_hardware_nvram::{DeviceMarker, DeviceProxy, DeviceRequest};
+    use flash::tests::FakeFlash;
     use std::sync::Arc;
 
     struct FakeNvram {
@@ -387,7 +531,12 @@ mod tests {
                                     .to_vec()))
                                 .expect("Read reply ok");
                         }
-                        DeviceRequest::Write { .. } => todo!(),
+                        DeviceRequest::Write { offset, data, responder } => {
+                            let offset: usize = offset as usize;
+                            self.contents.lock().await[offset..offset + data.len()]
+                                .copy_from_slice(data.as_slice());
+                            responder.send(&mut Ok(())).expect("Write reply ok");
+                        }
                     }
                 }
             })
@@ -402,7 +551,7 @@ mod tests {
         let data = vec![0; 32];
         let nvram = FakeNvram::new(data).start();
 
-        match Nvdata::new(0, 16, nvram, Default::default()).await {
+        match Nvdata::new(0, 16, nvram, FakeFlash::empty().await, Default::default()).await {
             Ok(_) => unreachable!(),
             Err(NvdataError::InvalidSignature) => {}
             Err(e) => panic!("Unexpected error {:?}", e),
@@ -415,7 +564,7 @@ mod tests {
         data[0] = 0x3;
         let nvram = FakeNvram::new(data).start();
 
-        match Nvdata::new(0, 16, nvram, Default::default()).await {
+        match Nvdata::new(0, 16, nvram, FakeFlash::empty().await, Default::default()).await {
             Ok(_) => unreachable!(),
             Err(NvdataError::NotEnoughSpace(64)) => {}
             Err(e) => panic!("Unexpected error {:?}", e),
@@ -428,7 +577,7 @@ mod tests {
         data[0] = 0x40;
         let nvram = FakeNvram::new(data).start();
 
-        match Nvdata::new(0, 12, nvram, Default::default()).await {
+        match Nvdata::new(0, 12, nvram, FakeFlash::empty().await, Default::default()).await {
             Ok(_) => unreachable!(),
             Err(NvdataError::NotEnoughSpace(16)) => {}
             Err(e) => panic!("Unexpected error {:?}", e),
@@ -441,7 +590,7 @@ mod tests {
         data[0] = 0x40;
         let nvram = FakeNvram::new(data).start();
 
-        match Nvdata::new(0, 16, nvram, Default::default()).await {
+        match Nvdata::new(0, 16, nvram, FakeFlash::empty().await, Default::default()).await {
             Ok(_) => unreachable!(),
             Err(NvdataError::CrcMismatch) => {}
             Err(e) => panic!("Unexpected error {:?}", e),
@@ -455,7 +604,9 @@ mod tests {
         data[63] = NvdataInner::calculate_crc(&data[0..63]);
         let nvram = FakeNvram::new(data).start();
 
-        let nvdata = Nvdata::new(0, 64, nvram, Default::default()).await.expect("nvdata valid");
+        let nvdata = Nvdata::new(0, 64, nvram, FakeFlash::empty().await, Default::default())
+            .await
+            .expect("nvdata valid");
         let mut i = 0;
         while let Some(key) = Key::from_primitive(i) {
             let value = nvdata.get(key).await.unwrap();
@@ -471,7 +622,35 @@ mod tests {
         data[15] = NvdataInner::calculate_crc(&data[0..15]);
         let nvram = FakeNvram::new(data).start();
 
-        let nvdata = Nvdata::new(0, 16, nvram, Default::default()).await.expect("nvdata valid");
+        let nvdata = Nvdata::new(0, 16, nvram, FakeFlash::empty().await, Default::default())
+            .await
+            .expect("nvdata valid");
         assert_eq!(nvdata.get(Key::FwMaxRollforward).await.unwrap(), u32::MAX - 1);
+    }
+
+    #[fuchsia::test]
+    async fn test_nvram_set() {
+        let mut data = vec![0; 16];
+        data[0] = 0x40;
+        data[15] = NvdataInner::calculate_crc(&data[0..15]);
+        let nvram = FakeNvram::new(data);
+        let fake_flash = FakeFlash::new(16);
+
+        let nvdata = Nvdata::new(
+            0,
+            16,
+            Arc::clone(&nvram).start(),
+            Arc::clone(&fake_flash).get_flash().await,
+            Default::default(),
+        )
+        .await
+        .expect("nvdata valid");
+        nvdata.set(Key::DevBootSignedOnly, 1).await.expect("Set OK");
+
+        let contents = nvram.contents.lock().await;
+        // Make sure nvram was updated.
+        assert!(fields::Dev(contents[NvdataOffset::Dev.val()]).allow_signed_only());
+        // Make sure flash was saved.
+        assert_eq!(contents.as_slice(), &fake_flash.data.lock().await[16..32]);
     }
 }
