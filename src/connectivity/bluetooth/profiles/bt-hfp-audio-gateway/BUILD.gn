@@ -101,6 +101,7 @@ rustc_binary("bin") {
     "src/profile.rs",
     "src/sco_connector.rs",
     "src/service_definitions.rs",
+    "src/test.rs",
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]

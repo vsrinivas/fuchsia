@@ -26,6 +26,8 @@ mod peer;
 mod profile;
 mod sco_connector;
 mod service_definitions;
+#[cfg(test)]
+mod test;
 
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {

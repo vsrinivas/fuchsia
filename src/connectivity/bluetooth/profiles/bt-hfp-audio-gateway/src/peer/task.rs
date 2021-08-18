@@ -647,6 +647,7 @@ mod tests {
                 SlcState,
             },
         },
+        test::run_while,
     };
 
     fn arb_signal() -> impl Strategy<Value = Option<SignalStrength>> {
@@ -734,28 +735,6 @@ mod tests {
             } else {
                 assert_eq!(c.roaming, None);
             }
-        }
-    }
-
-    /// Run a background task while waiting for a future that should occur.
-    /// This is useful for running a task which you expect to produce side effects that
-    /// mean the task is operating correctly. i.e. reacting to a peer action by producing a
-    /// response on a client's hanging get.
-    /// `background_fut` is expected not to finish ans is returned to the caller, along with
-    /// the result of `result_fut`.  If `background_fut` finishes, this function will panic.
-    fn run_while<BackgroundFut, ResultFut, Out>(
-        exec: &mut fasync::TestExecutor,
-        background_fut: BackgroundFut,
-        result_fut: ResultFut,
-    ) -> (Out, BackgroundFut)
-    where
-        BackgroundFut: Future + Unpin,
-        ResultFut: Future<Output = Out>,
-    {
-        pin_mut!(result_fut);
-        match exec.run_singlethreaded(&mut futures::future::select(background_fut, result_fut)) {
-            Either::Right(r) => r,
-            Either::Left(_) => panic!("Background future finished"),
         }
     }
 

@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, PeerHandlerMarker},
     fidl_fuchsia_bluetooth_hfp_test as hfp_test,
+    fuchsia_bluetooth::profile::find_service_classes,
     fuchsia_bluetooth::types::PeerId,
     futures::{channel::mpsc::Receiver, select, stream::StreamExt},
     parking_lot::Mutex,
@@ -121,6 +122,21 @@ impl Hfp {
     /// Handle a single `ProfileEvent` from `profile`.
     async fn handle_profile_event(&mut self, event: ProfileEvent) -> Result<(), Error> {
         let id = event.peer_id();
+        // TODO(fxbug.dev/82575): We shouldn't call Self::send_peer_connected if we can't connect.
+        // For now, check if the search result is really a HandsFree before adding the peer.
+        if let ProfileEvent::SearchResult { attributes, .. } = &event {
+            let classes = find_service_classes(attributes);
+            if classes
+                .iter()
+                .find(|an| {
+                    an.number == bredr::ServiceClassProfileIdentifier::HandsfreeAudioGateway as u16
+                })
+                .is_some()
+            {
+                info!(?id, "Search returned AudioGateway, skipping");
+                return Ok(());
+            }
+        }
         let peer = match self.peers.inner().entry(id) {
             Entry::Vacant(entry) => {
                 let mut peer = Box::new(PeerImpl::new(
@@ -189,7 +205,9 @@ mod tests {
         crate::{
             peer::{fake::PeerFake, ConnectionBehavior, PeerRequest},
             profile::test_server::{setup_profile_and_test_server, LocalProfileTestServer},
+            test::run_while,
         },
+        async_utils::PollExt,
         fidl_fuchsia_bluetooth as bt,
         fidl_fuchsia_bluetooth_hfp::{
             CallManagerMarker, CallManagerRequest, CallManagerRequestStream,
@@ -255,6 +273,66 @@ mod tests {
         .await;
         assert!(result.0.is_ok());
         assert!(result.1.is_ok());
+    }
+
+    /// Tests the HFP main run loop from a blackbox perspective by asserting on the FIDL messages
+    /// sent and received by the services that Hfp interacts with: A bredr profile server and
+    /// a call manager.
+    #[fuchsia::test]
+    fn new_profile_from_audio_gateway_is_ignored() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (profile, profile_svc, mut server) = setup_profile_and_test_server();
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+
+        let (mut sender, receiver) = mpsc::channel(1);
+        sender.try_send(proxy).expect("Hfp to receive the proxy");
+
+        let (_, rx) = mpsc::channel(1);
+
+        // Run hfp in a background task since we are testing that the profile server observes the
+        // expected behavior when interacting with hfp.
+        let hfp = Hfp::new(
+            profile,
+            profile_svc,
+            TestAudioControl::default(),
+            receiver,
+            AudioGatewayFeatureSupport::default(),
+            rx,
+        );
+
+        let hfp_fut = hfp.run();
+        futures::pin_mut!(hfp_fut);
+        // Complete registration by the peer.
+        let ((), hfp_fut) = run_while(&mut exec, hfp_fut, server.complete_registration());
+
+        // Send an AudioGateway service found
+        use fuchsia_bluetooth::types::Uuid;
+        let mut audio_gateway_service_class_attrs = vec![bredr::Attribute {
+            id: bredr::ATTR_SERVICE_CLASS_ID_LIST,
+            element: bredr::DataElement::Sequence(vec![
+                Some(Box::new(bredr::DataElement::Uuid(
+                    Uuid::new16(bredr::ServiceClassProfileIdentifier::HandsfreeAudioGateway as u16)
+                        .into(),
+                ))),
+                Some(Box::new(bredr::DataElement::Uuid(
+                    Uuid::new16(bredr::ServiceClassProfileIdentifier::GenericAudio as u16).into(),
+                ))),
+            ]),
+        }];
+
+        let service_found_fut = server.results.as_ref().unwrap().service_found(
+            &mut PeerId(1).into(),
+            None,
+            &mut audio_gateway_service_class_attrs.iter_mut(),
+        );
+
+        let (result, _hfp_fut) = run_while(&mut exec, hfp_fut, service_found_fut);
+        result.expect("service_found should complete with success");
+
+        // Call manager should have nothing from this interaction, the HFP should ignore it.
+        let res = exec.run_until_stalled(&mut stream.next());
+        res.expect_pending("should not send a call request");
     }
 
     /// Respond to all FIDL messages expected during the initialization of the Hfp main run loop
