@@ -377,7 +377,22 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
     flatland_manager_ = std::make_shared<flatland::FlatlandManager>(
         async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
-        display, std::move(importers));
+        display, std::move(importers),
+        /*register_view_ref_focused*/
+        [this](fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> vrf,
+               zx_koid_t view_ref_koid) {
+          focus_manager_->RegisterViewRefFocused(view_ref_koid, std::move(vrf));
+        },
+        /*register_touch_source*/
+        [this](fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source,
+               zx_koid_t view_ref_koid) {
+          input_->RegisterTouchSource(std::move(touch_source), view_ref_koid);
+        },
+        /*register_mouse_source*/
+        [this](fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> mouse_source,
+               zx_koid_t view_ref_koid) {
+          input_->RegisterMouseSource(std::move(mouse_source), view_ref_koid);
+        });
 
     // TODO(fxbug.dev/67206): these should be moved into FlatlandManager.
     {

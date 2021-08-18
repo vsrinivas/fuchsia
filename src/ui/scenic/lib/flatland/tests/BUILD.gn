@@ -28,6 +28,7 @@ executable("unittests") {
     "//garnet/public/lib/gtest:gtest",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/ui/scenic/cpp:cpp",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

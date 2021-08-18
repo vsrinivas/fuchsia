@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/flatland/flatland_manager.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_identity.h>
 
 #include <gtest/gtest.h>
 
@@ -127,7 +128,10 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     manager_ = std::make_unique<FlatlandManager>(
         dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
         std::make_shared<scenic_impl::display::Display>(kDisplayId, kDisplayWidth, kDisplayHeight),
-        importers);
+        importers,
+        /*register_view_ref_focused*/ [this](auto...) { view_ref_focused_registered_ = true; },
+        /*register_touch_source*/ [this](auto...) { touch_source_registered_ = true; },
+        /*register_mouse_source*/ [this](auto...) { mouse_source_registered_ = true; });
   }
 
   void TearDown() override {
@@ -205,6 +209,10 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
   std::unordered_set<scheduling::SessionId> removed_sessions_;
 
   const std::shared_ptr<LinkSystem> link_system_;
+
+  bool view_ref_focused_registered_ = false;
+  bool touch_source_registered_ = false;
+  bool mouse_source_registered_ = false;
 
  private:
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
@@ -643,6 +651,37 @@ TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
   EXPECT_EQ(info2->presentation_infos.size(), 2ul);
   EXPECT_EQ(zx::time(info2->presentation_infos[0].latched_time()), latch_time2_1);
   EXPECT_EQ(zx::time(info2->presentation_infos[1].latched_time()), latch_time2_2);
+}
+
+TEST_F(FlatlandManagerTest, ViewBoundProtocolsAreRegistered) {
+  fuchsia::ui::views::ViewportCreationToken parent_token;
+  fuchsia::ui::views::ViewCreationToken child_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> parent = CreateFlatland();
+  const fuchsia::ui::composition::ContentId kLinkId = {1};
+  fidl::InterfacePtr<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher;
+  fuchsia::ui::composition::ViewportProperties properties;
+  properties.set_logical_size({1, 2});
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
+
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> child = CreateFlatland();
+
+  fidl::InterfacePtr<fuchsia::ui::views::ViewRefFocused> view_ref_focused_ptr;
+  fidl::InterfacePtr<fuchsia::ui::pointer::TouchSource> touch_source_ptr;
+  fidl::InterfacePtr<fuchsia::ui::pointer::MouseSource> mouse_source_ptr;
+
+  fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
+  fuchsia::ui::composition::ViewBoundProtocols protocols;
+  protocols.set_view_ref_focused(view_ref_focused_ptr.NewRequest());
+  protocols.set_touch_source(touch_source_ptr.NewRequest());
+  protocols.set_mouse_source(mouse_source_ptr.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                     std::move(protocols), parent_viewport_watcher.NewRequest());
+
+  RunLoopUntil([this] {
+    return view_ref_focused_registered_ && touch_source_registered_ && mouse_source_registered_;
+  });
 }
 
 #undef PRESENT

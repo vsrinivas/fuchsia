@@ -69,7 +69,13 @@ class Flatland : public fuchsia::ui::composition::Flatland,
       std::shared_ptr<LinkSystem> link_system,
       std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
       const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
-          buffer_collection_importers);
+          buffer_collection_importers,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
+          register_view_ref_focused,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+          register_touch_source,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
+          register_mouse_source);
   ~Flatland();
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
@@ -166,18 +172,28 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   scheduling::SessionId GetSessionId() const;
 
  private:
-  Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-           fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
-           scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
-           std::shared_ptr<FlatlandPresenter> flatland_presenter,
-           std::shared_ptr<LinkSystem> link_system,
-           std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
-           const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
-               buffer_collection_importers);
+  Flatland(
+      std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+      fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
+      scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
+      std::shared_ptr<FlatlandPresenter> flatland_presenter,
+      std::shared_ptr<LinkSystem> link_system,
+      std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
+      const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+          buffer_collection_importers,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
+          register_view_ref_focused,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+          register_touch_source,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
+          register_mouse_source);
 
   void ReportBadOperationError();
   void ReportLinkProtocolError(const std::string& error_log);
   void CloseConnection(fuchsia::ui::composition::FlatlandError error);
+
+  void RegisterViewBoundProtocols(fuchsia::ui::composition::ViewBoundProtocols protocols,
+                                  zx_koid_t view_ref_koid);
 
   // The dispatcher this Flatland instance is running on.
   async_dispatcher_t* dispatcher() const { return dispatcher_holder_->dispatcher(); }
@@ -330,6 +346,14 @@ class Flatland : public fuchsia::ui::composition::Flatland,
 
   // Error reporter used for printing debug logs.
   std::shared_ptr<scenic_impl::ErrorReporter> error_reporter_;
+
+  // Callbacks for registering View-bound protocols.
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
+      register_view_ref_focused_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+      register_touch_source_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
+      register_mouse_source_;
 };
 
 }  // namespace flatland

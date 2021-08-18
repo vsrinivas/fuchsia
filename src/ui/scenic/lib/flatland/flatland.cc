@@ -18,6 +18,7 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_access.hpp>
@@ -46,22 +47,35 @@ std::shared_ptr<Flatland> Flatland::New(
     std::shared_ptr<FlatlandPresenter> flatland_presenter, std::shared_ptr<LinkSystem> link_system,
     std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
     const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
-        buffer_collection_importers) {
-  return std::shared_ptr<Flatland>(new Flatland(
-      std::move(dispatcher_holder), std::move(request), session_id,
-      std::move(destroy_instance_function), std::move(flatland_presenter), std::move(link_system),
-      std::move(uber_struct_queue), buffer_collection_importers));
+        buffer_collection_importers,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
+        register_view_ref_focused,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+        register_touch_source,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
+        register_mouse_source) {
+  return std::shared_ptr<Flatland>(
+      new Flatland(std::move(dispatcher_holder), std::move(request), session_id,
+                   std::move(destroy_instance_function), std::move(flatland_presenter),
+                   std::move(link_system), std::move(uber_struct_queue),
+                   buffer_collection_importers, std::move(register_view_ref_focused),
+                   std::move(register_touch_source), std::move(register_mouse_source)));
 }
 
-Flatland::Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-                   fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
-                   scheduling::SessionId session_id,
-                   std::function<void()> destroy_instance_function,
-                   std::shared_ptr<FlatlandPresenter> flatland_presenter,
-                   std::shared_ptr<LinkSystem> link_system,
-                   std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
-                   const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
-                       buffer_collection_importers)
+Flatland::Flatland(
+    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+    fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
+    scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
+    std::shared_ptr<FlatlandPresenter> flatland_presenter, std::shared_ptr<LinkSystem> link_system,
+    std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
+    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+        buffer_collection_importers,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
+        register_view_ref_focused,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+        register_touch_source,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
+        register_mouse_source)
     : dispatcher_holder_(std::move(dispatcher_holder)),
       binding_(this, std::move(request), dispatcher_holder_->dispatcher()),
       session_id_(session_id),
@@ -78,7 +92,10 @@ Flatland::Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       buffer_collection_importers_(buffer_collection_importers),
       transform_graph_(session_id_),
       local_root_(transform_graph_.CreateTransform()),
-      error_reporter_(scenic_impl::ErrorReporter::Default()) {
+      error_reporter_(scenic_impl::ErrorReporter::Default()),
+      register_view_ref_focused_(std::move(register_view_ref_focused)),
+      register_touch_source_(std::move(register_touch_source)),
+      register_mouse_source_(std::move(register_mouse_source)) {
   zx_status_t status = peer_closed_waiter_.Begin(
       dispatcher(),
       [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
@@ -277,6 +294,8 @@ void Flatland::CreateView2(ViewCreationToken token,
 
   FX_DCHECK(link_system_);
 
+  RegisterViewBoundProtocols(std::move(protocols), utils::ExtractKoid(view_identity.view_ref));
+
   // This portion of the method is not feed forward. This makes it possible for clients to receive
   // layout information before this operation has been presented. By initializing the link
   // immediately, parents can inform children of layout changes, and child clients can perform
@@ -313,6 +332,30 @@ void Flatland::CreateView2(ViewCreationToken token,
   bool child_added = transform_graph_.AddChild(link.child_view_watcher_handle, local_root_);
   FX_DCHECK(child_added);
   parent_link_ = std::move(link);
+}
+
+void Flatland::RegisterViewBoundProtocols(fuchsia::ui::composition::ViewBoundProtocols protocols,
+                                          const zx_koid_t view_ref_koid) {
+  FX_DCHECK(register_view_ref_focused_);
+  FX_DCHECK(register_touch_source_);
+  FX_DCHECK(register_mouse_source_);
+
+  if (protocols.has_view_focuser()) {
+    // TODO(fxbug.dev/82643): Implement ViewFocuserRegistry independent of gfx.
+    FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
+  }
+
+  if (protocols.has_view_ref_focused()) {
+    register_view_ref_focused_(std::move(*protocols.mutable_view_ref_focused()), view_ref_koid);
+  }
+
+  if (protocols.has_touch_source()) {
+    register_touch_source_(std::move(*protocols.mutable_touch_source()), view_ref_koid);
+  }
+
+  if (protocols.has_mouse_source()) {
+    register_mouse_source_(std::move(*protocols.mutable_mouse_source()), view_ref_koid);
+  }
 }
 
 void Flatland::ReleaseView(std::function<void(fuchsia::ui::views::ViewCreationToken)> callback) {

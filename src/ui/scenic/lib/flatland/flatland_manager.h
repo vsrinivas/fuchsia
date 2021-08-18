@@ -31,13 +31,19 @@ namespace flatland {
 
 class FlatlandManager : public scheduling::SessionUpdater {
  public:
-  FlatlandManager(async_dispatcher_t* dispatcher,
-                  const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-                  const std::shared_ptr<UberStructSystem>& uber_struct_system,
-                  const std::shared_ptr<LinkSystem>& link_system,
-                  std::shared_ptr<scenic_impl::display::Display> display,
-                  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>
-                      buffer_collection_importers);
+  FlatlandManager(
+      async_dispatcher_t* dispatcher, const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+      const std::shared_ptr<UberStructSystem>& uber_struct_system,
+      const std::shared_ptr<LinkSystem>& link_system,
+      std::shared_ptr<scenic_impl::display::Display> display,
+      std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>
+          buffer_collection_importers,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
+          register_view_ref_focused,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+          register_touch_source,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
+          register_mouse_source);
   ~FlatlandManager() override;
 
   void CreateFlatland(fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> flatland);
@@ -119,6 +125,16 @@ class FlatlandManager : public scheduling::SessionUpdater {
   // on Flatland instance worker threads.
   void DestroyInstanceFunction(scheduling::SessionId session_id);
 
+  std::shared_ptr<Flatland> NewFlatland(
+      std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+      fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
+      scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
+      std::shared_ptr<FlatlandPresenter> flatland_presenter,
+      std::shared_ptr<LinkSystem> link_system,
+      std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
+      const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+          buffer_collection_importers) const;
+
   // Used to assert that code is running on the expected thread.
   void CheckIsOnMainThread() const {
     FX_DCHECK(executor_.dispatcher() == async_get_default_dispatcher());
@@ -148,6 +164,14 @@ class FlatlandManager : public scheduling::SessionUpdater {
   // Eventually we will support multiple displays, but as we bootstrap Flatland we assume that
   // there is a single primary display.
   std::shared_ptr<scenic_impl::display::Display> primary_display_;
+
+  // Callbacks for registering View-bound protocols.
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
+      register_view_ref_focused_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+      register_touch_source_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
+      register_mouse_source_;
 };
 
 }  // namespace flatland

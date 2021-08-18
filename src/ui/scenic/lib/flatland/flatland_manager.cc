@@ -20,17 +20,29 @@ FlatlandManager::FlatlandManager(
     const std::shared_ptr<UberStructSystem>& uber_struct_system,
     const std::shared_ptr<LinkSystem>& link_system,
     std::shared_ptr<scenic_impl::display::Display> display,
-    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers)
+    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
+        register_view_ref_focused,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+        register_touch_source,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
+        register_mouse_source)
     : flatland_presenter_(flatland_presenter),
       uber_struct_system_(uber_struct_system),
       link_system_(link_system),
       buffer_collection_importers_(std::move(buffer_collection_importers)),
       executor_(dispatcher),
-      primary_display_(std::move(display)) {
+      primary_display_(std::move(display)),
+      register_view_ref_focused_(std::move(register_view_ref_focused)),
+      register_touch_source_(std::move(register_touch_source)),
+      register_mouse_source_(std::move(register_mouse_source)) {
   FX_DCHECK(dispatcher);
   FX_DCHECK(flatland_presenter_);
   FX_DCHECK(uber_struct_system_);
   FX_DCHECK(link_system_);
+  FX_DCHECK(register_view_ref_focused_);
+  FX_DCHECK(register_touch_source_);
+  FX_DCHECK(register_mouse_source_);
 #ifndef NDEBUG
   for (auto& buffer_collection_importer : buffer_collection_importers_) {
     FX_DCHECK(buffer_collection_importer);
@@ -62,7 +74,7 @@ void FlatlandManager::CreateFlatland(
   auto& instance = result.first->second;
   instance->loop =
       std::make_shared<utils::LoopDispatcherHolder>(&kAsyncLoopConfigNoAttachToCurrentThread);
-  instance->impl = Flatland::New(
+  instance->impl = NewFlatland(
       instance->loop, std::move(request), id,
       std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
       link_system_, uber_struct_system_->AllocateQueueForSession(id), buffer_collection_importers_);
@@ -91,6 +103,50 @@ void FlatlandManager::CreateFlatland(
                              scheduling::FrameScheduler::kMaxPresentsInFlight - 1u,
                              std::move(infos));
         }
+      });
+}
+
+std::shared_ptr<Flatland> FlatlandManager::NewFlatland(
+    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+    fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
+    scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
+    std::shared_ptr<FlatlandPresenter> flatland_presenter, std::shared_ptr<LinkSystem> link_system,
+    std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
+    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+        buffer_collection_importers) const {
+  return Flatland::New(
+      std::move(dispatcher_holder), std::move(request), session_id,
+      std::move(destroy_instance_function), std::move(flatland_presenter), std::move(link_system),
+      std::move(uber_struct_queue), std::move(buffer_collection_importers),
+      // All the register callbacks will be called on the instance thread, so we
+      // must make sure to post the work back on the main thread.
+      /*register_view_ref_focused*/
+      [this](fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> view_ref_focused,
+             zx_koid_t view_ref_koid) {
+        async::PostTask(
+            executor_.dispatcher(),
+            [this, view_ref_focused = std::move(view_ref_focused), view_ref_koid]() mutable {
+              CheckIsOnMainThread();
+              register_view_ref_focused_(std::move(view_ref_focused), view_ref_koid);
+            });
+      },
+      /*register_touch_source*/
+      [this](fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source,
+             zx_koid_t view_ref_koid) {
+        async::PostTask(executor_.dispatcher(),
+                        [this, touch_source = std::move(touch_source), view_ref_koid]() mutable {
+                          CheckIsOnMainThread();
+                          register_touch_source_(std::move(touch_source), view_ref_koid);
+                        });
+      },
+      /*register_mouse_source*/
+      [this](fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> mouse_source,
+             zx_koid_t view_ref_koid) {
+        async::PostTask(executor_.dispatcher(),
+                        [this, mouse_source = std::move(mouse_source), view_ref_koid]() mutable {
+                          CheckIsOnMainThread();
+                          register_mouse_source_(std::move(mouse_source), view_ref_koid);
+                        });
       });
 }
 
