@@ -217,11 +217,11 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   bool packet1_released = false;
   bool packet2_released = false;
   renderer->EnqueueAudioPacket(1.0, zx::msec(5), [&packet1_released] {
-    FX_LOGS(ERROR) << "Release packet 1";
+    FX_LOGS(INFO) << "Release packet 1";
     packet1_released = true;
   });
   renderer->EnqueueAudioPacket(1.0, zx::msec(5), [&packet2_released] {
-    FX_LOGS(ERROR) << "Release packet 2";
+    FX_LOGS(INFO) << "Release packet 2";
     packet2_released = true;
   });
 

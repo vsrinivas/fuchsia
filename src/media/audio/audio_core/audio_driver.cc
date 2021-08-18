@@ -4,11 +4,13 @@
 
 #include "src/media/audio/audio_core/audio_driver.h"
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -220,6 +222,68 @@ zx_status_t AudioDriver::GetDriverInfo() {
   return ZX_OK;
 }
 
+// Confirm that PcmSupportedFormats2 is well-formed (return false if not) and log the contents
+bool AudioDriver::ValidatePcmSupportedFormats(
+    std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& formats, bool is_input) {
+  for (size_t format_index = 0u; format_index < formats.size(); ++format_index) {
+    if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+      FX_LOGS(INFO) << __FUNCTION__ << ": " << (is_input ? " Input" : "Output")
+                    << " PcmSupportedFormats2[" << format_index << "] for "
+                    << (is_input ? " Input" : "Output");
+    }
+
+    if (!formats[format_index].has_channel_sets()) {
+      if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+        FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
+                         << format_index << "] table does not have required ChannelSets";
+      }
+      return false;
+    }
+
+    if (formats[format_index].frame_rates().empty()) {
+      if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+        FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
+                         << format_index << "].frame_rates contains no entries";
+      }
+      return false;
+    }
+
+    auto& channel_sets = formats[format_index].channel_sets();
+    for (size_t channel_set_index = 0u; channel_set_index < channel_sets.size();
+         ++channel_set_index) {
+      auto& channel_set = channel_sets[channel_set_index];
+      if (!channel_set.has_attributes()) {
+        if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+          FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
+                           << format_index << "].channel_sets[" << channel_set_index
+                           << "] table does not have required attributes";
+        }
+        return false;
+      }
+
+      if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+        auto& chan_set_attribs = channel_set.attributes();
+        for (size_t channel_index = 0u; channel_index < chan_set_attribs.size(); ++channel_index) {
+          if (!chan_set_attribs[channel_index].has_min_frequency()) {
+            FX_LOGS(INFO) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
+                          << format_index << "].channel_sets[" << channel_set_index
+                          << "].chan_set_attribs[" << channel_index
+                          << "] does not have min_frequency";
+          }
+          if (!chan_set_attribs[channel_index].has_max_frequency()) {
+            FX_LOGS(INFO) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
+                          << format_index << "].channel_sets[" << channel_set_index
+                          << "].chan_set_attribs[" << channel_index
+                          << "] does not have max_frequency";
+          }
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
 zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_buffer_duration) {
   TRACE_DURATION("audio", "AudioDriver::Configure");
   // TODO(fxbug.dev/13665): Figure out a better way to assert this!
@@ -254,11 +318,58 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
     return ZX_ERR_BAD_STATE;
   }
 
+  bool is_input = owner_->is_input();
+  if (!ValidatePcmSupportedFormats(formats_, is_input)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Retrieve the relevant ChannelSet; stop looking through all formats/sets when we find a match.
+  bool found_channel_set_match = false;
+  std::vector<ChannelAttributes> channel_config;
+  for (auto& format : formats_) {
+    auto max_rate = *std::max_element(format.frame_rates().begin(), format.frame_rates().end());
+    for (auto& channel_set : format.channel_sets()) {
+      auto& chan_set_attribs = channel_set.attributes();
+      if (chan_set_attribs.size() != channels) {
+        continue;
+      }
+      for (size_t channel_index = 0u; channel_index < chan_set_attribs.size(); ++channel_index) {
+        // If a frequency range doesn't specify min or max, assume it extends to the boundary.
+        channel_config.push_back({chan_set_attribs[channel_index].has_min_frequency()
+                                      ? chan_set_attribs[channel_index].min_frequency()
+                                      : 0u,
+                                  chan_set_attribs[channel_index].has_max_frequency()
+                                      ? chan_set_attribs[channel_index].max_frequency()
+                                      : (max_rate / 2)});
+      }
+      found_channel_set_match = true;
+      break;
+    }
+    if (found_channel_set_match) {
+      break;
+    }
+  }
+
   // Record the details of our intended target format
   min_ring_buffer_duration_ = min_ring_buffer_duration;
   {
     std::lock_guard<std::mutex> lock(configured_format_lock_);
     configured_format_ = {format};
+    configured_channel_config_.swap(channel_config);
+  }
+
+  if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+    if (channels != configured_channel_config_.size()) {
+      FX_LOGS(WARNING) << "Logic error, retrieved a channel_config of incorrect length (wanted "
+                       << channels << ", got " << configured_channel_config_.size();
+      return ZX_ERR_INTERNAL;
+    }
+    for (size_t channel_index = 0u; channel_index < channels; ++channel_index) {
+      FX_LOGS(INFO) << "Final configured_channel_config_[" << channel_index << "] is ("
+                    << configured_channel_config_[channel_index].min_frequency << ", "
+                    << configured_channel_config_[channel_index].max_frequency << ") for "
+                    << (is_input ? " Input" : "Output");
+    }
   }
 
   zx::channel local_channel;
@@ -316,6 +427,9 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     external_delay_ = zx::nsec(props.external_delay());
     FX_LOGS(DEBUG) << "Received external delay " << external_delay_.get();
+    turn_on_delay_ = zx::nsec(props.has_turn_on_delay() ? props.turn_on_delay() : 0);
+    FX_LOGS(DEBUG) << "Received turn-on delay " << turn_on_delay_.get() << " nsec ("
+                   << (owner_->is_input() ? " Input" : "Output") << ")";
     uint32_t fifo_depth_bytes = props.fifo_depth();
     FX_LOGS(DEBUG) << "Received fifo depth " << fifo_depth_bytes;
 
@@ -788,6 +902,60 @@ zx_status_t AudioDriver::SelectBestFormat(uint32_t* frames_per_second_inout,
 void AudioDriver::DriverCommandTimedOut() {
   FX_LOGS(WARNING) << "Unexpected driver timeout";
   driver_last_timeout_ = async::Now(owner_->mix_domain().dispatcher());
+}
+
+zx_status_t AudioDriver::SetActiveChannels(uint64_t chan_bit_mask) {
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
+
+  if (state_ != State::Started) {
+    FX_LOGS(ERROR) << "Unexpected SetActiveChannels request while in state "
+                   << static_cast<uint32_t>(state_);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (set_active_channels_err_ != ZX_OK) {
+    if constexpr (IdlePolicy::kLogSetActiveChannelsCalls) {
+      FX_LOGS(INFO) << "ring_buffer_fidl->SetActiveChannels(0x" << std::hex << chan_bit_mask
+                    << ") NOT called by AudioDriver because of previous set_active_channels_err_ "
+                    << std::dec << set_active_channels_err_;
+    }
+    return set_active_channels_err_;
+  }
+
+  if constexpr (IdlePolicy::kLogSetActiveChannelsCalls) {
+    FX_LOGS(INFO) << "ring_buffer_fidl->SetActiveChannels(0x" << std::hex << chan_bit_mask
+                  << ") called by AudioDriver";
+  }
+
+  // We choose not to use any watchdog timer for this command. If the driver works with other
+  // methods but not this one, then it will by default keep all channels active.
+
+  ring_buffer_fidl_->SetActiveChannels(
+      chan_bit_mask,
+      [this, chan_bit_mask](fuchsia::hardware::audio::RingBuffer_SetActiveChannels_Result result) {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
+
+        if (result.is_err()) {
+          set_active_channels_err_ = result.err();
+          FX_LOGS(WARNING) << "ring_buffer_fidl->SetActiveChannels(0x" << std::hex << chan_bit_mask
+                           << ") received error " << std::dec << set_active_channels_err_;
+          return;
+        }
+        int64_t set_active_channels_time = result.response().set_time;
+
+        if constexpr (IdlePolicy::kLogSetActiveChannelsCalls) {
+          FX_LOGS(INFO) << "ring_buffer_fidl->SetActiveChannels(0x" << std::hex << chan_bit_mask
+                        << ") received callback with set_time " << std::dec
+                        << set_active_channels_time;
+        } else {
+          (void)chan_bit_mask;  // avoid "unused lambda capture" compiler complaint
+        }
+
+        // TODO(fxbug.dev/82423): assuming this might change the clients' minimum lead time, here we
+        // should potentially kick off a notification -- including the set_active_channels_time.
+      });
+
+  return ZX_OK;
 }
 
 }  // namespace media::audio

@@ -17,6 +17,7 @@
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/device_config.h"
+#include "src/media/audio/audio_core/idle_policy.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
@@ -79,6 +80,8 @@ class RouteGraph {
   void SetCapturerRoutingProfile(const AudioObject& capturer, RoutingProfile profile);
 
   void RemoveCapturer(const AudioObject& capturer);
+
+  std::unordered_set<AudioDevice*> TargetsForRenderUsage(const RenderUsage& usage);
 
  private:
   struct RoutableOwnedObject {

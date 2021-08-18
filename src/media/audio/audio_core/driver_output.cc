@@ -494,6 +494,19 @@ void DriverOutput::OnDriverConfigComplete() {
     return;
   }
 
+  // Now that we are configured, retrieve the driver's channel-to-frequency-range mapping, to
+  // determine whether to participate in idle-power-down of the audible/ultrasonic ranges.
+  // These members must be set before ActivateSelf() is called.
+  channel_config_ = driver()->channel_config();
+  current_active_channel_mask_ = (1 << channel_config_.size()) - 1;
+  supports_audible_ = ChannelAttributes::IncludesAudible(channel_config_);
+  supports_ultrasonic_ = ChannelAttributes::IncludesUltrasonic(channel_config_);
+  audible_enabled_ = supports_audible_;
+  ultrasonic_enabled_ = supports_ultrasonic_;
+
+  StartCountdownToDisableAudible(IdlePolicy::kInitialPowerDownDelay);
+  StartCountdownToDisableUltrasonic(IdlePolicy::kInitialPowerDownDelay);
+
   // Success
   state_ = State::Starting;
   cleanup.cancel();
@@ -510,9 +523,8 @@ void DriverOutput::OnDriverStartComplete() {
 
   // Set up the mix task in the AudioOutput.
   //
-  // TODO(fxbug.dev/39886): The intermediate buffer probably does not need to be as large as the
-  // entire ring buffer.  Consider limiting this to be something only slightly larger than a nominal
-  // mix job.
+  // TODO(fxbug.dev/39886): an intermediate buffer probably need not be as large as the entire ring
+  // buffer. Consider limiting this to be only slightly larger than a nominal mix job.
   auto format = driver()->GetFormat();
   FX_DCHECK(format);
   SetupMixTask(config().output_device_profile(driver()->persistent_unique_id()),
@@ -555,6 +567,205 @@ void DriverOutput::OnDriverStartComplete() {
   reporter().StartSession(zx::clock::get_monotonic());
   state_ = State::Started;
   Process();
+}
+
+// Enable/disable device channels that are in the audible range. Used for power conservation.
+// Called from FIDL thread, but must post to device Mix thread to cancel and UpdateActiveChannels
+zx_status_t DriverOutput::EnableAudible() {
+  zx_status_t status = ZX_OK;
+  if (!supports_audible_) {
+    status = ZX_ERR_INTERNAL;
+  } else {
+    mix_domain().PostTask([this]() {
+      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+
+      CancelCountdownAudible();
+      audible_enabled_ = supports_audible_;
+      UpdateActiveChannels();
+
+      if constexpr (IdlePolicy::kDebugIdleTimers) {
+        FX_LOGS(INFO) << "mix_domain task from DriverOutput::EnableAudible completed";
+      }
+    });
+  }
+
+  if constexpr (IdlePolicy::kDebugSetActiveChannelsLogic) {
+    FX_LOGS(WARNING) << "DriverOutput::" << __func__ << " returned " << status;
+  }
+  return status;
+}
+
+// Enable/disable device channels that are in the ultrasonic range. Used for power conservation.
+// Called from FIDL thread, but must post to device Mix thread to cancel and UpdateActiveChannels
+zx_status_t DriverOutput::EnableUltrasonic() {
+  zx_status_t status = ZX_OK;
+  if (!supports_ultrasonic_) {
+    status = ZX_ERR_INTERNAL;
+  } else {
+    mix_domain().PostTask([this]() {
+      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+
+      CancelCountdownUltrasonic();
+      ultrasonic_enabled_ = supports_ultrasonic_;
+      UpdateActiveChannels();
+
+      if constexpr (IdlePolicy::kDebugIdleTimers) {
+        FX_LOGS(INFO) << "mix_domain task from DriverOutput::EnableUltrasonic completed";
+      }
+    });
+  }
+
+  if constexpr (IdlePolicy::kDebugSetActiveChannelsLogic) {
+    FX_LOGS(WARNING) << "DriverOutput::" << __func__ << " returned " << status;
+  }
+  return status;
+}
+
+// Called from the FIDL thread, but posts the countdown task to the device's mix thread
+zx_status_t DriverOutput::StartCountdownToDisableAudible(zx::duration countdown) {
+  zx_status_t status = ZX_OK;
+  if (countdown < zx::sec(0)) {
+    status = ZX_ERR_INVALID_ARGS;
+  } else if (!supports_audible_) {
+    status = ZX_ERR_INTERNAL;
+  } else {
+    // |ZX_OK| (successfully inserted, 0); |ZX_ERR_BAD_STATE| (dispatcher shutting down, -20)
+    // |ZX_ERR_NOT_SUPPORTED| (by dispatcher, -2); |ZX_ERR_ALREADY_EXISTS| (already pending, -25)
+    status = audible_countdown_.PostDelayed(mix_domain().dispatcher(), countdown);
+  }
+
+  if constexpr (IdlePolicy::kDebugIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput::" << __func__ << "(" << countdown.get() / ZX_MSEC(1)
+                  << " ms) returned " << status;
+  }
+  return status;
+}
+
+// Called from the FIDL thread, but posts the countdown task to the device's mix thread
+zx_status_t DriverOutput::StartCountdownToDisableUltrasonic(zx::duration countdown) {
+  zx_status_t status = ZX_OK;
+  if (!supports_ultrasonic_) {
+    status = ZX_ERR_INTERNAL;
+  } else if (countdown < zx::sec(0)) {
+    status = ZX_ERR_INVALID_ARGS;
+  } else {
+    status = ultrasonic_countdown_.PostDelayed(mix_domain().dispatcher(), countdown);
+  }
+
+  if constexpr (IdlePolicy::kDebugIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput::" << __func__ << "(" << countdown.get() / ZX_MSEC(1)
+                  << " ms) returned " << status;
+  }
+  return status;
+}
+
+// Must be called from the same thread that posts the task (device's Mix thread)
+zx_status_t DriverOutput::CancelCountdownAudible() {
+  if constexpr (IdlePolicy::kDebugIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput::" << __func__;
+  }
+
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+
+  if (!supports_audible_) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Returns ZX_OK(canceled) ZX_ERR_NOT_FOUND(not pending) or ZX_ERR_NOT_SUPPORTED(bad dispatcher)
+  // but for all of these, return ZX_OK since the caller shouldn't do anything to fix.
+  audible_countdown_.Cancel();
+
+  return ZX_OK;
+}
+
+// Must be called from the same thread that posts the task (device's Mix thread)
+zx_status_t DriverOutput::CancelCountdownUltrasonic() {
+  if constexpr (IdlePolicy::kDebugIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput::" << __func__;
+  }
+
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+
+  if (!supports_ultrasonic_) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Returns ZX_OK(canceled) ZX_ERR_NOT_FOUND(not pending) or ZX_ERR_NOT_SUPPORTED(bad dispatcher)
+  // but for all of these, return ZX_OK since the caller shouldn't do anything to fix.
+  ultrasonic_countdown_.Cancel();
+
+  return ZX_OK;
+}
+
+// Must be called from the same thread that posts the task (device's Mix thread)
+void DriverOutput::CountdownExpiredAudible() {
+  if constexpr (IdlePolicy::kDebugIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput::" << __func__;
+  }
+
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+
+  audible_enabled_ = false;
+  UpdateActiveChannels();
+}
+
+// Called from this device's Mix thread
+void DriverOutput::CountdownExpiredUltrasonic() {
+  if constexpr (IdlePolicy::kDebugIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput::" << __func__;
+  }
+
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+
+  ultrasonic_enabled_ = false;
+  UpdateActiveChannels();
+}
+
+// Called from this device's Mix thread
+// Returns the bitmask of channels that we set, purely for debug logging reasons
+uint64_t DriverOutput::UpdateActiveChannels() {
+  if (!supports_set_active_channels_) {
+    return current_active_channel_mask_;
+  }
+
+  uint64_t active_channel_mask = 0ull;
+  bool ultrasonic_needed = ultrasonic_enabled_;
+  for (size_t channel_index = 0; channel_index < channel_config_.size(); ++channel_index) {
+    if ((audible_enabled_ && channel_config_[channel_index].IncludesAudible()) ||
+        (ultrasonic_needed && channel_config_[channel_index].IncludesUltrasonic())) {
+      active_channel_mask |= 1 << channel_index;
+
+      if constexpr (IdlePolicy::kOnlyUseFirstUltrasonicChannel) {
+        // Configure only the first channel that satisfies ultrasonic; clear the others.
+        if (channel_config_[channel_index].IncludesUltrasonic()) {
+          ultrasonic_needed = false;
+        }
+      }
+    }
+  }
+
+  if (current_active_channel_mask_ != active_channel_mask) {
+    if constexpr (IdlePolicy::kDebugSetActiveChannelsLogic) {
+      FX_LOGS(INFO) << "DriverOutput::" << __func__ << " calling driver->SetActiveChannels(0x"
+                    << std::hex << active_channel_mask << ")";
+    }
+
+    zx_status_t status = driver()->SetActiveChannels(active_channel_mask);
+
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "driver->SetActiveChannels(0x" << std::hex << active_channel_mask
+                       << ") returned " << std::dec << status;
+      // We only lightly complain on error (like ZX_ERR_NOT_SUPPORTED), but we won't call again
+      supports_set_active_channels_ = false;
+    } else if constexpr (IdlePolicy::kDebugSetActiveChannelsLogic) {
+      FX_LOGS(INFO) << "driver->SetActiveChannels(0x" << std::hex << active_channel_mask
+                    << ") returned " << std::dec << status;
+    }
+
+    current_active_channel_mask_ = active_channel_mask;
+  }
+
+  return active_channel_mask;
 }
 
 }  // namespace media::audio

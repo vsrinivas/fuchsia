@@ -108,6 +108,19 @@ class AudioAdmin {
   using CapturerPolicies =
       std::array<fuchsia::media::Behavior, fuchsia::media::CAPTURE_USAGE_COUNT>;
 
+  std::unordered_set<fuchsia::media::AudioRenderer*>* active_streams_playback() {
+    return active_streams_playback_;
+  }
+  std::unordered_set<fuchsia::media::AudioCapturer*>* active_streams_capture() {
+    return active_streams_capture_;
+  }
+
+  // Used to ensure we are on the thread where we constructed the class (should be the FIDL thread).
+  async_dispatcher_t* fidl_dispatcher() { return fidl_dispatcher_; }
+
+  // For static thread annotation to work properly, subclasses must directly access this member.
+  fit::thread_checker fidl_thread_checker_;
+
  private:
   friend class Reporter;
 
@@ -117,9 +130,6 @@ class AudioAdmin {
   ActivityDispatcher& activity_dispatcher_ FXL_GUARDED_BY(fidl_thread_checker_);
   ActiveStreamCountReporter* active_stream_count_reporter_ FXL_GUARDED_BY(fidl_thread_checker_);
 
-  // Ensures we are always on the thread on which the class was constructed, which should
-  // be the FIDL thread.
-  fit::thread_checker fidl_thread_checker_;
   async_dispatcher_t* fidl_dispatcher_;
 
   void UpdatePolicy();

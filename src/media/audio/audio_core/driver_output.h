@@ -10,6 +10,7 @@
 
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/channel_attributes.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
@@ -42,6 +43,11 @@ class DriverOutput : public AudioOutput {
   ~DriverOutput();
 
   const PipelineConfig* pipeline_config() const override;
+
+  zx_status_t EnableAudible() override;
+  zx_status_t EnableUltrasonic() override;
+  zx_status_t StartCountdownToDisableAudible(zx::duration countdown) override;
+  zx_status_t StartCountdownToDisableUltrasonic(zx::duration countdown) override;
 
  protected:
   // AudioOutput implementation
@@ -113,6 +119,28 @@ class DriverOutput : public AudioOutput {
   // specifically to generate unique ids for each final-mix WAV file.
   static std::atomic<uint32_t> final_mix_instance_num_;
   WavWriter<kEnableFinalMixWavWriter> wav_writer_;
+
+  void CountdownExpiredAudible();
+  void CountdownExpiredUltrasonic();
+  zx_status_t CancelCountdownAudible();
+  zx_status_t CancelCountdownUltrasonic();
+  uint64_t UpdateActiveChannels() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
+  async::TaskClosureMethod<DriverOutput, &DriverOutput::CountdownExpiredAudible> audible_countdown_{
+      this};
+  async::TaskClosureMethod<DriverOutput, &DriverOutput::CountdownExpiredUltrasonic>
+      ultrasonic_countdown_{this};
+
+  // Set only once during OnDriverConfigComplete, subsequently readable from arbitrary context
+  bool supports_audible_;
+  bool supports_ultrasonic_;
+
+  bool supports_set_active_channels_ FXL_GUARDED_BY(mix_domain().token()) = true;
+  bool audible_enabled_ FXL_GUARDED_BY(mix_domain().token());
+  bool ultrasonic_enabled_ FXL_GUARDED_BY(mix_domain().token());
+
+  std::vector<ChannelAttributes> channel_config_;
+  uint64_t current_active_channel_mask_;
 };
 
 }  // namespace media::audio

@@ -19,6 +19,7 @@
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/device_registry.h"
+#include "src/media/audio/audio_core/idle_policy.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/process_config.h"
@@ -39,7 +40,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   static fpromise::result<audio_stream_unique_id_t> UniqueIdFromString(
       const std::string& unique_id);
 
-  ~AudioDevice() override;
+  ~AudioDevice() override = default;
 
   const std::string& name() const { return name_; }
 
@@ -129,6 +130,20 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
 
   // audio clock from AudioDriver
   virtual AudioClock& reference_clock();
+
+  // Device-level power management
+  //
+  // Enable/disable this device in the audible or ultrasonic range. Used for power conservation.
+  //
+  // Because there is no significant power savings in disabling input devices, these methods return
+  // ZX_ERR_WRONG_TYPE if device is Input or Throttle output. DriverOutput overrides these methods.
+  //
+  virtual zx_status_t EnableAudible() { return ZX_ERR_WRONG_TYPE; }
+  virtual zx_status_t EnableUltrasonic() { return ZX_ERR_WRONG_TYPE; }
+  virtual zx_status_t StartCountdownToDisableAudible(zx::duration dur) { return ZX_ERR_WRONG_TYPE; }
+  virtual zx_status_t StartCountdownToDisableUltrasonic(zx::duration dur) {
+    return ZX_ERR_WRONG_TYPE;
+  }
 
  protected:
   AudioDevice(Type type, const std::string& name, ThreadingModel* threading_model,

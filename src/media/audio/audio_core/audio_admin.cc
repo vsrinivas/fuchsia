@@ -209,13 +209,14 @@ void AudioAdmin::UpdateRenderActivity() {
   TRACE_DURATION("audio", "AudioAdmin::UpdateRenderActivity");
   std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
 
-  std::bitset<fuchsia::media::RENDER_USAGE_COUNT> render_activity;
+  std::bitset<fuchsia::media::RENDER_USAGE_COUNT> fidl_render_activity;
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     if (IsActive(kRenderUsages[i])) {
-      render_activity.set(i);
+      fidl_render_activity.set(i);
     }
   }
-  activity_dispatcher_.OnRenderActivityChanged(render_activity);
+
+  activity_dispatcher_.OnRenderActivityChanged(fidl_render_activity);
 }
 
 // As needed by ActivityReporter, "activity" counts FIDL usages (not loopback or ultrasound).
@@ -259,7 +260,8 @@ void AudioAdmin::UpdateRendererState(RenderUsage usage, bool active,
       auto result = active_streams_playback_[usage_index].insert(renderer);
       if (!result.second) {
         FX_LOGS(ERROR) << "Renderer " << renderer
-                       << " NOT inserted:  " << RenderUsageToString(usage);
+                       << " NOT inserted:  " << RenderUsageToString(usage)
+                       << "; prevented by renderer " << *(result.first);
       }
     } else {
       if (!active_streams_playback_[usage_index].erase(renderer)) {

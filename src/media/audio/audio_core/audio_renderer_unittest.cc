@@ -41,6 +41,10 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
 
     fidl_renderer_.set_error_handler(
         [](auto status) { EXPECT_TRUE(status == ZX_OK) << "Renderer disconnected: " << status; });
+
+    fake_output_ =
+        testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                         &context().link_matrix(), context().clock_factory());
   }
 
   fuchsia::media::AudioStreamType PcmStreamType() {
@@ -73,6 +77,9 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
     { auto r = std::move(fidl_renderer_); }
     RunLoopUntilIdle();
 
+    // This ensures that the device is properly unwired from RouteGraph etc., before ~AudioDevice.
+    context().device_manager().RemoveDevice(fake_output_);
+
     testing::ThreadingModelFixture::TearDown();
   }
 
@@ -87,6 +94,8 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
 
   fuchsia::media::AudioRendererPtr fidl_renderer_;
   std::shared_ptr<AudioRenderer> renderer_;
+
+  std::shared_ptr<testing::FakeAudioOutput> fake_output_;
 
   fzl::VmoMapper vmo_mapper_;
   zx::vmo vmo_;
@@ -103,18 +112,14 @@ constexpr int64_t kInvalidLeadTimeNs = -1;
 
 // Validate that MinLeadTime is provided to AudioRenderer clients accurately
 TEST_F(AudioRendererTest, MinLeadTimePadding) {
-  auto fake_output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-
   // We must set our output's delay, before linking it, before calling SetPcmStreamType().
-  fake_output->SetPresentationDelay(kMinLeadTime);
+  fake_output_->SetPresentationDelay(kMinLeadTime);
 
   // Our RouteGraph links one FakeAudioOutput to the Renderer-under-test. Thus we can set
   // our output's PresentationDelay, fully expecting this value to be reflected as-is to
   // renderer+clients.
   context().route_graph().AddRenderer(std::move(renderer_));
-  context().route_graph().AddDevice(fake_output.get());
+  context().route_graph().AddDevice(fake_output_.get());
 
   // SetPcmStreamType triggers the routing preparation completion, which connects output(s) to
   // renderer. Renderers react to new outputs in `OnLinkAdded` by recalculating minimum lead time.
@@ -131,12 +136,8 @@ TEST_F(AudioRendererTest, MinLeadTimePadding) {
 }
 
 TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
-  auto fake_output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-
   context().route_graph().AddRenderer(std::move(renderer_));
-  context().route_graph().AddDevice(fake_output.get());
+  context().route_graph().AddDevice(fake_output_.get());
 
   fidl_renderer_->SetPcmStreamType(PcmStreamType());
   AddPayloadBuffer(0, zx_system_get_page_size(), fidl_renderer_.get());
@@ -148,7 +149,7 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   RunLoopUntilIdle();
 
   std::vector<LinkMatrix::LinkHandle> links;
-  context().link_matrix().SourceLinks(*fake_output, &links);
+  context().link_matrix().SourceLinks(*fake_output_, &links);
   ASSERT_EQ(1u, links.size());
   for (auto& link : links) {
     auto stream = link.stream;
@@ -168,12 +169,8 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
 }
 
 TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
-  auto fake_output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-
   context().route_graph().AddRenderer(std::move(renderer_));
-  context().route_graph().AddDevice(fake_output.get());
+  context().route_graph().AddDevice(fake_output_.get());
 
   fidl_renderer_->SetPcmStreamType(PcmStreamType());
   AddPayloadBuffer(0, zx_system_get_page_size(), fidl_renderer_.get());
@@ -188,7 +185,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   RunLoopUntilIdle();
 
   std::vector<LinkMatrix::LinkHandle> links;
-  context().link_matrix().SourceLinks(*fake_output, &links);
+  context().link_matrix().SourceLinks(*fake_output_, &links);
   ASSERT_EQ(1u, links.size());
   auto stream = links[0].stream;
   ASSERT_TRUE(stream);
@@ -248,10 +245,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
       vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
       ZX_OK);
 
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   auto* renderer_raw = renderer_.get();
@@ -272,10 +266,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 
 // AudioRenderer should survive, if it calls Play while already playing.
 TEST_F(AudioRendererTest, DoublePlay) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -301,10 +292,7 @@ TEST_F(AudioRendererTest, DoublePlay) {
 // AudioRenderer should survive, if it calls Pause for a second time before calling Play.
 // Timestamps returned from this second Pause should be the same as those from the first.
 TEST_F(AudioRendererTest, DoublePause) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -344,10 +332,7 @@ TEST_F(AudioRendererTest, DoublePause) {
 // AudioRenderer should survive if calling Pause before ever calling Play.
 // We return timestamps that try to indicate that no previous timeline transform was established.
 TEST_F(AudioRendererTest, PauseBeforePlay) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -365,10 +350,7 @@ TEST_F(AudioRendererTest, PauseBeforePlay) {
 }
 
 TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -406,10 +388,7 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
 
 // AudioCore should survive, if a renderer is unbound between a Play call and its callback.
 TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -430,10 +409,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
 // AudioCore should survive, if a renderer is unbound immediately after PlayNoReply, as AudioCore
 // may kick off deferred actions that need to be safely retired.
 TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -449,10 +425,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
 
 // AudioCore should survive, if a renderer is unbound between a Pause call and its callback.
 TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -473,10 +446,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
 // AudioCore should survive, if a renderer is unbound immediately after PauseNoReply, as AudioCore
 // may kick off deferred actions that need to be safely retired.
 TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -493,10 +463,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
 }
 
 TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   context().route_graph().AddRenderer(std::move(renderer_));
@@ -515,7 +482,7 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
   RunLoopUntilIdle();
 
   // This will be the packet queue created when the link between the renderer and output was formed.
-  auto packet_queue = output->stream();
+  auto packet_queue = fake_output_->stream();
   ASSERT_TRUE(packet_queue);
 
   // Acquire a buffer.
@@ -539,18 +506,21 @@ TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
   clock::testing::VerifyAdvances(renderer_->reference_clock(), context().clock_factory());
 }
 
-TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
+TEST_F(AudioRendererTest, GetReferenceClockReturnsReadOnlyClock) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
-
-  // Within audio_core, the default clock is rate-adjustable.
-  clock::testing::VerifyCanBeRateAdjusted(renderer_->reference_clock());
 }
 
-TEST_F(AudioRendererTest, DefaultClockIsClockMonotonic) {
+TEST_F(AudioRendererTest, DefaultClockIsInitiallyMonotonic) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
   clock::testing::VerifyIsSystemMonotonic(renderer_->reference_clock());
+}
+
+TEST_F(AudioRendererTest, DefaultClockIsFlexible) {
+  clock::testing::VerifyCanBeRateAdjusted(renderer_->reference_clock());
+  EXPECT_TRUE(renderer_->reference_clock().is_adjustable());
+  EXPECT_TRUE(renderer_->reference_clock().is_client_clock());
 }
 
 // The renderer clock is valid, before and after devices are routed.
@@ -565,10 +535,7 @@ TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
   RunLoopUntilIdle();
   ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
 
-  auto output =
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory());
-  context().route_graph().AddDevice(output.get());
+  context().route_graph().AddDevice(fake_output_.get());
   RunLoopUntilIdle();
 
   ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
@@ -576,7 +543,11 @@ TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 
-  context().route_graph().RemoveDevice(output.get());
+  // Remove the device and validate that the reference clock received from the renderer remains
+  // valid, even after the device is removed (and thus renderer is rerouted to a ThrottleOutput)
+  context().route_graph().RemoveDevice(fake_output_.get());
+  // RemoveDevice(fake_output_.get()) will be called again during TearDown, which is benign
+
   RunLoopUntilIdle();
   ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
   clock::testing::VerifyAdvances(fidl_clock);

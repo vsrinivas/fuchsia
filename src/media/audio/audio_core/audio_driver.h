@@ -18,6 +18,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
+#include "src/media/audio/audio_core/channel_attributes.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/utils.h"
 
@@ -140,8 +141,15 @@ class AudioDriver {
   };
 
   AudioClock& reference_clock() { return *audio_clock_; }
+  zx::duration turn_on_delay() { return turn_on_delay_; };
+  std::vector<ChannelAttributes> channel_config() { return configured_channel_config_; }
+
+  zx_status_t SetActiveChannels(uint64_t chan_bit_mask);
 
  private:
+  static bool ValidatePcmSupportedFormats(
+      std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& formats, bool is_input);
+
   static constexpr uint32_t kDriverInfoHasUniqueId = (1u << 0);
   static constexpr uint32_t kDriverInfoHasMfrStr = (1u << 1);
   static constexpr uint32_t kDriverInfoHasProdStr = (1u << 2);
@@ -209,12 +217,14 @@ class AudioDriver {
   zx::duration min_ring_buffer_duration_;
   uint32_t fifo_depth_frames_;
   zx::duration fifo_depth_duration_;
+  zx::duration turn_on_delay_ = zx::nsec(0);
   zx::time configuration_deadline_ = zx::time::infinite();
 
   // A stashed copy of current format, queryable by destinations (outputs or AudioCapturers) when
   // determining which mixer to use.
   mutable std::mutex configured_format_lock_;
   std::optional<Format> configured_format_ FXL_GUARDED_BY(configured_format_lock_);
+  std::vector<ChannelAttributes> configured_channel_config_;
 
   // Ring buffer state. Details are lock-protected and changes tracked with generation counter,
   // allowing AudioCapturer clients to snapshot ring-buffer state during mix/resample operations.
@@ -260,6 +270,9 @@ class AudioDriver {
   uint64_t position_notification_count_ FXL_GUARDED_BY(owner_->mix_domain().token()) = 0;
   uint64_t ring_buffer_size_bytes_ FXL_GUARDED_BY(owner_->mix_domain().token());
   uint64_t running_pos_bytes_ FXL_GUARDED_BY(owner_->mix_domain().token());
+
+  // If we get an error from ring_buffer_fidl->SetActiveChannels(), then we won't call it again
+  zx_status_t set_active_channels_err_ = ZX_OK;
 };
 
 }  // namespace media::audio
