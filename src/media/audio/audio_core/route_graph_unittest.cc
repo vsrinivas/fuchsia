@@ -172,12 +172,12 @@ TEST_F(RouteGraphTest, RenderersRouteToLastPluggedOutput) {
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(first_output.get());
+  under_test_.AddDeviceToRoutes(first_output.get());
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({first_output.get()}));
 
   auto later_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(later_output.get());
+  under_test_.AddDeviceToRoutes(later_output.get());
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({later_output.get()}));
 }
 
@@ -193,14 +193,14 @@ TEST_F(RouteGraphTest, RenderersFallbackWhenOutputRemoved) {
   auto later_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
 
-  under_test_.AddDevice(first_output.get());
-  under_test_.AddDevice(later_output.get());
+  under_test_.AddDeviceToRoutes(first_output.get());
+  under_test_.AddDeviceToRoutes(later_output.get());
 
-  under_test_.RemoveDevice(later_output.get());
+  under_test_.RemoveDeviceFromRoutes(later_output.get());
   EXPECT_THAT(DestLinks(*renderer),
               UnorderedElementsAreArray(std::vector<AudioObject*>{first_output.get()}));
 
-  under_test_.RemoveDevice(first_output.get());
+  under_test_.RemoveDeviceFromRoutes(first_output.get());
   EXPECT_THAT(DestLinks(*renderer),
               UnorderedElementsAreArray(std::vector<AudioObject*>{context().throttle_output()}));
 }
@@ -219,21 +219,21 @@ TEST_F(RouteGraphTest, RemovingNonLastOutputDoesNotRerouteRenderers) {
   auto last_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                              &context().link_matrix(), context().clock_factory());
 
-  under_test_.AddDevice(first_output.get());
-  under_test_.AddDevice(second_output.get());
-  under_test_.AddDevice(last_output.get());
+  under_test_.AddDeviceToRoutes(first_output.get());
+  under_test_.AddDeviceToRoutes(second_output.get());
+  under_test_.AddDeviceToRoutes(last_output.get());
 
-  under_test_.RemoveDevice(second_output.get());
+  under_test_.RemoveDeviceFromRoutes(second_output.get());
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({last_output.get()}));
 
-  under_test_.RemoveDevice(first_output.get());
+  under_test_.RemoveDeviceFromRoutes(first_output.get());
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({last_output.get()}));
 }
 
 TEST_F(RouteGraphTest, RenderersPickUpLastPluggedOutputWhenRoutable) {
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(first_output.get());
+  under_test_.AddDeviceToRoutes(first_output.get());
 
   auto renderer = FakeAudioObject::FakeRenderer();
 
@@ -261,7 +261,7 @@ TEST_F(RouteGraphTest, RenderersAreRemoved) {
   under_test_.RemoveRenderer(*renderer);
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
   EXPECT_THAT(SourceLinks(*output), IsEmpty());
 }
 
@@ -283,13 +283,13 @@ TEST_F(RouteGraphTest, CapturersRouteToLastPluggedInput) {
   auto first_input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(first_input.get());
+  under_test_.AddDeviceToRoutes(first_input.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({first_input.get()}));
 
   auto later_input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(later_input.get());
+  under_test_.AddDeviceToRoutes(later_input.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({later_input.get()}));
 }
 
@@ -308,13 +308,13 @@ TEST_F(RouteGraphTest, CapturersFallbackWhenInputRemoved) {
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
 
-  under_test_.AddDevice(first_input.get());
-  under_test_.AddDevice(later_input.get());
+  under_test_.AddDeviceToRoutes(first_input.get());
+  under_test_.AddDeviceToRoutes(later_input.get());
 
-  under_test_.RemoveDevice(later_input.get());
+  under_test_.RemoveDeviceFromRoutes(later_input.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({first_input.get()}));
 
-  under_test_.RemoveDevice(first_input.get());
+  under_test_.RemoveDeviceFromRoutes(first_input.get());
   EXPECT_THAT(SourceLinks(*capturer), IsEmpty());
 }
 
@@ -336,14 +336,14 @@ TEST_F(RouteGraphTest, RemovingNonLastInputDoesNotRerouteCapturers) {
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
 
-  under_test_.AddDevice(first_input.get());
-  under_test_.AddDevice(second_input.get());
-  under_test_.AddDevice(last_input.get());
+  under_test_.AddDeviceToRoutes(first_input.get());
+  under_test_.AddDeviceToRoutes(second_input.get());
+  under_test_.AddDeviceToRoutes(last_input.get());
 
-  under_test_.RemoveDevice(first_input.get());
+  under_test_.RemoveDeviceFromRoutes(first_input.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({last_input.get()}));
 
-  under_test_.RemoveDevice(second_input.get());
+  under_test_.RemoveDeviceFromRoutes(second_input.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({last_input.get()}));
 }
 
@@ -351,12 +351,12 @@ TEST_F(RouteGraphTest, CapturersPickUpLastPluggedInputWhenRoutable) {
   auto first_input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(first_input.get());
+  under_test_.AddDeviceToRoutes(first_input.get());
 
   auto later_input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(later_input.get());
+  under_test_.AddDeviceToRoutes(later_input.get());
 
   auto capturer = FakeAudioObject::FakeCapturer();
 
@@ -380,7 +380,7 @@ TEST_F(RouteGraphTest, CapturersAreRemoved) {
   auto input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(input.get());
+  under_test_.AddDeviceToRoutes(input.get());
   EXPECT_THAT(DestLinks(*input), UnorderedElementsAreArray({capturer.get()}));
   under_test_.RemoveCapturer(*capturer);
   EXPECT_THAT(DestLinks(*input), IsEmpty());
@@ -396,12 +396,12 @@ TEST_F(RouteGraphTest, LoopbackCapturersRouteToLastPluggedOutput) {
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(first_output.get());
+  under_test_.AddDeviceToRoutes(first_output.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({first_output.get()}));
 
   auto later_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(later_output.get());
+  under_test_.AddDeviceToRoutes(later_output.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({later_output.get()}));
 }
 
@@ -418,13 +418,13 @@ TEST_F(RouteGraphTest, LoopbackCapturersFallbackWhenOutputRemoved) {
   auto later_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
 
-  under_test_.AddDevice(first_output.get());
-  under_test_.AddDevice(later_output.get());
+  under_test_.AddDeviceToRoutes(first_output.get());
+  under_test_.AddDeviceToRoutes(later_output.get());
 
-  under_test_.RemoveDevice(later_output.get());
+  under_test_.RemoveDeviceFromRoutes(later_output.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({first_output.get()}));
 
-  under_test_.RemoveDevice(first_output.get());
+  under_test_.RemoveDeviceFromRoutes(first_output.get());
   EXPECT_THAT(SourceLinks(*capturer), IsEmpty());
 }
 
@@ -443,25 +443,25 @@ TEST_F(RouteGraphTest, RemovingNonLastOutputDoesNotRerouteLoopbackCapturers) {
   auto last_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                              &context().link_matrix(), context().clock_factory());
 
-  under_test_.AddDevice(first_output.get());
-  under_test_.AddDevice(second_output.get());
-  under_test_.AddDevice(last_output.get());
+  under_test_.AddDeviceToRoutes(first_output.get());
+  under_test_.AddDeviceToRoutes(second_output.get());
+  under_test_.AddDeviceToRoutes(last_output.get());
 
-  under_test_.RemoveDevice(second_output.get());
+  under_test_.RemoveDeviceFromRoutes(second_output.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({last_output.get()}));
 
-  under_test_.RemoveDevice(first_output.get());
+  under_test_.RemoveDeviceFromRoutes(first_output.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({last_output.get()}));
 }
 
 TEST_F(RouteGraphTest, LoopbackCapturersPickUpLastPluggedOutputWhenRoutable) {
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(first_output.get());
+  under_test_.AddDeviceToRoutes(first_output.get());
 
   auto later_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(later_output.get());
+  under_test_.AddDeviceToRoutes(later_output.get());
 
   auto capturer = FakeAudioObject::FakeCapturer();
 
@@ -484,7 +484,7 @@ TEST_F(RouteGraphTest, LoopbackCapturersAreRemoved) {
 
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
   EXPECT_THAT(DestLinks(*output), UnorderedElementsAreArray({capturer.get()}));
 
   under_test_.RemoveCapturer(*capturer);
@@ -494,7 +494,7 @@ TEST_F(RouteGraphTest, LoopbackCapturersAreRemoved) {
 TEST_F(RouteGraphTest, OutputRouteCategoriesDoNotAffectEachOther) {
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
 
   auto capturer = FakeAudioObject::FakeCapturer();
 
@@ -521,12 +521,12 @@ TEST_F(RouteGraphTest, OutputRouteCategoriesDoNotAffectEachOther) {
 TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
 
   auto first_input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(first_input.get());
+  under_test_.AddDeviceToRoutes(first_input.get());
 
   auto capturer = FakeAudioObject::FakeCapturer();
 
@@ -549,7 +549,7 @@ TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
 TEST_F(RouteGraphTest, DoesNotRouteUnroutableRenderer) {
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
 
   auto renderer = FakeAudioObject::FakeRenderer();
 
@@ -561,7 +561,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableRenderer) {
 
   auto second_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                                &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(second_output.get());
+  under_test_.AddDeviceToRoutes(second_output.get());
   EXPECT_THAT(DestLinks(*renderer), IsEmpty());
 }
 
@@ -569,7 +569,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
   auto input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(input.get());
+  under_test_.AddDeviceToRoutes(input.get());
 
   auto capturer = FakeAudioObject::FakeCapturer();
 
@@ -583,14 +583,14 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
   auto second_input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(second_input.get());
+  under_test_.AddDeviceToRoutes(second_input.get());
   EXPECT_THAT(SourceLinks(*capturer), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, DoesNotRouteUnroutableLoopbackCapturer) {
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
 
   auto loopback_capturer = FakeAudioObject::FakeCapturer();
 
@@ -603,7 +603,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableLoopbackCapturer) {
 
   auto second_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                                &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(second_output.get());
+  under_test_.AddDeviceToRoutes(second_output.get());
   EXPECT_THAT(SourceLinks(*loopback_capturer), IsEmpty());
 }
 
@@ -620,7 +620,7 @@ TEST_F(RouteGraphTest, AcceptsUnroutableRendererWithInvalidFormat) {
 TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableRenderer) {
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
 
   auto renderer = FakeAudioObject::FakeRenderer();
 
@@ -638,7 +638,7 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableCapturer) {
   auto input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(input.get());
+  under_test_.AddDeviceToRoutes(input.get());
 
   auto capturer = FakeAudioObject::FakeCapturer();
 
@@ -657,7 +657,7 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableCapturer) {
 TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableLoopbackCapturer) {
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
 
   auto loopback_capturer = FakeAudioObject::FakeCapturer();
 
@@ -696,7 +696,7 @@ class RouteGraphWithMediaExternalPolicyTest : public RouteGraphTest {
 TEST_F(RouteGraphWithMediaExternalPolicyTest, MediaRoutesToLastPluggedSupportedDevice) {
   auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
   auto output = output_and_driver.output.get();
-  under_test_.AddDevice(output);
+  under_test_.AddDeviceToRoutes(output);
 
   auto renderer = FakeAudioObject::FakeRenderer();
 
@@ -707,14 +707,14 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, MediaRoutesToLastPluggedSupportedD
 
   auto unconfigured_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
   auto unconfigured_output = unconfigured_output_and_driver.output.get();
-  under_test_.AddDevice(unconfigured_output);
+  under_test_.AddDeviceToRoutes(unconfigured_output);
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({unconfigured_output}));
 }
 
 TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsupportedDevice) {
   auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
   auto output = output_and_driver.output.get();
-  under_test_.AddDevice(output);
+  under_test_.AddDeviceToRoutes(output);
 
   auto renderer = FakeAudioObject::FakeRenderer();
 
@@ -726,7 +726,7 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsuppor
 
   auto unconfigured_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
   auto unconfigured_output = unconfigured_output_and_driver.output.get();
-  under_test_.AddDevice(unconfigured_output);
+  under_test_.AddDeviceToRoutes(unconfigured_output);
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output}));
 }
 
@@ -759,7 +759,7 @@ class RouteGraphWithExternalNonLoopbackDeviceTest : public RouteGraphTest {
 TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackRoutesToLastPluggedSupported) {
   auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
   auto output = output_and_driver.output.get();
-  under_test_.AddDevice(output);
+  under_test_.AddDeviceToRoutes(output);
 
   auto capturer = FakeAudioObject::FakeCapturer();
 
@@ -771,14 +771,14 @@ TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackRoutesToLastPluggedS
 
   auto second_output_and_driver = OutputWithDeviceId(kSupportsLoopbackDeviceId);
   auto second_output = second_output_and_driver.output.get();
-  under_test_.AddDevice(second_output);
+  under_test_.AddDeviceToRoutes(second_output);
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({second_output}));
 }
 
 TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackDoesNotRouteToUnsupportedDevice) {
   auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
   auto output = output_and_driver.output.get();
-  under_test_.AddDevice(output);
+  under_test_.AddDeviceToRoutes(output);
 
   auto capturer = FakeAudioObject::FakeCapturer();
 
@@ -790,7 +790,7 @@ TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackDoesNotRouteToUnsupp
 
   auto second_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
   auto second_output = second_output_and_driver.output.get();
-  under_test_.AddDevice(second_output);
+  under_test_.AddDeviceToRoutes(second_output);
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({output}));
 }
 
@@ -843,7 +843,7 @@ TEST_F(RouteGraphTest, DoesNotRelinkRendererIfRouteDoesNotChange) {
   };
 
   // Add and confirm an initial link has been made.
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
   under_test_.AddRenderer(renderer);
   under_test_.SetRendererRoutingProfile(*renderer, kRoutableProfile);
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
@@ -867,7 +867,7 @@ TEST_F(RouteGraphTest, DoesNotRelinkCapturerIfRouteDoesNotChange) {
   };
 
   // Add and confirm an initial link has been made.
-  under_test_.AddDevice(input.get());
+  under_test_.AddDeviceToRoutes(input.get());
   under_test_.AddCapturer(capturer);
   under_test_.SetCapturerRoutingProfile(*capturer, kRoutableProfile);
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({input.get()}));
@@ -890,7 +890,7 @@ TEST_F(RouteGraphTest, DoesNotRelinkCapturerIfUnroutedDeviceIsAdded) {
   };
 
   // Add and confirm an initial link has been made.
-  under_test_.AddDevice(input.get());
+  under_test_.AddDeviceToRoutes(input.get());
   under_test_.AddCapturer(capturer);
   under_test_.SetCapturerRoutingProfile(*capturer, kRoutableProfile);
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({input.get()}));
@@ -899,7 +899,7 @@ TEST_F(RouteGraphTest, DoesNotRelinkCapturerIfUnroutedDeviceIsAdded) {
   // Now add an unrelated device. We should see no link activity on our capturer.
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({input.get()}));
   EXPECT_EQ(1u, capturer->total_links_formed());
 }
@@ -915,7 +915,7 @@ TEST_F(RouteGraphTest, DoesNotRelinkRendererIfUnroutedDeviceIsAdded) {
   };
 
   // Add and confirm an initial link has been made.
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
   under_test_.AddRenderer(renderer);
   under_test_.SetRendererRoutingProfile(*renderer, kRoutableProfile);
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
@@ -925,7 +925,7 @@ TEST_F(RouteGraphTest, DoesNotRelinkRendererIfUnroutedDeviceIsAdded) {
   auto input = AudioInput::Create(
       "", fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(), &threading_model(),
       &context().device_manager(), &context().link_matrix(), context().clock_factory());
-  under_test_.AddDevice(input.get());
+  under_test_.AddDeviceToRoutes(input.get());
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
   EXPECT_EQ(1u, renderer->total_links_formed());
 }
@@ -964,7 +964,7 @@ TEST_F(RouteGraphUltrasoundTest, DoNotLinkUltrasoundRendererToDeviceWithLowRate)
       .usage = StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND),
   };
 
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
   under_test_.AddRenderer(renderer);
   under_test_.SetRendererRoutingProfile(*renderer, kRoutableProfile);
 
@@ -990,7 +990,7 @@ TEST_F(RouteGraphUltrasoundTest, LinkUltrasoundRendererToDeviceWithSufficientRat
       .usage = StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND),
   };
 
-  under_test_.AddDevice(output.get());
+  under_test_.AddDeviceToRoutes(output.get());
   under_test_.AddRenderer(renderer);
   under_test_.SetRendererRoutingProfile(*renderer, kRoutableProfile);
 

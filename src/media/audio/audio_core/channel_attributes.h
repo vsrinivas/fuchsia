@@ -8,6 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
 #include <vector>
 
 namespace media::audio {
@@ -16,7 +17,7 @@ struct ChannelAttributes {
   // If we make the following 2 assumptions, then we need only specify one boundary frequency:
   // 1) if any channel in a channel set touches the audible range, then the channel set will cover
   // enough of the audible range to be a useful output;
-  // 2) a channel touches the ultrasonic range, then it will cover the entire range needed for
+  // 2) if a channel touches the ultrasonic range, then it will cover the entire range needed for
   // current content; it can (if needed) be the sole channel that emits ultrasonic frequencies.
   static constexpr uint32_t kAudibleUltrasonicBoundaryHz = 24000;
 
@@ -44,12 +45,8 @@ struct ChannelAttributes {
   // Supporting audible requires a single channel to support ANY non-empty frequency range
   // within these bounds (it need not cover the ENTIRE range).
   static bool IncludesAudible(std::vector<ChannelAttributes>& channels) {
-    for (auto& channel : channels) {
-      if (channel.IncludesAudible()) {
-        return true;
-      }
-    }
-    return false;
+    return std::any_of(channels.cbegin(), channels.cend(),
+                       [](const auto& channel) { return channel.IncludesAudible(); });
   }
 
   // Supporting ultrasonic requires a channel to support ANY non-empty frequency range within these
@@ -59,12 +56,8 @@ struct ChannelAttributes {
   // content. Ultimately, we will need the device to cover this range (not just a single frequency)
   // for ultrasonic content to be effective.
   static bool IncludesUltrasonic(std::vector<ChannelAttributes>& channels) {
-    for (auto& channel : channels) {
-      if (channel.IncludesUltrasonic()) {
-        return true;
-      }
-    }
-    return false;
+    return std::any_of(channels.cbegin(), channels.cend(),
+                       [](const auto& channel) { return channel.IncludesUltrasonic(); });
   }
 
   uint32_t min_frequency;

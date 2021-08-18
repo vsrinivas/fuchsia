@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_DEVICE_REGISTRY_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_DEVICE_REGISTRY_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -34,6 +35,18 @@ class DeviceRegistry {
 
   // Provides the set of devices in the registry.
   virtual std::vector<fuchsia::media::AudioDeviceInfo> GetDeviceInfos() = 0;
+};
+
+// An interface by which |DeviceRegistry| reports immediately before, and immediately after, the
+// RouteGraph has added/removed a target device.
+class DeviceRouter {
+ public:
+  // To be overridden by child implementations
+  // A device is ready to be routed -- add it to the route graph as appropriate.
+  virtual void AddDeviceToRoutes(AudioDevice* device) = 0;
+
+  // A device can no longer be routed -- remove it from the route graph as appropriate.
+  virtual void RemoveDeviceFromRoutes(AudioDevice* device) = 0;
 };
 
 }  // namespace media::audio

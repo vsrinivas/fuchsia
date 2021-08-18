@@ -226,25 +226,21 @@ zx_status_t AudioDriver::GetDriverInfo() {
 bool AudioDriver::ValidatePcmSupportedFormats(
     std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& formats, bool is_input) {
   for (size_t format_index = 0u; format_index < formats.size(); ++format_index) {
-    if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+    if constexpr (IdlePolicy::kLogChannelFrequencyRanges) {
       FX_LOGS(INFO) << __FUNCTION__ << ": " << (is_input ? " Input" : "Output")
                     << " PcmSupportedFormats2[" << format_index << "] for "
                     << (is_input ? " Input" : "Output");
     }
 
     if (!formats[format_index].has_channel_sets()) {
-      if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
-        FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
-                         << format_index << "] table does not have required ChannelSets";
-      }
+      FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
+                       << format_index << "] table does not have required ChannelSets";
       return false;
     }
 
     if (formats[format_index].frame_rates().empty()) {
-      if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
-        FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
-                         << format_index << "].frame_rates contains no entries";
-      }
+      FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
+                       << format_index << "].frame_rates contains no entries";
       return false;
     }
 
@@ -253,15 +249,13 @@ bool AudioDriver::ValidatePcmSupportedFormats(
          ++channel_set_index) {
       auto& channel_set = channel_sets[channel_set_index];
       if (!channel_set.has_attributes()) {
-        if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
-          FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
-                           << format_index << "].channel_sets[" << channel_set_index
-                           << "] table does not have required attributes";
-        }
+        FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats2["
+                         << format_index << "].channel_sets[" << channel_set_index
+                         << "] table does not have required attributes";
         return false;
       }
 
-      if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+      if constexpr (IdlePolicy::kLogChannelFrequencyRanges) {
         auto& chan_set_attribs = channel_set.attributes();
         for (size_t channel_index = 0u; channel_index < chan_set_attribs.size(); ++channel_index) {
           if (!chan_set_attribs[channel_index].has_min_frequency()) {
@@ -326,8 +320,12 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
   // Retrieve the relevant ChannelSet; stop looking through all formats/sets when we find a match.
   bool found_channel_set_match = false;
   std::vector<ChannelAttributes> channel_config;
+  uint32_t max_rate = 0;
   for (auto& format : formats_) {
-    auto max_rate = *std::max_element(format.frame_rates().begin(), format.frame_rates().end());
+    max_rate = std::max(*std::max_element(format.frame_rates().begin(), format.frame_rates().end()),
+                        max_rate);
+  }
+  for (auto& format : formats_) {
     for (auto& channel_set : format.channel_sets()) {
       auto& chan_set_attribs = channel_set.attributes();
       if (chan_set_attribs.size() != channels) {
@@ -358,7 +356,7 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
     configured_channel_config_.swap(channel_config);
   }
 
-  if constexpr (IdlePolicy::kDebugChannelFrequencyRangeIteration) {
+  if constexpr (IdlePolicy::kLogChannelFrequencyRanges) {
     if (channels != configured_channel_config_.size()) {
       FX_LOGS(WARNING) << "Logic error, retrieved a channel_config of incorrect length (wanted "
                        << channels << ", got " << configured_channel_config_.size();
@@ -426,12 +424,8 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
   ring_buffer_fidl_->GetProperties([this](fuchsia::hardware::audio::RingBufferProperties props) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     external_delay_ = zx::nsec(props.external_delay());
-    FX_LOGS(DEBUG) << "Received external delay " << external_delay_.get();
     turn_on_delay_ = zx::nsec(props.has_turn_on_delay() ? props.turn_on_delay() : 0);
-    FX_LOGS(DEBUG) << "Received turn-on delay " << turn_on_delay_.get() << " nsec ("
-                   << (owner_->is_input() ? " Input" : "Output") << ")";
     uint32_t fifo_depth_bytes = props.fifo_depth();
-    FX_LOGS(DEBUG) << "Received fifo depth " << fifo_depth_bytes;
 
     auto format = GetFormat();
     auto bytes_per_frame = format->bytes_per_frame();
@@ -441,7 +435,13 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
     fifo_depth_duration_ =
         zx::nsec(TimelineRate(ZX_SEC(1), frames_per_second).Scale(fifo_depth_frames_));
 
-    FX_LOGS(DEBUG) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
+    FX_LOGS(DEBUG) << "Received external_delay " << std::setw(5) << external_delay_.to_usecs()
+                   << " usec (" << (owner_->is_input() ? " Input" : "Output") << ")";
+    FX_LOGS(DEBUG) << "Received turn_on_delay  " << std::setw(5) << turn_on_delay_.to_usecs()
+                   << " usec (" << (owner_->is_input() ? " Input" : "Output") << ")";
+    FX_LOGS(DEBUG) << "Received fifo_depth_dur " << std::setw(5) << fifo_depth_duration_.to_usecs()
+                   << " usec (" << (owner_->is_input() ? " Input" : "Output") << ") or "
+                   << fifo_depth_frames_ << " frames (" << fifo_depth_bytes << " bytes)";
 
     // Figure out how many frames we need in our ring buffer.
     TimelineRate bytes_per_nanosecond(bytes_per_frame * frames_per_second, ZX_SEC(1));
@@ -464,11 +464,6 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
       FX_LOGS(ERROR) << "fifo depth      : " << fifo_depth_bytes;
       return;
     }
-
-    FX_LOGS(DEBUG) << "for audio " << (owner_->is_input() ? "input" : "output")
-                   << " -- fifo_depth_bytes:" << fifo_depth_bytes
-                   << ", fifo_depth_frames:" << fifo_depth_frames_
-                   << ", bytes_per_frame:" << bytes_per_frame;
 
     state_ = State::Configuring_GettingRingBuffer;
 
