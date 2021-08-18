@@ -1148,8 +1148,6 @@ decode_failure("OptionalXUnionInStructPresentZeroNumBytes") {
 }
 
 decode_failure("OptionalXUnionInStructPresentInvalidNumBytes") {
-    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer doesn't check input envelope num bytes.
-    bindings_denylist = [llcpp, hlcpp],
     type = TestOptionalXUnionInStruct,
     bytes = {
         v1 = [
@@ -1510,8 +1508,6 @@ decode_failure("XUnionInTableXUnionPresentZeroNumBytes") {
 }
 
 decode_failure("XUnionInTableXUnionPresentInvalidNumBytes") {
-    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer doesn't check input envelope num bytes.
-    bindings_denylist = [llcpp, hlcpp],
     type = TestXUnionInTable,
     bytes = {
         v1 = [

@@ -295,10 +295,17 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
                              const fidl_type_t* message_type,
                              std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
   if (wire_format_version == internal::WireFormatVersion::kV2) {
+    zx_status_t status = internal__fidl_validate__v2__may_break(
+        message_type, bytes(), byte_actual(), handle_actual(), error_address());
+    if (status != ZX_OK) {
+      SetResult(fidl::Result::DecodeError(status, *error_address()));
+      return;
+    }
+
     *out_transformed_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
 
     uint32_t actual_num_bytes = 0;
-    zx_status_t status = internal__fidl_transform__may_break(
+    status = internal__fidl_transform__may_break(
         FIDL_TRANSFORMATION_V2_TO_V1, message_type, bytes(), byte_actual(),
         out_transformed_buffer->get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_num_bytes,
         error_address());
