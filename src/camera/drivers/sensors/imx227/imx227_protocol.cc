@@ -71,7 +71,7 @@ zx_status_t Imx227Device::CameraSensor2SetMode(uint32_t mode) {
 
   HwInit();
 
-  if (mode > num_modes_) {
+  if (mode >= available_modes.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (!ValidateSensorID()) {
