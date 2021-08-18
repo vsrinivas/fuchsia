@@ -87,7 +87,7 @@ template("verify_bootfs_filelist") {
   assert(defined(invoker.goldens),
          "verify_kernel_cmdline() must specify goldens")
 
-  action("${target_name}") {
+  compiled_action("${target_name}") {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -97,41 +97,28 @@ template("verify_bootfs_filelist") {
                              "visibility",
                            ])
 
-    script = "//build/security/verify_build/verify_build.py"
+    tool = "//src/security/scrutiny/bin/verify_bootfs:bin"
+    tool_output_name = "scrutiny_verify_bootfs"
     stamp_file = "$target_gen_dir/$target_name.verified"
-    scrutiny_target =
-        "//src/security/scrutiny/bin/standalone:bin($host_toolchain)"
-    scrutiny_tool =
-        get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
 
-    inputs = [
-      scrutiny_tool,
-      invoker.zbi,
-    ]
+    inputs = [ invoker.zbi ]
     inputs += invoker.goldens
 
     outputs = [ stamp_file ]
 
     args = [
-             "--type",
-             "bootfs_filelist",
-             "--zbi-file",
+             "--zbi",
              rebase_path(invoker.zbi, root_build_dir),
-             "--scrutiny",
-             rebase_path(scrutiny_tool, root_build_dir),
              "--stamp",
              rebase_path(stamp_file, root_build_dir),
-             "--golden-files",
+             "--goldens",
            ] + rebase_path(invoker.goldens, root_build_dir)
 
     if (!defined(invoker.deps)) {
       deps = []
     }
 
-    deps += [
-      invoker.zbi_target,
-      scrutiny_target,
-    ]
+    deps += [ invoker.zbi_target ]
   }
 }
 
