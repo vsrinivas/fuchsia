@@ -4,6 +4,9 @@
 
 # Individual dependencies that are approved for use in CTS.
 ALLOWED_CTS_DEPS = [
+  # TODO(81399): Include this in the SDK.
+  "//sdk/fidl/fuchsia.sys2:fuchsia.sys2",
+
   "//sdk/cts/tests/pkg/fidl/cpp:conformance_test_sources",
   "//sdk/cts/tests/tools/package_manager:pm_test_package_gather_deps",
   "//src/sys/pkg/bin/pm:host",

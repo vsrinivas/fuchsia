@@ -10,10 +10,8 @@ cts_executable("diagnostics-test-bin") {
   testonly = true
 
   sources = [ "accessor_test.cc" ]
-
   deps = [
     "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -22,16 +20,23 @@ cts_executable("diagnostics-test-bin") {
   ]
 
   non_cts_deps = [
+    "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
+
+    # TODO(81398): Include this in the SDK.
+    "//sdk/lib/sys/cpp/testing:realm_builder",
     "//third_party/rapidjson",
   ]
 }
 
 cts_fuchsia_component("diagnostics-test") {
-  manifest = "meta/diagnostics-test.cmx"
+  manifest = "meta/diagnostics-test.cml"
   testonly = true
 
-  deps = [ ":diagnostics-test-bin" ]
+  deps = [
+    ":diagnostics-test-bin",
+    "//sdk/fidl/fuchsia.component",
+  ]
 }
 
 cts_executable("inspect-publisher-bin") {
@@ -49,7 +54,7 @@ cts_executable("inspect-publisher-bin") {
 }
 
 cts_fuchsia_component("inspect-publisher") {
-  manifest = "meta/inspect-publisher.cmx"
+  manifest = "meta/inspect-publisher.cml"
   testonly = true
   deps = [ ":inspect-publisher-bin" ]
 }
@@ -77,10 +82,7 @@ cts_copy_to_sdk("build") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fuchsia-diagnostics-tests",
-    "//src/diagnostics/archivist:archivist-for-embedding-v1",
-  ]
+  deps = [ ":fuchsia-diagnostics-tests" ]
 }
 
 sdk_molecule("test_sdks") {
