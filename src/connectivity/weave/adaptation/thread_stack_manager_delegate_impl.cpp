@@ -46,6 +46,7 @@ using fuchsia::lowpan::device::LookupSyncPtr;
 using fuchsia::lowpan::device::MacCounters;
 using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ProvisionError;
+using fuchsia::lowpan::device::ProvisioningMonitor_WatchProgress_Result;
 using fuchsia::lowpan::thread::LegacyJoiningSyncPtr;
 using fuchsia::net::IpAddress;
 using fuchsia::net::Ipv4Address;
@@ -853,6 +854,14 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::StartThreadJoiningIteration() {
     return status;
   }
 
+  provisioning_monitor_.set_error_handler([this](zx_status_t status) {
+    if (status != ZX_OK) {
+      // If the channel closed unexpectedly, continue as if WatchProgress had completed with a
+      // failure condition.
+      HandleProvisioningProgress(
+          ProvisioningMonitor_WatchProgress_Result::WithErr(ProvisionError::NETWORK_NOT_FOUND));
+    }
+  });
   provisioning_monitor_->WatchProgress(
       fit::bind_member(this, &ThreadStackManagerDelegateImpl::HandleProvisioningProgress));
 
@@ -910,7 +919,8 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetJoinParams(JoinParams& join_param
     return err;
   }
   if (config_length_out > MAX_VENDOR_NAME_LEN) {
-    FX_LOGS(WARNING) << "Vendor name was too long, truncating to " << MAX_VENDOR_NAME_LEN << " bytes.";
+    FX_LOGS(WARNING) << "Vendor name was too long, truncating to " << MAX_VENDOR_NAME_LEN
+                     << " bytes.";
     config_length_out = MAX_VENDOR_NAME_LEN;
   }
   commissioning_params.set_vendor_name(std::string(config_buffer, config_length_out));
@@ -923,7 +933,8 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetJoinParams(JoinParams& join_param
     return err;
   }
   if (config_length_out > MAX_VENDOR_MODEL_LEN) {
-    FX_LOGS(WARNING) << "Vendor model was too long, truncating to " << MAX_VENDOR_MODEL_LEN << " bytes.";
+    FX_LOGS(WARNING) << "Vendor model was too long, truncating to " << MAX_VENDOR_MODEL_LEN
+                     << " bytes.";
     config_length_out = MAX_VENDOR_MODEL_LEN;
   }
   commissioning_params.set_vendor_model(std::string(config_buffer, config_length_out));
@@ -936,7 +947,8 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetJoinParams(JoinParams& join_param
     return err;
   }
   if (config_length_out > MAX_VENDOR_SW_VER_LEN) {
-    FX_LOGS(WARNING) << "Vendor SW version was too long, truncating to " << MAX_VENDOR_SW_VER_LEN << " bytes.";
+    FX_LOGS(WARNING) << "Vendor SW version was too long, truncating to " << MAX_VENDOR_SW_VER_LEN
+                     << " bytes.";
     config_length_out = MAX_VENDOR_SW_VER_LEN;
   }
   commissioning_params.set_vendor_sw_version(std::string(config_buffer, config_length_out));
@@ -965,7 +977,7 @@ void ThreadStackManagerDelegateImpl::HandleJoiningRetryDelay() {
 }
 
 void ThreadStackManagerDelegateImpl::HandleProvisioningProgress(
-    fuchsia::lowpan::device::ProvisioningMonitor_WatchProgress_Result result) {
+    ProvisioningMonitor_WatchProgress_Result result) {
   if (result.is_err() && result.err() != ProvisionError::CANCELED) {
     joining_in_progress_ = false;
     provisioning_monitor_.Unbind();
