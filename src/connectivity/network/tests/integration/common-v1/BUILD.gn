@@ -60,8 +60,5 @@ rustc_library("netstack_testing_common") {
   #
   # TODO(https://fxbug.dev/70187): once all integration tests are migrated to
   # CFv2, remove this allowlist.
-  visibility = [
-    "//src/connectivity/network/tests/integration:compile",
-    "//src/connectivity/network/tests/integration/dns",
-  ]
+  visibility = [ "//src/connectivity/network/tests/integration:compile" ]
 }

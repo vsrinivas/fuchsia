@@ -55,6 +55,5 @@ rustc_library("lib") {
   visibility = [
     "//src/connectivity/network/ping3:*",
     "//src/connectivity/network/tests/integration/common-v1:netstack_testing_common",
-    "//src/connectivity/network/tests/integration/dns",
   ]
 }

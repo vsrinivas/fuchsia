@@ -22,12 +22,14 @@ use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6, std_s
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
 use net_types::Witness;
-use netemul::EnvironmentUdpSocket as _;
+use netemul::RealmUdpSocket as _;
 use netstack_testing_common::constants::{eth as eth_consts, ipv6 as ipv6_consts};
-use netstack_testing_common::environments::{
-    KnownServices, Manager, NetCfg, Netstack2, TestSandboxExt as _,
+use netstack_testing_common::realms::{
+    constants, KnownServiceProvider, Manager, NetCfg, Netstack2, TestSandboxExt as _,
 };
-use netstack_testing_common::{write_ndp_message, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT};
+use netstack_testing_common::{
+    wait_for_component_stopped, write_ndp_message, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+};
 use netstack_testing_macros::variants_test;
 use packet::serialize::{InnerPacketBuilder as _, Serializer as _};
 use packet::ParsablePacket as _;
@@ -45,7 +47,7 @@ use test_case::test_case;
 
 /// Keep polling the lookup admin's DNS servers until it returns `expect`.
 async fn poll_lookup_admin<
-    F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
+    F: Unpin + FusedFuture + Future<Output = Result<component_events::events::Stopped>>,
 >(
     lookup_admin: &net_name::LookupAdminProxy,
     expect: &[fnet::SocketAddress],
@@ -55,11 +57,12 @@ async fn poll_lookup_admin<
 ) -> Result {
     for i in 0..retry_count {
         let () = futures::select! {
-            () = fuchsia_async::Timer::new(poll_wait.after_now()).fuse() => {
-                Ok(())
-            }
-            wait_for_netmgr_res = wait_for_netmgr_fut => {
-                Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
+            () = fuchsia_async::Timer::new(poll_wait.after_now()).fuse() => Ok(()),
+            stopped_event = wait_for_netmgr_fut => {
+                Err(anyhow::anyhow!(
+                    "the network manager unexpectedly exited with event: {:?}",
+                    stopped_event,
+                ))
             }
         }?;
 
@@ -100,24 +103,35 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
     let network = sandbox.create_network("net").await.context("failed to create network")?;
-    let server_environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(
+    let server_realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
             format!("{}_server", name),
-            [
-                KnownServices::DhcpServer.into_launch_service(),
-                KnownServices::SecureStash.into_launch_service(),
+            &[
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::SecureStash,
             ],
         )
-        .context("failed to create server environment")?;
+        .context("failed to create server realm")?;
 
-    let client_environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(
+    let client_realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
             format!("{}_client", name),
-            &[KnownServices::LookupAdmin],
+            &[
+                // Start the network manager on the client.
+                //
+                // The network manager should listen for DNS server events from the netstack and
+                // configure the DNS resolver accordingly.
+                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::Dhcpv6Client,
+                KnownServiceProvider::SecureStash,
+            ],
         )
-        .context("failed to create client environment")?;
+        .context("failed to create client realm")?;
 
-    let _server_iface = server_environment
+    let _server_iface = server_realm
         .join_network::<E, _>(
             &network,
             "server-ep",
@@ -126,8 +140,8 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         .await
         .context("failed to configure server networking")?;
 
-    let dhcp_server = server_environment
-        .connect_to_service::<net_dhcp::Server_Marker>()
+    let dhcp_server = server_realm
+        .connect_to_protocol::<net_dhcp::Server_Marker>()
         .context("failed to connect to DHCP server")?;
 
     let dhcp_server_ref = &dhcp_server;
@@ -170,8 +184,8 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("dhcp/Server.StartServing returned error")?;
 
-    // Start networking on client environment.
-    let _client_iface = client_environment
+    // Start networking on client realm.
+    let _client_iface = client_realm
         .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::Dhcp)
         .await
         .context("failed to configure client networking")?;
@@ -201,16 +215,6 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
     .await
     .context("failed to write NDP message")?;
 
-    // Start the network manager on the client.
-    //
-    // The network manager should listen for DNS server events from the netstack and
-    // configure the DNS resolver accordingly.
-    let launcher =
-        client_environment.get_launcher().context("failed to create launcher for client env")?;
-    let mut netmgr =
-        fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), M::testing_args())
-            .context("launch the network manager")?;
-
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = [
         fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
@@ -225,11 +229,13 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
     ];
 
     // Poll LookupAdmin until we get the servers we want or after too many tries.
-    let lookup_admin = client_environment
-        .connect_to_service::<net_name::LookupAdminMarker>()
+    let lookup_admin = client_realm
+        .connect_to_protocol::<net_name::LookupAdminMarker>()
         .context("failed to connect to LookupAdmin")?;
-    let mut wait_for_netmgr_fut = netmgr.wait().fuse();
-    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr_fut, POLL_WAIT, RETRY_COUNT)
+    let wait_for_netmgr =
+        wait_for_component_stopped(&client_realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+    futures::pin_mut!(wait_for_netmgr);
+    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr, POLL_WAIT, RETRY_COUNT)
         .await
         .context("poll lookup admin")
 }
@@ -255,42 +261,43 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
-    let environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
             format!("{}_client", name),
-            &[KnownServices::Dhcpv6Client, KnownServices::LookupAdmin],
+            &[
+                // Start the network manager on the client.
+                //
+                // The network manager should listen for DNS server events from the DHCPv6 client
+                // and configure the DNS resolver accordingly.
+                KnownServiceProvider::Manager(NetCfg::MANAGEMENT_AGENT),
+                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::Dhcpv6Client,
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::SecureStash,
+            ],
         )
-        .context("failed to create environment")?;
+        .context("failed to create realm")?;
 
-    // Start the network manager on the client.
-    //
-    // The network manager should listen for DNS server events from the DHCPv6 client and
-    // configure the DNS resolver accordingly.
-    let launcher = environment.get_launcher().context("failed to create launcher for env")?;
-    let mut netmgr = fuchsia_component::client::launch(
-        &launcher,
-        NetCfg::PKG_URL.to_string(),
-        NetCfg::testing_args(),
-    )
-    .context("launch the network manager")?;
-
-    // Start networking on client environment.
+    // Start networking on client realm.
     let endpoint = network.create_endpoint::<E, _>(name).await.context("create endpoint")?;
     let () = endpoint.set_link_up(true).await.context("set link up")?;
     let endpoint_mount_path = E::dev_path("ep");
     let endpoint_mount_path = endpoint_mount_path.as_path();
-    let () = environment
+    let () = realm
         .add_virtual_device(&endpoint, endpoint_mount_path)
+        .await
         .with_context(|| format!("add virtual device {}", endpoint_mount_path.display()))?;
 
     // Make sure the Netstack got the new device added.
-    let interface_state = environment
-        .connect_to_service::<net_interfaces::StateMarker>()
+    let interface_state = realm
+        .connect_to_protocol::<net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
-    let mut wait_for_netmgr_fut = netmgr.wait().fuse();
+    let wait_for_netmgr =
+        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+    futures::pin_mut!(wait_for_netmgr);
     let _: (u64, String) = netstack_testing_common::wait_for_non_loopback_interface_up(
         &interface_state,
-        &mut wait_for_netmgr_fut,
+        &mut wait_for_netmgr,
         None,
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
@@ -404,10 +411,10 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     })];
 
     // Poll LookupAdmin until we get the servers we want or after too many tries.
-    let lookup_admin = environment
-        .connect_to_service::<net_name::LookupAdminMarker>()
+    let lookup_admin = realm
+        .connect_to_protocol::<net_name::LookupAdminMarker>()
         .context("failed to connect to LookupAdmin")?;
-    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr_fut, POLL_WAIT, RETRY_COUNT)
+    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr, POLL_WAIT, RETRY_COUNT)
         .await
         .context("poll lookup admin")
 }
@@ -436,20 +443,20 @@ async fn test_fallback_on_query_refused(
     let fallback_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.1:5678");
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let env = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(
-            "env",
-            &[KnownServices::LookupAdmin, KnownServices::Lookup],
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            "realm",
+            &[KnownServiceProvider::DnsResolver],
         )
-        .expect("failed to create environment");
+        .expect("failed to create realm");
 
     // Mock name servers in priority order.
     let mut expect = [
         fidl_fuchsia_net_ext::SocketAddress(refusing_dns_server).into(),
         fidl_fuchsia_net_ext::SocketAddress(fallback_dns_server).into(),
     ];
-    let lookup_admin = env
-        .connect_to_service::<net_name::LookupAdminMarker>()
+    let lookup_admin = realm
+        .connect_to_protocol::<net_name::LookupAdminMarker>()
         .expect("failed to connect to LookupAdmin");
     let () = lookup_admin
         .set_dns_servers(&mut expect.iter_mut())
@@ -459,15 +466,15 @@ async fn test_fallback_on_query_refused(
     let servers = lookup_admin.get_dns_servers().await.expect("failed to get DNS servers");
     assert_eq!(servers, expect);
 
-    let refusing_sock = fuchsia_async::net::UdpSocket::bind_in_env(&env, refusing_dns_server)
+    let refusing_sock = fuchsia_async::net::UdpSocket::bind_in_realm(&realm, refusing_dns_server)
         .await
         .expect("failed to create socket");
-    let fallback_sock = fuchsia_async::net::UdpSocket::bind_in_env(&env, fallback_dns_server)
+    let fallback_sock = fuchsia_async::net::UdpSocket::bind_in_realm(&realm, fallback_dns_server)
         .await
         .expect("failed to create socket");
 
     let name_lookup =
-        env.connect_to_service::<net_name::LookupMarker>().expect("failed to connect to Lookup");
+        realm.connect_to_protocol::<net_name::LookupMarker>().expect("failed to connect to Lookup");
     let lookup_fut = async {
         let ips = name_lookup
             .lookup_ip(

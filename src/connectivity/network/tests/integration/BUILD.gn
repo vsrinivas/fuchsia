@@ -10,7 +10,6 @@ group("tests") {
   deps = [
     ":compile",
     ":netstack-integration-tests",
-    ":netstack-integration-tests-v2",
     "ip_forward:netemul-ip-forward-tests",
   ]
 }
@@ -23,56 +22,9 @@ group("compile") {
   ]
 }
 
-tests = [ "dns" ]
-
-foreach(test, tests) {
-  name = "netstack_${test}_integration_test"
-  fuchsia_test_component(name) {
-    manifest = "meta/${name}.cmx"
-    deps = [ test ]
-  }
-}
-
-fuchsia_test_package("netstack-integration-tests") {
-  package_name = "netstack-integration-tests"
-
-  test_components = []
-  foreach(test, tests) {
-    test_components += [ ":netstack_${test}_integration_test" ]
-  }
-  deps = [
-    # device_name_provider provides fuchsia.device.NameProvider.
-    "..:device_name_provider",
-
-    # stash_secure is used by dhcpd and netstack.
-    "//src/sys/stash:stash_secure",
-
-    # dhcpd is used to test DHCP address acquisition.
-    "//src/connectivity/network/dhcp:component-v1",
-
-    # DHCPv6 client is under test.
-    "//src/connectivity/network/dhcpv6/client:component",
-
-    # dns_resolver integration with netstack is tested.
-    "//src/connectivity/network/dns:component",
-
-    # netcfg integration with netstack is tested.
-    ":netcfg-netemul-config",
-    "//src/connectivity/network/netcfg:component-netemul",
-
-    # netstack3 is under test.
-    "//src/connectivity/network/netstack3:component",
-
-    # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-tests_v2 = [
+tests = [
   "dhcp",
+  "dns",
   "fidl",
   "filter",
   "inspect",
@@ -86,7 +38,7 @@ tests_v2 = [
   "sys",
 ]
 
-foreach(test, tests_v2) {
+foreach(test, tests) {
   name = "netstack-${test}-integration-test"
   fuchsia_test_component(name) {
     manifest = "meta/${name}.cml"
@@ -94,9 +46,9 @@ foreach(test, tests_v2) {
   }
 }
 
-fuchsia_test_package("netstack-integration-tests-v2") {
+fuchsia_test_package("netstack-integration-tests") {
   test_components = []
-  foreach(test, tests_v2) {
+  foreach(test, tests) {
     test_components += [ ":netstack-${test}-integration-test" ]
   }
 
@@ -129,19 +81,12 @@ fuchsia_test_package("netstack-integration-tests-v2") {
     "//src/connectivity/network/dns:component-v2",
 
     # netcfg integration with netstack is tested.
-    ":netcfg-netemul-config-v2",
+    ":netcfg-netemul-config",
     "//src/connectivity/network/netcfg:component-v2",
   ]
 }
 
-config_data("netcfg-netemul-config") {
-  testonly = true
-  for_pkg = "netstack-integration-tests"
-  sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
-  outputs = [ "netcfg/empty.json" ]
-}
-
-resource("netcfg-netemul-config-v2") {
+resource("netcfg-netemul-config") {
   testonly = true
   sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
   outputs = [ "netcfg/empty.json" ]
