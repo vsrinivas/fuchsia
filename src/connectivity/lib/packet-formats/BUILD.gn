@@ -21,7 +21,6 @@ rustc_library("packet-formats") {
     "//src/connectivity/network/netstack3/core/fakestd",
     "//src/lib/network/packet",
     "//src/lib/zerocopy",
-    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]

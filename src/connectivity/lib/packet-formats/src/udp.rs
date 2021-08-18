@@ -405,10 +405,10 @@ impl<B> Debug for UdpPacket<B> {
 
 #[cfg(test)]
 mod tests {
-    use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, FragmentedBytesMut, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
+    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 
     use super::*;
     use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};

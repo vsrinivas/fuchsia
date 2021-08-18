@@ -733,9 +733,11 @@ pub(crate) fn reassemble_fragmented_packet<
 
 /// Parsing and serialization of IPv4 options.
 pub mod options {
-    use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
-
     use packet::records::options::{self, OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
+    use packet::BufferViewMut;
+    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
+
+    use crate::U16;
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -862,7 +864,7 @@ pub mod options {
             match option.data {
                 Ipv4OptionData::Unrecognized { data, .. } => buffer.copy_from_slice(data),
                 Ipv4OptionData::RouterAlert { data } => {
-                    buffer.write_u16::<NetworkEndian>(data).unwrap()
+                    (&mut buffer).write_obj_front(&U16::new(data)).unwrap()
                 }
             };
         }

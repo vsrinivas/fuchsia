@@ -78,10 +78,10 @@ pub mod utils;
 
 use core::convert::TryInto;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{IpAddress, Ipv4Addr, Ipv6Addr};
 use packet::SerializeBuffer;
+use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 
 use crate::ip::{IpExt, Ipv4Proto, Ipv6Proto};
 

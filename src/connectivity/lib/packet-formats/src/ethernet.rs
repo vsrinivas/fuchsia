@@ -306,10 +306,10 @@ pub mod testutil {
 
 #[cfg(test)]
 mod tests {
-    use byteorder::{ByteOrder, NetworkEndian};
     use packet::{
         AsFragmentedByteSlice, Buf, InnerPacketBuilder, ParseBuffer, SerializeBuffer, Serializer,
     };
+    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 
     use super::*;
 

@@ -1411,8 +1411,7 @@ pub mod options {
     use core::mem;
     use core::num::{NonZeroUsize, TryFromIntError};
 
-    use byteorder::ByteOrder;
-    use zerocopy::{AsBytes, FromBytes, Unaligned};
+    use zerocopy::{byteorder::ByteOrder, AsBytes, FromBytes, Unaligned};
 
     use super::*;
 
@@ -1878,7 +1877,7 @@ pub mod options {
         use super::*;
         use crate::Serializer;
 
-        type U16 = zerocopy::U16<byteorder::NetworkEndian>;
+        type U16 = zerocopy::U16<zerocopy::byteorder::NetworkEndian>;
 
         #[derive(Debug)]
         struct DummyOptionsImpl;

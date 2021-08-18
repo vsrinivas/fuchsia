@@ -482,8 +482,8 @@ const FIN_MASK: u16 = 0b00001;
 
 /// Parsing and serialization of TCP options.
 pub mod options {
-    use byteorder::{ByteOrder, NetworkEndian};
     use packet::records::options::{self, OptionsImpl, OptionsImplLayout};
+    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::U32;
@@ -636,10 +636,10 @@ impl<B> Debug for TcpSegment<B> {
 
 #[cfg(test)]
 mod tests {
-    use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
+    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 
     use super::*;
     use crate::compute_transport_checksum;

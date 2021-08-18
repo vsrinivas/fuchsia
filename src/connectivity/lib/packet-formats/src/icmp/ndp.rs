@@ -372,12 +372,12 @@ pub mod options {
     use core::num::NonZeroUsize;
     use core::time::Duration;
 
-    use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{AddrSubnet, AddrSubnetError, IpAddress as _, Ipv6Addr, Subnet};
     use net_types::{UnicastAddr, UnicastAddress};
     use packet::records::options::{
         LengthEncoding, OptionsImpl, OptionsImplLayout, OptionsSerializerImpl,
     };
+    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::utils::NonZeroDuration;
@@ -937,11 +937,11 @@ pub mod options {
 mod tests {
     use core::convert::TryFrom;
 
-    use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ip, IpAddress, Subnet};
     use packet::serialize::Serializer;
     use packet::{InnerPacketBuilder, ParseBuffer};
     use test_case::test_case;
+    use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::LayoutVerified;
 
     use super::*;

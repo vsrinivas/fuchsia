@@ -11,10 +11,7 @@ rustc_library("packet") {
   edition = "2018"
   with_unit_tests = true
 
-  deps = [
-    "//src/lib/zerocopy",
-    "//third_party/rust_crates:byteorder",
-  ]
+  deps = [ "//src/lib/zerocopy" ]
 
   test_deps = [
     "//third_party/rust_crates:matches",

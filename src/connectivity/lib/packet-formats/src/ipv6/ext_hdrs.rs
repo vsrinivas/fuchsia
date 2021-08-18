@@ -7,7 +7,6 @@
 use core::convert::TryFrom;
 use core::marker::PhantomData;
 
-use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
 use packet::records::options::{
     self, AlignedOptionsSerializerImpl, LengthEncoding, OptionsImplLayout, OptionsSerializerImpl,
 };
@@ -15,9 +14,11 @@ use packet::records::{
     ParsedRecord, RecordParseResult, Records, RecordsContext, RecordsImpl, RecordsImplLayout,
     RecordsRawImpl,
 };
-use packet::BufferView;
+use packet::{BufferView, BufferViewMut};
+use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 
 use crate::ip::{IpProto, Ipv6ExtHdrType, Ipv6Proto};
+use crate::U16;
 
 /// The length of an IPv6 Fragment Extension Header.
 pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;
@@ -568,7 +569,7 @@ impl<'a> OptionsSerializerImpl<'a> for HopByHopOptionsImpl {
             HopByHopOptionData::RouterAlert { data } => {
                 // If the buffer doesn't contain enough space, it is a
                 // contract violation, panic here.
-                buffer.write_u16::<NetworkEndian>(data).unwrap()
+                (&mut buffer).write_obj_front(&U16::new(data)).unwrap()
             }
         }
     }
