@@ -29,7 +29,7 @@ rustc_test("integration_test_bin") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//src/diagnostics/lib/selectors",
-    "//src/diagnostics/lib/testing/fake-archive-accessor",
+    "//src/lib/diagnostics/testing/fake-archive-accessor",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

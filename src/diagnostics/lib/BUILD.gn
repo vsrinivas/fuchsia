@@ -10,7 +10,6 @@ group("tests") {
     "sampler-config:tests",
     "selectors:tests",
     "streams/dart:tests",
-    "testing:tests",
     "triage:tests",
     "util:tests",
     "validating-log-listener:tests",
