@@ -7,8 +7,8 @@ use crate::{
     color::Color,
     drawing::{linebreak_text, measure_text_width, path_for_rectangle, FontFace, GlyphMap, Text},
     render::{
-        rive::RenderCache as RiveRenderCache, BlendMode, Context as RenderContext, Fill, FillRule,
-        Layer, Raster, Shed, Style,
+        rive::{load_rive, RenderCache as RiveRenderCache},
+        BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Shed, Style,
     },
     Coord, Point, Rect, Size, ViewAssistantContext,
 };
@@ -461,6 +461,37 @@ impl RiveFacet {
     /// Create a Rive facet with the contents of a Rive file.
     pub fn new(size: Size, artboard: rive::Object<rive::Artboard>) -> Self {
         Self { size, artboard, render_cache: RiveRenderCache::new() }
+    }
+
+    /// Given an already loaded Rive file, create a new Rive facet with the given named
+    /// artboard, or the first if artboard_name is None.
+    pub fn new_from_file(
+        size: Size,
+        file: &rive::File,
+        artboard_name: Option<&str>,
+    ) -> Result<Self, Error> {
+        let artboard = if let Some(artboard_name) = artboard_name {
+            file.get_artboard(artboard_name).ok_or_else(|| {
+                anyhow::anyhow!("artboard {} not found in rive file {:?}", artboard_name, file)
+            })?
+        } else {
+            file.artboard().ok_or_else(|| anyhow::anyhow!("no artboard in rive file {:?}", file))?
+        };
+        let facet = RiveFacet::new(size, artboard.clone());
+        let artboard_ref = artboard.as_ref();
+        artboard_ref.advance(0.0);
+        Ok(facet)
+    }
+
+    /// Given a path to a file, load the file and create a new Rive facet with the given named
+    /// artboard, or the first if artboard_name is None.
+    pub fn new_from_path<P: AsRef<std::path::Path> + std::fmt::Debug>(
+        size: Size,
+        path: P,
+        artboard_name: Option<&str>,
+    ) -> Result<Self, Error> {
+        let file = load_rive(&path)?;
+        Self::new_from_file(size, &file, artboard_name)
     }
 }
 

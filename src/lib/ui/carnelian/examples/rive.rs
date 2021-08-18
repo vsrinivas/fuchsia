@@ -89,7 +89,7 @@ impl AppAssistant for RiveAppAssistant {
     }
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        let file = load_rive(Path::new("/pkg/data/static").join(self.filename.clone()))?;
+        let file = load_rive(&Path::new("/pkg/data/static").join(self.filename.clone()))?;
         let playback_speed = self.playback_speed;
         let background = self.background;
         let artboard = self.artboard.clone();

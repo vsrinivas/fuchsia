@@ -41,6 +41,6 @@ additional_static_libraries = [
 ]
 
 data_files = [
-    { src = "res/fuchsia-logo.shed", dst = "data/logo.shed"},
+    { src = "res/fuchsia-logo.riv", dst = "data/logo.riv"},
     { src = "../../../prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf", dst = "data/fonts/Roboto-Regular.ttf"},
 ]

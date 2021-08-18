@@ -38,7 +38,7 @@ group("tests") {
 
 resource("recovery_logo") {
   sources = [ recovery_logo_path ]
-  outputs = [ "data/logo.shed" ]
+  outputs = [ "data/logo.riv" ]
 }
 
 resource("roboto_regular") {
@@ -57,6 +57,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
+    "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -126,6 +127,7 @@ rustc_binary("bin_fdr") {
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
+    "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

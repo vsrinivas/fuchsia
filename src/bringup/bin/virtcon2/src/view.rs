@@ -181,7 +181,7 @@ impl VirtualConsoleViewAssistant {
         let font = load_font(PathBuf::from(FONT))?;
         let virtcon_mode = VirtconMode::Forced; // We always start out in forced mode.
         let (animation, desired_virtcon_mode) = if boot_animation {
-            let file = load_rive(PathBuf::from(BOOT_ANIMATION))?;
+            let file = load_rive(BOOT_ANIMATION)?;
             let artboard = file.artboard().ok_or_else(|| anyhow!("missing artboard"))?;
             let artboard_ref = artboard.as_ref();
             let color_scheme_name = match color_scheme {

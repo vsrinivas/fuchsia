@@ -9,18 +9,15 @@ use carnelian::{
     color::Color,
     drawing::{load_font, path_for_circle, DisplayRotation, FontFace},
     input, make_message,
-    render::{BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style},
+    render::{rive::load_rive, BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style},
     scene::{
-        facets::{
-            RasterFacet, ShedFacet, TextFacetOptions, TextHorizontalAlignment,
-            TextVerticalAlignment,
-        },
+        facets::{RasterFacet, RiveFacet, TextFacetOptions, TextHorizontalAlignment},
         scene::{Scene, SceneBuilder},
     },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
     Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use euclid::{point2, size2};
+use euclid::{point2, size2, vec2};
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
 use fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker;
@@ -28,11 +25,12 @@ use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
+use rive_rs::{self as rive};
 use std::borrow::{Borrow, Cow};
 use std::path::{Path, PathBuf};
 
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
-const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.shed";
+const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.riv";
 const BG_COLOR: Color = Color::white();
 const HEADING_COLOR: Color = Color::new();
 const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
@@ -137,9 +135,11 @@ impl AppAssistant for RecoveryAppAssistant {
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let body = get_recovery_body(self.fdr_restriction.is_initially_enabled());
+        let file = load_rive(LOGO_IMAGE_PATH).ok();
         Ok(Box::new(RecoveryViewAssistant::new(
             &self.app_context,
             view_key,
+            file,
             RECOVERY_MODE_HEADLINE,
             body.map(Into::into),
             self.fdr_restriction,
@@ -158,6 +158,7 @@ struct RenderResources {
 impl RenderResources {
     fn new(
         render_context: &mut RenderContext,
+        file: &Option<rive::File>,
         target_size: Size,
         heading: &str,
         body: Option<&str>,
@@ -178,13 +179,17 @@ impl RenderResources {
         let logo_size: Size = size2(logo_edge, logo_edge);
         // Calculate position for centering the logo image
         let logo_position = {
-            let x = target_size.width / 2.0;
-            let y = top_margin * target_size.height + logo_edge / 2.0;
+            let x = target_size.width / 2.0 - logo_edge / 2.0;
+            let y = top_margin * target_size.height - logo_edge / 2.0;
             point2(x, y)
         };
 
         if is_counting_down {
-            let circle = raster_for_circle(Point::zero(), logo_edge / 2.0, render_context);
+            let circle = raster_for_circle(
+                logo_position + vec2(logo_edge / 2.0, logo_edge / 2.0),
+                logo_edge / 2.0,
+                render_context,
+            );
             let circle_facet = RasterFacet::new(
                 circle,
                 Style {
@@ -195,26 +200,37 @@ impl RenderResources {
                 logo_size,
             );
 
+            const HORIZONTAL_VISUAL_CENTERING_FACTOR: f32 = 2.2;
+            const VERTICAL_VISUAL_CENTERING_FACTOR: f32 = 1.1;
             builder.text(
                 face.clone(),
                 &format!("{:02}", countdown_ticks),
                 countdown_text_size,
-                logo_position,
+                logo_position
+                    + vec2(
+                        logo_edge / HORIZONTAL_VISUAL_CENTERING_FACTOR,
+                        countdown_text_size * VERTICAL_VISUAL_CENTERING_FACTOR,
+                    ),
                 TextFacetOptions {
-                    horizontal_alignment: TextHorizontalAlignment::Center,
-                    vertical_alignment: TextVerticalAlignment::Center,
                     color: Color::white(),
+                    horizontal_alignment: TextHorizontalAlignment::Center,
                     ..TextFacetOptions::default()
                 },
             );
-            let _ = builder.facet_at_location(Box::new(circle_facet), logo_position);
+            let _ = builder.facet(Box::new(circle_facet));
         } else {
-            let shed_facet = ShedFacet::new(PathBuf::from(LOGO_IMAGE_PATH), logo_size);
-            builder.facet_at_location(Box::new(shed_facet), logo_position);
+            if let Some(file) = file {
+                builder.facet_at_location(
+                    Box::new(
+                        RiveFacet::new_from_file(logo_size, &file, None).expect("facet_from_file"),
+                    ),
+                    logo_position,
+                );
+            }
         }
 
         let heading_text_location =
-            point2(target_size.width / 2.0, logo_position.y + logo_size.height / 2.0 + text_size);
+            point2(target_size.width / 2.0, logo_position.y + logo_size.height + text_size);
         builder.text(
             face.clone(),
             &heading,
@@ -257,6 +273,7 @@ struct RecoveryViewAssistant {
     reset_state_machine: fdr::FactoryResetStateMachine,
     app_context: AppContext,
     view_key: ViewKey,
+    file: Option<rive::File>,
     countdown_task: Option<Task<()>>,
     countdown_ticks: u8,
     render_resources: Option<RenderResources>,
@@ -266,6 +283,7 @@ impl RecoveryViewAssistant {
     fn new(
         app_context: &AppContext,
         view_key: ViewKey,
+        file: Option<rive::File>,
         heading: &'static str,
         body: Option<Cow<'static, str>>,
         fdr_restriction: FdrRestriction,
@@ -282,6 +300,7 @@ impl RecoveryViewAssistant {
             reset_state_machine: fdr::FactoryResetStateMachine::new(),
             app_context: app_context.clone(),
             view_key: 0,
+            file,
             countdown_task: None,
             countdown_ticks: FACTORY_RESET_TIMER_IN_SECONDS,
             render_resources: None,
@@ -379,6 +398,7 @@ impl ViewAssistant for RecoveryViewAssistant {
         if self.render_resources.is_none() {
             self.render_resources = Some(RenderResources::new(
                 render_context,
+                &self.file,
                 target_size,
                 self.heading,
                 self.body.as_ref().map(Borrow::borrow),
@@ -568,26 +588,32 @@ impl ViewAssistant for RecoveryViewAssistant {
 
         fn keyboard_to_consumer_phase(
             phase: carnelian::input::keyboard::Phase,
-        ) -> carnelian::input::consumer_control::Phase {
+        ) -> Option<carnelian::input::consumer_control::Phase> {
             match phase {
                 carnelian::input::keyboard::Phase::Pressed => {
-                    carnelian::input::consumer_control::Phase::Down
+                    Some(carnelian::input::consumer_control::Phase::Down)
                 }
-                _ => carnelian::input::consumer_control::Phase::Up,
+                carnelian::input::keyboard::Phase::Released => {
+                    Some(carnelian::input::consumer_control::Phase::Up)
+                }
+                _ => None,
             }
         }
 
-        let synthetic_event = match keyboard_event.hid_usage {
-            HID_USAGE_KEY_F11 => Some(input::consumer_control::Event {
-                button: ConsumerControlButton::VolumeDown,
-                phase: keyboard_to_consumer_phase(keyboard_event.phase),
-            }),
-            HID_USAGE_KEY_F12 => Some(input::consumer_control::Event {
-                button: ConsumerControlButton::VolumeUp,
-                phase: keyboard_to_consumer_phase(keyboard_event.phase),
-            }),
-            _ => None,
-        };
+        let synthetic_phase = keyboard_to_consumer_phase(keyboard_event.phase);
+
+        let synthetic_event =
+            synthetic_phase.and_then(|synthetic_phase| match keyboard_event.hid_usage {
+                HID_USAGE_KEY_F11 => Some(input::consumer_control::Event {
+                    button: ConsumerControlButton::VolumeDown,
+                    phase: synthetic_phase,
+                }),
+                HID_USAGE_KEY_F12 => Some(input::consumer_control::Event {
+                    button: ConsumerControlButton::VolumeUp,
+                    phase: synthetic_phase,
+                }),
+                _ => None,
+            });
 
         if let Some(synthetic_event) = synthetic_event {
             self.handle_consumer_control_event(context, event, &synthetic_event)?;

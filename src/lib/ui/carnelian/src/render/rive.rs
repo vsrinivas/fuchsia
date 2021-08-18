@@ -20,17 +20,18 @@ use {
         shapes::{Command, CommandPath},
         ImportError, PaintColor, RenderPaint,
     },
-    std::{collections::HashMap, fs, num::NonZeroU64, path::PathBuf},
+    std::{collections::HashMap, fs, num::NonZeroU64},
 };
 
-pub fn load_rive(path: PathBuf) -> Result<rive::File, Error> {
-    let buffer = fs::read(path.clone())
-        .with_context(|| format!("Failed to read rive from {}", path.display()))?;
+pub fn load_rive<P: AsRef<std::path::Path> + std::fmt::Debug>(
+    path: P,
+) -> Result<rive::File, Error> {
+    let buffer = fs::read(&path).with_context(|| format!("Failed to read rive from {:?}", path))?;
     let mut reader = rive::BinaryReader::new(&buffer);
     let file = rive::File::import(&mut reader).map_err(|error| {
         let context = match error {
-            ImportError::UnsupportedVersion => format!("Unsupported version: {}", path.display()),
-            ImportError::Malformed => format!("Malformed: {}", path.display()),
+            ImportError::UnsupportedVersion => format!("Unsupported version: {:?}", path),
+            ImportError::Malformed => format!("Malformed: {:?}", path),
         };
         anyhow::anyhow!(context)
     })?;
