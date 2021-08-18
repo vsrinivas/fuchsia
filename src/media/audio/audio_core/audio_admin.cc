@@ -17,20 +17,9 @@
 namespace media::audio {
 
 AudioAdmin::AudioAdmin(StreamVolumeManager* stream_volume_manager,
-                       async_dispatcher_t* fidl_dispatcher,
                        PolicyActionReporter* policy_action_reporter,
-                       ActivityDispatcher* activity_dispatcher)
-    : AudioAdmin(
-          BehaviorGain{
-              .none_gain_db = 0.0f,
-              .duck_gain_db = -35.0f,
-              .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
-          },
-          stream_volume_manager, policy_action_reporter, activity_dispatcher, fidl_dispatcher) {}
-
-AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, StreamVolumeManager* stream_volume_manager,
-                       PolicyActionReporter* policy_action_reporter,
-                       ActivityDispatcher* activity_dispatcher, async_dispatcher_t* fidl_dispatcher)
+                       ActivityDispatcher* activity_dispatcher, async_dispatcher_t* fidl_dispatcher,
+                       BehaviorGain behavior_gain)
     : behavior_gain_(behavior_gain),
       stream_volume_manager_(*stream_volume_manager),
       policy_action_reporter_(*policy_action_reporter),

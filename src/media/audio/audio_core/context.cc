@@ -44,8 +44,8 @@ class ContextImpl : public Context {
                         process_config_, clock_factory_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
                                process_config_.default_render_usage_volumes()),
-        audio_admin_(&stream_volume_manager_, threading_model_->FidlDomain().dispatcher(),
-                     &usage_reporter_, &activity_dispatcher_),
+        audio_admin_(&stream_volume_manager_, &usage_reporter_, &activity_dispatcher_,
+                     threading_model_->FidlDomain().dispatcher()),
         vmar_manager_(
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
         usage_gain_reporter_(this),
