@@ -183,7 +183,6 @@ class Imx227Device : public DeviceType,
   fpromise::result<int32_t, zx_status_t> GetTemperature();
 
   bool is_streaming_;
-  uint32_t num_modes_;
   uint32_t current_mode_;
 
   // Timing data
