@@ -766,6 +766,7 @@ impl Associated {
     }
 
     fn on_channel_switched(&mut self, info: fidl_internal::ChannelSwitchInfo) {
+        self.connect_txn_sink.send(ConnectTransactionEvent::OnChannelSwitched { info });
         self.bss.channel.primary = info.new_channel;
         self.last_channel_switch_time.replace(now());
     }
@@ -938,6 +939,7 @@ impl ClientState {
                     transition.to(idle).into()
                 }
                 MlmeEvent::SignalReport { ind } => {
+                    state.connect_txn_sink.send(ConnectTransactionEvent::OnSignalReport { ind });
                     state.last_rssi = ind.rssi_dbm;
                     state.last_snr = ind.snr_db;
                     state.last_signal_report_time = now();
@@ -2564,7 +2566,7 @@ mod tests {
     #[test]
     fn bss_channel_switch_ind() {
         let mut h = TestHelper::new();
-        let (mut cmd, _connect_txn_stream) = connect_command_one();
+        let (mut cmd, mut connect_txn_stream) = connect_command_one();
         cmd.bss = Box::new(fake_bss_description!(Open,
             ssid: b"bar".to_vec(),
             bssid: [8; 6],
@@ -2576,9 +2578,8 @@ mod tests {
         ));
         let state = link_up_state(cmd);
 
-        let switch_ind = MlmeEvent::OnChannelSwitched {
-            info: fidl_internal::ChannelSwitchInfo { new_channel: 36 },
-        };
+        let input_info = fidl_internal::ChannelSwitchInfo { new_channel: 36 };
+        let switch_ind = MlmeEvent::OnChannelSwitched { info: input_info.clone() };
 
         assert_variant!(&state, ClientState::Associated(state) => {
             assert_eq!(state.bss.channel.primary, 1);
@@ -2586,6 +2587,10 @@ mod tests {
         let state = state.on_mlme_event(switch_ind, &mut h.context);
         assert_variant!(state, ClientState::Associated(state) => {
             assert_eq!(state.bss.channel.primary, 36);
+        });
+
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnChannelSwitched { info })) => {
+            assert_eq!(info, input_info);
         });
     }
 
@@ -2721,14 +2726,20 @@ mod tests {
         let mut h = TestHelper::new();
         let time_a = now();
 
-        let state = link_up_state(connect_command_one().0);
-        let state = state.on_mlme_event(signal_report_with_rssi_snr(-42, 20), &mut h.context);
+        let (cmd, mut connect_txn_stream) = connect_command_one();
+        let state = link_up_state(cmd);
+        let input_ind = fidl_internal::SignalReportIndication { rssi_dbm: -42, snr_db: 20 };
+        let state =
+            state.on_mlme_event(MlmeEvent::SignalReport { ind: input_ind.clone() }, &mut h.context);
         let serving_ap_info = assert_variant!(state.status(),
                                                      ClientSmeStatus::Connected(serving_ap_info) =>
                                                      serving_ap_info);
         assert_eq!(serving_ap_info.rssi_dbm, -42);
         assert_eq!(serving_ap_info.snr_db, 20);
         assert!(serving_ap_info.signal_report_time > time_a);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnSignalReport { ind })) => {
+            assert_eq!(input_ind, ind);
+        });
 
         let time_b = now();
         let signal_report_time = assert_variant!(state.status(),
@@ -2736,7 +2747,9 @@ mod tests {
                                                  serving_ap_info.signal_report_time);
         assert!(signal_report_time < time_b);
 
-        let state = state.on_mlme_event(signal_report_with_rssi_snr(-24, 10), &mut h.context);
+        let input_ind = fidl_internal::SignalReportIndication { rssi_dbm: -24, snr_db: 10 };
+        let state =
+            state.on_mlme_event(MlmeEvent::SignalReport { ind: input_ind.clone() }, &mut h.context);
         let serving_ap_info = assert_variant!(state.status(),
                                                      ClientSmeStatus::Connected(serving_ap_info) =>
                                                      serving_ap_info);
@@ -2746,6 +2759,9 @@ mod tests {
                                                  ClientSmeStatus::Connected(serving_ap_info) =>
                                                  serving_ap_info.signal_report_time);
         assert!(signal_report_time > time_b);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnSignalReport { ind })) => {
+            assert_eq!(input_ind, ind);
+        });
 
         let time_c = now();
         let signal_report_time = assert_variant!(state.status(),
@@ -3392,9 +3408,5 @@ mod tests {
 
     fn fake_channel() -> Channel {
         Channel { primary: 153, cbw: wlan_common::channel::Cbw::Cbw20 }
-    }
-
-    fn signal_report_with_rssi_snr(rssi_dbm: i8, snr_db: i8) -> MlmeEvent {
-        MlmeEvent::SignalReport { ind: fidl_internal::SignalReportIndication { rssi_dbm, snr_db } }
     }
 }

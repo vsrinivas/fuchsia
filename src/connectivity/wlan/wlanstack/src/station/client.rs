@@ -211,17 +211,21 @@ async fn serve_connect_txn_stream(
     if let Some(handle) = handle {
         loop {
             match connect_txn_stream.next().fuse().await {
-                Some(event) => match event {
+                Some(event) => filter_out_peer_closed(match event {
                     ConnectTransactionEvent::OnConnectResult { result, is_reconnect } => {
                         let connect_result = convert_connect_result(&result);
-                        let result = handle.send_on_connect_result(connect_result, is_reconnect);
-                        filter_out_peer_closed(result)?;
+                        handle.send_on_connect_result(connect_result, is_reconnect)
                     }
                     ConnectTransactionEvent::OnDisconnect { mut info } => {
-                        let result = handle.send_on_disconnect(&mut info);
-                        filter_out_peer_closed(result)?;
+                        handle.send_on_disconnect(&mut info)
                     }
-                },
+                    ConnectTransactionEvent::OnSignalReport { mut ind } => {
+                        handle.send_on_signal_report(&mut ind)
+                    }
+                    ConnectTransactionEvent::OnChannelSwitched { mut info } => {
+                        handle.send_on_channel_switched(&mut info)
+                    }
+                })?,
                 // SME has dropped the ConnectTransaction endpoint, likely due to a disconnect.
                 None => return Ok(()),
             }
@@ -373,7 +377,7 @@ mod tests {
         super::*,
         crate::test_helper::fake_inspect_tree,
         fidl::endpoints::{create_proxy, create_proxy_and_stream},
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
         fidl_fuchsia_wlan_mlme::ScanResultCode,
         fidl_fuchsia_wlan_sme::{self as fidl_sme},
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -548,6 +552,28 @@ mod tests {
         let event = assert_variant!(poll_stream_fut(&mut exec, &mut fidl_client_fut), Poll::Ready(Some(Ok(event))) => event);
         assert_variant!(event, fidl_sme::ConnectTransactionEvent::OnDisconnect { info: output_info } => {
             assert_eq!(input_info, output_info);
+        });
+
+        // Test sending OnSignalReport
+        let input_ind = fidl_internal::SignalReportIndication { rssi_dbm: -40, snr_db: 30 };
+        sme_proxy
+            .unbounded_send(ConnectTransactionEvent::OnSignalReport { ind: input_ind.clone() })
+            .expect("expect sending ConnectTransactionEvent to succeed");
+        assert_variant!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let event = assert_variant!(poll_stream_fut(&mut exec, &mut fidl_client_fut), Poll::Ready(Some(Ok(event))) => event);
+        assert_variant!(event, fidl_sme::ConnectTransactionEvent::OnSignalReport { ind } => {
+            assert_eq!(input_ind, ind);
+        });
+
+        // Test sending OnChannelSwitched
+        let input_info = fidl_internal::ChannelSwitchInfo { new_channel: 8 };
+        sme_proxy
+            .unbounded_send(ConnectTransactionEvent::OnChannelSwitched { info: input_info.clone() })
+            .expect("expect sending ConnectTransactionEvent to succeed");
+        assert_variant!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let event = assert_variant!(poll_stream_fut(&mut exec, &mut fidl_client_fut), Poll::Ready(Some(Ok(event))) => event);
+        assert_variant!(event, fidl_sme::ConnectTransactionEvent::OnChannelSwitched { info } => {
+            assert_eq!(input_info, info);
         });
 
         // When SME proxy is dropped, the fut should terminate

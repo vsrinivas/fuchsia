@@ -247,6 +247,8 @@ pub type ConnectTransactionStream = mpsc::UnboundedReceiver<ConnectTransactionEv
 pub enum ConnectTransactionEvent {
     OnConnectResult { result: ConnectResult, is_reconnect: bool },
     OnDisconnect { info: fidl_sme::DisconnectInfo },
+    OnSignalReport { ind: fidl_internal::SignalReportIndication },
+    OnChannelSwitched { info: fidl_internal::ChannelSwitchInfo },
 }
 
 #[derive(Clone, Debug, PartialEq)]
