@@ -9,6 +9,7 @@
 
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
+#include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace flatland {
 
@@ -65,6 +66,9 @@ struct GlobalTopologyData {
                                                       const LinkTopologyMap& links,
                                                       TransformHandle::InstanceId link_instance_id,
                                                       TransformHandle root);
+
+  view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(float display_width,
+                                                      float display_height) const;
 };
 
 }  // namespace flatland

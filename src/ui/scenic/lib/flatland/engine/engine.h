@@ -14,6 +14,7 @@
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace flatland {
 
@@ -31,6 +32,10 @@ class Engine {
   void RenderScheduledFrame(uint64_t frame_number, zx::time presentation_time,
                             const FlatlandDisplay& display,
                             scheduling::FrameRenderer::FramePresentedCallback callback);
+
+  // Snapshots the current Flatland content tree rooted at |display| as a
+  // view_tree::SubtreeSnapshot.
+  view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(const FlatlandDisplay& display) const;
 
  private:
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;

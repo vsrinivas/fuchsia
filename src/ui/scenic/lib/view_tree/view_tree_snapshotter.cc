@@ -47,7 +47,6 @@ bool ValidateSnapshot(const Snapshot& snapshot) {
   FX_DCHECK(root != ZX_KOID_INVALID);
   FX_DCHECK(view_tree.count(root) != 0);
   FX_DCHECK(view_tree.at(root).parent == ZX_KOID_INVALID);
-  FX_DCHECK(!hit_testers.empty());
 
   size_t tree_walk_size = 0;
   TreeWalk(view_tree, root,
@@ -159,7 +158,9 @@ void ViewTreeSnapshotter::UpdateSnapshot() const {
           << "Two subtrees had duplicate tree boundaries";
     }
 
-    new_snapshot->hit_testers.emplace_back(std::move(hit_tester));
+    if (hit_tester) {
+      new_snapshot->hit_testers.emplace_back(std::move(hit_tester));
+    }
   }
 
   // Fix parent pointers at subtree boundaries.

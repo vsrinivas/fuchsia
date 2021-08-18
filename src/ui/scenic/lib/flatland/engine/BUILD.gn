@@ -35,6 +35,7 @@ template("engine_library") {
       "//src/ui/scenic/lib/flatland",
       "//src/ui/scenic/lib/flatland/renderer",
       "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
+      "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
     ]
 
     public_configs = [ ":engine_config" ]

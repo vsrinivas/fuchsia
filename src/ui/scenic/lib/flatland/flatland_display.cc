@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/flatland/flatland_display.h"
 
 #include <lib/async/default.h>
+#include <lib/ui/scenic/cpp/view_identity.h>
 
 static void ReportError() {
   // TODO(fxbug.dev/77035): investigate how to propagate errors back to clients.
@@ -54,6 +55,10 @@ FlatlandDisplay::FlatlandDisplay(
   FX_DCHECK(flatland_presenter_);
   FX_DCHECK(link_system_);
   FX_DCHECK(uber_struct_queue_);
+
+  auto [view_ref, control_ref] = scenic::NewViewIdentityOnCreation();
+  view_ref_ = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref));
+  control_ref_ = std::make_unique<fuchsia::ui::views::ViewRefControl>(std::move(control_ref));
 
   zx_status_t status = peer_closed_waiter_.Begin(
       dispatcher(),
@@ -127,6 +132,7 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
   auto uber_struct = std::make_unique<UberStruct>();
   uber_struct->local_topology = std::move(data.sorted_transforms);
   uber_struct->link_properties[child_link_.parent_viewport_watcher_handle] = std::move(properties);
+  uber_struct->view_ref = view_ref_;
 
   auto present_id = flatland_presenter_->RegisterPresent(session_id_, {});
   uber_struct_queue_->Push(present_id, std::move(uber_struct));

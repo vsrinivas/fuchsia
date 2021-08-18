@@ -474,9 +474,23 @@ void App::InitializeInput() {
 void App::InitializeHeartbeat() {
   TRACE_DURATION("gfx", "App::InitializeHeartbeat");
   {  // Initialize ViewTreeSnapshotter
-    std::vector<view_tree::SubtreeSnapshotGenerator> subtrees;
-    subtrees.emplace_back([this] { return engine_->scene_graph()->view_tree().Snapshot(); });
 
+    // These callbacks are be called once per frame (at the end of UpdateSessions()) and the results
+    // used to build the ViewTreeSnapshot.
+    // We create one per compositor.
+    std::vector<view_tree::SubtreeSnapshotGenerator> subtrees_generator_callbacks;
+    subtrees_generator_callbacks.emplace_back(
+        [this] { return engine_->scene_graph()->view_tree().Snapshot(); });
+    subtrees_generator_callbacks.emplace_back([this] {
+      if (auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering()) {
+        return flatland_engine_->GenerateViewTreeSnapshot(*display);
+      } else {
+        return view_tree::SubtreeSnapshot{};  // Empty snapshot.
+      }
+    });
+
+    // All subscriber callbacks get called with the new snapshot every time one is generated (once
+    // per frame).
     std::vector<view_tree::ViewTreeSnapshotter::Subscriber> subscribers;
     subscribers.push_back(
         {.on_new_view_tree =
@@ -495,7 +509,7 @@ void App::InitializeHeartbeat() {
                                },
                            .dispatcher = async_get_default_dispatcher()});
     view_tree_snapshotter_ = std::make_shared<view_tree::ViewTreeSnapshotter>(
-        std::move(subtrees), std::move(subscribers));
+        std::move(subtrees_generator_callbacks), std::move(subscribers));
   }
 
   // |session_updaters| will be updated in submission order.

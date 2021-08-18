@@ -52,6 +52,7 @@ source_set("flatland") {
     "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/flatland/buffers",
     "//src/ui/scenic/lib/utils",
+    "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
     "//zircon/system/ulib/async-default",
   ]
 

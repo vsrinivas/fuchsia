@@ -132,7 +132,7 @@ struct SubtreeSnapshot {
   std::unordered_set<zx_koid_t> unconnected_views;
 
   // Hit tester for this subtree.
-  SubtreeHitTester hit_tester;
+  SubtreeHitTester hit_tester = nullptr;
 
   // Map of leaf nodes in this subtree to their children in other subtrees. Keys must be dangling
   // children in |view_tree| and values must be roots in other subtrees.

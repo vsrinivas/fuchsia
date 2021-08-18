@@ -96,4 +96,23 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
                                     flatland_presenter_->TakeReleaseFences(), std::move(callback));
 }
 
+view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(const FlatlandDisplay& display) const {
+  // TODO(fxbug.dev/82814): Stop generating the GlobalTopologyData twice. It's wasted work and a
+  // synchronization hazard.
+  const auto uber_struct_snapshot = uber_struct_system_->Snapshot();
+  const auto links = link_system_->GetResolvedTopologyLinks();
+  const auto link_system_id = link_system_->GetInstanceId();
+  const auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
+      uber_struct_snapshot, links, link_system_id, display.root_transform());
+
+  // TODO(fxbug.dev/82677): Get real bounding boxes inside of
+  // topology_data.GenerateViewTreeSnapshot() function instead of grabbing the full display size
+  // here.
+  const auto hw_display = display.display();
+  const auto display_width = static_cast<float>(hw_display->width_in_px());
+  const auto display_height = static_cast<float>(hw_display->height_in_px());
+
+  return topology_data.GenerateViewTreeSnapshot(display_width, display_height);
+}
+
 }  // namespace flatland

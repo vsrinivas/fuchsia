@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_DISPLAY_H_
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
 
@@ -106,6 +107,10 @@ class FlatlandDisplay : public fuchsia::ui::composition::FlatlandDisplay,
   const TransformHandle root_transform_;
 
   LinkSystem::ChildLink child_link_;
+
+  // Must have a ViewRef as a reference for the UberStruct.
+  std::shared_ptr<fuchsia::ui::views::ViewRef> view_ref_;
+  std::unique_ptr<fuchsia::ui::views::ViewRefControl> control_ref_;
 };
 
 }  // namespace flatland

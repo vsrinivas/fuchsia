@@ -20,6 +20,11 @@ std::vector<zx_koid_t> Snapshot::HitTest(zx_koid_t start_node, glm::vec2 world_s
   SubtreeHitTestResult result;
   const auto view_local_point = utils::TransformPointerCoords(
       world_space_point, view_tree.at(start_node).local_from_world_transform);
+
+  if (hit_testers.empty()) {
+    FX_LOGS(WARNING) << "No hit testers found.";
+  }
+
   for (const auto& hit_tester : hit_testers) {
     result = hit_tester(start_node, view_local_point, is_semantic);
     // At most one hit tester should have results for this |start_node|, since each node only

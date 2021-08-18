@@ -6,12 +6,23 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/ui/scenic/lib/utils/helpers.h"
+
 namespace {
+
 struct pair_hash {
   size_t operator()(const std::pair<flatland::TransformHandle, uint64_t>& p) const noexcept {
     return std::hash<flatland::TransformHandle>{}(p.first) ^ std::hash<uint64_t>{}(p.second);
   }
 };
+
+zx_koid_t GetViewRefKoid(
+    const flatland::TransformHandle& handle,
+    const std::unordered_map<flatland::TransformHandle,
+                             std::shared_ptr<const fuchsia::ui::views::ViewRef>>& view_ref_map) {
+  return utils::ExtractKoid(*view_ref_map.at(handle));
+}
+
 }  // namespace
 
 namespace flatland {
@@ -91,8 +102,6 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
         continue;
       }
 
-      view_refs.emplace(current_entry.handle, uber_struct_kv->second->view_ref);
-
       // Thanks to one-view-per-session semantics, we should never cycle through the
       // topological vectors, so we don't need to handle cycles. We DCHECK here just to be sure.
       FX_DCHECK(std::find_if(vector_stack.cbegin(), vector_stack.cend(),
@@ -116,6 +125,8 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     child_counts.push_back(current_entry.child_count);
     parent_indices.push_back(parent_counts.empty() ? 0 : parent_counts.back().first);
     live_transforms.insert(current_entry.handle);
+    view_refs.emplace(current_entry.handle,
+                      uber_structs.at(current_entry.handle.GetInstanceId())->view_ref);
 
     // If this entry was the last child for the previous parent, pop that off the stack.
     if (!parent_counts.empty() && parent_counts.back().second == 0) {
@@ -139,6 +150,69 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
           .parent_indices = std::move(parent_indices),
           .live_handles = std::move(live_transforms),
           .view_refs = std::move(view_refs)};
+}
+
+view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
+    float display_width, float display_height) const {
+  if (topology_vector.empty()) {
+    return {};
+  }
+
+  view_tree::SubtreeSnapshot snapshot{// We do not currently support other compositors as subtrees.
+                                      .tree_boundaries = {}};
+  auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+
+  // TODO(fxbug.dev/82677): Get real bounding boxes instead of using the full display size for each
+  // one.
+  const auto full_screen_bounding_box = view_tree::BoundingBox{
+      .min = {0, 0},
+      .max = {display_width, display_height},
+  };
+
+  // Set up the root.
+  root = GetViewRefKoid(topology_vector.front(), view_refs);
+
+  // Add all remaining Views to |view_tree| + their parents.
+  for (size_t i = 0; i < topology_vector.size(); ++i) {
+    const auto& transform_handle = topology_vector.at(i);
+    const auto& view_ref = view_refs.at(transform_handle);
+    const zx_koid_t view_ref_koid = utils::ExtractKoid(*view_ref);
+    if (view_tree.count(view_ref_koid) != 0) {
+      // Might have duplicates in |topology_vector|. Only initialize each ViewNode once.
+      // TODO(fxbug.dev/82892): Figure out if we need to do something differently for hit testing in
+      // these cases.
+      continue;
+    }
+
+    // Find the parent. (Note: root has no parent).
+    const size_t parent_index = parent_indices[i];
+    const zx_koid_t parent_koid = view_ref_koid == root
+                                      ? ZX_KOID_INVALID
+                                      : GetViewRefKoid(topology_vector[parent_index], view_refs);
+
+    // TODO(fxbug.dev/82678): Add local_from_world_transform to the ViewNode.
+    view_tree.emplace(view_ref_koid, view_tree::ViewNode{.parent = parent_koid,
+                                                         .bounding_box = full_screen_bounding_box,
+                                                         .view_ref = view_ref});
+  }
+
+  // Look at all the parents to determine the children of each node.
+  for (const auto& [koid, view_node] : view_tree) {
+    if (view_node.parent != ZX_KOID_INVALID) {
+      view_tree.at(view_node.parent).children.emplace(koid);
+    }
+  }
+
+  // TODO(fxbug.dev/72075): This currently directly returns the last leaf node instead of a full hit
+  // test. This is a stopgap solution until we've designed the full hit testing API for Flatland.
+  hit_tester = [leaf_node_koid = GetViewRefKoid(topology_vector.back(), view_refs)](
+                   zx_koid_t start_node, glm::vec2 local_point, bool is_semantic_hit_test) {
+    return view_tree::SubtreeHitTestResult{.hits = {leaf_node_koid}};
+  };
+
+  // TODO(fxbug.dev/82675): Add unconnected views.
+
+  return snapshot;
 }
 
 }  // namespace flatland

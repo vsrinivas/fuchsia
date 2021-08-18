@@ -5,11 +5,14 @@
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <memory>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 using flatland::TransformGraph;
 using flatland::TransformHandle;
@@ -262,6 +265,94 @@ TEST(GlobalTopologyDataTest, GlobalTopologyDiamondInheritance) {
   EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
   EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
   EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
+}
+
+TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::LinkTopologyMap links;
+
+  auto link_2 = GetLinkHandle(2);
+
+  auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
+  auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
+  const zx_koid_t view_ref1_koid = utils::ExtractKoid(view_ref1);
+  const zx_koid_t view_ref2_koid = utils::ExtractKoid(view_ref2);
+
+  // Recreate the GlobalTopologyData from GlobalTopologyDataTest.GlobalTopologyIncompleteLink and
+  // confirm that the correct ViewTreeSnapshot is generated.
+  TransformGraph::TopologyVector vectors[] = {
+      {{{1, 0}, 3}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0 - 1:1
+                                                             //   \ \
+                                                             //    \  0:2
+                                                             //     \
+                                                             //       1:2
+                                                             //
+      {{{2, 0}, 1}, {{2, 1}, 0}}};                           // 2:0 - 2:1
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[0];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref1));
+    uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[1];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref2));
+    uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+
+  // When the link becomes available, the full topology is available, excluding the link handle.
+  //
+  // 1:0 - 1:1
+  //   \ \
+  //    \  2:0 - 2:1
+  //     \
+  //       1:2
+  GlobalTopologyData::TopologyVector expected_topology = {{1, 0}, {1, 1}, {2, 0}, {2, 1}, {1, 2}};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {3, 0, 1, 0, 0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 0, 2, 0};
+
+  MakeLink(links, 2);  // 0:2 - 2:0
+
+  auto gtd =
+      GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
+  CHECK_GLOBAL_TOPOLOGY_DATA(gtd, 0u);
+
+  EXPECT_THAT(gtd.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(gtd.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(gtd.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
+
+  // Since the global topology is only 2 instances, we should only see two views: the root and the
+  // child, one a child of the other.
+  {
+    const float kWidth = 10;
+    const float kHeight = 5;
+    auto snapshot = gtd.GenerateViewTreeSnapshot(kWidth, kHeight);
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+    EXPECT_EQ(root, view_ref1_koid);
+    EXPECT_EQ(view_tree.size(), 2u);
+
+    {
+      ASSERT_TRUE(view_tree.count(view_ref1_koid) == 1);
+      const auto& node1 = view_tree.at(view_ref1_koid);
+      EXPECT_EQ(node1.parent, ZX_KOID_INVALID);
+      EXPECT_THAT(node1.children, testing::UnorderedElementsAre(view_ref2_koid));
+      EXPECT_THAT(node1.bounding_box.min, testing::ElementsAre(0, 0));
+      EXPECT_THAT(node1.bounding_box.max, testing::ElementsAre(kWidth, kHeight));
+    }
+
+    {
+      ASSERT_TRUE(view_tree.count(view_ref2_koid) == 1);
+      const auto& node2 = view_tree.at(view_ref2_koid);
+      EXPECT_EQ(node2.parent, view_ref1_koid);
+      EXPECT_TRUE(node2.children.empty());
+      EXPECT_THAT(node2.bounding_box.min, testing::ElementsAre(0, 0));
+      EXPECT_THAT(node2.bounding_box.max, testing::ElementsAre(kWidth, kHeight));
+    }
+
+    EXPECT_TRUE(unconnected_views.empty());
+    EXPECT_TRUE(tree_boundaries.empty());
+  }
 }
 
 #undef CHECK_GLOBAL_TOPOLOGY_DATA
