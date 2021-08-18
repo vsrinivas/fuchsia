@@ -5,6 +5,10 @@
 #ifndef GARNET_BIN_RUN_TEST_COMPONENT_OUTPUT_COLLECTOR_H_
 #define GARNET_BIN_RUN_TEST_COMPONENT_OUTPUT_COLLECTOR_H_
 
+#include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/zx/socket.h>
 #include <zircon/assert.h>
 
@@ -13,9 +17,6 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
-
-#include "lib/async/cpp/wait.h"
-#include "lib/async/dispatcher.h"
 
 namespace run {
 
@@ -29,13 +30,16 @@ class OutputCollector {
   using OutputCallBack = fit::function<void(std::string s)>;
 
   zx::socket TakeServer() {
-    ZX_ASSERT_MSG(server_socket_.is_valid(), "This funtion should be called only once");
+    ZX_ASSERT_MSG(server_socket_.is_valid(), "This function should be called only once");
     return std::move(server_socket_);
   }
   explicit OutputCollector(zx::socket log_socket, zx::socket server_socket);
   ~OutputCollector();
 
   void CollectOutput(OutputCallBack callback, async_dispatcher_t *dispatcher);
+
+  /// Signals when this class is done processing output socket.
+  fpromise::promise<> SignalWhenDone();
 
  private:
   void Close();
@@ -47,6 +51,7 @@ class OutputCollector {
   zx::socket log_socket_;
   async::WaitMethod<OutputCollector, &OutputCollector::Handler> wait_;
   std::unique_ptr<OutputCollector> self_;
+  std::vector<fpromise::bridge<>> done_signals_;
 };
 
 }  // namespace run

@@ -5,7 +5,10 @@
 #include "garnet/bin/run_test_component/component.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/fd.h>
+#include <lib/fpromise/barrier.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/handle.h>
 #include <unistd.h>
@@ -16,7 +19,6 @@
 #include <fbl/unique_fd.h>
 
 #include "garnet/bin/run_test_component/output_collector.h"
-#include "lib/async/cpp/task.h"
 
 namespace run {
 
@@ -63,6 +65,10 @@ std::unique_ptr<Component> Component::Launch(const fuchsia::sys::LauncherPtr& la
   launcher->CreateComponent(std::move(launch_info), contoller.NewRequest());
   return std::make_unique<Component>(std::move(out), std::move(err), std::move(contoller),
                                      std::move(svc));
+}
+
+fpromise::promise<> Component::SignalWhenOutputCollected() {
+  return stderr_->SignalWhenDone().and_then(stdout_->SignalWhenDone());
 }
 
 Component::Component(std::unique_ptr<OutputCollector> out, std::unique_ptr<OutputCollector> err,

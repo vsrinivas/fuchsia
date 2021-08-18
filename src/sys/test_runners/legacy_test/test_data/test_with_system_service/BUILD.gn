@@ -1,0 +1,41 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("test_with_system_service_bin") {
+  output_name = "test_with_system_service"
+  testonly = true
+  source_root = "test_with_system_service.rs"
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+  ]
+
+  sources = [ "test_with_system_service.rs" ]
+}
+
+fuchsia_test_component("test_with_system_service_legacy") {
+  component_name = "test_with_system_service"
+  manifest = "meta/test_with_system_service.cmx"
+  deps = [ ":test_with_system_service_bin" ]
+}
+
+fuchsia_test_component("test_with_system_service_modern") {
+  component_name = "test_with_system_service"
+  manifest = "meta/test_with_system_service.cml"
+}
+
+group("test_with_system_service") {
+  testonly = true
+  deps = [
+    ":test_with_system_service_legacy",
+    ":test_with_system_service_modern",
+  ]
+}

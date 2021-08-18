@@ -54,6 +54,8 @@ class TestMetadata {
 
   bool HasServices() const { return !service_url_pair_.empty(); }
   Services TakeServices() { return std::move(service_url_pair_); }
+  const Services& services() const { return service_url_pair_; }
+
   const std::vector<std::string>& system_services() const { return system_services_; }
 
  private:

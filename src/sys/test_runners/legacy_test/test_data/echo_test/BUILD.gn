@@ -1,0 +1,41 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("echo_test_bin") {
+  output_name = "echo_test"
+  testonly = true
+  source_root = "echo_test.rs"
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "echo_test.rs" ]
+}
+
+fuchsia_test_component("echo_test_legacy") {
+  component_name = "echo_test"
+  manifest = "meta/echo_test.cmx"
+  deps = [ ":echo_test_bin" ]
+}
+
+fuchsia_test_component("echo_test_modern") {
+  component_name = "echo_test"
+  manifest = "meta/echo_test.cml"
+}
+
+group("echo_test") {
+  testonly = true
+  deps = [
+    ":echo_test_legacy",
+    ":echo_test_modern",
+    "///garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
+  ]
+}

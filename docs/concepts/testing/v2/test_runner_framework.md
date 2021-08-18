@@ -147,8 +147,66 @@ In order to use this runner, add the following to your component manifest:
 }
 ```
 
-There is no notion of parallelism since tests that use this runner don't have a
-notion of multiple test cases.
+#### Legacy test runner {#legacy-test-runner}
+
+The test runner to run legacy tests - it executes legacy tests, waits for the
+test to terminate, then reports that the test passed if the test returned zero
+or that it failed for any non-zero return value.
+
+Use this test runner if you have a legacy component test which is not ready to
+be converted to a modern test.
+
+To wrap your legacy test add legacy manifest file path to your
+`program.legacy_manifest` along with necessary shards:
+
+simple_test.cml:
+
+```cml
+{
+    include: [
+        "//src/sys/test_runners/legacy_test/default.shard.cml",
+    ],
+    program: {
+        legacy_manifest: "meta/simple_test.cmx",
+    },
+}
+```
+
+Then change your BUILD.gn to create a new component and add it as a test to your
+package:
+
+```gn
+fuchsia_test_component("simple_test_legacy") {
+  component_name = "simple_test"
+  manifest = "meta/simple_test.cmx"
+  deps = [ ":simple_test_bin" ]
+}
+
+fuchsia_test_component("simple_test_modern") {
+  component_name = "simple_test"
+  manifest = "meta/simple_test.cml"
+}
+
+fuchsia_package("simple_test") {
+  testonly = true
+  test_component =[ ":simple_test_modern" ]
+  deps = [
+    ":simple_test_legacy", # simple_test_legacy is no longer added as "test_component".
+  ]
+}
+
+```
+
+There is no notion of parallelism or test filtering, instead use test language
+specific flags.
+
+eg:
+
+```posix-terminal
+fx test <test> -- --test-threads=5 # rust
+
+fx test <test> -- --gtest_filter=MyTestCase # gtest
+```
 
 ### Controlling parallel execution of test cases
 

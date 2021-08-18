@@ -1,0 +1,27 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/legacy_test_runner",
+    },
+    capabilities: [
+        {
+            runner: "legacy_test_runner",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+        },
+    ],
+    expose: [
+        {
+            runner: "legacy_test_runner",
+            from: "self",
+        },
+    ],
+}

@@ -141,6 +141,7 @@ group("test_runners") {
     "gotests",
     "gtest",
     "inspect",
+    "legacy_test",
     "rust",
     "starnix",
   ]
@@ -155,6 +156,7 @@ group("tests") {
     "gotests:tests",
     "gtest:tests",
     "inspect:tests",
+    "legacy_test:tests",
     "rust:tests",
     "starnix:tests",
   ]

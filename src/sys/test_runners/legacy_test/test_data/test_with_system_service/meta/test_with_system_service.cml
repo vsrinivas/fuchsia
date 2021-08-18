@@ -1,0 +1,6 @@
+{
+    include: [ "//src/sys/test_runners/legacy_test/default.shard.cml" ],
+    program: {
+        legacy_manifest: "meta/test_with_system_service.cmx",
+    },
+}

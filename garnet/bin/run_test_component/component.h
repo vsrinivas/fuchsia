@@ -6,6 +6,7 @@
 #define GARNET_BIN_RUN_TEST_COMPONENT_COMPONENT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/socket.h>
 #include <zircon/assert.h>
@@ -31,6 +32,9 @@ class Component {
   const std::shared_ptr<sys::ServiceDirectory>& svc() const { return svc_; }
 
   const fuchsia::sys::ComponentControllerPtr& controller() const { return controller_; }
+
+  /// Signal when all output is collected.
+  fpromise::promise<> SignalWhenOutputCollected();
 
  private:
   std::unique_ptr<OutputCollector> stdout_;

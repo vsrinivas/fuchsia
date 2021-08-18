@@ -1,0 +1,21 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.device.NameProvider"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/test_with_system_service"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.device.NameProvider",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

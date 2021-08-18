@@ -38,6 +38,10 @@
                     from: "#go_test_runner",
                 },
                 {
+                    runner: "legacy_test_runner",
+                    from: "#legacy_test_runner",
+                },
+                {
                     runner: "realm_builder",
                     from: "#fuchsia_component_test_framework_intermediary",
                 },

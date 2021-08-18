@@ -6,6 +6,8 @@
 
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/zx/socket.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -52,14 +54,29 @@ void OutputCollector::Close() {
   }
   wait_.Cancel();
   log_socket_.reset();
+  for (auto& b : done_signals_) {
+    b.completer.complete_ok();
+  }
+  done_signals_.clear();
   callback_ = nullptr;
+}
+
+fpromise::promise<> OutputCollector::SignalWhenDone() {
+  fpromise::bridge<> bridge;
+  auto promise = bridge.consumer.promise();
+  if (!log_socket_.is_valid()) {
+    bridge.completer.complete_ok();
+  } else {
+    done_signals_.push_back(std::move(bridge));
+  }
+  return promise;
 }
 
 OutputCollector::~OutputCollector() { Close(); }
 
 void OutputCollector::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal) {
-  ZX_ASSERT_MSG(ZX_OK == status, "Error occured while collecting output: %s",
+  ZX_ASSERT_MSG(ZX_OK == status, "Error occurred while collecting output: %s",
                 zx_status_get_string(status));
   if (signal->observed & ZX_SOCKET_READABLE) {
     std::vector<uint8_t> data(OC_DATA_BUFFER_SIZE);
@@ -78,7 +95,7 @@ void OutputCollector::Handler(async_dispatcher_t* dispatcher, async::WaitBase* w
         return;
       }
 
-      ZX_ASSERT_MSG(ZX_OK == status, "Error occured while collecting output: %s",
+      ZX_ASSERT_MSG(ZX_OK == status, "Error occurred while collecting output: %s",
                     zx_status_get_string(status));
 
       if (len == 0) {

@@ -21,6 +21,10 @@
             url: "fuchsia-pkg://fuchsia.com/gtest-runner#meta/gtest-runner.cm",
         },
         {
+            name: "legacy_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/legacy-test-runner#meta/legacy-test-runner.cm",
+        },
+        {
             name: "rust_test_runner",
             url: "fuchsia-pkg://fuchsia.com/rust-test-runner#meta/rust-test-runner.cm",
         },
@@ -141,12 +145,21 @@
                 "#go_test_runner",
                 "#gtest_runner",
                 "#inspect_test_runner",
+                "#legacy_test_runner",
                 "#runner_memfs",
                 "#rust_test_runner",
                 "#starnix_test_runner",
                 "#starnix_unit_test_runner",
                 "#test_tmpfs",
             ],
+        },
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "parent",
+            to: [ "#legacy_test_runner" ],
         },
         {
             protocol: "fuchsia.kernel.VmexResource",
