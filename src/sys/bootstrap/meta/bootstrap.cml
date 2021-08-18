@@ -88,6 +88,10 @@
             url: "fuchsia-boot:///#meta/sysinfo.cm",
         },
         {
+            name: "vboot-fwparam",
+            url: "fuchsia-boot:///#meta/vboot-fwparam.cm",
+        },
+        {
             // base_resolver is present on all product configurations except
             // bringup builds, as its dependency pkgfs is not available on
             // bringup builds either.
@@ -439,6 +443,7 @@
                 "#miscsvc",
                 "#netsvc",
                 "#sysinfo",
+                "#vboot-fwparam",
                 "#virtual_console",
             ],
         },
@@ -678,6 +683,7 @@
                 "#power_manager",
                 "#pwrbtn-monitor",
                 "#svchost",
+                "#vboot-fwparam",
             ],
         },
         {

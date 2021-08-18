@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/vboot-fwparam",
+    },
+    capabilities: [
+        { protocol: "fuchsia.vboot.fwparam.FirmwareParam" },
+    ],
+    use: [
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.vboot.fwparam.FirmwareParam",
+            from: "self",
+        },
+    ],
+}

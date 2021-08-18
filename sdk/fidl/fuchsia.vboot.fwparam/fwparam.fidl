@@ -1,0 +1,144 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.vboot.fwparam;
+
+using zx;
+
+/// Firmware result codes for NvramKey.FW_RESULT and NvramKey.PREV_RESULT.
+type FirmwareResult = flexible enum {
+    /// Unknown.
+    UNKNOWN = 0;
+    /// Trying a new slot, but haven't reached success/failure.
+    TRYING = 1;
+    /// Successfully booted the OS.
+    SUCCESS = 2;
+    /// Known failure.
+    FAILURE = 3;
+};
+
+/// Boot targets for DEV_DEFAULT_BOOT.
+type BootTarget = flexible enum {
+    /// Boot from internal disk by default.
+    INTERNAL = 0;
+    /// Boot from external disk by default.
+    EXTERNAL = 1;
+    /// Boot from altfw by default.
+    ALTFW = 2;
+};
+
+/// Keys found in nvram.
+/// https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:src/platform/vboot_reference/firmware/2lib/2nvstorage.c,
+/// vb2_nv_get()
+type Key = flexible enum {
+    /// Parameter values have been reset to defaults (flag for firmware).
+    /// 0=clear; 1=set.
+    FIRMWARE_SETTINGS_RESET = 0;
+    /// Parameter values have been reset to defaults (flag for kernel).
+    /// 0=clear; 1=set.
+    KERNEL_SETTINGS_RESET = 1;
+    /// Request debug reset on next S3->S0 transition.  0=clear; 1=set.
+    DEBUG_RESET_MODE = 2;
+    /// Firmware slot to try next.  0=A; 1=B
+    TRY_NEXT = 3;
+    /// Number of times to try booting RW firmware slot B before slot A.
+    /// Valid range: 0-15.
+    ///
+    /// For VB2; number of times to try booting the slot indicated by
+    /// TRY_NEXT.  On a 1->0 transition of try count; TRY_NEXT
+    /// will be set to the other slot.
+    TRY_COUNT = 4;
+    /// Request recovery mode on next boot; see 2recovery_reason.h for
+    /// currently defined reason codes.  8-bit value.
+    RECOVERY_REQUEST = 5;
+    /// Localization index for screen bitmaps displayed by firmware.
+    /// 8-bit value.
+    LOCALIZATION_INDEX = 6;
+    /// Field reserved for kernel/user-mode use; 16-bit value.
+    KERNEL_FIELD = 7;
+    /// Allow booting from external disk in developer mode.  0=no; 1=yes.
+    DEV_BOOT_EXTERNAL = 8;
+    /// Allow booting of legacy OSes in developer mode.  0=no; 1=yes.
+    DEV_BOOT_ALTFW = 9;
+    /// Only boot Google-signed images in developer mode.  0=no; 1=yes.
+    DEV_BOOT_SIGNED_ONLY = 10;
+    /// Set default boot mode (see BootTarget)
+    DEV_DEFAULT_BOOT = 11;
+    /// Enable USB Device Controller
+    DEV_ENABLE_UDC = 12;
+    /// Set by userspace to request that RO firmware disable dev-mode on the
+    /// next boot. This is likely only possible if the dev-switch is
+    /// virtual.
+    DISABLE_DEV_REQUEST = 13;
+    /// Set and cleared by vboot to request that display be initialized
+    /// at boot time, so that BIOS screens can be displayed. 0=no, 1=yes.
+    DISPLAY_REQUEST = 14;
+    /// Request that the firmware clear the TPM owner on the next boot.
+    CLEAR_TPM_OWNER_REQUEST = 15;
+    /// Flag that TPM owner was cleared on request.
+    CLEAR_TPM_OWNER_DONE = 16;
+    /// TPM requested a reboot already.
+    TPM_REQUESTED_REBOOT = 17;
+    /// More details on recovery reason
+    RECOVERY_SUBCODE = 18;
+    /// Request that NVRAM be backed up at next boot if possible.
+    BACKUP_NVRAM_REQUEST = 19;
+    /// Firmware slot tried this boot (0=A, 1=B)
+    FW_TRIED = 20;
+    /// Result of trying that firmware (see FirmwareResult)
+    FW_RESULT = 21;
+    /// Firmware slot tried previous boot (0=A, 1=B)
+    FW_PREV_TRIED = 22;
+    /// Result of trying that firmware (see FirmwareResult)
+    FW_PREV_RESULT = 23;
+    /// Request wipeout of the device by the app.
+    REQ_WIPEOUT = 24;
+
+    /// Boot system when AC detected (0=no, 1=yes).
+    BOOT_ON_AC_DETECT = 25;
+    /// Try to update the EC-RO image after updating the EC-RW image
+    /// (0=no, 1=yes).
+    TRY_RO_SYNC = 26;
+    /// Cut off battery and shutdown on next boot.
+    BATTERY_CUTOFF_REQUEST = 27;
+    /// Maximum kernel version to roll forward to
+    KERNEL_MAX_ROLLFORWARD = 28;
+
+    // Fields only available in NV storage V2.
+
+    /// Maximum firmware version to roll forward to.  Returns
+    /// VB2_MAX_ROLLFORWARD_MAX_V1_DEFAULT for V1.
+    FW_MAX_ROLLFORWARD = 29;
+    /// Add a short delay after EC software sync for any interaction
+    /// with EC-RW (persistent).  Formerly used for programmatically
+    /// testing Alt OS booting.
+    POST_EC_SYNC_DELAY = 30;
+    /// Request booting of diagnostic rom.  0=no, 1=yes.
+    DIAG_REQUEST = 31;
+    /// Priority of miniOS partition to load: 0=MINIOS-A, 1=MINIOS-B.
+    MINIOS_PRIORITY = 32;
+};
+
+@discoverable
+protocol FirmwareParam {
+    /// Get |key|.
+    /// Returns ZX_ERR_NOT_SUPPORTED if the given key is unsupported.
+    /// Returns ZX_ERR_INTERNAL if an internal error occurred (e.g.
+    /// communicating to the firmware parameter storage).
+    Get(struct {
+        key Key;
+    }) -> (struct {
+        result uint32;
+    }) error zx.status;
+
+    /// Set |key| to |value|.
+    /// Returns ZX_ERR_NOT_SUPPORTED if the given key is unsupported.
+    /// Returns ZX_ERR_IO_REFUSED if the given key is read-only.
+    /// Returns ZX_ERR_INVALID_ARGS if the value written to the key is invalid.
+    /// Returns ZX_ERR_INTERNAL if an internal error occurred (e.g.
+    /// communicating to the firmware parameter storage).
+    Set(struct {
+        key Key;
+        value uint32;
+    }) -> (struct {}) error zx.status;
+};

@@ -27,6 +27,7 @@ _common_bootfs_deps = [
   "//src/devices/misc/drivers/chromeos-acpi",
   "//src/devices/nand/drivers/intel-spi-flash",
   "//src/devices/tpm/drivers/cr50-spi",
+  "//src/firmware/bin/vboot-fwparam:bootfs",
   "//src/storage/flashmap:bootfs",
 ]
 
