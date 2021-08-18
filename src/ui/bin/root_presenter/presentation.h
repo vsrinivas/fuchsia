@@ -135,7 +135,7 @@ class Presentation : fuchsia::ui::policy::Presenter,
   // Creates and attaches a new View using the passed in tokens.
   // Any currently attached client is detached and its ViewHolder destroyed.
   void AttachClient(fuchsia::ui::views::ViewHolderToken view_holder_token,
-                    fuchsia::ui::views::ViewRef view_ref,
+                    std::optional<fuchsia::ui::views::ViewRef> view_ref,
                     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request);
 
   // |fuchsia::ui::policy::Presentation|

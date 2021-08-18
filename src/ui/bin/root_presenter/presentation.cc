@@ -247,9 +247,12 @@ void Presentation::UpdateGraphState(GraphState updated_state) {
   } else if (IsValidSceneGraph()) {
     injector_->MarkSceneReady();
 
-    FX_DCHECK(client_view_ref_.has_value());
-    FX_LOGS(INFO) << "Transferring focus to client";
-    view_focuser_->RequestFocus(fidl::Clone(client_view_ref_.value()), [](auto) {});
+    if (client_view_ref_.has_value()) {
+      FX_LOGS(INFO) << "Transferring focus to client";
+      view_focuser_->RequestFocus(fidl::Clone(client_view_ref_.value()), [](auto) {});
+    } else {
+      FX_LOGS(WARNING) << "Cannot transfer focus to client: no view ref.";
+    }
   }
 }
 
@@ -378,13 +381,13 @@ void Presentation::PresentView(
     return;
   }
 
-  AttachClient(std::move(view_holder_token), {}, std::move(presentation_request));
+  AttachClient(std::move(view_holder_token), std::nullopt, std::move(presentation_request));
 }
 
 void Presentation::PresentOrReplaceView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  AttachClient(std::move(view_holder_token), {}, std::move(presentation_request));
+  AttachClient(std::move(view_holder_token), std::nullopt, std::move(presentation_request));
 }
 
 void Presentation::PresentOrReplaceView2(
@@ -394,7 +397,8 @@ void Presentation::PresentOrReplaceView2(
 }
 
 void Presentation::AttachClient(
-    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    std::optional<fuchsia::ui::views::ViewRef> view_ref,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
   if (client_view_holder_) {
     proxy_view_->DetachChild(client_view_holder_.value());
@@ -408,7 +412,7 @@ void Presentation::AttachClient(
     SetViewHolderProperties(display_metrics_);
   }
 
-  client_view_ref_ = std::move(view_ref);
+  client_view_ref_ = std::move(view_ref);  // unconditional write, replacement semantics
 
   presentation_binding_.Bind(std::move(presentation_request));
   safe_presenter_proxy_.QueuePresent([] {});
