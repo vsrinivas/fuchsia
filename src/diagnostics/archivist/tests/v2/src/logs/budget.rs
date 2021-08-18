@@ -15,6 +15,7 @@ use diagnostics_reader::{ArchiveReader, Inspect, SubscriptionResultsStream};
 use fidl_fuchsia_archivist_tests::{
     SocketPuppetControllerRequest, SocketPuppetControllerRequestStream, SocketPuppetProxy,
 };
+use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io::DirectoryMarker;
 use fidl_fuchsia_sys2::{ChildRef, EventSourceMarker, RealmMarker};
@@ -163,10 +164,12 @@ impl PuppetEnv {
         assert!(id < self.max_puppets);
         let mut child_ref = ChildRef { name: format!("puppet-{}", id), collection: None };
 
-        let (_client_end, server_end) =
-            fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
+        let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let realm = self.instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
-        realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
+        realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
+
+        let _ = client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
+            .unwrap();
 
         debug!("waiting for controller request");
         let mut controller = self.controllers.next().await.unwrap();

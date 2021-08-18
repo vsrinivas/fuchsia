@@ -7,4 +7,10 @@
     use: [
         { protocol: "fuchsia.archivist.tests.SocketPuppetController" },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

@@ -7,4 +7,10 @@
         runner: "elf",
         binary: "bin/log_and_crash",
     },
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }
