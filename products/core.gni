@@ -37,6 +37,7 @@ core_realm_shards = [
   "//src/developer/memory/monitor:memory_monitor_core_shard",
   "//src/developer/remote-control:laboratory-core-shard",
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
+  "//src/developer/memory/mem:core_shard",
 
   # TODO(fxbug.dev/80375): only include in eng builds
   "//src/sys/test_manager:test_manager_core_shard",

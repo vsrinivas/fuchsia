@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//src/sys/component_index/component_index.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 executable("bin") {
   output_name = "mem"
@@ -20,7 +21,28 @@ executable("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("mem") {
+# TODO(fxbug.dev/82740): mem could be an ffx plugin
+fuchsia_component("mem_cml") {
+  component_name = "mem"
+  manifest = "meta/mem.cml"
+  deps = [ ":bin" ]
+}
+
+core_shard("core_shard") {
+  shard_file = "meta/mem.core_shard.cml"
+}
+
+# TODO(fxbug.dev/82741): legacy mem.cmx invoked by out-of-tree product tests
+# Delete the below when the bug is fixed
+fuchsia_component("mem_cmx") {
+  component_name = "mem"
   manifest = "meta/mem.cmx"
   deps = [ ":bin" ]
+}
+
+fuchsia_package("mem") {
+  deps = [
+    ":mem_cml",
+    ":mem_cmx",
+  ]
 }

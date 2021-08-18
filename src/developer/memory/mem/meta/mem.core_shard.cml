@@ -1,0 +1,38 @@
+// Adds mem to core
+// TODO(fxbug.dev/82740): mem could be an ffx plugin
+{
+    children: [
+        {
+            name: "mem",
+            url: "fuchsia-pkg://fuchsia.com/mem#meta/mem.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: "#mem",
+        },
+        {
+            protocol: [ "fuchsia.memory.Debugger" ],
+            from: "#memory_monitor",
+            to: "#mem",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#appmgr",
+            to: "#mem",
+            dependency: "weak_for_migration",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#mem",
+            subdir: "mem",
+        },
+    ],
+}

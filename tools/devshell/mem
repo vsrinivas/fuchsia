@@ -39,4 +39,8 @@ case $1 in
   ;;
 esac
 
+# TODO(fxbug.dev/82782): Support stdout/stderr in ffx component run
+# If/when the bug above is fixed, uncomment the line below with `run` and delete
+# the line below it with `run-legacy`.
+# fx-command-run ffx component run fuchsia-pkg://fuchsia.com/mem#meta/mem.cm -- "$@"
 fx-command-run ffx component run-legacy fuchsia-pkg://fuchsia.com/mem#meta/mem.cmx -- "$@"
