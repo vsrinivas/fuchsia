@@ -402,7 +402,7 @@ async fn echo_clients() -> Result<(), Error> {
                 ],
             })?;
 
-        let _child_instance = builder.build().create().await?;
+        let realm_instance = builder.build().create().await?;
 
         assert!(
             receive_echo_server_called.next().await.is_some(),
@@ -410,6 +410,8 @@ async fn echo_clients() -> Result<(), Error> {
             client_counter
         );
         client_counter += 1;
+
+        realm_instance.destroy().await?;
     }
 
     assert!(
@@ -463,7 +465,7 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
                 ],
             })?;
 
-        let _child_instance = builder
+        let realm_instance = builder
             .build()
             .create_in_nested_component_manager("#meta/component_manager.cm")
             .await?;
@@ -474,6 +476,8 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
             client_counter
         );
         client_counter += 1;
+
+        realm_instance.destroy().await?;
     }
     assert!(
         receive_echo_client_results.next().await.is_some(),
@@ -527,7 +531,7 @@ async fn echo_servers() -> Result<(), Error> {
                 ],
             })?;
 
-        let _child_instance = builder.build().create().await?;
+        let realm_instance = builder.build().create().await?;
 
         assert!(
             receive_echo_client_results.next().await.is_some(),
@@ -535,6 +539,8 @@ async fn echo_servers() -> Result<(), Error> {
             server_counter
         );
         server_counter += 1;
+
+        realm_instance.destroy().await?;
     }
 
     assert!(

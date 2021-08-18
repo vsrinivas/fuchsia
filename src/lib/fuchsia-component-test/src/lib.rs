@@ -9,6 +9,7 @@ use {
     fidl::endpoints::{self, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_realm_builder as frealmbuilder, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{FutureExt, TryFutureExt},
@@ -133,14 +134,46 @@ pub struct RealmInstance {
     pub root: ScopedInstance,
     // We want to ensure that the mocks runner remains alive for as long as the realm exists, so
     // the ScopedInstance is bundled up into a struct along with the mocks runner.
-    _mocks_runner: mock::MocksRunner,
+    mocks_runner: mock::MocksRunner,
 }
 
-// Empty Drop impl so that `RealmInstance` cannot be destructured.
-// This avoids a common mistake where the `ScopedInstance` is moved out and the MocksRunner is
-// dropped, leading to unexpected behavior.
 impl Drop for RealmInstance {
-    fn drop(&mut self) {}
+    /// To ensure component mocks are shutdown in an orderly manner (i.e. after their dependent
+    /// clients) upon `drop`, keep the mocks_runner_task alive in an async task until the
+    /// destroy_waiter synchronously destroys the realm.
+    fn drop(&mut self) {
+        match (self.mocks_runner.take_runner_task(), self.root.destroy_waiter_taken()) {
+            (Some(mocks_runner_task), false) => {
+                let destroy_waiter = self.root.take_destroy_waiter();
+                fasync::Task::local(async move {
+                    // move the mocks_runner into this block
+                    let _mocks_runner_task = mocks_runner_task;
+                    destroy_waiter.await.expect("failed to wait for realm destruction");
+                })
+                .detach();
+            }
+            _ => (),
+        }
+    }
+}
+
+impl RealmInstance {
+    /// Destroys the realm instance, returning only once realm destruction is complete.
+    ///
+    /// This function can be useful to call when it's important to ensure a realm accessing a
+    /// global resource is stopped before proceeding, or to ensure that realm destruction doesn't
+    /// race with process (and thus mock component) termination.
+    pub async fn destroy(mut self) -> Result<(), Error> {
+        let _mocks_runner_task =
+            self.mocks_runner.take_runner_task().expect("mocks runner already taken");
+        if self.root.destroy_waiter_taken() {
+            return Err(Error::DestroyWaiterTaken);
+        }
+        let destroy_waiter = self.root.take_destroy_waiter();
+        drop(self);
+        destroy_waiter.await.expect("failed to wait for realm destruction");
+        Ok(())
+    }
 }
 
 /// A custom built realm, which can be created at runtime in a component collection
@@ -381,7 +414,7 @@ impl Realm {
         let root = ScopedInstance::new(collection_name, root_url)
             .await
             .map_err(RealmError::FailedToCreateChild)?;
-        Ok(RealmInstance { root, _mocks_runner: mocks_runner })
+        Ok(RealmInstance { root, mocks_runner })
     }
 
     /// Creates this realm in a child component collection. By default this happens in the
@@ -391,7 +424,7 @@ impl Realm {
         let root = ScopedInstance::new_with_name(child_name, collection_name, root_url)
             .await
             .map_err(RealmError::FailedToCreateChild)?;
-        Ok(RealmInstance { root, _mocks_runner: mocks_runner })
+        Ok(RealmInstance { root, mocks_runner })
     }
 
     /// Launches a nested component manager which will run the created realm (along with any mocks
@@ -468,7 +501,7 @@ impl Realm {
         let root = ScopedInstance::new(collection_name, component_manager_url)
             .await
             .map_err(RealmError::FailedToCreateChild)?;
-        Ok(RealmInstance { root, _mocks_runner: mocks_runner })
+        Ok(RealmInstance { root, mocks_runner })
     }
 }
 
@@ -645,8 +678,13 @@ impl ScopedInstance {
         &self.exposed_dir
     }
 
+    /// Returns true if `take_destroy_waiter` has already been called.
+    pub fn destroy_waiter_taken(&self) -> bool {
+        self.destroy_channel.is_some()
+    }
+
     /// Returns a future which can be awaited on for destruction to complete after the
-    /// `ScopedInstance` is dropped.
+    /// `ScopedInstance` is dropped. Panics if called multiple times.
     pub fn take_destroy_waiter(
         &mut self,
     ) -> impl futures::Future<Output = Result<(), anyhow::Error>> {
@@ -685,6 +723,107 @@ impl Drop for ScopedInstance {
             let () = chan.send(result).unwrap_or_else(|result| {
                 warn!("Failed to send result for destroyed scoped instance. Result={:?}", result);
             });
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::builder::*,
+        futures::{channel::oneshot, future::pending, lock::Mutex, select},
+        std::sync::Arc,
+    };
+
+    struct SendsOnDrop {
+        sender: Option<oneshot::Sender<()>>,
+    }
+
+    impl Drop for SendsOnDrop {
+        fn drop(&mut self) {
+            self.sender.take().expect("sender already taken").send(()).unwrap()
+        }
+    }
+
+    impl SendsOnDrop {
+        fn new() -> (Self, oneshot::Receiver<()>) {
+            let (sender, receiver) = oneshot::channel();
+            (SendsOnDrop { sender: Some(sender) }, receiver)
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn realm_destroy() {
+        let (component_1_sends_on_drop, mut component_1_drop_receiver) = SendsOnDrop::new();
+        let (component_2_sends_on_drop, mut component_2_drop_receiver) = SendsOnDrop::new();
+        let component_1_sends_on_drop = Arc::new(Mutex::new(Some(component_1_sends_on_drop)));
+        let component_2_sends_on_drop = Arc::new(Mutex::new(Some(component_2_sends_on_drop)));
+
+        let (component_1_start_sender, component_1_start_receiver) = oneshot::channel();
+        let (component_2_start_sender, component_2_start_receiver) = oneshot::channel();
+        let component_1_start_sender = Arc::new(Mutex::new(Some(component_1_start_sender)));
+        let component_2_start_sender = Arc::new(Mutex::new(Some(component_2_start_sender)));
+
+        let mut builder = RealmBuilder::new().await.unwrap();
+        builder
+            .add_eager_component(
+                "component_1",
+                ComponentSource::mock(move |_mh: mock::MockHandles| {
+                    let component_1_start_sender = component_1_start_sender.clone();
+                    let component_1_sends_on_drop = component_1_sends_on_drop.clone();
+                    Box::pin(async move {
+                        component_1_start_sender.lock().await.take().unwrap().send(()).unwrap();
+                        let _sends_on_drop = component_1_sends_on_drop.lock().await.take().unwrap();
+                        let () = pending().await;
+                        Ok(())
+                    })
+                }),
+            )
+            .await
+            .expect("failed to add component_1")
+            .add_eager_component(
+                "component_2",
+                ComponentSource::mock(move |_mh: mock::MockHandles| {
+                    let component_2_start_sender = component_2_start_sender.clone();
+                    let component_2_sends_on_drop = component_2_sends_on_drop.clone();
+                    Box::pin(async move {
+                        component_2_start_sender.lock().await.take().unwrap().send(()).unwrap();
+                        let _sends_on_drop = component_2_sends_on_drop.lock().await.take().unwrap();
+                        let () = pending().await;
+                        Ok(())
+                    })
+                }),
+            )
+            .await
+            .expect("failed to add component_2");
+
+        let realm_instance = builder.build().create().await.expect("failed to create the realm");
+
+        // Wait for the component to report that they started
+        component_1_start_receiver.await.expect("component_1 never started");
+        component_2_start_receiver.await.expect("component_2 never started");
+
+        // Confirm that the components are still running
+        select! {
+            res = component_1_drop_receiver => panic!(
+                "component_1 should still be running, but we received this: {:?}", res),
+            res = component_2_drop_receiver => panic!(
+                "component_2 should still be running, but we received this: {:?}", res),
+            default => (),
+        };
+
+        // Destroy the realm, which will stop the components
+        realm_instance.destroy().await.expect("failed to destroy realm");
+
+        // Check that the components reported themselves being dropped
+        select! {
+            res = component_1_drop_receiver => res.expect("failed to receive stop notification"),
+            default => panic!("component_1 should have stopped by now"),
+        }
+        select! {
+            res = component_2_drop_receiver => res.expect("failed to receive stop notification"),
+            default => panic!("component_2 should have stopped by now"),
         }
     }
 }

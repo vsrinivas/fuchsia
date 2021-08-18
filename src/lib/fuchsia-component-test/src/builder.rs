@@ -8,7 +8,7 @@ use {
     crate::{error::*, mock, Moniker, Realm},
     anyhow, cm_rust,
     fidl::endpoints::DiscoverableProtocolMarker,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as frealmbuilder, fuchsia_async as fasync,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as frealmbuilder,
     futures::{future::BoxFuture, FutureExt},
     maplit::hashmap,
     std::{collections::HashMap, fmt},
@@ -397,7 +397,7 @@ impl RealmBuilder {
             framework_intermediary_proxy: realm.framework_intermediary_proxy.clone(),
             mocks_runner: crate::mock::MocksRunner {
                 mocks: realm.mocks_runner.mocks.clone(),
-                _event_stream_handling_task: fasync::Task::local(async { () }),
+                event_stream_handling_task: None,
             },
             collection_name: realm.collection_name.clone(),
             routes_to_add: vec![],

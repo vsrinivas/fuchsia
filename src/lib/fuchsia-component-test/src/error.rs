@@ -43,6 +43,9 @@ pub enum Error {
 
     #[error("failed to set package directory: {0:?}")]
     FailedToSetPkgDir(frealmbuilder::RealmBuilderError),
+
+    #[error("unable to destroy realm, the destroy waiter for root has already been taken")]
+    DestroyWaiterTaken,
 }
 
 #[derive(Debug, Error)]

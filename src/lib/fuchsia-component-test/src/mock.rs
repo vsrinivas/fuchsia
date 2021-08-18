@@ -117,7 +117,10 @@ pub struct MocksRunner {
 
     // We want the async task handling run requests from the framework intermediary to run as long
     // as this MocksRunner is alive, so hold on to the task for it in this struct.
-    pub(crate) _event_stream_handling_task: fasync::Task<()>,
+    //
+    // This is in an option because we want to be able to take this task during
+    // `RealmInstance::destroy` in order to keep mocks running during the realm shutdown.
+    pub(crate) event_stream_handling_task: Option<fasync::Task<()>>,
 }
 
 impl MocksRunner {
@@ -125,16 +128,23 @@ impl MocksRunner {
         framework_intermediary_event_stream: ftrb::FrameworkIntermediaryEventStream,
     ) -> Self {
         let mocks = Arc::new(Mutex::new(HashMap::new()));
-        let event_stream_handling_task = Self::run_event_stream_handling_task(
+        let event_stream_handling_task = Some(Self::run_event_stream_handling_task(
             mocks.clone(),
             framework_intermediary_event_stream,
-        );
-        Self { mocks, _event_stream_handling_task: event_stream_handling_task }
+        ));
+        Self { mocks, event_stream_handling_task }
     }
 
     pub async fn register_mock(&self, mock_id: String, mock: Mock) {
         let mut mocks_guard = self.mocks.lock().await;
         mocks_guard.insert(mock_id, mock);
+    }
+
+    /// Takes ownership of the task containing the mocks runner and all running mock components.
+    /// Useful if the RealmInstance this is part of is being destroyed and we want to wait for
+    /// realm destruction to complete before stopping the mock components.
+    pub(crate) fn take_runner_task(&mut self) -> Option<fasync::Task<()>> {
+        self.event_stream_handling_task.take()
     }
 
     fn run_event_stream_handling_task(
