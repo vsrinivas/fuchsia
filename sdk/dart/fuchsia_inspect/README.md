@@ -8,7 +8,7 @@ state. More can be read about inspect [here][inspect].
 ## Using
 
 This library can be added to projects by including the
-`//topaz/public/dart/fuchsia_inspect` GN target and importing the
+`//sdk/dart/fuchsia_inspect` GN target and importing the
 `package:fuchsia_inspect/inspect.dart` package. Inspect is also available in the
 SDK.
 
@@ -20,7 +20,7 @@ Inspect data may be discovered and retrieved with [iquery][iquery].
 
 Unit tests for Inspect are available in the `fuchsia_inspect_package_unittests`
 package. This includes tests from the `test/inspect` and `test/vmo` directories.
-To run these tests, include `--with //topaz:tests` in the `fx set`
+To run these tests, include `--with //sdk/dart:tests` in the `fx set`
 invocation and run the following command:
 
 ```

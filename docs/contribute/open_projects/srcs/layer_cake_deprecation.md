@@ -34,7 +34,6 @@ The following directories remain in the Fuchsia git repository:
 
 *   `//zircon/`
 *   `//garnet/`
-*   `//topaz/`
 
 Show them that you mean business by picking one of their subdirectories and
 moving it elsewhere - typically to `//src`.

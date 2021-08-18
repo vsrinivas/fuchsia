@@ -57,4 +57,4 @@ fx build && fx shell run fuchsia-pkg://fuchsia.com/inspect_validator#meta/valida
 The test entrypoint is located in `src/client.rs`. It connects to and controls
 one or more "puppet" programs located under lib/(language) such as
 lib/rust/src/main.rs. Since Dart is not currently supported in //src, its
-puppet will be located at //topaz/public/dart/fuchsia_inspect/test/validator_puppet.
+puppet will be located at //sdk/dart/fuchsia_inspect/test/validator_puppet.

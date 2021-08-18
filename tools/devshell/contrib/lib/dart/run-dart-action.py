@@ -17,7 +17,8 @@ import threading
 def gn_describe(path):
     gn = os.path.join(paths.FUCHSIA_DIR, 'buildtools', 'gn')
     data = subprocess.check_output(
-        [gn, 'desc', paths.FUCHSIA_BUILD_DIR, path, '--format=json'], cwd=paths.FUCHSIA_DIR)
+        [gn, 'desc', paths.FUCHSIA_BUILD_DIR, path, '--format=json'],
+        cwd=paths.FUCHSIA_DIR)
     return json.loads(data)
 
 
@@ -59,15 +60,17 @@ targets. Extra flags will be passed to the supporting Dart tool if applicable.
 ''')
     parser.add_argument(
         '--tree',
-        help='Restrict analysis to a source subtree, e.g. //topaz/shell/*',
+        help='Restrict analysis to a source subtree, e.g. //sdk/dart/*',
         default='*')
     parser.add_argument(
-        '--jobs', '-j',
+        '--jobs',
+        '-j',
         help='Number of concurrent instances to run',
         type=int,
         default=multiprocessing.cpu_count())
     parser.add_argument(
-        '--verbose', '-v',
+        '--verbose',
+        '-v',
         help='Show output from tests that pass',
         action='store_true')
     parser.add_argument(
@@ -89,27 +92,20 @@ targets. Extra flags will be passed to the supporting Dart tool if applicable.
 
     for target_name, properties in targets.items():
         if args.action == 'analyze':
-          script_valid = (
-              'script' in properties and properties['script'] ==
-              '//build/dart/gen_analyzer_invocation.py'
-          )
+            script_valid = (
+                'script' in properties and properties['script']
+                == '//build/dart/gen_analyzer_invocation.py')
         elif args.action == 'test':
-          script_valid = (
-              'script' in properties and
-              properties['script'] == '//build/dart/gen_test_invocation.py'
-          )
+            script_valid = (
+                'script' in properties and
+                properties['script'] == '//build/dart/gen_test_invocation.py')
         else:  # 'target-test'
-          script_valid = (
-              'script' in properties and
-              properties['script'] ==
-              '//build/dart/gen_remote_test_invocation.py'
-          )
-        if ('type' not in properties or
-                properties['type'] != 'action' or
-                'script' not in properties or
-                not script_valid or
-                'outputs' not in properties or
-                not len(properties['outputs'])):
+            script_valid = (
+                'script' in properties and properties['script']
+                == '//build/dart/gen_remote_test_invocation.py')
+        if ('type' not in properties or properties['type'] != 'action' or
+                'script' not in properties or not script_valid or
+                'outputs' not in properties or not len(properties['outputs'])):
             continue
         script_path = properties['outputs'][0]
         script_path = script_path[2:]  # Remove the leading //
@@ -130,8 +126,8 @@ targets. Extra flags will be passed to the supporting Dart tool if applicable.
         WorkerThread(script_queue, result_queue, extras).start()
 
     def print_progress():
-        sys.stdout.write('\rProgress: %d/%d\033[K' % (len(script_results),
-                                                      len(scripts)))
+        sys.stdout.write(
+            '\rProgress: %d/%d\033[K' % (len(script_results), len(scripts)))
         sys.stdout.flush()
 
     print_progress()
@@ -144,7 +140,8 @@ targets. Extra flags will be passed to the supporting Dart tool if applicable.
         if returncode != 0:
             failed_scripts.append(script)
         if args.verbose or returncode != 0:
-            print('\r----------------------------------------------------------')
+            print(
+                '\r----------------------------------------------------------')
             print(script)
             print(output)
 

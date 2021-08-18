@@ -15,13 +15,13 @@ invokes the Validator on the Dart Puppet, and is integrated in CQ/CI.
 ## Building
 
 This project can be added to builds by including
-`--with //topaz/public/dart/fuchsia_inspect/test/validator_puppet:tests`
+`--with //sdk/dart/fuchsia_inspect/test/validator_puppet:tests`
 to the `fx set` invocation.
 
 For example:
 
 ```
-fx set core.x64 --with '//topaz/bundles:buildbot' --with //src/diagnostics/validator/inspect:tests
+fx set core.x64 --with //src/diagnostics/validator/inspect:tests --with //sdk/dart/fuchsia_inspect/test/validator_puppet:tests
 ```
 
 ## Running

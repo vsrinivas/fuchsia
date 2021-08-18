@@ -2,7 +2,7 @@
 
 Diagnostics Streams is an experimental library for writing logs in the
 [log encoding][encoding]. The library will eventually be merged into the
-`fuchsia_logger` library in //topaz/public/dart and should not be used directly.
+`fuchsia_logger` library in //sdk/dart and should not be used directly.
 
 ## Testing
 

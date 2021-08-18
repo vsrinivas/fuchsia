@@ -12,7 +12,7 @@ interest.  Doing so will be the topic of followup work.
 To make the library available to other packages, add a dependency:
 
 ```
-//topaz/public/lib//internationalization"
+//sdk/dart/fuchsia_internationalization_flutter"
 ```
 
 to the dependencies in the appropriate `BUILD.gn` rule of your package.
@@ -22,7 +22,7 @@ to the dependencies in the appropriate `BUILD.gn` rule of your package.
 To import the new dependency, add the import:
 
 ```dart
-import 'packages:internationalization/internationalization.dart';
+import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 ```
 
 to the import section of any Dart file that needs strings.

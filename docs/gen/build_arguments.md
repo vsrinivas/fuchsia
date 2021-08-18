@@ -3338,7 +3338,7 @@ The directories to search for parts of the SDK.
 By default, we search the public directories for the various layers.
 In the future, we'll search a pre-built SDK as well.
 
-**Current value (from the default):** `["//garnet/public", "//topaz/public"]`
+**Current value (from the default):** `["//garnet/public"]`
 
 From //build/config/fuchsia/sdk.gni:10
 
@@ -3510,7 +3510,7 @@ size_checker_input = {
   components = [
     {
       component = "Foo"
-      src = [ "topaz/runtime/foo_runner" ]
+      src = [ "sdk/runtime/foo_runner" ]
       limit = 10240
     },
     {

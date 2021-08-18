@@ -33,16 +33,6 @@ exceptions = {
         ],
     '//src/developer/debug': ['//garnet/lib/process:process',],
     '//src/developer/feedback_agent': ['//src/ui/lib/escher/test',],
-    '//src/experiences/bin': [
-        '//topaz/public',
-        '//topaz/runtime',
-    ],
-    '//src/experiences/session_shells':
-        [
-            '//topaz/lib/tiler',
-            '//topaz/public',
-            '//topaz/runtime',
-        ],
     '//src/lib/process_builder': [
         '//garnet/examples/fidl/services:echo-rustc',
     ],

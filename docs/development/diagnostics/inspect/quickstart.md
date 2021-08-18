@@ -426,7 +426,7 @@ See below for the quick start guide in your language of choice.
   [...]
     deps = [
       [...]
-      "//topaz/public/dart/fuchsia_inspect",
+      "//sdk/dart/fuchsia_inspect",
       [...]
     ]
   [...]

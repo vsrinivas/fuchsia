@@ -14,7 +14,7 @@ The necessary packages can be included with an addtion to `deps` in `BUILD.gn`:
 
 ```
 deps = [
-  "//topaz/public/dart/fuchsia_logger",
+  "//sdk/dart/fuchsia_logger",
 ]
 ```
 

@@ -6,7 +6,7 @@
 #### CATEGORY=Run, inspect and debug
 ### attach to a running flutter module to enable hot reload and debugging
 
-## usage: fx flutter-attach //topaz/examples/hello_world:hello_world
+## usage: fx flutter-attach //examples/hello_world:hello_world
 ##
 ## This command requires Topaz in order to run.
 ##

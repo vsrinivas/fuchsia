@@ -8,7 +8,7 @@ debugging Flutter Applications on Fuchsia.
 ## Building
 
 This project can be added to builds by including `--with
-//topaz/packages/tests:dart_unittests` to the `fx set` invocation.
+//sdk/dart:tests` to the `fx set` invocation.
 
 ## Using
 
@@ -19,7 +19,7 @@ GN target.
 ## Testing
 
 Unit tests for library are available in
-`//topaz/public/dart/fuchsia_inspect_flutter/test`
+`//sdk/dart/fuchsia_inspect_flutter/test`
 directory. The tests can be run using
 
 ```

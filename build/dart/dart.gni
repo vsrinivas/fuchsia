@@ -19,7 +19,3 @@ dart_sdk_deps = []
 
 gen_snapshot = prebuilt_gen_snapshot
 gen_snapshot_product = prebuilt_gen_snapshot_product
-
-# This variable is currently used in //topaz. It can be removed when the reference
-# is removed from that repository
-gen_snapshot_deps = []

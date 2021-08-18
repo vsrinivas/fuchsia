@@ -18,7 +18,7 @@ final _log = Logger('DartInspectBenchmarksTest');
 
 /// Mapping of event names to output test names.
 /// These event names must be kept in sync with
-/// //topaz/tests/dart-inspect-benchmarks/lib/dart_inspect_benchmarks.dart.
+/// //src/lib/diagnostics/inspect/dart/bench/lib/dart_inspect_benchmarks.dart
 const _eventNameMap = {
   'Inc integer': 'basic/increment',
   'Set integer': 'basic/setInt',

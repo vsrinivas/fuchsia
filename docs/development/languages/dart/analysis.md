@@ -23,11 +23,11 @@ This file may refer to a common set of options by way of an `include` directive:
 include: relative/path/to/options.file
 ```
 
-A canonical set is available at [//topaz/tools/analysis_options.yaml](https://fuchsia.googlesource.com/topaz/+/HEAD/tools/analysis_options.yaml)
+A canonical set is available at [//build/dart/analysis_options.yaml](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/build/dart/analysis_options.yaml)
 It is customary to merely include that set from a local options file:
 
 ```
-include: path/to/topaz/tools/analysis_options.yaml
+include: path/to/build/dart/analysis_options.yaml
 ```
 
 Analysis may be disabled altogether for a given target with:
