@@ -29,6 +29,9 @@ toc:
     path: /docs/development/testing/block_device_testing.md
   - title: "NAND testing"
     path: /docs/development/testing/nand_testing.md
+- title: "Compatibility Testing"
+  section:
+  - include: /docs/development/testing/cts/_toc.yaml
 - title: "Fuzzing"
   section:
   - include: /docs/development/testing/fuzzing/_toc.yaml
