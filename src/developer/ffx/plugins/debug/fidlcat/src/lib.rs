@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -46,78 +46,69 @@ impl ProcessArguments {
     }
 }
 
+const UNIX_SOCKET: &str = "/tmp/debug_agent.socket";
+
 #[ffx_core::ffx_plugin(
-    "debug_enabled",
+    "debug.enabled",
     fidl_fuchsia_debugger::DebugAgentProxy = "core/appmgr:out:fuchsia.debugger.DebugAgent"
 )]
-pub async fn debug(
+pub async fn fidlcat(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
-    cmd: ffx_debug_plugin_args::DebugCommand,
+    cmd: ffx_debug_fidlcat_args::FidlcatCommand,
 ) -> Result<()> {
     let result = execute_debug(debugger_proxy, &cmd).await;
     // Removes the Unix socket file to be able to connect again.
-    let _ = fs::remove_file(&cmd.socket_location);
+    let _ = fs::remove_file(UNIX_SOCKET);
     result
 }
 
 pub async fn execute_debug(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
-    cmd: &ffx_debug_plugin_args::DebugCommand,
+    cmd: &ffx_debug_fidlcat_args::FidlcatCommand,
 ) -> Result<(), Error> {
     let sdk = ffx_config::get_sdk().await?;
 
     let mut arguments = ProcessArguments::new();
     let mut needs_debug_agent = true;
 
-    let command_path = match &cmd.sub_command {
-        Some(ffx_debug_plugin_args::DebugSubCommand::Fidlcat(options)) => {
-            if let Some(from) = &options.from {
-                if from != "device" {
-                    needs_debug_agent = false;
-                    arguments.add_value("--from", from);
-                }
-            }
+    let command_path = sdk.get_host_tool("fidlcat")?;
 
-            arguments.add_option("--to", &options.to);
-            arguments.add_option("--format", &options.format);
-            arguments.add_values("--with", &options.with);
-            arguments.add_flag("--with-process-info", options.with_process_info);
-            arguments.add_option("--stack", &options.stack);
-            arguments.add_values("--syscalls", &options.syscalls);
-            arguments.add_values("--exclude-syscalls", &options.exclude_syscalls);
-            arguments.add_values("--messages", &options.messages);
-            arguments.add_values("--exclude-messages", &options.exclude_messages);
-            arguments.add_values("--trigger", &options.trigger);
-            arguments.add_values("--thread", &options.thread);
-            arguments.add_flag("--dump-messages", options.dump_messages);
-
-            if needs_debug_agent {
-                // Processes to monitor.
-                arguments.add_values("--remote-pid", &options.remote_pid);
-                arguments.add_values("--remote-name", &options.remote_name);
-                arguments.add_values("--extra-name", &options.extra_name);
-
-                // Jobs to monitor.
-                arguments.add_values("--remote-job-id", &options.remote_job_id);
-                arguments.add_values("--remote-job-name", &options.remote_job_name);
-            }
-
-            if let SdkVersion::InTree = sdk.get_version() {
-                // When ffx is used in tree, uses the JSON IR files listed in all_fidl_json.txt.
-                let ir_file =
-                    format!("@{}/all_fidl_json.txt", sdk.get_path_prefix().to_str().unwrap());
-                arguments.add_value("--fidl-ir-path", &ir_file);
-            }
-            sdk.get_host_tool("fidlcat")?
+    if let Some(from) = &cmd.from {
+        if from != "device" {
+            needs_debug_agent = false;
+            arguments.add_value("--from", from);
         }
-        Some(ffx_debug_plugin_args::DebugSubCommand::Zxdb(_options)) => {
-            sdk.get_host_tool("zxdb")?
-        }
-        None => {
-            // If no sub command is specified, launches zxdb.
-            sdk.get_host_tool("zxdb")?
-        }
-    };
+    }
+
+    arguments.add_option("--to", &cmd.to);
+    arguments.add_option("--format", &cmd.format);
+    arguments.add_values("--with", &cmd.with);
+    arguments.add_flag("--with-process-info", cmd.with_process_info);
+    arguments.add_option("--stack", &cmd.stack);
+    arguments.add_values("--syscalls", &cmd.syscalls);
+    arguments.add_values("--exclude-syscalls", &cmd.exclude_syscalls);
+    arguments.add_values("--messages", &cmd.messages);
+    arguments.add_values("--exclude-messages", &cmd.exclude_messages);
+    arguments.add_values("--trigger", &cmd.trigger);
+    arguments.add_values("--thread", &cmd.thread);
+    arguments.add_flag("--dump-messages", cmd.dump_messages);
+
+    if needs_debug_agent {
+        // Processes to monitor.
+        arguments.add_values("--remote-pid", &cmd.remote_pid);
+        arguments.add_values("--remote-name", &cmd.remote_name);
+        arguments.add_values("--extra-name", &cmd.extra_name);
+
+        // Jobs to monitor.
+        arguments.add_values("--remote-job-id", &cmd.remote_job_id);
+        arguments.add_values("--remote-job-name", &cmd.remote_job_name);
+    }
+
+    if let SdkVersion::InTree = sdk.get_version() {
+        // When ffx is used in tree, uses the JSON IR files listed in all_fidl_json.txt.
+        let ir_file = format!("@{}/all_fidl_json.txt", sdk.get_path_prefix().to_str().unwrap());
+        arguments.add_value("--fidl-ir-path", &ir_file);
+    }
 
     if !needs_debug_agent {
         // Start fidlcat locally.
@@ -143,10 +134,10 @@ pub async fn execute_debug(
     let tx = std::cell::RefCell::new(tx);
 
     // Create our Unix socket.
-    let listener = UnixListener::bind(&cmd.socket_location)?;
+    let listener = UnixListener::bind(UNIX_SOCKET)?;
 
     // Connect to the Unix socket.
-    arguments.add_value("--unix-connect", &cmd.socket_location);
+    arguments.add_value("--unix-connect", UNIX_SOCKET);
 
     // Use the symbol server.
     arguments.add_value("--symbol-server", "gs://fuchsia-artifacts-release/debug");

@@ -1,18 +1,13 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_debug_plugin") {
+ffx_plugin("ffx_debug_symbol_index") {
   version = "0.1.0"
   edition = "2018"
-
-  plugin_deps = [
-    "fidlcat:ffx_debug_fidlcat",
-    "symbol-index:ffx_debug_symbol_index",
-    "zxdb:ffx_debug_zxdb",
-  ]
+  deps = [ "//third_party/rust_crates:serde_json" ]
 
   sources = [ "src/args.rs" ]
 }
