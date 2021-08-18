@@ -4,22 +4,13 @@
 
 use fidl_fuchsia_hardware_power_statecontrol as reboot;
 use fidl_fuchsia_mockrebootcontroller as controller;
-use fuchsia_async::{self as fasync, futures::TryStreamExt};
-use std::sync::{Arc, Mutex};
-
-pub struct ControllerState {
-    reboot_client: Option<reboot::RebootMethodsWatcherProxy>,
-}
-
-impl ControllerState {
-    pub fn new() -> Arc<Mutex<ControllerState>> {
-        Arc::new(Mutex::new(ControllerState { reboot_client: None }))
-    }
-}
+use fuchsia_async as fasync;
+use futures::{channel::mpsc, lock::Mutex, SinkExt, StreamExt, TryStreamExt};
+use std::sync::Arc;
 
 pub fn serve_reboot_server(
     mut stream: reboot::RebootMethodsWatcherRegisterRequestStream,
-    state: Arc<Mutex<ControllerState>>,
+    mut proxy_sender: mpsc::Sender<reboot::RebootMethodsWatcherProxy>,
 ) {
     fasync::Task::spawn(async move {
         while let Some(req) = stream.try_next().await.unwrap() {
@@ -28,7 +19,7 @@ pub fn serve_reboot_server(
                     watcher,
                     control_handle: _,
                 } => {
-                    state.lock().unwrap().reboot_client = Some(watcher.into_proxy().unwrap());
+                    proxy_sender.send(watcher.into_proxy().unwrap()).await.unwrap();
                 }
             }
         }
@@ -38,44 +29,25 @@ pub fn serve_reboot_server(
 
 pub fn serve_reboot_controller(
     mut stream: controller::MockRebootControllerRequestStream,
-    state: Arc<Mutex<ControllerState>>,
+    proxy_receiver: Arc<Mutex<mpsc::Receiver<reboot::RebootMethodsWatcherProxy>>>,
 ) {
     fasync::Task::spawn(async move {
         while let Some(req) = stream.try_next().await.unwrap() {
+            let proxy = proxy_receiver.lock().await.next().await.unwrap();
             match req {
                 controller::MockRebootControllerRequest::TriggerReboot { responder } => {
-                    let client_proxy = state.lock().unwrap().reboot_client.take();
-                    match client_proxy {
-                        Some(proxy) => {
-                            match proxy.on_reboot(reboot::RebootReason::UserRequest).await {
-                                Err(_) => {
-                                    responder
-                                        .send(&mut Err(controller::RebootError::ClientError))
-                                        .unwrap();
-                                }
-                                Ok(()) => {
-                                    responder.send(&mut Ok(())).unwrap();
-                                }
-                            }
+                    match proxy.on_reboot(reboot::RebootReason::UserRequest).await {
+                        Err(_) => {
+                            responder.send(&mut Err(controller::RebootError::ClientError)).unwrap();
                         }
-                        None => {
-                            responder.send(&mut Err(controller::RebootError::NoClientSet)).unwrap();
-                            continue;
+                        Ok(()) => {
+                            responder.send(&mut Ok(())).unwrap();
                         }
                     }
                 }
                 controller::MockRebootControllerRequest::CrashRebootChannel { responder } => {
-                    let client_proxy = state.lock().unwrap().reboot_client.take();
-                    match client_proxy {
-                        Some(proxy) => {
-                            drop(proxy);
-                            responder.send(&mut Ok(())).unwrap();
-                        }
-                        None => {
-                            responder.send(&mut Err(controller::RebootError::NoClientSet)).unwrap();
-                            continue;
-                        }
-                    }
+                    drop(proxy);
+                    responder.send(&mut Ok(())).unwrap();
                 }
             }
         }

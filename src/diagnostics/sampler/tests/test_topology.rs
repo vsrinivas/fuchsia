@@ -8,8 +8,8 @@ use cm_rust;
 use fidl_fuchsia_io2 as fio2;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_component_test::{builder::*, mock::*, Moniker, RealmInstance};
-use futures::StreamExt;
-use std::sync::{Arc, Mutex};
+use futures::{channel::mpsc, lock::Mutex, StreamExt};
+use std::sync::Arc;
 
 const MOCK_COBALT_URL: &str = "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cm";
 const SINGLE_COUNTER_URL: &str =
@@ -174,15 +174,15 @@ pub async fn create() -> Result<RealmInstance, Error> {
 async fn serve_mocks(mock_handles: MockHandles) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
-    let state: Arc<Mutex<mocks::ControllerState>> = mocks::ControllerState::new();
-    let controller_state = state.clone();
+    let (snd, rcv) = mpsc::channel(1);
+    let rcv = Arc::new(Mutex::new(rcv));
 
     fs.dir("svc")
         .add_fidl_service(move |stream| {
-            mocks::serve_reboot_server(stream, controller_state.clone());
+            mocks::serve_reboot_server(stream, snd.clone());
         })
         .add_fidl_service(move |stream| {
-            mocks::serve_reboot_controller(stream, state.clone());
+            mocks::serve_reboot_controller(stream, rcv.clone());
         });
     fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;

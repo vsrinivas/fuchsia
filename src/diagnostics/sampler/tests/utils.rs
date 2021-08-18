@@ -38,12 +38,12 @@ pub async fn gather_sample_group(
 ) -> Vec<CobaltEvent> {
     let mut events: Vec<CobaltEvent> = Vec::new();
     loop {
-        let watch = logger_querier.watch_logs(
+        let watch = logger_querier.watch_logs2(
             log_querier_config.project_id,
             fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvent,
         );
 
-        let (mut new_events, more) = watch.await.unwrap().unwrap();
+        let (mut new_events, more) = watch.await.unwrap();
         assert!(!more);
 
         events.append(&mut new_events);

@@ -7,8 +7,6 @@ use fidl_fuchsia_cobalt_test::LoggerQuerierMarker;
 use fidl_fuchsia_component::BinderMarker;
 use fidl_fuchsia_mockrebootcontroller::MockRebootControllerMarker;
 use fidl_fuchsia_samplertestcontroller::SamplerTestControllerMarker;
-use fuchsia_async as fasync;
-use fuchsia_zircon::DurationNum;
 
 mod mocks;
 mod test_topology;
@@ -31,11 +29,6 @@ async fn event_count_sampler_test() {
         .root
         .connect_to_named_protocol_at_exposed_dir::<BinderMarker>("fuchsia.component.SamplerBinder")
         .unwrap();
-
-    // If we don't sleep, then calls to logger_querier.watch fail because
-    // the logger isn't available.
-    // TODO(fxb/45331): Remove sleep when race is resolved.
-    fasync::Timer::new(fasync::Time::after(2.seconds())).await;
 
     test_app_controller.increment_int(1).unwrap();
 
@@ -133,11 +126,6 @@ async fn reboot_server_crashed_test() {
         .root
         .connect_to_named_protocol_at_exposed_dir::<BinderMarker>("fuchsia.component.SamplerBinder")
         .unwrap();
-
-    // If we don't sleep, then calls to logger_querier.watch fail because
-    // the logger isn't available.
-    // TODO(fxb/45331): Remove sleep when race is resolved.
-    fasync::Timer::new(fasync::Time::after(2.seconds())).await;
 
     // Crash the reboot server to verify that sampler continues to sample.
     reboot_controller.crash_reboot_channel().await.unwrap().unwrap();
