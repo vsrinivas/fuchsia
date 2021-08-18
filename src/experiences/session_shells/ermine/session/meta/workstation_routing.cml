@@ -108,5 +108,9 @@
             ],
             from: "#scene_manager",
         },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
     ],
 }
