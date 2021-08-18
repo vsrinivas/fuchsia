@@ -257,3 +257,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0121_component_events.md
 - title: "RFC-0122: Stakeholders"
   path: /docs/contribute/governance/rfcs/0122_stakeholders.md
+- title: "RFC-0123: CPU performance info syscalls"
+  path: /docs/contribute/governance/rfcs/0123_cpu_performance_info.md

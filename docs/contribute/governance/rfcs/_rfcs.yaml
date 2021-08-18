@@ -1587,3 +1587,17 @@
   reviewers: ['abarth@google.com', 'wittrock@google.com', 'pascallouis@google.com', 'aaronwood@google.com', 'dgilhooley@google.com', 'simonshields@google.com', 'bprosnitz@google.com']
   submitted: '2021-06-21'
   reviewed: '2021-08-16'
+
+- name: 'RFC-0123'
+  title: 'CPU performance info syscalls'
+  short_description: 'Interface for communicating with the kernel regarding CPU performance'
+  authors: ['claridge@google.com']
+  file: '0123_cpu_performance_info.md'
+  area: ['Zircon']
+  issue: ['']
+  gerrit_change_id: ['554188']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'eieio@google.com', 'gkalsi@google.com', 'maniscalco@google.com', 'pshickel@google.com', 'travisg@google.com']
+  consulted: ['wez@google.com']
+  submitted: '2021-07-20'
+  reviewed: '2021-08-18'

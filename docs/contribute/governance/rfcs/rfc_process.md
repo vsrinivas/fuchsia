@@ -186,7 +186,7 @@ socialization, you are ready to start the formal part of the RFC process. The
 next step is to write a first draft of the RFC document itself.
 
 Mechanically, an RFC is a markdown file in the
-`//docs/contribute/governance/rfcs` directory. To create and RFC, you create a
+`//docs/contribute/governance/rfcs` directory. To create an RFC, you create a
 CL that adds a file to that directory. You must start by making a copy of the
 [RFC template](TEMPLATE.md). The template is designed to guide you towards
 writing a high-quality RFC by prompting you to think through the problem you are
