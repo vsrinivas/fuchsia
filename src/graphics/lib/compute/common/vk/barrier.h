@@ -39,6 +39,9 @@ void
 vk_barrier_compute_w_to_indirect_compute_r(VkCommandBuffer cb);
 
 void
+vk_barrier_transfer_w_compute_w_to_transfer_r(VkCommandBuffer cb);
+
+void
 vk_barrier_compute_w_to_host_r(VkCommandBuffer cb);
 
 void
