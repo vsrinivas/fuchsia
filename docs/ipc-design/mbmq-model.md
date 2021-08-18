@@ -66,8 +66,8 @@ An MBO starts off in the `owned_by_caller` state.
 
 To send a request, the caller process writes the request message into
 the MBO using `zx_mbo_write()` and then sends the MBO on a channel
-using `zx_channel_write_mbo()`.  This enqueues the MBO onto the
-channel's associated MsgQueue and switches the MBO's state to
+using `zx_channel_send()`.  This enqueues the MBO onto the channel's
+associated MsgQueue and switches the MBO's state to
 `enqueued_as_request`.  In that state, MBO's handle can no longer be
 used to read or write the MBO, so the caller cannot modify the message
 after it has been sent.
@@ -130,7 +130,7 @@ a different callee.
     or a CMH handle (for a CMH pointing to an MBO in the
     `owned_by_callee` state).
 
-*   `zx_channel_write_mbo(channel, mbo)`
+*   `zx_channel_send(channel, mbo)`
 
     Sends an MBO as a request on a channel.  The MBO must be in the
     `owned_by_caller` state.  Its state will be changed to
@@ -172,11 +172,11 @@ a different callee.
 
     For channels: When given channel endpoint 1 of a pair, this sets
     the associated MsgQueue for endpoint 2 of the pair so that calls
-    to `zx_channel_write_mbo()` on endpoint 2 will enqueue messages
-    onto the given MsgQueue with the given key value.  If the channel
-    had any existing messages queued on it (previously written to
-    endpoint 2 and currently readable from endpoint 1), they are moved
-    onto the given MsgQueue.
+    to `zx_channel_send()` on endpoint 2 will enqueue messages onto
+    the given MsgQueue with the given key value.  If the channel had
+    any existing messages queued on it (previously written to endpoint
+    2 and currently readable from endpoint 1), they are moved onto the
+    given MsgQueue.
 
     For MBOs: When given an MBO, this sets the associated MsgQueue for
     the MBO, onto which `zx_cmh_send_reply()` will enqueue the MBO
@@ -290,9 +290,8 @@ MBO:
     *   An array of bytes (data).
     *   An array of Zircon handles.
 *   `key`: 64-bit integer.  This is set when the MBO is enqueued onto
-    a MsgQueue by either `zx_channel_write_mbo()` or
-    `zx_cmh_send_reply()`.  Its value is returned by
-    `zx_msgqueue_wait()`.
+    a MsgQueue by either `zx_channel_send()` or `zx_cmh_send_reply()`.
+    Its value is returned by `zx_msgqueue_wait()`.
 *   `reply_queue`: This is the MsgQueue that `zx_cmh_send_reply()`
     will enqueue the MBO onto when it is sent as a reply.
 *   `reply_key`: 64-bit integer.  `zx_cmh_send_reply()` will set the
@@ -356,8 +355,8 @@ mapped at the same time.)
 struct zx_mbmq_multiop {
   // Inputs for write+send:
   bool is_req;           // true if sending a request, false if sending a reply
-  zx_handle_t mbo;       // for zx_mbo_write() + zx_channel_write_mbo()/zx_cmh_send_reply()
-  zx_handle_t channel;   // for zx_channel_write_mbo() (if is_req is true)
+  zx_handle_t mbo;       // for zx_mbo_write() + zx_channel_send()/zx_cmh_send_reply()
+  zx_handle_t channel;   // for zx_channel_send() (if is_req is true)
 
   // Inputs for wait+read:
   zx_handle_t msgqueue;  // for zx_msgqueue_wait()
@@ -378,8 +377,8 @@ zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
     the MBO specified by `mbo` (which may be an MBO handle or a CMH
     handle).
 *   Send message:
-    *   If `is_req` is true, do `zx_channel_write_mbo()` to send `mbo`
-        on `channel`.
+    *   If `is_req` is true, do `zx_channel_send()` to send `mbo` on
+        `channel`.
     *   If `is_req` is false, do `zx_cmh_send_reply()` on `mbo` to
         send the message as a reply.
 *   Do `zx_msgqueue_wait()` on `msgqueue` and `cmh`.  Returns the
@@ -605,9 +604,8 @@ could be reordered or done in parallel:
 *   Implement most of the new kernel primitives, including MsgQueues,
     MBOs and CMHs.  Channels will be modified so that they can contain
     both legacy messages (those sent with `zx_channel_write()`) and
-    MBO messages (those sent with `zx_channel_write_mbo()`).
-    MsgQueues will be added as a new object type, separate from Zircon
-    ports.
+    MBO messages (those sent with `zx_channel_send()`).  MsgQueues
+    will be added as a new object type, separate from Zircon ports.
 
 *   Switch processes over to using MsgQueues instead of Zircon ports.
     An initial conversion can replace uses of `zx_object_wait_async()`
