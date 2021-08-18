@@ -6,12 +6,6 @@
         <col width="10%">
       </colgroup>
         <tbody class="list">
-          {% if driver.status != '' %}
-          <tr>
-            <td>Status</td>
-            <td>{{ driver.status }}</td>
-          </tr>
-          {% endif %}
           {% if driver.vendor != [''] %}
           <tr>
             <td>Vendor</td>
