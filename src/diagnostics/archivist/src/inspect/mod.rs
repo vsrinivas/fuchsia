@@ -355,19 +355,14 @@ impl ReaderServer {
 #[cfg(test)]
 mod tests {
     use {
-        super::collector::InspectDataCollector,
+        super::collector::{InspectData, InspectDataCollector},
         super::*,
         crate::{
-            accessor::BatchIterator,
-            container::ComponentIdentity,
-            diagnostics::AccessorStats,
-            events::types::{ComponentIdentifier, InspectData},
-            pipeline::Pipeline,
-            repository::DataRepo,
+            accessor::BatchIterator, container::ComponentIdentity, diagnostics::AccessorStats,
+            events::types::ComponentIdentifier, pipeline::Pipeline, repository::DataRepo,
         },
         anyhow::format_err,
         diagnostics_hierarchy::trie::TrieIterableNode,
-        diagnostics_hierarchy::DiagnosticsHierarchy,
         fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
@@ -518,7 +513,7 @@ mod tests {
                 assert!(extra.is_some());
 
                 match extra.unwrap() {
-                    InspectData::Tree(tree, vmo) => {
+                    InspectData::Tree(tree) => {
                         // Assert we can read the tree proxy and get the data we expected.
                         let hierarchy =
                             reader::read(tree).await.expect("failed to read hierarchy from tree");
@@ -527,15 +522,6 @@ mod tests {
                             lazy: {
                                 b: 3.14,
                             }
-                        });
-                        let partial_hierarchy: DiagnosticsHierarchy =
-                            PartialNodeHierarchy::try_from(vmo.as_ref().unwrap())
-                                .expect("failed to read hierarchy from vmo")
-                                .into();
-                        // Assert the vmo also points to that data (in this case since there's no
-                        // lazy nodes).
-                        assert_data_tree!(partial_hierarchy, root: {
-                            a: 1i64,
                         });
                     }
                     v => {

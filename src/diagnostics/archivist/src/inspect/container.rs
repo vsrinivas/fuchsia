@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    super::collector::InspectDataCollector,
     crate::{
         container::{ComponentIdentity, ReadSnapshot, SnapshotData},
-        events::types::InspectData,
+        inspect::collector::{InspectData, InspectDataCollector},
     },
     diagnostics_data as schema,
     diagnostics_hierarchy::InspectHierarchyMatcher,
@@ -58,8 +57,7 @@ impl PopulatedInspectDataContainer {
                     let mut acc: Vec<SnapshotData> = vec![];
                     for (filename, data) in data_map {
                         match data {
-                            InspectData::Tree(tree, _) => match SnapshotTree::try_from(&tree).await
-                            {
+                            InspectData::Tree(tree) => match SnapshotTree::try_from(&tree).await {
                                 Ok(snapshot_tree) => {
                                     acc.push(SnapshotData::successful(
                                         ReadSnapshot::Tree(snapshot_tree),

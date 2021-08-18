@@ -9,8 +9,6 @@ use {
     },
     async_trait::async_trait,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fidl_fuchsia_inspect::TreeProxy,
-    fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream},
     fidl_fuchsia_sys2::{self as fsys, Event, EventHeader},
@@ -361,32 +359,6 @@ pub enum ComponentEvent {
 
     /// We received a new connection to `LogSink`.
     LogSinkRequested(LogSinkRequestedEvent),
-}
-
-/// Data associated with a component.
-/// This data is stored by data collectors and passed by the collectors to processors.
-#[derive(Debug)]
-pub enum InspectData {
-    /// Empty data, for testing.
-    Empty,
-
-    /// A VMO containing data associated with the event.
-    Vmo(zx::Vmo),
-
-    /// A file containing data associated with the event.
-    ///
-    /// Because we can't synchronously retrieve file contents like we can for VMOs, this holds
-    /// the full file contents. Future changes should make streaming ingestion feasible.
-    File(Vec<u8>),
-
-    /// A connection to a Tree service and a handle to the root hierarchy VMO. This VMO is what a
-    /// root.inspect file would contain and the result of calling Tree#GetContent. We hold to it
-    /// so that we can use it when the component is removed, at which point calling the Tree
-    /// service is not an option.
-    Tree(TreeProxy, Option<zx::Vmo>),
-
-    /// A connection to the deprecated Inspect service.
-    DeprecatedFidl(InspectProxy),
 }
 
 impl TryFrom<Event> for ComponentEvent {

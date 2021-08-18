@@ -1,14 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
-    crate::events::types::InspectData,
     anyhow::{format_err, Error},
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
-    fidl_fuchsia_inspect::TreeMarker,
-    fidl_fuchsia_inspect_deprecated::InspectMarker,
+    fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
+    fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy},
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo},
-    files_async,
+    files_async, fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::stream::StreamExt,
     futures::{FutureExt, TryFutureExt},
@@ -26,6 +26,29 @@ use {
 pub type DataMap = HashMap<String, InspectData>;
 
 pub type Moniker = String;
+
+/// Data associated with a component.
+/// This data is stored by data collectors and passed by the collectors to processors.
+#[derive(Debug)]
+pub enum InspectData {
+    /// Empty data, for testing.
+    Empty,
+
+    /// A VMO containing data associated with the event.
+    Vmo(zx::Vmo),
+
+    /// A file containing data associated with the event.
+    ///
+    /// Because we can't synchronously retrieve file contents like we can for VMOs, this holds
+    /// the full file contents. Future changes should make streaming ingestion feasible.
+    File(Vec<u8>),
+
+    /// A connection to a Tree service.
+    Tree(TreeProxy),
+
+    /// A connection to the deprecated Inspect service.
+    DeprecatedFidl(InspectProxy),
+}
 
 /// InspectDataCollector holds the information needed to retrieve the Inspect
 /// VMOs associated with a particular component
@@ -77,10 +100,7 @@ impl InspectDataCollector {
             // We are only currently interested in inspect VMO files (root.inspect) and
             // inspect services.
             if let Ok(Some(proxy)) = self.maybe_load_service::<TreeMarker>(inspect_proxy, &entry) {
-                let maybe_vmo =
-                    proxy.get_content().err_into::<anyhow::Error>().await?.buffer.map(|b| b.vmo);
-
-                self.maybe_add(&entry.name, InspectData::Tree(proxy, maybe_vmo));
+                self.maybe_add(&entry.name, InspectData::Tree(proxy));
                 continue;
             }
 
@@ -181,19 +201,15 @@ impl InspectDataCollector {
 mod tests {
     use {
         super::*,
-        crate::events::types::InspectData,
-        diagnostics_hierarchy::DiagnosticsHierarchy,
         fdio,
         fidl::endpoints::DiscoverableProtocolMarker,
         fidl_fuchsia_inspect::TreeMarker,
         fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
-        fuchsia_inspect::reader::PartialNodeHierarchy,
         fuchsia_inspect::{assert_data_tree, reader, Inspector},
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
         futures::{FutureExt, StreamExt},
-        std::convert::TryFrom,
         std::path::PathBuf,
     };
 
@@ -327,7 +343,7 @@ mod tests {
                 assert!(extra.is_some());
 
                 match extra.unwrap() {
-                    InspectData::Tree(tree, vmo) => {
+                    InspectData::Tree(tree) => {
                         // Assert we can read the tree proxy and get the data we expected.
                         let hierarchy =
                             reader::read(tree).await.expect("failed to read hierarchy from tree");
@@ -336,15 +352,6 @@ mod tests {
                             lazy: {
                                 b: 3.14,
                             }
-                        });
-                        let partial_hierarchy: DiagnosticsHierarchy =
-                            PartialNodeHierarchy::try_from(vmo.as_ref().unwrap())
-                                .expect("failed to read hierarchy from vmo")
-                                .into();
-                        // Assert the vmo also points to that data (in this case since there's no
-                        // lazy nodes).
-                        assert_data_tree!(partial_hierarchy, root: {
-                            a: 1i64,
                         });
                     }
                     v => {
