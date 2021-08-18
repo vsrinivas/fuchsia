@@ -8,17 +8,8 @@ import("//build/config.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":compile",
     ":netstack-integration-tests",
     "ip_forward:netemul-ip-forward-tests",
-  ]
-}
-
-group("compile") {
-  testonly = true
-  deps = [
-    "common:netstack_testing_common",
-    "common-v1:netstack_testing_common",
   ]
 }
 
@@ -53,7 +44,7 @@ fuchsia_test_package("netstack-integration-tests") {
   }
 
   deps = [
-    # netemul-sandbox-v2 is used to create hermetic environments.
+    # netemul-sandbox-v2 is used to create hermetic test realms.
     "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
 
     # netstack is under test.

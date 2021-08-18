@@ -470,7 +470,7 @@ async fn test_acquire_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
 ///
 /// This method will:
 ///   -- For each passed netstack config:
-///        -- Start a netstack in a new environment
+///        -- Start a netstack in a new realm
 ///        -- Create netemul endpoints in the referenced network and install them on the netstack
 ///        -- Start DHCP servers on each server endpoint
 ///        -- Start DHCP clients on each client endpoint and verify that they acquire the expected
@@ -489,14 +489,14 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                 let TestNetstackRealmConfig { servers, clients } = netstack;
                 let netstack_realm = sandbox
                     .create_netstack_realm_with::<Netstack2, _, _>(
-                        format!("netstack_env_{}_{}", test_name, id),
+                        format!("netstack_realm_{}_{}", test_name, id),
                         &[
                             KnownServiceProvider::DhcpServer { persistent: false },
                             KnownServiceProvider::DnsResolver,
                             KnownServiceProvider::SecureStash,
                         ],
                     )
-                    .context("failed to create netstack environment")?;
+                    .context("failed to create netstack realm")?;
                 let netstack_realm_ref = &netstack_realm;
 
                 let servers = stream::iter(servers.into_iter())

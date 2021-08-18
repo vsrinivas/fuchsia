@@ -15,7 +15,6 @@ rustc_test("ipv6") {
     "//src/connectivity/lib/fidl_fuchsia_netstack_ext",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
-    "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",

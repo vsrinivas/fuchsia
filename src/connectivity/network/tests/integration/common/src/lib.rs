@@ -9,12 +9,6 @@
 pub mod constants;
 #[macro_use]
 pub mod realms;
-// TODO(https://fxbug.dev/77202): remove this alias once integration tests are
-// fully migrated to netemul-v2.
-//
-// We alias this so that references to `environments` in integration testing
-// macros don't become invalid until all usages of them in tests are migrated.
-pub use realms as environments;
 
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom as _;
