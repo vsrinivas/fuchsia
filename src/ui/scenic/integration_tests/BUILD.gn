@@ -7,7 +7,10 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 group("integration_tests") {
   testonly = true
-  public_deps = [ ":gfx_integration_tests" ]
+  public_deps = [
+    ":flatland_integration_tests",
+    ":gfx_integration_tests",
+  ]
 }
 
 source_set("common_deps") {
@@ -141,6 +144,24 @@ fuchsia_test_component("gfx_view_ref_installed_integration_test") {
   deps = [ ":gfx_view_ref_installed_integration_test_bin" ]
 }
 
+executable("flatland_touch_integration_test_bin") {
+  testonly = true
+  sources = [ "flatland_touch_integration_test.cc" ]
+  deps = [
+    ":common_deps",
+    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk//fidl/fuchsia.ui.pointer",
+    "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//src/ui/lib/glm_workaround",
+  ]
+}
+
+fuchsia_test_component("flatland_touch_integration_test") {
+  component_name = "flatland_touch_integration_test"
+  manifest = "meta/flatland_touch_integration_test.cmx"
+  deps = [ ":flatland_touch_integration_test_bin" ]
+}
+
 fuchsia_test_package("gfx_integration_tests") {
   test_components = [
     ":gfx_focus_integration_test",
@@ -153,6 +174,16 @@ fuchsia_test_package("gfx_integration_tests") {
   ]
   test_specs = {
     environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+  }
+  deps = [ "//src/ui/scenic:component" ]
+}
+
+fuchsia_test_package("flatland_integration_tests") {
+  test_components = [ ":flatland_touch_integration_test" ]
+  test_specs = {
+    # TODO(fxbug.dev/71344): Should have the same environments as "gfx_integration_tests" above, but
+    # Flatland display compositor currently crashes on aemu, so we skip it for now.
+    environments = magma_libvulkan_hardware_envs
   }
   deps = [ "//src/ui/scenic:component" ]
 }
