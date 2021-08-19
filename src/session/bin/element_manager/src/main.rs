@@ -66,9 +66,12 @@ mod tests {
     use {
         super::ELEMENT_COLLECTION_NAME,
         element_management::{ElementManager, SimpleElementManager},
+        fidl::endpoints::ProtocolMarker,
         fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
-        fidl_fuchsia_element as felement, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
+        fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
         lazy_static::lazy_static,
+        session_testing::spawn_directory_server,
         test_util::Counter,
     };
 
@@ -101,10 +104,19 @@ mod tests {
     async fn propose_element_launches_element() {
         lazy_static! {
             static ref CREATE_CHILD_CALL_COUNT: Counter = Counter::new(0);
-            static ref BIND_CHILD_CALL_COUNT: Counter = Counter::new(0);
+            static ref BINDER_CONNECTION_COUNT: Counter = Counter::new(0);
         }
 
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
+
+        let directory_request_handler = move |directory_request| match directory_request {
+            fio::DirectoryRequest::Open { path, .. } => {
+                if path == fcomponent::BinderMarker::DEBUG_NAME {
+                    BINDER_CONNECTION_COUNT.inc();
+                }
+            }
+            _ => panic!("Directory handler received an unexpected request"),
+        };
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
@@ -113,8 +125,8 @@ mod tests {
                     CREATE_CHILD_CALL_COUNT.inc();
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys2::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                    BIND_CHILD_CALL_COUNT.inc();
+                fsys2::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
+                    spawn_directory_server(exposed_dir, directory_request_handler);
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => {
@@ -148,6 +160,6 @@ mod tests {
         assert!(result.is_ok());
 
         assert_eq!(CREATE_CHILD_CALL_COUNT.get(), 1);
-        assert_eq!(BIND_CHILD_CALL_COUNT.get(), 1);
+        assert_eq!(BINDER_CONNECTION_COUNT.get(), 1);
     }
 }

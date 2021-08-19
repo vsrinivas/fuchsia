@@ -95,8 +95,8 @@ async fn handle_element_manager_requests(
     mut stream: ElementManagerRequestStream,
 ) -> Result<(), Error> {
     let mut uncontrolled_elements = vec![];
-    let realm =
-        connect_to_protocol::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
+    let realm = connect_to_protocol::<fsys::RealmMarker>()
+        .context("Could not connect to Realm service.")?;
 
     let element_manager = SimpleElementManager::new(realm);
     while let Some(request) =
@@ -145,6 +145,9 @@ async fn handle_element_manager_requests(
                         Err(ProposeElementError::Rejected)
                     }
                     Err(ElementManagerError::NotCreated { .. }) => {
+                        Err(ProposeElementError::Rejected)
+                    }
+                    Err(ElementManagerError::ExposedDirNotOpened { .. }) => {
                         Err(ProposeElementError::Rejected)
                     }
                     Err(ElementManagerError::NotBound { .. }) => Err(ProposeElementError::Rejected),

@@ -382,7 +382,10 @@ impl SessionManager {
                         fcomponent::Error::InstanceCannotResolve => LaunchError::NotFound,
                         _ => LaunchError::CreateComponentFailed,
                     },
-                    startup::StartupError::NotBound { .. } => LaunchError::CreateComponentFailed,
+                    startup::StartupError::ExposedDirNotOpened { .. } => {
+                        LaunchError::CreateComponentFailed
+                    }
+                    startup::StartupError::NotLaunched { .. } => LaunchError::CreateComponentFailed,
                 })
                 .map(|session_exposed_dir_channel| {
                     state.session_url = Some(session_url);
@@ -407,7 +410,12 @@ impl SessionManager {
                         fcomponent::Error::InstanceCannotResolve => RestartError::NotFound,
                         _ => RestartError::CreateComponentFailed,
                     },
-                    startup::StartupError::NotBound { .. } => RestartError::CreateComponentFailed,
+                    startup::StartupError::ExposedDirNotOpened { .. } => {
+                        RestartError::CreateComponentFailed
+                    }
+                    startup::StartupError::NotLaunched { .. } => {
+                        RestartError::CreateComponentFailed
+                    }
                 })
                 .map(|session_exposed_dir_channel| {
                     state.session_exposed_dir_channel = Some(session_exposed_dir_channel);
@@ -433,6 +441,7 @@ mod tests {
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
         futures::prelude::*,
         matches::assert_matches,
+        session_testing::spawn_noop_directory_server,
     };
 
     fn serve_session_manager_services(
@@ -481,7 +490,8 @@ mod tests {
                     assert_eq!(decl.url.unwrap(), session_url);
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                fsys::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
+                    spawn_noop_directory_server(exposed_dir);
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -515,7 +525,8 @@ mod tests {
                     assert_eq!(decl.url.unwrap(), session_url);
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                fsys::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
+                    spawn_noop_directory_server(exposed_dir);
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),

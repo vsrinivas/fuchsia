@@ -61,10 +61,15 @@ pub enum ElementManagerError {
     #[error("Element {} not launched: {:?}", url, err_str)]
     NotLaunched { url: String, err_str: String },
 
+    /// Returned when the element manager fails to open the exposed directory
+    /// of the component instance associated with a given element.
+    #[error("Element {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
+    ExposedDirNotOpened { name: String, collection: String, url: String, err: fcomponent::Error },
+
     /// Returned when the element manager fails to bind to the component instance associated with
     /// a given element.
-    #[error("Element {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
-    NotBound { name: String, collection: String, url: String, err: fcomponent::Error },
+    #[error("Element {} not bound at \"{}/{}\": {:?}", url, collection, name, err_str)]
+    NotBound { name: String, collection: String, url: String, err_str: String },
 }
 
 impl ElementManagerError {
@@ -110,17 +115,31 @@ impl ElementManagerError {
         ElementManagerError::NotLaunched { url: url.into(), err_str: err_str.into() }
     }
 
-    pub fn not_bound(
+    pub fn exposed_dir_not_opened(
         name: impl Into<String>,
         collection: impl Into<String>,
         url: impl Into<String>,
         err: impl Into<fcomponent::Error>,
     ) -> ElementManagerError {
-        ElementManagerError::NotBound {
+        ElementManagerError::ExposedDirNotOpened {
             name: name.into(),
             collection: collection.into(),
             url: url.into(),
             err: err.into(),
+        }
+    }
+
+    pub fn not_bound(
+        name: impl Into<String>,
+        collection: impl Into<String>,
+        url: impl Into<String>,
+        err_str: impl Into<String>,
+    ) -> ElementManagerError {
+        ElementManagerError::NotBound {
+            name: name.into(),
+            collection: collection.into(),
+            url: url.into(),
+            err_str: err_str.into(),
         }
     }
 }
@@ -497,22 +516,39 @@ impl SimpleElementManager {
             ElementManagerError::not_created(child_name, &self.collection, child_url, err)
         })?;
 
-        let directory_channel =
-            match realm_management::bind_child_component(child_name, &self.collection, &self.realm)
-                .await
-            {
-                Ok(channel) => channel,
-                Err(err) => {
-                    return Err(ElementManagerError::not_bound(
-                        child_name,
-                        self.collection.clone(),
-                        child_url,
-                        err,
-                    ))
-                }
-            };
+        let exposed_directory = match realm_management::open_child_component_exposed_dir(
+            child_name,
+            &self.collection,
+            &self.realm,
+        )
+        .await
+        {
+            Ok(exposed_directory) => exposed_directory,
+            Err(err) => {
+                return Err(ElementManagerError::exposed_dir_not_opened(
+                    child_name,
+                    self.collection.clone(),
+                    child_url,
+                    err,
+                ))
+            }
+        };
+
+        // Connect to fuchsia.component.Binder in order to start the component.
+        let _ = fuchsia_component::client::connect_to_protocol_at_dir_root::<
+            fcomponent::BinderMarker,
+        >(&exposed_directory)
+        .map_err(|err| {
+            ElementManagerError::not_bound(
+                child_name,
+                self.collection.clone(),
+                child_url,
+                err.to_string(),
+            )
+        })?;
+
         Ok(Element::from_directory_channel(
-            directory_channel,
+            exposed_directory.into_channel().unwrap().into_zx_channel(),
             child_name,
             child_url,
             &self.collection,
@@ -639,6 +675,7 @@ impl ElementManager for SimpleElementManager {
                                 | ElementManagerError::AdditionalServicesNotSupported { .. }
                                 | ElementManagerError::NotCreated { .. }
                                 | ElementManagerError::NotBound { .. }
+                                | ElementManagerError::ExposedDirNotOpened { .. }
                                 | ElementManagerError::NotLaunched { .. } => {
                                     Err(felement::ProposeElementError::InvalidArgs)
                                 }
@@ -658,28 +695,15 @@ impl ElementManager for SimpleElementManager {
 mod tests {
     use {
         super::{ElementManager, ElementManagerError, SimpleElementManager},
-        fidl::endpoints::{spawn_stream_handler, ServerEnd},
+        fidl::endpoints::{spawn_stream_handler, ProtocolMarker, ServerEnd},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
         fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::mpsc::channel, prelude::*},
         lazy_static::lazy_static,
+        session_testing::{spawn_directory_server, spawn_noop_directory_server},
         test_util::Counter,
     };
-
-    fn spawn_directory_server<F: 'static>(
-        mut directory_server: fio::DirectoryRequestStream,
-        request_handler: F,
-    ) where
-        F: Fn(fio::DirectoryRequest) + Send,
-    {
-        fasync::Task::spawn(async move {
-            while let Some(directory_request) = directory_server.try_next().await.unwrap() {
-                request_handler(directory_request);
-            }
-        })
-        .detach();
-    }
 
     /// Tests that launching a component with a cmx file successfully returns an Element
     /// with outgoing directory routing appropriate for v1 components.
@@ -724,9 +748,7 @@ mod tests {
                     } => {
                         assert_eq!(url, component_url);
                         spawn_directory_server(
-                            ServerEnd::<fio::DirectoryMarker>::new(directory_request.unwrap())
-                                .into_stream()
-                                .unwrap(),
+                            ServerEnd::<fio::DirectoryMarker>::new(directory_request.unwrap()),
                             directory_request_handler,
                         );
                         fasync::Task::spawn(async move {
@@ -872,7 +894,7 @@ mod tests {
 
         let (dir_client, dir_server) = fidl::Channel::create().unwrap();
         spawn_directory_server(
-            ServerEnd::<fio::DirectoryMarker>::new(dir_server).into_stream().unwrap(),
+            ServerEnd::<fio::DirectoryMarker>::new(dir_server),
             directory_request_handler.clone(),
         );
 
@@ -975,12 +997,9 @@ mod tests {
 
                         let _ = responder.send(&mut Ok(()));
                     }
-                    fsys2::RealmRequest::BindChild { child, exposed_dir, responder } => {
+                    fsys2::RealmRequest::OpenExposedDir { child, exposed_dir, responder } => {
                         assert_eq!(child.collection, Some(child_collection.to_string()));
-                        spawn_directory_server(
-                            exposed_dir.into_stream().unwrap(),
-                            directory_request_handler,
-                        );
+                        spawn_directory_server(exposed_dir, directory_request_handler);
                         let _ = responder.send(&mut Ok(()));
                     }
                     _ => panic!("Realm handler received an unexpected request"),
@@ -1012,8 +1031,8 @@ mod tests {
         // that the directory channel received the request with the correct path.
         let (_client_channel, server_channel) = zx::Channel::create().unwrap();
         let _ = element.connect_to_named_service_with_channel("myService", server_channel);
-        let open_paths = directory_open_receiver.take(1).collect::<Vec<_>>().await;
-        assert_eq!(vec!["svc/myService"], open_paths);
+        let open_paths = directory_open_receiver.take(2).collect::<Vec<_>>().await;
+        assert_eq!(vec![fcomponent::BinderMarker::DEBUG_NAME, "svc/myService"], open_paths);
     }
 
     /// Tests that adding a .cm element does not use fuchsia.sys.Launcher.
@@ -1032,9 +1051,9 @@ mod tests {
 
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys2::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
+                fsys2::RealmRequest::OpenExposedDir { child, exposed_dir, responder } => {
                     assert_eq!(child.collection, Some(child_collection.to_string()));
-
+                    spawn_noop_directory_server(exposed_dir);
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -1253,6 +1272,53 @@ mod tests {
         );
     }
 
+    /// Tests that adding an element which can't have its exposed directory opened
+    /// returns an appropriate error.
+    #[fasync::run_until_stalled(test)]
+    async fn open_exposed_dir_error() {
+        let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
+
+        let launcher = spawn_stream_handler(move |_launcher_request| async move {
+            panic!("Launcher should not receive any requests as it's only used for v1 components")
+        })
+        .unwrap();
+
+        let realm = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
+                    let _ = responder.send(&mut Ok(()));
+                }
+                fsys2::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
+                    let _ = responder.send(&mut Err(fcomponent::Error::InstanceCannotResolve));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
+            }
+        })
+        .unwrap();
+
+        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
+
+        let result = element_manager
+            .launch_element(
+                felement::Spec {
+                    component_url: Some(component_url.to_string()),
+                    ..felement::Spec::EMPTY
+                },
+                "",
+            )
+            .await;
+        assert!(result.is_err());
+        assert_eq!(
+            result.err().unwrap(),
+            ElementManagerError::exposed_dir_not_opened(
+                "",
+                "",
+                component_url,
+                fcomponent::Error::InstanceCannotResolve,
+            )
+        );
+    }
+
     /// Tests that adding an element which is not successfully bound in the realm returns an
     /// appropriate error.
     #[fasync::run_until_stalled(test)]
@@ -1264,15 +1330,16 @@ mod tests {
         })
         .unwrap();
 
-        // The following match errors if it sees a bind request: since the child was not created
-        // successfully the bind should not be called.
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
                 fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys2::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                    let _ = responder.send(&mut Err(fcomponent::Error::InstanceCannotStart));
+                fsys2::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
+                    // By not binding a server implementation to the provided `exposed_dir`
+                    // field, a PEER_CLOSED signal will be observed. Thus, the library
+                    // can assume that the component did not launch.
+                    let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
             }
@@ -1296,7 +1363,7 @@ mod tests {
                 "",
                 "",
                 component_url,
-                fcomponent::Error::InstanceCannotStart
+                "Failed to open protocol in directory"
             )
         );
     }

@@ -11,6 +11,7 @@ rustc_binary("element_manager_bin") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -25,7 +26,9 @@ rustc_binary("element_manager_bin") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/test_util",
+    "//src/session/testing",
     "//third_party/rust_crates:lazy_static",
   ]
 

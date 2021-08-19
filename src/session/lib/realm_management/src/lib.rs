@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl::endpoints::Proxy, fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-};
+use {fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys};
 
 /// Creates a child in the specified `Realm`.
 ///
@@ -41,8 +38,8 @@ pub async fn create_child_component(
     Ok(())
 }
 
-/// Binds a child in the specified `Realm`. This call is expected to follow a matching call to
-/// `create_child`.
+/// Opens the exposed directory of a child in the specified `Realm`. This call
+/// is expected to follow a matching call to `create_child`.
 ///
 /// # Parameters
 /// - `child_name`: The name of the child to bind.
@@ -50,14 +47,14 @@ pub async fn create_child_component(
 /// - `realm`: The `Realm` the child will bound in.
 ///
 /// # Returns
-/// `Ok` Result with a client-side channel bound to the component's `exposed_dir`. This directory
+/// `Ok` Result with a DirectoryProxy bound to the component's `exposed_dir`. This directory
 /// contains the capabilities that the child exposed to its realm (as declared, for instance, in the
 /// `expose` declaration of the component's `.cml` file).
-pub async fn bind_child_component(
+pub async fn open_child_component_exposed_dir(
     child_name: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
-) -> Result<zx::Channel, fcomponent::Error> {
+) -> Result<fio::DirectoryProxy, fcomponent::Error> {
     let mut child_ref = fsys::ChildRef {
         name: child_name.to_string(),
         collection: Some(collection_name.to_string()),
@@ -66,11 +63,11 @@ pub async fn bind_child_component(
     let (client_end, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
         .map_err(|_| fcomponent::Error::Internal)?;
     realm
-        .bind_child(&mut child_ref, server_end)
+        .open_exposed_dir(&mut child_ref, server_end)
         .await
         .map_err(|_| fcomponent::Error::Internal)??;
 
-    Ok(client_end.into_channel().unwrap().into_zx_channel())
+    Ok(client_end)
 }
 
 /// Destroys a child in the specified `Realm`. This call is expects a matching call to have been
@@ -101,8 +98,10 @@ pub async fn destroy_child_component(
 #[cfg(test)]
 mod tests {
     use {
-        super::{bind_child_component, create_child_component, destroy_child_component},
-        fidl::endpoints::spawn_stream_handler,
+        super::{
+            create_child_component, destroy_child_component, open_child_component_exposed_dir,
+        },
+        fidl::endpoints::{spawn_stream_handler, Proxy},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
         fuchsia_async as fasync,
         futures::prelude::*,
@@ -191,15 +190,15 @@ mod tests {
         assert!(create_child_component("", "", "", &realm_proxy).await.is_err());
     }
 
-    /// Tests that `bind_child` results in the appropriate call to `RealmProxy`.
+    /// Tests that `open_child_component_exposed_dir` results in the appropriate call to `RealmProxy`.
     #[fasync::run_until_stalled(test)]
-    async fn bind_child_parameters() {
+    async fn open_child_component_exposed_dir_parameters() {
         let child_name = "test_child";
         let child_collection = "test_collection";
 
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
+                fsys::RealmRequest::OpenExposedDir { child, exposed_dir: _, responder } => {
                     assert_eq!(child.name, child_name);
                     assert_eq!(child.collection, Some(child_collection.to_string()));
 
@@ -210,16 +209,18 @@ mod tests {
         })
         .unwrap();
 
-        assert!(bind_child_component(child_name, child_collection, &realm_proxy).await.is_ok());
+        assert!(open_child_component_exposed_dir(child_name, child_collection, &realm_proxy)
+            .await
+            .is_ok());
     }
 
-    /// Tests that a success received when binding a child results in an appropriate result from
-    /// `bind_child`.
+    /// Tests that a success received when opening a child's exposed directory
+    /// results in an appropriate result from `open_child_component_exposed_dir`.
     #[fasync::run_until_stalled(test)]
-    async fn bind_child_success() {
+    async fn open_child_component_exposed_dir_success() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                fsys::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -227,12 +228,12 @@ mod tests {
         })
         .unwrap();
 
-        assert!(bind_child_component("", "", &realm_proxy).await.is_ok());
+        assert!(open_child_component_exposed_dir("", "", &realm_proxy).await.is_ok());
     }
 
-    /// Tests that binding a child returns the child's exposed Directory.
+    /// Tests that opening a child's exposed directory returns successfully.
     #[fasync::run_until_stalled(test)]
-    async fn bind_child_exposed_dir_success() {
+    async fn open_child_exposed_dir_success() {
         // Make a static call counter to avoid unneeded complexity with cloned Arc<Mutex>.
         lazy_static! {
             static ref CALL_COUNT: Counter = Counter::new(0);
@@ -248,7 +249,7 @@ mod tests {
 
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::BindChild {
+                fsys::RealmRequest::OpenExposedDir {
                     child: _,
                     exposed_dir: exposed_dir_server,
                     responder,
@@ -265,7 +266,7 @@ mod tests {
         })
         .unwrap();
 
-        let exposed_dir = bind_child_component("", "", &realm_proxy).await.unwrap();
+        let exposed_dir = open_child_component_exposed_dir("", "", &realm_proxy).await.unwrap();
 
         // Create a proxy of any FIDL protocol, with any `await`-able method.
         // (`fio::DirectoryMarker` here is arbitrary.)
@@ -275,7 +276,7 @@ mod tests {
         // Connect should succeed, but it is still an asynchronous operation.
         // The `directory_request_handler` is not called yet.
         assert!(fdio::service_connect_at(
-            &exposed_dir,
+            &exposed_dir.into_channel().unwrap().into_zx_channel(),
             "fake_capability_path",
             server_end.into_channel()
         )
@@ -292,13 +293,13 @@ mod tests {
         assert_eq!(CALL_COUNT.get(), 2);
     }
 
-    /// Tests that an error received when binding a child results in an appropriate error from
-    /// `bind_child`.
+    /// Tests that an error received when opening a child's exposed directory
+    /// results in an appropriate error from `open_exposed_dir`.
     #[fasync::run_until_stalled(test)]
-    async fn bind_child_error() {
+    async fn open_child_component_exposed_dir_error() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                fsys::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::Internal));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -306,7 +307,7 @@ mod tests {
         })
         .unwrap();
 
-        assert!(bind_child_component("", "", &realm_proxy).await.is_err());
+        assert!(open_child_component_exposed_dir("", "", &realm_proxy).await.is_err());
     }
 
     /// Tests that `destroy_child` results in the appropriate call to `RealmProxy`.
