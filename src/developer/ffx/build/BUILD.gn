@@ -33,6 +33,10 @@ if (is_host) {
           disabled = true
         }
       }
+      sdk = {
+        root = rebase_path(root_build_dir, root_build_dir)
+        type = "in-tree"
+      }
     }
   }
 

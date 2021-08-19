@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/host_test_data.gni")
 import("//build/zircon/tools.gni")
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
@@ -51,31 +50,8 @@ ffx_plugin("ffx_assembly") {
   ]
 
   test_deps = [
-    ":tools_for_testing",
     "//src/lib/assembly/test_keys",
+    "//src/lib/assembly/test_util",
     "//third_party/rust_crates:matches",
-  ]
-}
-
-# The blobfs tool is currently only available on the base host toolchain.
-# The assembly tool currently assumes host_x64/<tool> locations.
-_blobfs_target = "//zircon/tools/blobfs(${toolchain_variant.base})"
-_blobfs_path = get_label_info(_blobfs_target, "root_out_dir") + "/blobfs"
-_fvm_target = "//src/storage/bin/fvm(${toolchain_variant.base})"
-_fvm_path = get_label_info(_fvm_target, "root_out_dir") + "/fvm"
-_zbi_target = "//zircon/tools/zbi(${toolchain_variant.base})"
-_zbi_path = get_label_info(_zbi_target, "root_out_dir") + "/zbi"
-host_test_data("tools_for_testing") {
-  sources = [
-    _blobfs_path,
-    _fvm_path,
-    _zbi_path,
-    minfs_tool_path,
-  ]
-  deps = [
-    _blobfs_target,
-    _fvm_target,
-    _zbi_target,
-    minfs_tool_target,
   ]
 }

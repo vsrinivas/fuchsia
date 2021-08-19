@@ -4,46 +4,34 @@
 
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/testing/host_test_data.gni")
 import("//build/zircon/tools.gni")
 
 if (is_host) {
-  crate_deps = [
-    "//src/lib/assembly/util",
-    "//src/sys/pkg/lib/fuchsia-hash",
-    "//src/sys/pkg/lib/fuchsia-merkle",
-    "//src/sys/pkg/lib/fuchsia-pkg",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:pathdiff",
-    "//third_party/rust_crates:serde_json",
-  ]
-  crate_srcs = [
-    "src/blobfs.rs",
-    "src/lib.rs",
-    "src/manifest.rs",
-  ]
-
   rustc_library("blobfs") {
     name = "assembly_blobfs"
     version = "0.1.0"
-    sources = crate_srcs
-    deps = crate_deps
-  }
+    with_unit_tests = true
 
-  rustc_test("blobfs_test") {
-    sources = crate_srcs
-    deps = crate_deps + [
-             ":blobfs_tool",
-             "//third_party/rust_crates:tempfile",
-           ]
-  }
+    sources = [
+      "src/blobfs.rs",
+      "src/lib.rs",
+      "src/manifest.rs",
+    ]
 
-  # The blobfs tool is currently only available on the base host toolchain.
-  _blobfs_target = "//zircon/tools/blobfs(${toolchain_variant.base})"
-  _blobfs_path = get_label_info(_blobfs_target, "root_out_dir") + "/blobfs"
-  host_test_data("blobfs_tool") {
-    sources = [ _blobfs_path ]
-    deps = [ _blobfs_target ]
+    deps = [
+      "//src/lib/assembly/util",
+      "//src/sys/pkg/lib/fuchsia-hash",
+      "//src/sys/pkg/lib/fuchsia-merkle",
+      "//src/sys/pkg/lib/fuchsia-pkg",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:pathdiff",
+      "//third_party/rust_crates:serde_json",
+    ]
+
+    test_deps = [
+      "//src/lib/assembly/test_util",
+      "//third_party/rust_crates:tempfile",
+    ]
   }
 }
 

@@ -498,7 +498,8 @@ template("assemble_system") {
       rebase_path(files.outdir, root_build_dir),
     ]
 
-    deps = []
+    # The SDK produces a manifest, which is used by ffx to find the host tools.
+    deps = [ "//sdk:host_tools.all" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

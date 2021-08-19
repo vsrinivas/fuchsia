@@ -7,34 +7,25 @@ import("//build/rust/rustc_library.gni")
 import("//build/zircon/tools.gni")
 
 if (is_host) {
-  crate_deps = [
-    "//src/lib/assembly/util",
-    "//third_party/rust_crates:anyhow",
-  ]
-
-  crate_srcs = [
-    "src/lib.rs",
-    "src/minfs.rs",
-  ]
-
   rustc_library("minfs") {
     name = "assembly_minfs"
     version = "0.1.0"
-    deps = crate_deps
-    sources = crate_srcs
-  }
+    with_unit_tests = true
 
-  rustc_test("minfs_test") {
-    sources = crate_srcs
-    deps = crate_deps + [
-             ":minfs_tool",
-             "//third_party/rust_crates:tempfile",
-           ]
-  }
+    deps = [
+      "//src/lib/assembly/util",
+      "//third_party/rust_crates:anyhow",
+    ]
 
-  host_test_data("minfs_tool") {
-    sources = [ minfs_tool_path ]
-    deps = [ minfs_tool_target ]
+    sources = [
+      "src/lib.rs",
+      "src/minfs.rs",
+    ]
+
+    test_deps = [
+      "//src/lib/assembly/test_util",
+      "//third_party/rust_crates:tempfile",
+    ]
   }
 }
 

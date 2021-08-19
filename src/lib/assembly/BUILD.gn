@@ -9,6 +9,7 @@ group("tests") {
     "blobfs:tests",
     "fvm:tests",
     "minfs:tests",
+    "test_util:tests",
     "update_package:tests",
     "util:tests",
     "vbmeta:tests",

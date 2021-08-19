@@ -14,6 +14,7 @@ use std::process::Command;
 use zbi::ZbiBuilder;
 
 pub fn construct_zbi(
+    zbi_tool: impl AsRef<Path>,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
@@ -21,7 +22,7 @@ pub fn construct_zbi(
     base_package: Option<&BasePackage>,
     fvm: Option<impl AsRef<Path>>,
 ) -> Result<PathBuf> {
-    let mut zbi_builder = ZbiBuilder::default();
+    let mut zbi_builder = ZbiBuilder::new(zbi_tool);
 
     // Add the kernel image.
     zbi_builder.set_kernel(&product.kernel_image);
@@ -137,13 +138,13 @@ mod tests {
 
     use crate::base_package::BasePackage;
     use crate::config::{BlobFSConfig, BoardConfig, ProductConfig, ZbiConfig, ZbiSigningScript};
+    use assembly_test_util::{generate_fake_tool, generate_fake_tool_nop};
     use assembly_util::PathToStringExt;
     use fuchsia_hash::Hash;
     use serde_json::json;
     use std::collections::BTreeMap;
     use std::fs::File;
     use std::io::Write;
-    use std::os::unix::fs::PermissionsExt;
     use std::path::{Path, PathBuf};
     use std::str::FromStr;
     use tempfile::tempdir;
@@ -201,7 +202,12 @@ mod tests {
             path: base_path,
         };
 
-        let zbi_path = construct_zbi(
+        // Create a fake zbi tool.
+        let tool_path = dir.path().join("zbi.sh");
+        generate_fake_tool_nop(&tool_path);
+
+        construct_zbi(
+            &tool_path,
             dir.path(),
             dir.path(),
             &product_config,
@@ -210,7 +216,6 @@ mod tests {
             None::<PathBuf>,
         )
         .unwrap();
-        assert_eq!(zbi_path, dir.path().join("fuchsia.zbi"));
     }
 
     #[test]
@@ -245,8 +250,11 @@ mod tests {
         };
 
         // Create the signing tool that ensures that we pass the correct arguments.
-        let tool_string = format!(
-            r#"#!/bin/bash
+        let tool_path = dir.path().join("tool.sh");
+        generate_fake_tool(
+            &tool_path,
+            format!(
+                r#"#!/bin/bash
             if [[ "$1" != "-z" || "$3" != "-o" ]]; then
               exit 1
             fi
@@ -261,14 +269,12 @@ mod tests {
             fi
             exit 0
         "#,
-            zbi_path.path_to_string().unwrap(),
-            expected_output.path_to_string().unwrap(),
-            "arg1",
-            "arg2",
+                zbi_path.path_to_string().unwrap(),
+                expected_output.path_to_string().unwrap(),
+                "arg1",
+                "arg2",
+            ),
         );
-        let tool_path = dir.path().join("tool.sh");
-        std::fs::write(&tool_path, tool_string.as_bytes()).unwrap();
-        std::fs::set_permissions(&tool_path, std::fs::Permissions::from_mode(0o500)).unwrap();
 
         // Create the signing config.
         let extra_arguments = vec!["arg1".into(), "arg2".into()];

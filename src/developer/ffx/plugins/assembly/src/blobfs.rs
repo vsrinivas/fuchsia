@@ -10,13 +10,14 @@ use assembly_blobfs::BlobFSBuilder;
 use std::path::{Path, PathBuf};
 
 pub fn construct_blobfs(
+    blobfs_tool: impl AsRef<Path>,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
     blobfs_config: &BlobFSConfig,
     base_package: &BasePackage,
 ) -> Result<PathBuf> {
-    let mut blobfs_builder = BlobFSBuilder::new(&blobfs_config.layout);
+    let mut blobfs_builder = BlobFSBuilder::new(&blobfs_tool, &blobfs_config.layout);
     blobfs_builder.set_compressed(blobfs_config.compress);
 
     // Add the base and cache packages.
@@ -44,6 +45,7 @@ mod tests {
     use super::*;
 
     use crate::config::{BlobFSConfig, ProductConfig};
+    use assembly_test_util::generate_fake_tool_nop;
     use fuchsia_hash::Hash;
     use std::collections::BTreeMap;
     use std::str::FromStr;
@@ -66,9 +68,20 @@ mod tests {
             contents: BTreeMap::default(),
             path: base_path,
         };
-        let blobfs_path =
-            construct_blobfs(dir.path(), dir.path(), &product_config, &blobfs_config, &base)
-                .unwrap();
-        assert_eq!(blobfs_path, dir.path().join("blob.blk"));
+
+        // Create a fake blobfs tool.
+        let tool_path = dir.path().join("blobfs.sh");
+        generate_fake_tool_nop(&tool_path);
+
+        // Construct blobfs, and ensure no error is returned.
+        construct_blobfs(
+            &tool_path,
+            dir.path(),
+            dir.path(),
+            &product_config,
+            &blobfs_config,
+            &base,
+        )
+        .unwrap();
     }
 }

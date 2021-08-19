@@ -8,14 +8,14 @@ use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Builder for BlobFS.
 ///
 /// Example usage:
 ///
 /// ```
-/// let builder = BlobFSBuilder::new("compact");
+/// let builder = BlobFSBuilder::new("path/to/tool/blobfs", "compact");
 /// builder.set_compressed(false);
 /// builder.add_package("path/to/package_manifest.json")?;
 /// builder.add_file("path/to/file.txt")?;
@@ -23,6 +23,8 @@ use std::path::Path;
 /// ```
 ///
 pub struct BlobFSBuilder {
+    /// Path to the blobfs host tool.
+    tool: PathBuf,
     layout: String,
     compress: bool,
     manifest: BlobManifest,
@@ -30,8 +32,9 @@ pub struct BlobFSBuilder {
 
 impl BlobFSBuilder {
     /// Construct a new BlobFSBuilder.
-    pub fn new(layout: impl AsRef<str>) -> Self {
+    pub fn new(tool: impl AsRef<Path>, layout: impl AsRef<str>) -> Self {
         BlobFSBuilder {
+            tool: tool.as_ref().to_path_buf(),
             layout: layout.as_ref().to_string(),
             compress: false,
             manifest: BlobManifest::default(),
@@ -82,8 +85,7 @@ impl BlobFSBuilder {
         )?;
 
         // Run the blobfs tool.
-        // TODO(fxbug.dev/76378): Take the tool location from a config.
-        let output = std::process::Command::new("host_x64/blobfs").args(&blobfs_args).output();
+        let output = std::process::Command::new(&self.tool).args(&blobfs_args).output();
         let output = output.context("Failed to run the blobfs tool")?;
         if !output.status.success() {
             anyhow::bail!(format!(
@@ -130,6 +132,7 @@ fn build_blobfs_args(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_test_util::generate_fake_tool_nop;
     use std::io::Write;
     use tempfile::{NamedTempFile, TempDir};
 
@@ -185,32 +188,22 @@ mod tests {
     fn blobfs_builder() {
         // Prepare a temporary directory where the intermediate files as well
         // as the input and output files will go.
-        let gendir = TempDir::new().unwrap();
+        let dir = TempDir::new().unwrap();
+
+        // Create a fake blobfs tool.
+        let tool_path = dir.path().join("blobfs.sh");
+        generate_fake_tool_nop(&tool_path);
 
         // Create a test file.
-        let filepath = gendir.path().join("file.txt");
+        let filepath = dir.path().join("file.txt");
         let mut file = File::create(&filepath).unwrap();
         write!(file, "Boaty McBoatface").unwrap();
 
         // Build blobfs.
         let output = NamedTempFile::new().unwrap();
-        let mut builder = BlobFSBuilder::new("compact");
+        let mut builder = BlobFSBuilder::new(&tool_path, "compact");
         builder.set_compressed(true);
         builder.add_file(&filepath).unwrap();
-        builder.build(&gendir.path(), &output.path()).unwrap();
-
-        // Ensure the blob manifest is correct.
-        let manifest = std::fs::read_to_string(gendir.path().join("blob.manifest")).unwrap();
-        let expected_manifest =
-            format!("1739e556c9f2800c6263d8926ae00652d3c9a008b7a5ee501719854fe55b3787=file.txt\n",);
-        assert_eq!(manifest, expected_manifest);
-
-        // Ensure the blobs list and blobfs exists. We will not verify the
-        // contents of these two files, because this code is not responsible
-        // for creating those files. In order to make it easier to modify the
-        // blobfs format in the future, that functionality should be tested
-        // closer to the blobfs logic itself.
-        assert!(Path::exists(&gendir.path().join("blobs.json")));
-        assert!(Path::exists(&output.path()));
+        builder.build(&dir.path(), &output.path()).unwrap();
     }
 }

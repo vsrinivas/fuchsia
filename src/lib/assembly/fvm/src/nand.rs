@@ -23,6 +23,8 @@ use std::path::PathBuf;
 /// ```
 
 pub struct NandFvmBuilder {
+    /// Path to the fvm host tool.
+    pub tool: PathBuf,
     /// The path to write the FVM to.
     pub output: PathBuf,
     /// The path to the sparse, blob-only FVM on the host.
@@ -46,9 +48,7 @@ impl NandFvmBuilder {
     /// Build the FVM.
     pub fn build(self) -> Result<()> {
         let args = self.build_args()?;
-
-        // TODO(fxbug.dev/76378): Take the tool location from a config.
-        let output = std::process::Command::new("host_x64/fvm").args(&args).output();
+        let output = std::process::Command::new(&self.tool).args(&args).output();
         let output = output.context("Failed to run the fvm tool")?;
         if !output.status.success() {
             anyhow::bail!(format!(
@@ -97,6 +97,7 @@ mod tests {
     #[test]
     fn nand_args() {
         let builder = NandFvmBuilder {
+            tool: "fvm".into(),
             output: "mypath".into(),
             sparse_blob_fvm: "sparsepath".into(),
             max_disk_size: Some(500),

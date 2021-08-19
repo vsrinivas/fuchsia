@@ -15,6 +15,9 @@ use std::process::Command;
 /// command line.
 #[derive(Default)]
 pub struct ZbiBuilder {
+    /// Path to the zbi host tool.
+    tool: PathBuf,
+
     kernel: Option<PathBuf>,
     // Map from file destination in the ZBI to the path of the source file on the host.
     bootfs_files: BTreeMap<String, PathBuf>,
@@ -32,6 +35,20 @@ pub struct ZbiBuilder {
 }
 
 impl ZbiBuilder {
+    /// Construct a new ZbiBuilder that uses the zbi |tool|.
+    pub fn new(tool: impl AsRef<Path>) -> Self {
+        Self {
+            tool: tool.as_ref().to_path_buf(),
+            kernel: None,
+            bootfs_files: BTreeMap::default(),
+            bootargs: Vec::default(),
+            cmdline: Vec::default(),
+            ramdisk: None,
+            compression: None,
+            output_manifest: None,
+        }
+    }
+
     /// Set the kernel to be used.
     pub fn set_kernel(&mut self, kernel: impl AsRef<Path>) {
         self.kernel = Some(kernel.as_ref().to_path_buf());
@@ -92,7 +109,7 @@ impl ZbiBuilder {
         let zbi_args = self.build_zbi_args(&bootfs_manifest_path, None::<PathBuf>, output)?;
         debug!("ZBI command args: {:?}", zbi_args);
 
-        let output = Command::new("host_x64/zbi")
+        let output = Command::new(&self.tool)
             .args(&zbi_args)
             .output()
             .context("Failed to run the zbi tool")?;

@@ -12,6 +12,8 @@ use crate::zbi::{construct_zbi, vendor_sign_zbi};
 
 use anyhow::{Context, Result};
 use ffx_assembly_args::ImageArgs;
+use ffx_config::get_sdk;
+use futures::executor::block_on;
 use log::info;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -26,6 +28,9 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let (product, board) = read_configs(product, board)?;
     let gendir = gendir.unwrap_or(outdir.clone());
 
+    // Use the sdk to get the host tool paths.
+    let sdk = block_on(get_sdk())?;
+
     let base_package: Option<BasePackage> = if has_base_package(&product) {
         info!("Creating base package");
         Some(construct_base_package(&outdir, &gendir, &product)?)
@@ -36,7 +41,14 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
-        Some(construct_blobfs(&outdir, &gendir, &product, &board.blobfs, &base_package)?)
+        Some(construct_blobfs(
+            sdk.get_host_tool("blobfs")?,
+            &outdir,
+            &gendir,
+            &product,
+            &board.blobfs,
+            &base_package,
+        )?)
     } else {
         info!("Skipping blobfs creation");
         None
@@ -44,7 +56,13 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let fvms: Option<Fvms> = if let Some(fvm_config) = &board.fvm {
         info!("Creating the fvm");
-        Some(construct_fvm(&outdir, &fvm_config, blobfs_path.as_ref())?)
+        Some(construct_fvm(
+            sdk.get_host_tool("fvm")?,
+            sdk.get_host_tool("minfs")?,
+            &outdir,
+            &fvm_config,
+            blobfs_path.as_ref(),
+        )?)
     } else {
         info!("Skipping fvm creation");
         None
@@ -60,8 +78,15 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     };
 
     info!("Creating the ZBI");
-    let zbi_path =
-        construct_zbi(&outdir, &gendir, &product, &board, base_package.as_ref(), fvm_for_zbi)?;
+    let zbi_path = construct_zbi(
+        sdk.get_host_tool("zbi")?,
+        &outdir,
+        &gendir,
+        &product,
+        &board,
+        base_package.as_ref(),
+        fvm_for_zbi,
+    )?;
 
     let vbmeta_path: Option<PathBuf> = if let Some(vbmeta_config) = &board.vbmeta {
         info!("Creating the VBMeta image");

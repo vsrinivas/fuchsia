@@ -7,7 +7,12 @@
 /// ```
 /// let slice_size: u64 = 1;
 /// let reserved_slices: u64 = 2;
-/// let builder = FvmBuilder::new("path/to/output.blk", slice_size, reserved_slices);
+/// let builder = FvmBuilder::new(
+///     "path/to/tool/fvm",
+///     "path/to/output.blk",
+///     slice_size,
+///     reserved_slices,
+/// );
 /// builder.filesystem(Filesystem {
 ///     path: "path/to/blob.blk",
 ///     attributes: FilesystemAttributes {
@@ -27,6 +32,8 @@ use std::path::{Path, PathBuf};
 
 /// The FVM builder.
 pub struct FvmBuilder {
+    /// Path to the fvm host tool.
+    tool: PathBuf,
     /// The path to write the FVM to.
     output: PathBuf,
     /// The size of a slice for the FVM.
@@ -85,6 +92,7 @@ pub struct FilesystemAttributes {
 impl FvmBuilder {
     /// Construct a new FvmBuilder.
     pub fn new(
+        tool: impl AsRef<Path>,
         output: impl AsRef<Path>,
         slice_size: u64,
         reserved_slices: u64,
@@ -92,6 +100,7 @@ impl FvmBuilder {
         fvm_type: FvmType,
     ) -> Self {
         Self {
+            tool: tool.as_ref().to_path_buf(),
             output: output.as_ref().to_path_buf(),
             slice_size,
             reserved_slices,
@@ -109,9 +118,7 @@ impl FvmBuilder {
     /// Build the FVM.
     pub fn build(self) -> Result<()> {
         let args = self.build_args()?;
-
-        // TODO(fxbug.dev/76378): Take the tool location from a config.
-        let output = std::process::Command::new("host_x64/fvm").args(&args).output();
+        let output = std::process::Command::new(&self.tool).args(&args).output();
         let output = output.context("Failed to run the fvm tool")?;
         if !output.status.success() {
             anyhow::bail!(format!(
@@ -189,14 +196,14 @@ mod tests {
 
     #[test]
     fn default_args_no_filesystem() {
-        let builder = FvmBuilder::new("mypath", 1, 2, None, FvmType::Default);
+        let builder = FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Default);
         let args = builder.build_args().unwrap();
         assert_eq!(args, ["mypath", "create", "--slice", "1", "--reserve-slices", "2"]);
     }
 
     #[test]
     fn default_args_with_filesystem() {
-        let mut builder = FvmBuilder::new("mypath", 1, 2, None, FvmType::Default);
+        let mut builder = FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Default);
         builder.filesystem(Filesystem {
             path: PathBuf::from("path/to/file.blk"),
             attributes: FilesystemAttributes {
@@ -231,7 +238,8 @@ mod tests {
 
     #[test]
     fn sparse_args_no_max_size() {
-        let builder = FvmBuilder::new("mypath", 1, 2, None, FvmType::Sparse { empty_minfs: false });
+        let builder =
+            FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Sparse { empty_minfs: false });
         let args = builder.build_args().unwrap();
         assert_eq!(
             args,
@@ -241,8 +249,14 @@ mod tests {
 
     #[test]
     fn sparse_args_max_size() {
-        let builder =
-            FvmBuilder::new("mypath", 1, 2, Some(500), FvmType::Sparse { empty_minfs: false });
+        let builder = FvmBuilder::new(
+            "fvm",
+            "mypath",
+            1,
+            2,
+            Some(500),
+            FvmType::Sparse { empty_minfs: false },
+        );
         let args = builder.build_args().unwrap();
         assert_eq!(
             args,
@@ -263,7 +277,8 @@ mod tests {
 
     #[test]
     fn sparse_blob_args() {
-        let builder = FvmBuilder::new("mypath", 1, 2, None, FvmType::Sparse { empty_minfs: true });
+        let builder =
+            FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Sparse { empty_minfs: true });
         let args = builder.build_args().unwrap();
         assert_eq!(
             args,
@@ -284,6 +299,7 @@ mod tests {
     #[test]
     fn emmc_args() {
         let builder = FvmBuilder::new(
+            "fvm",
             "mypath",
             1,
             2,

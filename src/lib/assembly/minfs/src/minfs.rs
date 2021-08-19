@@ -4,17 +4,24 @@
 
 use anyhow::{Context, Result};
 use assembly_util::PathToStringExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Builder for MinFS. Currently, it only writes an empty minfs.
-pub struct MinFSBuilder {}
-impl MinFSBuilder {
-    /// Build minfs and write the file to `output`.
-    pub fn build(output: impl AsRef<Path>) -> Result<()> {
-        let minfs_args = Self::build_args(output)?;
+pub struct MinFSBuilder {
+    /// Path to the minfs host tool.
+    tool: PathBuf,
+}
 
-        // TODO(fxbug.dev/76378): Take the tool location from a config.
-        let output = std::process::Command::new("host_x64/minfs").args(&minfs_args).output();
+impl MinFSBuilder {
+    /// Construct a new MinFSBuilder that uses the minfs |tool|.
+    pub fn new(tool: impl AsRef<Path>) -> Self {
+        Self { tool: tool.as_ref().to_path_buf() }
+    }
+
+    /// Build minfs and write the file to `output`.
+    pub fn build(self, output: impl AsRef<Path>) -> Result<()> {
+        let minfs_args = self.build_args(output)?;
+        let output = std::process::Command::new(&self.tool).args(&minfs_args).output();
         let output = output.context("Failed to run the minfs tool")?;
         if !output.status.success() {
             anyhow::bail!(format!("Failed to generate minfs with output: {:?}", output));
@@ -24,7 +31,7 @@ impl MinFSBuilder {
     }
 
     /// Get the build arguments to pass to the minfs tool.
-    fn build_args(output: impl AsRef<Path>) -> Result<Vec<String>> {
+    fn build_args(&self, output: impl AsRef<Path>) -> Result<Vec<String>> {
         Ok(vec![output.as_ref().path_to_string()?, "create".to_string()])
     }
 }
@@ -32,22 +39,33 @@ impl MinFSBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_test_util::generate_fake_tool_nop;
     use tempfile::TempDir;
 
     #[test]
     fn build_args() {
-        let args = MinFSBuilder::build_args("minfs").unwrap();
+        let dir = TempDir::new().unwrap();
+        let tool_path = dir.path().join("minfs.sh");
+        generate_fake_tool_nop(&tool_path);
+
+        let builder = MinFSBuilder::new(&tool_path);
+
+        let args = builder.build_args("minfs").unwrap();
         assert_eq!(args, vec!["minfs".to_string(), "create".to_string()]);
 
-        let args = MinFSBuilder::build_args("minfs2").unwrap();
+        let args = builder.build_args("minfs2").unwrap();
         assert_eq!(args, vec!["minfs2".to_string(), "create".to_string()]);
     }
 
     #[test]
     fn build() {
-        let outdir = TempDir::new().unwrap();
-        let minfs_path = outdir.as_ref().join("data.blk");
-        MinFSBuilder::build(&minfs_path).unwrap();
-        assert!(minfs_path.exists())
+        let dir = TempDir::new().unwrap();
+        let tool_path = dir.path().join("minfs.sh");
+        generate_fake_tool_nop(&tool_path);
+
+        let builder = MinFSBuilder::new(&tool_path);
+
+        let minfs_path = dir.as_ref().join("data.blk");
+        builder.build(&minfs_path).unwrap();
     }
 }
