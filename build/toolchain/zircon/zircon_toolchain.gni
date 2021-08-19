@@ -558,20 +558,9 @@ template("zircon_toolchain") {
       assert(invoker.os == "fuchsia",
              "shared library creation not supported for ${invoker.os}")
 
-      # TODO(fxbug.dev/79232): Remove elfabi after migration completes.
-      use_llvm_ifs = false
-      use_llvm_elfabi = false
-      if (clang_has_llvm_ifs) {
-        use_llvm_ifs = is_elf
-        if (use_llvm_ifs) {
-          llvm_ifs = rebase_path("$clang_tool_dir/llvm-ifs", root_build_dir)
-        }
-      } else {
-        use_llvm_elfabi = is_elf
-        if (use_llvm_elfabi) {
-          llvm_elfabi =
-              rebase_path("$clang_tool_dir/llvm-elfabi", root_build_dir)
-        }
+      use_llvm_ifs = is_elf
+      if (use_llvm_ifs) {
+        llvm_ifs = rebase_path("$clang_tool_dir/llvm-ifs", root_build_dir)
       }
 
       solink_common = {
@@ -618,20 +607,6 @@ template("zircon_toolchain") {
           depend_output = "${outfile}.ifs"
           outputs += [ depend_output ]
           command += " && $llvm_ifs --output-format=IFS --write-if-changed --output=$depend_output $link_output"
-        }
-        if (use_llvm_elfabi) {
-          # The Ninja dependency for linking in the shared library will be
-          # the .tbe file (depend_output), though the actual linking *input*
-          # will be the original .so file (link_output).  Ninja will restat
-          # the output files after running the commands.  llvm-elfabi will
-          # not touch the .tbe file if its contents haven't changed.  Hence
-          # Ninja will only re-run any linking commands depending on this
-          # shared library if the .tbe file has actually changed, indicating
-          # that the linking ABI has actually changed.
-          restat = true
-          depend_output = "${outfile}.tbe"
-          outputs += [ depend_output ]
-          command += " && $llvm_elfabi $link_output --emit-tbe=$depend_output"
         }
       }
 

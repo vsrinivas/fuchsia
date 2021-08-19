@@ -537,26 +537,10 @@ template("clang_toolchain") {
       outfile = "{{output_dir}}/$outname"
       rspfile = "$outfile.rsp"
 
-      # TODO(fxbug.dev/79232): Remove elfabi after migration completes.
-      use_llvm_ifs = false
-      use_llvm_elfabi = false
-      if (clang_has_llvm_ifs) {
-        use_llvm_ifs =
-            invoker.toolchain_os != "mac" && invoker.toolchain_os != "win"
-      } else {
-        use_llvm_elfabi =
-            invoker.toolchain_os != "mac" && invoker.toolchain_os != "win"
-      }
-
-      # TODO(fxbug.dev/79232): Re-enable this after migration completes.
-      # All other OS possibilities are ELF.
-      # use_llvm_ifs =
-      #    invoker.toolchain_os != "mac" && invoker.toolchain_os != "win"
+      use_llvm_ifs =
+          invoker.toolchain_os != "mac" && invoker.toolchain_os != "win"
       if (use_llvm_ifs) {
         llvm_ifs = "${prefix}/llvm-ifs"
-      }
-      if (use_llvm_elfabi) {
-        llvm_elfabi = "${prefix}/llvm-elfabi"
       }
       unstripped_outfile = outfile
       if (use_strip) {
@@ -614,21 +598,6 @@ template("clang_toolchain") {
         link_output = unstripped_outfile
         outputs += [ depend_output ]
         command += " && $llvm_ifs --output-format=IFS --write-if-changed --output=$depend_output $link_output"
-      }
-      if (use_llvm_elfabi) {
-        # The Ninja dependency for linking in the shared library will be
-        # the .tbe file (depend_output), though the actual linking *input*
-        # will be the original .so file (link_output).  Ninja will restat
-        # the output files after running the commands.  llvm-elfabi will
-        # not touch the .tbe file if its contents haven't changed.  Hence
-        # Ninja will only re-run any linking commands depending on this
-        # shared library if the .tbe file has actually changed, indicating
-        # that the linking ABI has actually changed.
-        restat = true
-        depend_output = "${outfile}.tbe"
-        link_output = unstripped_outfile
-        outputs += [ depend_output ]
-        command += " && $llvm_elfabi $link_output --emit-tbe=$depend_output"
       }
     }
 

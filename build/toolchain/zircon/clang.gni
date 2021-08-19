@@ -32,22 +32,6 @@ if (clang_tool_dir == "") {
   }
 }
 
-# TODO(fxbug.dev/79232): Remove this after migration completes.
-clang_has_llvm_ifs = false
-if (clang_version_string != "aUPvom0rfD2jLssugLimJkywf60eqgg9CG0Vk6-ASuUC" &&
-    clang_version_string != "duSz1BCClOVUA8LxhlJaouzmvGqe9rU61OhnAE_UG5oC" &&
-    clang_version_string != "rm-r5Uy50UmkWHJNZYzaS8cy_Q5S53cCwGw4BplIgecC" &&
-    clang_version_string != "d9nnr4pVXG3B0JL8TTt0ZjWSs4xet-6Yc8438AXPWIUC" &&
-    clang_version_string != "qrYJhq3WHgPd8qyip_1FhuyfoX5w0PKayUDZsbII1sAC" &&
-    clang_version_string != "AA9aCrWNrXs7g4G7wq4Cyv1ICLD9eHJ65008O3q-tNgC" &&
-    clang_version_string != "Lwq5cThR2BvFSjddIVmzF2-LHzOr-ZXdeXf4bw5tyigC" &&
-    clang_version_string != "eDzL2utDIub9b8u_zmphLvcLIvA5H4IH31T4VG0f9kQC" &&
-    clang_version_string != "ON1yKdqDlcTmDj9XpJrI0NBCmVUDNS8iG65NoucTyYoC" &&
-    clang_version_string != "GUxdhOlaKw1Xbg8SVnYiK3kDkTOQYAr-xInC_WKtsNUC" &&
-    clang_version_string != "B05Qdyd1KtFQSprZP0S3beRMzTeiKW8l12GssdHShncC") {
-  clang_has_llvm_ifs = true
-}
-
 _clang_lib_dir = "$clang_tool_dir/../lib"
 
 # Human-readable identifier for the toolchain version.

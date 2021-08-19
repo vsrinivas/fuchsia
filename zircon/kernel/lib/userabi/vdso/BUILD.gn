@@ -137,56 +137,45 @@ if (toolchain_environment == "user.vdso") {
   if (is_kernel) {
     # Make sure the vDSO that goes into the kernel matches the ABI
     # that userland links against.
-    # TODO(fxbug.dev/79232): Remove elfabi after migration completes.
-    if (clang_has_llvm_ifs) {
-      abi_tbe = "//src/zircon/lib/zircon/zircon.ifs"
-    } else {
-      abi_tbe = "//src/zircon/lib/zircon/zircon-$current_cpu.tbe"
-    }
+    abi_ifs = "//src/zircon/lib/zircon/zircon.ifs"
 
     vdso_out_dir = get_label_info(vdso_label, "root_out_dir")
-    if (clang_has_llvm_ifs) {
-      vdso_tbe_unstripped = "$vdso_out_dir/libzircon.so.ifs"
-      vdso_tbe = "$target_out_dir/libzircon_stripped.so.ifs"
-      action("strip-abi-target") {
-        visibility = [ ":*" ]
+    vdso_ifs_unstripped = "$vdso_out_dir/libzircon.so.ifs"
+    vdso_ifs = "$target_out_dir/libzircon_stripped.so.ifs"
+    action("strip-abi-target") {
+      visibility = [ ":*" ]
 
-        deps = [
-          "//src/zircon/lib/zircon",
-          vdso_label,
-        ]
+      deps = [
+        "//src/zircon/lib/zircon",
+        vdso_label,
+      ]
 
-        sources = [ vdso_tbe_unstripped ]
-        outputs = [ vdso_tbe ]
+      sources = [ vdso_ifs_unstripped ]
+      outputs = [ vdso_ifs ]
 
-        script = "$clang_tool_dir/llvm-ifs"
-        args = [
-          "--input-format=IFS",
-          "--output-format=IFS",
-          "--strip-ifs-target",
-          "--write-if-changed",
-          "--output=" + rebase_path(vdso_tbe, root_build_dir),
-          rebase_path(vdso_tbe_unstripped, root_build_dir),
-        ]
-      }
-    } else {
-      vdso_tbe = "$vdso_out_dir/libzircon.so.tbe"
+      script = "$clang_tool_dir/llvm-ifs"
+      args = [
+        "--input-format=IFS",
+        "--output-format=IFS",
+        "--strip-ifs-target",
+        "--write-if-changed",
+        "--output=" + rebase_path(vdso_ifs, root_build_dir),
+        rebase_path(vdso_ifs_unstripped, root_build_dir),
+      ]
     }
 
     action("verify-abi") {
       visibility = [ ":*" ]
+      vdso_label = ":strip-abi-target"
 
-      if (clang_has_llvm_ifs) {
-        vdso_label = ":strip-abi-target"
-      }
       deps = [
         "//src/zircon/lib/zircon",
         vdso_label,
       ]
 
       sources = [
-        abi_tbe,
-        vdso_tbe,
+        abi_ifs,
+        vdso_ifs,
       ]
       outputs = [ "$target_out_dir/$target_name.ok" ]
 

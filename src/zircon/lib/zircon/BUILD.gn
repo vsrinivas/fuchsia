@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/sdk/sdk_noop_atom.gni")
-import("//build/toolchain/elfabi_shared_library.gni")
 import("//build/toolchain/ifs_shared_library.gni")
 import("//build/toolchain/toolchain_environment.gni")
 import("//build/unification/global_variables.gni")
@@ -12,21 +11,9 @@ import("//build/unification/global_variables.gni")
 # comes from the kernel and is not part of the build or SDK for userland at
 # all.  The kernel's internal build of the vDSO verifies that the ABI matches.
 if (is_fuchsia && toolchain_base_environment != "kernel") {
-  # TODO(fxbug.dev/79232, haowei): Remove elfabi once migration completes.
-  if (clang_has_llvm_ifs) {
-    ifs_shared_library("zircon") {
-      abi = "zircon.ifs"
-      public_deps = [ ":headers" ]
-    }
-  } else {
-    elfabi_shared_library("zircon") {
-      # TODO(mcgrathr): The ABIs are identical across machines, but the .tbe file
-      # insists on embedding "Arch:".  llvm-ifs should get features to allow
-      # emitting a file without arch tag and to specify --target= to set the
-      # arch/class/data of an ELF stub when the .tbe file doesn't say.
-      abi = "zircon-$current_cpu.tbe"
-      public_deps = [ ":headers" ]
-    }
+  ifs_shared_library("zircon") {
+    abi = "zircon.ifs"
+    public_deps = [ ":headers" ]
   }
 } else {
   # References from other environments only get the headers.  This
