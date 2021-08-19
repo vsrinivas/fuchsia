@@ -9734,6 +9734,7 @@ rust_library("tokio-v1_10_0") {
   deps = []
   deps += [ ":bytes-v1_0_1" ]
   deps += [ ":memchr-v2_4_0" ]
+  deps += [ ":num_cpus-v1_13_0" ]
   deps += [ ":pin-project-lite-v0_2_4" ]
 
   rustenv = []
@@ -9747,6 +9748,9 @@ rust_library("tokio-v1_10_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"io-util\"",
     "--cfg=feature=\"memchr\"",
+    "--cfg=feature=\"num_cpus\"",
+    "--cfg=feature=\"rt\"",
+    "--cfg=feature=\"rt-multi-thread\"",
     "--cfg=feature=\"sync\"",
     "--cfg=tokio_track_caller",
   ]

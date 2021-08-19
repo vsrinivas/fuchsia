@@ -14,7 +14,7 @@ pub mod task {
     /// task, call the cancel() method. To run a task to completion without
     /// retaining the Task handle, call the detach() method.
     #[derive(Debug)]
-    pub struct Task<T>(async_executor::Task<T>);
+    pub struct Task<T>(pub(crate) Option<tokio::task::JoinHandle<T>>);
 
     impl<T: 'static> Task<T> {
         /// spawn a new `Send` task onto the executor.
@@ -22,22 +22,28 @@ pub mod task {
         where
             T: Send,
         {
-            Self(super::executor::spawn(fut))
+            Self(Some(super::executor::spawn(fut)))
         }
 
         /// spawn a new non-`Send` task onto the single threaded executor.
         pub fn local<'a>(fut: impl Future<Output = T> + 'static) -> Self {
-            Self(super::executor::local(fut))
+            Self(Some(super::executor::local(fut)))
         }
 
         /// detach the Task handle. The contained future will be polled until completion.
-        pub fn detach(self) {
-            self.0.detach()
+        pub fn detach(mut self) {
+            self.0.take();
         }
 
         /// cancel a task and wait for cancellation to complete.
         pub async fn cancel(self) -> Option<T> {
-            self.0.cancel().await
+            match self.0 {
+                None => None,
+                Some(join_handle) => {
+                    join_handle.abort();
+                    join_handle.await.ok()
+                }
+            }
         }
     }
 
@@ -45,8 +51,12 @@ pub mod task {
         type Output = T;
 
         fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            // TODO: spawning a task onto a task may leak, never resolving
             use futures_lite::FutureExt;
-            self.0.poll(cx)
+            self.0.as_mut().map_or(Poll::Pending, |jh| match jh.poll(cx) {
+                Poll::Ready(Ok(r)) => Poll::Ready(r),
+                _ => Poll::Pending,
+            })
         }
     }
 
@@ -72,16 +82,16 @@ pub mod task {
     /// should be assumed to be held until the returned future completes.
     ///
     /// For details on performance characteristics and edge cases, see [`blocking::unblock`].
+    // TODO: redo docs
     pub fn unblock<T: 'static + Send>(
         f: impl 'static + Send + FnOnce() -> T,
     ) -> impl 'static + Send + Future<Output = T> {
-        blocking::unblock(f)
+        crate::Task(Some(tokio::task::spawn_blocking(f)))
     }
 }
 
 pub mod executor {
     use crate::runtime::WakeupTime;
-    use easy_parallel::Parallel;
     use fuchsia_zircon_status as zx_status;
     use std::future::Future;
 
@@ -97,25 +107,23 @@ pub mod executor {
 
     pub(crate) fn spawn<T: 'static>(
         fut: impl Future<Output = T> + Send + 'static,
-    ) -> async_executor::Task<T>
+    ) -> tokio::task::JoinHandle<T>
     where
         T: Send,
     {
-        GLOBAL.spawn(fut)
+        tokio::task::spawn(fut)
     }
 
-    pub(crate) fn local<T>(fut: impl Future<Output = T> + 'static) -> async_executor::Task<T>
+    pub(crate) fn local<T>(fut: impl Future<Output = T> + 'static) -> tokio::task::JoinHandle<T>
     where
         T: 'static,
     {
-        LOCAL.with(|local| local.spawn(fut))
+        LOCAL.with(|local| local.spawn_local(fut))
     }
 
     thread_local! {
-        static LOCAL: async_executor::LocalExecutor<'static> = async_executor::LocalExecutor::new();
+        static LOCAL: tokio::task::LocalSet = tokio::task::LocalSet::new();
     }
-
-    static GLOBAL: async_executor::Executor<'_> = async_executor::Executor::new();
 
     /// A multi-threaded executor.
     ///
@@ -124,13 +132,20 @@ pub mod executor {
     /// The current implementation of Executor does not isolate work
     /// (as the underlying executor is not yet capable of this).
     pub struct SendExecutor {
-        num_threads: usize,
+        runtime: tokio::runtime::Runtime,
     }
 
     impl SendExecutor {
         /// Create a new executor running with actual time.
         pub fn new(num_threads: usize) -> Result<Self, zx_status::Status> {
-            Ok(Self { num_threads })
+            Ok(Self {
+                runtime: tokio::runtime::Builder::new_multi_thread()
+                    .worker_threads(num_threads)
+                    .enable_all()
+                    .build()
+                    // TODO: how to better report errors given the API constraints?
+                    .map_err(|_e| zx_status::Status::IO)?,
+            })
         }
 
         /// Run a single future to completion using multiple threads.
@@ -139,24 +154,7 @@ pub mod executor {
             F: Future + Send + 'static,
             F::Output: Send + 'static,
         {
-            let (signal, shutdown) = async_channel::unbounded::<()>();
-
-            let (_, res) = Parallel::new()
-                .each(0..self.num_threads, |_| {
-                    LOCAL.with(|local| {
-                        let _ = async_io::block_on(local.run(GLOBAL.run(shutdown.recv())));
-                    })
-                })
-                .finish(|| {
-                    LOCAL.with(|local| {
-                        async_io::block_on(local.run(GLOBAL.run(async {
-                            let res = main_future.await;
-                            drop(signal);
-                            res
-                        })))
-                    })
-                });
-            res
+            LOCAL.with(|local| local.block_on(&self.runtime, main_future))
         }
     }
 
@@ -179,7 +177,12 @@ pub mod executor {
         where
             F: Future,
         {
-            LOCAL.with(|local| async_io::block_on(GLOBAL.run(local.run(main_future))))
+            LOCAL.with(|local| {
+                local.block_on(
+                    &tokio::runtime::Builder::new_current_thread().build().unwrap(),
+                    main_future,
+                )
+            })
         }
     }
 
