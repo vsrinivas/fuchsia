@@ -43,7 +43,7 @@ MBOs have multiple roles:
     returned from a callee to a caller.  Each MBO may have an
     associated reply-path MsgQueue, which is the queue that the MBO
     will be enqueued on when a callee returns it via
-    `zx_cmh_send_reply()`.  This means a callee does not have to
+    `zx_mbo_send_reply()`.  This means a callee does not have to
     specify a channel for returning a reply message on.
 
 A CMH is a callee process's limited-access reference to an MBO.  A
@@ -90,7 +90,7 @@ into the MBO (overwriting its contents) by passing the CMH handle to
 
 Once the callee has written a reply into the MBO, it can send the
 reply to the caller by passing the CMH handle to
-`zx_cmh_send_reply()`.  This enqueues the MBO on its associated
+`zx_mbo_send_reply()`.  This enqueues the MBO on its associated
 MsgQueue, drops the CMH's reference to the MBO (putting the CMH back
 in the "unused" state), and sets the MBO's state to
 `enqueued_as_reply`.  The callee can now reuse this CMH object in
@@ -185,7 +185,7 @@ a different callee.
     given MsgQueue.
 
     For MBOs: When given an MBO, this sets the associated MsgQueue for
-    the MBO, onto which `zx_cmh_send_reply()` will enqueue the MBO
+    the MBO, onto which `zx_mbo_send_reply()` will enqueue the MBO
     with the given key value.  The MBO must be in the
     `owned_by_caller` state.
 
@@ -194,7 +194,7 @@ a different callee.
     Creates a new CMH.  The CMH starts off not holding a reference to
     any MBO.
 
-*   `zx_cmh_send_reply(cmh)`
+*   `zx_mbo_send_reply(cmh)`
 
     Returns a reply message to the caller.  The given CMH must have a
     reference to an MBO (which will be in the state
@@ -263,7 +263,7 @@ are dropped:
         an MBO, the system will send an automatic reply on the MBO.
         The system will replace the MBO's contents with a default
         reply message and send the MBO as a reply (as if
-        `zx_cmh_send_reply()` was called).
+        `zx_mbo_send_reply()` was called).
 
     *   Closed MsgQueue: If all the handles to a MsgQueue are closed
         while its queue contains MBOs in the state
@@ -296,11 +296,11 @@ MBO:
     *   An array of bytes (data).
     *   An array of Zircon handles.
 *   `key`: 64-bit integer.  This is set when the MBO is enqueued onto
-    a MsgQueue by either `zx_channel_send()` or `zx_cmh_send_reply()`.
+    a MsgQueue by either `zx_channel_send()` or `zx_mbo_send_reply()`.
     Its value is returned by `zx_msgqueue_wait()`.
-*   `reply_queue`: This is the MsgQueue that `zx_cmh_send_reply()`
+*   `reply_queue`: This is the MsgQueue that `zx_mbo_send_reply()`
     will enqueue the MBO onto when it is sent as a reply.
-*   `reply_key`: 64-bit integer.  `zx_cmh_send_reply()` will set the
+*   `reply_key`: 64-bit integer.  `zx_mbo_send_reply()` will set the
     MBO's `key` field to this value when the MBO is sent as a reply.
 *   State: one of the four MBO states listed above (`owned_by_caller`,
     `owned_by_callee`, `enqueued_as_request`, `enqueued_as_reply`).
@@ -361,7 +361,7 @@ mapped at the same time.)
 struct zx_mbmq_multiop {
   // Inputs for write+send:
   bool is_req;           // true if sending a request, false if sending a reply
-  zx_handle_t mbo;       // for zx_mbo_write() + zx_channel_send()/zx_cmh_send_reply()
+  zx_handle_t mbo;       // for zx_mbo_write() + zx_channel_send()/zx_mbo_send_reply()
   zx_handle_t channel;   // for zx_channel_send() (if is_req is true)
 
   // Inputs for wait+read:
@@ -385,7 +385,7 @@ zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
 *   Send message:
     *   If `is_req` is true, do `zx_channel_send()` to send `mbo` on
         `channel`.
-    *   If `is_req` is false, do `zx_cmh_send_reply()` on `mbo` to
+    *   If `is_req` is false, do `zx_mbo_send_reply()` on `mbo` to
         send the message as a reply.
 *   Do `zx_msgqueue_wait()` on `msgqueue` and `cmh`.  Returns the
     resulting key value in `key`.
@@ -461,7 +461,7 @@ recycles MBOs across requests or not:
 
 For fire-and-forget requests, a well-behaved callee should release the
 MBO after it has read or processed the message by writing an empty
-reply message into the MBO and calling `zx_cmh_send_reply()` (or,
+reply message into the MBO and calling `zx_mbo_send_reply()` (or,
 equivalently, by closing the CMH handle).  Unfortunately that has the
 problem of requiring an extra syscall invocation, so we might want to
 introduce a way of releasing the callee's MBO reference implicitly
@@ -621,7 +621,7 @@ could be reordered or done in parallel:
 
 *   Change all server processes to accept requests via both MBO
     messages and legacy messages.  Servers will send replies via
-    either legacy messages or MBOs (using `zx_cmh_send_reply()`)
+    either legacy messages or MBOs (using `zx_mbo_send_reply()`)
     depending on the request type.  This work can be made easier using
     the "legacy reply mode" for CMHs described below.
 
@@ -657,7 +657,7 @@ MBOs and legacy messages, we can temporarily extend CMHs with a
 "legacy reply mode": When a legacy request message is read into a CMH
 using `zx_msgqueue_wait()`, the CMH will store a reference to the
 channel endpoint that the request was written to.  Calling
-`zx_cmh_send_reply()` on that CMH will then enqueue the reply as a
+`zx_mbo_send_reply()` on that CMH will then enqueue the reply as a
 legacy message so that it is readable from that channel endpoint.
 This feature can be removed after client code no longer sends requests
 via legacy messages.
