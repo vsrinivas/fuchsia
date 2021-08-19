@@ -405,8 +405,6 @@ sdk("core.modular") {
 }
 
 group("host_tools.all") {
-  testonly = true
-
   public_deps = []
   if (host_os == "linux") {
     public_deps += [
@@ -420,7 +418,6 @@ group("host_tools.all") {
 
 if (is_host) {
   sdk("host_tools.modular") {
-    testonly = true
     id = sdk_id
     category = "partner"
     api = "manifests/host_tools_${current_os}_${current_cpu}.manifest"
@@ -443,6 +440,7 @@ if (is_host) {
       "//tools/net/device-finder:device-finder_sdk",
       "//tools/symbol-index:symbol_index_sdk",
       "//tools/symbolizer:sdk",
+      "//zircon/tools/blobfs:blobfs_sdk",
       "//zircon/tools/merkleroot:merkleroot_sdk",
       "//zircon/tools/minfs:minfs_sdk",
       "//zircon/tools/zbi:zbi_sdk",

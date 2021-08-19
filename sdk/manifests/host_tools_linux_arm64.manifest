@@ -1,5 +1,6 @@
 sdk://docs/metadata_schemas
 sdk://tools/arm64/blobfs-compression
+sdk://tools/arm64/blobfs_do_not_depend
 sdk://tools/arm64/bootserver
 sdk://tools/arm64/cmc
 sdk://tools/arm64/device-finder
