@@ -27,7 +27,13 @@ class ViewStateImpl with Disposable implements ViewState {
   final ViewHandle view;
 
   @override
+  final Observable<bool> rendered = false.asObservable();
+
+  @override
   final Observable<bool> ready = false.asObservable();
+
+  @override
+  final Observable<bool> timeout = false.asObservable();
 
   @override
   final Observable<bool> closed = false.asObservable();
@@ -57,10 +63,34 @@ class ViewStateImpl with Disposable implements ViewState {
     _onClose();
   }.asAction();
 
+  @override
+  late final Action wait = () {
+    timeout.value = false;
+    Future.delayed(
+        Duration(seconds: 10), () => runInAction(() => timeout.value = true));
+  }.asAction();
+
+  /// Called by [PresenterService] when the view is attached to the scene.
+  void viewConnected() {
+    // Mark the view as ready, so that it can be focused.
+    runInAction(() => ready.value = true);
+
+    // Mark the view as timed-out if it fails to render in time.
+    Future.delayed(
+        Duration(seconds: 10), () => runInAction(() => timeout.value = true));
+  }
+
   /// Called by [PresenterService] when the view has rendered a new frame.
   void viewStateChanged({required bool state}) {
     runInAction(() {
+      // Mark the view as ready, so that it can be focused.
       ready.value = ready.value || state;
+
+      // The view has rendered its first frame.
+      rendered.value = true;
+
+      // Cancel timeout waiting for the view to render its first frame.
+      timeout.value = false;
     });
   }
 }

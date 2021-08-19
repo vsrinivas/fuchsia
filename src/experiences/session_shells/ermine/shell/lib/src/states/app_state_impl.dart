@@ -21,6 +21,7 @@ import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 
@@ -220,12 +221,25 @@ class AppStateImpl with Disposable implements AppState {
       startupService.appLaunchEntries;
 
   void setFocusToShellView() {
-    setFocus(startupService.hostView);
+    FocusState.instance.requestFocus(startupService.hostView.handle);
   }
 
   void setFocusToChildView() {
     if (views.isNotEmpty) {
-      setFocus(topView.value.view);
+      FocusState.instance
+          .requestFocus(topView.value.view.handle)
+          .catchError((e) {
+        log.warning('Failed to set focus on top view, retrying. $e');
+        if (topView.value.rendered.value) {
+          // Mark the view as not ready, in order to try to set focus again on
+          // the next viewStateChanged event.
+          topView.value.ready.value = false;
+        } else {
+          // This view has not rendered any frames yet, just retry setting
+          // focus recursively.
+          setFocusToChildView();
+        }
+      });
     }
   }
 
@@ -247,13 +261,17 @@ class AppStateImpl with Disposable implements AppState {
   @override
   late final switchView = (ViewState view) {
     topView.value = view;
-    (view as ViewStateImpl).ready.value = false;
+    if (topView.value.rendered.value) {
+      view.ready.value = false;
+    } else {
+      setFocusToChildView();
+    }
   }.asAction();
 
   @override
   late final switchNext = () {
     if (views.length > 1) {
-      // Start with the top view.
+      // Initialize [switchTarget] with the top view, if not already set.
       switchTarget.value ??= topView.value;
 
       // Get next view from top view. Wrap to first view in list, if it is last.
@@ -264,15 +282,15 @@ class AppStateImpl with Disposable implements AppState {
       // Set focus to shell view so that we can receive the final Alt key press.
       setFocusToShellView();
 
-      // Display the app switcher after shell has focus.
-      when((_) => shellHasFocus.value, () => switcherVisible.value = true);
+      // Display the app switcher.
+      switcherVisible.value = true;
     }
   }.asAction();
 
   @override
   late final switchPrev = () {
     if (views.length > 1) {
-      // Start with the top view.
+      // Initialize [switchTarget] with the top view, if not already set.
       switchTarget.value ??= topView.value;
 
       switchTarget.value = switchTarget.value == views.first
@@ -282,25 +300,25 @@ class AppStateImpl with Disposable implements AppState {
       // Set focus to shell view so that we can receive the final Alt key press.
       setFocusToShellView();
 
-      // Display the app switcher after shell has focus.
-      when((_) => shellHasFocus.value, () => switcherVisible.value = true);
+      // Display the app switcher.
+      switcherVisible.value = true;
     }
   }.asAction();
 
   void _triggerSwitch() {
     if (switchTarget.value != null) {
       runInAction(() {
-        if (switchTarget.value != topView.value) {
+        if (switchTarget.value != topView.value &&
+            switchTarget.value!.rendered.value) {
           topView.value = switchTarget.value!;
-          (switchTarget.value as ViewStateImpl).ready.value = false;
+          topView.value.ready.value = false;
         } else {
-          // Set focus to the child view since we did not switch to another view.
+          topView.value = switchTarget.value!;
+          // Set focus to the child view since we did not switch to another view
           setFocusToChildView();
         }
 
-        // Dismiss the app switcher after shell loses focus
-        when((_) => !shellHasFocus.value, () => switcherVisible.value = false);
-
+        switcherVisible.value = false;
         switchTarget.value = null;
       });
     }
@@ -409,14 +427,23 @@ class AppStateImpl with Disposable implements AppState {
     });
   }
 
-  void setFocus(ViewHandle view) {
-    focusService.moveFocus(view);
-  }
-
   bool _onViewPresented(ViewState viewState) {
     final view = viewState as ViewStateImpl;
-    // Make this view the top view.
+
+    // TODO(https://fxbug.dev/82840): Remove this block once this issue is
+    // fixed. Since the current top view looses hittesting functionality,
+    // explicitly reset the hittest flag on current topView before dismissing
+    // the overlays.
+    if (views.isNotEmpty) {
+      FuchsiaViewsService.instance
+          .updateView(topView.value.viewConnection.viewId)
+          .catchError((e) {
+        log.warning('Error calling updateView on ${topView.value.title}: $e');
+      });
+    }
+
     runInAction(() {
+      // Make this view the top view.
       views.add(view);
       topView.value = view;
 
@@ -433,13 +460,15 @@ class AppStateImpl with Disposable implements AppState {
     // Focus on view when it is ready.
     view.reactions.add(reaction<bool>((_) => view.ready.value, (ready) {
       if (ready && view == topView.value && view.focusable.value) {
-        setFocus(view.view);
+        setFocusToChildView();
       }
     }));
 
     // Update view hittestability based on overlay visibility.
     view.reactions.add(reaction<bool>((_) => overlaysVisible.value, (overlay) {
-      view.hitTestable.value = !overlay;
+      // Don't reset hittest flag when showing app switcher, because the
+      // app switcher does not react to pointer events.
+      view.hitTestable.value = !overlay || switcherVisible.value;
     }));
 
     // Remove view from views when it is closed.
@@ -460,7 +489,7 @@ class AppStateImpl with Disposable implements AppState {
             ? views.first
             : views[views.indexOf(topView.value) + 1];
         topView.value = nextView;
-        (nextView as ViewStateImpl).ready.value = false;
+        nextView.ready.value = false;
       }
 
       views.remove(view);

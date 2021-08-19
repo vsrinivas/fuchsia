@@ -85,6 +85,7 @@ dart_library("lib") {
     "src/widgets/settings/timezone_settings.dart",
     "src/widgets/side_bar.dart",
     "src/widgets/status.dart",
+    "src/widgets/timeout.dart",
   ]
 
   sources = entrypoints + services + states + widgets

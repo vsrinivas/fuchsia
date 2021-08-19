@@ -779,6 +779,28 @@ class Strings {
             'The text displayed for downloading and updating to target channel.',
         args: [targetChannel],
       );
+  static String loadingApplication(String title) => Intl.message(
+        'Loading $title',
+        name: 'loading application with title',
+        desc: 'The lable on the circular loading indicator.',
+        args: [title],
+      );
+  static String get applicationNotResponding => Intl.message(
+        'This application is not responding',
+        name: 'application is not responding message',
+        desc: 'The title of dialog to handle unresponsive application.',
+      );
+  static String promptToWaitOrClose(String title) => Intl.message(
+        '$title is taking long to load. Would you like to wait for another 10 seconds or stop loading and close the app?',
+        name: 'application taking too long to load. wait or close',
+        desc: 'The prompt text to wait or close unresponsive app.',
+        args: [title],
+      );
+  static String get wait => Intl.message(
+        'Wait',
+        name: 'wait',
+        desc: 'The button label for the "wait" command.',
+      );
   static String get cancelKeyboardShortcut => Intl.message(
         'Dismiss system overlays',
         name: 'dismiss system overlays',

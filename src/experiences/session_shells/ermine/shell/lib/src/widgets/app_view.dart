@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:ermine/src/states/app_state.dart';
+import 'package:ermine/src/widgets/timeout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
@@ -17,10 +18,17 @@ class AppView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
       final view = state.topView.value;
-      return FuchsiaView(
-        controller: view.viewConnection,
-        hitTestable: view.hitTestable.value,
-        focusable: view.focusable.value,
+      return Stack(
+        children: [
+          FuchsiaView(
+            controller: view.viewConnection,
+            hitTestable: view.hitTestable.value,
+            focusable: view.focusable.value,
+          ),
+
+          // Loading and timeout UX.
+          LoadTimeout(view),
+        ],
       );
     });
   }

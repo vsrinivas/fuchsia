@@ -64,6 +64,7 @@ class PresenterService extends GraphicalPresenter {
       final viewConnection = FuchsiaViewConnection(
         viewHolderToken,
         viewRef: viewRef,
+        onViewConnected: (_) => viewState.viewConnected(),
         onViewStateChanged: (_, state) {
           viewState.viewStateChanged(state: state ?? false);
         },
