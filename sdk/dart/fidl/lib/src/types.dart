@@ -905,18 +905,36 @@ class PointerType<T> extends SimpleFidlType<T?> {
 class MemberType<T> {
   const MemberType({
     required this.type,
-    required this.offset,
+    required this.offsetV1,
+    required this.offsetV2,
   });
 
   final FidlType type;
-  final int offset;
+  final int offsetV1;
+  final int offsetV2;
 
   void encode(Encoder encoder, T value, int base, int depth) {
-    type.encode(encoder, value, base + offset, depth);
+    switch (encoder.wireFormat) {
+      case WireFormat.v1:
+        type.encode(encoder, value, base + offsetV1, depth);
+        break;
+      case WireFormat.v2:
+        type.encode(encoder, value, base + offsetV2, depth);
+        break;
+      default:
+        throw FidlError('unknown wire format');
+    }
   }
 
   T decode(Decoder decoder, int base, int depth) {
-    return type.decode(decoder, base + offset, depth);
+    switch (decoder.wireFormat) {
+      case WireFormat.v1:
+        return type.decode(decoder, base + offsetV1, depth);
+      case WireFormat.v2:
+        return type.decode(decoder, base + offsetV2, depth);
+      default:
+        throw FidlError('unknown wire format');
+    }
   }
 }
 
@@ -1505,30 +1523,40 @@ class MethodType {
     required this.request,
     required this.response,
     required this.name,
-    required this.requestInlineSize,
-    required this.responseInlineSize,
+    required this.requestInlineSizeV1,
+    required this.requestInlineSizeV2,
+    required this.responseInlineSizeV1,
+    required this.responseInlineSizeV2,
   });
 
   final List<MemberType>? request;
   final List<MemberType>? response;
   final String name;
-  final int requestInlineSize;
-  final int responseInlineSize;
+  final int requestInlineSizeV1;
+  final int requestInlineSizeV2;
+  final int responseInlineSizeV1;
+  final int responseInlineSizeV2;
 
-  int encodingRequestInlineSize() {
-    return requestInlineSize;
+  int requestInlineSize(WireFormat wireFormat) {
+    switch (wireFormat) {
+      case WireFormat.v1:
+        return requestInlineSizeV1;
+      case WireFormat.v2:
+        return requestInlineSizeV2;
+      default:
+        throw FidlError('unknown wire format');
+    }
   }
 
-  int encodingResponseInlineSize() {
-    return responseInlineSize;
-  }
-
-  int decodeRequestInlineSize() {
-    return requestInlineSize;
-  }
-
-  int decodeResponseInlineSize() {
-    return responseInlineSize;
+  int responseInlineSize(WireFormat wireFormat) {
+    switch (wireFormat) {
+      case WireFormat.v1:
+        return responseInlineSizeV1;
+      case WireFormat.v2:
+        return responseInlineSizeV2;
+      default:
+        throw FidlError('unknown wire format');
+    }
   }
 }
 

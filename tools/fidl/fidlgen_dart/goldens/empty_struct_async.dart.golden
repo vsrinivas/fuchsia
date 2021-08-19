@@ -106,36 +106,42 @@ const $fidl.StructType<Empty> kEmpty_Type = $fidl.StructType<Empty>(
 const int _kEmptyProtocol_Send_Ordinal = 0x1e4e78d0556b6f28;
 const $fidl.MethodType _kEmptyProtocol_Send_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<Empty>(type: kEmpty_Type, offset: 0),
+    $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
   ],
   response: [],
   name: r"EmptyProtocol.Send",
-  requestInlineSize: 8,
-  responseInlineSize: 0,
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
 );
 // receive:  -> (Empty e)
 const int _kEmptyProtocol_Receive_Ordinal = 0x45bd261c537791e0;
 const $fidl.MethodType _kEmptyProtocol_Receive_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<Empty>(type: kEmpty_Type, offset: 0),
+    $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
   ],
   name: r"EmptyProtocol.Receive",
-  requestInlineSize: 0,
-  responseInlineSize: 8,
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
 );
 // sendAndReceive: (Empty e) -> (Empty e)
 const int _kEmptyProtocol_SendAndReceive_Ordinal = 0x56ca6bd78bac3571;
 const $fidl.MethodType _kEmptyProtocol_SendAndReceive_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<Empty>(type: kEmpty_Type, offset: 0),
+    $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<Empty>(type: kEmpty_Type, offset: 0),
+    $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
   ],
   name: r"EmptyProtocol.SendAndReceive",
-  requestInlineSize: 8,
-  responseInlineSize: 8,
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
 );
 
 abstract class EmptyProtocol {
@@ -182,7 +188,8 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
               _kEmptyProtocol_Receive_Type.response!;
           _receiveEventStreamController.add($fidl.decodeMessage(
               $message,
-              _kEmptyProtocol_Receive_Type.decodeResponseInlineSize(),
+              _kEmptyProtocol_Receive_Type
+                  .responseInlineSize($message.wireFormat),
               $types[0]));
         }, 'event');
         break;
@@ -213,7 +220,8 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
           // ignore: prefer_const_declarations
           final $response = $fidl.decodeMessage(
               $message,
-              _kEmptyProtocol_SendAndReceive_Type.decodeResponseInlineSize(),
+              _kEmptyProtocol_SendAndReceive_Type
+                  .responseInlineSize($message.wireFormat),
               $types[0]);
 
           $completer.complete($response);
@@ -237,8 +245,8 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kEmptyProtocol_Send_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kEmptyProtocol_Send_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder, _kEmptyProtocol_Send_Type.encodingRequestInlineSize(), () {
+    $fidl.encodeMessageWithCallback($encoder,
+        _kEmptyProtocol_Send_Type.requestInlineSize($encoder.wireFormat), () {
       $types[0].encode($encoder, e, $fidl.kMessageHeaderSize, 1);
     });
     return $async.Future.sync(() {
@@ -263,8 +271,10 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
     $encoder.encodeMessageHeader(_kEmptyProtocol_SendAndReceive_Ordinal, 0);
     final List<$fidl.MemberType> $types =
         _kEmptyProtocol_SendAndReceive_Type.request!;
-    $fidl.encodeMessageWithCallback($encoder,
-        _kEmptyProtocol_SendAndReceive_Type.encodingRequestInlineSize(), () {
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kEmptyProtocol_SendAndReceive_Type
+            .requestInlineSize($encoder.wireFormat), () {
       $types[0].encode($encoder, e, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<Empty>();
@@ -296,7 +306,8 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
                 _kEmptyProtocol_Receive_Type.response!;
             $fidl.encodeMessage(
                 $encoder,
-                _kEmptyProtocol_Receive_Type.encodingResponseInlineSize(),
+                _kEmptyProtocol_Receive_Type
+                    .responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             sendMessage($encoder.message);
@@ -320,8 +331,9 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
           final _impl = impl!;
           final $async.Future<void> $future = $fidl
               .decodeMessageWithCallback<$async.Future<void>>(
-                  $message, _kEmptyProtocol_Send_Type.decodeRequestInlineSize(),
-                  ($fidl.Decoder decoder) {
+                  $message,
+                  _kEmptyProtocol_Send_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
             return _impl.send(
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
@@ -336,9 +348,10 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<Empty> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<Empty>>($message,
-                  _kEmptyProtocol_SendAndReceive_Type.decodeRequestInlineSize(),
-                  ($fidl.Decoder decoder) {
+              .decodeMessageWithCallback<$async.Future<Empty>>(
+                  $message,
+                  _kEmptyProtocol_SendAndReceive_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
             return _impl.sendAndReceive(
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
@@ -353,7 +366,7 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
             $fidl.encodeMessage(
                 $encoder,
                 _kEmptyProtocol_SendAndReceive_Type
-                    .encodingResponseInlineSize(),
+                    .responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             $respond($encoder.message);

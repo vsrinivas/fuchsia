@@ -953,16 +953,20 @@ const $fidl.TableType<FunctionApplication> kFunctionApplication_Type =
 const int _kSomeProtocol_SomeMethod_Ordinal = 0x7c16def2273b94ee;
 const $fidl.MethodType _kSomeProtocol_SomeMethod_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<UnionMember>(type: kUnionMember_Type, offset: 0),
-    $fidl.MemberType<TableMember>(type: kTableMember_Type, offset: 24),
+    $fidl.MemberType<UnionMember>(
+        type: kUnionMember_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<TableMember>(
+        type: kTableMember_Type, offsetV1: 24, offsetV2: 16),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<SomeProtocolSomeMethodResult>(
-        type: kSomeProtocol_SomeMethod_Result_Type, offset: 0),
+        type: kSomeProtocol_SomeMethod_Result_Type, offsetV1: 0, offsetV2: 0),
   ],
   name: r"SomeProtocol.SomeMethod",
-  requestInlineSize: 40,
-  responseInlineSize: 24,
+  requestInlineSizeV1: 40,
+  requestInlineSizeV2: 32,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
 );
 
 abstract class SomeProtocol {
@@ -1025,7 +1029,8 @@ class SomeProtocolProxy extends $fidl.AsyncProxy<SomeProtocol>
           // ignore: prefer_const_declarations
           final $response = $fidl.decodeMessage(
               $message,
-              _kSomeProtocol_SomeMethod_Type.decodeResponseInlineSize(),
+              _kSomeProtocol_SomeMethod_Type
+                  .responseInlineSize($message.wireFormat),
               $types[0]);
 
           if ($response.$tag == SomeProtocolSomeMethodResultTag.response) {
@@ -1055,8 +1060,8 @@ class SomeProtocolProxy extends $fidl.AsyncProxy<SomeProtocol>
     $encoder.encodeMessageHeader(_kSomeProtocol_SomeMethod_Ordinal, 0);
     final List<$fidl.MemberType> $types =
         _kSomeProtocol_SomeMethod_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder, _kSomeProtocol_SomeMethod_Type.encodingRequestInlineSize(),
+    $fidl.encodeMessageWithCallback($encoder,
+        _kSomeProtocol_SomeMethod_Type.requestInlineSize($encoder.wireFormat),
         () {
       $types[0].encode($encoder, unionMember, $fidl.kMessageHeaderSize, 1);
       $types[1].encode($encoder, tableMember, $fidl.kMessageHeaderSize, 1);
@@ -1082,9 +1087,10 @@ class SomeProtocolBinding extends $fidl.AsyncBinding<SomeProtocol> {
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<BitsMember> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<BitsMember>>($message,
-                  _kSomeProtocol_SomeMethod_Type.decodeRequestInlineSize(),
-                  ($fidl.Decoder decoder) {
+              .decodeMessageWithCallback<$async.Future<BitsMember>>(
+                  $message,
+                  _kSomeProtocol_SomeMethod_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
             return _impl.someMethod(
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
               $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
@@ -1108,7 +1114,8 @@ class SomeProtocolBinding extends $fidl.AsyncBinding<SomeProtocol> {
                 _kSomeProtocol_SomeMethod_Type.response!;
             $fidl.encodeMessage(
                 $encoder,
-                _kSomeProtocol_SomeMethod_Type.encodingResponseInlineSize(),
+                _kSomeProtocol_SomeMethod_Type
+                    .responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             $respond($encoder.message);

@@ -44,14 +44,18 @@ const int _kSuper_foo_Ordinal = 0x45602cf3b581d6ab;
 const $fidl.MethodType _kSuper_foo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null), offset: 0),
+        type: $fidl.StringType(maybeElementCount: null),
+        offsetV1: 0,
+        offsetV2: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
   ],
   name: r"Super.foo",
-  requestInlineSize: 16,
-  responseInlineSize: 8,
+  requestInlineSizeV1: 16,
+  requestInlineSizeV2: 16,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
 );
 
 abstract class Super {
@@ -109,7 +113,9 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
           final List<$fidl.MemberType> $types = _kSuper_foo_Type.response!;
           // ignore: prefer_const_declarations
           final $response = $fidl.decodeMessage(
-              $message, _kSuper_foo_Type.decodeResponseInlineSize(), $types[0]);
+              $message,
+              _kSuper_foo_Type.responseInlineSize($message.wireFormat),
+              $types[0]);
 
           $completer.complete($response);
         }, 'method response');
@@ -133,7 +139,7 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
     $encoder.encodeMessageHeader(_kSuper_foo_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kSuper_foo_Type.request!;
     $fidl.encodeMessageWithCallback(
-        $encoder, _kSuper_foo_Type.encodingRequestInlineSize(), () {
+        $encoder, _kSuper_foo_Type.requestInlineSize($encoder.wireFormat), () {
       $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<int>();
@@ -156,8 +162,8 @@ class SuperBinding extends $fidl.AsyncBinding<Super> {
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<int> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<int>>(
-                  $message, _kSuper_foo_Type.decodeRequestInlineSize(),
+              .decodeMessageWithCallback<$async.Future<int>>($message,
+                  _kSuper_foo_Type.requestInlineSize($message.wireFormat),
                   ($fidl.Decoder decoder) {
             return _impl.foo(
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
@@ -170,7 +176,7 @@ class SuperBinding extends $fidl.AsyncBinding<Super> {
             final List<$fidl.MemberType> $types = _kSuper_foo_Type.response!;
             $fidl.encodeMessage(
                 $encoder,
-                _kSuper_foo_Type.encodingResponseInlineSize(),
+                _kSuper_foo_Type.responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             $respond($encoder.message);
@@ -190,14 +196,18 @@ const int _kSub_foo_Ordinal = 0x45602cf3b581d6ab;
 const $fidl.MethodType _kSub_foo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null), offset: 0),
+        type: $fidl.StringType(maybeElementCount: null),
+        offsetV1: 0,
+        offsetV2: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
   ],
   name: r"Sub.foo",
-  requestInlineSize: 16,
-  responseInlineSize: 8,
+  requestInlineSizeV1: 16,
+  requestInlineSizeV2: 16,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
 );
 
 abstract class Sub {
@@ -254,7 +264,9 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
           final List<$fidl.MemberType> $types = _kSub_foo_Type.response!;
           // ignore: prefer_const_declarations
           final $response = $fidl.decodeMessage(
-              $message, _kSub_foo_Type.decodeResponseInlineSize(), $types[0]);
+              $message,
+              _kSub_foo_Type.responseInlineSize($message.wireFormat),
+              $types[0]);
 
           $completer.complete($response);
         }, 'method response');
@@ -278,7 +290,7 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
     $encoder.encodeMessageHeader(_kSub_foo_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kSub_foo_Type.request!;
     $fidl.encodeMessageWithCallback(
-        $encoder, _kSub_foo_Type.encodingRequestInlineSize(), () {
+        $encoder, _kSub_foo_Type.requestInlineSize($encoder.wireFormat), () {
       $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<int>();
@@ -301,8 +313,8 @@ class SubBinding extends $fidl.AsyncBinding<Sub> {
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<int> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<int>>(
-                  $message, _kSub_foo_Type.decodeRequestInlineSize(),
+              .decodeMessageWithCallback<$async.Future<int>>($message,
+                  _kSub_foo_Type.requestInlineSize($message.wireFormat),
                   ($fidl.Decoder decoder) {
             return _impl.foo(
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
@@ -315,7 +327,7 @@ class SubBinding extends $fidl.AsyncBinding<Sub> {
             final List<$fidl.MemberType> $types = _kSub_foo_Type.response!;
             $fidl.encodeMessage(
                 $encoder,
-                _kSub_foo_Type.encodingResponseInlineSize(),
+                _kSub_foo_Type.responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             $respond($encoder.message);

@@ -209,15 +209,19 @@ const int _kExample_foo_Ordinal = 0x57e41804562237ae;
 const $fidl.MethodType _kExample_foo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null), offset: 0),
+        type: $fidl.StringType(maybeElementCount: null),
+        offsetV1: 0,
+        offsetV2: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<ExampleFooResult>(
-        type: kExample_foo_Result_Type, offset: 0),
+        type: kExample_foo_Result_Type, offsetV1: 0, offsetV2: 0),
   ],
   name: r"Example.foo",
-  requestInlineSize: 16,
-  responseInlineSize: 24,
+  requestInlineSizeV1: 16,
+  requestInlineSizeV2: 16,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
 );
 
 abstract class Example {
@@ -274,8 +278,10 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
         $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
           final List<$fidl.MemberType> $types = _kExample_foo_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage($message,
-              _kExample_foo_Type.decodeResponseInlineSize(), $types[0]);
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kExample_foo_Type.responseInlineSize($message.wireFormat),
+              $types[0]);
 
           if ($response.$tag == ExampleFooResultTag.response) {
             $completer.complete($response.response.y);
@@ -303,7 +309,8 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
     $encoder.encodeMessageHeader(_kExample_foo_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kExample_foo_Type.request!;
     $fidl.encodeMessageWithCallback(
-        $encoder, _kExample_foo_Type.encodingRequestInlineSize(), () {
+        $encoder, _kExample_foo_Type.requestInlineSize($encoder.wireFormat),
+        () {
       $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<int>();
@@ -326,8 +333,8 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<int> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<int>>(
-                  $message, _kExample_foo_Type.decodeRequestInlineSize(),
+              .decodeMessageWithCallback<$async.Future<int>>($message,
+                  _kExample_foo_Type.requestInlineSize($message.wireFormat),
                   ($fidl.Decoder decoder) {
             return _impl.foo(
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
@@ -349,7 +356,7 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
             final List<$fidl.MemberType> $types = _kExample_foo_Type.response!;
             $fidl.encodeMessage(
                 $encoder,
-                _kExample_foo_Type.encodingResponseInlineSize(),
+                _kExample_foo_Type.responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             $respond($encoder.message);

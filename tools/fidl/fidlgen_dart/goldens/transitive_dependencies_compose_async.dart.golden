@@ -46,11 +46,14 @@ const int _kTop_GetFoo_Ordinal = 0x2c8ccb022c3c571f;
 const $fidl.MethodType _kTop_GetFoo_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<lib$bottom.Foo>(type: lib$bottom.kFoo_Type, offset: 0),
+    $fidl.MemberType<lib$bottom.Foo>(
+        type: lib$bottom.kFoo_Type, offsetV1: 0, offsetV2: 0),
   ],
   name: r"Top.GetFoo",
-  requestInlineSize: 0,
-  responseInlineSize: 8,
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 8,
+  responseInlineSizeV2: 8,
 );
 
 abstract class Top {
@@ -106,8 +109,10 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
         $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
           final List<$fidl.MemberType> $types = _kTop_GetFoo_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage($message,
-              _kTop_GetFoo_Type.decodeResponseInlineSize(), $types[0]);
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kTop_GetFoo_Type.responseInlineSize($message.wireFormat),
+              $types[0]);
 
           $completer.complete($response);
         }, 'method response');
@@ -150,7 +155,8 @@ class TopBinding extends $fidl.AsyncBinding<Top> {
           final _impl = impl!;
           final $async.Future<lib$bottom.Foo> $future = $fidl
               .decodeMessageWithCallback<$async.Future<lib$bottom.Foo>>(
-                  $message, _kTop_GetFoo_Type.decodeRequestInlineSize(),
+                  $message,
+                  _kTop_GetFoo_Type.requestInlineSize($message.wireFormat),
                   ($fidl.Decoder decoder) {
             return _impl.getFoo();
           });
@@ -161,7 +167,7 @@ class TopBinding extends $fidl.AsyncBinding<Top> {
             final List<$fidl.MemberType> $types = _kTop_GetFoo_Type.response!;
             $fidl.encodeMessage(
                 $encoder,
-                _kTop_GetFoo_Type.encodingResponseInlineSize(),
+                _kTop_GetFoo_Type.responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             $respond($encoder.message);

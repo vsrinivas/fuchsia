@@ -33,7 +33,8 @@ fidl.OutgoingMessage _encode<T, I extends Iterable<T>>(
   encoder.encodeMessageHeader(0, 0);
   fidl.MemberType member = fidl.MemberType(
     type: type,
-    offset: 0,
+    offsetV1: 0,
+    offsetV2: 0,
   );
   fidl.encodeMessage(
       encoder, type.inlineSize(encoder.wireFormat), member, value);
@@ -65,7 +66,8 @@ T _decode<T, I extends Iterable<T>>(fidl.WireFormat wireFormat,
       fidl.IncomingMessage(messageBytes, handleInfos);
   fidl.MemberType member = fidl.MemberType(
     type: type,
-    offset: 0,
+    offsetV1: 0,
+    offsetV2: 0,
   );
   return fidl.decodeMessage(message, type.inlineSize(wireFormat), member);
 }

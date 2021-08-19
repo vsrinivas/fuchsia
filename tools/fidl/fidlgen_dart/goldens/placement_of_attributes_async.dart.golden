@@ -433,12 +433,14 @@ const int _kExampleProtocol_Method_Ordinal = 0x207d2f81c0ddb184;
 const $fidl.MethodType _kExampleProtocol_Method_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<lib$exampleusing.Empty>(
-        type: lib$exampleusing.kEmpty_Type, offset: 0),
+        type: lib$exampleusing.kEmpty_Type, offsetV1: 0, offsetV2: 0),
   ],
   response: [],
   name: r"ExampleProtocol.Method",
-  requestInlineSize: 8,
-  responseInlineSize: 0,
+  requestInlineSizeV1: 8,
+  requestInlineSizeV2: 8,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
 );
 
 abstract class ExampleProtocol {
@@ -511,8 +513,8 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
     $encoder.encodeMessageHeader(_kExampleProtocol_Method_Ordinal, 0);
     final List<$fidl.MemberType> $types =
         _kExampleProtocol_Method_Type.request!;
-    $fidl.encodeMessageWithCallback(
-        $encoder, _kExampleProtocol_Method_Type.encodingRequestInlineSize(),
+    $fidl.encodeMessageWithCallback($encoder,
+        _kExampleProtocol_Method_Type.requestInlineSize($encoder.wireFormat),
         () {
       $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize, 1);
     });
@@ -537,9 +539,10 @@ class ExampleProtocolBinding extends $fidl.AsyncBinding<ExampleProtocol> {
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>($message,
-                  _kExampleProtocol_Method_Type.decodeRequestInlineSize(),
-                  ($fidl.Decoder decoder) {
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kExampleProtocol_Method_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
             return _impl.method(
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );

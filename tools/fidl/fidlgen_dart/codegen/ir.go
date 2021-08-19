@@ -442,16 +442,20 @@ func (c *compiler) getPayload(name fidlgen.EncodedCompoundIdentifier) fidlgen.St
 
 func (c *compiler) typeExprForMethod(val fidlgen.Method, request []StructMember, response []StructMember, name string) string {
 	var (
-		requestSize  = 0
-		responseSize = 0
+		requestSizeV1  = 0
+		requestSizeV2  = 0
+		responseSizeV1 = 0
+		responseSizeV2 = 0
 	)
 	if val.RequestPayload != "" {
 		payload := c.getPayload(val.RequestPayload)
-		requestSize = payload.TypeShapeV1.InlineSize
+		requestSizeV1 = payload.TypeShapeV1.InlineSize
+		requestSizeV2 = payload.TypeShapeV2.InlineSize
 	}
 	if val.ResponsePayload != "" {
 		payload := c.getPayload(val.ResponsePayload)
-		responseSize = payload.TypeShapeV1.InlineSize
+		responseSizeV1 = payload.TypeShapeV1.InlineSize
+		responseSizeV2 = payload.TypeShapeV2.InlineSize
 	}
 
 	// request/response and requestInlineSize/responseInlineSize are null/0 for both empty
@@ -461,10 +465,12 @@ func (c *compiler) typeExprForMethod(val fidlgen.Method, request []StructMember,
 	    request: %s,
 		response: %s,
 		name: r"%s",
-		requestInlineSize: %d,
-		responseInlineSize: %d,
+		requestInlineSizeV1: %d,
+		requestInlineSizeV2: %d,
+		responseInlineSizeV1: %d,
+		responseInlineSizeV2: %d,
 	  )`, formatParameterList(request), formatParameterList(response), name,
-		requestSize, responseSize)
+		requestSizeV1, requestSizeV2, responseSizeV1, responseSizeV2)
 }
 
 func (c *compiler) inExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
@@ -955,8 +961,6 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t)
 	}
 
-	typeStr := fmt.Sprintf("type: %s", t.typeExpr)
-	offsetStr := fmt.Sprintf("offset: %v", val.FieldShapeV1.Offset)
 	return StructMember{
 		Type:         t,
 		TypeSymbol:   t.typeExpr,
@@ -964,8 +968,9 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 		DefaultValue: defaultValue,
 		OffsetV1:     val.FieldShapeV1.Offset,
 		OffsetV2:     val.FieldShapeV2.Offset,
-		typeExpr:     fmt.Sprintf("$fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
-		Documented:   docString(val),
+		typeExpr: fmt.Sprintf("$fidl.MemberType<%s>(type: %s, offsetV1: %v, offsetV2: %v)",
+			t.Decl, t.typeExpr, val.FieldShapeV1.Offset, val.FieldShapeV2.Offset),
+		Documented: docString(val),
 	}
 }
 

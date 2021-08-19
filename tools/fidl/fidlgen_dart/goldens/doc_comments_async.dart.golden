@@ -631,8 +631,10 @@ const $fidl.MethodType _kInterface_Method_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"Interface.Method",
-  requestInlineSize: 0,
-  responseInlineSize: 0,
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
 );
 // onEvent:  -> ()
 const int _kInterface_OnEvent_Ordinal = 0x37812b697096f6fa;
@@ -640,8 +642,10 @@ const $fidl.MethodType _kInterface_OnEvent_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"Interface.OnEvent",
-  requestInlineSize: 0,
-  responseInlineSize: 0,
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
 );
 
 /// interface comment #1
@@ -798,8 +802,9 @@ class InterfaceBinding extends $fidl.AsyncBinding<Interface> {
           final _impl = impl!;
           final $async.Future<void> $future = $fidl
               .decodeMessageWithCallback<$async.Future<void>>(
-                  $message, _kInterface_Method_Type.decodeRequestInlineSize(),
-                  ($fidl.Decoder decoder) {
+                  $message,
+                  _kInterface_Method_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
             return _impl.method();
           });
         }, close);

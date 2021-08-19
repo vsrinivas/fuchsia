@@ -2584,11 +2584,13 @@ const $fidl.MethodType
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<StrictBoundedXUnion>(
-        type: kStrictBoundedXUnion_Type, offset: 0),
+        type: kStrictBoundedXUnion_Type, offsetV1: 0, offsetV2: 0),
   ],
   name: r"TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated",
-  requestInlineSize: 0,
-  responseInlineSize: 24,
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
 );
 // flexibleXUnionHenceResponseMustBeHeapAllocated: () -> (OlderSimpleUnion xu)
 const int
@@ -2599,11 +2601,14 @@ const $fidl.MethodType
     $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<OlderSimpleUnion>(type: kOlderSimpleUnion_Type, offset: 0),
+    $fidl.MemberType<OlderSimpleUnion>(
+        type: kOlderSimpleUnion_Type, offsetV1: 0, offsetV2: 0),
   ],
   name: r"TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated",
-  requestInlineSize: 0,
-  responseInlineSize: 24,
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
 );
 
 abstract class TestProtocol {
@@ -2672,7 +2677,7 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
           final $response = $fidl.decodeMessage(
               $message,
               _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
-                  .decodeResponseInlineSize(),
+                  .responseInlineSize($message.wireFormat),
               $types[0]);
 
           $completer.complete($response);
@@ -2690,7 +2695,7 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
           final $response = $fidl.decodeMessage(
               $message,
               _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
-                  .decodeResponseInlineSize(),
+                  .responseInlineSize($message.wireFormat),
               $types[0]);
 
           $completer.complete($response);
@@ -2761,7 +2766,8 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
                   $async.Future<StrictBoundedXUnion>>(
               $message,
               _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
-                  .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+                  .requestInlineSize($message.wireFormat),
+              ($fidl.Decoder decoder) {
             return _impl.strictXUnionHenceResponseMayBeStackAllocated();
           });
           $future.then(($response) {
@@ -2776,7 +2782,7 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
             $fidl.encodeMessage(
                 $encoder,
                 _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
-                    .encodingResponseInlineSize(),
+                    .responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             $respond($encoder.message);
@@ -2800,7 +2806,8 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
                   $async.Future<OlderSimpleUnion>>(
               $message,
               _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
-                  .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+                  .requestInlineSize($message.wireFormat),
+              ($fidl.Decoder decoder) {
             return _impl.flexibleXUnionHenceResponseMustBeHeapAllocated();
           });
           $future.then(($response) {
@@ -2815,7 +2822,7 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
             $fidl.encodeMessage(
                 $encoder,
                 _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
-                    .encodingResponseInlineSize(),
+                    .responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
             $respond($encoder.message);

@@ -45,8 +45,10 @@ const $fidl.MethodType _kFirstProtocol_MethodOnFirst_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"FirstProtocol.MethodOnFirst",
-  requestInlineSize: 0,
-  responseInlineSize: 0,
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
 );
 
 abstract class FirstProtocol {
@@ -138,9 +140,10 @@ class FirstProtocolBinding extends $fidl.AsyncBinding<FirstProtocol> {
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>($message,
-                  _kFirstProtocol_MethodOnFirst_Type.decodeRequestInlineSize(),
-                  ($fidl.Decoder decoder) {
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kFirstProtocol_MethodOnFirst_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
             return _impl.methodOnFirst();
           });
         }, close);
@@ -158,8 +161,10 @@ const $fidl.MethodType _kSecondProtocol_MethodOnSecond_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"SecondProtocol.MethodOnSecond",
-  requestInlineSize: 0,
-  responseInlineSize: 0,
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
 );
 
 abstract class SecondProtocol {
@@ -253,8 +258,8 @@ class SecondProtocolBinding extends $fidl.AsyncBinding<SecondProtocol> {
           final $async.Future<void> $future = $fidl
               .decodeMessageWithCallback<$async.Future<void>>(
                   $message,
-                  _kSecondProtocol_MethodOnSecond_Type
-                      .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+                  _kSecondProtocol_MethodOnSecond_Type.requestInlineSize(
+                      $message.wireFormat), ($fidl.Decoder decoder) {
             return _impl.methodOnSecond();
           });
         }, close);
