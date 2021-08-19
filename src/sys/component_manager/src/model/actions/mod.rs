@@ -271,6 +271,9 @@ impl ActionSet {
             let rx = rx.clone();
             (None, rx)
         } else {
+            // If the current action is Stop/Shutdown, ensure that
+            // we block on the completion of Shutdown/Stop if it is
+            // currently in progress.
             let blocking_action = match key {
                 ActionKey::Shutdown => self.rep.get(&ActionKey::Stop),
                 ActionKey::Stop => self.rep.get(&ActionKey::Shutdown),
