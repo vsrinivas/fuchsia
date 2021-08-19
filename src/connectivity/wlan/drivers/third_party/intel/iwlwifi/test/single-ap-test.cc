@@ -22,12 +22,19 @@ SingleApTest::SingleApTest()
       sim_trans_(&env_, fake_parent_.get()) {
   // Add a default MVM firmware to the fake DDK.
   TlvFwBuilder fw_builder;
+
   const uint32_t dummy_ucode = 0;
   fw_builder.AddValue(IWL_UCODE_TLV_SEC_INIT, &dummy_ucode, sizeof(dummy_ucode));
   fw_builder.AddValue(IWL_UCODE_TLV_INST, &dummy_ucode, sizeof(dummy_ucode));
   fw_builder.AddValue(IWL_UCODE_TLV_DATA, &dummy_ucode, sizeof(dummy_ucode));
   fw_builder.AddValue(IWL_UCODE_TLV_INIT, &dummy_ucode, sizeof(dummy_ucode));
   fw_builder.AddValue(IWL_UCODE_TLV_INIT_DATA, &dummy_ucode, sizeof(dummy_ucode));
+
+  const uint32_t ucode_phy_sku =
+      cpu_to_le32((3 << FW_PHY_CFG_TX_CHAIN_POS) |  // Tx antenna 1 and 0.
+                  (6 << FW_PHY_CFG_RX_CHAIN_POS));  // Rx antenna 2 and 1.
+  fw_builder.AddValue(IWL_UCODE_TLV_PHY_SKU, &ucode_phy_sku, sizeof(ucode_phy_sku));
+
   fake_parent_->SetFirmware(fw_builder.GetBinary());
 
   zx_status_t status = sim_trans_.Init();

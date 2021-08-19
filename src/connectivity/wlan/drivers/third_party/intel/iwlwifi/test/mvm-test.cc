@@ -153,16 +153,22 @@ TEST_F(MvmTest, rxMpdu) {
 }
 
 // The antenna index will be toggled after each call.
-// The current number of antenna is 1, which is determined by the sim-default-nvm.cc file.
+// Check 'ucode_phy_sku' in test/single-ap-test.cc for the fake antenna setting.
 TEST_F(MvmTest, toggleTxAntenna) {
-  uint8_t ant = 0;
+  uint8_t ant = 1;  // the current antenna 1
 
-  // Since the current configuration is 1 antenna so that the 'ant' is always 0.
   iwl_mvm_toggle_tx_ant(mvm_, &ant);
+  // Since there is only antenna 1 and 0 available, the 'ant' should be updated to 0.
   EXPECT_EQ(0, ant);
+
+  // Do again.
   iwl_mvm_toggle_tx_ant(mvm_, &ant);
-  EXPECT_EQ(0, ant);
+  // The 'ant' should be toggled to 1.
+  EXPECT_EQ(1, ant);
 }
+
+// Check 'ucode_phy_sku' in test/single-ap-test.cc for the fake antenna setting.
+TEST_F(MvmTest, validRxAnt) { EXPECT_EQ(iwl_mvm_get_valid_rx_ant(mvm_), 6); }
 
 TEST_F(MvmTest, scanLmacErrorChecking) {
   struct iwl_mvm_scan_params params = {
@@ -206,7 +212,8 @@ TEST_F(MvmTest, scanLmacNormal) {
   EXPECT_EQ(ZX_OK, iwl_mvm_scan_lmac(mvm_, &params));
 
   struct iwl_scan_req_lmac* cmd = reinterpret_cast<struct iwl_scan_req_lmac*>(mvm_->scan_cmd);
-  EXPECT_EQ(0x0001, le16_to_cpu(cmd->rx_chain_select));
+  EXPECT_EQ(0x036d, le16_to_cpu(cmd->rx_chain_select));  // Refer iwl_mvm_scan_rx_chain() for the
+                                                         // actual implementation.
   EXPECT_EQ(1, le32_to_cpu(cmd->iter_num));
   EXPECT_EQ(0, le32_to_cpu(cmd->delay));
   EXPECT_EQ(4, cmd->n_channels);
