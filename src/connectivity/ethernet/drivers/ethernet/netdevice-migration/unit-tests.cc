@@ -108,70 +108,58 @@ TEST_F(NetdeviceMigrationDefaultSetupTest, NetworkDeviceImplInit) {
 }
 
 TEST_F(NetdeviceMigrationDefaultSetupTest, NetworkDeviceImplStartStop) {
-  struct CallbackReturn {
-    bool called;
-    std::optional<zx_status_t> status;
-  };
-  auto start_cb = [](void* ctx, zx_status_t status) {
-    auto* callback_called = static_cast<CallbackReturn*>(ctx);
-    *callback_called = {
-        .called = true,
-        .status = status,
-    };
-  };
   constexpr struct {
     const char* name;
-    void (*start_callback)(void*, zx_status_t);
-    void (*stop_callback)(void*);
     bool device_started;
-    // Only used if start_callback is not nullptr.
-    zx_status_t start_status;
+    // Step calls ImplStart if set, ImplStop otherwise.
+    std::optional<zx_status_t> start_status;
   } kTestSteps[] = {
       {
           .name = "failed start",
-          .start_callback = start_cb,
           .start_status = ZX_ERR_INTERNAL,
       },
       {
           .name = "successful start",
-          .start_callback = start_cb,
           .device_started = true,
           .start_status = ZX_OK,
       },
       {
           .name = "already bound start",
-          .start_callback = start_cb,
           .device_started = true,
           .start_status = ZX_ERR_ALREADY_BOUND,
       },
       {
           .name = "stop",
-          .stop_callback =
-              [](void* ctx) {
-                auto* callback_called = static_cast<CallbackReturn*>(ctx);
-                *callback_called = {
-                    .called = true,
-                };
-              },
       },
   };
   for (const auto& step : kTestSteps) {
     SCOPED_TRACE(step.name);
-    CallbackReturn result = {};
-    if (step.start_callback) {
-      if (step.start_status != ZX_ERR_ALREADY_BOUND) {
+    if (step.start_status.has_value()) {
+      const zx_status_t start_status = step.start_status.value();
+      if (start_status != ZX_ERR_ALREADY_BOUND) {
         EXPECT_CALL(mock_ethernet_impl_, EthernetImplStart(testing::_))
-            .WillOnce(testing::Return(step.start_status));
+            .WillOnce(testing::Return(start_status));
       }
-      device_->NetworkDeviceImplStart(step.start_callback, &result);
-      ASSERT_TRUE(result.status.has_value());
-      ASSERT_STATUS(*result.status, step.start_status);
-    } else if (step.stop_callback) {
+      std::optional<zx_status_t> callback_status;
+      device_->NetworkDeviceImplStart(
+          [](void* ctx, zx_status_t status) {
+            std::optional<zx_status_t>* ptr = static_cast<std::optional<zx_status_t>*>(ctx);
+            *ptr = status;
+          },
+          &callback_status);
+      ASSERT_TRUE(callback_status.has_value());
+      ASSERT_STATUS(callback_status.value(), start_status);
+    } else {
+      bool callback_called = false;
       EXPECT_CALL(mock_ethernet_impl_, EthernetImplStop()).Times(1);
-      device_->NetworkDeviceImplStop(step.stop_callback, &result);
-      ASSERT_FALSE(result.status.has_value());
+      device_->NetworkDeviceImplStop(
+          [](void* ctx) {
+            bool* ptr = static_cast<bool*>(ctx);
+            *ptr = true;
+          },
+          &callback_called);
+      EXPECT_TRUE(callback_called);
     }
-    EXPECT_TRUE(result.called);
     EXPECT_EQ(device_->IsStarted(), step.device_started);
   }
 }
