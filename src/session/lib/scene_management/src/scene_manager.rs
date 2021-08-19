@@ -143,6 +143,7 @@ pub trait SceneManager: Sized {
         let cursor_shape = scenic::ShapeNode::new(self.session());
         cursor_shape.set_shape(&cursor_rect);
         cursor_shape.set_material(&image.material);
+        cursor_shape.set_translation(image.width / 2.0, image.height / 2.0, 0.0);
 
         self.set_cursor_shape(cursor_shape);
         Ok(())
