@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -265,13 +266,22 @@ func generateFile(filename, clangFormatPath string, contentGenerator func(wr io.
 		return fmt.Errorf("Error creating LazyWriter: %w", err)
 	}
 
-	generatedPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(file)
+	bufferedContent := new(bytes.Buffer)
+	if err := contentGenerator(bufferedContent); err != nil {
+		return fmt.Errorf("Error generating content: %w", err)
+	}
+	// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
+	maybeFormatter := clangFormatPath
+	if bufferedContent.Len() > 1024*1024 && runtime.GOOS == "darwin" {
+		maybeFormatter = ""
+	}
+	generatedPipe, err := cpp.NewClangFormatter(maybeFormatter).FormatPipe(file)
 	if err != nil {
 		return fmt.Errorf("Error in FormatPipe: %w", err)
 	}
-
-	if err := contentGenerator(generatedPipe); err != nil {
-		return fmt.Errorf("Error generating content: %w", err)
+	_, err = bufferedContent.WriteTo(generatedPipe)
+	if err != nil {
+		return fmt.Errorf("Error writing to formatter: %w", err)
 	}
 
 	if err := generatedPipe.Close(); err != nil {
