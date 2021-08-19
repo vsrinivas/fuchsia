@@ -15,6 +15,11 @@ rustc_library("lib") {
   edition = "2018"
   with_unit_tests = true
 
+  visibility = [
+    "//src/diagnostics/launcher/*",
+    "//src/diagnostics/sampler/*",
+  ]
+
   deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",

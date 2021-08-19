@@ -82,6 +82,15 @@ rustc_library("lib") {
   with_unit_tests = true
   source_root = "src/lib.rs"
 
+  visibility = [
+    "//src/developer/ffx/plugins/inspect/*",
+    "//src/developer/remote-control/diagnostics-bridge/*",
+    "//src/diagnostics/iquery/*",
+
+    # TODO(fxbug.dev/82964): remove.
+    "//src/developer/ffx/plugins/flutter/tunnel/*",
+  ]
+
   deps = iquery_deps
 
   sources = iquery_sources

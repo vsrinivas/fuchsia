@@ -10,6 +10,12 @@ rustc_library("inspect-fidl-load") {
   edition = "2018"
   with_unit_tests = true
 
+  visibility = [
+    "//src/diagnostics/archivist/*",
+    "//src/diagnostics/iquery/*",
+    "//src/diagnostics/lib/inspect-fidl-load/*",
+  ]
+
   deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
