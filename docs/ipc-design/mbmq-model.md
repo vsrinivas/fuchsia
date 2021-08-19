@@ -348,7 +348,9 @@ CalleesRef:
 MsgQueue:
 
 *   List of MBOs, all of which will be in the state
-    `enqueued_as_request` or `enqueued_as_reply`.
+    `enqueued_as_request` or `enqueued_as_reply`.  This can use an
+    intrusive list implementation so that adding an MBO to the list
+    does not require doing a memory allocation.
 
 Channel endpoint:
 
