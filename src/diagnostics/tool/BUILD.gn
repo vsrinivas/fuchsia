@@ -9,9 +9,9 @@ import("//build/rust/rustc_test.gni")
 bin_deps = [
   "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
   "//src/connectivity/overnet/lib/hoist",
-  "//src/diagnostics/lib/selectors",
   "//src/lib/diagnostics/data/rust",
   "//src/lib/diagnostics/hierarchy/rust",
+  "//src/lib/diagnostics/selectors",
   "//src/lib/fidl/rust/fidl",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:byteorder",

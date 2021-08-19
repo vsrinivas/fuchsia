@@ -11,7 +11,7 @@ ffx_plugin("ffx_debug_fidlcat") {
   deps = [
     "//sdk/fidl/fuchsia.debugger:fuchsia.debugger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:async-net",

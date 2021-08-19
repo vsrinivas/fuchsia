@@ -12,7 +12,7 @@ rustc_library("fake-archive-accessor") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",

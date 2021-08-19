@@ -18,7 +18,7 @@ ffx_plugin("ffx_version") {
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/core:lib",
     "//src/developer/ffx/lib/timeout:lib",
-    "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",

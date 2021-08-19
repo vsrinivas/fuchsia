@@ -9,9 +9,9 @@ rustc_test("integration_tests_bin") {
   name = "archive_reader_integration_test"
   edition = "2018"
   deps = [
-    "//src/diagnostics/lib/selectors",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/reader/rust",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

@@ -8,7 +8,6 @@ group("tests") {
     "inspect-fetcher:tests",
     "inspect-fidl-load:tests",
     "sampler-config:tests",
-    "selectors:tests",
     "streams/dart:tests",
     "triage:tests",
     "util:tests",

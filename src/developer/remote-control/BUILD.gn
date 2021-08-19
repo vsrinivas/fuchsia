@@ -50,7 +50,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/connectivity/overnet/lib/hoist",
-    "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

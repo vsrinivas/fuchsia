@@ -21,7 +21,7 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
     "//src/lib/syslog/rust:syslog-listener",

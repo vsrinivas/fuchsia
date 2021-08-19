@@ -12,7 +12,7 @@ rustc_library("diagnostics-hierarchy") {
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/selectors",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:difference",

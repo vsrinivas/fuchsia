@@ -11,7 +11,7 @@ rustc_binary("bin") {
 
   deps = [
     "//src/developer/fuchsia-criterion",
-    "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/selectors",
   ]
 
   sources = [ "src/main.rs" ]

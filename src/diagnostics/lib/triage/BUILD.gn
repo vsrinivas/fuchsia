@@ -6,8 +6,8 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 lib_deps = [
-  "//src/diagnostics/lib/selectors",
   "//src/lib/diagnostics/hierarchy/rust",
+  "//src/lib/diagnostics/selectors",
   "//src/lib/injectable-time",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:itertools",
