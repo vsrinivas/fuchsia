@@ -26,8 +26,8 @@ impl PidDirectory {
     pub fn new(task: Arc<Task>) -> PidDirectory {
         let task_clone = task.clone();
         let nodes = Arc::new(Mutex::new(hashmap! {
-            b"exe".to_vec() => NodeHolder::new(move || { ExeSymlink::new(task_clone.clone()) }, ExeSymlink::file_mode()),
-            b"fd".to_vec() => NodeHolder::new(move || { FdDirectory::new(task.clone()) }, FdDirectory::file_mode()),
+            b"exe".to_vec() => NodeHolder::new(move || { Ok(ExeSymlink::new(task_clone.clone())) }, ExeSymlink::file_mode()),
+            b"fd".to_vec() => NodeHolder::new(move || { Ok(FdDirectory::new(task.clone())) }, FdDirectory::file_mode()),
         }));
 
         PidDirectory { nodes }

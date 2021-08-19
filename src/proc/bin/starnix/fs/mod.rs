@@ -16,6 +16,7 @@ mod fs_node;
 mod namespace;
 mod null_file;
 mod observer_list;
+mod simple_file;
 mod symlink_node;
 mod vmo_file;
 
@@ -30,10 +31,11 @@ pub use file_object::*;
 pub use file_system::*;
 pub use fs_context::*;
 pub use fs_node::*;
-pub use namespace::SymlinkMode;
 pub use namespace::*;
 pub use null_file::*;
 pub use observer_list::*;
+pub use path::*;
+pub use simple_file::*;
 pub use symlink_node::*;
 pub use vmo_file::*;
 
@@ -48,5 +50,3 @@ pub mod proc;
 pub mod syscalls;
 pub mod sysfs;
 pub mod tmpfs;
-
-pub use path::{FsStr, FsString};

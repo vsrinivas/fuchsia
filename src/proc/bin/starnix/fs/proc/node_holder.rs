@@ -12,7 +12,7 @@ use crate::types::*;
 /// number the node will get.
 pub struct NodeHolder {
     /// The function that creates the `FsNodeOps` for the created node.
-    ops: Box<dyn Fn() -> Box<dyn FsNodeOps> + Send + Sync>,
+    ops: Box<dyn Fn() -> Result<Box<dyn FsNodeOps>, Errno> + Send + Sync>,
 
     /// The file mode to set on the created node.
     pub file_mode: FileMode,
@@ -28,7 +28,7 @@ impl NodeHolder {
     /// - `file_mode`: The `FileMode` that will be set on the created `FsNode`.
     pub fn new<F>(ops: F, file_mode: FileMode) -> NodeHolder
     where
-        F: Fn() -> Box<dyn FsNodeOps> + Send + Sync,
+        F: Fn() -> Result<Box<dyn FsNodeOps>, Errno> + Send + Sync,
         F: 'static,
     {
         NodeHolder { ops: Box::new(ops), file_mode, inode_num: None }
@@ -41,7 +41,7 @@ impl NodeHolder {
     pub fn get_or_create_node(&mut self, fs: &FileSystemHandle) -> Result<FsNodeHandle, Errno> {
         fs.get_or_create_node(self.inode_num, |inode_num| {
             self.inode_num = Some(inode_num);
-            Ok(FsNode::new((self.ops)(), fs, inode_num, self.file_mode))
+            Ok(FsNode::new((self.ops)()?, fs, inode_num, self.file_mode))
         })
     }
 

@@ -39,6 +39,10 @@ impl ProcDirectory {
     pub fn new(kernel: Weak<Kernel>) -> ProcDirectory {
         let nodes = Arc::new(Mutex::new(hashmap! {
             b"self".to_vec() => NodeHolder::new(SelfSymlink::new, SelfSymlink::file_mode()),
+            b"cmdline".to_vec() => NodeHolder::new(|| {
+                let cmdline = std::env::var("KERNEL_CMDLINE").unwrap_or("".into()).into_bytes();
+                Ok(ByteVecFile::new(cmdline).map(Box::new)?)
+            }, FileMode::IFREG),
         }));
 
         ProcDirectory { kernel, nodes }
@@ -177,8 +181,8 @@ impl FileOps for DirectoryFileOps {
 struct SelfSymlink {}
 
 impl SelfSymlink {
-    fn new() -> Box<dyn FsNodeOps> {
-        Box::new(SelfSymlink {})
+    fn new() -> Result<Box<dyn FsNodeOps>, Errno> {
+        Ok(Box::new(SelfSymlink {}))
     }
 
     fn file_mode() -> FileMode {
