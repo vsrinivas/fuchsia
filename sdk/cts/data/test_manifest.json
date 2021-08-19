@@ -8,5 +8,10 @@
         "archive_name": "cts-hello-world-rust-tests",
         "component_name": "cts-hello-world-rust.cm",
         "package": "cts-hello-world-rust-tests"
+    },
+    {
+        "archive_name": "fuchsia-diagnostics-tests",
+        "component_name": "diagnostics-test.cm",
+        "package": "fuchsia-diagnostics-tests"
     }
 ]
