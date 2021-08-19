@@ -9,6 +9,7 @@ ffx_plugin("ffx_component") {
   edition = "2018"
   plugin_deps = [
     "bind:ffx_component_bind",
+    "create:ffx_component_create",
     "knock:ffx_knock",
     "list:ffx_component_list",
     "run:ffx_component_run",
@@ -27,9 +28,11 @@ group("tests") {
 
   deps = [
     ":ffx_component_tests",
+    "add:ffx_component_add_tests",
     "bind:ffx_component_bind_tests",
     "knock:ffx_knock_tests",
     "list:ffx_component_list_tests",
+    "run:ffx_component_run_tests",
     "run-legacy:ffx_component_run_legacy_tests",
     "select:ffx_component_select_tests",
     "show:ffx_component_show_tests",

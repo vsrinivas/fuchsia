@@ -29,6 +29,14 @@
             storage_id: "static_instance_id_or_moniker",
         },
     ],
+    use: [
+        // The Realm service is accessed by ffx to create arbitrary components
+        // in the `ffx-laboratory` collection.
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
     offer: [
         {
             protocol: [
@@ -64,14 +72,6 @@
             from: "self",
             as: "cache",
             to: "#ffx-laboratory",
-        },
-    ],
-    expose: [
-        // The Realm service is accessed by ffx to create arbitrary components
-        // in the `ffx-laboratory` collection.
-        {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
         },
     ],
 }

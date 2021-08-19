@@ -585,7 +585,7 @@ fn is_v1_moniker(span: Span, selector: ComponentSelector) -> Result<bool, Error>
         && cmp_string_selector(segments.get(1).unwrap(), "appmgr"));
 }
 
-fn is_expose_dir(span: Span, selector: TreeSelector) -> Result<bool, Error> {
+fn is_namespace(span: Span, selector: &TreeSelector, namespace: &str) -> Result<bool, Error> {
     match selector {
         TreeSelector::SubtreeSelector(ref subtree) => {
             if subtree.node_path.is_empty() {
@@ -594,7 +594,7 @@ fn is_expose_dir(span: Span, selector: TreeSelector) -> Result<bool, Error> {
                     format!("Got an invalid tree selector. {:?}", selector),
                 ));
             }
-            Ok(cmp_string_selector(subtree.node_path.get(0).unwrap(), "expose"))
+            Ok(cmp_string_selector(subtree.node_path.get(0).unwrap(), namespace))
         }
         TreeSelector::PropertySelector(ref selector) => {
             if selector.node_path.is_empty() {
@@ -603,7 +603,7 @@ fn is_expose_dir(span: Span, selector: TreeSelector) -> Result<bool, Error> {
                     format!("Got an invalid tree selector. {:?}", selector),
                 ));
             }
-            Ok(cmp_string_selector(selector.node_path.get(0).unwrap(), "expose"))
+            Ok(cmp_string_selector(selector.node_path.get(0).unwrap(), namespace))
         }
         _ => Err(Error::new(span, "Compiled with an unexpected TreeSelector variant.")),
     }
@@ -689,9 +689,10 @@ impl Parse for ProxyMap {
                             let moniker = parsed_selector.component_selector.unwrap();
                             let subdir = parsed_selector.tree_selector.unwrap();
                             if !is_v1_moniker(selection.span(), moniker)?
-                                && !is_expose_dir(selection.span(), subdir)?
+                                && !is_namespace(selection.span(), &subdir, "expose")?
+                                && !is_namespace(selection.span(), &subdir, "in")?
                             {
-                                return Err(Error::new(selection.span(), format!("Selectors for V2 components in plugin definitions must use `expose`, not `out`. See fxbug.dev/60910.")));
+                                return Err(Error::new(selection.span(), format!("Selectors for V2 components in plugin definitions must use `expose` or `in`. `out` is unsupported. See fxbug.dev/60910.")));
                             }
                             selection.value()
                         };
@@ -1017,6 +1018,22 @@ mod test {
             test = "test:anything:anything"
         });
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_v2_proxy_map_using_in_ok() {
+        let result: Result<ProxyMap, Error> = parse2(quote! {
+            test = "test:in:anything"
+        });
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_v2_proxy_map_using_expose_ok() {
+        let result: Result<ProxyMap, Error> = parse2(quote! {
+            test = "test:expose:anything"
+        });
+        assert!(result.is_ok());
     }
 
     #[test]

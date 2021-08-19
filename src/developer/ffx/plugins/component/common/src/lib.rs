@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Error, Result},
+    anyhow::{anyhow, Error, Result},
     errors::ffx_bail,
     fidl::endpoints::{ProtocolMarker, Proxy},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_url::pkg_url::PkgUrl,
     moniker::{ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
     std::path::PathBuf,
 };
@@ -77,4 +78,58 @@ pub async fn get_lifecycle_controller_proxy(
         )),
         Err(e) => ffx_bail!("could not open node proxy: {}", e),
     }
+}
+
+/// Verifies that `url` can be parsed as a fuchsia-pkg CM URL
+/// Returns the name of the component manifest, if the parsing was successful.
+pub fn verify_fuchsia_pkg_cm_url(url: &str) -> Result<String> {
+    let url = match PkgUrl::parse(url) {
+        Ok(url) => url,
+        Err(e) => {
+            return Err(anyhow!("URL parsing error: {:?}", e));
+        }
+    };
+
+    let resource = url.resource().ok_or(anyhow!("URL does not contain a path to a manifest"))?;
+    let manifest = resource
+        .split('/')
+        .last()
+        .ok_or(anyhow!("Could not extract manifest filename from URL"))?;
+
+    if let Some(name) = manifest.strip_suffix(".cm") {
+        Ok(name.to_string())
+    } else if manifest.ends_with(".cmx") {
+        Err(anyhow!(
+            "{} is a legacy component manifest. Run it using `ffx component run-legacy`",
+            manifest
+        ))
+    } else {
+        Err(anyhow!(
+            "{} is not a component manifest! Component manifests must end in the `cm` extension.",
+            manifest
+        ))
+    }
+}
+
+/// Create a v2 component instance with the given `name` and `url` under the given `collection`
+/// using the given `realm_proxy`.
+pub async fn create_component_instance(
+    realm_proxy: &fsys::RealmProxy,
+    name: String,
+    url: String,
+    collection: String,
+) -> Result<()> {
+    let mut collection = fsys::CollectionRef { name: collection };
+    let decl = fsys::ChildDecl {
+        name: Some(name),
+        url: Some(url),
+        startup: Some(fsys::StartupMode::Lazy),
+        environment: None,
+        ..fsys::ChildDecl::EMPTY
+    };
+
+    realm_proxy
+        .create_child(&mut collection, decl, fsys::CreateChildArgs::EMPTY)
+        .await?
+        .map_err(|e| anyhow!("Error creating child: {:?}", e))
 }

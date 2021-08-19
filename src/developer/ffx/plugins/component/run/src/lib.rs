@@ -3,87 +3,36 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::Result,
+    ffx_component::{create_component_instance, verify_fuchsia_pkg_cm_url},
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc,
-    fidl_fuchsia_sys2::{ChildDecl, CollectionRef, CreateChildArgs, RealmProxy, StartupMode},
-    fuchsia_url::pkg_url::PkgUrl,
+    fidl_fuchsia_sys2::RealmProxy,
 };
 
 const COLLECTION_NAME: &'static str = "ffx-laboratory";
 
-#[ffx_plugin(RealmProxy = "core:expose:fuchsia.sys2.Realm")]
+#[ffx_plugin(RealmProxy = "core:in:fuchsia.sys2.Realm")]
 pub async fn run_component(
     _rcs_proxy: rc::RemoteControlProxy,
     realm_proxy: RealmProxy,
     run: RunComponentCommand,
 ) -> Result<()> {
-    run_component_cmd(realm_proxy, run, &mut std::io::stdout()).await
+    run_component_cmd(realm_proxy, run).await
 }
 
-async fn run_component_cmd<W: std::io::Write>(
-    realm_proxy: RealmProxy,
-    run: RunComponentCommand,
-    writer: &mut W,
-) -> Result<()> {
-    let url = match PkgUrl::parse(run.url.as_str()) {
-        Ok(url) => url,
-        Err(e) => {
-            return Err(anyhow!("URL parsing error: {:?}", e));
-        }
-    };
-
-    let resource = if let Some(resource) = url.resource() {
-        resource
-    } else {
-        return Err(anyhow!("URL does not contain a path to a manifest"));
-    };
-
-    let manifest = if let Some(manifest) = resource.split('/').last() {
-        manifest
-    } else {
-        return Err(anyhow!("Could not extract manifest filename from URL"));
-    };
-
-    let manifest_name = if let Some(name) = manifest.strip_suffix(".cm") {
-        name
-    } else if manifest.ends_with(".cmx") {
-        return Err(anyhow!(
-            "{} is a legacy component manifest. Run it using `ffx component run-legacy`",
-            manifest
-        ));
-    } else {
-        return Err(anyhow!(
-            "{} is not a component manifest! Component manifests must end in the `cm` extension.",
-            manifest
-        ));
-    };
+async fn run_component_cmd(realm_proxy: RealmProxy, run: RunComponentCommand) -> Result<()> {
+    let manifest_name = verify_fuchsia_pkg_cm_url(run.url.as_str())?;
 
     let name = if let Some(name) = run.name {
         // Use a custom name provided in the command line
         name
     } else {
         // Attempt to use the manifest name as the instance name
-        manifest_name.to_string()
+        manifest_name
     };
 
-    writeln!(writer, "Creating component instance: {}", name)?;
-
-    let mut collection = CollectionRef { name: COLLECTION_NAME.to_string() };
-    let decl = ChildDecl {
-        name: Some(name.clone()),
-        url: Some(run.url.clone()),
-        startup: Some(StartupMode::Lazy),
-        environment: None,
-        ..ChildDecl::EMPTY
-    };
-
-    // The collection this child is being created under is single-run.
-    // Creating the component will automatically cause it to start.
-    let child_args = CreateChildArgs { numbered_handles: None, ..CreateChildArgs::EMPTY };
-    realm_proxy
-        .create_child(&mut collection, decl, child_args)
-        .await?
-        .map_err(|e| anyhow!("Error creating child: {:?}", e))
+    println!("Creating component instance: {}", name);
+    create_component_instance(&realm_proxy, name, run.url, COLLECTION_NAME.to_string()).await
 }
