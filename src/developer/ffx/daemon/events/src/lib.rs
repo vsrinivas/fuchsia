@@ -39,7 +39,12 @@ pub enum WireTrafficType {
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum DaemonEvent {
     WireTraffic(WireTrafficType),
+    /// A peer with the contained NodeId has been observed on the
+    /// Overnet mesh.
     OvernetPeer(u64),
+    /// A peer with the contained NodeId has been dropped from the
+    /// Overnet mesh (there are no remaining known routes to this peer).
+    OvernetPeerLost(u64),
     NewTarget(TargetInfo),
     // TODO(awdavies): Stale target event, target shutdown event, etc.
 }

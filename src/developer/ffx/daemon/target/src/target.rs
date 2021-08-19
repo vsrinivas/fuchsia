@@ -587,6 +587,13 @@ impl Target {
             .collect();
     }
 
+    pub fn overnet_node_id(&self) -> Option<u64> {
+        if let TargetConnectionState::Rcs(conn) = self.get_connection_state() {
+            return Some(conn.overnet_id.id);
+        }
+        None
+    }
+
     pub fn ssh_port(&self) -> Option<u16> {
         self.ssh_port.borrow().clone()
     }

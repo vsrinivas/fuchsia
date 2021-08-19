@@ -118,6 +118,17 @@ impl DaemonEventHandler {
         target.run_logger();
     }
 
+    async fn handle_overnet_peer_lost(&self, node_id: u64) {
+        if let Some(target) = self
+            .target_collection
+            .targets()
+            .iter()
+            .find(|target| target.overnet_node_id() == Some(node_id))
+        {
+            target.disconnect();
+        }
+    }
+
     fn handle_fastboot(&self, t: TargetInfo, over_network: bool) {
         log::trace!(
             "Found new target via fastboot: {}",
@@ -258,6 +269,9 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
             },
             DaemonEvent::OvernetPeer(node_id) => {
                 self.handle_overnet_peer(node_id).await;
+            }
+            DaemonEvent::OvernetPeerLost(node_id) => {
+                self.handle_overnet_peer_lost(node_id).await;
             }
             _ => (),
         }
@@ -530,13 +544,24 @@ impl Daemon {
                 .unwrap_or(false);
             if peer_has_rcs {
                 queue.push(DaemonEvent::OvernetPeer(peer.id.id)).unwrap_or_else(|err| {
-                    log::warn!("Overnet discovery failed to enqueue event: {}", err);
+                    log::warn!(
+                        "Overnet discovery failed to enqueue event {:?}: {}",
+                        DaemonEvent::OvernetPeer(peer.id.id),
+                        err
+                    );
                 });
             }
         }
 
-        for _peer in known_peers.difference(&new_peers) {
-            // TODO: tell the daemon that this overnet peer has gone away!
+        for peer in known_peers.difference(&new_peers) {
+            let peer = &peer.0;
+            queue.push(DaemonEvent::OvernetPeerLost(peer.id.id)).unwrap_or_else(|err| {
+                log::warn!(
+                    "Overnet discovery failed to enqueue event {:?}: {}",
+                    DaemonEvent::OvernetPeerLost(peer.id.id),
+                    err
+                );
+            });
         }
 
         new_peers
@@ -1549,10 +1574,29 @@ mod test {
 
         known_peers = new_peers;
 
+        // Make a new queue so we don't get any of the historical events.
+        let queue = events::Queue::<DaemonEvent>::new(&Rc::new(NullDaemonEventSynthesizer {}));
+        let event_log = Rc::new(RefCell::new(Vec::<DaemonEvent>::new()));
+
+        // Now wire up the event handler, we want to assert that we observe OvernetPeerLost events for the leaving targets.
+        queue.add_handler(DaemonEventRecorder { event_log: event_log.clone() }).await;
+
         // Next the targets are lost:
         let new_peers = Daemon::handle_overnet_peers(&queue, known_peers, vec![]);
         assert!(!new_peers.contains(&PeerSetElement(peer1.clone())));
         assert!(!new_peers.contains(&PeerSetElement(peer2.clone())));
+
+        let start = Instant::now();
+        while event_log.borrow().len() != 2 {
+            if Instant::now().duration_since(start) > Duration::from_secs(1) {
+                break;
+            }
+            futures_lite::future::yield_now().await;
+        }
+
+        assert_eq!(event_log.borrow().len(), 2);
+        assert_matches!(event_log.borrow()[0], DaemonEvent::OvernetPeerLost(_));
+        assert_matches!(event_log.borrow()[1], DaemonEvent::OvernetPeerLost(_));
 
         known_peers = new_peers;
 

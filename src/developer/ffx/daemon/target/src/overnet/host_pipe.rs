@@ -8,7 +8,6 @@ use {
     crate::RETRY_DELAY,
     anyhow::{anyhow, Context, Result},
     async_io::Async,
-    ffx_daemon_events::TargetConnectionState,
     fuchsia_async::{unblock, Task, Timer},
     futures::channel::oneshot,
     futures::future::FutureExt,
@@ -180,11 +179,6 @@ impl HostPipeConnection {
                 .map_err(|e| anyhow!("host-pipe error running try-wait: {}", e.to_string()))
             {
                 Ok(_) => {
-                    target.update_connection_state(|s| match s {
-                        TargetConnectionState::Rcs(_) => TargetConnectionState::Disconnected,
-                        _ => s,
-                    });
-                    log::debug!("rcs disconnected, exiting");
                     return Ok(());
                 }
                 Err(e) => log::debug!("running cmd: {:#?}", e),
