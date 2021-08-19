@@ -3,6 +3,7 @@
     program: {
         runner: "elf",
         binary: "bin/starnix_runner",
+        environ: [ "KERNEL_CMDLINE=androidboot.hardware=starnix" ],
         job_policy_create_raw_processes: "true",
     },
     capabilities: [
