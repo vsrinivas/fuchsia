@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 library fuchsia.hardware.camera;
 
-using zx;
+using fuchsia.camera2.debug;
 using fuchsia.camera2.hal;
+using zx;
 
 protocol Device {
     /// Note: this method obtains a channel to the capture device which
@@ -19,5 +20,8 @@ protocol Device {
     });
     GetChannel2(resource struct {
         server_end server_end:fuchsia.camera2.hal.Controller;
+    });
+    GetDebugChannel(resource struct {
+        server_end server_end:fuchsia.camera2.debug.Debug;
     });
 };

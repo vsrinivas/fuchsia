@@ -33,6 +33,11 @@ void VirtualCameraAgent::GetChannel2(
   hal_controllers_.insert(std::move(hal_controller));
 }
 
+void VirtualCameraAgent::GetDebugChannel(
+    fidl::InterfaceRequest<fuchsia::camera2::debug::Debug> server_end) {
+  ZX_ASSERT(false);
+}
+
 void VirtualCameraAgent::AddToDeviceWatcher(AddToDeviceWatcherCallback callback) {
   if (hardware_device_binding_.is_bound()) {
     FX_LOGS(WARNING) << "AddToDeviceWatcher already called.";

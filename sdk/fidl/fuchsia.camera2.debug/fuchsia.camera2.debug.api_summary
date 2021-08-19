@@ -1,0 +1,3 @@
+protocol/member fuchsia.camera2.debug/Debug.SetDefaultSensorMode(uint32 mode) -> (int32 status)
+protocol fuchsia.camera2.debug/Debug
+library fuchsia.camera2.debug

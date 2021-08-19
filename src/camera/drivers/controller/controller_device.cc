@@ -79,6 +79,36 @@ void ControllerDevice::GetChannel2(GetChannel2RequestView request,
   completer.Close(ZX_ERR_INTERNAL);
 }
 
+void ControllerDevice::GetDebugChannel(GetDebugChannelRequestView request,
+                                       GetDebugChannelCompleter::Sync& completer) {
+  if (debug_ != nullptr) {
+    FX_LOGST(WARNING, kTag) << "Debug already running. Resetting ...";
+    debug_ = nullptr;
+  }
+
+  if (!request->server_end.is_valid()) {
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  fidl::InterfaceRequest<fuchsia::camera2::debug::Debug> control_interface(
+      request->server_end.TakeChannel());
+
+  auto shutdown_callback = [this] {
+    shutdown_waiter_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                        zx_status_t status,
+                                        const zx_packet_signal_t* signal) { debug_ = nullptr; });
+  };
+
+  if (control_interface.is_valid()) {
+    debug_ = std::make_unique<DebugImpl>(parent(), std::move(control_interface), loop_.dispatcher(),
+                                         isp_, shutdown_callback);
+    completer.Close(ZX_OK);
+    return;
+  }
+  completer.Close(ZX_ERR_INTERNAL);
+}
+
 void ControllerDevice::ShutDown() { loop_.Shutdown(); }
 
 zx_status_t ControllerDevice::StartThread() {

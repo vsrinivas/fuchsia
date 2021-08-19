@@ -9,6 +9,7 @@ fidl("fuchsia.hardware.camera") {
   api = "fuchsia.hardware.camera.api"
   sources = [ "camera.fidl" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.camera2.debug",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//zircon/vdso/zx",
   ]

@@ -26,6 +26,7 @@ class VirtualCameraAgent : public fuchsia::hardware::camera::Device,
   // fuchsia::hardware::camera::Device impl.
   void GetChannel(zx::channel channel) override;
   void GetChannel2(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> server_end) override;
+  void GetDebugChannel(fidl::InterfaceRequest<fuchsia::camera2::debug::Debug> server_end) override;
 
   // fuchsia::camera::virtualcamera::VirtualCameraDevice impl.
   void AddToDeviceWatcher(AddToDeviceWatcherCallback callback) override;

@@ -29,6 +29,8 @@ source_set("source") {
     "controller_device.h",
     "controller_protocol.cc",
     "controller_protocol.h",
+    "debug_protocol.cc",
+    "debug_protocol.h",
     "gdc_node.cc",
     "gdc_node.h",
     "ge2d_node.cc",
@@ -60,6 +62,7 @@ source_set("source") {
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.debug",
     "//sdk/fidl/fuchsia.camera2.hal",
 
     # The LLCPP bindings for fuchsia.hardware.camera is used by controller_device.h

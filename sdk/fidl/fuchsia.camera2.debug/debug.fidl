@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.camera2.debug;
+
+using zx;
+
+/// This is the interface to the camera driver
+/// which allows debug settings.
+@discoverable
+protocol Debug {
+    // Set the default sensor mode
+    SetDefaultSensorMode(resource struct {
+        mode uint32;
+    }) -> (struct {
+        status zx.status;
+    });
+};

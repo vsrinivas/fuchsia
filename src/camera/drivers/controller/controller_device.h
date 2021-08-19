@@ -30,6 +30,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 
 #include "src/camera/drivers/controller/controller_protocol.h"
+#include "src/camera/drivers/controller/debug_protocol.h"
 
 namespace camera {
 
@@ -72,6 +73,8 @@ class ControllerDevice : public ControllerDeviceType,
   void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
+  void GetDebugChannel(GetDebugChannelRequestView request,
+                       GetDebugChannelCompleter::Sync& completer) override;
 
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
@@ -81,6 +84,7 @@ class ControllerDevice : public ControllerDeviceType,
   async::Loop loop_;
   thrd_t loop_thread_;
   std::unique_ptr<ControllerImpl> controller_;
+  std::unique_ptr<DebugImpl> debug_;
   ddk::SysmemProtocolClient sysmem_;
 };
 
