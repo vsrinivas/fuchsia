@@ -136,7 +136,11 @@ impl Pager {
 
     /// Terminate the pager thread.  This will block until it has finished.
     pub async fn terminate(&self) {
-        self.thread.inner.lock().unwrap().files.clear();
+        {
+            // Drop any remaining files outside of the lock context, since FxFile::drop will call
+            // unregister_file which attempts to claim the lock again.
+            let _files = std::mem::take(&mut self.thread.inner.lock().unwrap().files);
+        }
         self.thread
             .port
             .queue(&zx::Packet::from_user_packet(0, 0, zx::UserPacket::from_u8_array([0; 32])))

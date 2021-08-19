@@ -496,7 +496,7 @@ impl WritebackCache {
         let target_end = offset + buf.len() as u64;
         let end = std::cmp::min(target_end, self.data.size());
         let buf = if end < target_end {
-            let len = buf.len() - (target_end - end) as usize;
+            let len = end.saturating_sub(offset) as usize;
             &mut buf[..len]
         } else {
             buf
@@ -1080,6 +1080,21 @@ mod tests {
                 assert_eq!(buffer.as_slice()[..bytes as usize], vec![123u8; bytes as usize]);
             }
             _ => panic!("Unexpected result {:?}", result),
+        }
+        cache.cleanup(&reserver);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_past_eof() {
+        let reserver = FakeReserver::new(8192, 1);
+        let cache = WritebackCache::new(NativeDataBuffer::new(3000));
+        let mut buffer = vec![0u8; 8192];
+
+        let result = cache.read(3001, &mut buffer[..4096], 512);
+        if let ReadResult::Done(bytes) = result {
+            assert_eq!(bytes, 0);
+        } else {
+            panic!("Unexpected result {:?}", result);
         }
         cache.cleanup(&reserver);
     }
