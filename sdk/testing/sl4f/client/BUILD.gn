@@ -55,6 +55,7 @@ dart_library("client") {
     "src/trace_processing/trace_importing.dart",
     "src/trace_processing/trace_model.dart",
     "src/update.dart",
+    "src/virtual_camera.dart",
     "src/webdriver.dart",
     "trace_processing.dart",
   ]
@@ -96,6 +97,7 @@ dart_test("sl4f_client_tests") {
     "time_test.dart",
     "trace_processing_test.dart",
     "update_test.dart",
+    "virtual_camera_test.dart",
     "webdriver_from_existing_chromedriver_test.dart",
     "webdriver_test.dart",
   ]

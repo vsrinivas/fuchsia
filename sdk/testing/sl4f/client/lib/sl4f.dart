@@ -31,4 +31,5 @@ export 'src/time.dart';
 export 'src/trace_processing/metrics_results.dart';
 export 'src/trace_processing/metrics_spec.dart';
 export 'src/update.dart';
+export 'src/virtual_camera.dart';
 export 'src/webdriver.dart';
