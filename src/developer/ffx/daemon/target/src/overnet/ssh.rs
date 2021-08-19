@@ -37,6 +37,13 @@ async fn get_ssh_key_path() -> Result<String> {
     Ok(TEST_SSH_KEY_PATH.to_string())
 }
 
+async fn apply_auth_sock(cmd: &mut Command) {
+    const SSH_AUTH_SOCK: &str = "ssh.auth-sock";
+    if let Ok(path) = ffx_config::get::<String, _>(SSH_AUTH_SOCK).await {
+        cmd.env("SSH_AUTH_SOCK", path);
+    }
+}
+
 pub async fn build_ssh_command(addr: SocketAddr, command: Vec<&str>) -> Result<Command> {
     build_ssh_command_base(addr, command, true).await
 }
@@ -59,6 +66,7 @@ pub async fn build_ssh_command_base(
     let key = get_ssh_key_path().await?;
 
     let mut c = Command::new("ssh");
+    apply_auth_sock(&mut c).await;
     c.args(DEFAULT_SSH_OPTIONS);
     if setup_repository_tunnel {
         match listen_addr().await {
@@ -96,6 +104,7 @@ pub async fn build_ssh_command_base(
 
 #[cfg(test)]
 mod test {
+    use std::io::BufRead;
     use {super::*, itertools::Itertools};
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -126,5 +135,33 @@ mod test {
             TEST_SSH_KEY_PATH,
         );
         assert!(dbgstr.contains(&expected), "ssh lines did not match:\n{}\n{}", expected, dbgstr);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_apply_auth_sock() {
+        ffx_config::init(&[], None, None).unwrap();
+        // XXX(82683): Setting config options in tests is modifying the user environment, so just
+        // grab the current value and assert against it.  This needs to get fixed, until it is, this
+        // test is of somewhat limited value.
+        let expect_path: String = match ffx_config::get("ssh.auth-sock").await {
+            Ok(s) => s,
+            Err(_) => {
+                eprintln!("WARNING: untested case, see fxbug.dev/82683");
+                return;
+            }
+        };
+
+        let mut cmd = Command::new("env");
+        apply_auth_sock(&mut cmd).await;
+        let lines =
+            cmd.output().unwrap().stdout.lines().filter_map(|res| res.ok()).collect::<Vec<_>>();
+
+        let expected_var = format!("SSH_AUTH_SOCK={}", expect_path);
+        assert!(
+            lines.iter().any(|line| line.starts_with(&expected_var)),
+            "Looking for {} in {}",
+            expected_var,
+            lines.join("\n")
+        );
     }
 }
