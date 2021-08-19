@@ -89,10 +89,10 @@ can write a reply message into the MBO (overwriting its contents) by
 passing the CalleesRef handle to `zx_mbo_write()`.
 
 Once the callee has written a reply into the MBO, it can send the
-reply to the caller by passing the CalleesRef handle to
-`zx_mbo_send_reply()`.  This enqueues the MBO on its associated
-MsgQueue, drops the CalleesRef's reference to the MBO (putting the
-CalleesRef back in the "unused" state), and sets the MBO's state to
+reply to the caller by invoking `zx_mbo_send_reply()` with the
+CalleesRef handle.  This enqueues the MBO on its associated MsgQueue,
+drops the CalleesRef's reference to the MBO (putting the CalleesRef
+back in the "unused" state), and sets the MBO's state to
 `enqueued_as_reply`.  The callee can now reuse this CalleesRef object
 in later calls to `zx_msgqueue_wait()`.
 
