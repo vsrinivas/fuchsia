@@ -743,7 +743,7 @@ config("Wno-conversion") {
     "//src/virtualization/buildtools/*",
     "//src/virtualization/lib/guest_config/*",
     "//src/virtualization/lib/vsh/*",
-    "//src/virtualization/tests/*",
+    "//src/virtualization/tests/hypervisor/*",
     "//src/virtualization/third_party/fdt/*",
     "//third_party/*",
     "//tools/bootserver_old/*",

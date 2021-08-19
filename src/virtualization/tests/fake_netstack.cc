@@ -225,11 +225,10 @@ fpromise::promise<std::vector<uint8_t>, zx_status_t> Device::ReadPacket() {
 }
 
 fpromise::promise<void, zx_status_t> Device::WritePacket(std::vector<uint8_t> packet) {
-  eth_fifo_entry_t entry;
-  entry.offset = kMtu;
-  entry.length = packet.size();
-  entry.flags = 0;
-  entry.cookie = 0;
+  eth_fifo_entry_t entry = {
+      .offset = kMtu,
+      .length = static_cast<uint16_t>(packet.size()),
+  };
 
   memcpy(reinterpret_cast<void*>(io_addr_ + entry.offset), packet.data(), packet.size());
 
@@ -329,7 +328,7 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   while (sum > UINT16_MAX) {
     sum = (sum & UINT16_MAX) + (sum >> 16);
   }
-  return ~sum;
+  return static_cast<uint16_t>(~sum);
 }
 
 static size_t make_ip_header(const uint8_t guest_mac[ETH_ALEN], uint8_t packet_type, size_t length,
@@ -345,7 +344,7 @@ static size_t make_ip_header(const uint8_t guest_mac[ETH_ALEN], uint8_t packet_t
   ip->version = 4;
   ip->ihl = sizeof(iphdr) >> 2;  // Header length in 32-bit words.
   ip->tos = 0;
-  ip->tot_len = htons(sizeof(iphdr) + length);
+  ip->tot_len = htons(static_cast<uint16_t>(sizeof(iphdr) + length));
   ip->id = 0;
   ip->frag_off = 0;
   ip->ttl = UINT8_MAX;
@@ -381,7 +380,7 @@ fpromise::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
   auto udp = reinterpret_cast<udp_hdr_t*>(udp_packet.data() + off);
   udp->src_port = htons(kTestPort);
   udp->dst_port = htons(kTestPort);
-  udp->length = htons(sizeof(udp_hdr_t) + packet.size());
+  udp->length = htons(static_cast<uint16_t>(sizeof(udp_hdr_t) + packet.size()));
   // The checksum is optional for IPv4.
   udp->checksum = 0;
 
