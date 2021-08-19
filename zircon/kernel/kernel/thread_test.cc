@@ -570,8 +570,7 @@ bool runtime_test() {
   END_TEST;
 }
 
-// TODO(fxbug.dev/78695): Test is disabled. Remove annotation once it's enabled.
-[[maybe_unused]] bool migrate_stress_test() {
+bool migrate_stress_test() {
   BEGIN_TEST;
 
   // Get number of CPUs in the system.
@@ -690,9 +689,23 @@ bool runtime_test() {
 
   // Join threads.
   for (auto& thread : threads) {
+    // Inform the thread to stop.
     thread.should_stop.store(true);
+
+    // Wait for it to finish.
     int ret;
-    thread.thread->Join(&ret, ZX_TIME_INFINITE);
+    zx_status_t result = thread.thread->Join(&ret, Deadline::after(ZX_SEC(5)).when());
+    if (result != ZX_OK) {
+      // If the thread has not completed in 5 seconds, it is likely that the
+      // thread has hung or been forgotton about by the scheduler.
+      //
+      // TODO(fxbug.dev/78695): We are currently seeing some flakes in CI/CQ
+      // that cannot be reproduced locally. Once resolved, this additional
+      // logging can be removed.
+      dump_thread(thread.thread, /*full=*/true);
+      thread.thread->PrintBacktrace();
+      ZX_ASSERT_MSG(result == ZX_OK, "Failed to join worker thread: %d\n", result);
+    }
   }
 
   END_TEST;
@@ -772,9 +785,7 @@ UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_an
 UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
 UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
 UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
-// TODO(fxbug.dev/78695): This test sometimes hangs on NUC. Deflake and
-// re-enable.
-// UNITTEST("migrate_stress_test", migrate_stress_test)
+UNITTEST("migrate_stress_test", migrate_stress_test)
 UNITTEST("runtime_test", runtime_test)
 UNITTEST("backtrace_test", backtrace_test)
 UNITTEST("get_backtrace_test", get_backtrace_test)
