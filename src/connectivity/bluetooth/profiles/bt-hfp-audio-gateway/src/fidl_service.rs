@@ -88,11 +88,10 @@ pub async fn run_services(
 mod tests {
     use {
         super::*, fidl::endpoints::RequestStream, fidl_fuchsia_bluetooth_bredr as bredr,
-        fidl_fuchsia_bluetooth_hfp::*, fuchsia_async as fasync, futures::channel::mpsc,
-        matches::assert_matches,
+        fidl_fuchsia_bluetooth_hfp::*, futures::channel::mpsc, matches::assert_matches,
     };
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn successful_no_op_hfp_connection() {
         let (sender, _receiver) = mpsc::channel(0);
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<HfpMarker>().unwrap();
@@ -104,7 +103,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn error_on_hfp_connection() {
         let (sender, _receiver) = mpsc::channel(0);
 
@@ -126,7 +125,7 @@ mod tests {
         assert_matches!(result, Err(_));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn successful_call_manager_registration() {
         let (sender, _receiver) = mpsc::channel(1);
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<HfpMarker>().unwrap();

@@ -870,7 +870,7 @@ pub(crate) mod tests {
         assert!(slc.is_terminated());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn slc_handles_multipart_commands() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (mut slc, remote) = create_and_connect_slc();
@@ -891,7 +891,7 @@ pub(crate) mod tests {
         expect_slc_ready(&mut exec, &mut slc, std::mem::discriminant(&slc_volume_request));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn slc_handles_multiple_commands() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (mut slc, remote) = create_and_connect_slc();
@@ -914,7 +914,7 @@ pub(crate) mod tests {
     }
 
     // TODO(fxbug.dev/73027): Re-enable this test after error handling policies are implemented.
-    #[test]
+    #[fuchsia::test]
     #[ignore]
     fn unexpected_command_before_initialization_closes_channel() {
         let mut exec = fasync::TestExecutor::new().unwrap();
@@ -960,7 +960,7 @@ pub(crate) mod tests {
         assert!(!slc.is_active(&slci_marker));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn completing_slc_init_procedure_initializes_channel() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -1029,7 +1029,7 @@ pub(crate) mod tests {
         assert!(!slc.is_active(&slci_marker));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn slc_state_codecs_supported() {
         let mut state = SlcState::default();
         // Without any codecs supported, only CVSD is returned.
@@ -1042,7 +1042,7 @@ pub(crate) mod tests {
         assert_eq!(codecs, state.codecs_supported());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn slci_command_after_initialization_returns_error() {
         let _exec = fasync::TestExecutor::new().unwrap();
         let (mut slc, _remote) = create_and_connect_slc();
@@ -1058,7 +1058,7 @@ pub(crate) mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn locally_initiated_phone_status_procedure_returns_message() {
         // Bypass the SLCI procedure by setting the channel to initialized and enable indicator
         // reporting.
@@ -1084,7 +1084,7 @@ pub(crate) mod tests {
         assert!(!slc.is_active(&expected_marker));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn ag_updates_are_queued_until_slc_initialization() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -1198,7 +1198,7 @@ pub(crate) mod tests {
         assert!(connection.is_terminated());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn queued_packets_get_sent_to_connection() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -1231,7 +1231,7 @@ pub(crate) mod tests {
         expect_peer_pending(&mut exec, &mut remote);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn read_error_result_is_propagated_to_stream() {
         // Close the local end of the channel so that local reads and remote writes
         // fail.
@@ -1246,7 +1246,7 @@ pub(crate) mod tests {
         assert_matches!(connection.next().await, Some(Err(zx::Status::BAD_STATE)));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn write_error_result_is_propagated_to_stream() {
         // Close the remote end of the channel so that remote reads and local writes
         // fail.

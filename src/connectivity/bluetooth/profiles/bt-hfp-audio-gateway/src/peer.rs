@@ -282,7 +282,7 @@ mod tests {
         Arc::new(Mutex::new(Box::new(TestAudioControl::default())))
     }
 
-    #[test]
+    #[fuchsia::test]
     fn peer_id_returns_expected_id() {
         // TestExecutor must exist in order to create fidl endpoints
         let _exec = fasync::TestExecutor::new().unwrap();

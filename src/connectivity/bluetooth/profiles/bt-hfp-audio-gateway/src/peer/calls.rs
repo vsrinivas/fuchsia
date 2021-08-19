@@ -589,7 +589,7 @@ mod tests {
         matches::assert_matches,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn call_is_active() {
         // executor must be created before fidl endpoints can be created
         let _exec = fasync::TestExecutor::new().unwrap();
@@ -647,7 +647,7 @@ mod tests {
         (calls, peer_stream, call_stream, 1, num)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn calls_should_ring_succeeds() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -883,7 +883,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn calls_is_call_active() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -916,7 +916,7 @@ mod tests {
         assert!(!calls.is_call_active());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn calls_stream_lifecycle() {
         // Test the Stream for items when a single call is tracked, then a second call is added,
         // when the states of those calls are modified, and finally, when both calls have been
@@ -997,7 +997,7 @@ mod tests {
         assert!(calls.is_terminated());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn bad_watch_next_call_data_returns_error() {
         // `setup_ongoing_call` requires that an executor exists.
         let mut _exec = fasync::TestExecutor::new();
@@ -1010,7 +1010,7 @@ mod tests {
         assert_matches!(result, Err(Error::MissingParameter(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn send_dtmf_code_to_call() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 

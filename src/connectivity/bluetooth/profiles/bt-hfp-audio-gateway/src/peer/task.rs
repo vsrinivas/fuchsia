@@ -734,14 +734,42 @@ mod tests {
         }
     }
 
-    #[fasync::run_until_stalled(test)]
-    async fn handle_peer_request_stores_peer_handler_proxy() {
+    /// Run a background task while waiting for a future that should occur.
+    /// This is useful for running a task which you expect to produce side effects that
+    /// mean the task is operating correctly. i.e. reacting to a peer action by producing a
+    /// response on a client's hanging get.
+    /// `background_fut` is expected not to finish ans is returned to the caller, along with
+    /// the result of `result_fut`.  If `background_fut` finishes, this function will panic.
+    fn run_while<BackgroundFut, ResultFut, Out>(
+        exec: &mut fasync::TestExecutor,
+        background_fut: BackgroundFut,
+        result_fut: ResultFut,
+    ) -> (Out, BackgroundFut)
+    where
+        BackgroundFut: Future + Unpin,
+        ResultFut: Future<Output = Out>,
+    {
+        pin_mut!(result_fut);
+        match exec.run_singlethreaded(&mut futures::future::select(background_fut, result_fut)) {
+            Either::Right(r) => r,
+            Either::Left(_) => panic!("Background future finished"),
+        }
+    }
+
+    #[fuchsia::test]
+    fn handle_peer_request_stores_peer_handler_proxy() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let mut peer = setup_peer_task(None).0;
         assert!(peer.handler.is_none());
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
-        fasync::Task::local(async move {
-            match stream.next().await {
+
+        {
+            let request_fut = peer.peer_request(PeerRequest::Handle(proxy));
+            pin_mut!(request_fut);
+
+            let (result, request_fut) = run_while(&mut exec, request_fut, stream.next());
+            match result {
                 Some(Ok(PeerHandlerRequest::WatchNetworkInformation { responder })) => {
                     responder
                         .send(NetworkInformation::EMPTY)
@@ -750,17 +778,15 @@ mod tests {
                 x => panic!("Expected watch network information request: {:?}", x),
             };
 
-            // Call manager will wait indefinitely for a request that will not come during this
-            // test.
-            while let Some(Ok(_)) = stream.next().await {}
-        })
-        .detach();
+            // Request future should finish.
+            let request_result = exec.run_singlethreaded(request_fut);
+            assert!(request_result.is_ok());
+        }
 
-        peer.peer_request(PeerRequest::Handle(proxy)).await.expect("peer request to succeed");
         assert!(peer.handler.is_some());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn handle_peer_request_decline_to_handle() {
         let mut peer = setup_peer_task(None).0;
         assert!(peer.handler.is_none());
@@ -773,7 +799,7 @@ mod tests {
         assert!(peer.handler.is_none());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn task_runs_until_all_event_sources_close() {
         let (peer, sender, receiver, _) = setup_peer_task(None);
         // Peer will stop running when all event sources are closed.
@@ -793,7 +819,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn peer_task_drives_procedure() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (mut peer, _sender, receiver, _profile) = setup_peer_task(None);
@@ -814,7 +840,7 @@ mod tests {
         expect_message_received_by_peer(&mut exec, &mut remote);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn network_information_updates_are_relayed_to_peer() {
         // This test produces the following two network updates. Each update is expected to
         // be sent to the remote peer.
@@ -854,60 +880,58 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
 
-        fasync::Task::local(async move {
-            // A vec to hold all the stream items we don't care about for this test.
-            let mut junk_drawer = vec![];
+        // A vec to hold all the stream items we don't care about for this test.
+        let mut junk_drawer = vec![];
 
-            // Filter out all items that are irrelevant to this particular test, placing them in
-            // the junk_drawer.
-            let mut stream = stream.filter_map(move |item| {
-                let item = match item {
-                    Ok(PeerHandlerRequest::WatchNetworkInformation { responder }) => {
-                        Some(responder)
-                    }
-                    x => {
-                        junk_drawer.push(x);
-                        None
-                    }
-                };
-                ready(item)
-            });
-
-            // Send the first network update - should be relayed to the peer.
-            let responder = stream.next().await.unwrap();
-            responder.send(network_update_1).expect("Successfully send network information");
-            expect_data_received_by_peer(&mut remote, expected_data1).await;
-
-            // Send the second network update - should be relayed to the peer.
-            let responder = stream.next().await.unwrap();
-            responder.send(network_update_2).expect("Successfully send network information");
-            expect_data_received_by_peer(&mut remote, expected_data2).await;
-
-            // Call manager should collect all further network requests, without responding.
-            stream.collect::<Vec<_>>().await;
-        })
-        .detach();
+        // Filter out all items that are irrelevant to this particular test, placing them in
+        // the junk_drawer.
+        let mut stream = stream.filter_map(move |item| {
+            let item = match item {
+                Ok(PeerHandlerRequest::WatchNetworkInformation { responder }) => Some(responder),
+                x => {
+                    junk_drawer.push(x);
+                    None
+                }
+            };
+            ready(item)
+        });
 
         // Pass in the client end connected to the call manager
         let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
         assert!(result.is_ok());
 
-        // Run the PeerTask until it has no more work to do.
+        // The stream should produce the network update while the peer runs in the background.
         let run_fut = peer.run(receiver);
         pin_mut!(run_fut);
-        let result = exec.run_until_stalled(&mut run_fut);
-        assert!(result.is_pending());
+
+        // Send the first network update - should be relayed to the peer.
+        let (responder, run_fut) = run_while(&mut exec, run_fut, stream.next());
+        responder.unwrap().send(network_update_1).expect("Successfully send network information");
+        let ((), run_fut) = run_while(
+            &mut exec,
+            run_fut,
+            expect_data_received_by_peer(&mut remote, expected_data1),
+        );
+
+        // Send the second network update - should be relayed to the peer.
+        let (responder, run_fut) = run_while(&mut exec, run_fut, stream.next());
+        responder.unwrap().send(network_update_2).expect("Successfully send network information");
+        let ((), mut run_fut) = run_while(
+            &mut exec,
+            run_fut,
+            expect_data_received_by_peer(&mut remote, expected_data2),
+        );
 
         // Drop the peer task sender to force the PeerTask's run future to complete
         drop(sender);
-        let task = exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+        let task = exec.run_singlethreaded(&mut run_fut);
 
         // Check that the task's network information contains the expected values
         // based on the updates provided by the call manager task.
         assert_eq!(task.network, expected_network);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn terminated_slc_ends_peer_task() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (connection, remote) = create_and_initialize_slc(SlcState::default());
@@ -928,7 +952,7 @@ mod tests {
         assert!(peer.connection.is_terminated());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn error_in_slc_ends_peer_task() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (connection, remote) = create_and_initialize_slc(SlcState::default());
@@ -1004,7 +1028,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_updates_update_ringer_state() {
         // Set up the executor, peer, and background call manager task
         let mut exec = fasync::TestExecutor::new().unwrap();
@@ -1020,39 +1044,29 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
 
-        fasync::Task::local(async move {
-            let mut stream = wait_for_call_stream(stream).await;
-
-            // Send the incoming call
-            let responder = stream.next().await.unwrap();
-            let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
-            let next_call = NextCall {
-                call: Some(client_end),
-                remote: Some("1234567".to_string()),
-                state: Some(CallState::IncomingRinging),
-                direction: Some(CallDirection::MobileTerminated),
-                ..NextCall::EMPTY
-            };
-            responder.send(next_call).expect("Successfully send call information");
-
-            // Call manager should collect all further requests, without responding.
-            stream.collect::<Vec<_>>().await;
-        })
-        .detach();
-
         // Pass in the client end connected to the call manager
         let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
         assert!(result.is_ok());
 
-        // Run the PeerTask until it has no more work to do.
         let run_fut = peer.run(receiver);
         pin_mut!(run_fut);
-        let result = exec.run_until_stalled(&mut run_fut);
-        assert!(result.is_pending());
+        let (mut stream, run_fut) = run_while(&mut exec, run_fut, wait_for_call_stream(stream));
 
-        // Expect to send the Call Setup indicator to the peer.
+        // Send the incoming call
+        let (responder, run_fut) = run_while(&mut exec, run_fut, stream.next());
+        let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
+        let next_call = NextCall {
+            call: Some(client_end),
+            remote: Some("1234567".to_string()),
+            state: Some(CallState::IncomingRinging),
+            direction: Some(CallDirection::MobileTerminated),
+            ..NextCall::EMPTY
+        };
+        responder.unwrap().send(next_call).expect("Successfully send call information");
+
         let expected_data = vec![AgIndicator::CallSetup(1).into()];
-        exec.run_singlethreaded(expect_data_received_by_peer(&mut remote, expected_data));
+        let ((), mut run_fut) =
+            run_while(&mut exec, run_fut, expect_data_received_by_peer(&mut remote, expected_data));
 
         // Drop the peer task sender to force the PeerTask's run future to complete
         drop(sender);
@@ -1062,7 +1076,7 @@ mod tests {
         assert!(task.ringer.ringing());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn incoming_hf_indicator_battery_level_is_propagated_to_peer_handler_stream() {
         // Set up the executor, peer, and background call manager task
         let mut exec = fasync::TestExecutor::new().unwrap();
@@ -1074,42 +1088,10 @@ mod tests {
         let (connection, mut remote) = create_and_initialize_slc(state);
         let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
 
-        let (proxy, mut stream) =
+        let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
         // The battery level that will be reported by the peer.
         let expected_level = 79;
-
-        fasync::Task::local(async move {
-            // First request is always the network info.
-            match stream.next().await {
-                Some(Ok(PeerHandlerRequest::WatchNetworkInformation { responder })) => {
-                    responder
-                        .send(NetworkInformation::EMPTY)
-                        .expect("Successfully send network information");
-                }
-                x => panic!("Expected watch network information request: {:?}", x),
-            };
-            // A vec to hold all the stream items we don't care about for this test.
-            let mut junk_drawer = vec![];
-
-            // Filter out all items that are irrelevant to this particular test, placing them in
-            // the junk_drawer.
-            let mut stream = stream.filter_map(move |item| {
-                let item = match item {
-                    Ok(PeerHandlerRequest::ReportHeadsetBatteryLevel { level, .. }) => Some(level),
-                    x => {
-                        junk_drawer.push(x);
-                        None
-                    }
-                };
-                ready(item)
-            });
-            let actual_battery_level = stream.next().await.unwrap();
-            assert_eq!(actual_battery_level, expected_level);
-            // Call manager should collect all further requests, without responding.
-            stream.collect::<Vec<_>>().await;
-        })
-        .detach();
 
         // Pass in the client end connected to the call manager
         let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
@@ -1118,7 +1100,13 @@ mod tests {
         // Run the PeerTask.
         let run_fut = peer.run(receiver);
         pin_mut!(run_fut);
-        assert!(exec.run_until_stalled(&mut run_fut).is_pending());
+
+        let headset_level_stream_fut = filtered_stream(stream, |item| match item {
+            PeerHandlerRequest::ReportHeadsetBatteryLevel { level, .. } => Ok(level),
+            x => Err(x),
+        });
+
+        let (mut stream, run_fut) = run_while(&mut exec, run_fut, headset_level_stream_fut);
 
         // Peer sends us a battery level HF indicator update.
         let battery_level_cmd = at::Command::Biev {
@@ -1128,14 +1116,16 @@ mod tests {
         let mut buf = Vec::new();
         at::Command::serialize(&mut buf, &vec![battery_level_cmd]).expect("serialization is ok");
         remote.as_ref().write(&buf[..]).expect("channel write is ok");
-        // Run the main future - the spawned task should receive the HF indicator and report it.
-        assert!(exec.run_until_stalled(&mut run_fut).is_pending());
+
+        // Run the main future - the task should receive the HF indicator and report it.
+        let (battery_level, _run_fut) = run_while(&mut exec, run_fut, stream.next());
+        assert_eq!(battery_level, Some(expected_level));
 
         // Since we (the AG) received a valid HF indicator, we expect to send an OK back to the peer.
         expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(at::Response::Ok)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_updates_produce_call_waiting() {
         // Set up the executor, peer, and background call manager task
         let mut exec = fasync::TestExecutor::new().unwrap();
@@ -1158,45 +1148,38 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
 
-        fasync::Task::local(async move {
-            let mut stream = wait_for_call_stream(stream).await;
-
-            // Send the incoming waiting call
-            let responder = stream.next().await.unwrap();
-            let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
-            let next_call = NextCall {
-                call: Some(client_end),
-                remote: Some(raw_number.to_string()),
-                state: Some(CallState::IncomingWaiting),
-                direction: Some(CallDirection::MobileTerminated),
-                ..NextCall::EMPTY
-            };
-            responder.send(next_call).expect("Successfully send call information");
-
-            // Call manager should collect all further requests, without responding.
-            stream.collect::<Vec<_>>().await;
-        })
-        .detach();
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
 
         // Pass in the client end connected to the call manager
         let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
         assert!(result.is_ok());
 
-        // Run the PeerTask until it has no more work to do.
-        let run_fut = peer.run(receiver);
-        pin_mut!(run_fut);
-        let result = exec.run_until_stalled(&mut run_fut);
-        assert!(result.is_pending());
+        let (mut stream, run_fut) = run_while(&mut exec, run_fut, wait_for_call_stream(stream));
 
-        exec.run_singlethreaded(expect_data_received_by_peer(&mut remote, expected_ccwa));
-        exec.run_singlethreaded(expect_data_received_by_peer(&mut remote, expected_ciev));
+        // Send the incoming waiting call.
+        let (responder, run_fut) = run_while(&mut exec, run_fut, stream.next());
+        let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
+        let next_call = NextCall {
+            call: Some(client_end),
+            remote: Some(raw_number.to_string()),
+            state: Some(CallState::IncomingWaiting),
+            direction: Some(CallDirection::MobileTerminated),
+            ..NextCall::EMPTY
+        };
+        responder.unwrap().send(next_call).expect("Successfully send call information");
+
+        let ((), run_fut) =
+            run_while(&mut exec, run_fut, expect_data_received_by_peer(&mut remote, expected_ccwa));
+        let ((), mut run_fut) =
+            run_while(&mut exec, run_fut, expect_data_received_by_peer(&mut remote, expected_ciev));
 
         // Drop the peer task sender to force the PeerTask's run future to complete
         drop(sender);
         exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connection_behavior_request_updates_state() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (peer, mut sender, receiver, mut profile) = setup_peer_task(None);
@@ -1252,7 +1235,7 @@ mod tests {
         assert!(result.is_pending());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn non_rfcomm_search_result_is_ignored() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (peer, mut sender, receiver, mut profile) = setup_peer_task(None);
@@ -1276,7 +1259,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut profile.next()).is_pending());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_triggers_connection() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let connection = ServiceLevelConnection::new();
@@ -1308,7 +1291,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut remote.next()).is_pending());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_replaces_connection() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         // SLC is connected at the start of the test.

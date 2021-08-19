@@ -74,7 +74,7 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::task::Poll;
 
-    #[test]
+    #[fuchsia::test]
     fn when_a2dp_not_accessible() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let control = Control::connect();
@@ -119,7 +119,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn suspend_and_release() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (proxy, mut control_requests) =
@@ -157,7 +157,7 @@ mod tests {
         let _ = responder_two.send().unwrap();
     }
 
-    #[test]
+    #[fuchsia::test]
     fn suspend_fails() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (proxy, mut control_requests) =
@@ -177,7 +177,7 @@ mod tests {
         let _ = exec.run_singlethreaded(&mut pause_fut).expect_err("pause error");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn proxy_is_closed_before_suspend_event() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (proxy, mut control_requests) =

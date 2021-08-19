@@ -326,7 +326,7 @@ mod tests {
     use super::*;
     use matches::assert_matches;
 
-    #[test]
+    #[fuchsia::test]
     fn update_hf_indicators_with_invalid_values_is_error() {
         let mut hf_indicators = HfIndicators::default();
         hf_indicators.enable_indicators(vec![
@@ -361,7 +361,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn update_disabled_hf_indicators_with_valid_values_is_error() {
         // Default is no indicators set. Therefore any updates are errors.
         let mut hf_indicators = HfIndicators::default();
@@ -381,7 +381,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn update_hf_indicators_with_valid_values_is_ok() {
         let mut hf_indicators = HfIndicators::default();
         // Default values.
@@ -413,7 +413,7 @@ mod tests {
         assert_eq!(hf_indicators.enhanced_safety.value, Some(false));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn default_indicators_reporting_is_disabled_with_all_indicators_enabled() {
         let default = AgIndicatorsReporting::default();
         assert!(!default.is_enabled);
@@ -423,7 +423,7 @@ mod tests {
         assert!(default.batt_chg);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn indicator_flags_are_updated_from_bool_flags() {
         // No flags is OK, no updates.
         let mut status = AgIndicatorsReporting::default();
@@ -476,7 +476,7 @@ mod tests {
         assert_eq!(status, expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn toggling_indicators_reporting_maintains_same_indicators() {
         let mut status = AgIndicatorsReporting::default();
         assert!(!status.is_enabled);
@@ -497,7 +497,7 @@ mod tests {
         assert!(status.is_enabled);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn indicator_enabled_is_false_when_indicators_reporting_disabled() {
         let status = AgIndicatorsReporting::new_disabled();
 
@@ -507,7 +507,7 @@ mod tests {
         assert!(!status.indicator_enabled(&AgIndicator::Call(0)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn indicator_enabled_check_returns_expected_result() {
         let mut status = AgIndicatorsReporting::new_enabled();
         status.batt_chg = false;

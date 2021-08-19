@@ -94,7 +94,7 @@ impl<T> CallList<T> {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn call_list_insert() {
         let mut list = CallList::default();
         let i1 = list.insert(1);
@@ -103,7 +103,7 @@ mod tests {
         assert_eq!(i2, 2, "The second value is assigned the next available number");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_list_get() {
         let mut list = CallList::default();
         let i1 = list.insert(1);
@@ -114,7 +114,7 @@ mod tests {
         assert_eq!(list.get(3), None);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_list_get_mut() {
         let mut list = CallList::default();
         let i1 = list.insert(1);
@@ -124,7 +124,7 @@ mod tests {
         assert_eq!(list.get_mut(3), None);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_list_remove() {
         let mut list = CallList::default();
         let i1 = list.insert(1);
@@ -137,7 +137,7 @@ mod tests {
         assert!(list.remove(invalid_idx).is_none());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_list_remove_and_insert_behaves() {
         let mut list = CallList::default();
         let i1 = list.insert(1);
@@ -162,7 +162,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_list_iter_returns_all_valid_values() {
         let mut list = CallList::default();
         let i1 = list.insert(1);

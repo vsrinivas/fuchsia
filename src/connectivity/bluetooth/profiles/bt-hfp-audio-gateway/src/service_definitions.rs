@@ -107,7 +107,7 @@ mod tests {
 
     /// Make sure all the flags are correctly mapped in the `From` implementation.
     /// Bit flags are independent so a test covering each flag independently is sufficient
-    #[test]
+    #[fuchsia::test]
     fn ag_features_sdp_attr_from_ag_features() {
         let three_way_calling =
             AudioGatewayFeatureSupport { three_way_calling: true, ..Default::default() };
