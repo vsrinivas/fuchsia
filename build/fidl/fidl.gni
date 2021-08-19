@@ -77,6 +77,13 @@ import("//build/rust/toolchain.gni")
 #     breaking global integration. See fxb/68951 for details.
 #
 #     Only has effect if experimental_api_summary==true.
+#
+#   dart_analysis (optional, boolean, default false)
+#     If set to true, dart analysis is run on generated Dart bindings.
+#     Dart analysis can take tens of seconds to finish, so running it for all
+#     generated Dart bindings is wasteful. This parameter allows us to only run
+#     analysis on goldens, and skip for other generated bindings. See fxb/82975
+#     for details.
 
 template("fidl") {
   if (defined(invoker.sdk_category)) {
@@ -102,6 +109,9 @@ template("fidl") {
   }
   if (defined(invoker.lenient_api_summary)) {
     not_needed(invoker, [ "lenient_api_summary" ])
+  }
+  if (defined(invoker.dart_analysis)) {
+    not_needed(invoker, [ "dart_analysis" ])
   }
 
   # Allow generated targets visibility to their dependant generated targets

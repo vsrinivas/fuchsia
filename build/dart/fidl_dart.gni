@@ -12,6 +12,7 @@ import("//build/sdk/sdk_atom_alias.gni")
 #
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
+#   - dart_analysis;
 #   - name;
 #   - sdk_category.
 
@@ -100,6 +101,10 @@ template("fidl_dart") {
                              "testonly",
                              "visibility",
                            ])
+
+    # Dart analysis can take tens of second, so skip by default to save build
+    # time.
+    disable_analysis = !defined(invoker.dart_analysis) || !invoker.dart_analysis
 
     package_root = root_dir
 

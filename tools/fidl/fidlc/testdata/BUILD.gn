@@ -45,6 +45,9 @@ foreach(filename, standalone_libraries) {
     sources = [ filename ]
     public_deps = [ "//zircon/vdso/zx" ]
     host_llcpp = true
+
+    # To ensure quality of generated Dart bindings.
+    dart_analysis = true
   }
 }
 
