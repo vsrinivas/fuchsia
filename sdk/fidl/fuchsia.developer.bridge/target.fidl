@@ -87,3 +87,18 @@ protocol TargetControl {
         state TargetRebootState;
     }) -> (struct {}) error TargetRebootError;
 };
+
+protocol TargetCollectionIterator {
+    GetNext() -> (resource struct {
+        entry vector<Target>:MAX;
+    });
+};
+
+/// A protocol implemented in the daemon as a service.
+@discoverable
+protocol TargetCollection {
+    ListTargets(resource struct {
+        query string:<255, optional>;
+        iterator server_end:TargetCollectionIterator;
+    }) -> ();
+};

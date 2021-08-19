@@ -13,6 +13,7 @@ ffx_plugin("ffx_list") {
     "//src/developer/ffx/lib/addr:lib",
     "//src/developer/ffx/lib/netext:lib",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",

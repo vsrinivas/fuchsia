@@ -7,6 +7,7 @@ use {
     async_trait::async_trait,
     ffx_daemon_core::events::Queue,
     ffx_daemon_events::{DaemonEvent, TargetEvent},
+    ffx_daemon_target::target_collection::TargetCollection,
     fidl::endpoints::Proxy,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
@@ -47,6 +48,11 @@ pub trait DaemonServiceProvider {
 
     /// Returns a clone of the daemon event queue.
     async fn daemon_event_queue(&self) -> Queue<DaemonEvent> {
+        unimplemented!()
+    }
+
+    /// Returns a copy of the daemon target collection.
+    async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
         unimplemented!()
     }
 }
@@ -109,5 +115,25 @@ impl Context {
         target_identifier: Option<String>,
     ) -> Result<RemoteControlProxy> {
         self.inner.open_remote_control(target_identifier).await
+    }
+
+    pub async fn open_service_proxy<S>(&self) -> Result<S::Proxy>
+    where
+        S: fidl::endpoints::DiscoverableProtocolMarker,
+    {
+        let channel = self
+            .inner
+            .open_service_proxy(
+                <S as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME.to_owned(),
+            )
+            .await?;
+        let proxy = S::Proxy::from_channel(
+            fidl::AsyncChannel::from_channel(channel).context("making service async channel")?,
+        );
+        Ok(proxy)
+    }
+
+    pub async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
+        self.inner.get_target_collection().await
     }
 }

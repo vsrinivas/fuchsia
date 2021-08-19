@@ -29,7 +29,7 @@ use {
     },
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
-        DiagnosticsStreamError, RepositoryRegistryMarker, StreamMode,
+        DiagnosticsStreamError, RepositoryRegistryMarker, StreamMode, TargetCollectionMarker,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, DiagnosticsData,
@@ -229,6 +229,10 @@ impl DaemonServiceProvider for Daemon {
     async fn daemon_event_queue(&self) -> events::Queue<DaemonEvent> {
         self.event_queue.clone()
     }
+
+    async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
+        Ok(self.target_collection.clone())
+    }
 }
 
 #[async_trait(?Send)]
@@ -305,9 +309,12 @@ impl Daemon {
 
     async fn start_services(&mut self) -> Result<()> {
         let cx = services::Context::new(self.clone());
-        self.service_register
-            .start(RepositoryRegistryMarker::PROTOCOL_NAME.to_string(), cx)
-            .await?;
+        let ((), ()) = futures::future::try_join(
+            self.service_register
+                .start(RepositoryRegistryMarker::PROTOCOL_NAME.to_string(), cx.clone()),
+            self.service_register.start(TargetCollectionMarker::PROTOCOL_NAME.to_string(), cx),
+        )
+        .await?;
         Ok(())
     }
 
