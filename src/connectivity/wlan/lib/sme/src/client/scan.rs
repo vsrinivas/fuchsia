@@ -534,8 +534,8 @@ mod tests {
 
         assert_eq!(bss_description_list.len(), 1);
         // Verify that both IEs are processed.
-        assert!(slice_contains(&bss_description_list[0].ies[..], ie_marker1));
-        assert!(slice_contains(&bss_description_list[0].ies[..], ie_marker2));
+        assert!(slice_contains(bss_description_list[0].ies(), ie_marker1));
+        assert!(slice_contains(bss_description_list[0].ies(), ie_marker2));
     }
 
     fn slice_contains(slice: &[u8], subslice: &[u8]) -> bool {

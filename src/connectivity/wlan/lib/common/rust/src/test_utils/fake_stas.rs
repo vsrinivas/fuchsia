@@ -377,6 +377,6 @@ mod tests {
             0x42, 0x43, 0x5e, 0x00, // AC_VI parameters
             0x62, 0x32, 0x2f, 0x00, // AC_VO parameters
         ];
-        assert_eq!(bss.ies, expected_ies);
+        assert_eq!(bss.ies(), &expected_ies[..]);
     }
 }

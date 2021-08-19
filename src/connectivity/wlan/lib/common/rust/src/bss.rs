@@ -102,7 +102,8 @@ pub struct BssDescription {
     pub channel: fidl_fuchsia_wlan_common::WlanChannel,
     pub rssi_dbm: i8,
     pub snr_db: i8,
-    pub ies: Vec<u8>,
+    // Private because the parsed information reference the IEs
+    ies: Vec<u8>,
 
     // *** Fields parsed out of fidl_internal::BssDescription IEs
     ssid_range: Range<usize>,
@@ -208,6 +209,10 @@ impl BssDescription {
             let bytes: VhtOpArray = vht_op.as_bytes().try_into().unwrap();
             fidl_internal::VhtOperation { bytes }
         })
+    }
+
+    pub fn ies(&self) -> &[u8] {
+        &self.ies[..]
     }
 
     /// Return bool on whether BSS is protected.
