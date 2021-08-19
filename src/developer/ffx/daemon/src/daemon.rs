@@ -77,12 +77,11 @@ pub struct DaemonEventHandler {
     // holding the event queue itself (as is the case with the target collection
     // here).
     target_collection: Rc<TargetCollection>,
-    config_reader: Rc<dyn ConfigReader>,
 }
 
 impl DaemonEventHandler {
     fn new(target_collection: Rc<TargetCollection>) -> Self {
-        Self { target_collection, config_reader: Rc::new(DefaultConfigReader::default()) }
+        Self { target_collection }
     }
 
     async fn handle_mdns(&self, t: TargetInfo) {
@@ -94,17 +93,7 @@ impl DaemonEventHandler {
         new_target.update_connection_state(|_| TargetConnectionState::Mdns(Instant::now()));
 
         let target = self.target_collection.merge_insert(new_target);
-        let nodename = target.nodename();
-
-        if let Some(s) = self.config_reader.get("target.default").await.ok().flatten() {
-            if nodename.as_ref().map(|x| x == &s).unwrap_or(false) {
-                log::trace!(
-                    "Doing autoconnect for default target: {}",
-                    nodename.as_ref().map(|x| x.as_str()).unwrap_or("<unknown>")
-                );
-                target.run_host_pipe();
-            }
-        }
+        target.run_host_pipe();
     }
 
     async fn handle_overnet_peer(&self, node_id: u64) {
@@ -1243,13 +1232,7 @@ mod test {
 
         let before_update = Instant::now();
 
-        let handler = DaemonEventHandler {
-            target_collection: tc.clone(),
-            config_reader: Rc::new(FakeConfigReader {
-                query_expected: "target.default".to_owned(),
-                value: "florp".to_owned(),
-            }),
-        };
+        let handler = DaemonEventHandler { target_collection: tc.clone() };
         assert!(
             handler
                 .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
@@ -1261,7 +1244,7 @@ mod test {
                 == events::Status::Waiting
         );
 
-        assert!(!t.is_host_pipe_running());
+        assert!(t.is_host_pipe_running());
         assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_update);
 
         let before_second_update = Instant::now();
@@ -1269,13 +1252,7 @@ mod test {
 
         // This handler will now return the value of the default target as
         // intended.
-        let handler = DaemonEventHandler {
-            target_collection: tc.clone(),
-            config_reader: Rc::new(FakeConfigReader {
-                query_expected: "target.default".to_owned(),
-                value: "this-town-aint-big-enough-for-the-three-of-us".to_owned(),
-            }),
-        };
+        let handler = DaemonEventHandler { target_collection: tc.clone() };
         assert!(
             handler
                 .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
