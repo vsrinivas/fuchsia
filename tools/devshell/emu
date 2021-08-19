@@ -6,13 +6,14 @@
 #### CATEGORY=Run, inspect and debug
 ### start fuchsia in an emulator
 
-## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [-m <mb>] [-k <authorized_keys_file>] [-K <kernel_image>] [-z <zbi_image>] [-f <fvm_image>] [-p mouse|touch] [-H|--headless] [--audio] [--hidpi-scaling] [--software-gpu] [--debugger]
+## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-v <build_variant>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [-m <mb>] [-k <authorized_keys_file>] [-K <kernel_image>] [-z <zbi_image>] [-f <fvm_image>] [-p mouse|touch] [-H|--headless] [--audio] [--hidpi-scaling] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -c <text> append item to kernel command line
 ##   -ds <size> extends the fvm image size to <size> bytes. Default is twice the original size
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
 ##   -u <path> execute emu if-up script, default: linux: no script, macos: tap ifup script.
+##   -v <build_variant> uses the build system variant to modify the total memory.
 ##   -e <directory> location of emulator, defaults to looking in prebuilt/third_party/aemu/PLATFORM
 ##   -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
 ##   -r <fps> webrtc frame rate when using gRPC service, default is 30
@@ -52,6 +53,7 @@ readonly MEMSIZE_DEFAULT=8192
 readonly SMP_DEFAULT=4
 
 ACCEL="auto"
+BUILD_VARIANT=
 NET=0
 DEBUGGER=0
 IFNAME=""
@@ -85,6 +87,7 @@ FVM_TOOL=""
 POINTING_DEVICE="mouse"
 BUILD=1
 EMU_ARGS=()
+HAS_MEMSIZE=false
 
 # Propagate our TERM environment variable as a kernel command line
 # argument.  This is first so that an explicit -c TERM=foo argument
@@ -122,6 +125,10 @@ while [[ $# -ge 1 ]]; do
     shift
     UPSCRIPT="$1"
     ;;
+  -v)
+    shift
+    BUILD_VARIANT="$1"
+    ;;
   -e)
     shift
     AEMU_DIR="$1"
@@ -157,6 +164,7 @@ while [[ $# -ge 1 ]]; do
   -m)
     shift
     MEMSIZE="$1"
+    HAS_MEMSIZE=true
     ;;
   -k)
     shift
@@ -291,6 +299,14 @@ fi
 
 if [[ -z "$AUTHORIZED_KEYS" ]]; then
   AUTHORIZED_KEYS="$(get-ssh-authkeys)"
+fi
+
+# if memory size is not specified, assign memory size based on build_variant.
+if [[ ! ("$HAS_MEMSIZE" && -z "$BUILD_VARIANT") ]]; then
+  variants=("asan" "asan-ubsan" "coverage" "coverage-rust" "profile")
+  if [[ ! ${variants[*]} =~ "$BUILD_VARIANT " ]]; then
+    MEMSIZE=4096
+  fi
 fi
 
 # construct the args for aemu

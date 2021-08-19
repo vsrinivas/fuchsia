@@ -340,6 +340,7 @@ Remaining arguments are passed to emu wrapper and emulator:
   -N run with emulated nic via tun/tap
   -I <ifname> uses the tun/tap interface named ifname
   -u <path> execute emu if-up script, default: linux: no script, macos: tap ifup script.
+  -v <build_variant> uses the build system variant to modify the total memory.
   -e <directory> location of emulator, defaults to looking in prebuilt/third_party/aemu/PLATFORM
   -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
   -r <fps> webrtc frame rate when using gRPC service, default is 30
