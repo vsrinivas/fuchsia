@@ -104,6 +104,7 @@ group("tests") {
     "icu_data:tests",
     "inet:tests",
     "inject:tests",
+    "injectable-time:tests",
     "intl:tests",
     "isolated_devmgr:tests",
     "json_parser:tests",
