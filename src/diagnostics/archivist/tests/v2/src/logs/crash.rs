@@ -5,6 +5,7 @@
 use crate::{constants::*, test_topology, utils};
 use component_events::matcher::ExitStatusMatcher;
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Logs, Severity};
+use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io::DirectoryMarker;
 use fidl_fuchsia_sys2::{ChildRef, RealmMarker};
@@ -37,9 +38,13 @@ async fn logs_from_crashing_component() {
 
     let mut child_ref = ChildRef { name: "log_and_crash".to_string(), collection: None };
     // launch our child and wait for it to exit before asserting on its logs
-    let (_client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
+    let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
     let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
-    realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
+    realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
+    let _ = fuchsia_component::client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(
+        &exposed_dir,
+    )
+    .unwrap();
 
     utils::wait_for_component_stopped(
         &instance.root.child_name(),
