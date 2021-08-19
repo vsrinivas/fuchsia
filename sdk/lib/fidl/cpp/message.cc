@@ -138,14 +138,14 @@ zx_status_t HLCPPOutgoingMessage::Encode(const fidl_type_t* type, const char** e
   return status;
 }
 
-zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* v1_type,
+zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* type,
                                            const char** error_msg_out) const {
-  fidl_trace(WillHLCPPValidate, v1_type, bytes_.data(), bytes_.actual(), handles_.actual());
-  const zx_status_t status =
-      fidl_validate(v1_type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
-  fidl_trace(DidHLCPPValidate);
+  internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
+  if ((header().flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
+    wire_format_version = internal::WireFormatVersion::kV2;
+  }
 
-  return status;
+  return ValidateWithVersion_InternalMayBreak(wire_format_version, type, error_msg_out);
 }
 
 zx_status_t HLCPPOutgoingMessage::ValidateWithVersion_InternalMayBreak(
