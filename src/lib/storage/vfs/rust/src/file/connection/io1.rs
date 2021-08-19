@@ -355,6 +355,10 @@ impl<T: 'static + File> FileConnection<T> {
             return Err(zx::Status::BAD_HANDLE);
         }
 
+        if count > fidl_fuchsia_io::MAX_BUF {
+            return Err(zx::Status::OUT_OF_RANGE);
+        }
+
         let mut buffer = vec![0u8; count as usize];
         self.file.read_at(offset, &mut buffer[..]).await.map(|count| (buffer, count))
     }
@@ -934,6 +938,13 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_read_validates_count() {
+        let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
+        let (status, _data) = env.proxy.read(fidl_fuchsia_io::MAX_BUF + 1).await.unwrap();
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OUT_OF_RANGE);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_read_at_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, data) = env.proxy.read_at(5, 10).await.unwrap();
@@ -948,6 +959,13 @@ mod tests {
                 FileOperation::ReadAt { offset: 10, count: 5 },
             ]
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_at_validates_count() {
+        let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
+        let (status, _data) = env.proxy.read_at(fidl_fuchsia_io::MAX_BUF + 1, 0).await.unwrap();
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OUT_OF_RANGE);
     }
 
     #[fasync::run_singlethreaded(test)]
