@@ -3,11 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{component::BindReason, error::ModelError, model::Model},
+    crate::model::{
+        component::{BindReason, ComponentInstance},
+        error::ModelError,
+        model::Model,
+    },
+    ::routing::error::ComponentInstanceError,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     futures::prelude::*,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker},
-    std::{convert::TryFrom, sync::Weak},
+    log::*,
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, MonikerError, RelativeMoniker, RelativeMonikerBase,
+    },
+    std::{
+        convert::TryFrom,
+        sync::{Arc, Weak},
+    },
 };
 
 #[derive(Clone)]
@@ -32,46 +43,79 @@ impl LifecycleController {
         &self,
         operation: LifecycleOperation,
         moniker: String,
-        is_recursive: bool,
+        recursive_stop: bool,
     ) -> Result<(), fcomponent::Error> {
-        println!("Requested lifecycle operation: {:?}, moniker: {}", operation, moniker);
-        if let (Some(model), Ok(moniker)) =
-            (self.model.upgrade(), RelativeMoniker::try_from(moniker.as_str()))
-        {
-            if let Ok(abs_moniker) = AbsoluteMoniker::from_relative(&self.prefix, &moniker) {
-                match model.look_up(&abs_moniker).await {
-                    Ok(component) => match operation {
-                        LifecycleOperation::Resolve => {
-                            println!("Found component {} and resolving", abs_moniker);
-                            Ok(())
-                        }
-                        LifecycleOperation::Bind => {
-                            println!("Found component {} and binding", abs_moniker);
-                            component
-                                .bind(&BindReason::Debug)
-                                .await
-                                .map(|_| ())
-                                .map_err(|_| fcomponent::Error::Internal)
-                        }
-                        LifecycleOperation::Stop => {
-                            println!("Found component {} and stopping", abs_moniker);
-                            component
-                                .stop_instance(false, is_recursive)
-                                .await
-                                .map(|_| ())
-                                .map_err(|_| fcomponent::Error::Internal)
-                        }
-                    },
-                    Err(ModelError::ResolverError { .. }) => {
-                        Err(fcomponent::Error::InstanceCannotResolve)
-                    }
-                    Err(_) => Err(fcomponent::Error::Internal),
-                }
-            } else {
-                Err(fcomponent::Error::InstanceNotFound)
+        let relative_moniker =
+            RelativeMoniker::try_from(moniker.as_str()).map_err(|e: MonikerError| {
+                debug!("lifecycle controller received invalid component moniker: {}", e);
+                fcomponent::Error::InvalidArguments
+            })?;
+        if !relative_moniker.up_path().is_empty() {
+            debug!(
+                "lifecycle controller received moniker that attempted to reach outside its scope"
+            );
+            return Err(fcomponent::Error::InvalidArguments);
+        }
+        let abs_moniker = AbsoluteMoniker::from_relative(&self.prefix, &relative_moniker).map_err(
+            |e: MonikerError| {
+                debug!("lifecycle controller received invalid component moniker: {}", e);
+                fcomponent::Error::InvalidArguments
+            },
+        )?;
+        let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
+
+        let component = model.look_up(&abs_moniker).await.map_err(|e| match e {
+            e @ ModelError::ResolverError { .. } | e @ ModelError::ComponentInstanceError {
+                err: ComponentInstanceError::ResolveFailed { .. }
+            } => {
+                debug!(
+                    "lifecycle controller failed to resolve component instance {}: {:?}",
+                    abs_moniker,
+                    e
+                );
+                fcomponent::Error::InstanceCannotResolve
             }
-        } else {
-            Err(fcomponent::Error::InstanceNotFound)
+            e @ ModelError::ComponentInstanceError {
+                err: ComponentInstanceError::InstanceNotFound { .. },
+            } => {
+                debug!(
+                    "lifecycle controller was asked to perform an operation on a component instance that doesn't exist {}: {:?}",
+                    abs_moniker,
+                    e,
+                );
+                fcomponent::Error::InstanceNotFound
+            }
+            e => {
+                error!(
+                    "unexpected error encountered by lifecycle controller while looking up component {}: {:?}",
+                    abs_moniker,
+                    e,
+                );
+                fcomponent::Error::Internal
+            }
+        })?;
+        match operation {
+            LifecycleOperation::Resolve => Ok(()),
+            LifecycleOperation::Bind => {
+                let _: Arc<ComponentInstance> =
+                    component.bind(&BindReason::Debug).await.map_err(|e: ModelError| {
+                        debug!(
+                            "lifecycle controller failed to bind to component instance {}: {:?}",
+                            abs_moniker, e
+                        );
+                        fcomponent::Error::InstanceCannotStart
+                    })?;
+                Ok(())
+            }
+            LifecycleOperation::Stop => {
+                component.stop_instance(false, recursive_stop).await.map_err(|e: ModelError| {
+                    debug!(
+                        "lifecycle controller failed to stop component instance {} (recursive_stop={}): {:?}",
+                        abs_moniker, recursive_stop, e
+                    );
+                    fcomponent::Error::Internal
+                })
+            }
         }
     }
 
@@ -96,5 +140,87 @@ impl LifecycleController {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::model::testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
+        cm_rust_testing::ComponentDeclBuilder,
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        std::sync::Arc,
+    };
+
+    #[fuchsia::test]
+    async fn lifecycle_controller_test() {
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_child(cm_rust::ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                        environment: None,
+                        on_terminate: None,
+                    })
+                    .add_child(cm_rust::ChildDecl {
+                        name: "cant-resolve".to_string(),
+                        url: "cant-resolve://cant-resolve".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                        environment: None,
+                        on_terminate: None,
+                    })
+                    .build(),
+            ),
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_child(cm_rust::ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                        environment: None,
+                        on_terminate: None,
+                    })
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new().build()),
+        ];
+
+        let TestModelResult { model, .. } =
+            TestEnvironmentBuilder::new().set_components(components).build().await;
+
+        let lifecycle_controller = LifecycleController::new(Arc::downgrade(&model), vec![].into());
+
+        let (lifecycle_proxy, lifecycle_request_stream) =
+            create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
+
+        // async move {} is used here because we want this to own the lifecycle_controller
+        let _lifecycle_server_task = fasync::Task::local(async move {
+            lifecycle_controller.serve(lifecycle_request_stream).await
+        });
+
+        assert_eq!(lifecycle_proxy.resolve(".").await.unwrap(), Ok(()));
+
+        assert_eq!(lifecycle_proxy.resolve("./a:0").await.unwrap(), Ok(()));
+
+        assert_eq!(
+            lifecycle_proxy.resolve(".\\scope-escape-attempt:0").await.unwrap(),
+            Err(fcomponent::Error::InvalidArguments)
+        );
+
+        assert_eq!(
+            lifecycle_proxy.resolve("./doesnt-exist:0").await.unwrap(),
+            Err(fcomponent::Error::InstanceNotFound)
+        );
+
+        assert_eq!(
+            lifecycle_proxy.resolve("./cant-resolve:0").await.unwrap(),
+            Err(fcomponent::Error::InstanceCannotResolve)
+        );
     }
 }

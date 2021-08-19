@@ -609,7 +609,7 @@ impl ManagedRealm {
                 }
                 ManagedRealmRequest::StopChildComponent { child_name, responder } => {
                     let realm_ref = &realm;
-                    let response = (|| async move {
+                    let response = async move {
                         let lifecycle =
                             fuchsia_component::client::connect_to_named_protocol_at_dir_root::<
                                 fsys2::LifecycleControllerMarker,
@@ -634,22 +634,22 @@ impl ManagedRealm {
                             .map_err(|e: fidl_fuchsia_component::Error| {
                                 warn!("failed to stop child component '{}': {:?}", child_name, e);
                                 match e {
-                                    fidl_fuchsia_component::Error::InstanceNotFound => {
+                                    fidl_fuchsia_component::Error::InvalidArguments => {
                                         Err(zx::Status::INVALID_ARGS)
                                     }
-                                    // LifecycleController returns Internal when supplied with a
-                                    // non-existent, but formally valid, component name.
-                                    // TODO(https://fxbug.dev/81729): Replace Error::Internal with
-                                    // correct Error variant.
-                                    fidl_fuchsia_component::Error::Internal => {
+                                    fidl_fuchsia_component::Error::AccessDenied => {
+                                        Err(zx::Status::ACCESS_DENIED)
+                                    }
+                                    fidl_fuchsia_component::Error::InstanceCannotResolve => {
+                                        Err(zx::Status::UNAVAILABLE)
+                                    }
+                                    fidl_fuchsia_component::Error::InstanceNotFound => {
                                         Err(zx::Status::NOT_FOUND)
                                     }
-                                    fidl_fuchsia_component::Error::InvalidArguments
+                                    fidl_fuchsia_component::Error::Internal
                                     | fidl_fuchsia_component::Error::Unsupported
-                                    | fidl_fuchsia_component::Error::AccessDenied
                                     | fidl_fuchsia_component::Error::InstanceAlreadyExists
                                     | fidl_fuchsia_component::Error::InstanceCannotStart
-                                    | fidl_fuchsia_component::Error::InstanceCannotResolve
                                     | fidl_fuchsia_component::Error::CollectionNotFound
                                     | fidl_fuchsia_component::Error::ResourceUnavailable
                                     | fidl_fuchsia_component::Error::InstanceDied
@@ -659,7 +659,7 @@ impl ManagedRealm {
                                 }
                             })?;
                         Ok(())
-                    })()
+                    }
                     .await;
                     let () = responder
                         .send(&mut response.map_err(zx::Status::into_raw))
