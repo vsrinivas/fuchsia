@@ -32,6 +32,7 @@ Checks: >
   -readability-qualified-auto,
   -readability-uppercase-literal-suffix,
   -readability-identifier-length,
+  -readability-named-parameter,
 
 WarningsAsErrors: false
 AnalyzeTemporaryDtors: false
