@@ -132,6 +132,12 @@ Fuchsia:
    </td>
   </tr>
   <tr>
+   <td><a href="https://groups.google.com/a/fuchsia.dev/g/docs-discuss">docs-discuss</a>
+   </td>
+   <td>For conversation about about documentation on fuchsia.dev.
+   </td>
+  </tr>
+  <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/drivers-dev">drivers-dev</a>
    </td>
    <td>For conversation about {{ widgets.glossary_simple ('driver', 'drivers') }}.
