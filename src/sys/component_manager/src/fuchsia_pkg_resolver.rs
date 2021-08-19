@@ -302,7 +302,7 @@ mod tests {
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/hello-world#meta/component_manager_tests_invalid.cm",
+            "fuchsia-pkg://fuchsia.com/hello-world#meta/component_manager_tests.invalid_cm",
             ResolverError::ManifestInvalid { .. }
         );
         test_resolve_error!(

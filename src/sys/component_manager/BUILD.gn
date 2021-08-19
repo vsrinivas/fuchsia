@@ -357,7 +357,7 @@ fuchsia_component("component-manager-tests-cmp") {
 }
 
 resource("component_manager_tests_invalid_manifest") {
-  sources = [ "meta/component_manager_tests_invalid.cm" ]
+  sources = [ "meta/component_manager_tests.invalid_cm" ]
   outputs = [ "meta/{{source_file_part}}" ]
 }
 
