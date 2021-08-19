@@ -108,7 +108,7 @@ fn insert_build_rule(
 
     // Add the bind header to the driver_module's dependency.
     output.push_str(&contents[last_import.end()..deps_start]);
-    output.push_str(format!("deps = [\n    \":{}_bind\",", device_name).as_str());
+    output.push_str(format!("deps = [\n    \":{}_bind_header\",", device_name).as_str());
     output.push_str(&contents[deps_end..]);
 
     file.seek(SeekFrom::Start(0)).map_err(|_| "Failed to seek to beginning of build file")?;

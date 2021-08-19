@@ -11,6 +11,7 @@ pub enum Library {
     Bluetooth,
     Clock,
     Gpio,
+    I2c,
     Pci,
     Platform,
     Pwm,
@@ -26,6 +27,7 @@ impl Library {
             Library::Acpi => "fuchsia.acpi",
             Library::Amlogic => "amlogic.platform",
             Library::Bluetooth => "fuchsia.bluetooth",
+            Library::I2c => "fuchsia.i2c",
             Library::Clock => "fuchsia.clock",
             Library::Gpio => "fuchsia.gpio",
             Library::Pci => "fuchsia.pci",
@@ -45,6 +47,7 @@ impl Library {
             Library::Bluetooth => "//src/devices/bind/fuchsia.bluetooth",
             Library::Clock => "//src/devices/bind/fuchsia.clock",
             Library::Gpio => "//src/devices/bind/fuchsia.gpio",
+            Library::I2c => "//src/devices/bind/fuchsia.i2c",
             Library::Pci => "//src/devices/bind/fuchsia.pci",
             Library::Platform => "//src/devices/bind/fuchsia.platform",
             Library::Pwm => "//src/devices/bind/fuchsia.pwm",
@@ -218,9 +221,18 @@ pub fn rename_and_add<'a>(libraries: &mut HashSet<Library>, original: &'a str) -
             libraries.insert(Library::Platform);
             "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC"
         }
+        "BIND_I2C_BUS_ID" => {
+            libraries.insert(Library::I2c);
+            "fuchsia.BIND_I2C_BUS_ID"
+        }
+        "BIND_I2C_ADDRESS" => {
+            libraries.insert(Library::I2c);
+            "fuchsia.BIND_I2C_ADDRESS"
+        }
 
         "BIND_CLOCK_ID" => "fuchsia.BIND_CLOCK_ID",
         "BIND_GPIO_PIN" => "fuchsia.BIND_GPIO_PIN",
+        "BIND_PWM_ID" => "fuchsia.BIND_PWM_ID",
 
         "BIND_PLATFORM_DEV_PID" => "fuchsia.BIND_PLATFORM_DEV_PID",
         "BIND_PLATFORM_DEV_DID" => "fuchsia.BIND_PLATFORM_DEV_DID",
