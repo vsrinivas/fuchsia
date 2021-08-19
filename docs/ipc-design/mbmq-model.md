@@ -5,11 +5,12 @@ communication) proposed for use in Fuchsia.
 
 ## Overview of object types
 
-The MBMQ model is based around four types of object:
+The MBMQ model is based around five types of object:
 
 *   Channel endpoint
 *   MsgQueue: message queue
 *   MBO: message buffer object
+*   CallersRef: the caller's reference to an MBO
 *   CalleesRef: a callee's reference to an MBO
 
 A MsgQueue is a queue of messages, or to be more exact, a queue of
@@ -52,13 +53,25 @@ it returns ownership of the MBO back to the caller.  The callee's
 access to the MBO is revoked when it sends the reply, so the caller
 can then reuse the MBO with a different callee.
 
+Similarly, a CallersRef is a caller process's limited-access reference
+to an MBO.  The caller process can use the CallersRef for an MBO to
+read and write that MBO while it has ownership of the MBO.
+
+The MBO is a kernel-internal object that userland only access through
+CallersRef and CalleesRef handles.  In practice, an MBO and its
+CallersRef are implemented by the kernel as the same object on the
+kernel heap; there is a one-to-one correspondence between the two and
+they have the same lifetime.  However, we use separate terms to
+emphasise that a CallersRef handle cannot always be used to read and
+write its associated MBO.
+
 ## Overview of the request-reply lifecycle
 
 There are four possible states for an MBO, listed here in the order in
 which they are typically used:
 
-*   `owned_by_caller`: Owned by the caller: contents accessible through
-    the MBO handle
+*   `owned_by_caller`: Owned by the caller via the CallersRef for the
+    MBO: contents accessible through the CallersRef handle
 *   `enqueued_as_request`: Enqueued on a MsgQueue (or channel) as a
     request
 *   `owned_by_callee`: Owned by a callee via a CalleesRef: contents
@@ -111,21 +124,25 @@ a different callee.
 
 ## Core operations
 
-*   `zx_mbo_create() -> mbo`
+*   `zx_mbo_create() -> callersref`
 
-    Creates a new MBO.  The MBO starts off in the `owned_by_caller` state.
+    Creates a new MBO and its associated CallersRef and returns a
+    handle for the CallersRef.  The MBO starts off in the
+    `owned_by_caller` state.
 
 *   `zx_mbo_create_calleesref() -> calleesref`
 
     Creates a new CalleesRef.  The CalleesRef starts off not holding a
     reference to any MBO.
 
-*   `zx_mbo_read(mbo_or_calleesref) -> (data, handles)`
+*   `zx_mbo_read(mbo) -> (data, handles)`
 
     Reads an MBO.  This reads the entire contents of the MBO.
-    (Operations for partial reads will be defined later.)  This takes
-    either an MBO handle (in the `owned_by_caller` state) or a
-    CalleesRef handle (for a CalleesRef pointing to an MBO in the
+    (Operations for partial reads will be defined later.)
+
+    This takes an MBO reference, which means either a CallersRef
+    handle (for an MBO in the `owned_by_caller` state) or a CalleesRef
+    handle (for a CalleesRef pointing to an MBO in the
     `owned_by_callee` state).
 
     If the message is too large to fit into the buffer passed to the
@@ -133,13 +150,12 @@ a different callee.
     the process to allocate a larger buffer and call the syscall
     again.
 
-*   `zx_mbo_write(mbo_or_calleesref, data, handles)`
+*   `zx_mbo_write(mbo, data, handles)`
 
     Writes an MBO.  This replaces the MBO's existing contents.
     (Operations for partial/incremental writes will be defined later.)
-    This takes either an MBO handle (in the `owned_by_caller` state)
-    or a CalleesRef handle (for a CalleesRef pointing to an MBO in the
-    `owned_by_callee` state).
+    This takes an MBO reference (as defined in the description of
+    `zx_mbo_read()`).
 
 *   `zx_channel_send(channel, mbo)`
 
@@ -246,17 +262,18 @@ are dropped:
 
 *   MBO: An MBO is freed when all references to it have been dropped.
 
-    Closing all the handles to an MBO only causes the MBO to be freed
-    if there are no other references to the MBO from a MsgQueue or a
-    CalleesRef.  If the handles to an MBO are closed while the MBO is
-    enqueued as a request on a MsgQueue, the MBO remains in the
-    MsgQueue, and it can still be read into a CalleesRef and sent as a
-    reply, but it will be freed when `zx_msgqueue_wait()` returns the
-    MBO to the `owned_by_caller` state.
+    Closing the CallersRef handles for an MBO only causes the MBO to
+    be freed if there are no other references to the MBO from a
+    MsgQueue or a CalleesRef.  If the CallersRef handles for an MBO
+    are closed while the MBO is enqueued as a request on a MsgQueue,
+    the MBO remains in the MsgQueue, and it can still be read into a
+    CalleesRef and sent as a reply, but it will be freed when
+    `zx_msgqueue_wait()` returns the MBO to the `owned_by_caller`
+    state.
 
     This means it is possible to do a "fire-and-forget" send with an
-    MBO: that is, send the MBO as a request message, but close the MBO
-    handle and ignore any replies.
+    MBO: that is, send the MBO as a request message, but close the
+    CallersRef handle and ignore any replies.
 
 *   Automatic replies: An MBO receives an automatic reply message if
     it was sent as a request but there is no way a callee could send a
@@ -308,8 +325,8 @@ MBO:
 *   State: one of the four MBO states listed above (`owned_by_caller`,
     `owned_by_callee`, `enqueued_as_request`, `enqueued_as_reply`).
     Note that in practice we do not need to distinguish between
-    `enqueued_as_request` and `owned_by_callee`.  Operations on MBO
-    handles need to check for `owned_by_caller`, whereas
+    `enqueued_as_request` and `owned_by_callee`.  Operations on
+    CallersRef handles need to check for `owned_by_caller`, whereas
     `zx_msgqueue_wait()` needs to check for `enqueued_as_request`
     versus `enqueued_as_reply`.
 
@@ -383,7 +400,7 @@ zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
 `zx_mbmq_multiop()` does the following:
 
 *   Do `zx_mbo_write()` to write the message specified by `buf` into
-    the MBO specified by `mbo` (which may be an MBO handle or a
+    the MBO specified by `mbo` (which may be a CallersRef or
     CalleesRef handle).
 *   Send message:
     *   If `is_req` is true, do `zx_channel_send()` to send `mbo` on
@@ -401,7 +418,7 @@ zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
         equivalent to `zx_mbo_read()` on `calleesref`.  Otherwise, if
         the unqueued message was a reply, then if userland were to do
         an equivalent `zx_mbo_read()` call it would involve looking up
-        the MBO handle based on the `key` value.
+        the CallersRef handle based on the `key` value.
 
 ## Properties of CalleesRefs
 
@@ -449,10 +466,11 @@ recycles MBOs across requests or not:
 
 *   Non-recycled MBOs: This is the simplest for a caller to do, so it
     is likely to be the common case.  The caller allocates a new MBO
-    for each fire-and-forget message.  The caller closes the MBO
-    handle after sending the MBO, without ever setting a `reply_queue`
-    on the MBO.  The MBO will get freed automatically after the callee
-    has received the message and dropped its reference to the MBO.
+    for each fire-and-forget message.  The caller closes the
+    CallersRef handle after sending the MBO, without ever setting a
+    `reply_queue` on the MBO.  The MBO will get freed automatically
+    after the callee has received the message and dropped its
+    reference to the MBO.
 
 *   Recycled MBOs: A callee has the option of detecting when the
     callee has dropped its reference to the MBO.  It can exercise that
