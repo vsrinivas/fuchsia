@@ -42,7 +42,11 @@ constexpr size_t kMaxInspectSize = 2 * 1024 * 1024 /* 2MB */;
 Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     : inspector_(inspect::InspectSettings{.maximum_size = kMaxInspectSize}),
       cpu_watcher_(
-          std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild("cpu_stats"), zx::job())),
+          std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild("cpu_stats"),
+                                       CpuWatcherParameters{
+                                           .sample_period = kCpuSamplePeriod,
+                                       },
+                                       nullptr /* stats_reader */)),
       publish_vfs_(dispatcher),
       publish_dir_(fbl::MakeRefCounted<fs::PseudoDir>()),
       sysmgr_url_(std::move(args.sysmgr_url)),
