@@ -72,14 +72,15 @@ impl FxFile {
         server_end: ServerEnd<NodeMarker>,
     ) {
         FileConnection::<FxFile>::create_connection(
-            // Note readable/writable do not override what's set in flags, they merely tell the
-            // FileConnection that it's valid to open the file readable/writable.
+            // Note readable/writable/executable do not override what's set in flags, they merely
+            // tell the FileConnection which set of rights the file can be opened as.
             scope.clone(),
             connection::util::OpenFile::new(this.take(), scope),
             flags,
             server_end,
             /*readable=*/ true,
             /*writable=*/ true,
+            /*executable=*/ false,
         );
     }
 

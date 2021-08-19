@@ -389,8 +389,7 @@ async fn open_child_dir_with_posix_flag() {
             dir_flags
         );
         // Ensure expanded rights do not exceed those of the parent directory connection.
-        // TODO(fxb/37534): Add support for OPEN_RIGHT_EXECUTABLE.
-        let expected_rights = dir_flags & !(io::OPEN_RIGHT_ADMIN | io::OPEN_RIGHT_EXECUTABLE);
+        let expected_rights = dir_flags & !io::OPEN_RIGHT_ADMIN;
         assert_eq!(get_node_flags(&child_dir_client).await & expected_rights, expected_rights);
     }
 }
@@ -845,14 +844,16 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
         return;
     }
 
-    for file_flags in harness.readable_flag_combos() {
+    const VMO_FLAGS: u32 = io::VMO_FLAG_READ;
+
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_WRITABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
-        let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_READ)
+        let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
             .await
             .expect("Failed to create file and obtain buffer");
         // Check contents of buffer.
         let mut data = vec![0; buffer.size as usize];
-        buffer.vmo.read(&mut data, 0).expect("vmo read failed");
+        buffer.vmo.read(&mut data, 0).expect("VMO read failed");
         assert_eq!(&data, TEST_FILE_CONTENTS);
     }
 }
@@ -881,13 +882,14 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
     if harness.config.no_get_buffer.unwrap_or_default() {
         return;
     }
+    const VMO_FLAGS: u32 = io::VMO_FLAG_WRITE | io::VMO_FLAG_PRIVATE;
 
-    for file_flags in harness.writable_flag_combos() {
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, io::OPEN_RIGHT_READABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
-        let (buffer, _) =
-            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_WRITE)
-                .await
-                .expect("Failed to create file and obtain buffer");
+        let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
+            .await
+            .expect("Failed to create file and obtain buffer");
+        // Ensure that we can actually write to the VMO.
         buffer.vmo.write("bbbbb".as_bytes(), 0).expect("vmo write failed");
     }
 }
@@ -899,15 +901,18 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
         return;
     }
 
-    for file_flags in harness.non_writable_flag_combos() {
-        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
-        assert_eq!(
-            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_WRITE)
-                .await
-                .expect_err("Error was expected"),
-            zx::Status::ACCESS_DENIED
-        );
-    }
+    let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+    assert_eq!(
+        create_file_and_get_buffer(
+            file,
+            &harness,
+            io::OPEN_RIGHT_READABLE,
+            io::VMO_FLAG_WRITE | io::VMO_FLAG_PRIVATE
+        )
+        .await
+        .expect_err("Error was expected"),
+        zx::Status::ACCESS_DENIED
+    );
 }
 
 #[fasync::run_singlethreaded(test)]

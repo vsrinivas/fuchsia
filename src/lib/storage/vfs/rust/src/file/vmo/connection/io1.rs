@@ -130,6 +130,7 @@ impl VmoFileConnection {
             flags,
             file.is_readable(),
             file.is_writable(),
+            file.is_executable(),
             /*append_allowed=*/ false,
         ) {
             Ok(updated) => updated,
@@ -810,6 +811,7 @@ impl VmoFileConnection {
         responder(status, buffer)
     }
 
+    // Removes rights not requested in flags from the underlying VMO's current rights.
     fn get_vmo_rights(vmo: &zx::Vmo, flags: u32) -> Result<zx::Rights, zx::Status> {
         let mut rights = vmo.basic_info()?.rights;
 

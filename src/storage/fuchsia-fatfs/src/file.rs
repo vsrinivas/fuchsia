@@ -363,6 +363,7 @@ impl DirectoryEntry for FatFile {
             server_end,
             /*readable=*/ true,
             /*writable=*/ true,
+            /*executable=*/ false,
         );
     }
 

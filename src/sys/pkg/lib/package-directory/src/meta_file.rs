@@ -106,6 +106,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
             // FileConnection that it's valid to open the file readable/writable.
             true,  /*=readable*/
             false, /*=writable*/
+            false, /*=executable*/
         );
     }
 

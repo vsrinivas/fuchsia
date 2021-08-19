@@ -111,7 +111,7 @@ where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, None, true, false)
+    VmoFile::new(init_vmo, None, true, false, false)
 }
 
 fn init_vmo<'a>(content: Arc<[u8]>) -> impl Fn() -> BoxFuture<'a, InitVmoResult> + Send + Sync {
@@ -237,7 +237,7 @@ where
     ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
     ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, Some(consume_vmo), false, true)
+    VmoFile::new(init_vmo, Some(consume_vmo), false, true, false)
 }
 
 /// Creates new `VmoFile` backed by the specified `init_vmo` and `consume_vmo` handlers.
@@ -263,7 +263,7 @@ where
     ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
     ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, Some(consume_vmo), true, true)
+    VmoFile::new(init_vmo, Some(consume_vmo), true, true, false)
 }
 
 /// Implementation of an asynchronous VMO-backed file in a virtual file system. This is created by
@@ -294,6 +294,9 @@ where
     /// file in order to reprocess the VMO when all the connections are gone.  It is an error to
     /// have a writable file without a `consume_vmo` though.
     writable: bool,
+
+    /// Specifies if the file can be opened as executable.
+    executable: bool,
 
     // File connections share state with the file itself.
     // TODO: It should be `pub(in super::connection)` but the compiler claims, `super` does not
@@ -341,6 +344,7 @@ where
         consume_vmo: Option<ConsumeVmo>,
         readable: bool,
         writable: bool,
+        executable: bool,
     ) -> Arc<Self> {
         // A writable file has to have a `consume_vmo` handler.  Otherwise we may lose updates
         // without realizing it.
@@ -351,6 +355,7 @@ where
             consume_vmo,
             readable,
             writable,
+            executable,
             state: Mutex::new(VmoFileState::Uninitialized),
         })
     }
@@ -391,6 +396,10 @@ where
 
     fn is_writable(&self) -> bool {
         return self.writable;
+    }
+
+    fn is_executable(&self) -> bool {
+        return self.executable;
     }
 }
 

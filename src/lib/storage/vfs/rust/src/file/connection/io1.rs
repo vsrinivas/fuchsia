@@ -85,6 +85,7 @@ impl<T: 'static + File> FileConnection<T> {
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
         writable: bool,
+        executable: bool,
     ) {
         let task = Self::create_connection_task(
             scope.clone(),
@@ -93,6 +94,7 @@ impl<T: 'static + File> FileConnection<T> {
             server_end,
             readable,
             writable,
+            executable,
         );
         // If we failed to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently). `server_end` and the
@@ -107,9 +109,10 @@ impl<T: 'static + File> FileConnection<T> {
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
         writable: bool,
+        executable: bool,
     ) {
         let flags = match new_connection_validate_flags(
-            flags, readable, writable, /*append_allowed=*/ true,
+            flags, readable, writable, executable, /*append_allowed=*/ true,
         ) {
             Ok(updated) => updated,
             Err(status) => {
@@ -656,6 +659,7 @@ mod tests {
                 server_end.into_channel().into(),
                 true,
                 true,
+                false,
             );
         }
 
@@ -700,6 +704,7 @@ mod tests {
             server_end.into_channel().into(),
             true,
             true,
+            false,
         );
 
         TestEnv { file, proxy, scope }
