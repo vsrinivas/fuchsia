@@ -15,12 +15,6 @@ source_set("common") {
     "//sdk/fidl/fuchsia.mem",
     "//src/lib/fxl",
   ]
-  public_configs = [ ":common-config" ]
-}
-
-config("common-config") {
-  visibility = [ ":*" ]
-  include_dirs = [ "." ]
 }
 
 source_set("unittests") {
@@ -33,6 +27,7 @@ source_set("unittests") {
   deps = [
     ":common",
     ":test_utils",
+    "../testing",
   ]
 }
 

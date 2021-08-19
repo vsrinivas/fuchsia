@@ -48,7 +48,7 @@ class SharedMemory final {
  public:
   SharedMemory() = default;
   SharedMemory(SharedMemory&& other) { *this = std::move(other); }
-  SharedMemory& operator=(SharedMemory&& other);
+  SharedMemory& operator=(SharedMemory&& other) noexcept;
   ~SharedMemory();
 
   const zx::vmo& vmo() const { return vmo_; }
@@ -90,7 +90,7 @@ class SharedMemory final {
 
   // Writes data to the VMO. If unmapped, returns ZX_ERR_BAD_STATE. If the data is truncated due to
   // insufficient remaining capacity, writes as much as it can and returns ZX_ERR_BUFFER_TOO_SMALL.
-  zx_status_t Write(const void* data, size_t size);
+  zx_status_t Write(const void* src, size_t len);
 
   // If this object was |Share|d, copies the data from the original memory region to this objects
   // shared memory; otherwise, does nothing.

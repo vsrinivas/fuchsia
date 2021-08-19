@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "shared-memory.h"
+#include "src/sys/fuzzing/common/shared-memory.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmar.h>
@@ -44,7 +44,7 @@ size_t AlignedCapacity(size_t capacity, size_t size) {
 
 // Public methods
 
-SharedMemory& SharedMemory::operator=(SharedMemory&& other) {
+SharedMemory& SharedMemory::operator=(SharedMemory&& other) noexcept {
   vmo_ = std::move(other.vmo_);
   addr_ = other.addr_;
   capacity_ = other.capacity_;
@@ -77,6 +77,7 @@ void SharedMemory::Create(size_t capacity, Buffer* out, bool inline_size) {
   }
   out->size = ActualCapacity(capacity_, size_);
   if (inline_size) {
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
     auto* header = reinterpret_cast<InlineHeader*>(addr_);
     strncpy(header->magic, kInlineMagic, sizeof(header->magic));
     header->size = 0;
@@ -107,6 +108,7 @@ void SharedMemory::Link(Buffer buf, bool inline_size) {
     size_ = buf.size;
     return;
   }
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto* header = reinterpret_cast<InlineHeader*>(addr_);
   capacity_ -= sizeof(InlineHeader);
   if (strncmp(header->magic, kInlineMagic, sizeof(header->magic)) != 0) {
@@ -129,11 +131,10 @@ zx_status_t SharedMemory::Write(const void* src, size_t len) {
     memcpy(dst, src, left);
     SetSize(capacity_);
     return ZX_ERR_BUFFER_TOO_SMALL;
-  } else {
-    memcpy(dst, src, len);
-    SetSize(offset + len);
-    return ZX_OK;
   }
+  memcpy(dst, src, len);
+  SetSize(offset + len);
+  return ZX_OK;
 }
 
 void SharedMemory::Update() {
@@ -160,24 +161,27 @@ void SharedMemory::Reset() {
 
 void* SharedMemory::Begin() const {
   if (size_ != kInlinedSize) {
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
     return reinterpret_cast<void*>(addr_);
-  } else {
-    return reinterpret_cast<void*>(addr_ + sizeof(InlineHeader));
   }
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
+  return reinterpret_cast<void*>(addr_ + sizeof(InlineHeader));
 }
 
 void* SharedMemory::End() const {
   if (size_ != kInlinedSize) {
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
     return reinterpret_cast<void*>(addr_ + capacity_);
-  } else {
-    return reinterpret_cast<void*>(addr_ + sizeof(InlineHeader) + capacity_);
   }
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
+  return reinterpret_cast<void*>(addr_ + sizeof(InlineHeader) + capacity_);
 }
 
 size_t SharedMemory::GetSize() const {
   if (size_ != kInlinedSize) {
     return size_;
   }
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto* header = reinterpret_cast<InlineHeader*>(addr_);
   return header->size;
 }
@@ -188,6 +192,7 @@ void SharedMemory::SetSize(size_t size) {
     size_ = size;
     return;
   }
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto* header = reinterpret_cast<InlineHeader*>(addr_);
   header->size = size;
 }

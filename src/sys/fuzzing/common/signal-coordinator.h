@@ -5,6 +5,7 @@
 #ifndef SRC_SYS_FUZZING_COMMON_SIGNAL_COORDINATOR_H_
 #define SRC_SYS_FUZZING_COMMON_SIGNAL_COORDINATOR_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/types.h>
 
@@ -48,15 +49,14 @@ class SignalCoordinator final {
   // This will be called when a the other end of the event pair sends a Zircon user signal to this
   // end. If this method returns false, the wait loop will exit. When the wait loop exits for any
   // reason, this method will be called one final time with |ZX_EVENTPAIR_PEER_CLOSED|.
+  using SignalHandler = fit::function<bool(zx_signals_t)>;
 
   // Creates an event pair and returns one end via |out|. If this object was previously created or
   // linked, it is first reset. See the above note on |on_signal|.
-  template <typename SignalHandler>
-  void Create(zx::eventpair* out, SignalHandler on_signal);
+  zx::eventpair Create(SignalHandler on_signal);
 
   // Takes one end of an event pair and starts a thread to listen for signals on it. If this object
   // was previously created or linked, it is first reset. See the above note on |on_signal|.
-  template <typename SignalHandler>
   void Pair(zx::eventpair paired, SignalHandler on_signal);
 
   // Send one or more Zircon user signals to the other end of the eventpair. Returns true if the
@@ -71,47 +71,15 @@ class SignalCoordinator final {
   void Reset();
 
  private:
-  void CreateImpl(zx::eventpair* out);
-  void PairImpl(zx::eventpair paired);
-
-  // Returns `ZX_EVENTPAIR_PEER_CLOSED` if disconnected, or blocks until a signal is received and
-  // returns it.
-  zx_signals_t WaitOne();
-
-  template <typename SignalHandler>
-  void WaitLoop(SignalHandler on_signal);
+  // Waits to receive signals and dispatches them to the previously provided |SignalHandler|.
+  void WaitLoop();
 
   zx::eventpair paired_;
   std::thread wait_loop_;
+  SignalHandler on_signal_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(SignalCoordinator);
 };
-
-// Templated method implementations.
-
-template <typename SignalHandler>
-void SignalCoordinator::Create(zx::eventpair* out, SignalHandler on_signal) {
-  CreateImpl(out);
-  WaitLoop(on_signal);
-}
-
-template <typename SignalHandler>
-void SignalCoordinator::Pair(zx::eventpair paired, SignalHandler on_signal) {
-  PairImpl(std::move(paired));
-  WaitLoop(on_signal);
-}
-
-template <typename SignalHandler>
-void SignalCoordinator::WaitLoop(SignalHandler on_signal) {
-  wait_loop_ = std::thread([this, on_signal]() {
-    zx_signals_t observed;
-    do {
-      observed = WaitOne();
-    } while (observed != ZX_EVENTPAIR_PEER_CLOSED && on_signal(observed));
-    paired_.reset();
-    on_signal(ZX_EVENTPAIR_PEER_CLOSED);
-  });
-}
 
 }  // namespace fuzzing
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "shared-memory.h"
+#include "src/sys/fuzzing/common/shared-memory.h"
 
 #include <zircon/errors.h>
 
 #include <gmock/gmock.h>
 
-#include "test-utils.h"
+#include "src/sys/fuzzing/common/test-utils.h"
 
 namespace fuzzing {
 namespace {
@@ -56,19 +56,20 @@ TEST(SharedMemoryTest, Share) {
 }
 
 TEST(SharedMemoryTest, Link) {
-  Buffer buffer;
   SharedMemory shmem;
 
-  buffer.size = kCapacity;
-  EXPECT_EQ(zx::vmo::create(buffer.size, 0, &buffer.vmo), ZX_OK);
-  shmem.Link(std::move(buffer));
+  Buffer buffer1;
+  buffer1.size = kCapacity;
+  EXPECT_EQ(zx::vmo::create(buffer1.size, 0, &buffer1.vmo), ZX_OK);
+  shmem.Link(std::move(buffer1));
   EXPECT_TRUE(shmem.is_mapped());
   EXPECT_EQ(shmem.capacity(), kCapacity);
 
   // Can remap.
-  buffer.size = kCapacity * 2;
-  EXPECT_EQ(zx::vmo::create(buffer.size, 0, &buffer.vmo), ZX_OK);
-  shmem.Link(std::move(buffer));
+  Buffer buffer2;
+  buffer2.size = kCapacity * 2;
+  EXPECT_EQ(zx::vmo::create(buffer2.size, 0, &buffer2.vmo), ZX_OK);
+  shmem.Link(std::move(buffer2));
   EXPECT_TRUE(shmem.is_mapped());
   EXPECT_EQ(shmem.capacity(), kCapacity * 2);
 }
@@ -159,9 +160,9 @@ TEST(SharedMemoryTest, Update) {
   EXPECT_THAT(actual, Eq(expected));
 
   //  Change source data, but don't update. Uses |cksum| to verify |expected| did in fact change.
-  auto cksum = std::accumulate(expected.begin(), expected.end(), 0, std::bit_xor<uint8_t>());
+  auto cksum = std::accumulate(expected.begin(), expected.end(), 0, std::bit_xor<>());
   PickArray(expected.data(), expected.size());
-  EXPECT_NE(cksum, std::accumulate(expected.begin(), expected.end(), 0, std::bit_xor<uint8_t>()));
+  EXPECT_NE(cksum, std::accumulate(expected.begin(), expected.end(), 0, std::bit_xor<>()));
   actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
   EXPECT_THAT(actual, Ne(expected));
 

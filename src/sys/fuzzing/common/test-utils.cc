@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test-utils.h"
+#include "src/sys/fuzzing/common/test-utils.h"
 
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
