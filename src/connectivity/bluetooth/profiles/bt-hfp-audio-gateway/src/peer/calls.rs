@@ -40,6 +40,8 @@ mod call_list;
 /// Defines commonly used types when interacting with a call.
 pub mod types;
 
+mod pending;
+
 /// The index associated with a call, that is guaranteed to be unique for the lifetime of the call,
 /// but will be recycled after the call is released.
 pub type CallIdx = usize;
@@ -116,6 +118,22 @@ impl Call {
     }
 }
 
+/// Return the `fn` that should be used to request that the Call Manager put a call into `state`.
+///
+/// `state` must be a state that is valid to request of the Call Manager, `OngoingActive`,
+/// `OngoingHeld`, `Terminated`, or `TransferredToAg`.
+fn call_state_to_request(
+    state: CallState,
+) -> Result<Box<dyn FnOnce(&CallProxy) -> Result<(), fidl::Error>>, anyhow::Error> {
+    Ok(match state {
+        CallState::OngoingActive => Box::new(CallProxy::request_active),
+        CallState::OngoingHeld => Box::new(CallProxy::request_hold),
+        CallState::Terminated => Box::new(CallProxy::request_terminate),
+        CallState::TransferredToAg => Box::new(CallProxy::request_transfer_audio),
+        _ => anyhow::bail!("{:?} is not a valid state to request of the Call Manager", state),
+    })
+}
+
 /// A stream of updates to the state of calls. Each update contains the `Number` and the
 /// `CallState`. When the channel for a given call is closed, an epitaph is returned with the
 /// `Number`.
@@ -163,6 +181,9 @@ pub(crate) struct Calls {
     current_calls: CallList<CallEntry>,
     /// A Stream of all updates to the state of ongoing calls.
     call_updates: CallStateUpdates,
+    /// Tracks groups of pending call state changes that have been requested
+    /// by the HF but have not been confirmed by the Call Manager.
+    pending: pending::CallChanges,
     /// The last set of indicator values returned from Polling Calls as a Stream.
     reported_indicators: CallIndicators,
     /// The Calls Stream terminated state.
@@ -177,13 +198,13 @@ impl Calls {
             new_calls,
             current_calls: CallList::default(),
             call_updates: CallStateUpdates::empty(),
+            pending: Default::default(),
             reported_indicators: CallIndicators::default(),
             terminated: false,
         }
     }
 
-    /// Insert a new call.
-    /// Returns the index of the call inserted.
+    /// Insert a new call. Returns the index of the call inserted.
     fn handle_new_call(&mut self, call: NextCall) -> Result<CallIdx, Error> {
         let call: CallEntry = call.try_into()?;
         let proxy = call.proxy.clone();
@@ -192,6 +213,7 @@ impl Calls {
         if self.call_updates.insert(index, call_state.tagged(index).with_epitaph(index)).is_some() {
             warn!("Replaced call at {} with a new call?", index)
         }
+        self.pending.should_report = true;
         self.terminated = false;
         Ok(index)
     }
@@ -205,26 +227,46 @@ impl Calls {
 
     /// Run `f`, passing the CallProxy associated with the given `number` into `f` and removing
     /// the CallProxy from the map if an error is returned by running `f`.
+    ///
+    /// Successful call requests are recorded as pending. If `txn` is Some, they are recorded
+    /// to that Transaction, otherwise they are recorded directly to a new Transaction..
+    ///
+    /// Panics: Invalid call `state` passed to `send_call_state` will result in a panic.
     fn send_call_request(
         &mut self,
         index: CallIdx,
-        f: impl FnOnce(&CallProxy) -> Result<(), fidl::Error>,
+        state: CallState,
+        txn: Option<&mut pending::Transaction>,
     ) -> Result<(), CallError> {
         let call = self.current_calls.get(index).ok_or(CallError::UnknownIndexError(index))?;
-        let result = f(&call.proxy);
-        if let Err(e) = result {
-            if !e.is_closed() {
-                warn!("Error making request on Call channel for call {:?}: {}", index, e);
+        let request = call_state_to_request(state).expect("Invalid call state request");
+
+        match (request)(&call.proxy) {
+            Ok(()) => {
+                // Record the call as "pending" if the request to the Call Manager succeeds.
+                match txn {
+                    Some(txn) => txn.pending_call(index, state),
+                    None => self.pending.pending_call(index, state),
+                }
             }
-            self.remove_call(index);
+            Err(e) => {
+                if !e.is_closed() {
+                    warn!("Error making request on Call channel for call {:?}: {}", index, e);
+                }
+                // Call channel is unreachable, so we expect to record a terminated state.
+                self.pending.pending_call(index, CallState::Terminated);
+                self.remove_call(index);
+            }
         }
+
         Ok(())
     }
 
     /// Send a request to the call manager to place the call on hold.
     #[cfg(test)]
     fn request_hold(&mut self, index: CallIdx) -> Result<(), CallError> {
-        self.send_call_request(index, CallProxy::request_hold)
+        let desired_state = CallState::OngoingHeld;
+        self.send_call_request(index, desired_state, None)
     }
 
     /// Send a request to the call manager to make the call active.
@@ -236,8 +278,9 @@ impl Calls {
         index: CallIdx,
         terminate_others: bool,
     ) -> Result<(), CallError> {
-        let action =
-            if terminate_others { CallProxy::request_terminate } else { CallProxy::request_hold };
+        let desired_state = CallState::OngoingActive;
+        let desired_others =
+            if terminate_others { CallState::Terminated } else { CallState::OngoingHeld };
 
         // Collect active_calls into a Vec to avoid double borrowing self.
         let active_calls: Vec<_> = self
@@ -246,23 +289,30 @@ impl Calls {
             .filter_map(|(i, call)| (i != index && call.is_active()).then(|| i))
             .collect();
 
+        let mut txn = pending::Transaction::default();
+
         for i in active_calls {
             // Failures are ignored.
-            let _ = self.send_call_request(i, action);
+            let _ = self.send_call_request(i, desired_others, Some(&mut txn));
         }
-        self.send_call_request(index, CallProxy::request_active)
+
+        self.send_call_request(index, desired_state, Some(&mut txn))?;
+        self.pending.pending_txn(txn);
+        Ok(())
     }
 
     /// Send a request to the call manager to terminate the call.
     pub fn request_terminate(&mut self, index: CallIdx) -> Result<(), CallError> {
-        self.send_call_request(index, CallProxy::request_terminate)
+        let desired_state = CallState::Terminated;
+        self.send_call_request(index, desired_state, None)
     }
 
     /// Send a request to the call manager to transfer the audio of the call from the
     /// headset to the fuchsia device.
     #[cfg(test)]
     fn request_transfer_audio(&mut self, index: CallIdx) -> Result<(), CallError> {
-        self.send_call_request(index, CallProxy::request_transfer_audio)
+        let desired_state = CallState::TransferredToAg;
+        self.send_call_request(index, desired_state, None)
     }
 
     /// Send a dtmf code to the call manager for active call,
@@ -301,7 +351,10 @@ impl Calls {
     }
 
     /// Remove all references to the call assigned to `index`.
+    /// Removing a call signals that it has been terminated by the Call Manager
+    /// so a CallState::Terminated is recorded to pending calls.
     fn remove_call(&mut self, index: CallIdx) {
+        self.pending.record(index, CallState::Terminated);
         drop(self.call_updates.remove(&index));
         drop(self.current_calls.remove(index));
     }
@@ -489,6 +542,7 @@ impl Calls {
                 Poll::Ready(Some(item)) => match item {
                     StreamItem::Item((index, Ok(state))) => {
                         if let Some(call) = self.current_calls.get_mut(index) {
+                            self.pending.record(index, state);
                             call.set_state(state);
                         } else {
                             self.remove_call(index);
@@ -525,18 +579,19 @@ impl Stream for Calls {
         self.poll_and_consume_new_calls(cx);
         self.poll_and_consume_call_updates(cx);
 
-        let previous = self.reported_indicators;
-        self.reported_indicators = self.indicators();
+        if self.pending.report_now() {
+            let previous = self.reported_indicators;
+            self.reported_indicators = self.indicators();
 
-        // Return a list of all the indicators that have changed as a result of the
-        // new call state.
-        let changes = self.reported_indicators.difference(previous);
+            // Return a list of all the indicators that have changed as a result of the
+            // new call state.
+            let changes = self.reported_indicators.difference(previous);
 
-        if !changes.is_empty() {
-            Poll::Ready(Some(changes))
-        } else {
-            Poll::Pending
+            if !changes.is_empty() {
+                return Poll::Ready(Some(changes));
+            }
         }
+        Poll::Pending
     }
 }
 
@@ -664,7 +719,13 @@ mod tests {
         // Call is no longer ringing after call state has changed
         assert!(!calls.should_ring());
 
-        let _call2_stream = new_call(&mut exec, &mut peer_handler, "2", CallState::IncomingRinging);
+        let _call2_stream = new_call(
+            &mut exec,
+            &mut peer_handler,
+            "2",
+            CallState::IncomingRinging,
+            CallDirection::MobileTerminated,
+        );
         poll_calls_until_pending(&mut exec, &mut calls);
 
         // The calls state should not be ringing despite an IncomingRinging call because there
@@ -758,18 +819,6 @@ mod tests {
         assert!(call.is_none(), "Call must not exist in list of calls");
     }
 
-    fn direction_from_state(state: CallState) -> CallDirection {
-        match state {
-            CallState::IncomingRinging | CallState::IncomingWaiting => {
-                CallDirection::MobileTerminated
-            }
-            CallState::OutgoingDialing | CallState::OutgoingAlerting => {
-                CallDirection::MobileOriginated
-            }
-            _ => panic!("Cannot derive a CallDirection from {:?}", state),
-        }
-    }
-
     /// Make a new call, manually driving async execution.
     #[track_caller]
     fn new_call(
@@ -777,6 +826,7 @@ mod tests {
         stream: &mut PeerHandlerRequestStream,
         num: &str,
         state: CallState,
+        direction: CallDirection,
     ) -> CallRequestStream {
         // Get WatchNextCall request.
         let responder = match exec.run_until_stalled(&mut stream.next()) {
@@ -789,26 +839,35 @@ mod tests {
             call: Some(client),
             remote: Some(num.to_string()),
             state: Some(state),
-            direction: Some(direction_from_state(state)),
+            direction: Some(direction),
             ..NextCall::EMPTY
         };
         responder.send(next_call).expect("response to succeed");
         call
     }
 
+    /// Expects a WatchState call to be the next pending item on `stream`.
+    /// Returns the responder or panics.
+    #[track_caller]
+    fn watch_state_responder(
+        exec: &mut fasync::TestExecutor,
+        stream: &mut CallRequestStream,
+    ) -> CallWatchStateResponder {
+        match exec.run_until_stalled(&mut stream.next()) {
+            Poll::Ready(Some(Ok(CallRequest::WatchState { responder, .. }))) => responder,
+            result => panic!("Unexpected result: {:?}", result),
+        }
+    }
+
     /// Update call state, manually driving async execution.
-    /// Expects a watchstate call to be the next pending item on `stream`.
+    /// Expects a WatchState call to be the next pending item on `stream`.
     #[track_caller]
     fn update_call(
         exec: &mut fasync::TestExecutor,
         stream: &mut CallRequestStream,
         state: CallState,
     ) {
-        // Get WatchState request for call
-        let responder = match exec.run_until_stalled(&mut stream.next()) {
-            Poll::Ready(Some(Ok(CallRequest::WatchState { responder, .. }))) => responder,
-            result => panic!("Unexpected result: {:?}", result),
-        };
+        let responder = watch_state_responder(exec, stream);
         // Respond with a call state.
         responder.send(state).expect("response to succeed");
     }
@@ -850,8 +909,10 @@ mod tests {
     /// Assert the Calls stream is pending, manually driving async execution.
     #[track_caller]
     fn assert_calls_pending(exec: &mut fasync::TestExecutor, calls: &mut Calls) {
-        let result = exec.run_until_stalled(&mut calls.next());
-        assert!(result.is_pending());
+        match exec.run_until_stalled(&mut calls.next()) {
+            Poll::Pending => {}
+            x => panic!("Expected pending, got {:?}", x),
+        }
     }
 
     /// Return the next item from the Calls stream, manually driving async execution.
@@ -893,8 +954,13 @@ mod tests {
         assert!(!calls.is_call_active());
 
         poll_calls_until_pending(&mut exec, &mut calls);
-        let mut call_stream =
-            new_call(&mut exec, &mut peer_stream, "1", CallState::IncomingRinging);
+        let mut call_stream = new_call(
+            &mut exec,
+            &mut peer_stream,
+            "1",
+            CallState::IncomingRinging,
+            CallDirection::MobileTerminated,
+        );
         poll_calls_until_pending(&mut exec, &mut calls);
 
         // When we have an ringing call, we are still not active yet.
@@ -934,7 +1000,13 @@ mod tests {
         // Stream doesn't have an item ready.
         assert_calls_pending(&mut exec, &mut calls);
 
-        let mut call_2 = new_call(&mut exec, &mut handler_stream, "2", CallState::OutgoingAlerting);
+        let mut call_2 = new_call(
+            &mut exec,
+            &mut handler_stream,
+            "2",
+            CallState::OutgoingAlerting,
+            CallDirection::MobileOriginated,
+        );
 
         // There are no new calls in this test so close handler stream.
         drop(handler_stream);
@@ -993,6 +1065,82 @@ mod tests {
         let result = exec.run_until_stalled(&mut calls.next());
         assert_matches!(result, Poll::Ready(None));
         assert!(calls.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn partial_call_updates_dont_report() {
+        // Test the Stream for items when a single call is tracked, then a second call is added,
+        // when the states of those calls are modified, and finally, when both calls have been
+        // removed from the stream.
+
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let (mut calls, mut handler_stream, mut call_1, idx_1, _num_1) = setup_ongoing_call();
+
+        let item = assert_calls_indicators(&mut exec, &mut calls);
+        let expected = CallIndicatorsUpdates {
+            callsetup: Some(types::CallSetup::Incoming),
+            ..CallIndicatorsUpdates::default()
+        };
+        assert_eq!(item, expected);
+
+        // Stream doesn't have an item ready.
+        assert_calls_pending(&mut exec, &mut calls);
+
+        let mut call_2 = new_call(
+            &mut exec,
+            &mut handler_stream,
+            "2",
+            CallState::OngoingActive,
+            CallDirection::MobileTerminated,
+        );
+
+        // There are no new calls in this test so close handler stream.
+        drop(handler_stream);
+
+        // Stream has an item ready.
+        let item = assert_calls_indicators(&mut exec, &mut calls);
+        // The ready item is OutgoingAlerting even though there is also an IncomingRinging call.
+        // This is because the OutgoingAlerting call state was reported last.
+        let expected = CallIndicatorsUpdates {
+            call: Some(types::Call::Some),
+            ..CallIndicatorsUpdates::default()
+        };
+        assert_eq!(item, expected);
+
+        // Stream doesn't have an item ready.
+        assert_calls_pending(&mut exec, &mut calls);
+
+        let call_1_resp = watch_state_responder(&mut exec, &mut call_1);
+        let call_2_resp = watch_state_responder(&mut exec, &mut call_2);
+
+        // Requesting idx_1 active causes idx_2 to be placed on hold
+        calls.request_active(idx_1, false).expect("valid index");
+        assert_matches!(
+            exec.run_singlethreaded(call_1.next()),
+            Some(Ok(CallRequest::RequestActive { .. }))
+        );
+        assert_matches!(
+            exec.run_singlethreaded(call_2.next()),
+            Some(Ok(CallRequest::RequestHold { .. }))
+        );
+
+        call_1_resp.send(CallState::OngoingActive).expect("response to succeed");
+
+        // Stream doesn't have an item ready until both call_1 and call_2 have been updated.
+        assert_calls_pending(&mut exec, &mut calls);
+
+        call_2_resp.send(CallState::OngoingHeld).expect("response to succeed");
+
+        // Stream has an item ready now that both calls have been updated.
+        let item = assert_calls_indicators(&mut exec, &mut calls);
+        // Only indicators that have changed are returned.
+        let expected = CallIndicatorsUpdates {
+            callsetup: Some(types::CallSetup::None),
+            callheld: Some(types::CallHeld::HeldAndActive),
+            ..CallIndicatorsUpdates::default()
+        };
+        assert_eq!(item, expected);
     }
 
     #[fuchsia::test]

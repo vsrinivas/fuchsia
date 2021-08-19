@@ -66,6 +66,7 @@ rustc_binary("bin") {
     "src/peer/calls.rs",
     "src/peer/calls/call_list.rs",
     "src/peer/calls/number.rs",
+    "src/peer/calls/pending.rs",
     "src/peer/calls/types.rs",
     "src/peer/gain_control.rs",
     "src/peer/indicators.rs",
