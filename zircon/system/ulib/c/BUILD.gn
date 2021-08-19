@@ -206,16 +206,5 @@ if (zircon_toolchain == false) {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":libc-unittests-pkg",
-    "test",
-  ]
-}
-
-test("libc-unittests") {
-  deps = [ ":unittests" ]
-}
-
-fuchsia_unittest_package("libc-unittests-pkg") {
-  deps = [ ":libc-unittests" ]
+  deps = [ "test" ]
 }

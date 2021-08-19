@@ -5,6 +5,12 @@
 import("//build/components.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
+import("//build/testing/environments.gni")
+
+# We want to run these tests on every kind of hardware as well as emulators.
+libc_test_specs = {
+  environments = all_fuchsia_envs
+}
 
 default_stack_size_cases = [
   {
@@ -162,6 +168,7 @@ group("test") {
   testonly = true
   deps = [
     ":atexit-test-pkg",
+    ":libc-unittests-pkg",
     ":posix-clocks-test-pkg",
     ":pthread-detach-idempotent-test-pkg",
     "noop:tests",
@@ -173,6 +180,7 @@ group("test") {
 
 fuchsia_unittest_package("atexit-test-pkg") {
   deps = [ ":atexit-test" ]
+  test_specs = libc_test_specs
 }
 
 # TODO(gboone): Convert to fuchsia_unittest_package() and move to core.
@@ -183,8 +191,19 @@ bootfs_test("cdebugdata-test-bootfs-test") {
 
 fuchsia_unittest_package("posix-clocks-test-pkg") {
   deps = [ ":posix-clocks-test" ]
+  test_specs = libc_test_specs
 }
 
 fuchsia_unittest_package("pthread-detach-idempotent-test-pkg") {
   deps = [ ":pthread-detach-idempotent-test" ]
+  test_specs = libc_test_specs
+}
+
+test("libc-unittests") {
+  deps = [ "..:unittests" ]
+}
+
+fuchsia_unittest_package("libc-unittests-pkg") {
+  deps = [ ":libc-unittests" ]
+  test_specs = libc_test_specs
 }

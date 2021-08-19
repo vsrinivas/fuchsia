@@ -14,7 +14,8 @@ declare_args() {
   basic_env_names = [ "emu" ]
 }
 
-_all_named_envs = []
+_all_named_fuchsia_envs = []
+_all_named_host_envs = []
 
 ### Individual test environments
 # Please keep alphabetized.
@@ -24,7 +25,7 @@ aemu_env = {
     device_type = "AEMU"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "aemu"
     env = aemu_env
@@ -36,7 +37,7 @@ astro_env = {
     device_type = "Astro"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "astro"
     env = astro_env
@@ -49,7 +50,7 @@ linux_env = {
     cpu = current_cpu
   }
 }
-_all_named_envs += [
+_all_named_host_envs += [
   {
     name = "linux"
     env = linux_env
@@ -61,7 +62,7 @@ luis_env = {
     device_type = "Luis"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "luis"
     env = luis_env
@@ -78,7 +79,7 @@ mac_env = {
   # the "mac" tag in that case to filter out other tests.
   tags = [ "mac" ]
 }
-_all_named_envs += [
+_all_named_host_envs += [
   {
     name = "mac"
     env = mac_env
@@ -90,7 +91,7 @@ nelson_env = {
     device_type = "Nelson"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "nelson"
     env = nelson_env
@@ -102,7 +103,7 @@ nuc_env = {
     device_type = "Intel NUC Kit NUC7i5DNHE"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "nuc"
     env = nuc_env
@@ -114,7 +115,7 @@ qemu_env = {
     device_type = "QEMU"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "qemu"
     env = qemu_env
@@ -126,7 +127,7 @@ sherlock_env = {
     device_type = "Sherlock"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "sherlock"
     env = sherlock_env
@@ -138,7 +139,7 @@ vim3_env = {
     device_type = "Vim3"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "vim3"
     env = vim3_env
@@ -150,7 +151,7 @@ gce_env = {
     device_type = "GCE"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "gce"
     env = gce_env
@@ -162,7 +163,7 @@ atlas_env = {
     device_type = "Atlas"
   }
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "atlas"
     env = atlas_env
@@ -186,7 +187,7 @@ if (target_cpu == "x64") {
   }
   emu_env = aemu_env
 }
-_all_named_envs += [
+_all_named_fuchsia_envs += [
   {
     name = "emu"
     env = emu_env
@@ -216,9 +217,14 @@ if (include_tests_that_fail_on_nuc_asan) {
   nuc_env_fails_on_asan += [ nuc_env ]
 }
 
+all_fuchsia_envs = []
+foreach(named_env, _all_named_fuchsia_envs) {
+  all_fuchsia_envs += [ named_env.env ]
+}
+
 basic_envs = []
 foreach(name, basic_env_names) {
-  foreach(named_env, _all_named_envs) {
+  foreach(named_env, _all_named_fuchsia_envs + _all_named_host_envs) {
     if (name == named_env.name) {
       basic_envs += [ named_env.env ]
     }
