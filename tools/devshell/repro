@@ -7,7 +7,7 @@
 #### EXPERIMENTAL
 ### [EXPERIMENTAL] locally replicate the result of infra builds and tests
 ##
-## This command attempts to replicate the result of an infra bot by reading
+## This command attempts to replicate the result of an infra builder by reading
 ## build information and translating to corresponding local 'fx' commands.
 ##
 ## usage: fx repro [-h|--help] <BUILD_ID>|<BUILD_URL>|<FINT_PARAMS_FILE>
@@ -100,7 +100,7 @@ function repro {
   if [[ ! -f "${fint_params_file}" ]]; then
     fx-error "Cannot find fint parameters for this build: ${fint_params_file}"
     fx-error "If this is an internal builder, make sure your Fuchsia source tree has the internal"
-    fx-error "integration repository as described in https://fuchsia.dev/internal/intree/get-started/smart-display/get-build-source"
+    fx-error "integration repository as described in https://fuchsia.dev/internal/intree/development/get-the-source-code"
     return 1
   fi
 
