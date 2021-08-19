@@ -350,7 +350,11 @@ top_source="$(realpath --relative-to="$project_root" "$top_source")"
 # Locally generate a depfile only and read it as list of files to upload.
 # These inputs appear relative to the build/output directory, but need to be
 # relative to the $project_root for rewrapper.
-"${dep_only_command[@]}"
+"${dep_only_command[@]}" || {
+  status=$?
+  echo "Depfile generation failed.  Aborting."
+  exit "$status"
+}
 mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
   xargs -n 1 realpath --relative-to="$project_root")
 # Done with temporary depfile, remove it.
