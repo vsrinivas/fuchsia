@@ -44,6 +44,30 @@ bool use_legacy_shutdown2_fidl() {
   return legacy;
 }
 
+// TODO(https://fxbug.dev/82723): Remove after ABI transition.
+bool use_legacy_base_socket_methods() {
+  static std::once_flag once;
+  static bool legacy;
+
+  std::call_once(once, [&]() {
+    legacy = []() {
+      constexpr char kLegacyBaseSocketMethods[] = "LEGACY_BASE_SOCKET_METHODS";
+      const char* const legacy_env = getenv(kLegacyBaseSocketMethods);
+      return legacy_env && strcmp(legacy_env, "1") == 0;
+    }();
+  });
+  return legacy;
+}
+
+#define MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(client, method, args, handler) \
+  [&]() {                                                                               \
+    if (use_legacy_base_socket_methods()) {                                             \
+      return handler((client).BaseSocket##method args);                                 \
+    } else {                                                                            \
+      return handler((client).method args);                                             \
+    }                                                                                   \
+  }()
+
 // A helper structure to keep a socket address and the variants allocations in stack.
 struct SocketAddress {
   fnet::wire::SocketAddress address;
@@ -179,7 +203,7 @@ class GetSockOptProcessor {
   GetSockOptProcessor(void* optval, socklen_t* optlen) : optval_(optval), optlen_(optlen) {}
 
   template <typename T, typename F>
-  SockOptResult Process(T response, F getter) {
+  SockOptResult Process(T&& response, F getter) {
     if (response.status() != ZX_OK) {
       return SockOptResult::Zx(response.status());
     }
@@ -420,6 +444,16 @@ class SetSockOptProcessor {
     return SockOptResult::FromFidlResponse(f(std::move(v)));
   }
 
+  template <typename T, typename F>
+  SockOptResult ProcessAndExpectSockOptResult(F f) {
+    T v;
+    int16_t result = Get(&v);
+    if (result) {
+      return SockOptResult::Errno(result);
+    }
+    return f(std::move(v));
+  }
+
  private:
   const void* const optval_;
   socklen_t const optlen_;
@@ -602,35 +636,39 @@ struct BaseSocket {
       return status;
     }
 
-    auto response = client().Bind(fidl_addr.address);
-    status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
+    return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+        client(), Bind, (fidl_addr.address), [&](auto response) {
+          status = response.status();
+          if (status != ZX_OK) {
+            return status;
+          }
+          auto const& result = response.Unwrap()->result;
+          if (result.is_err()) {
+            *out_code = static_cast<int16_t>(result.err());
+            return ZX_OK;
+          }
+          *out_code = 0;
+          return ZX_OK;
+        });
   }
 
   zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     // If address is AF_UNSPEC we should call disconnect.
     if (addr->sa_family == AF_UNSPEC) {
-      auto response = client().Disconnect();
-      zx_status_t status = response.status();
-      if (status != ZX_OK) {
-        return status;
-      }
-      const auto& result = response.Unwrap()->result;
-      if (result.is_err()) {
-        *out_code = static_cast<int16_t>(result.err());
-      } else {
-        *out_code = 0;
-      }
-      return ZX_OK;
+      return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+          client(), Disconnect, (), [&](auto response) {
+            zx_status_t status = response.status();
+            if (status != ZX_OK) {
+              return status;
+            }
+            const auto& result = response.Unwrap()->result;
+            if (result.is_err()) {
+              *out_code = static_cast<int16_t>(result.err());
+            } else {
+              *out_code = 0;
+            }
+            return ZX_OK;
+          });
     }
 
     SocketAddress fidl_addr;
@@ -639,22 +677,24 @@ struct BaseSocket {
       return status;
     }
 
-    auto response = client().Connect(fidl_addr.address);
-    status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
+    return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+        client(), Connect, (fidl_addr.address), [&](auto response) {
+          status = response.status();
+          if (status != ZX_OK) {
+            return status;
+          }
+          auto const& result = response.Unwrap()->result;
+          if (result.is_err()) {
+            *out_code = static_cast<int16_t>(result.err());
+            return ZX_OK;
+          }
+          *out_code = 0;
+          return ZX_OK;
+        });
   }
 
   template <typename R>
-  zx_status_t getname(R response, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+  zx_status_t getname(R&& response, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -675,11 +715,15 @@ struct BaseSocket {
   }
 
   zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return getname(client().GetSockName(), addr, addrlen, out_code);
+    return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+        client(), GetSockName, (),
+        [&](auto response) { return getname(response, addr, addrlen, out_code); });
   }
 
   zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return getname(client().GetPeerName(), addr, addrlen, out_code);
+    return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+        client(), GetPeerName, (),
+        [&](auto response) { return getname(response, addr, addrlen, out_code); });
   }
 
   SockOptResult getsockopt_fidl(int level, int optname, void* optval, socklen_t* optlen) {
@@ -801,83 +845,122 @@ struct BaseSocket {
       case SOL_IP:
         switch (optname) {
           case IP_TTL:
-            return proc.Process(client().GetIpTtl(), [](const auto& response) {
-              return static_cast<int32_t>(response.value);
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpTtl, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return static_cast<int32_t>(response.value);
+                  });
+                });
           case IP_MULTICAST_TTL:
-            return proc.Process(client().GetIpMulticastTtl(), [](const auto& response) {
-              return PartialCopy{
-                  .value = response.value,
-                  .allow_char = true,
-              };
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpMulticastTtl, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return PartialCopy{
+                        .value = response.value,
+                        .allow_char = true,
+                    };
+                  });
+                });
           case IP_MULTICAST_IF:
-            return proc.Process(client().GetIpMulticastInterface(),
-                                [](const auto& response) { return response.value; });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpMulticastInterface, (), [&](auto response) {
+                  return proc.Process(response,
+                                      [](const auto& response) { return response.value; });
+                });
           case IP_MULTICAST_LOOP:
-            return proc.Process(client().GetIpMulticastLoopback(), [](const auto& response) {
-              return PartialCopy{
-                  .value = response.value,
-                  .allow_char = true,
-              };
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpMulticastLoopback, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return PartialCopy{
+                        .value = response.value,
+                        .allow_char = true,
+                    };
+                  });
+                });
           case IP_TOS:
-            return proc.Process(client().GetIpTypeOfService(), [](const auto& response) {
-              return PartialCopy{
-                  .value = response.value,
-                  .allow_char = true,
-              };
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpTypeOfService, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return PartialCopy{
+                        .value = response.value,
+                        .allow_char = true,
+                    };
+                  });
+                });
           case IP_RECVTOS:
-            return proc.Process(client().GetIpReceiveTypeOfService(), [](const auto& response) {
-              return PartialCopy{
-                  .value = response.value,
-                  .allow_char = true,
-              };
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpReceiveTypeOfService, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return PartialCopy{
+                        .value = response.value,
+                        .allow_char = true,
+                    };
+                  });
+                });
           case IP_PKTINFO:
-            return proc.Process(client().GetIpPacketInfo(),
-                                [](const auto& response) { return response.value; });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpPacketInfo, (), [&](auto response) {
+                  return proc.Process(response,
+                                      [](const auto& response) { return response.value; });
+                });
           default:
             return SockOptResult::Errno(ENOPROTOOPT);
         }
       case SOL_IPV6:
         switch (optname) {
           case IPV6_V6ONLY:
-            return proc.Process(client().GetIpv6Only(),
-                                [](const auto& response) { return response.value; });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpv6Only, (), [&](auto response) {
+                  return proc.Process(response,
+                                      [](const auto& response) { return response.value; });
+                });
           case IPV6_TCLASS:
-            return proc.Process(client().GetIpv6TrafficClass(), [](const auto& response) {
-              return PartialCopy{
-                  .value = response.value,
-                  .allow_char = false,
-              };
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpv6TrafficClass, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return PartialCopy{
+                        .value = response.value,
+                        .allow_char = false,
+                    };
+                  });
+                });
           case IPV6_MULTICAST_IF:
-            return proc.Process(client().GetIpv6MulticastInterface(), [](const auto& response) {
-              return static_cast<uint32_t>(response.value);
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpv6MulticastInterface, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return static_cast<uint32_t>(response.value);
+                  });
+                });
           case IPV6_MULTICAST_HOPS:
-            return proc.Process(client().GetIpv6MulticastHops(), [](const auto& response) {
-              return PartialCopy{
-                  .value = response.value,
-                  .allow_char = false,
-              };
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpv6MulticastHops, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return PartialCopy{
+                        .value = response.value,
+                        .allow_char = false,
+                    };
+                  });
+                });
           case IPV6_MULTICAST_LOOP:
-            return proc.Process(client().GetIpv6MulticastLoopback(), [](const auto& response) {
-              return PartialCopy{
-                  .value = response.value,
-                  .allow_char = false,
-              };
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpv6MulticastLoopback, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return PartialCopy{
+                        .value = response.value,
+                        .allow_char = false,
+                    };
+                  });
+                });
           case IPV6_RECVTCLASS:
-            return proc.Process(client().GetIpv6ReceiveTrafficClass(), [](const auto& response) {
-              return PartialCopy{
-                  .value = response.value,
-                  .allow_char = false,
-              };
-            });
+            return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                client(), GetIpv6ReceiveTrafficClass, (), [&](auto response) {
+                  return proc.Process(response, [](const auto& response) {
+                    return PartialCopy{
+                        .value = response.value,
+                        .allow_char = false,
+                    };
+                  });
+                });
           default:
             return SockOptResult::Errno(ENOPROTOOPT);
         }
@@ -996,55 +1079,74 @@ struct BaseSocket {
       case SOL_IP:
         switch (optname) {
           case IP_MULTICAST_TTL:
-            return proc.Process<OptionalUint8CharAllowed>([this](OptionalUint8CharAllowed value) {
-              return client().SetIpMulticastTtl(value.inner.opt);
-            });
+            return proc.ProcessAndExpectSockOptResult<OptionalUint8CharAllowed>(
+                [this](OptionalUint8CharAllowed value) {
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), SetIpMulticastTtl, (value.inner.opt),
+                      SockOptResult::FromFidlResponse);
+                });
           case IP_ADD_MEMBERSHIP: {
-            return proc.Process<fsocket::wire::IpMulticastMembership>(
+            return proc.ProcessAndExpectSockOptResult<fsocket::wire::IpMulticastMembership>(
                 [this](fsocket::wire::IpMulticastMembership value) {
-                  return client().AddIpMembership(value);
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), AddIpMembership, (value), SockOptResult::FromFidlResponse);
                 });
           }
           case IP_DROP_MEMBERSHIP:
-            return proc.Process<fsocket::wire::IpMulticastMembership>(
+            return proc.ProcessAndExpectSockOptResult<fsocket::wire::IpMulticastMembership>(
                 [this](fsocket::wire::IpMulticastMembership value) {
-                  return client().DropIpMembership(value);
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), DropIpMembership, (value), SockOptResult::FromFidlResponse);
                 });
           case IP_MULTICAST_IF: {
             if (optlen == sizeof(struct in_addr)) {
-              return proc.Process<struct in_addr>([this](struct in_addr value) {
+              return proc.ProcessAndExpectSockOptResult<struct in_addr>([this](
+                                                                            struct in_addr value) {
                 fnet::wire::Ipv4Address addr;
                 std::copy_n(reinterpret_cast<const uint8_t*>(&value.s_addr), sizeof(value.s_addr),
                             addr.addr.begin());
-                return client().SetIpMulticastInterface(0, addr);
+                return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                    client(), SetIpMulticastInterface, (0, addr), SockOptResult::FromFidlResponse);
               });
             }
-            return proc.Process<fsocket::wire::IpMulticastMembership>(
+            return proc.ProcessAndExpectSockOptResult<fsocket::wire::IpMulticastMembership>(
                 [this](fsocket::wire::IpMulticastMembership value) {
-                  return client().SetIpMulticastInterface(value.iface, value.local_addr);
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), SetIpMulticastInterface, (value.iface, value.local_addr),
+                      SockOptResult::FromFidlResponse);
                 });
           }
           case IP_MULTICAST_LOOP:
-            return proc.Process<IntOrChar>([this](IntOrChar value) {
-              return client().SetIpMulticastLoopback(value.value != 0);
+            return proc.ProcessAndExpectSockOptResult<IntOrChar>([this](IntOrChar value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpMulticastLoopback, (value.value != 0),
+                  SockOptResult::FromFidlResponse);
             });
           case IP_TTL:
-            return proc.Process<OptionalUint8>(
-                [this](OptionalUint8 value) { return client().SetIpTtl(value.opt); });
+            return proc.ProcessAndExpectSockOptResult<OptionalUint8>([this](OptionalUint8 value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpTtl, (value.opt), SockOptResult::FromFidlResponse);
+            });
           case IP_TOS:
             if (optlen == 0) {
               return SockOptResult::Ok();
             }
-            return proc.Process<IntOrChar>([this](IntOrChar value) {
-              return client().SetIpTypeOfService(static_cast<uint8_t>(value.value));
+            return proc.ProcessAndExpectSockOptResult<IntOrChar>([this](IntOrChar value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpTypeOfService, (static_cast<uint8_t>(value.value)),
+                  SockOptResult::FromFidlResponse);
             });
           case IP_RECVTOS:
-            return proc.Process<IntOrChar>([this](IntOrChar value) {
-              return client().SetIpReceiveTypeOfService(value.value != 0);
+            return proc.ProcessAndExpectSockOptResult<IntOrChar>([this](IntOrChar value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpReceiveTypeOfService, (value.value != 0),
+                  SockOptResult::FromFidlResponse);
             });
           case IP_PKTINFO:
-            return proc.Process<IntOrChar>(
-                [this](IntOrChar value) { return client().SetIpPacketInfo(value.value != 0); });
+            return proc.ProcessAndExpectSockOptResult<IntOrChar>([this](IntOrChar value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpPacketInfo, (value.value != 0), SockOptResult::FromFidlResponse);
+            });
           case MCAST_JOIN_GROUP:
             return SockOptResult::Errno(ENOTSUP);
           default:
@@ -1053,33 +1155,48 @@ struct BaseSocket {
       case SOL_IPV6:
         switch (optname) {
           case IPV6_V6ONLY:
-            return proc.Process<bool>([this](bool value) { return client().SetIpv6Only(value); });
+            return proc.ProcessAndExpectSockOptResult<bool>([this](bool value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpv6Only, (value), SockOptResult::FromFidlResponse);
+            });
           case IPV6_ADD_MEMBERSHIP:
-            return proc.Process<fsocket::wire::Ipv6MulticastMembership>(
+            return proc.ProcessAndExpectSockOptResult<fsocket::wire::Ipv6MulticastMembership>(
                 [this](fsocket::wire::Ipv6MulticastMembership value) {
-                  return client().AddIpv6Membership(value);
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), AddIpv6Membership, (value), SockOptResult::FromFidlResponse);
                 });
           case IPV6_DROP_MEMBERSHIP:
-            return proc.Process<fsocket::wire::Ipv6MulticastMembership>(
+            return proc.ProcessAndExpectSockOptResult<fsocket::wire::Ipv6MulticastMembership>(
                 [this](fsocket::wire::Ipv6MulticastMembership value) {
-                  return client().DropIpv6Membership(value);
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), DropIpv6Membership, (value), SockOptResult::FromFidlResponse);
                 });
           case IPV6_MULTICAST_IF:
-            return proc.Process<IntOrChar>([this](IntOrChar value) {
-              return client().SetIpv6MulticastInterface(value.value);
+            return proc.ProcessAndExpectSockOptResult<IntOrChar>([this](IntOrChar value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpv6MulticastInterface, (value.value),
+                  SockOptResult::FromFidlResponse);
             });
           case IPV6_MULTICAST_HOPS:
-            return proc.Process<OptionalUint8>(
-                [this](OptionalUint8 value) { return client().SetIpv6MulticastHops(value.opt); });
+            return proc.ProcessAndExpectSockOptResult<OptionalUint8>([this](OptionalUint8 value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpv6MulticastHops, (value.opt), SockOptResult::FromFidlResponse);
+            });
           case IPV6_MULTICAST_LOOP:
-            return proc.Process<bool>(
-                [this](bool value) { return client().SetIpv6MulticastLoopback(value); });
+            return proc.ProcessAndExpectSockOptResult<bool>([this](bool value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpv6MulticastLoopback, (value), SockOptResult::FromFidlResponse);
+            });
           case IPV6_TCLASS:
-            return proc.Process<OptionalUint8>(
-                [this](OptionalUint8 value) { return client().SetIpv6TrafficClass(value.opt); });
+            return proc.ProcessAndExpectSockOptResult<OptionalUint8>([this](OptionalUint8 value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpv6TrafficClass, (value.opt), SockOptResult::FromFidlResponse);
+            });
           case IPV6_RECVTCLASS:
-            return proc.Process<bool>(
-                [this](bool value) { return client().SetIpv6ReceiveTrafficClass(value); });
+            return proc.ProcessAndExpectSockOptResult<bool>([this](bool value) {
+              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                  client(), SetIpv6ReceiveTrafficClass, (value), SockOptResult::FromFidlResponse);
+            });
           default:
             return SockOptResult::Errno(ENOPROTOOPT);
         }
@@ -1166,32 +1283,36 @@ struct BaseSocket {
     }
 
     if (use_legacy_shutdown2_fidl()) {
-      auto response = client().Shutdown2(mode);
-      zx_status_t status = response.status();
-      if (status != ZX_OK) {
-        return status;
-      }
-      auto const& result = response.Unwrap()->result;
-      if (result.is_err()) {
-        *out_code = static_cast<int16_t>(result.err());
-        return ZX_OK;
-      }
-      *out_code = 0;
-      return ZX_OK;
+      return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+          client(), Shutdown2, (mode), [&](auto response) {
+            zx_status_t status = response.status();
+            if (status != ZX_OK) {
+              return status;
+            }
+            auto const& result = response.Unwrap()->result;
+            if (result.is_err()) {
+              *out_code = static_cast<int16_t>(result.err());
+              return ZX_OK;
+            }
+            *out_code = 0;
+            return ZX_OK;
+          });
     }
 
-    auto response = client().Shutdown(mode);
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
+    return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+        client(), Shutdown, (mode), [&](auto response) {
+          zx_status_t status = response.status();
+          if (status != ZX_OK) {
+            return status;
+          }
+          auto const& result = response.Unwrap()->result;
+          if (result.is_err()) {
+            *out_code = static_cast<int16_t>(result.err());
+            return ZX_OK;
+          }
+          *out_code = 0;
+          return ZX_OK;
+        });
   }
 
  private:

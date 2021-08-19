@@ -47,10 +47,10 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
   }
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override {
-    auto response = fuchsia_posix_socket::wire::BaseSocketShutdownResponse();
-    auto result = fuchsia_posix_socket::wire::BaseSocketShutdownResult::WithResponse(
-        fidl::ObjectView<fuchsia_posix_socket::wire::BaseSocketShutdownResponse>::FromExternal(
-            &response));
+    auto response = fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResponse();
+    auto result = fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResult::WithResponse(
+        fidl::ObjectView<fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResponse>::
+            FromExternal(&response));
 
     shutdown_count_++;
     completer.Reply(result);

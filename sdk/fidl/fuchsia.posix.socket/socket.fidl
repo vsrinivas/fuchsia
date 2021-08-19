@@ -17,47 +17,9 @@ type ShutdownMode = strict bits : uint16 {
     WRITE = 2;
 };
 
-/// A network socket.
-///
-/// Once a socket has been retrieved from a `Provider`, this interface is then used to further
-/// configure and use the socket. This interface is essentially POSIX. Its implementation must
-/// support Linux-specific arguments to {Get,Set}SockOpt.
-///
-/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
-///
-/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
-/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
-/// and clients that couple directly to this protocol will make those changes more difficult.
+/// A socket.
 protocol BaseSocket {
     compose fuchsia.io.Node;
-
-    /// Sets the local address used for the socket.
-    Bind(struct {
-        addr fuchsia.net.SocketAddress;
-    }) -> (struct {}) error fuchsia.posix.Errno;
-    /// Initiates a connection to a remote address.
-    Connect(struct {
-        addr fuchsia.net.SocketAddress;
-    }) -> (struct {}) error fuchsia.posix.Errno;
-    /// Clears connection information from this socket.
-    Disconnect() -> (struct {}) error fuchsia.posix.Errno;
-    /// Retrieves the local socket address.
-    GetSockName() -> (struct {
-        addr fuchsia.net.SocketAddress;
-    }) error fuchsia.posix.Errno;
-    /// Retrieves the remote socket address.
-    GetPeerName() -> (struct {
-        addr fuchsia.net.SocketAddress;
-    }) error fuchsia.posix.Errno;
-    /// Shuts down part of the socket.
-    Shutdown(struct {
-        mode ShutdownMode;
-    }) -> (struct {}) error fuchsia.posix.Errno;
-    // TODO(https://fxbug.dev/78129): Remove after ABI transition.
-    @deprecated("Use Shutdown instead")
-    Shutdown2(struct {
-        mode ShutdownMode;
-    }) -> (struct {}) error fuchsia.posix.Errno;
 
     /// Set `SOL_SOCKET` -> `SO_REUSEADDR`.
     SetReuseAddress(struct {
@@ -175,6 +137,39 @@ protocol BaseSocket {
     GetTimestamp() -> (struct {
         value bool;
     }) error fuchsia.posix.Errno;
+};
+
+/// A network socket.
+protocol BaseNetworkSocket {
+    compose BaseSocket;
+
+    /// Sets the local address used for the socket.
+    Bind(struct {
+        addr fuchsia.net.SocketAddress;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Initiates a connection to a remote address.
+    Connect(struct {
+        addr fuchsia.net.SocketAddress;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Clears connection information from this socket.
+    Disconnect() -> (struct {}) error fuchsia.posix.Errno;
+    /// Retrieves the local socket address.
+    GetSockName() -> (struct {
+        addr fuchsia.net.SocketAddress;
+    }) error fuchsia.posix.Errno;
+    /// Retrieves the remote socket address.
+    GetPeerName() -> (struct {
+        addr fuchsia.net.SocketAddress;
+    }) error fuchsia.posix.Errno;
+    /// Shuts down part of the socket.
+    Shutdown(struct {
+        mode ShutdownMode;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    // TODO(https://fxbug.dev/78129): Remove after ABI transition.
+    @deprecated("Use Shutdown instead")
+    Shutdown2(struct {
+        mode ShutdownMode;
+    }) -> (struct {}) error fuchsia.posix.Errno;
 
     /// Set `SOL_IP` -> `IP_TOS`.
     SetIpTypeOfService(struct {
@@ -323,6 +318,230 @@ protocol BaseSocket {
     GetIpv6TrafficClass() -> (struct {
         value uint8;
     }) error fuchsia.posix.Errno;
+
+    // TODO(https://fxbug.dev/82723): Remove once out-of-tree users no longer
+    // depend on the below methods.
+
+    @deprecated("Use Bind instead")
+    @selector("fuchsia.posix.socket/BaseSocket.Bind")
+    BaseSocketBind(struct {
+        addr fuchsia.net.SocketAddress;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use Connect instead")
+    @selector("fuchsia.posix.socket/BaseSocket.Connect")
+    BaseSocketConnect(struct {
+        addr fuchsia.net.SocketAddress;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use Disconnect instead")
+    @selector("fuchsia.posix.socket/BaseSocket.Disconnect")
+    BaseSocketDisconnect() -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetSockName instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetSockName")
+    BaseSocketGetSockName() -> (struct {
+        addr fuchsia.net.SocketAddress;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetPeerName instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetPeerName")
+    BaseSocketGetPeerName() -> (struct {
+        addr fuchsia.net.SocketAddress;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use Shutdown instead")
+    @selector("fuchsia.posix.socket/BaseSocket.Shutdown")
+    BaseSocketShutdown(struct {
+        mode ShutdownMode;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use Shutdown instead")
+    @selector("fuchsia.posix.socket/BaseSocket.Shutdown2")
+    BaseSocketShutdown2(struct {
+        mode ShutdownMode;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpTypeOfService instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpTypeOfService")
+    BaseSocketSetIpTypeOfService(struct {
+        value uint8;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpTypeOfService instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpTypeOfService")
+    BaseSocketGetIpTypeOfService() -> (struct {
+        value uint8;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpTtl instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpTtl")
+    BaseSocketSetIpTtl(struct {
+        value OptionalUint8;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpTtl instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpTtl")
+    BaseSocketGetIpTtl() -> (struct {
+        value uint8;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpPacketInfo instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpPacketInfo")
+    BaseSocketSetIpPacketInfo(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpPacketInfo instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpPacketInfo")
+    BaseSocketGetIpPacketInfo() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpReceiveTypeOfService instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpReceiveTypeOfService")
+    BaseSocketSetIpReceiveTypeOfService(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpReceiveTypeOfService instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpReceiveTypeOfService")
+    BaseSocketGetIpReceiveTypeOfService() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpMulticastInterface instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpMulticastInterface")
+    BaseSocketSetIpMulticastInterface(struct {
+        iface fuchsia.net.interface_id;
+        address fuchsia.net.Ipv4Address;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpMulticastInterface instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpMulticastInterface")
+    BaseSocketGetIpMulticastInterface() -> (struct {
+        value fuchsia.net.Ipv4Address;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpMulticastTtl instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpMulticastTtl")
+    BaseSocketSetIpMulticastTtl(struct {
+        value OptionalUint8;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpMulticastTtl instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpMulticastTtl")
+    BaseSocketGetIpMulticastTtl() -> (struct {
+        value uint8;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpMulticastLoopback instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpMulticastLoopback")
+    BaseSocketSetIpMulticastLoopback(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpMulticastLoopback instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpMulticastLoopback")
+    BaseSocketGetIpMulticastLoopback() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use AddIpMembership instead")
+    @selector("fuchsia.posix.socket/BaseSocket.AddIpMembership")
+    BaseSocketAddIpMembership(struct {
+        membership IpMulticastMembership;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use DropIpMembership instead")
+    @selector("fuchsia.posix.socket/BaseSocket.DropIpMembership")
+    BaseSocketDropIpMembership(struct {
+        membership IpMulticastMembership;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use AddIpv6Membership instead")
+    @selector("fuchsia.posix.socket/BaseSocket.AddIpv6Membership")
+    BaseSocketAddIpv6Membership(struct {
+        membership Ipv6MulticastMembership;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use DropIpv6Membership instead")
+    @selector("fuchsia.posix.socket/BaseSocket.DropIpv6Membership")
+    BaseSocketDropIpv6Membership(struct {
+        membership Ipv6MulticastMembership;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpv6MulticastInterface instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpv6MulticastInterface")
+    BaseSocketSetIpv6MulticastInterface(struct {
+        value fuchsia.net.interface_id;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpv6MulticastInterface instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpv6MulticastInterface")
+    BaseSocketGetIpv6MulticastInterface() -> (struct {
+        value fuchsia.net.interface_id;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpv6MulticastHops instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpv6MulticastHops")
+    BaseSocketSetIpv6MulticastHops(struct {
+        value OptionalUint8;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpv6MulticastHops instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpv6MulticastHops")
+    BaseSocketGetIpv6MulticastHops() -> (struct {
+        value uint8;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpv6MulticastLoopback instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpv6MulticastLoopback")
+    BaseSocketSetIpv6MulticastLoopback(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpv6MulticastLoopback instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpv6MulticastLoopback")
+    BaseSocketGetIpv6MulticastLoopback() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpv6Only instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpv6Only")
+    BaseSocketSetIpv6Only(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpv6Only instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpv6Only")
+    BaseSocketGetIpv6Only() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpv6ReceiveTrafficClass instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpv6ReceiveTrafficClass")
+    BaseSocketSetIpv6ReceiveTrafficClass(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpv6ReceiveTrafficClass instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpv6ReceiveTrafficClass")
+    BaseSocketGetIpv6ReceiveTrafficClass() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
+
+    @deprecated("Use SetIpv6TrafficClass instead")
+    @selector("fuchsia.posix.socket/BaseSocket.SetIpv6TrafficClass")
+    BaseSocketSetIpv6TrafficClass(struct {
+        value OptionalUint8;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    @deprecated("Use GetIpv6TrafficClass instead")
+    @selector("fuchsia.posix.socket/BaseSocket.GetIpv6TrafficClass")
+    BaseSocketGetIpv6TrafficClass() -> (struct {
+        value uint8;
+    }) error fuchsia.posix.Errno;
 };
 
 /// IPv4 multicast membership options.
@@ -385,8 +604,12 @@ type SendMsgFlags = strict bits : uint16 {
 /// additional information about the state of the socket such as readiness or shutdown-ness.
 ///
 /// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+///
+/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
+/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
+/// and clients that couple directly to this protocol will make those changes more difficult.
 protocol DatagramSocket {
-    compose BaseSocket;
+    compose BaseNetworkSocket;
 
     /// Receives a message from the socket.
     ///
@@ -449,8 +672,12 @@ protocol DatagramSocket {
 /// listening socket.
 ///
 /// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+///
+/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
+/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
+/// and clients that couple directly to this protocol will make those changes more difficult.
 protocol StreamSocket {
-    compose BaseSocket;
+    compose BaseNetworkSocket;
 
     /// Begins listening for new incoming connections. At most `backlog` connections will be
     /// buffered.
@@ -774,6 +1001,10 @@ type InterfaceFlags = strict bits : uint16 {
 };
 
 /// Provider implements the POSIX sockets API.
+///
+/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
+/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
+/// and clients that couple directly to this protocol will make those changes more difficult.
 @discoverable
 protocol Provider {
     /// Requests a stream socket with the specified parameters.
