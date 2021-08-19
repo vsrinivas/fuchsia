@@ -9,7 +9,7 @@ steadily evolved since then.
 
 ## Technical background
 
-Last updated: **May 2021**
+Last updated: **August 2021**
 
 A high-level diagram of the system's component topology is shown below:
 
@@ -91,25 +91,23 @@ Specifically, ..."
 
 ## How to help
 
-Last updated: **May 2021**
+Last updated: **August 2021**
 
 ### Picking a task
 
 Components v2 migrations are happening throughout the system. Any component that
-still has at least one `.cmx` file is a migration candidate. However there is
-currently additional focus on:
+still has at least one `.cmx` file is a migration candidate.
 
--   The stack of Software Delivery components and associated tests, including
-    the package cache and package resolver.
--   The Netstack2 components, including migration of Netemul and associated
-    tests to Test Runner Framework.
--   The Bluetooth components and associated tests.
--   Components under [sysmgr][glossary.sysmgr] that are critical to
-    system functionality but each have a smaller footprint than the ones above,
-    tracked [here][label-cf-v2-migration].
--   Scaling migrations by creating and expanding a
-    [self-service guide][migrating-sys-components].
--   Exploratory work with migrating wlan and Thread/Weave components.
+For legacy `sys` realm components you may use the [self-service migration
+guide][migrating-sys-components]. Multiple component owners have recently seen
+success in using this guide, including but not limited to:
+
+*   Software Delivery
+*   Netstack
+*   Wlan
+*   Bluetooth
+*   Cobalt
+*   Archivist
 
 ### Doing a task
 
