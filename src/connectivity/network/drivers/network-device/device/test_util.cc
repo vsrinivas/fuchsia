@@ -156,11 +156,12 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplStart(network_device_impl_start_cal
                                                    void* cookie) {
   fbl::AutoLock lock(&lock_);
   EXPECT_FALSE(device_started_) << "called start on already started device";
-  if (auto_start_) {
-    if (auto_start_.value() == ZX_OK) {
+  if (auto_start_.has_value()) {
+    const zx_status_t auto_start = auto_start_.value();
+    if (auto_start == ZX_OK) {
       device_started_ = true;
     }
-    callback(cookie, auto_start_.value());
+    callback(cookie, auto_start);
   } else {
     ZX_ASSERT(!(pending_start_callback_ || pending_stop_callback_));
     pending_start_callback_ = [cookie, callback, this]() {
