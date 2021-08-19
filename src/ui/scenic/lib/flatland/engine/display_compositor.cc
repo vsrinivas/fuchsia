@@ -145,8 +145,11 @@ bool DisplayCompositor::ImportBufferCollection(
   }
   display_tokens_[collection_id] = std::move(display_token_sync_ptr);
 
-  // The pixel format doesn't matter here when importing to the display.
+  // The image config needs to match the one passed to SetLayerPrimaryConfig for
+  // the layer the image will be attached to.
   fuchsia::hardware::display::ImageConfig image_config;
+  image_config.pixel_format = kDefaultImageFormat;
+  image_config.type = 0;
   std::unique_lock<std::mutex> lock(lock_);
   auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
                                                     std::move(display_token_dup), image_config);
