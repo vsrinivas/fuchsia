@@ -1220,8 +1220,7 @@ mod tests {
             regulatory_manager::REGION_CODE_LEN,
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::{
-                create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                generate_random_bss_description, poll_sme_req,
+                create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver, poll_sme_req,
             },
         },
         async_trait::async_trait,
@@ -1258,8 +1257,9 @@ mod tests {
 
     /// Produces wlan network configuration objects to be used in tests.
     pub fn create_connect_request(ssid: &str, password: &str) -> client_types::ConnectRequest {
+        let ssid = ssid.as_bytes().to_vec();
         let network = ap_types::NetworkIdentifier {
-            ssid: ssid.as_bytes().to_vec(),
+            ssid: ssid.clone(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
         };
         let credential = Credential::Password(password.as_bytes().to_vec());
@@ -1269,7 +1269,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(generate_random_bss_description()),
+                bss_description: Some(fake_fidl_bss_description!(Wpa1, ssid: ssid.clone())),
                 multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2018,7 +2018,9 @@ mod tests {
                         network: network_id.clone().into(),
                         credential,
                         observed_in_passive_scan: Some(true),
-                        bss_description: Some(generate_random_bss_description()),
+                        bss_description: Some(
+                            fake_fidl_bss_description!(Wpa3, ssid: TEST_SSID.as_bytes().to_vec()),
+                        ),
                         multiple_bss_candidates: Some(true),
                     },
                     reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2104,8 +2106,9 @@ mod tests {
             create_iface_manager_with_client(&test_values, false);
 
         // Call connect on the IfaceManager
+        let ssid = b"some_ssid".to_vec();
         let network = ap_types::NetworkIdentifier {
-            ssid: b"some_ssid".to_vec(),
+            ssid: ssid.clone(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa3,
         };
         let credential = Credential::Password(b"some_password".to_vec());
@@ -2115,7 +2118,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(generate_random_bss_description()),
+                bss_description: Some(fake_fidl_bss_description!(Wpa3, ssid: ssid.clone())),
                 multiple_bss_candidates: None,
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2133,8 +2136,9 @@ mod tests {
     fn test_connect_wpa3_with_configured_iface() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
         // Build the connect request for connecting to the WPA3 network.
+        let ssid = b"some_wpa3_network".to_vec();
         let network = ap_types::NetworkIdentifier {
-            ssid: b"some_wpa3_network".to_vec(),
+            ssid: ssid.clone(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa3,
         };
         let credential = Credential::Password(b"password".to_vec());
@@ -2143,7 +2147,7 @@ mod tests {
                 network: network.clone(),
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(generate_random_bss_description()),
+                bss_description: Some(fake_fidl_bss_description!(Wpa3, ssid: ssid.clone())),
                 multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
