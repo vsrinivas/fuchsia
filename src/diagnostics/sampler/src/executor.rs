@@ -342,6 +342,7 @@ pub enum ProjectSamplerEvent {
     RebootTriggered,
     RebootChannelClosed(Error),
 }
+
 impl ProjectSampler {
     pub async fn new(
         config: ProjectConfig,
@@ -513,7 +514,7 @@ impl ProjectSampler {
     async fn process_payload(
         &mut self,
         payload: &DiagnosticsHierarchy,
-        moniker: &String,
+        moniker: &str,
     ) -> Result<bool, Error> {
         for (hierarchy_path, property) in payload.property_iter() {
             // The property iterator will visit empty nodes once,
@@ -527,7 +528,7 @@ impl ProjectSampler {
                         .map(|s| selectors::sanitize_string_for_selectors(s))
                         .collect::<Vec<String>>()
                         .join("/"),
-                    new_sample.key()
+                    selectors::sanitize_string_for_selectors(new_sample.key()),
                 );
 
                 self.process_newly_sampled_property(&selector, new_sample).await?;
@@ -557,6 +558,7 @@ impl ProjectSampler {
                     " diagnostics snapshot, which wasn't",
                     " requested by the client."
                 ));
+                warn!("Searched for {:?}, but this selector is not configured", selector,);
             }
             Some(metric_transformation) => {
                 // Rust is scared that the sample processors require mutable
@@ -1022,7 +1024,8 @@ mod tests {
         let hierarchy = hierarchy! {
             root: {
                 var unescaped: {
-                    value: 0
+                    value: 0,
+                    "value/with:escapes": 0,
                 }
             }
         };
@@ -1056,6 +1059,27 @@ mod tests {
             Err(_) => panic!("Expecting false from process_payload."),
         }
 
+        let selector_with_escaped_property: String =
+            "my/component:root/path\\/to:value\\/with\\:escapes".to_string();
+        sampler.metric_transformation_map.insert(
+            selector_with_escaped_property.clone(),
+            MetricConfig {
+                selector: selector_with_escaped_property.clone(),
+                metric_id: 1,
+                // Occurrence type with a value of zero will not attempt to use any loggers.
+                metric_type: DataType::Occurrence,
+                event_codes: Vec::new(),
+                // upload_once means that the method will return false if it is found in the map.
+                upload_once: Some(true),
+                use_legacy_cobalt: Some(false),
+            },
+        );
+        match executor::block_on(sampler.process_payload(&hierarchy, &"my/component".to_string())) {
+            // This selector will be found and removed from the map. Resulting in a false response.
+            Ok(b) => assert_eq!(b, false),
+            Err(_) => panic!("Expecting false from process_payload."),
+        }
+
         let selector_unfound: String = "my/component:root/path/to:value".to_string();
         sampler.metric_transformation_map.insert(
             selector_unfound.clone(),
@@ -1073,7 +1097,7 @@ mod tests {
         match executor::block_on(sampler.process_payload(&hierarchy, &"my/component".to_string())) {
             // This selector will not be found and removed from the map. Resulting in a true response.
             Ok(b) => assert_eq!(b, true),
-            Err(_) => panic!("Expecting false from process_payload."),
+            Err(_) => panic!("Expecting true from process_payload."),
         }
     }
 
