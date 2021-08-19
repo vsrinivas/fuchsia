@@ -4,11 +4,6 @@
 
 #include "src/sys/fuzzing/common/signal-coordinator.h"
 
-#include <lib/sync/completion.h>
-#include <lib/zx/time.h>
-
-#include <atomic>
-
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/testing/signal-coordinator.h"

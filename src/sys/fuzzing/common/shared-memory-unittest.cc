@@ -6,9 +6,11 @@
 
 #include <zircon/errors.h>
 
-#include <gmock/gmock.h>
+#include <limits>
+#include <random>
 
-#include "src/sys/fuzzing/common/test-utils.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace fuzzing {
 namespace {
@@ -16,7 +18,37 @@ namespace {
 using ::testing::Eq;
 using ::testing::Ne;
 
+// Test fixtures.
+
 constexpr size_t kCapacity = 0x1000;
+
+// Helper function to create a deterministically pseudorandom integer type.
+template <typename T>
+T Pick() {
+  static std::mt19937_64 prng;
+  return static_cast<T>(prng() & std::numeric_limits<T>::max());
+}
+
+// Helper function to create an array of deterministically pseudorandom integer types.
+template <typename T>
+void PickArray(T* out, size_t out_len) {
+  for (size_t i = 0; i < out_len; ++i) {
+    out[i] = Pick<T>();
+  }
+}
+
+// Helper function to create a vector of deterministically pseudorandom integer types.
+template <typename T = uint8_t>
+std::vector<T> PickVector(size_t size) {
+  std::vector<T> v;
+  v.reserve(size);
+  for (size_t i = 0; i < size; ++i) {
+    v.push_back(Pick<T>());
+  }
+  return v;
+}
+
+// Unit tests.
 
 TEST(SharedMemoryTest, Create) {
   Buffer buffer;
