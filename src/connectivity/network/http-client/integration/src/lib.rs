@@ -87,12 +87,13 @@ fn make_request(method: &str, url: String) -> http::Request {
 }
 
 fn check_response_common(response: &http::Response, expected_header_names: &[&str]) {
-    assert_eq!(response.status_code, Some(200));
+    let http::Response { error, status_code, headers, .. } = response;
+    assert_eq!(error, &None);
+    assert_eq!(status_code, &Some(200));
     // If the webserver started above ever returns different headers, or changes the order, this
     // assertion will fail. Note that case doesn't matter, and can vary across HTTP client
     // implementations, so we lowercase all the header keys before checking.
-    let response_header_names = response
-        .headers
+    let response_header_names = headers
         .as_ref()
         .map(|headers| {
             headers
@@ -141,7 +142,8 @@ async fn test_fetch_http() {
             .await
             .expect("failed to fetch");
         let () = check_response(&response);
-        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+        let http::Response { body, .. } = response;
+        let () = check_body(body, ROOT_DOCUMENT.as_bytes()).await;
     })
     .await
 }
@@ -149,7 +151,7 @@ async fn test_fetch_http() {
 #[fasync::run_singlethreaded(test)]
 async fn test_fetch_past_deadline() {
     run(|loader, addr| async move {
-        let response = loader
+        let http::Response { error, body, .. } = loader
             .fetch({
                 let mut req = make_request("GET", format!("http://{}", addr));
 
@@ -160,8 +162,8 @@ async fn test_fetch_past_deadline() {
             .await
             .expect("failed to fetch");
 
-        assert_eq!(response.error, Some(http::Error::DeadlineExceeded));
-        assert!(response.body.is_none());
+        assert_eq!(error, Some(http::Error::DeadlineExceeded));
+        assert_eq!(body, None);
     })
     .await
 }
@@ -169,7 +171,7 @@ async fn test_fetch_past_deadline() {
 #[fasync::run_singlethreaded(test)]
 async fn test_fetch_response_too_slow() {
     run(|loader, addr| async move {
-        let response = loader
+        let http::Response { error, body, .. } = loader
             .fetch({
                 let mut req =
                     make_request("GET", format!("http://{}/responds_in_10_minutes", addr));
@@ -180,8 +182,8 @@ async fn test_fetch_response_too_slow() {
             .await
             .expect("failed to fetch");
 
-        assert_eq!(response.error, Some(http::Error::DeadlineExceeded));
-        assert!(response.body.is_none());
+        assert_eq!(error, Some(http::Error::DeadlineExceeded));
+        assert_eq!(body, None);
     })
     .await
 }
@@ -189,13 +191,13 @@ async fn test_fetch_response_too_slow() {
 #[fasync::run_singlethreaded(test)]
 async fn test_fetch_https() {
     run(|loader, addr| async move {
-        let response = loader
+        let http::Response { error, body, .. } = loader
             .fetch(make_request("GET", format!("https://{}", addr)))
             .await
             .expect("failed to fetch");
 
-        assert_eq!(response.error, Some(http::Error::Connect));
-        assert!(response.body.is_none());
+        assert_eq!(error, Some(http::Error::Connect));
+        assert_eq!(body, None);
     })
     .await
 }
@@ -220,7 +222,8 @@ async fn test_start_http() {
             .expect("failed to convert to event stream");
 
         let () = check_response(&response);
-        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+        let http::Response { body, .. } = response;
+        let () = check_body(body, ROOT_DOCUMENT.as_bytes()).await;
 
         let () = responder.send().expect("failed to respond");
     })
@@ -234,9 +237,10 @@ async fn test_fetch_redirect() {
             .fetch(make_request("GET", format!("http://{}/trigger_301", addr)))
             .await
             .expect("failed to fetch");
-        assert_eq!(response.final_url, Some(format!("http://{}/", addr)));
         let () = check_response(&response);
-        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+        let http::Response { body, final_url, .. } = response;
+        let () = check_body(body, ROOT_DOCUMENT.as_bytes()).await;
+        assert_eq!(final_url, Some(format!("http://{}/", addr)));
     })
     .await
 }
@@ -252,7 +256,7 @@ async fn test_start_redirect() {
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
 
-        let (response, responder) = rx
+        let (http::Response { status_code, redirect, .. }, responder) = rx
             .next()
             .await
             .expect("stream error")
@@ -260,9 +264,9 @@ async fn test_start_redirect() {
             .into_on_response()
             .expect("failed to convert to event stream");
 
-        assert_eq!(response.status_code, Some(301));
+        assert_eq!(status_code, Some(301));
         assert_eq!(
-            response.redirect,
+            redirect,
             Some(http::RedirectTarget {
                 method: Some("GET".to_string()),
                 url: Some(format!("http://{}/", addr)),
@@ -280,10 +284,10 @@ async fn test_start_redirect() {
             .expect("request error")
             .into_on_response()
             .expect("failed to convert to event stream");
-
-        assert_eq!(response.final_url, Some(format!("http://{}/", addr)));
         let () = check_response(&response);
-        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+        let http::Response { body, final_url, .. } = response;
+        let () = check_body(body, ROOT_DOCUMENT.as_bytes()).await;
+        assert_eq!(final_url, Some(format!("http://{}/", addr)));
 
         let () = responder.send().expect("failed to respond");
     })
@@ -297,9 +301,10 @@ async fn test_fetch_see_other() {
             .fetch(make_request("POST", format!("http://{}/see_other", addr)))
             .await
             .expect("failed to fetch");
-        assert_eq!(response.final_url, Some(format!("http://{}/", addr)));
         let () = check_response(&response);
-        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+        let http::Response { body, final_url, .. } = response;
+        let () = check_body(body, ROOT_DOCUMENT.as_bytes()).await;
+        assert_eq!(final_url, Some(format!("http://{}/", addr)));
     })
     .await
 }
@@ -315,7 +320,7 @@ async fn test_start_see_other() {
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
 
-        let (response, responder) = rx
+        let (http::Response { status_code, redirect, .. }, responder) = rx
             .next()
             .await
             .expect("stream error")
@@ -323,9 +328,9 @@ async fn test_start_see_other() {
             .into_on_response()
             .expect("failed to convert to event stream");
 
-        assert_eq!(response.status_code, Some(303));
+        assert_eq!(status_code, Some(303));
         assert_eq!(
-            response.redirect,
+            redirect,
             Some(http::RedirectTarget {
                 method: Some("GET".to_string()),
                 url: Some(format!("http://{}/", addr)),
@@ -344,9 +349,10 @@ async fn test_start_see_other() {
             .into_on_response()
             .expect("failed to convert to event stream");
 
-        assert_eq!(response.final_url, Some(format!("http://{}/", addr)));
         let () = check_response(&response);
-        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+        let http::Response { body, final_url, .. } = response;
+        let () = check_body(body, ROOT_DOCUMENT.as_bytes()).await;
+        assert_eq!(final_url, Some(format!("http://{}/", addr)));
 
         let () = responder.send().expect("failed to respond");
     })
@@ -356,14 +362,14 @@ async fn test_start_see_other() {
 #[fasync::run_singlethreaded(test)]
 async fn test_fetch_max_redirect() {
     run(|loader, addr| async move {
-        let response = loader
+        let http::Response { status_code, redirect, .. } = loader
             .fetch(make_request("GET", format!("http://{}/loop1", addr)))
             .await
             .expect("failed to fetch");
         // The last request in the redirect loop will always return status code 301
-        assert_eq!(response.status_code, Some(301));
+        assert_eq!(status_code, Some(301));
         assert_eq!(
-            response.redirect,
+            redirect,
             Some(http::RedirectTarget {
                 method: Some("GET".to_string()),
                 url: Some(format!("http://{}/loop2", addr)),
@@ -387,7 +393,7 @@ async fn test_start_redirect_loop() {
         let mut rx = rx.into_stream().expect("failed to convert to stream");
 
         for () in std::iter::repeat(()).take(3) {
-            let (response, responder) = rx
+            let (http::Response { status_code, redirect, .. }, responder) = rx
                 .next()
                 .await
                 .expect("stream error")
@@ -395,9 +401,9 @@ async fn test_start_redirect_loop() {
                 .into_on_response()
                 .expect("failed to convert to event stream");
 
-            assert_eq!(response.status_code, Some(301));
+            assert_eq!(status_code, Some(301));
             assert_eq!(
-                response.redirect,
+                redirect,
                 Some(http::RedirectTarget {
                     method: Some("GET".to_string()),
                     url: Some(format!("http://{}/loop2", addr)),
@@ -408,7 +414,7 @@ async fn test_start_redirect_loop() {
 
             let () = responder.send().expect("failed to respond");
 
-            let (response, responder) = rx
+            let (http::Response { status_code, redirect, .. }, responder) = rx
                 .next()
                 .await
                 .expect("stream error")
@@ -416,9 +422,9 @@ async fn test_start_redirect_loop() {
                 .into_on_response()
                 .expect("failed to convert to event stream");
 
-            assert_eq!(response.status_code, Some(301));
+            assert_eq!(status_code, Some(301));
             assert_eq!(
-                response.redirect,
+                redirect,
                 Some(http::RedirectTarget {
                     method: Some("GET".to_string()),
                     url: Some(format!("http://{}/loop1", addr)),
@@ -442,7 +448,8 @@ async fn test_fetch_http_big_stream() {
             .expect("failed to fetch");
 
         let () = check_response_big(&response);
-        let () = check_body(response.body, &big_vec()).await;
+        let http::Response { body, .. } = response;
+        let () = check_body(body, &big_vec()).await;
     })
     .await
 }
