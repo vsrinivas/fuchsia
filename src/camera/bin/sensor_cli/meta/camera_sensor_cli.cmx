@@ -1,0 +1,24 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/camera_sensor_cli_bin"
+    },
+    "sandbox": {
+        "dev": [
+            "class/camera"
+        ],
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fuchsia.camera2.debug.Debug",
+            "fuchsia.camera2.hal.Controller",
+            "fuchsia.hardware.camera.Device",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

@@ -1,0 +1,38 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("sensor_cli") {
+  deps = [ ":camera_sensor_cli" ]
+}
+
+executable("camera_sensor_cli_bin") {
+  output_name = "camera_sensor_cli_bin"
+  sources = [
+    "debug_client.cc",
+    "debug_client.h",
+    "main.cc",
+  ]
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.camera2.debug",
+    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.hardware.camera",
+  ]
+}
+
+fuchsia_shell_package("camera_sensor_cli") {
+  manifest = "meta/camera_sensor_cli.cmx"
+  deps = [ ":camera_sensor_cli_bin" ]
+}

@@ -42,5 +42,8 @@ group("service") {
 # Add targets here that are useful for general development.
 group("tools") {
   testonly = true
-  public_deps = [ "//src/camera/bin/benchmark" ]
+  public_deps = [
+    "//src/camera/bin/benchmark",
+    "//src/camera/bin/sensor_cli",
+  ]
 }
