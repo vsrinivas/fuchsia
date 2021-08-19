@@ -18,7 +18,7 @@ class AppChips extends StatelessWidget {
       child: Observer(
         builder: (context) {
           return ListView.separated(
-            padding: EdgeInsets.symmetric(vertical: 24),
+            padding: EdgeInsets.only(top: 8, bottom: 24),
             itemCount: _app.views.length,
             itemBuilder: (context, index) {
               final view = _app.views[index];
@@ -28,12 +28,12 @@ class AppChips extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
 
                 // Active view indicator.
-                leading: Container(
-                  width: 36,
-                  alignment: Alignment.centerLeft,
+                leading: Transform.translate(
+                  offset: Offset(0, 12),
                   child: Container(
+                    padding: EdgeInsets.only(right: 4),
                     width: 8,
-                    height: 54.0,
+                    height: 54,
                     color: _app.topView.value == view
                         ? Theme.of(context).colorScheme.onSurface
                         : null,
@@ -44,15 +44,36 @@ class AppChips extends StatelessWidget {
                 title: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    IconButton(
-                      icon: Image.asset(
-                        _getIconPath(view.title),
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      iconSize: 48,
-                      splashRadius: 8,
-                      tooltip: view.title,
-                      onPressed: () => _app.switchView([view]),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(width: 48),
+                        // App icon
+                        IconButton(
+                          icon: Image.asset(
+                            _getIconPath(view.title),
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          iconSize: 48,
+                          padding: EdgeInsets.fromLTRB(0, 16, 0, 16),
+                          splashRadius: 1,
+                          tooltip: view.title,
+                          onPressed: () => _app.switchView([view]),
+                        ),
+                        // Close button
+                        Focus(
+                          // Prevent close button from automatically gaining focus.
+                          // Requires pointer to press it.
+                          descendantsAreFocusable: false,
+                          child: IconButton(
+                            icon: Icon(Icons.close),
+                            iconSize: 24,
+                            splashRadius: 24,
+                            onPressed: view.close,
+                          ),
+                        ),
+                      ],
                     ),
                     Tooltip(
                       message: view.title,
@@ -64,30 +85,10 @@ class AppChips extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                // Close button.
-                trailing: Container(
-                  width: 36,
-                  alignment: Alignment.topLeft,
-                  child: Focus(
-                    // Prevent close button from automatically gaining focus.
-                    // Requires pointer to press it.
-                    descendantsAreFocusable: false,
-                    child: IconButton(
-                      icon: Icon(Icons.close),
-                      constraints: BoxConstraints.tight(Size(18, 18)),
-                      padding: EdgeInsets.all(0),
-                      iconSize: 16,
-                      splashRadius: 8,
-                      onPressed: view.close,
-                    ),
-                  ),
-                ),
-
                 onTap: () => _app.switchView([view]),
               );
             },
-            separatorBuilder: (context, index) => const SizedBox(height: 32),
+            separatorBuilder: (context, index) => const SizedBox(height: 24),
           );
         },
       ),
