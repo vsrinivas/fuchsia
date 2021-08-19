@@ -12,12 +12,18 @@ The MBMQ model is based around four types of object:
 *   MBO: message buffer object
 *   CMH: callee MBO holder
 
-A channel endpoint is something that you can send messages to.  A
-channel may be redirected to a MsgQueue so that when a message is sent
-to the channel, the message is enqueued onto the MsgQueue.
+A MsgQueue is a queue of messages, or to be more exact, a queue of
+MBOs.  A MsgQueue may be set as the destination for a channel
+endpoint, so that when a message is sent to the endpoint, it is
+enqueued onto the MsgQueue.  Furthermore, one MsgQueue may be set as
+the destination for multiple channels.  MsgQueues are a replacement
+for Zircon ports.
 
-A MsgQueue is a queue of messages, potentially from multiple sources
--- a MsgQueue may be set as the destination for multiple channels.
+A channel consists of a pair of channel endpoints.  The destination
+MsgQueue for an endpoint can be set using the opposite endpoint of the
+pair.  So, for a pair of endpoints A and B, calling
+`zx_object_set_msgqueue()` on endpoint B sets the MsgQueue that
+messages sent to endpoint A will be enqueued on.
 
 MBOs have multiple roles:
 
