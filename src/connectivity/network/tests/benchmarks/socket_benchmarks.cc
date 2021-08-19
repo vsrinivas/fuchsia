@@ -4,6 +4,7 @@
 
 #include <arpa/inet.h>
 #include <lib/syslog/cpp/macros.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 
 #include <fbl/unique_fd.h>
@@ -91,6 +92,10 @@ bool TcpWriteRead(perftest::RepeatState* state, size_t transfer) {
   FX_CHECK(transfer < std::numeric_limits<int32_t>::max());
   int32_t sndbuf = static_cast<int32_t>(transfer);
   CHECK_ZERO_ERRNO(setsockopt(client_sock.get(), SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)));
+  // Disable the Nagle algorithm, it introduces artificial latency that defeats this test.
+  const int32_t no_delay = 1;
+  CHECK_ZERO_ERRNO(
+      setsockopt(client_sock.get(), SOL_TCP, TCP_NODELAY, &no_delay, sizeof(no_delay)));
 
   CHECK_ZERO_ERRNO(connect(client_sock.get(), sockaddr.as_sockaddr(), sockaddr.socklen()));
 

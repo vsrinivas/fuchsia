@@ -3,19 +3,28 @@
 // found in the LICENSE file.
 
 #include <getopt.h>
+
+#if defined(__Fuchsia__)
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/trace-engine/context.h>
 #include <lib/trace-engine/instrumentation.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
-#include <pthread.h>
-#include <regex.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
+#else
+#define TRACE_DURATION(...)
+#endif
+
+#include <lib/fit/defer.h>
+#include <pthread.h>
+#include <regex.h>
 
 #include <algorithm>
+#include <chrono>
 #include <memory>
+#include <optional>
 #include <random>
 
 #include <fbl/function.h>
@@ -27,6 +36,23 @@
 namespace perftest {
 namespace {
 
+#if defined(__Fuchsia__)
+using Timestamp = uint64_t;
+Timestamp Now() { return zx_ticks_get(); }
+double GetDurationNanos(Timestamp t1, Timestamp t2) {
+  double nanoseconds_per_tick = 1e9 / static_cast<double>(zx_ticks_per_second());
+  uint64_t time_taken = t2 - t1;
+  return static_cast<double>(time_taken) * nanoseconds_per_tick;
+}
+#else
+using Clock = std::chrono::steady_clock;
+using Timestamp = Clock::time_point;
+Timestamp Now() { return Clock::now(); }
+double GetDurationNanos(Timestamp t1, Timestamp t2) {
+  return std::chrono::duration<double, std::chrono::nanoseconds::period>(t2 - t1).count();
+}
+#endif
+
 // g_tests needs to be POD because this list is populated by constructors.
 // We don't want g_tests to have a constructor that might get run after
 // items have been added to the list, because that would clobber the list.
@@ -34,7 +60,7 @@ internal::TestList* g_tests;
 
 class RepeatStateImpl : public RepeatState {
  public:
-  RepeatStateImpl(uint32_t run_count) : run_count_(run_count) {}
+  explicit RepeatStateImpl(uint32_t run_count) : run_count_(run_count) {}
 
   void SetBytesProcessedPerRun(uint64_t bytes) override {
     if (started_) {
@@ -65,12 +91,12 @@ class RepeatStateImpl : public RepeatState {
       SetError("Too many calls to NextStep()");
       return;
     }
-    timestamps_[next_idx_] = zx_ticks_get();
+    timestamps_[next_idx_] = Now();
     ++next_idx_;
   }
 
   bool KeepRunning() override {
-    uint64_t timestamp = zx_ticks_get();
+    Timestamp timestamp = Now();
     if (unlikely(next_idx_ != end_of_run_idx_)) {
       // Slow path, including error cases.
       if (error_) {
@@ -91,7 +117,7 @@ class RepeatStateImpl : public RepeatState {
       // test run), plus one more timestamp for the end of the last
       // test run.
       timestamps_size_ = run_count_ * step_count_ + 1;
-      timestamps_.reset(new uint64_t[timestamps_size_]);
+      timestamps_.reset(new Timestamp[timestamps_size_]);
       // Clear the array in order to fault in the pages.  This should
       // prevent page faults occurring as we cross page boundaries
       // when writing a test's running times (which would affect the
@@ -100,7 +126,7 @@ class RepeatStateImpl : public RepeatState {
       next_idx_ = 1;
       end_of_run_idx_ = step_count_;
       started_ = true;
-      timestamps_[0] = zx_ticks_get();
+      timestamps_[0] = Now();
       return run_count_ != 0;
     }
     if (unlikely(next_idx_ == timestamps_size_ - 1)) {
@@ -122,9 +148,9 @@ class RepeatStateImpl : public RepeatState {
   // Returns nullptr on success, or an error string on failure.
   const char* RunTestFunc(const char* test_name, const fbl::Function<TestFunc>& test_func) {
     TRACE_DURATION("perftest", "test_group", "test_name", test_name);
-    overall_start_time_ = zx_ticks_get();
+    overall_start_time_ = Now();
     bool result = test_func(this);
-    overall_end_time_ = zx_ticks_get();
+    overall_end_time_ = Now();
     if (error_) {
       return error_;
     }
@@ -165,6 +191,7 @@ class RepeatStateImpl : public RepeatState {
   // we avoid incurring the overhead of the tracing system on each test
   // run.
   void WriteTraceEvents() {
+#if defined(__Fuchsia__)
     trace_string_ref_t category_ref;
     trace_context_t* context = trace_acquire_context_for_category("perftest", &category_ref);
     if (!context) {
@@ -173,7 +200,7 @@ class RepeatStateImpl : public RepeatState {
     trace_thread_ref_t thread_ref;
     trace_context_register_current_thread(context, &thread_ref);
 
-    auto WriteEvent = [&](trace_string_ref_t* name_ref, uint64_t start_time, uint64_t end_time) {
+    auto WriteEvent = [&](trace_string_ref_t* name_ref, Timestamp start_time, Timestamp end_time) {
       trace_context_write_duration_begin_event_record(context, start_time, &thread_ref,
                                                       &category_ref, name_ref, nullptr, 0);
       trace_context_write_duration_end_event_record(context, end_time, &thread_ref, &category_ref,
@@ -199,6 +226,7 @@ class RepeatStateImpl : public RepeatState {
       }
     }
     WriteEvent(&test_teardown_string, timestamps_[timestamps_size_ - 1], overall_end_time_);
+#endif
   }
 
  private:
@@ -212,7 +240,7 @@ class RepeatStateImpl : public RepeatState {
   // GetTimestamp(R+1, 0).
   // The start and end times of step S within run R are GetTimestamp(R,
   // S) and GetTimestamp(R, S+1).
-  uint64_t GetTimestamp(uint32_t run_number, uint32_t step_number) const {
+  Timestamp GetTimestamp(uint32_t run_number, uint32_t step_number) const {
     uint32_t index = run_number * step_count_ + step_number;
     ZX_ASSERT(step_number <= step_count_);
     ZX_ASSERT(index < timestamps_size_);
@@ -221,14 +249,11 @@ class RepeatStateImpl : public RepeatState {
 
   void CopyStepTimes(uint32_t start_step_index, uint32_t end_step_index,
                      TestCaseResults* results) const {
-    double nanoseconds_per_tick = 1e9 / static_cast<double>(zx_ticks_per_second());
-
     // Copy the timing results, converting timestamps to elapsed times.
     results->values.reserve(run_count_);
     for (uint32_t run = 0; run < run_count_; ++run) {
-      uint64_t time_taken =
-          (GetTimestamp(run, end_step_index) - GetTimestamp(run, start_step_index));
-      results->AppendValue(static_cast<double>(time_taken) * nanoseconds_per_tick);
+      results->AppendValue(
+          GetDurationNanos(GetTimestamp(run, start_step_index), GetTimestamp(run, end_step_index)));
     }
   }
 
@@ -261,7 +286,7 @@ class RepeatStateImpl : public RepeatState {
   const char* error_ = nullptr;
   // Array of timestamps for the starts and ends of test runs and of
   // steps within runs.  GetTimestamp() describes the array layout.
-  std::unique_ptr<uint64_t[]> timestamps_;
+  std::unique_ptr<Timestamp[]> timestamps_;
   // Number of elements allocated for timestamps_ array.
   uint32_t timestamps_size_ = 0;
   // Whether the first KeepRunning() call has occurred.
@@ -274,9 +299,9 @@ class RepeatStateImpl : public RepeatState {
   // Index in timestamp_ for writing the end of the current run.
   uint32_t end_of_run_idx_ = 0;
   // Start time, before the test's setup phase.
-  uint64_t overall_start_time_;
+  Timestamp overall_start_time_;
   // End time, after the test's teardown phase.
-  uint64_t overall_end_time_;
+  Timestamp overall_end_time_;
   // Used for calculating throughput in bytes per unit time.
   uint64_t bytes_processed_per_run_ = 0;
 };
@@ -317,15 +342,26 @@ namespace internal {
 bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
               const char* regex_string, FILE* log_stream, ResultsSet* results_set, bool quiet,
               bool random_order) {
-  // Compile the regular expression.
-  regex_t regex;
-  int err = regcomp(&regex, regex_string, REG_EXTENDED);
-  if (err != 0) {
-    char msg[256];
-    msg[0] = '\0';
-    regerror(err, &regex, msg, sizeof(msg));
-    fprintf(log_stream, "Compiling the regular expression \"%s\" failed: %s\n", regex_string, msg);
-    return false;
+  std::optional<regex_t> regex;
+  auto cleanup = fit::defer([&regex]() {
+    if (regex.has_value()) {
+      regfree(&regex.value());
+    }
+  });
+  // Compile the regular expression if it's not the empty string.
+  // MacOS returns an error attempting to compile an empty regex.
+  if (strlen(regex_string) != 0) {
+    regex_t init;
+    int err = regcomp(&init, regex_string, REG_EXTENDED | REG_NOSUB);
+    if (err != 0) {
+      char msg[256];
+      msg[0] = '\0';
+      regerror(err, &init, msg, sizeof(msg));
+      fprintf(log_stream, "Compiling the regular expression \"%s\" failed: %s\n", regex_string,
+              msg);
+      return false;
+    }
+    regex = init;
   }
 
   // Use either a consistent or randomized order for the test cases,
@@ -352,9 +388,11 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
   bool ok = true;
   for (internal::NamedTest* test_case : test_list_copy) {
     const char* test_name = test_case->name.c_str();
-    bool matched_regex = regexec(&regex, test_name, 0, nullptr, 0) == 0;
-    if (!matched_regex) {
-      continue;
+    if (regex.has_value()) {
+      bool matched_regex = regexec(&regex.value(), test_name, 0, nullptr, 0) == 0;
+      if (!matched_regex) {
+        continue;
+      }
     }
     found_regex_match = true;
 
@@ -381,8 +419,6 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
     }
   }
 
-  regfree(&regex);
-
   if (!found_regex_match) {
     // Report an error so that this doesn't fail silently if the regex
     // is wrong.
@@ -394,13 +430,15 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
 
 void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
   static const struct option opts[] = {
-      {"out", required_argument, nullptr, 'o'},
-      {"filter", required_argument, nullptr, 'f'},
-      {"runs", required_argument, nullptr, 'r'},
-      {"quiet", no_argument, nullptr, 'q'},
-      {"random-order", no_argument, nullptr, 'n'},
-      {"enable-tracing", no_argument, nullptr, 't'},
-      {"startup-delay", required_argument, nullptr, 'd'},
+    {"out", required_argument, nullptr, 'o'},
+    {"filter", required_argument, nullptr, 'f'},
+    {"runs", required_argument, nullptr, 'r'},
+    {"quiet", no_argument, nullptr, 'q'},
+    {"random-order", no_argument, nullptr, 'n'},
+#if defined(__Fuchsia__)
+    {"enable-tracing", no_argument, nullptr, 't'},
+    {"startup-delay", required_argument, nullptr, 'd'},
+#endif
   };
   optind = 1;
   for (;;) {
@@ -434,6 +472,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
       case 'n':
         dest->random_order = true;
         break;
+#if defined(__Fuchsia__)
       case 't':
         dest->enable_tracing = true;
         break;
@@ -448,6 +487,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
         dest->startup_delay_seconds = val;
         break;
       }
+#endif
       default:
         // getopt_long() will have printed an error already.
         exit(1);
@@ -461,6 +501,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
 
 }  // namespace internal
 
+#if defined(__Fuchsia__)
 static void* TraceProviderThread(void* thread_arg) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
@@ -475,16 +516,19 @@ static void StartTraceProvider() {
   err = pthread_detach(tid);
   ZX_ASSERT(err == 0);
 }
+#endif
 
 static bool PerfTestMode(const char* test_suite, int argc, char** argv) {
   internal::CommandArgs args;
   internal::ParseCommandArgs(argc, argv, &args);
 
+#if defined(__Fuchsia__)
   if (args.enable_tracing) {
     StartTraceProvider();
   }
   zx_duration_t duration = static_cast<zx_duration_t>(ZX_SEC(1) * args.startup_delay_seconds);
   zx_nanosleep(zx_deadline_after(duration));
+#endif
 
   ResultsSet results;
   bool success = RunTests(test_suite, g_tests, args.run_count, args.filter_regex, stdout, &results,
@@ -540,6 +584,7 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
         "  --random-order\n"
         "      Run the tests in random order.  The default is to run them "
         "in the order of their names.\n"
+#if defined(__Fuchsia__)
         "  --enable-tracing\n"
         "      Enable use of Fuchsia tracing: Enable registering as a "
         "TraceProvider.  This is off by default because the "
@@ -550,7 +595,9 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
         "      Delay in seconds to wait on startup, after registering "
         "a TraceProvider.  This allows working around a race condition "
         "where tracing misses initial events from newly-registered "
-        "TraceProviders (see fxbug.dev/22911).\n",
+        "TraceProviders (see fxbug.dev/22911).\n"
+#endif
+        ,
         argv[0], argv[0]);
     return 1;
   }

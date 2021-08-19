@@ -26,5 +26,8 @@ fuchsia_unittest_package("perftest-pkg") {
 
 group("tests") {
   testonly = true
-  deps = [ ":perftest-pkg" ]
+  deps = [
+    ":perftest($host_toolchain)",
+    ":perftest-pkg",
+  ]
 }

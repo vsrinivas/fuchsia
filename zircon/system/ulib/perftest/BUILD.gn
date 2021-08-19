@@ -5,6 +5,7 @@
 import("//build/unification/zx_library.gni")
 
 zx_library("perftest") {
+  host = true
   sdk = "source"
   sdk_headers = [
     "perftest/perftest.h",
@@ -16,17 +17,19 @@ zx_library("perftest") {
     "results.cc",
     "runner.cc",
   ]
-  deps = [
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
-  ]
+  deps = [ "//zircon/public/lib/fbl" ]
+  if (is_fuchsia) {
+    deps += [
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/async-loop",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/trace",
+      "//zircon/system/ulib/trace-engine",
+      "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    ]
+  }
 }
 
 group("tests") {

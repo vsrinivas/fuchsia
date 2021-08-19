@@ -361,22 +361,28 @@ TEST(PerfTestRunner, TestRunningInRandomOrder) {
 }
 
 TEST(PerfTestRunner, TestParsingCommandArgs) {
-  const char* argv[] = {"unused_argv0",
-                        "--runs",
-                        "123",
-                        "--out",
-                        "dest_file",
-                        "--filter",
-                        "some_regex",
-                        "--quiet",
-                        "--enable-tracing",
-                        "--startup-delay=456"};
+  const char* argv[] = {
+    "unused_argv0",
+    "--runs",
+    "123",
+    "--out",
+    "dest_file",
+    "--filter",
+    "some_regex",
+    "--quiet",
+#if defined(__Fuchsia__)
+    "--enable-tracing",
+    "--startup-delay=456"
+#endif
+  };
   perftest::internal::CommandArgs args;
   perftest::internal::ParseCommandArgs(std::size(argv), const_cast<char**>(argv), &args);
   EXPECT_EQ(args.run_count, 123);
   EXPECT_STR_EQ(args.output_filename, "dest_file");
   EXPECT_STR_EQ(args.filter_regex, "some_regex");
   EXPECT_TRUE(args.quiet);
+#if defined(__Fuchsia__)
   EXPECT_TRUE(args.enable_tracing);
   EXPECT_EQ(args.startup_delay_seconds, 456);
+#endif
 }

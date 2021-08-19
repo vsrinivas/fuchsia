@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERFTEST_RUNNER_H_
+#define PERFTEST_RUNNER_H_
 
 #include <fbl/vector.h>
 #include <perftest/perftest.h>
@@ -31,11 +32,15 @@ struct CommandArgs {
   uint32_t run_count = 1000;
   bool quiet = false;
   bool random_order = false;
+#if defined(__Fuchsia__)
   bool enable_tracing = false;
   double startup_delay_seconds = 0;
+#endif
 };
 
 void ParseCommandArgs(int argc, char** argv, CommandArgs* dest);
 
 }  // namespace internal
 }  // namespace perftest
+
+#endif  // PERFTEST_RUNNER_H_

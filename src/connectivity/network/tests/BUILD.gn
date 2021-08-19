@@ -10,7 +10,7 @@ group("tests") {
   testonly = true
   deps = [
     ":netstack-c-api-tests",
-    "benchmarks",
+    "benchmarks:tests",
     "dhcp_interop:dhcp_integration_tests",
     "getifaddrs:tests",
     "integration:tests",

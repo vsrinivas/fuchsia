@@ -29,3 +29,11 @@ fuchsia_unittest_package("socket-benchmarks-package") {
   ]
   manifest = "meta/socket-benchmarks.cmx"
 }
+
+group("tests") {
+  testonly = true
+  deps = [ ":socket-benchmarks-package" ]
+  if (is_linux) {
+    deps += [ ":socket_benchmarks($host_toolchain)" ]
+  }
+}
