@@ -154,15 +154,16 @@ struct RdmaChannelContainer {
  * contain three possible values:
  * kRdmaTableReady: This index may be used by RDMA
  * kRdmaTableUnavailable: This index is unavailble
- * <config stamp>: This index is includes a valid config
+ * <config stamp>: This index includes a valid config. The stored value corresponds to the first
+ *                 image handle that is contained in the config (we currently assume 1 image per
+ *                 config).
  *
- * When RDMA completes, RdmaThread (which processes RDMA IRQs) checks how far the RDMA was able to
- * write by comparing the "Config Stamp" in a scratch register to rdma_usage_table_. If RDMA did
+ * The client of the Osd instance is expected to call Osd::GetLastImageApplied() on every vsync
+ * interrupt to obtain the most recently applied config. This method checks if a previously
+ * scheduled RDMA (via Osd::FlipOnVsync) has completed, and if so,  checks how far the RDMA was able
+ * to write by comparing the "Config Stamp" in a scratch register to rdma_usage_table_. If RDMA did
  * not apply all the configs, it will re-schedule a new RDMA transaction.
- * RdmaThread will also signal the Vsync thread and provide the most recent applied configuration
- * (latest_applied_config_)
  */
-
 class Osd {
  public:
   Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t display_width,
@@ -173,8 +174,18 @@ class Osd {
   void Disable();
   void Enable();
 
-  // This function will apply configuration when VSYNC interrupt occurs using RDMA
+  // Schedules the given |config| to be applied by the RDMA engine when the next VSYNC interrupt
+  // occurs.
   void FlipOnVsync(uint8_t idx, const display_config_t* config);
+
+  // Returns the image handle that was most recently processed by the RDMA engine. If RDMA is
+  // determined to be in progress and incomplete, then the previously applied image is returned. If
+  // RDMA is determined to be complete at the time of a call, then the RDMA engine registers are
+  // updated accordingly.
+  //
+  // This function is used by the vsync thread to determine the latest applied config.
+  uint64_t GetLastImageApplied();
+
   void Dump();
   void Release();
 
@@ -188,9 +199,6 @@ class Osd {
 
   void SetMinimumRgb(uint8_t minimum_rgb);
 
-  // This function is used by vsync thread to determine the latest config applied
-  uint64_t GetLastImageApplied();
-
  private:
   void DefaultSetup();
   // this function sets up scaling based on framebuffer and actual display
@@ -201,19 +209,29 @@ class Osd {
   void ResetRdmaTable();
   void SetRdmaTableValue(uint32_t table_index, uint32_t idx, uint32_t val);
   void FlushRdmaTable(uint32_t table_index);
+  int GetNextAvailableRdmaTableIndex() __TA_EXCLUDES(rdma_lock_);
+
+  // The following functions move the current RDMA state machine forward. If TryResolvePendingRdma
+  // determines that RDMA has completed, it
+  // - records the image handle of the most recently applied config based on scratch register
+  //   content,
+  // - updates the RDMA usage table and reschedules RDMA for remaining configs that the RDMA
+  //   engine has not applied,
+  // - writes to the RDMA control registers to clear and/or reschedule the RDMA interrupts.
+  //
+  // This method must be called when RDMA is active.
+  void TryResolvePendingRdma() __TA_REQUIRES(rdma_lock_);
+  void ProcessRdmaUsageTable() __TA_REQUIRES(rdma_lock_);
 
   void SetAfbcRdmaTableValue(uint32_t val) const;
   void FlushAfbcRdmaTable() const;
-  int RdmaThread() __TA_EXCLUDES(rdma_lock_);
+  int RdmaIrqThread() __TA_EXCLUDES(rdma_lock_);
   void EnableGamma();
   void DisableGamma();
   zx_status_t ConfigAfbc();
   zx_status_t SetGamma(GammaChannel channel, const float* data);
   zx_status_t WaitForGammaAddressReady();
   zx_status_t WaitForGammaWriteReady();
-  void WaitForRdmaIdle() __TA_REQUIRES(rdma_lock_);
-  void HandleBaseRdmaComplete() __TA_REQUIRES(rdma_lock_);
-  int GetNextAvailableRdmaTableIndex() __TA_EXCLUDES(rdma_lock_);
 
   // Like Dump() but logs critical sections that require holding |rdma_lock_|.
   void DumpLocked() __TA_REQUIRES(rdma_lock_);
@@ -224,12 +242,11 @@ class Osd {
   std::optional<ddk::MmioBuffer> vpu_mmio_;
   zx::bti bti_;
 
-  // RDMA IRQ handle and thread
+  // RDMA IRQ handle and thread used for diagnostic purposes.
   zx::interrupt rdma_irq_;
-  thrd_t rdma_thread_;
+  thrd_t rdma_irq_thread_;
 
   fbl::Mutex rdma_lock_;
-  fbl::ConditionVariable rdma_active_cnd_ TA_GUARDED(rdma_lock_);
 
   uint64_t rdma_usage_table_[kNumberOfTables] TA_GUARDED(rdma_lock_);
   size_t start_index_used_ TA_GUARDED(rdma_lock_) = 0;
@@ -269,14 +286,21 @@ class Osd {
 
   bool initialized_ = false;
 
+  // Diagnostic variables:
+
   inspect::Node inspect_node_;
   inspect::UintProperty rdma_allocation_failures_;
   inspect::UintProperty rdma_irq_count_;
-  inspect::UintProperty rdma_base_channel_pending_in_irq_count_;
-  inspect::UintProperty rdma_base_channel_done_count_;
-  inspect::UintProperty rdma_afbc_channel_done_count_;
+  inspect::UintProperty rdma_begin_count_;
+  inspect::UintProperty rdma_pending_in_vsync_count_;
+  inspect::UintProperty last_rdma_pending_in_vsync_interval_ns_;
+  inspect::UintProperty last_rdma_pending_in_vsync_timestamp_ns_prop_;
+
+  // Unused inspect properties (but still queried by lapis/detect for metrics and triage reporting).
   inspect::UintProperty rdma_stall_count_;
   inspect::UintProperty last_rdma_stall_timestamp_ns_;
+
+  zx::time last_rdma_pending_in_vsync_timestamp_;
 };
 
 }  // namespace amlogic_display

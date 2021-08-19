@@ -79,92 +79,40 @@ constexpr uint32_t kAfbcColorReorderG = 2;
 constexpr uint32_t kAfbcColorReorderB = 3;
 constexpr uint32_t kAfbcColorReorderA = 4;
 
-constexpr zx::duration kRdmaActiveCondWaitTimeout = zx::sec(1);
-constexpr zx::duration kRdmaRegisterDumpTimeout = zx::sec(2);
-
-struct RdmaRegisterRecord {
-  uint32_t rdma_access_auto;
-  uint32_t rdma_access_auto2;
-  uint32_t rdma_access_auto3;
-  uint32_t rdma_access_man;
-  uint32_t rdma_ctrl;
-  uint32_t rdma_status;
-  uint32_t rdma_status2;
-  uint32_t rdma_status3;
-  uint32_t scratch_reg_high;
-  uint32_t scratch_reg_low;
-
-  explicit RdmaRegisterRecord(ddk::MmioBuffer* mmio) {
-    rdma_access_auto = mmio->Read32(VPU_RDMA_ACCESS_AUTO);
-    rdma_access_auto2 = mmio->Read32(VPU_RDMA_ACCESS_AUTO2);
-    rdma_access_auto3 = mmio->Read32(VPU_RDMA_ACCESS_AUTO3);
-    rdma_access_man = mmio->Read32(VPU_RDMA_ACCESS_MAN);
-    rdma_ctrl = mmio->Read32(VPU_RDMA_CTRL);
-    rdma_status = mmio->Read32(VPU_RDMA_STATUS);
-    rdma_status2 = mmio->Read32(VPU_RDMA_STATUS2);
-    rdma_status3 = mmio->Read32(VPU_RDMA_STATUS3);
-    scratch_reg_high = mmio->Read32(VPP_DUMMY_DATA1);
-    scratch_reg_low = mmio->Read32(VPP_OSD_SC_DUMMY_DATA);
-  }
-
-  void Dump() {
-    DISP_INFO("VPU_RDMA_ACCESS_AUTO = 0x%x", rdma_access_auto);
-    DISP_INFO("VPU_RDMA_ACCESS_AUTO2 = 0x%x", rdma_access_auto2);
-    DISP_INFO("VPU_RDMA_ACCESS_AUTO3 = 0x%x", rdma_access_auto3);
-    DISP_INFO("VPU_RDMA_ACCESS_MAN = 0x%x", rdma_access_man);
-    DISP_INFO("VPU_RDMA_CTRL = 0x%x", rdma_ctrl);
-    DISP_INFO("VPU_RDMA_STATUS = 0x%x", rdma_status);
-    DISP_INFO("VPU_RDMA_STATUS2 = 0x%x", rdma_status2);
-    DISP_INFO("VPU_RDMA_STATUS3 = 0x%x", rdma_status3);
-    DISP_INFO("Scratch Reg High: 0x%x", scratch_reg_high);
-    DISP_INFO("Scratch Reg Low: 0x%x", scratch_reg_low);
-  }
-};
-
 }  // namespace
 
-void Osd::WaitForRdmaIdle() {
-  // Record the state of RDMA registers to log in case of a stall.
-  RdmaRegisterRecord record(&(*vpu_mmio_));
+void Osd::TryResolvePendingRdma() {
+  ZX_DEBUG_ASSERT(rdma_active_);
 
-  zx::time dump_deadline = zx::deadline_after(kRdmaRegisterDumpTimeout);
-  zx::unowned_clock utc_clock(zx_utc_reference_get());
-  bool dumped = false;
-  auto stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
-  while (stat_reg.RequestLatched(kRdmaChannel) || stat_reg.ChannelDone(kRdmaChannel)) {
-    zx::time now = zx::clock::get_monotonic();
-    if (!dumped && now > dump_deadline) {
-      rdma_stall_count_.Add(1);
-      last_rdma_stall_timestamp_ns_.Set(now.get());
+  zx::time now = zx::clock::get_monotonic();
+  auto rdma_status = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
+  if (!rdma_status.ChannelDone(kRdmaChannel)) {
+    // The configs scheduled to apply on the previous vsync have not been processed by the RDMA
+    // engine yet. Log some statistics on how often this situation occurs.
+    rdma_pending_in_vsync_count_.Add(1);
 
-      DISP_INFO("vsync blocked too long waiting for RDMA; dumping registers");
-      dumped = true;
+    zx::duration interval = now - last_rdma_pending_in_vsync_timestamp_;
+    last_rdma_pending_in_vsync_timestamp_ = now;
+    last_rdma_pending_in_vsync_timestamp_ns_prop_.Set(last_rdma_pending_in_vsync_timestamp_.get());
+    last_rdma_pending_in_vsync_interval_ns_.Set(interval.get());
+  }
 
-      DISP_INFO("RDMA registers before wait:\n");
-      record.Dump();
-      DumpLocked();
+  // If RDMA for AFBC just completed, simply clear the interrupt. We keep RDMA enabled to
+  // automatically get triggered on every vsync. FlipOnVsync is responsible for enabling/disabling
+  // AFBC-related RDMA based on configs.
+  if (rdma_status.ChannelDone(kAfbcRdmaChannel - 1, &(*vpu_mmio_))) {
+    RdmaCtrlReg::ClearInterrupt(kAfbcRdmaChannel - 1, &(*vpu_mmio_));
+  }
 
-      if (stat_reg.ChannelDone(kRdmaChannel)) {
-        // Typically we expect this to be handled by RdmaThread(), however there is a subtle bug
-        // that causes the RDMA thread to sometimes not wake up from the IRQ wait. Here we assume
-        // that RdmaThread() did not handle this condition, schedule any pending configs as
-        // RdmaThread() would, and unblock the vsync event delivery.
-        HandleBaseRdmaComplete();
-        return;
-      }
-    }
+  if (rdma_status.ChannelDone(kRdmaChannel)) {
+    RdmaCtrlReg::ClearInterrupt(kRdmaChannel, &(*vpu_mmio_));
 
-    zx::time_utc now_utc;
-    if (utc_clock->read(now_utc.get_address()) != ZX_OK) {
-      DISP_ERROR("failed to read UTC clock");
-      return;
-    }
+    uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
+    regVal &= ~RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // Remove VSYNC interrupt source
+    vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
 
-    // TODO(fxbug.dev/80821): Migrate this driver to use std::condition_variable instead.
-    struct timespec deadline = (now_utc + kRdmaActiveCondWaitTimeout).to_timespec();
-    cnd_timedwait(rdma_active_cnd_.get(), rdma_lock_.GetInternal(), &deadline);
-
-    stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
+    // Read and store the last applied image handle and drive the RDMA state machine forward.
+    ProcessRdmaUsageTable();
   }
 }
 
@@ -172,23 +120,14 @@ uint64_t Osd::GetLastImageApplied() {
   ZX_DEBUG_ASSERT(initialized_);
   fbl::AutoLock lock(&rdma_lock_);
   if (rdma_active_) {
-    WaitForRdmaIdle();
+    TryResolvePendingRdma();
   }
   return latest_applied_config_;
 }
 
-void Osd::HandleBaseRdmaComplete() {
-  uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
-  regVal &= ~RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // Remove VSYNC interrupt source
-  vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
-  // clear interrupts
-  RdmaCtrlReg::ClearInterrupt(kRdmaChannel, &(*vpu_mmio_));
+void Osd::ProcessRdmaUsageTable() {
+  ZX_DEBUG_ASSERT(rdma_active_);
 
-  // Continue only if rdma is active. If not, it means we are switching clients and this is
-  // a "left" over interrupt.
-  if (!rdma_active_) {
-    return;
-  }
   // Find out how far did the RDMA write
   uint64_t val = (static_cast<uint64_t>(vpu_mmio_->Read32(VPP_DUMMY_DATA1)) << 32) |
                  (vpu_mmio_->Read32(VPP_OSD_SC_DUMMY_DATA));
@@ -213,7 +152,7 @@ void Osd::HandleBaseRdmaComplete() {
   }
 
   rdma_active_ = false;
-  rdma_active_cnd_.Broadcast();
+
   // Only mark ready if we actually completed all the configs.
   if (last_table_index == end_index_used_) {
     // Clear them up
@@ -236,10 +175,11 @@ void Osd::HandleBaseRdmaComplete() {
     regVal |= RDMA_ACCESS_AUTO_WRITE(kRdmaChannel);   // Write
     vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
     rdma_active_ = true;
+    rdma_begin_count_.Add(1);
   }
 }
 
-int Osd::RdmaThread() {
+int Osd::RdmaIrqThread() {
   zx_status_t status;
   while (true) {
     status = rdma_irq_.wait(nullptr);
@@ -249,46 +189,6 @@ int Osd::RdmaThread() {
     }
 
     rdma_irq_count_.Add(1);
-    auto status_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
-
-    // For AFBC, we simply clear the interrupt. We keep it enabled since it needs to get triggered
-    // every vsync. It will get disabled if FlipOnVsync does not use AFBC.
-    if (RdmaStatusReg::ChannelDone(kAfbcRdmaChannel - 1, &(*vpu_mmio_))) {
-      RdmaCtrlReg::ClearInterrupt(kAfbcRdmaChannel - 1, &(*vpu_mmio_));
-      rdma_afbc_channel_done_count_.Add(1);
-    }
-
-    if (!status_reg.ChannelDone(kRdmaChannel, &(*vpu_mmio_))) {
-      // If the RDMA transfer is not pending, then wait for the next IRQ to fire.
-      if (!status_reg.RequestLatched(kRdmaChannel)) {
-        continue;
-      }
-
-      DISP_INFO("rdma_thread: RDMA channel 1 request latched - looping until channel is done");
-      rdma_base_channel_pending_in_irq_count_.Add(1);
-
-      // The RDMA request is yet to be serviced. Wait until it has completed.
-      while (!status_reg.ChannelDone(kRdmaChannel)) {
-        zx::nanosleep(zx::deadline_after(zx::usec(10)));
-        status_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
-
-        // If at any point in our busy wait RDMA was intentionally shut down, then break out of this
-        // loop.
-        fbl::AutoLock lock(&rdma_lock_);
-        if (!rdma_active_) {
-          DISP_INFO("rdma_thread: RDMA no longer active; done waiting");
-          break;
-        }
-      }
-
-      DISP_INFO("rdma_thread: done waiting for RDMA channel 1 request");
-    } else {
-      rdma_base_channel_done_count_.Add(1);
-    }
-
-    // RDMA completed. Remove source for all finished DMA channels
-    fbl::AutoLock lock(&rdma_lock_);
-    HandleBaseRdmaComplete();
   }
   return status;
 }
@@ -303,12 +203,14 @@ Osd::Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t dis
       inspect_node_(parent_node->CreateChild("osd")) {
   rdma_allocation_failures_ = inspect_node_.CreateUint("rdma_allocation_failures", 0);
   rdma_irq_count_ = inspect_node_.CreateUint("rdma_irq_count", 0);
-  rdma_base_channel_pending_in_irq_count_ =
-      inspect_node_.CreateUint("rdma_base_channel_pending_in_irq_count", 0);
-  rdma_base_channel_done_count_ = inspect_node_.CreateUint("rdma_base_channel_done_count", 0);
-  rdma_afbc_channel_done_count_ = inspect_node_.CreateUint("rdma_afbc_channel_done_count", 0);
+  rdma_begin_count_ = inspect_node_.CreateUint("rdma_begin_count", 0);
+  rdma_pending_in_vsync_count_ = inspect_node_.CreateUint("rdma_pending_in_vsync_count", 0);
   rdma_stall_count_ = inspect_node_.CreateUint("rdma_stalls", 0);
   last_rdma_stall_timestamp_ns_ = inspect_node_.CreateUint("last_rdma_stall_timestamp_ns", 0);
+  last_rdma_pending_in_vsync_interval_ns_ =
+      inspect_node_.CreateUint("last_rdma_pending_in_vsync_interval_ns", 0);
+  last_rdma_pending_in_vsync_timestamp_ns_prop_ =
+      inspect_node_.CreateUint("last_rdma_pending_in_vsync_timestamp_ns", 0);
 }
 
 zx_status_t Osd::Init(ddk::PDev& pdev) {
@@ -337,8 +239,8 @@ zx_status_t Osd::Init(ddk::PDev& pdev) {
     return status;
   }
 
-  auto start_thread = [](void* arg) { return static_cast<Osd*>(arg)->RdmaThread(); };
-  status = thrd_create_with_name(&rdma_thread_, start_thread, this, "rdma_thread");
+  auto start_thread = [](void* arg) { return static_cast<Osd*>(arg)->RdmaIrqThread(); };
+  status = thrd_create_with_name(&rdma_irq_thread_, start_thread, this, "rdma_irq_thread");
   if (status != ZX_OK) {
     DISP_ERROR("Could not create rdma_thread");
     return status;
@@ -672,6 +574,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
   rdma_usage_table_[next_table_idx] = config[0].layer_list[0]->cfg.primary.image.handle;
   rdma_active_ = true;
+  rdma_begin_count_.Add(1);
   if (supports_afbc_ && info->is_afbc) {
     // Enable Auto mode: Non-Increment, VSync Interrupt Driven, Write
     RdmaAccessAuto2Reg::Get().FromValue(0).set_chn7_auto_write(1).WriteTo(&(*vpu_mmio_));
@@ -978,7 +881,6 @@ void Osd::StopRdma() {
   // Clear interrupt status
   RdmaCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_clear_done(0xFF).WriteTo(&(*vpu_mmio_));
   rdma_active_ = false;
-  rdma_active_cnd_.Signal();
   for (auto& i : rdma_usage_table_) {
     i = kRdmaTableReady;
   }
@@ -1387,7 +1289,7 @@ void Osd::DumpRdmaState() {
 void Osd::Release() {
   Disable();
   rdma_irq_.destroy();
-  thrd_join(rdma_thread_, nullptr);
+  thrd_join(rdma_irq_thread_, nullptr);
   rdma_pmt_.unpin();
 }
 
