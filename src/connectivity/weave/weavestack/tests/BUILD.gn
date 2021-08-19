@@ -66,4 +66,9 @@ fuchsia_test_package("package-test") {
   package_name = "weavestack-unittests"
   test_components = [ ":weavestack-unittests" ]
   deps = [ "//src/connectivity/network/netstack:component-debug" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

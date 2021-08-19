@@ -322,6 +322,9 @@ fuchsia_unittest_package("audio_core_unittests") {
 
   test_specs = {
     environments = basic_envs
+    log_settings = {
+      max_severity = "FATAL"
+    }
   }
 }
 

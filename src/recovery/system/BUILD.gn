@@ -189,5 +189,8 @@ fuchsia_test_package("system_recovery_tests") {
   ]
   test_specs = {
     environments = [ nuc_env ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }

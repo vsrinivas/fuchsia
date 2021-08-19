@@ -5,20 +5,12 @@
             "url": "fuchsia-pkg://fuchsia.com/asix-88179-integration-test#meta/asix-88179-integration-test.cmx"
         },
         {
-            "max_severity": "FATAL",
-            "url": "fuchsia-pkg://fuchsia.com/audio_core_unittests#meta/audio_core_unittests.cmx"
-        },
-        {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/bind-fail-test#meta/bind-fail-test.cmx"
         },
         {
             "max_severity": "FATAL",
             "url": "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_unittests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers_ext4_test.cmx"
         },
         {
             "max_severity": "ERROR",
@@ -34,14 +26,6 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/inspect-validator-test-rust#meta/inspect-validator-test-rust.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/isolated-ota-integration-tests#meta/isolated-ota-integration-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/magma_intel_gen_integration_tests#meta/msd_intel_gen_integration_tests.cmx"
         },
         {
@@ -50,23 +34,11 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/msd-vsi-vip-nonhardware-tests#meta/msd-vsi-vip-nonhardware-tests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-stack-ncp-ver-query-mock-component.cmx"
         },
         {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/paver-test#meta/paver-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/web_semantics_tests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/system_recovery_tests#meta/system_recovery_bin_test.cmx"
         },
         {
             "max_severity": "ERROR",
@@ -87,14 +59,6 @@
         {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/usb-hid-test#meta/usb-hid-test-package.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/weavestack-unittests#meta/weavestack-unittests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/web_runner_tests#meta/web_runner_integration_tests.cmx"
         },
         {
             "max_severity": "ERROR",

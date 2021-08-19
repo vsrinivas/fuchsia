@@ -151,6 +151,9 @@ fuchsia_test_package("web_runner_tests") {
 
   test_specs = {
     environments = with_display_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

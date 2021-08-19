@@ -152,6 +152,11 @@ fuchsia_test_package("factory_store_providers_ext4_tests") {
 
            ":factory_ext4_image",
          ] + test_file_resources
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 resource("items_zbi") {
