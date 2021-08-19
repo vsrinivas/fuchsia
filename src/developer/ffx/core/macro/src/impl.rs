@@ -14,7 +14,7 @@ use {
         spanned::Spanned,
         token::Comma,
         AngleBracketedGenericArguments, Error, FnArg, GenericArgument, Ident, ItemFn, ItemStruct,
-        Lit, LitStr, Pat, PatType, PathArguments, PathSegment, Token,
+        Lit, LitStr, Pat, PatIdent, PatType, PathArguments, PathSegment, Token,
         Type::Path,
         TypePath,
     },
@@ -183,13 +183,26 @@ fn parse_arguments(
                                 arg.span(),
                                 format!(
                                     "ffx_plugin could not recognize the parameters: {} \n{}",
-                                    command.clone(),
+                                    command.ident.clone(),
                                     UNRECOGNIZED_PARAMETER
                                 ),
                             ));
                         } else {
-                            cmd = Some(arg.clone());
-                            inner_args.push(quote! { #command });
+                            let ident = command.ident.clone();
+                            if command.mutability.is_some() {
+                                if let FnArg::Typed(p) = arg.clone() {
+                                    let new_pat = Box::new(Pat::Ident(PatIdent {
+                                        mutability: None,
+                                        ..command
+                                    }));
+                                    cmd = Some(FnArg::Typed(PatType { ty, pat: new_pat, ..p }));
+                                } else {
+                                    cmd = Some(arg.clone());
+                                }
+                            } else {
+                                cmd = Some(arg.clone());
+                            }
+                            inner_args.push(quote! { #ident });
                         }
                     } else {
                         if let Pat::Ident(pat_ident) = pat.as_ref() {
@@ -225,9 +238,9 @@ fn parse_arguments(
     }
 }
 
-fn parse_argh_command(pattern_type: &Box<Pat>) -> Option<Ident> {
+fn parse_argh_command(pattern_type: &Box<Pat>) -> Option<PatIdent> {
     if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
-        Some(pat_ident.ident.clone())
+        Some(pat_ident.clone())
     } else {
         None
     }
