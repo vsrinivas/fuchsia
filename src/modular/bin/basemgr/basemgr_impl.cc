@@ -10,6 +10,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <zircon/time.h>
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/common/async_holder.h"
@@ -87,12 +88,13 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
 
 BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
-                         fuchsia::sys::LauncherPtr launcher,
+                         BasemgrInspector* inspector, fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                          fit::function<void()> on_shutdown)
     : config_accessor_(std::move(config_accessor)),
       outgoing_services_(std::move(outgoing_services)),
+      inspector_(inspector),
       launcher_(std::move(launcher)),
       presenter_(std::move(presenter)),
       device_administrator_(std::move(device_administrator)),
@@ -212,6 +214,8 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
   auto start_session_result =
       session_provider_->StartSession(std::move(view_token), std::move(view_ref_pair));
   FX_CHECK(start_session_result.is_ok());
+
+  inspector_->AddSessionStartedAt(zx_clock_get_monotonic());
 
   // TODO(fxbug.dev/56132): Ownership of the Presenter should be moved to the session shell.
   if (presenter_) {

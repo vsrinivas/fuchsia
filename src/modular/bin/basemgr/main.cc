@@ -19,6 +19,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
+#include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
@@ -40,12 +41,14 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
 
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
     modular::ModularConfigAccessor config_accessor, sys::ComponentContext* component_context,
+    modular::BasemgrInspector* inspector,
     async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
       config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
 
   return std::make_unique<modular::BasemgrImpl>(
       std::move(config_accessor), component_context->outgoing(),
+      inspector,
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
@@ -55,14 +58,6 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
         component_context->outgoing()->debug_dir()->RemoveEntry(modular_config::kBasemgrConfigName);
         loop->Quit();
       });
-}
-
-inspect::StringProperty AddConfigToInspect(const modular::ModularConfigReader& config_reader,
-                                           sys::ComponentInspector* inspector) {
-  FX_DCHECK(inspector);
-  auto config_json = modular::ConfigToJsonString(config_reader.GetConfig());
-  inspect::Node& inspect_root = inspector->root();
-  return inspect_root.CreateString(modular_config::kInspectConfig, config_json);
 }
 
 std::string GetUsage() {
@@ -118,11 +113,14 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> component_context(
       sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
-  auto inspector = std::make_unique<sys::ComponentInspector>(component_context.get());
-  auto config_property = AddConfigToInspect(config_reader, inspector.get());
+  auto component_inspector = std::make_unique<sys::ComponentInspector>(component_context.get());
+  component_inspector->Health().Ok();
+
+  auto inspector = std::make_unique<modular::BasemgrInspector>(component_inspector->inspector());
+  inspector->AddConfig(config_reader.GetConfig());
 
   auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()),
-                                        component_context.get(), &loop);
+                                        component_context.get(), inspector.get(), &loop);
 
   if (!command_line.HasOption(kArrestedFlag)) {
     basemgr_impl->Start();

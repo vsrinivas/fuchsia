@@ -16,12 +16,14 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/svc/cpp/service_namespace.h>
 
 #include <optional>
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/bin/basemgr/presentation_container.h"
 #include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/lib/async/cpp/future.h"
@@ -59,12 +61,14 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   //
   // |config_accessor| Contains configuration for starting sessions.
   //    This is normally read from files in basemgr's /config/data directory.
+  // |outgoing| The component's outgoing directory for publishing protocols.
+  // |inspector| Inspect tree for publishing diagnostics.
   // |launcher| Environment service for creating component instances.
   // |presenter| Service to initialize the presentation.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(modular::ModularConfigAccessor config_accessor,
-                       std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
-                       fuchsia::sys::LauncherPtr launcher,
+                       std::shared_ptr<sys::OutgoingDirectory> outgoing,
+                       BasemgrInspector* inspector, fuchsia::sys::LauncherPtr launcher,
                        fuchsia::ui::policy::PresenterPtr presenter,
                        fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                        fit::function<void()> on_shutdown);
@@ -143,6 +147,9 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Used to export protocols like Lifecycle
   const std::shared_ptr<sys::OutgoingDirectory> outgoing_services_;
+
+  // Used to store metrics in the inspect tree. Not owned.
+  BasemgrInspector* inspector_;
 
   // Used to launch component instances.
   fuchsia::sys::LauncherPtr launcher_;

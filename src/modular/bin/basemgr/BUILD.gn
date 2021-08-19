@@ -26,7 +26,6 @@ executable("basemgr_bin") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/files",
@@ -68,8 +67,21 @@ fuchsia_package("basemgr") {
   ]
 }
 
+source_set("bounded_inspect_list_node") {
+  sources = [
+    "bounded_inspect_list_node.cc",
+    "bounded_inspect_list_node.h",
+  ]
+
+  deps = [ "//src/lib/fxl" ]
+
+  public_deps = [ "//sdk/lib/sys/inspect/cpp" ]
+}
+
 source_set("lib") {
   sources = [
+    "inspector.cc",
+    "inspector.h",
     "presentation_container.cc",
     "presentation_container.h",
     "session_context_impl.cc",
@@ -94,6 +106,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    ":bounded_inspect_list_node",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
@@ -102,10 +115,12 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:environment",
+    "//zircon/public/lib/zx",
   ]
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
@@ -162,10 +177,47 @@ fuchsia_unittest_component("basemgr-impl-unittest") {
   deps = [ ":basemgr_impl_unittest" ]
 }
 
+executable("bounded_inspect_list_node_unittest") {
+  testonly = true
+
+  sources = [ "bounded_inspect_list_node_unittest.cc" ]
+
+  deps = [
+    ":bounded_inspect_list_node",
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_component("bounded-inspect-list-node-unittest") {
+  deps = [ ":bounded_inspect_list_node_unittest" ]
+}
+
+executable("inspector_unittest") {
+  testonly = true
+
+  sources = [ "inspector_unittest.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+  ]
+}
+
+fuchsia_unittest_component("basemgr-inspector-unittest") {
+  deps = [ ":inspector_unittest" ]
+}
+
 fuchsia_test_package("basemgr_unittests") {
   test_components = [
     ":basemgr-impl-unittest",
     ":session-context-impl-unittest",
+    ":bounded-inspect-list-node-unittest",
+    ":basemgr-inspector-unittest",
   ]
   test_specs = {
     # session_context_impl_unittest exercises crash handling that logs an ERROR.

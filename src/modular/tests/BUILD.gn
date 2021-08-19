@@ -182,6 +182,30 @@ fuchsia_unittest_component("inspect-session-test") {
   deps = [ ":inspect_session_test" ]
 }
 
+executable("inspect_basemgr_test") {
+  testonly = true
+
+  sources = [ "inspect_basemgr_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/inspect/contrib/cpp:archive_reader",
+    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/modular_config",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_impl",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+fuchsia_unittest_component("inspect-basemgr-test") {
+  manifest = "meta/inspect_basemgr_test.cmx"
+  deps = [ ":inspect_basemgr_test" ]
+}
+
 executable("intents_test") {
   testonly = true
 
@@ -419,6 +443,7 @@ fuchsia_test_package("modular_integration_tests") {
     ":basemgr-test",
     ":component-context-test",
     ":element-manager-test",
+    ":inspect-basemgr-test",
     ":inspect-session-test",
     ":intents-test",
     ":module-context-test",
