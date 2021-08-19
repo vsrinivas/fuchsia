@@ -137,7 +137,7 @@ a different callee.
 
 *   `zx_mbo_read(mbo) -> (data, handles)`
 
-    Reads an MBO.  This reads the entire contents of the MBO.
+    Reads from an MBO.  This reads the entire contents of the MBO.
     (Operations for partial reads will be defined later.)
 
     This takes an MBO reference, which means either a CallersRef
@@ -152,7 +152,7 @@ a different callee.
 
 *   `zx_mbo_write(mbo, data, handles)`
 
-    Writes an MBO.  This replaces the MBO's existing contents.
+    Writes to an MBO.  This replaces the MBO's existing contents.
     (Operations for partial/incremental writes will be defined later.)
     This takes an MBO reference (as defined in the description of
     `zx_mbo_read()`).
