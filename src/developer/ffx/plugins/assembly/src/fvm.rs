@@ -161,6 +161,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    #[ignore = "TODO(https://fxbug.dev/82867): Re-enable this test when it no longer flakes"]
     fn construct() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
@@ -179,6 +180,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "TODO(https://fxbug.dev/82867): Re-enable this test when it no longer flakes"]
     fn construct_with_emmc() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
@@ -202,6 +204,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "TODO(https://fxbug.dev/82867): Re-enable this test when it no longer flakes"]
     fn construct_with_nand() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
