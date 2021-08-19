@@ -10,7 +10,7 @@ The MBMQ model is based around four types of object:
 *   Channel endpoint
 *   MsgQueue: message queue
 *   MBO: message buffer object
-*   CMH: callee MBO holder
+*   CalleesRef: a callee's reference to an MBO
 
 A MsgQueue is a queue of messages, or to be more exact, a queue of
 MBOs.  A MsgQueue may be set as the destination for a channel
@@ -46,11 +46,11 @@ MBOs have multiple roles:
     `zx_mbo_send_reply()`.  This means a callee does not have to
     specify a channel for returning a reply message on.
 
-A CMH is a callee process's limited-access reference to an MBO.  A
-callee process can use a CMH to read and write an MBO until it returns
-ownership of the MBO back to the caller.  The callee's access to the
-MBO is revoked when it sends the reply, so the caller can then reuse
-the MBO with a different callee.
+A CalleesRef is a callee process's limited-access reference to an MBO.
+A callee process can use a CalleesRef to read and write an MBO until
+it returns ownership of the MBO back to the caller.  The callee's
+access to the MBO is revoked when it sends the reply, so the caller
+can then reuse the MBO with a different callee.
 
 ## Overview of the request-reply lifecycle
 
@@ -61,8 +61,8 @@ which they are typically used:
     the MBO handle
 *   `enqueued_as_request`: Enqueued on a MsgQueue (or channel) as a
     request
-*   `owned_by_callee`: Owned by a callee via a CMH: contents accessible
-    through the CMH handle
+*   `owned_by_callee`: Owned by a callee via a CalleesRef: contents
+    accessible through the CalleesRef handle
 *   `enqueued_as_reply`: Enqueued on a MsgQueue as a reply
 
 An MBO switches between these states as it is sent to a callee,
@@ -79,29 +79,29 @@ used to read or write the MBO, so the caller cannot modify the message
 after it has been sent.
 
 The callee process can read the MBO from its MsgQueue using
-`zx_msgqueue_wait()`, supplying a CMH object.  This removes the MBO
-from the message queue, sets the CMH to point to the MBO, and sets the
-MBO's state to `owned_by_callee`.  This state gives the callee the
-ability to read and write the MBO's contents using the CMH handle.
-The caller can read the request message out of the MBO by passing the
-CMH handle to `zx_mbo_read()`.  The caller can write a reply message
-into the MBO (overwriting its contents) by passing the CMH handle to
-`zx_mbo_write()`.
+`zx_msgqueue_wait()`, supplying a CalleesRef object.  This removes the
+MBO from the message queue, sets the CalleesRef to point to the MBO,
+and sets the MBO's state to `owned_by_callee`.  This state gives the
+callee the ability to read and write the MBO's contents using the
+CalleesRef handle.  The caller can read the request message out of the
+MBO by passing the CalleesRef handle to `zx_mbo_read()`.  The caller
+can write a reply message into the MBO (overwriting its contents) by
+passing the CalleesRef handle to `zx_mbo_write()`.
 
 Once the callee has written a reply into the MBO, it can send the
-reply to the caller by passing the CMH handle to
+reply to the caller by passing the CalleesRef handle to
 `zx_mbo_send_reply()`.  This enqueues the MBO on its associated
-MsgQueue, drops the CMH's reference to the MBO (putting the CMH back
-in the "unused" state), and sets the MBO's state to
-`enqueued_as_reply`.  The callee can now reuse this CMH object in
-later calls to `zx_msgqueue_wait()`.
+MsgQueue, drops the CalleesRef's reference to the MBO (putting the
+CalleesRef back in the "unused" state), and sets the MBO's state to
+`enqueued_as_reply`.  The callee can now reuse this CalleesRef object
+in later calls to `zx_msgqueue_wait()`.
 
 The caller process can then read the MBO from its MsgQueue using
-`zx_msgqueue_wait()`.  The caller supplies a CMH object but in this
-case the CMH is not used.  The `zx_msgqueue_wait()` syscall removes
-the MBO from the MsgQueue and sets the MBO's state back to
-`owned_by_callee`.  The caller can use the key value returned by
-`zx_msgqueue_wait()` to determine which MBO was returned, if
+`zx_msgqueue_wait()`.  The caller supplies a CalleesRef object but in
+this case the CalleesRef is not used.  The `zx_msgqueue_wait()`
+syscall removes the MBO from the MsgQueue and sets the MBO's state
+back to `owned_by_callee`.  The caller can use the key value returned
+by `zx_msgqueue_wait()` to determine which MBO was returned, if
 necessary.  The caller can now read the reply message from the MBO
 using `zx_mbo_read()`.
 
@@ -115,25 +115,25 @@ a different callee.
 
     Creates a new MBO.  The MBO starts off in the `owned_by_caller` state.
 
-*   `zx_mbo_read(mbo_or_cmh) -> (data, handles)`
+*   `zx_mbo_read(mbo_or_calleesref) -> (data, handles)`
 
     Reads an MBO.  This reads the entire contents of the MBO.
     (Operations for partial reads will be defined later.)  This takes
-    either an MBO handle (in the `owned_by_caller` state) or a CMH
-    handle (for a CMH pointing to an MBO in the `owned_by_callee`
-    state).
+    either an MBO handle (in the `owned_by_caller` state) or a
+    CalleesRef handle (for a CalleesRef pointing to an MBO in the
+    `owned_by_callee` state).
 
     If the message is too large to fit into the buffer passed to the
     syscall, the syscall returns the size of the message.  This allows
     the process to allocate a larger buffer and call the syscall
     again.
 
-*   `zx_mbo_write(mbo_or_cmh, data, handles)`
+*   `zx_mbo_write(mbo_or_calleesref, data, handles)`
 
     Writes an MBO.  This replaces the MBO's existing contents.
     (Operations for partial/incremental writes will be defined later.)
     This takes either an MBO handle (in the `owned_by_caller` state)
-    or a CMH handle (for a CMH pointing to an MBO in the
+    or a CalleesRef handle (for a CalleesRef pointing to an MBO in the
     `owned_by_callee` state).
 
 *   `zx_channel_send(channel, mbo)`
@@ -153,20 +153,23 @@ a different callee.
 
     Creates a new MsgQueue.
 
-*   `zx_msgqueue_wait(msgqueue, cmh) -> key`
+*   `zx_msgqueue_wait(msgqueue, calleesref) -> key`
 
     Reads an MBO from a MsgQueue.  If the MsgQueue is empty, this
     first blocks until the MsgQueue is non-empty.
 
-    This takes a CMH as an argument.  The CMH must not currently hold
-    a reference to an MBO, otherwise an error is returned.
+    This takes a CalleesRef as an argument.  The CalleesRef must not
+    currently hold a reference to an MBO, otherwise an error is
+    returned.
 
     This removes the first MBO from the message queue.  If the MBO was
-    in the `enqueued_as_request` state, this sets the CMH to point to
-    the MBO, and changes the MBO's state to `owned_by_callee`.
+    in the `enqueued_as_request` state, this sets the CalleesRef to
+    point to the MBO, and changes the MBO's state to
+    `owned_by_callee`.
 
     If the MBO was in the `enqueued_as_reply` state, this changes the
-    MBO's state to `owned_by_caller` and does not modify the CMH.
+    MBO's state to `owned_by_caller` and does not modify the
+    CalleesRef.
 
     This returns the `key` field from the MBO, which allows the
     process to determine which channel the message was sent on (for
@@ -189,19 +192,19 @@ a different callee.
     with the given key value.  The MBO must be in the
     `owned_by_caller` state.
 
-*   `zx_cmh_create() -> cmh`
+*   `zx_mbo_create_calleesref() -> calleesref`
 
-    Creates a new CMH.  The CMH starts off not holding a reference to
-    any MBO.
+    Creates a new CalleesRef.  The CalleesRef starts off not holding a
+    reference to any MBO.
 
-*   `zx_mbo_send_reply(cmh)`
+*   `zx_mbo_send_reply(calleesref)`
 
-    Returns a reply message to the caller.  The given CMH must have a
-    reference to an MBO (which will be in the state
-    `owned_by_callee`).  This operation drops the CMH's reference to
-    the MBO, and enqueues the MBO onto its associated MsgQueue,
-    setting the MBO's `key` field to its reply key.  The MBO's state
-    is set to `enqueued_as_reply`.
+    Returns a reply message to the caller.  The given CalleesRef must
+    have a reference to an MBO (which will be in the state
+    `owned_by_callee`).  This operation drops the CalleesRef's
+    reference to the MBO, and enqueues the MBO onto its associated
+    MsgQueue, setting the MBO's `key` field to its reply key.  The
+    MBO's state is set to `enqueued_as_reply`.
 
     If the MBO had no `reply_queue` set (which can be true for MBOs
     used for fire-and-forget messages), the MBO enters a defunct state
@@ -245,11 +248,11 @@ are dropped:
 
     Closing all the handles to an MBO only causes the MBO to be freed
     if there are no other references to the MBO from a MsgQueue or a
-    CMH.  If the handles to an MBO are closed while the MBO is
+    CalleesRef.  If the handles to an MBO are closed while the MBO is
     enqueued as a request on a MsgQueue, the MBO remains in the
-    MsgQueue, and it can still be read into a CMH and sent as a reply,
-    but it will be freed when `zx_msgqueue_wait()` returns the MBO to
-    the `owned_by_caller` state.
+    MsgQueue, and it can still be read into a CalleesRef and sent as a
+    reply, but it will be freed when `zx_msgqueue_wait()` returns the
+    MBO to the `owned_by_caller` state.
 
     This means it is possible to do a "fire-and-forget" send with an
     MBO: that is, send the MBO as a request message, but close the MBO
@@ -259,10 +262,10 @@ are dropped:
     it was sent as a request but there is no way a callee could send a
     reply.  There are two cases for this:
 
-    *   Closed CMH: If a CMH is closed while it holds a reference to
-        an MBO, the system will send an automatic reply on the MBO.
-        The system will replace the MBO's contents with a default
-        reply message and send the MBO as a reply (as if
+    *   Closed CalleesRef: If a CalleesRef is closed while it holds a
+        reference to an MBO, the system will send an automatic reply
+        on the MBO.  The system will replace the MBO's contents with a
+        default reply message and send the MBO as a reply (as if
         `zx_mbo_send_reply()` was called).
 
     *   Closed MsgQueue: If all the handles to a MsgQueue are closed
@@ -310,7 +313,7 @@ MBO:
     `zx_msgqueue_wait()` needs to check for `enqueued_as_request`
     versus `enqueued_as_reply`.
 
-CMH:
+CalleesRef:
 
 *   Reference to an MBO.  This reference may be null.  If the
     reference is non-null, the MBO is in the `owned_by_callee` state.
@@ -360,18 +363,18 @@ mapped at the same time.)
 ```c
 struct zx_mbmq_multiop {
   // Inputs for write+send:
-  bool is_req;           // true if sending a request, false if sending a reply
-  zx_handle_t mbo;       // for zx_mbo_write() + zx_channel_send()/zx_mbo_send_reply()
-  zx_handle_t channel;   // for zx_channel_send() (if is_req is true)
+  bool is_req;            // true if sending a request, false if sending a reply
+  zx_handle_t mbo;        // for zx_mbo_write() + zx_channel_send()/zx_mbo_send_reply()
+  zx_handle_t channel;    // for zx_channel_send() (if is_req is true)
 
   // Inputs for wait+read:
-  zx_handle_t msgqueue;  // for zx_msgqueue_wait()
-  zx_handle_t cmh;       // for zx_msgqueue_wait()
+  zx_handle_t msgqueue;   // for zx_msgqueue_wait()
+  zx_handle_t calleesref; // for zx_msgqueue_wait()
 
-  buffer_info buf;       // for zx_mbo_write() and zx_mbo_read()
+  buffer_info buf;        // for zx_mbo_write() and zx_mbo_read()
 
   // Output:
-  uint64_t key;          // from zx_msgqueue_wait()
+  uint64_t key;           // from zx_msgqueue_wait()
 };
 
 zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
@@ -380,45 +383,45 @@ zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
 `zx_mbmq_multiop()` does the following:
 
 *   Do `zx_mbo_write()` to write the message specified by `buf` into
-    the MBO specified by `mbo` (which may be an MBO handle or a CMH
-    handle).
+    the MBO specified by `mbo` (which may be an MBO handle or a
+    CalleesRef handle).
 *   Send message:
     *   If `is_req` is true, do `zx_channel_send()` to send `mbo` on
         `channel`.
     *   If `is_req` is false, do `zx_mbo_send_reply()` on `mbo` to
         send the message as a reply.
-*   Do `zx_msgqueue_wait()` on `msgqueue` and `cmh`.  Returns the
-    resulting key value in `key`.
+*   Do `zx_msgqueue_wait()` on `msgqueue` and `calleesref`.  Returns
+    the resulting key value in `key`.
 *   Do `zx_mbo_read()` to read the message from the MBO that was
     unqueued by `zx_msgqueue_wait()` into `buffer`.
     *   If the message was fully read into the buffer, the MBO is
         truncated (i.e. its copy of the message is dropped).  This is
         to allow the direct-copy optimisation.
     *   If the message that was unqueued was a request, this is
-        equivalent to `zx_mbo_read()` on `cmh`.  Otherwise, if the
-        unqueued message was a reply, then if userland were to do an
-        equivalent `zx_mbo_read()` call it would involve looking up
+        equivalent to `zx_mbo_read()` on `calleesref`.  Otherwise, if
+        the unqueued message was a reply, then if userland were to do
+        an equivalent `zx_mbo_read()` call it would involve looking up
         the MBO handle based on the `key` value.
 
-## Properties of CMHs
+## Properties of CalleesRefs
 
-CMHs have these useful properties:
+CalleesRefs have these useful properties:
 
-*   **Acts as a reply capability:** A CMH acts as single-use,
+*   **Acts as a reply capability:** A CalleesRef acts as single-use,
     revokable capability for replying to a request.  When the reply is
-    sent, the CMH's reference to the MBO is dropped, revoking the
-    callee's ability to use it to modify the MBO or send the MBO as a
-    reply again.
+    sent, the CalleesRef's reference to the MBO is dropped, revoking
+    the callee's ability to use it to modify the MBO or send the MBO
+    as a reply again.
 
-*   **Reusable:** A callee can reuse a CMH across multiple requests.
-    This means we can avoid doing an allocation and deallocation for
-    each request, and we can avoid modifying the handle table for each
-    request.  (A CMH's ability to reply to a particular request is
-    revoked when the reply is sent, but the CMH itself is not
-    revoked.)
+*   **Reusable:** A callee can reuse a CalleesRef across multiple
+    requests.  This means we can avoid doing an allocation and
+    deallocation for each request, and we can avoid modifying the
+    handle table for each request.  (A CalleesRef's ability to reply
+    to a particular request is revoked when the reply is sent, but the
+    CalleesRef itself is not revoked.)
 
-*   **Acts as a message handle:** A CMH acts as a handle to a request
-    message.  This means that a large request can be read
+*   **Acts as a message handle:** A CalleesRef acts as a handle to a
+    request message.  This means that a large request can be read
     incrementally by doing multiple syscall invocations using that
     handle to read parts of the message.  (Note, however, that we have
     not defined the syscalls for doing that yet.)  This means that a
@@ -462,10 +465,10 @@ recycles MBOs across requests or not:
 For fire-and-forget requests, a well-behaved callee should release the
 MBO after it has read or processed the message by writing an empty
 reply message into the MBO and calling `zx_mbo_send_reply()` (or,
-equivalently, by closing the CMH handle).  Unfortunately that has the
-problem of requiring an extra syscall invocation, so we might want to
-introduce a way of releasing the callee's MBO reference implicitly
-when the message is read.
+equivalently, by closing the CalleesRef handle).  Unfortunately that
+has the problem of requiring an extra syscall invocation, so we might
+want to introduce a way of releasing the callee's MBO reference
+implicitly when the message is read.
 
 Note that a badly-behaved callee could hold into the MBO indefinitely,
 but that is not very different from behaving badly by never unqueuing
@@ -608,10 +611,11 @@ are some dependencies between the following steps, but some of them
 could be reordered or done in parallel:
 
 *   Implement most of the new kernel primitives, including MsgQueues,
-    MBOs and CMHs.  Channels will be modified so that they can contain
-    both legacy messages (those sent with `zx_channel_write()`) and
-    MBO messages (those sent with `zx_channel_send()`).  MsgQueues
-    will be added as a new object type, separate from Zircon ports.
+    MBOs and CalleesRefs.  Channels will be modified so that they can
+    contain both legacy messages (those sent with
+    `zx_channel_write()`) and MBO messages (those sent with
+    `zx_channel_send()`).  MsgQueues will be added as a new object
+    type, separate from Zircon ports.
 
 *   Switch processes over to using MsgQueues instead of Zircon ports.
     An initial conversion can replace uses of `zx_object_wait_async()`
@@ -623,7 +627,7 @@ could be reordered or done in parallel:
     messages and legacy messages.  Servers will send replies via
     either legacy messages or MBOs (using `zx_mbo_send_reply()`)
     depending on the request type.  This work can be made easier using
-    the "legacy reply mode" for CMHs described below.
+    the "legacy reply mode" for CalleesRefs described below.
 
 *   Switch client code over to sending requests via MBOs instead of
     via legacy messages.  Change `zx_channel_call()` to send requests
@@ -650,21 +654,21 @@ could be reordered or done in parallel:
     messages, because we no longer need it for matching up replies
     with requests.
 
-### Legacy reply mode for CMHs
+### Legacy reply mode for CalleesRefs
 
 To simplify the work of converting servers to accept requests via both
-MBOs and legacy messages, we can temporarily extend CMHs with a
-"legacy reply mode": When a legacy request message is read into a CMH
-using `zx_msgqueue_wait()`, the CMH will store a reference to the
-channel endpoint that the request was written to.  Calling
-`zx_mbo_send_reply()` on that CMH will then enqueue the reply as a
-legacy message so that it is readable from that channel endpoint.
-This feature can be removed after client code no longer sends requests
-via legacy messages.
+MBOs and legacy messages, we can temporarily extend CalleesRefs with a
+"legacy reply mode": When a legacy request message is read into a
+CalleesRef using `zx_msgqueue_wait()`, the CalleesRef will store a
+reference to the channel endpoint that the request was written to.
+Calling `zx_mbo_send_reply()` on that CalleesRef will then enqueue the
+reply as a legacy message so that it is readable from that channel
+endpoint.  This feature can be removed after client code no longer
+sends requests via legacy messages.
 
 This means that server code will be able to handle legacy requests
 without having to be aware of them.  Server code can be converted
-directly to using CMHs.  We won't have to add and later remove
+directly to using CalleesRefs.  We won't have to add and later remove
 server-side code for conditionalising based on whether a request was
 an MBO or a legacy message.  The conditionalising only needs to be
 done once, in the kernel's IPC implementation, rather than for each
@@ -676,13 +680,13 @@ An alternative transition plan would be to split up the features
 provided by the MBMQ model and adopt these features separately.
 
 For example, we could implement MsgQueues, including the ability to
-redirect channels to MsgQueues, without implementing MBOs and CMHs --
-or we could add that functionality to Zircon ports.  This would give
-us the ability to combine `zx_port_wait()` and `zx_channel_read()`
-into a single syscall (giving some performance benefits) and to
-preserve message ordering across channels.  It would not give us the
-other benefits, including shareability of channels, allowing large
-messages, and providing memory accounting for messages.
+redirect channels to MsgQueues, without implementing MBOs and
+CalleesRefs -- or we could add that functionality to Zircon ports.
+This would give us the ability to combine `zx_port_wait()` and
+`zx_channel_read()` into a single syscall (giving some performance
+benefits) and to preserve message ordering across channels.  It would
+not give us the other benefits, including shareability of channels,
+allowing large messages, and providing memory accounting for messages.
 
 This approach is more incremental and could be easier in some ways,
 but it could also make it harder to get to a better overall solution.
