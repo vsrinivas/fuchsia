@@ -450,8 +450,15 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            // TODO(fxbug.dev/37419): Remove default handling after methods landed.
-            _ => {}
+            FileRequest::NodeGetFlags { responder } => {
+                responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
+            }
+            FileRequest::NodeSetFlags { flags: _, responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            FileRequest::AdvisoryLock { request: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
         }
         Ok(ConnectionState::Alive)
     }
