@@ -157,11 +157,11 @@ a different callee.
     This takes an MBO reference (as defined in the description of
     `zx_mbo_read()`).
 
-*   `zx_channel_send(channel, mbo)`
+*   `zx_channel_send(channel, callersref)`
 
-    Sends an MBO as a request on a channel.  The MBO must be in the
-    `owned_by_caller` state.  Its state will be changed to
-    `enqueued_as_request`.
+    Sends an MBO as a request on a channel.  Takes a CallersRef for
+    the MBO.  The MBO must be in the `owned_by_caller` state.  Its
+    state will be changed to `enqueued_as_request`.
 
     If the channel has an associated destination MsgQueue, as set by
     `zx_object_set_msgqueue()`, the MBO will be enqueued onto that
@@ -196,7 +196,7 @@ a different callee.
     process to determine which channel the message was sent on (for
     requests) or which request this is a reply to (for replies).
 
-*   `zx_object_set_msgqueue(channel_or_mbo, msgqueue, key)`
+*   `zx_object_set_msgqueue(channel_or_callersref, msgqueue, key)`
 
     Sets the associated destination MsgQueue for a channel or an MBO.
 
@@ -208,10 +208,10 @@ a different callee.
     2 and currently readable from endpoint 1), they are moved onto the
     given MsgQueue.
 
-    For MBOs: When given an MBO, this sets the associated MsgQueue for
-    the MBO, onto which `zx_mbo_send_reply()` will enqueue the MBO
-    with the given key value.  The MBO must be in the
-    `owned_by_caller` state.
+    For MBOs: When given the CallersRef for an MBO, this sets the
+    associated MsgQueue for the MBO, onto which `zx_mbo_send_reply()`
+    will enqueue the MBO with the given key value.  The MBO must be in
+    the `owned_by_caller` state.
 
 *   `zx_mbo_send_reply(calleesref)`
 
@@ -228,7 +228,7 @@ a different callee.
     MBO being enqueued as a reply on a MsgQueue for which the handles
     are later closed.
 
-*   `zx_object_wait_async_mbo(handle, mbo, signals, options)`
+*   `zx_object_wait_async_mbo(handle, callersref, signals, options)`
 
     This is a replacement for `zx_object_wait_async()`.  Like that
     syscall, it waits until one or more of the given signals is
@@ -242,7 +242,8 @@ a different callee.
     This means that waiting for a signal on an object is like making a
     call to the object.
 
-    The given MBO must be in the `owned_by_caller` state.
+    This takes a CallersRef for an MBO.  The MBO must be in the
+    `owned_by_caller` state.
 
     Note that `zx_object_wait_async_mbo()` does not need to allocate
     memory.  We can ensure that every MBO preallocates enough memory
@@ -329,6 +330,12 @@ MBO:
     CallersRef handles need to check for `owned_by_caller`, whereas
     `zx_msgqueue_wait()` needs to check for `enqueued_as_request`
     versus `enqueued_as_reply`.
+
+CallersRef:
+
+*   A CallersRef needs no state of its own.  A CallersRef can be
+    represented as just a reference to an MBO, or it can be
+    implemented as the same heap object as the MBO.
 
 CalleesRef:
 
@@ -629,8 +636,8 @@ are some dependencies between the following steps, but some of them
 could be reordered or done in parallel:
 
 *   Implement most of the new kernel primitives, including MsgQueues,
-    MBOs and CalleesRefs.  Channels will be modified so that they can
-    contain both legacy messages (those sent with
+    MBOs, CallersRefs and CalleesRefs.  Channels will be modified so
+    that they can contain both legacy messages (those sent with
     `zx_channel_write()`) and MBO messages (those sent with
     `zx_channel_send()`).  MsgQueues will be added as a new object
     type, separate from Zircon ports.
