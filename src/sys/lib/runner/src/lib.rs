@@ -176,8 +176,13 @@ pub fn get_environ(dict: &fdata::Dictionary) -> Result<Option<Vec<String>>, Star
                 return Ok(None);
             }
             for (i, value) in values.iter().enumerate() {
-                let parts: Vec<&str> = value.split("=").collect();
-                if parts.len() != 2 || parts.iter().any(|s| s.is_empty()) {
+                let parts = value.split_once("=");
+                if parts.is_none() {
+                    return Err(StartInfoProgramError::InvalidEnvironValue(i));
+                }
+                let parts = parts.unwrap();
+                // The value of an environment variable can in fact be empty.
+                if parts.0.is_empty() {
                     return Err(StartInfoProgramError::InvalidEnvironValue(i));
                 }
             }
@@ -244,9 +249,9 @@ mod tests {
     #[test_case(fdata::DictionaryValue::StrVec(vec!["foo=bar".to_owned(), "bar=baz".to_owned()]), Ok(Some(vec!["foo=bar".to_owned(), "bar=baz".to_owned()])); "when_values_are_valid")]
     #[test_case(fdata::DictionaryValue::StrVec(vec![]), Ok(None); "when_value_is_empty")]
     #[test_case(fdata::DictionaryValue::StrVec(vec!["=bad".to_owned()]), Err(StartInfoProgramError::InvalidEnvironValue(0)); "for_environ_with_empty_left_hand_side")]
-    #[test_case(fdata::DictionaryValue::StrVec(vec!["bad=".to_owned()]), Err(StartInfoProgramError::InvalidEnvironValue(0)); "for_environ_with_empty_right_hand_side")]
+    #[test_case(fdata::DictionaryValue::StrVec(vec!["good=".to_owned()]), Ok(Some(vec!["good=".to_owned()])); "for_environ_with_empty_right_hand_side")]
     #[test_case(fdata::DictionaryValue::StrVec(vec!["no_equal_sign".to_owned()]), Err(StartInfoProgramError::InvalidEnvironValue(0)); "for_environ_with_no_delimiter")]
-    #[test_case(fdata::DictionaryValue::StrVec(vec!["foo==bar".to_owned()]), Err(StartInfoProgramError::InvalidEnvironValue(0)); "for_environ_with_too_many_delimiters")]
+    #[test_case(fdata::DictionaryValue::StrVec(vec!["foo=bar=baz".to_owned()]), Ok(Some(vec!["foo=bar=baz".to_owned()])); "for_environ_with_multiple_delimiters")]
     #[test_case(fdata::DictionaryValue::Str("foo=bar".to_owned()), Err(StartInfoProgramError::InvalidValue(ENVIRON_KEY.to_owned(), "vector of string".to_owned(), "string".to_owned())); "for_environ_as_invalid_type")]
     fn get_environ_test(
         value: fdata::DictionaryValue,
