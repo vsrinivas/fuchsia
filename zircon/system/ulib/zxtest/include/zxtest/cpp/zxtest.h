@@ -42,11 +42,17 @@
 
 #define _ZXTEST_BEGIN_TEST_BODY(TestClass) void TestClass::TestBody()
 
-#define _ZXTEST_REGISTER(TestCase, Test, Fixture)                                               \
-  _ZXTEST_TEST_CLASS_DECL(Fixture, _ZXTEST_TEST_CLASS(TestCase, Test));                         \
-  [[maybe_unused]] static zxtest::TestRef _ZXTEST_TEST_REF(TestCase, Test) =                    \
-      zxtest::Runner::GetInstance()->RegisterTest<Fixture, _ZXTEST_TEST_CLASS(TestCase, Test)>( \
-          #TestCase, #Test, __FILE__, __LINE__);                                                \
+#define _ZXTEST_REGISTER_FN(TestCase, Test) TestCase##_##Test##_register_fn
+
+#define _ZXTEST_REGISTER(TestCase, Test, Fixture)                                                 \
+  _ZXTEST_TEST_CLASS_DECL(Fixture, _ZXTEST_TEST_CLASS(TestCase, Test));                           \
+  static zxtest::TestRef _ZXTEST_TEST_REF(TestCase, Test) = {};                                   \
+  static void _ZXTEST_REGISTER_FN(TestCase, Test)(void) __attribute__((constructor));             \
+  void _ZXTEST_REGISTER_FN(TestCase, Test)(void) {                                                \
+    _ZXTEST_TEST_REF(TestCase, Test) =                                                            \
+        zxtest::Runner::GetInstance()->RegisterTest<Fixture, _ZXTEST_TEST_CLASS(TestCase, Test)>( \
+            #TestCase, #Test, __FILE__, __LINE__);                                                \
+  }                                                                                               \
   _ZXTEST_BEGIN_TEST_BODY(_ZXTEST_TEST_CLASS(TestCase, Test))
 
 #define TEST(TestCase, Test) _ZXTEST_REGISTER(TestCase, Test, _ZXTEST_DEFAULT_FIXTURE)

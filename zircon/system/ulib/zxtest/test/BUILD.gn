@@ -10,6 +10,7 @@ group("tests") {
   deps = [
     ":zxtest($host_toolchain)",
     "integration:tests",
+    "regression:tests",
   ]
 }
 
