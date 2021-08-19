@@ -94,6 +94,7 @@ rustc_binary("bin") {
     "//src/sys/lib/stdout-to-debuglog/rust",
     "//third_party/rust_crates:anyhow",
   ]
+  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 }
 
 resource("font_test") {
