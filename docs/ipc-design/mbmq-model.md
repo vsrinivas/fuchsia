@@ -115,6 +115,11 @@ a different callee.
 
     Creates a new MBO.  The MBO starts off in the `owned_by_caller` state.
 
+*   `zx_mbo_create_calleesref() -> calleesref`
+
+    Creates a new CalleesRef.  The CalleesRef starts off not holding a
+    reference to any MBO.
+
 *   `zx_mbo_read(mbo_or_calleesref) -> (data, handles)`
 
     Reads an MBO.  This reads the entire contents of the MBO.
@@ -191,11 +196,6 @@ a different callee.
     the MBO, onto which `zx_mbo_send_reply()` will enqueue the MBO
     with the given key value.  The MBO must be in the
     `owned_by_caller` state.
-
-*   `zx_mbo_create_calleesref() -> calleesref`
-
-    Creates a new CalleesRef.  The CalleesRef starts off not holding a
-    reference to any MBO.
 
 *   `zx_mbo_send_reply(calleesref)`
 
