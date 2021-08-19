@@ -22,7 +22,6 @@ size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
       return 12;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
-  return 0;
 }
 
 size_t StrideBytesPerWidthPixel(const fuchsia::images::PixelFormat& pixel_format) {
@@ -38,7 +37,6 @@ size_t StrideBytesPerWidthPixel(const fuchsia::images::PixelFormat& pixel_format
       return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
-  return 0;
 }
 
 size_t MaxSampleAlignment(const fuchsia::images::PixelFormat& pixel_format) {
@@ -64,7 +62,6 @@ size_t MaxSampleAlignment(const fuchsia::images::PixelFormat& pixel_format) {
       return 2u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format));
-  return 0;
 }
 
 size_t ImageSize(const fuchsia::images::ImageInfo& image_info) {
@@ -80,7 +77,6 @@ size_t ImageSize(const fuchsia::images::ImageInfo& image_info) {
       return image_info.height * image_info.stride * 3 / 2;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(image_info.pixel_format));
-  return 0;
 }
 
 }  // namespace images

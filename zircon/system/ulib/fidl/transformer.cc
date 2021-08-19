@@ -442,13 +442,11 @@ class Transformer {
         }
         break;
       case FIDL_ALLOC_ABSENT:
-        if (src_envelope.num_bytes == 0) {
-          return ZX_OK;
-        } else {
+        if (src_envelope.num_bytes != 0) {
           error = "envelope is absent but num_bytes is not 0";
           return ZX_ERR_INVALID_ARGS;
         }
-        break;
+        return ZX_OK;
       default:
         error = "invalid presence marker";
         return ZX_ERR_INVALID_ARGS;

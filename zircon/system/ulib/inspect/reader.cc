@@ -223,10 +223,8 @@ cpp17::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
   switch (GetType(block)) {
     case BlockType::kName:
       return LoadName(block);
-      break;
     case BlockType::kStringReference:
       return LoadStringReference(block);
-      break;
     default:
       return {};
   }
