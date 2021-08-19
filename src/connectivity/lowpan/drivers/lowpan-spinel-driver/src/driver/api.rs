@@ -18,11 +18,14 @@ use fidl_fuchsia_lowpan_device::{
 };
 use fidl_fuchsia_lowpan_test::*;
 use fuchsia_async::TimeoutExt;
+use fuchsia_zircon::Duration;
 use futures::stream::BoxStream;
 use futures::{StreamExt, TryFutureExt};
 use lowpan_driver_common::{AsyncConditionWait, Driver as LowpanDriver, FutureExt, ZxResult};
 use spinel_pack::{TryUnpack, EUI64};
 use std::convert::TryInto;
+
+const JOIN_TIMEOUT: Duration = Duration::from_seconds(30);
 
 /// Helpers for API-related tasks.
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
@@ -526,7 +529,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         };
 
         let stream = self.frame_handler.inspect_as_stream(|frame| {
-            fx_log_info!("join network stream: Inspecting {:?}", frame);
+            traceln!("join network stream: Inspecting {:?}", frame);
 
             // This method may return the following values:
             //
@@ -581,17 +584,13 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             }
         });
 
-        self.start_ongoing_stream_process(
-            init_task,
-            stream,
-            Time::after(Duration::from_seconds(15)),
-        )
-        .chain(
-            async move { Ok(Ok(ProvisioningProgress::Identity(self.identity_snapshot()))) }
-                .into_stream()
-                .boxed(),
-        )
-        .boxed()
+        self.start_ongoing_stream_process(init_task, stream, Time::after(JOIN_TIMEOUT))
+            .chain(
+                async move { Ok(Ok(ProvisioningProgress::Identity(self.identity_snapshot()))) }
+                    .into_stream()
+                    .boxed(),
+            )
+            .boxed()
     }
 
     async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {
