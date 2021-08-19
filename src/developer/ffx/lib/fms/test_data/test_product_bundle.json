@@ -23,22 +23,22 @@
                         "name": "fuchsia",
                         "oem_files": [],
                         "partitions": [
-                            [
-                                "",
-                                "fuchsia.zbi"
-                            ],
-                            [
-                                "",
-                                "zedboot.zbi"
-                            ],
-                            [
-                                "",
-                                "fuchsia.vbmeta"
-                            ],
-                            [
-                                "",
-                                "zedboot.vbmeta"
-                            ]
+                            {
+                                "name": "",
+                                "path": "fuchsia.zbi"
+                            },
+                            {
+                                "name": "",
+                                "path": "zedboot.zbi"
+                            },
+                            {
+                                "name": "",
+                                "path": "fuchsia.vbmeta"
+                            },
+                            {
+                                "name": "",
+                                "path": "zedboot.vbmeta"
+                            }
                         ]
                     }
                 ]

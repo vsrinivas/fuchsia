@@ -21,7 +21,7 @@ import("//build/product.gni")
 #
 #   flash_manifest(optional)
 #     Flash manifest
-#     See //build/sdk/meta/flash_manifest-02.json
+#     See //build/sdk/meta/flash_manifest-835e8f26.json
 #
 #   deps (optional)
 #   public_deps (optional)
@@ -105,7 +105,7 @@ template("product_metadata") {
       # Included schemata.
       "//build/sdk/meta/common.json",
       "//build/sdk/meta/emu_manifest.json",
-      "//build/sdk/meta/flash_manifest-02.json",
+      "//build/sdk/meta/flash_manifest-835e8f26.json",
     ]
     allow_comments = true
   }

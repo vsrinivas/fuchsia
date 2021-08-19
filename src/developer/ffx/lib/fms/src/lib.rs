@@ -41,6 +41,15 @@ impl Entries {
     pub fn entry(&self, name: &str) -> Option<&Metadata> {
         self.data.get(name)
     }
+
+    /// Get first entry.
+    ///
+    /// Returns None if no entries exit.
+    /// TODO(fxbug.dev/81756) - Remove when not needed.
+    #[doc(hidden)]
+    pub fn first(&self) -> Option<&Metadata> {
+        self.data.iter().next().map(|(_, value)| value)
+    }
 }
 
 #[cfg(test)]
@@ -68,6 +77,8 @@ mod tests {
         entries.add_json(&mut reader).expect("add fms metadata");
         // Now it is present.
         assert_ne!(entries.entry("generic-arm64"), None);
+        // Test first method.
+        assert_eq!(entries.entry("generic-arm64"), entries.first());
         // This isn't just returning non-None for everything.
         assert_eq!(entries.entry("unfound"), None);
     }

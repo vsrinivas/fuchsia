@@ -85,19 +85,49 @@ pub struct PackageBundle {
 pub struct Product {
     /// A list of partition names and file names corresponding to the
     /// partitions.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bootloader_partitions: Option<Vec<(String, String)>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bootloader_partitions: Vec<Partition>,
 
     /// A unique name of this manifest.
     pub name: String,
 
     /// A list of OEM command and file names corresponding to the command.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub oem_files: Option<Vec<(String, String)>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub oem_files: Vec<OemFile>,
 
     /// A list of partition names and file names corresponding to then
     /// partitions.
-    pub partitions: Vec<(String, String)>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub partitions: Vec<Partition>,
+}
+
+/// A partition to flash on the target.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct Partition {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<Condition>,
+    /// Name of the partition.
+    pub name: String,
+    /// Path to file on host to upload.
+    pub path: String,
+}
+
+/// A file to upload and run an OEM command afterwards.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct OemFile {
+    /// OEM Command to run after uploading the file.
+    pub command: String,
+    /// Path to file on host to upload.
+    pub path: String,
+}
+
+/// A condition that must be true in order to flash a partition.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct Condition {
+    /// Variable to check for this flashing condition.
+    pub variable: String,
+    /// Value of the variable that must match for this condition to be true.
+    pub value: String,
 }
 
 /// Description of the data needed to set up (flash) a device.
@@ -198,10 +228,22 @@ mod tests {
                             "name": "fuchsia",
                             "oem_files": [],
                             "partitions": [
-                                ["", "fuchsia.zbi"],
-                                ["", "zedboot.zbi"],
-                                ["", "fuchsia.vbmeta"],
-                                ["", "zedboot.vbmeta"]
+                                {
+                                    "name": "",
+                                    "path": "fuchsia.zbi"
+                                },
+                                {
+                                    "name": "",
+                                    "path": "zedboot.zbi"
+                                },
+                                {
+                                    "name": "",
+                                    "path": "fuchsia.vbmeta"
+                                },
+                                {
+                                    "name": "",
+                                    "path": "zedboot.vbmeta"
+                                }
                             ]}
                         ]
                     },

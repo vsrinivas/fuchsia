@@ -1,0 +1,135 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "definitions": {
+        "condition": {
+            "additionalProperties": false,
+            "description": "A condition that must be true for a partition to be flashed.",
+            "properties": {
+                "value": {
+                    "description": "The value of the variable that must match for this condition to be true.",
+                    "type": "string"
+                },
+                "variable": {
+                    "description": "A variable name to check on a target device.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "variable",
+                "value"
+            ],
+            "type": "object"
+        },
+        "manifest": {
+            "additionalProperties": false,
+            "description": "A named list of partitions and OEM files necessary to flash a device.",
+            "properties": {
+                "hw_revision": {
+                    "description": "A board name used to verify whether the device can be flashed using this manifest.",
+                    "type": "string"
+                },
+                "products": {
+                    "description": "A list of product specifications that can be flashed onto the device.",
+                    "items": {
+                        "$ref": "#/definitions/product"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                }
+            },
+            "required": [
+                "hw_revision",
+                "products"
+            ],
+            "type": "object"
+        },
+        "oem_file": {
+            "additionalProperties": false,
+            "description": "A OEM file that is uploaded followed by a given OEM command.",
+            "properties": {
+                "command": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "path",
+                "command"
+            ],
+            "type": "object"
+        },
+        "partition": {
+            "additionalProperties": false,
+            "description": "A condition that must be true for a partition to be flashed.",
+            "properties": {
+                "condition": {
+                    "$ref": "#/definitions/condition"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "path"
+            ],
+            "type": "object"
+        },
+        "product": {
+            "additionalProperties": false,
+            "description": "A named product specification.",
+            "properties": {
+                "bootloader_partitions": {
+                    "description": "A list of partition names and file names corresponding to the partitions.",
+                    "items": {
+                        "$ref": "#/definitions/partition"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "description": "A unique name of this manifest.",
+                    "type": "string"
+                },
+                "oem_files": {
+                    "description": "A list of OEM command and file names corresponding to the command.",
+                    "items": {
+                        "$ref": "#/definitions/oem_file"
+                    },
+                    "type": "array"
+                },
+                "partitions": {
+                    "description": "A list of partition names and file names corresponding to the partitions.",
+                    "items": {
+                        "$ref": "#/definitions/partition"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "name"
+            ],
+            "type": "object"
+        }
+    },
+    "description": "A manifest that describes how to flash a device.",
+    "id": "http://fuchsia.com/schemas/sdk/flash_manifest-835e8f26.json",
+    "properties": {
+        "manifest": {
+            "$ref": "#/definitions/manifest"
+        },
+        "version": {
+            "$ref": "common.json#/definitions/version"
+        }
+    },
+    "required": [
+        "version",
+        "manifest"
+    ],
+    "type": "object"
+}

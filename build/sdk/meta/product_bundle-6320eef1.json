@@ -32,7 +32,7 @@
                                     "$ref": "emu_manifest.json#/definitions/manifest"
                                 },
                                 "flash": {
-                                    "$ref": "flash_manifest-02.json#/definitions/manifest"
+                                    "$ref": "flash_manifest-835e8f26.json#/definitions/manifest"
                                 }
                             },
                             "type": "object"

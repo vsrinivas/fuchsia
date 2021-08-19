@@ -70,7 +70,7 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
     fn get_schema_id() -> Result<String> {
         let schema = from_str(Self::get_schema())?;
         let mut scope = json_schema::Scope::new();
-        let url = scope.compile(schema, /*ban_unknown=*/true).map_err(Error::SchemaInvalid)?;
+        let url = scope.compile(schema, /*ban_unknown=*/ true).map_err(Error::SchemaInvalid)?;
         Ok(url.to_string())
     }
 
@@ -81,19 +81,27 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
 
         // Add the schema including all the common definitions.
         scope
-            .compile(from_str(include_str!("../common.json"))?, /*ban_unknown=*/true)
+            .compile(from_str(include_str!("../common.json"))?, /*ban_unknown=*/ true)
             .map_err(Error::SchemaInvalid)?;
         scope
-            .compile(from_str(include_str!("../emu_manifest.json"))?, /*ban_unknown=*/true)
+            .compile(from_str(include_str!("../emu_manifest.json"))?, /*ban_unknown=*/ true)
             .map_err(Error::SchemaInvalid)?;
         scope
-            .compile(from_str(include_str!("../flash_manifest-02.json"))?, /*ban_unknown=*/true)
+            .compile(
+                from_str(include_str!("../flash_manifest-835e8f26.json"))?,
+                /*ban_unknown=*/ true,
+            )
             .map_err(Error::SchemaInvalid)?;
         scope
-            .compile(from_str(include_str!("../hardware-f6f47515.json"))?, /*ban_unknown=*/true)
+            .compile(
+                from_str(include_str!("../hardware-f6f47515.json"))?,
+                /*ban_unknown=*/ true,
+            )
             .map_err(Error::SchemaInvalid)?;
 
-        let validator = scope.compile_and_return(schema, /*ban_unknown=*/true).map_err(Error::SchemaInvalid)?;
+        let validator = scope
+            .compile_and_return(schema, /*ban_unknown=*/ true)
+            .map_err(Error::SchemaInvalid)?;
         let value = to_value(self)?;
         let result = validator.validate(&value);
         if !result.is_strictly_valid() {
