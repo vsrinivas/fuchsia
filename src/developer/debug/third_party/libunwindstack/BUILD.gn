@@ -8,13 +8,6 @@ config("config") {
   # Use -isystem instead of -I to suppress -Wconversion warnings.
   cflags = [ "-isystem" + rebase_path("include", root_build_dir) ]
   include_dirs = [ "fuchsia" ]
-
-  if (is_mac) {
-    # This has to be public so that includes from unwindstack/ElfInterface.h can
-    # find the elf.h that is copied from //zircon below. Not to be confused with
-    # unwindstack/Elf.h, or ELF.h that's picked up from clang. o_O
-    include_dirs += [ target_gen_dir ]
-  }
 }
 
 config("config_private") {
@@ -80,17 +73,8 @@ static_library("libunwindstack") {
     "//zircon/public/lib/fbl",
   ]
   if (is_mac) {
-    deps += [ ":copy_elf_h" ]
+    deps += [ "//src/developer/debug/shared:elf_h_on_mac" ]
   }
 
   configs += [ "//build/config:Wno-conversion" ]
-}
-
-if (is_mac) {
-  # libunwindstack needs elf.h which doesn't come on Mac. Copy the one out of
-  # Zircon and use it in this build.
-  copy("copy_elf_h") {
-    sources = [ "//zircon/third_party/ulib/musl/include/elf.h" ]
-    outputs = [ "$target_gen_dir/elf.h" ]
-  }
 }

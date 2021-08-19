@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/unwinder/dwarf_cfi.h"
 
+#include <elf.h>
+
 #include <algorithm>
 #include <cinttypes>
 #include <cstdint>
@@ -13,7 +15,6 @@
 
 #include "src/developer/debug/unwinder/dwarf_cfi_parser.h"
 #include "src/developer/debug/unwinder/error.h"
-#include "third_party/crashpad/third_party/glibc/elf/elf.h"
 
 namespace unwinder {
 

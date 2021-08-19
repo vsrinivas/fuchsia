@@ -18,9 +18,13 @@ static_library("unwinder") {
     "registers.cc",
     "unwind.cc",
   ]
+  public_deps = [ "//src/lib/fxl" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 
-  # UnwindLocal() is only available on ELF systems.
-  if (!is_mac) {
+  if (is_mac) {
+    deps += [ "//src/developer/debug/shared:elf_h_on_mac" ]
+  } else {
+    # UnwindLocal() is only available on ELF systems.
     public += [ "unwind_local.h" ]
     sources += [
       "third_party/libunwindstack/context.h",
@@ -35,9 +39,6 @@ static_library("unwinder") {
     public += [ "fuchsia.h" ]
     sources += [ "fuchsia.cc" ]
   }
-
-  public_deps = [ "//src/lib/fxl" ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("tests") {

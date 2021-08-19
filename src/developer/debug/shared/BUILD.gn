@@ -128,3 +128,20 @@ source_set("tests") {
     "//third_party/googletest:gtest",
   ]
 }
+
+if (is_mac) {
+  # Unwinders need elf.h which doesn't come on Mac. Copy the one out of Zircon and use it.
+  copy("copy_elf_h") {
+    sources = [ "//zircon/third_party/ulib/musl/include/elf.h" ]
+    outputs = [ "$target_gen_dir/elf/elf.h" ]
+  }
+
+  config("config_elf_h") {
+    include_dirs = [ target_gen_dir + "/elf" ]
+  }
+
+  group("elf_h_on_mac") {
+    public_deps = [ ":copy_elf_h" ]
+    public_configs = [ ":config_elf_h" ]
+  }
+}
