@@ -1,0 +1,85 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Software delivery
+### deregisters dev host as target's update source
+
+## usage: fx remove-update-source [-r|--repository NAME]
+##
+## Configure target device to use a new update source.
+##
+##   -r|--repo-name NAME  Name the generated repository config NAME.
+##
+## NAME:
+## If no name is supplied, the name defaults to "devhost", otherwise
+## it contains the address given.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/updates.sh || exit $?
+fx-config-read
+
+function usage {
+  fx-command-help remove-update-source
+}
+
+function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  repo_name=""
+  persist=""
+  while [[ $# -ne 0 ]]; do
+    case "$1" in
+      -r|--repositoryname)
+        repo_name="$2"
+        shift
+        ;;
+      *)
+        fx-error "Unrecognized option: $1"
+        usage
+        exit 1
+    esac
+    shift
+  done
+
+  if is_feature_enabled "legacy_serve"; then
+    if [[ -z "${repo_name}" ]]; then
+      repo_name="devhost"
+    fi
+
+    repo_url="fuchsia-pkg://${repo_name}"
+
+    fx-command-run shell pkgctl rule clear
+    err=$?
+
+    if [[ $err -ne 0 ]]; then
+      fx-error "Unable to clear rewrite rule list"
+      return "$err"
+    fi
+
+    fx-command-run shell pkgctl repo rm "${repo_url}"
+    err=$?
+
+    if [[ $err -ne 0 ]]; then
+      fx-error "Unable to deregister update source."
+      return "$err"
+    fi
+  else
+    if [[ -z "${repo_name}" ]]; then
+      repo_name="$(ffx-default-repository-name)"
+    fi
+
+    fx-command-run ffx --config ffx_repository=true repository target deregister \
+      --repository "$repo_name"
+    err=$?
+
+    if [[ $err -ne 0 ]]; then
+      fx-error "The repository was unable to be deregistered from the target device"
+      return "$err"
+    fi
+  fi
+}
+
+main "$@"
