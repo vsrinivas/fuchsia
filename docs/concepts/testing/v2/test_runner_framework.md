@@ -149,63 +149,73 @@ In order to use this runner, add the following to your component manifest:
 
 #### Legacy test runner {#legacy-test-runner}
 
-The test runner to run legacy tests - it executes legacy tests, waits for the
-test to terminate, then reports that the test passed if the test returned zero
-or that it failed for any non-zero return value.
+Legacy tests are tests that were written before the Test Runner Framework was
+introduced. The legacy test runner offers a simple adapter between the modern
+test framework and legacy tests that were not converted to modern ones. For help
+with migrations see [this guide][sys-migration-guide].
+**It is not recommended to use the legacy test runner in new tests.**
 
-Use this test runner if you have a legacy component test which is not ready to
-be converted to a modern test.
+The legacy test runner detects if a test passed or failed by observing its
+return code, with zero indicating success and non-zero indicating failure.
 
-To wrap your legacy test add legacy manifest file path to your
-`program.legacy_manifest` along with necessary shards:
+You can follow the example below to wrap a legacy test with the legacy test
+runner.
 
-simple_test.cml:
-
-```cml
+```json5
+// Create this new file, simple_test.cml
 {
     include: [
         "//src/sys/test_runners/legacy_test/default.shard.cml",
     ],
     program: {
+        // Reference your existing test component manifest simple_test.cmx
         legacy_manifest: "meta/simple_test.cmx",
     },
 }
 ```
 
-Then change your BUILD.gn to create a new component and add it as a test to your
-package:
+Then change your `BUILD.gn` build definitions as follows:
 
 ```gn
+import("//build/components.gni")
+
+# This is your existing legacy test
 fuchsia_test_component("simple_test_legacy") {
   component_name = "simple_test"
   manifest = "meta/simple_test.cmx"
   deps = [ ":simple_test_bin" ]
 }
 
+# Add this wrapper
 fuchsia_test_component("simple_test_modern") {
   component_name = "simple_test"
   manifest = "meta/simple_test.cml"
+  deps = [ ":simple_test_legacy" ]
 }
 
-fuchsia_package("simple_test") {
-  testonly = true
-  test_component =[ ":simple_test_modern" ]
-  deps = [
-    ":simple_test_legacy", # simple_test_legacy is no longer added as "test_component".
-  ]
+# Specify the wrapper as the test component in your test package
+fuchsia_test_package("simple_test") {
+  test_components = [ ":simple_test_modern" ]
+  # Note that if simple_test_legacy was in test_components before, then it's now
+  # replaced with the wrapper.
 }
 
 ```
 
-There is no notion of parallelism or test filtering, instead use test language
-specific flags.
-
-eg:
+The legacy test runner does not understand concepts such as test cases (or
+filtering on them), running multiple test cases in parallel, etc. It does
+however forward arguments to the test, so you can pass arguments that are
+specific to the underlying test framework. For instance, to run just a specific
+test case from a gtest:
 
 ```posix-terminal
-fx test <test> -- --test-threads=5 # rust
+fx test <test> -- --gtest_filter=MyTestCase
+```
 
-fx test <test> -- --gtest_filter=MyTestCase # gtest
+To run Rust tests, at most 5 test cases at a time:
+
+```posix-terminal
+fx test <test> -- --test-threads=5
 ```
 
 ### Controlling parallel execution of test cases
@@ -467,3 +477,4 @@ Components in the test realm may play various roles in the test, as follows:
 [loader-service]: /docs/concepts/booting/program_loading.md#the_loader_service
 [caching-loader-service]: /src/sys/test_runners/src/elf/elf_component.rs
 [framework-capabilities]: /docs/concepts/components/v2/component_manifests.md#framework-protocols
+[sys-migration-guide]: /docs/development/components/v2/migration.md
