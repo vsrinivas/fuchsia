@@ -1,0 +1,42 @@
+{
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/isolated-devmgr.cm",
+        },
+        {
+            name: "password_authenticator_integration_test",
+            url: "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-integration-test.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [
+                "#isolated_devmgr",
+                "#password_authenticator_integration_test",
+            ],
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#password_authenticator_integration_test",
+        },
+        {
+            directory: "dev",
+            from: "#isolated_devmgr",
+            to: "#password_authenticator_integration_test",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#password_authenticator_integration_test",
+        },
+    ],
+}

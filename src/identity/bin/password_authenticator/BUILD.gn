@@ -11,6 +11,8 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -21,7 +23,10 @@ rustc_binary("bin") {
 
   test_deps = []
 
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/account_manager.rs",
+    "src/main.rs",
+  ]
 }
 
 fuchsia_component("component") {

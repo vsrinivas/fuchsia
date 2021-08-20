@@ -1,0 +1,69 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+
+rustc_test("driver") {
+  name = "password_authenticator_integration_test"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  source_root = "src/account_manager.rs"
+  sources = [ "src/account_manager.rs" ]
+}
+
+fuchsia_component("password-authenticator-integration-test") {
+  testonly = true
+  manifest = "meta/password-authenticator-integration-test.cml"
+  deps = [ ":driver" ]
+}
+
+isolated_devmgr_v2_component("isolated-devmgr-component") {
+  deps = [
+    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_drivers",
+  ]
+}
+
+fuchsia_component("test-root") {
+  testonly = true
+  manifest = "meta/test-root.cml"
+}
+
+fuchsia_test_package("password-authenticator-integration-tests") {
+  # isolated devmgr sometimes logs at error level when its processes are torn
+  # down in unlucky orders, and there's no way to tear them down
+  # deterministically, so I guess we tolerate ERROR level log messages
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+
+  test_components = [ ":test-root" ]
+  deps = [
+    ":isolated-devmgr-component",
+    ":password-authenticator-integration-test",
+    "//src/identity/bin/password_authenticator:component",
+  ]
+}
+
+group("password_authenticator_integration") {
+  testonly = true
+  public_deps = [ ":password-authenticator-integration-tests" ]
+}
