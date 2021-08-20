@@ -4,15 +4,13 @@
 
 #include "lib/framebuffer/framebuffer.h"
 
-#include <fcntl.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
-#include <zircon/pixelformat.h>
+#include <lib/service/llcpp/service.h>
 
 #include <thread>
 
@@ -24,8 +22,8 @@
 namespace fhd = fuchsia_hardware_display;
 namespace sysmem = fuchsia_sysmem;
 
-zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
-                                 zx::channel dc_client_channel);
+zx_status_t fb_bind_with(bool single_buffer, const char** err_msg_out,
+                         fidl::ClientEnd<fhd::Controller> client);
 
 void RunSingleBufferTest() {
   fbl::unique_fd dc_fd(open("/dev/class/display-controller/000", O_RDWR));
@@ -88,12 +86,9 @@ constexpr uint32_t kBytesPerRowDivisor = 128;
 class StubDisplayController : public fidl::WireServer<fhd::Controller> {
  public:
   StubDisplayController(bool use_ram_domain) : use_ram_domain_(use_ram_domain) {
-    zx::channel sysmem_server, sysmem_client;
-    ASSERT_OK(zx::channel::create(0, &sysmem_server, &sysmem_client));
-    ASSERT_OK(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server.release()));
-
-    sysmem_allocator_ =
-        std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(sysmem_client));
+    zx::status client_end = service::Connect<sysmem::Allocator>();
+    ASSERT_OK(client_end.status_value());
+    sysmem_allocator_ = fidl::BindSyncClient(std::move(*client_end));
     sysmem_allocator_->SetDebugClientInfo(
         fidl::StringView::FromExternal(fsl::GetCurrentProcessName() + "-debug-client"),
         fsl::GetCurrentProcessKoid());
@@ -216,14 +211,14 @@ class StubDisplayController : public fidl::WireServer<fhd::Controller> {
 
   void ImportBufferCollection(ImportBufferCollectionRequestView request,
                               ImportBufferCollectionCompleter::Sync& _completer) override {
-    zx::channel server, client;
-    ASSERT_OK(zx::channel::create(0, &server, &client));
+    zx::status endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
+    ASSERT_OK(endpoints.status_value());
 
     ASSERT_TRUE(sysmem_allocator_
-                    ->BindSharedCollection(std::move(request->collection_token), std::move(server))
+                    ->BindSharedCollection(std::move(request->collection_token),
+                                           std::move(endpoints->server))
                     .ok());
-    current_buffer_collection_ =
-        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(std::move(client));
+    current_buffer_collection_ = fidl::BindSyncClient(std::move(endpoints->client));
 
     _completer.Reply(ZX_OK);
   }
@@ -295,44 +290,43 @@ class StubDisplayController : public fidl::WireServer<fhd::Controller> {
   }
 
  private:
-  std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator_;
-  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> current_buffer_collection_;
+  std::optional<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator_;
+  std::optional<fidl::WireSyncClient<sysmem::BufferCollection>> current_buffer_collection_;
   bool use_ram_domain_;
 };
 
 }  // namespace
 
-void SendInitialDisplay(const fidl::WireEventSender<fhd::Controller>& event_sender,
-                        fhd::wire::Mode* mode, uint32_t pixel_format) {
-  fhd::wire::Info info;
-  info.pixel_format = fidl::VectorView<uint32_t>::FromExternal(&pixel_format, 1);
-  info.modes = fidl::VectorView<fhd::wire::Mode>::FromExternal(mode, 1);
-  auto added = fidl::VectorView<fhd::wire::Info>::FromExternal(&info, 1);
-  fidl::VectorView<uint64_t> removed;
-
-  ASSERT_OK(event_sender.OnDisplaysChanged(std::move(added), std::move(removed)));
-}
-
 void TestDisplayStride(bool ram_domain) {
-  zx::channel server_channel, client_channel;
-  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
-  fidl::WireEventSender<fhd::Controller> event_sender(std::move(server_channel));
+  zx::status endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  ASSERT_OK(endpoints.status_value());
 
+  constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_ARGB_8888;
+  fhd::wire::Mode mode = {
+      .horizontal_resolution = 301,
+      .vertical_resolution = 250,
+  };
+
+  fidl::WireEventSender<fhd::Controller> event_sender(std::move(endpoints->server));
+  {
+    uint32_t pixel_format = kPixelFormat;
+    fhd::wire::Info info = {
+        .modes = fidl::VectorView<fhd::wire::Mode>::FromExternal(&mode, 1),
+        .pixel_format = fidl::VectorView<uint32_t>::FromExternal(&pixel_format, 1),
+    };
+    ASSERT_OK(event_sender.OnDisplaysChanged(
+        fidl::VectorView<fhd::wire::Info>::FromExternal(&info, 1), {}));
+  }
   StubDisplayController controller(ram_domain);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fhd::wire::Mode mode;
-  mode.horizontal_resolution = 301;
-  mode.vertical_resolution = 250;
-  constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_ARGB_8888;
-  SendInitialDisplay(event_sender, &mode, kPixelFormat);
+
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(event_sender.server_end()),
+                                         &controller));
 
   loop.StartThread();
 
-  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(event_sender.channel()),
-                                         &controller));
-
   const char* error;
-  zx_status_t status = fb_bind_with_channel(true, &error, std::move(client_channel));
+  zx_status_t status = fb_bind_with(true, &error, std::move(endpoints->client));
   EXPECT_OK(status);
   zx_handle_t buffer_handle = fb_get_single_buffer();
   EXPECT_NE(ZX_HANDLE_INVALID, buffer_handle);

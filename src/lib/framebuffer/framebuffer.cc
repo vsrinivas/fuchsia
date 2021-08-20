@@ -4,30 +4,16 @@
 
 #include "lib/framebuffer/framebuffer.h"
 
-#include <errno.h>
-#include <fcntl.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 // FIDL must come before banjo
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fdio/directory.h>
-#include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <zircon/assert.h>
-#include <zircon/pixelformat.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
-#include <variant>
 
 #include <fbl/unique_fd.h>
 
@@ -36,10 +22,10 @@
 namespace fhd = fuchsia_hardware_display;
 namespace sysmem = fuchsia_sysmem;
 
-static zx_handle_t device_handle = ZX_HANDLE_INVALID;
+static std::optional<zx::channel> device_handle;
 
-std::unique_ptr<fidl::WireSyncClient<fhd::Controller>> dc_client;
-std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator;
+std::optional<fidl::WireSyncClient<fhd::Controller>> dc_client;
+std::optional<fidl::WireSyncClient<sysmem::Allocator>> sysmem_allocator;
 
 static uint64_t display_id;
 static uint64_t layer_id;
@@ -51,7 +37,7 @@ static zx_pixel_format_t format;
 static bool type_set;
 static uint32_t image_type;
 
-static zx_handle_t vmo = ZX_HANDLE_INVALID;
+static std::optional<zx::vmo> vmo;
 
 static bool inited = false;
 static bool in_single_buffer_mode;
@@ -82,65 +68,43 @@ static zx_status_t set_layer_config(uint64_t layer_id, uint32_t width, uint32_t 
   return dc_client->SetLayerPrimaryConfig(layer_id, config).status();
 }
 
-template <typename T>
-class EndpointOrError {
- public:
-  static EndpointOrError<T> Create() {
-    zx::channel token_server, token_client;
-    zx_status_t status = zx::channel::create(0, &token_server, &token_client);
-    if (status != ZX_OK) {
-      return EndpointOrError<T>(status);
-    }
-    return EndpointOrError<T>(std::move(token_server), std::move(token_client));
+#define CHECKED_CALL(func, err_msg)     \
+  {                                     \
+    fidl::WireResult rsp = func;        \
+    if (!(rsp).ok()) {                  \
+      *err_msg_out = err_msg;           \
+      return zx::error((rsp).status()); \
+    }                                   \
   }
 
-  EndpointOrError(zx_status_t status) : internal_(status) {}
-  EndpointOrError(zx::channel server, zx::channel client)
-      : internal_(std::make_pair(std::move(server), T(std::move(client)))) {}
-
-  bool ok() { return internal_.index() == 1; }
-  zx_status_t status() { return std::get<0>(internal_); }
-
-  zx::channel TakeServer() { return std::move(std::get<1>(internal_).first); }
-  T& operator*() { return std::get<1>(internal_).second; }
-  T* operator->() { return &std::get<1>(internal_).second; }
-
- private:
-  std::variant<zx_status_t, std::pair<zx::channel, T>> internal_;
-};
-
-#define CHECK_RSP(rsp, err_msg) \
-  if (!(rsp).ok()) {            \
-    *err_msg_out = err_msg;     \
-    return (rsp).status();      \
+static zx::status<fidl::WireSyncClient<sysmem::BufferCollection>> create_buffer_collection(
+    const char** err_msg_out) {
+  zx::status token = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
+  if (token.is_error()) {
+    *err_msg_out = "Failed to create collection channel";
+    return token.take_error();
   }
-
-#define CHECKED_CALL(func, err_msg) \
-  {                                 \
-    auto rsp = func;                \
-    CHECK_RSP(rsp, err_msg);        \
-  }
-
-static zx_status_t create_buffer_collection(
-    const char** err_msg_out,
-    std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>>* collection_client) {
-  auto token = EndpointOrError<fidl::WireSyncClient<sysmem::BufferCollectionToken>>::Create();
-  CHECK_RSP(token, "Failed to create collection channel");
-  CHECKED_CALL(sysmem_allocator->AllocateSharedCollection(token.TakeServer()),
+  CHECKED_CALL(sysmem_allocator->AllocateSharedCollection(std::move(token->server)),
                "Failed to allocate shared collection");
-  auto display_token =
-      EndpointOrError<fidl::WireSyncClient<sysmem::BufferCollectionToken>>::Create();
-  CHECK_RSP(display_token, "Failed to allocate display token");
-  CHECKED_CALL(token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token.TakeServer()),
+  zx::status display_token = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
+  if (display_token.is_error()) {
+    *err_msg_out = "Failed to allocate display token";
+    return display_token.take_error();
+  }
+  CHECKED_CALL(fidl::WireCall(token->client)
+                   .Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(display_token->server)),
                "Failed to duplicate token");
-  CHECKED_CALL(token->Sync(), "Failed to sync token");
+  CHECKED_CALL(fidl::WireCall(token->client).Sync(), "Failed to sync token");
 
-  auto import_rsp = dc_client->ImportBufferCollection(kCollectionId,
-                                                      std::move(*display_token->mutable_channel()));
-  CHECK_RSP(import_rsp, "Failed to import buffer collection");
+  fidl::WireResult import_rsp =
+      dc_client->ImportBufferCollection(kCollectionId, std::move(display_token->client));
+  if (!import_rsp.ok()) {
+    *err_msg_out = "Failed to import buffer collection";
+    return zx::error(import_rsp.status());
+  }
   if (import_rsp->res != ZX_OK) {
     *err_msg_out = "Import buffer collection error";
-    return import_rsp->res;
+    return zx::error(import_rsp->res);
   }
 
   fhd::wire::ImageConfig config = {
@@ -149,23 +113,32 @@ static zx_status_t create_buffer_collection(
       .pixel_format = format,
       .type = IMAGE_TYPE_SIMPLE,
   };
-  auto set_display_constraints = dc_client->SetBufferCollectionConstraints(kCollectionId, config);
-  CHECK_RSP(set_display_constraints, "Failed to set display constraints");
+  fidl::WireResult set_display_constraints =
+      dc_client->SetBufferCollectionConstraints(kCollectionId, config);
+  if (!set_display_constraints.ok()) {
+    *err_msg_out = "Failed to set display constraints";
+    return zx::error(set_display_constraints.status());
+  }
   if (set_display_constraints->res != ZX_OK) {
     *err_msg_out = "Display constraints error";
-    return set_display_constraints->res;
+    return zx::error(set_display_constraints->res);
   }
 
-  auto collection = EndpointOrError<fidl::WireSyncClient<sysmem::BufferCollection>>::Create();
-  CHECK_RSP(collection, "Failed to create collection channel");
+  zx::status collection = fidl::CreateEndpoints<sysmem::BufferCollection>();
+  if (collection.is_error()) {
+    *err_msg_out = "Failed to create collection channel";
+    return collection.take_error();
+  }
 
-  CHECKED_CALL(sysmem_allocator->BindSharedCollection(std::move(*token->mutable_channel()),
-                                                      collection.TakeServer()),
+  CHECKED_CALL(sysmem_allocator->BindSharedCollection(std::move(token->client),
+                                                      std::move(collection->server)),
                "Failed to bind collection");
+
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(collection->client));
 
   constexpr uint32_t kNamePriority = 1000000;
   const char kNameString[] = "framebuffer";
-  CHECKED_CALL(collection->SetName(kNamePriority, fidl::StringView(kNameString)),
+  CHECKED_CALL(client.SetName(kNamePriority, fidl::StringView(kNameString)),
                "Failed to set framebuffer name");
 
   sysmem::wire::BufferCollectionConstraints constraints;
@@ -190,15 +163,13 @@ static zx_status_t create_buffer_collection(
   constraints.buffer_memory_constraints = image_format::GetDefaultBufferMemoryConstraints();
   constraints.buffer_memory_constraints.ram_domain_supported = true;
 
-  collection->SetConstraints(true, constraints);
-  *collection_client =
-      std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(std::move(*collection));
-  return ZX_OK;
+  client.SetConstraints(true, constraints);
+  return zx::ok(std::move(client));
 }
 
 // Not static because this function is also called from unit tests.
-zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
-                                 zx::channel dc_client_channel);
+zx_status_t fb_bind_with(bool single_buffer, const char** err_msg_out,
+                         fidl::ClientEnd<fhd::Controller> client);
 
 zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
   const char* err_msg;
@@ -226,16 +197,16 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     return status;
   }
 
-  zx::channel dc_server, dc_client_channel;
-  status = zx::channel::create(0, &dc_server, &dc_client_channel);
-  if (status != ZX_OK) {
+  zx::status dc = fidl::CreateEndpoints<fhd::Controller>();
+  if (dc.is_error()) {
     *err_msg_out = "Failed to create controller channel";
-    return status;
+    return dc.status_value();
   }
 
   fdio_cpp::FdioCaller caller(std::move(dc_fd));
-  auto open_status = fidl::WireCall<fhd::Provider>(caller.channel())
-                         .OpenController(std::move(device_server), std::move(dc_server));
+  fidl::WireResult open_status =
+      fidl::WireCall(caller.borrow_as<fhd::Provider>())
+          .OpenController(std::move(device_server), std::move(dc->server));
   if (open_status.status() != ZX_OK) {
     *err_msg_out = "Failed to call service handle";
     return open_status.status();
@@ -245,34 +216,25 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     return status;
   }
 
-  device_handle = device_client.release();
-  return fb_bind_with_channel(single_buffer, err_msg_out, std::move(dc_client_channel));
+  device_handle = std::move(device_client);
+  return fb_bind_with(single_buffer, err_msg_out, std::move(dc->client));
 }
 
-zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
-                                 zx::channel dc_client_channel) {
-  dc_client = std::make_unique<fidl::WireSyncClient<fhd::Controller>>(std::move(dc_client_channel));
+zx_status_t fb_bind_with(bool single_buffer, const char** err_msg_out,
+                         fidl::ClientEnd<fhd::Controller> client) {
+  dc_client = fidl::BindSyncClient(std::move(client));
   auto close_dc_handle = fit::defer([]() {
-    zx_handle_close(device_handle);
+    device_handle.reset();
     dc_client.reset();
-    device_handle = ZX_HANDLE_INVALID;
   });
 
-  zx_status_t status;
-  zx::channel sysmem_server, sysmem_client;
-  status = zx::channel::create(0, &sysmem_server, &sysmem_client);
-  if (status != ZX_OK) {
-    *err_msg_out = "Failed to create sysmem channel";
-    return status;
-  }
-  status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server.release());
-  if (status != ZX_OK) {
+  zx::status client_end = service::Connect<sysmem::Allocator>();
+  if (client_end.is_error()) {
     *err_msg_out = "Failed to connect to sysmem";
-    return status;
+    return client_end.status_value();
   }
 
-  sysmem_allocator =
-      std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(sysmem_client));
+  sysmem_allocator = fidl::BindSyncClient(std::move(*client_end));
   sysmem_allocator->SetDebugClientInfo(
       fidl::StringView::FromExternal(fsl::GetCurrentProcessName() + "-framebuffer"),
       fsl::GetCurrentProcessKoid());
@@ -317,28 +279,28 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
     }
   } while (!event_handler.has_display());
 
-  auto create_layer_rsp = dc_client->CreateLayer();
+  fidl::WireResult create_layer_rsp = dc_client->CreateLayer();
   if (!create_layer_rsp.ok()) {
     *err_msg_out = "Create layer call failed";
     return create_layer_rsp.status();
   }
   if (create_layer_rsp->res != ZX_OK) {
     *err_msg_out = "Failed to create layer";
-    status = create_layer_rsp->res;
-    return status;
+    return create_layer_rsp->res;
   }
 
-  auto layers_rsp = dc_client->SetDisplayLayers(
+  fidl::WireResult layers_rsp = dc_client->SetDisplayLayers(
       display_id, fidl::VectorView<uint64_t>::FromExternal(&create_layer_rsp->layer_id, 1));
   if (!layers_rsp.ok()) {
     *err_msg_out = layers_rsp.error().lossy_description();
     return layers_rsp.status();
   }
 
-  if ((status =
-           set_layer_config(create_layer_rsp->layer_id, event_handler.mode().horizontal_resolution,
-                            event_handler.mode().vertical_resolution, event_handler.pixel_format(),
-                            IMAGE_TYPE_SIMPLE)) != ZX_OK) {
+  if (zx_status_t status =
+          set_layer_config(create_layer_rsp->layer_id, event_handler.mode().horizontal_resolution,
+                           event_handler.mode().vertical_resolution, event_handler.pixel_format(),
+                           IMAGE_TYPE_SIMPLE);
+      status != ZX_OK) {
     *err_msg_out = "Failed to set layer config";
     return status;
   }
@@ -357,15 +319,16 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
 
   zx::vmo local_vmo;
 
-  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> collection_client;
-
-  status = create_buffer_collection(err_msg_out, &collection_client);
-  if (status != ZX_OK) {
-    return status;
+  zx::status collection_client = create_buffer_collection(err_msg_out);
+  if (collection_client.is_error()) {
+    return collection_client.status_value();
   }
 
-  auto info_result = collection_client->WaitForBuffersAllocated();
-  CHECK_RSP(info_result, "Couldn't wait for fidl buffers allocated");
+  fidl::WireResult info_result = collection_client->WaitForBuffersAllocated();
+  if (!info_result.ok()) {
+    *err_msg_out = "Couldn't wait for fidl buffers allocated";
+    return info_result.status();
+  }
   if (info_result->status != ZX_OK) {
     *err_msg_out = "Couldn't wait for buffers allocated";
     return info_result->status;
@@ -389,12 +352,13 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   zx_vmo_set_cache_policy(local_vmo.get(), ZX_CACHE_POLICY_WRITE_COMBINING);
 
   uint64_t image_id;
-  if ((status = fb_import_image(kCollectionId, 0, IMAGE_TYPE_SIMPLE, &image_id)) != ZX_OK) {
+  if (zx_status_t status = fb_import_image(kCollectionId, 0, IMAGE_TYPE_SIMPLE, &image_id);
+      status != ZX_OK) {
     *err_msg_out = "Couldn't import framebuffer";
     return status;
   }
 
-  if ((status = fb_present_image(image_id, INVALID_ID, INVALID_ID)) != ZX_OK) {
+  if (zx_status_t status = fb_present_image(image_id, INVALID_ID, INVALID_ID); status != ZX_OK) {
     *err_msg_out = "Failed to present single_buffer mode framebuffer";
     return status;
   }
@@ -402,7 +366,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   in_single_buffer_mode = single_buffer;
 
   clear_inited.cancel();
-  vmo = local_vmo.release();
+  vmo = std::move(local_vmo);
   close_dc_handle.cancel();
   close_sysmem_handle.cancel();
 
@@ -416,14 +380,12 @@ void fb_release() {
 
   dc_client->ReleaseBufferCollection(kCollectionId);
 
-  zx_handle_close(device_handle);
+  device_handle.reset();
   dc_client.reset();
   sysmem_allocator.reset();
-  device_handle = ZX_HANDLE_INVALID;
 
   if (in_single_buffer_mode) {
-    zx_handle_close(vmo);
-    vmo = ZX_HANDLE_INVALID;
+    vmo.reset();
   }
 
   inited = false;
@@ -441,7 +403,7 @@ void fb_get_config(uint32_t* width_out, uint32_t* height_out, uint32_t* linear_s
 
 zx_handle_t fb_get_single_buffer() {
   ZX_ASSERT(inited && in_single_buffer_mode);
-  return vmo;
+  return vmo.value().get();
 }
 
 zx_status_t fb_import_image(uint64_t collection_id, uint32_t index, uint32_t type,
@@ -465,7 +427,7 @@ zx_status_t fb_import_image(uint64_t collection_id, uint32_t index, uint32_t typ
       .type = type,
   };
 
-  auto import_rsp = dc_client->ImportImage(config, collection_id, index);
+  fidl::WireResult import_rsp = dc_client->ImportImage(config, collection_id, index);
   if (!import_rsp.ok()) {
     return import_rsp.status();
   }
@@ -479,7 +441,8 @@ zx_status_t fb_import_image(uint64_t collection_id, uint32_t index, uint32_t typ
 }
 
 zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id) {
-  auto rsp = dc_client->SetLayerImage(layer_id, image_id, wait_event_id, signal_event_id);
+  fidl::WireResult rsp =
+      dc_client->SetLayerImage(layer_id, image_id, wait_event_id, signal_event_id);
   if (!rsp.ok()) {
     return rsp.status();
   }

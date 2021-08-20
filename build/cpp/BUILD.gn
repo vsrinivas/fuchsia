@@ -173,8 +173,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/lib/fake-clock/lib:lib",
     "//src/lib/fidl/c/llcpp_interop_tests:bin",
     "//src/lib/fidl/c/walker_tests:test_sources",
-    "//src/lib/framebuffer:framebuffer",
-    "//src/lib/framebuffer/test:framebuffer-test",
     "//src/lib/isolated_devmgr:usb-virtual-bus",
     "//src/lib/isolated_devmgr/v2_component:client",
     "//src/lib/isolated_devmgr/v2_component:support",
