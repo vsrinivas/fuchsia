@@ -52,7 +52,7 @@ To see the recorded metrics use a command line such as this one:
 
 ```
 fx ffx inspect show \
-    "core/session-manager/sessoin:\:session/scene_manager"
+    "core/session-manager/session:\:session/scene_manager"
 ```
 
 The output will be like this:
