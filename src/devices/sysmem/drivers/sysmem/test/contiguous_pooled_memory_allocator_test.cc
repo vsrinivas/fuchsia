@@ -276,5 +276,38 @@ TEST_F(ContiguousPooledSystem, ExternalGuardPages) {
   EXPECT_EQ(2u, allocator_.failed_guard_region_checks());
 }
 
+TEST_F(ContiguousPooledSystem, FreeRegionReporting) {
+  EXPECT_OK(allocator_.Init());
+  allocator_.set_ready();
+
+  std::vector<zx::vmo> vmos;
+  for (uint32_t i = 0; i < kVmoCount; ++i) {
+    zx::vmo vmo;
+    EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
+    vmos.push_back(std::move(vmo));
+  }
+
+  // We want this pattern: blank filled blank blank filled ...
+  for (uint32_t i = 0; i < kVmoCount - 5; i += 5) {
+    allocator_.Delete(std::move(vmos[i]));
+    allocator_.Delete(std::move(vmos[i + 2]));
+    allocator_.Delete(std::move(vmos[i + 3]));
+  }
+
+  auto hierarchy = inspect::ReadFromVmo(inspector_.DuplicateVmo());
+  auto* value = hierarchy.value().GetByPath({"test-pool"});
+  ASSERT_TRUE(value);
+
+  // There should be at least 10 regions each with 2 adjacent VMOs free.
+  EXPECT_EQ(10 * 2u * kVmoSize,
+            value->node()
+                .get_property<inspect::UintPropertyValue>("large_contiguous_region_sum")
+                ->value());
+  for (auto& vmo : vmos) {
+    if (vmo)
+      allocator_.Delete(std::move(vmo));
+  }
+}
+
 }  // namespace
 }  // namespace sysmem_driver

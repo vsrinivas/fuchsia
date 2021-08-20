@@ -8,6 +8,9 @@
 #include <lib/ddk/trace/event.h>
 #include <lib/zx/clock.h>
 
+#include <algorithm>
+#include <numeric>
+
 #include <fbl/string_printf.h>
 
 #include "lib/fidl/llcpp/arena.h"
@@ -73,6 +76,7 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
       node_.CreateUint("failed_guard_region_checks", failed_guard_region_checks_);
   last_failed_guard_region_check_timestamp_ns_property_ =
       node_.CreateUint("last_failed_guard_region_check_timestamp_ns", 0);
+  large_contiguous_region_sum_property_ = node_.CreateUint("large_contiguous_region_sum", 0);
 
   if (dispatcher) {
     zx_status_t status = zx::event::create(0, &trace_observer_event_);
@@ -469,6 +473,26 @@ void ContiguousPooledMemoryAllocator::CheckGuardPageCallback(async_dispatcher_t*
   }
 }
 
+uint64_t ContiguousPooledMemoryAllocator::CalculateLargeContiguousRegionSize() {
+  constexpr uint32_t kRegionTrackerCount = 10;
+
+  std::array<uint64_t, kRegionTrackerCount> largest_regions{};
+  // All elements are identical, so largest_regions is already a heap.
+  region_allocator_.WalkAvailableRegions([&](const ralloc_region_t* r) -> bool {
+    if (r->size > largest_regions[0]) {
+      // Pop the smallest element.
+      std::pop_heap(largest_regions.begin(), largest_regions.end(), std::greater<uint64_t>());
+      // Push the region size onto the heap.
+      largest_regions[kRegionTrackerCount - 1] = r->size;
+      std::push_heap(largest_regions.begin(), largest_regions.end(), std::greater<uint64_t>());
+    }
+    return true;
+  });
+
+  uint64_t top_region_sum = std::accumulate(largest_regions.begin(), largest_regions.end(), 0);
+  return top_region_sum;
+}
+
 void ContiguousPooledMemoryAllocator::DumpPoolStats() {
   uint64_t unused_size = 0;
   uint64_t max_free_size = 0;
@@ -479,11 +503,13 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
         return true;
       });
 
+  uint64_t top_region_sum = CalculateLargeContiguousRegionSize();
+
   LOG(INFO,
       "%s unused total: %ld bytes, max free size %ld bytes "
-      "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu",
+      "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu, largest 10 regions %zu",
       allocation_name_, unused_size, max_free_size, region_allocator_.AllocatedRegionCount(),
-      region_allocator_.AvailableRegionCount());
+      region_allocator_.AvailableRegionCount(), top_region_sum);
   for (auto& [vmo, region] : regions_) {
     LOG(INFO, "Region koid %ld name %s size %zu", region.koid, region.name.c_str(),
         region.ptr->size);
@@ -504,6 +530,7 @@ void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
     return true;
   });
   used_size_property_.Set(used_size);
+  large_contiguous_region_sum_property_.Set(CalculateLargeContiguousRegionSize());
   TRACE_COUNTER("gfx", "Contiguous pool size", pool_id_, "size", used_size);
   bool trace_high_water_mark = initial_trace;
   if (used_size > high_water_mark_used_size_) {

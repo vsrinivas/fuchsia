@@ -91,6 +91,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   void DumpPoolStats();
   void DumpPoolHighWaterMark();
   void TracePoolSize(bool initial_trace);
+  uint64_t CalculateLargeContiguousRegionSize();
   Owner* const parent_device_{};
   const char* const allocation_name_{};
   const uint64_t pool_id_{};
@@ -140,6 +141,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   inspect::BoolProperty is_ready_property_;
   inspect::UintProperty failed_guard_region_checks_property_;
   inspect::UintProperty last_failed_guard_region_check_timestamp_ns_property_;
+  // This tracks the sum of the size of the 10 largest free regions.
+  inspect::UintProperty large_contiguous_region_sum_property_;
 
   zx::event trace_observer_event_;
   async::WaitMethod<ContiguousPooledMemoryAllocator,
