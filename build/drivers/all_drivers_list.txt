@@ -131,6 +131,7 @@
 //src/devices/light-sensor/drivers/lite-on:lite-on-driver
 //src/devices/mcu/drivers/vim3-mcu:vim3-mcu-driver
 //src/devices/misc/drivers/builtin:builtin-driver
+//src/devices/misc/drivers/chromeos-acpi:driver
 //src/devices/misc/drivers/cpu-trace:cpu-trace-driver
 //src/devices/misc/drivers/packaged:lib
 //src/devices/misc/drivers/test-parent:test-parent-sys_driver
