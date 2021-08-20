@@ -228,10 +228,10 @@ while (true) {                          | while (true) {
 
     If the channel has an associated destination MsgQueue, as set by
     `zx_object_set_msgqueue()`, the MBO will be enqueued onto that
-    MsgQueue and its `key` field will be set to the key value that was
-    set by `zx_object_set_msgqueue()`.  Otherwise, the MBO will be
-    enqueued on the channel so that it is readable from the channel's
-    opposite endpoint.
+    MsgQueue and its `current_key` field will be set to the key value
+    that was set by `zx_object_set_msgqueue()`.  Otherwise, the MBO
+    will be enqueued on the channel so that it is readable from the
+    channel's opposite endpoint.
 
 *   `zx_msgqueue_create() -> msgqueue`
 
@@ -255,9 +255,9 @@ while (true) {                          | while (true) {
     MBO's state to `owned_by_caller` and does not modify the
     CalleesRef.
 
-    This returns the `key` field from the MBO, which allows the
-    process to determine which channel the message was sent on (for
-    requests) or which request this is a reply to (for replies).
+    This returns the `current_key` field from the MBO, which allows
+    the process to determine which channel the message was sent on
+    (for requests) or which request this is a reply to (for replies).
 
 *   `zx_object_set_msgqueue(channel_or_callersref, msgqueue, key)`
 
@@ -282,8 +282,8 @@ while (true) {                          | while (true) {
     have a reference to an MBO (which will be in the state
     `owned_by_callee`).  This operation drops the CalleesRef's
     reference to the MBO, and enqueues the MBO onto its associated
-    MsgQueue, setting the MBO's `key` field to its reply key.  The
-    MBO's state is set to `enqueued_as_reply`.
+    MsgQueue, setting the MBO's `current_key` field to its reply key.
+    The MBO's state is set to `enqueued_as_reply`.
 
     If the MBO had no `reply_queue` set (which can be true for MBOs
     used for fire-and-forget messages), the MBO enters a defunct state
@@ -379,13 +379,15 @@ MBO:
 *   Message contents.  This consists of two resizable arrays:
     *   An array of bytes (data).
     *   An array of Zircon handles.
-*   `key`: 64-bit integer.  This is set when the MBO is enqueued onto
-    a MsgQueue by either `zx_channel_send()` or `zx_mbo_send_reply()`.
-    Its value is returned by `zx_msgqueue_wait()`.
+*   `current_key`: 64-bit integer.  This is set when the MBO is
+    enqueued onto a MsgQueue by either `zx_channel_send()` or
+    `zx_mbo_send_reply()`.  Its value is returned by
+    `zx_msgqueue_wait()`.
 *   `reply_queue`: This is the MsgQueue that `zx_mbo_send_reply()`
     will enqueue the MBO onto when it is sent as a reply.
 *   `reply_key`: 64-bit integer.  `zx_mbo_send_reply()` will set the
-    MBO's `key` field to this value when the MBO is sent as a reply.
+    MBO's `current_key` field to this value when the MBO is sent as a
+    reply.
 *   State: one of the four MBO states listed above (`owned_by_caller`,
     `owned_by_callee`, `enqueued_as_request`, `enqueued_as_reply`).
     Note that in practice we do not need to distinguish between
@@ -416,7 +418,7 @@ Channel endpoint:
 
 *   Reference to a MsgQueue.  This reference may be null.
 *   `channel_key`: 64-bit integer.  When an MBO is sent through this
-    channel endpoint, its `key` field will be set to this
+    channel endpoint, its `current_key` field will be set to this
     `channel_key` value.
 *   List of MBOs, all of which will be in the state
     `enqueued_as_request`.  This will be empty if the endpoint has an
