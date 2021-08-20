@@ -182,12 +182,7 @@ fn run_regulatory_manager(
     match fuchsia_component::client::connect_to_protocol::<RegulatoryRegionWatcherMarker>() {
         Ok(regulatory_svc) => {
             let regulatory_manager = RegulatoryManager::new(regulatory_svc, iface_manager);
-            let regulatory_fut = async move {
-                regulatory_manager.run(regulatory_sender).await.unwrap_or_else(|e| {
-                    error!("regulatory manager failed: {:?}", e);
-                });
-                Ok(())
-            };
+            let regulatory_fut = async move { regulatory_manager.run(regulatory_sender).await };
 
             Box::pin(regulatory_fut)
         }

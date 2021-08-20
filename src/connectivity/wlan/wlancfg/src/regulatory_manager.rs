@@ -4,10 +4,10 @@
 
 use {
     crate::mode_management::iface_manager_api::IfaceManagerApi,
-    anyhow::{bail, Context, Error},
+    anyhow::{Context, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherProxy,
     futures::{channel::oneshot, lock::Mutex},
-    log::info,
+    log::{info, warn},
     std::sync::Arc,
 };
 
@@ -50,13 +50,17 @@ impl<I: IfaceManagerApi + ?Sized> RegulatoryManager<I> {
 
             let mut region_array = [0u8; REGION_CODE_LEN];
             if region_string.len() != region_array.len() {
-                bail!("Region code {:?} does not have length {}", region_string, REGION_CODE_LEN);
+                warn!("Region code {:?} does not have length {}", region_string, REGION_CODE_LEN);
+                continue;
             }
             region_array.copy_from_slice(region_string.as_bytes());
 
             // Apply the new country code.
             let mut iface_manager = self.iface_manager.lock().await;
-            iface_manager.set_country(Some(region_array)).await?;
+            if let Err(e) = iface_manager.set_country(Some(region_array)).await {
+                warn!("Failed to set region code: {:?}", e);
+                continue;
+            }
 
             if let Some(notifier) = policy_notifier.take() {
                 if notifier.send(()).is_err() {
@@ -152,14 +156,18 @@ mod tests {
             Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
         responder.send(Some("U")).expect("failed to send response");
-        assert_variant!(
-            context.executor.run_until_stalled(&mut regulatory_fut),
-            Poll::Ready(Err(_))
-        );
+        assert_variant!(context.executor.run_until_stalled(&mut regulatory_fut), Poll::Pending);
 
         assert_variant!(
             &context.executor.run_until_stalled(&mut context.regulatory_receiver),
-            Poll::Ready(Err(_))
+            Poll::Pending
+        );
+
+        // Verify that there is a new region update request.
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(_)),
         );
     }
 
@@ -176,14 +184,18 @@ mod tests {
             Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
         responder.send(Some("USA")).expect("failed to send response");
-        assert_variant!(
-            context.executor.run_until_stalled(&mut regulatory_fut),
-            Poll::Ready(Err(_))
-        );
+        assert_variant!(context.executor.run_until_stalled(&mut regulatory_fut), Poll::Pending);
 
         assert_variant!(
             &context.executor.run_until_stalled(&mut context.regulatory_receiver),
-            Poll::Ready(Err(_))
+            Poll::Pending
+        );
+
+        // Verify that there is a new region update request.
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(_)),
         );
     }
 
@@ -239,7 +251,7 @@ mod tests {
 
         assert_variant!(
             &context.executor.run_until_stalled(&mut context.regulatory_receiver),
-            Poll::Ready(Err(_))
+            Poll::Pending
         );
     }
 
@@ -289,7 +301,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn propagates_iface_manager_failure() {
+    fn absorbs_iface_manager_failure() {
         let (mut set_country_responder, set_country_response_stream) = mpsc::channel(0);
         let mut context =
             TestContext::new(StubIfaceManager { country_code: None, set_country_response_stream });
@@ -312,9 +324,13 @@ mod tests {
             .try_send(Err(format_err!("sending a test error")))
             .expect("internal error: failed to send fake response to StubIfaceManager");
 
+        assert_variant!(&context.executor.run_until_stalled(&mut regulatory_fut), Poll::Pending);
+
+        // Verify that there is a new region update request.
+        let region_request_fut = &mut context.regulatory_region_requests.next();
         assert_variant!(
-            &context.executor.run_until_stalled(&mut regulatory_fut),
-            Poll::Ready(Err(_))
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(_)),
         );
     }
 
