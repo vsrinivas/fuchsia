@@ -193,7 +193,7 @@ zx_status_t Vnode::CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask even
       size_t actual;
       zx_status_t status = iter->socket_.write(0, &inotify_event, sizeof(inotify_event), &actual);
       if (status != ZX_OK) {
-        // TODO manalib log error for this filter and carry on with other filters in the list.
+        // TODO(fxbug.dev/83035) Report IN_Q_OVERFLOW if the socket buffer is full.
       }
     }
   }
