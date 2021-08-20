@@ -57,7 +57,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
-    "//src/lib/bootfs",
     "//src/lib/files",
     "//src/storage/memfs",
     "//zircon/public/lib/fidl",
@@ -67,6 +66,7 @@ source_set("lib") {
     "//zircon/system/ulib/launchpad",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/zbitl",
   ]
 }
 

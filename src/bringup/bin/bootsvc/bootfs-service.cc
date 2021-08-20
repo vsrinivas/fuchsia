@@ -6,6 +6,10 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/stdcompat/string_view.h>
+#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/items/bootfs.h>
+#include <lib/zbitl/vmo.h>
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 #include <sys/stat.h>
@@ -21,7 +25,6 @@
 #include <fbl/algorithm.h>
 #include <launchpad/launchpad.h>
 
-#include "src/lib/bootfs/parser.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "util.h"
 
@@ -30,6 +33,8 @@ namespace fio = fuchsia_io;
 namespace bootsvc {
 
 namespace {
+
+using BootfsView = zbitl::BootfsView<zbitl::MapUnownedVmo>;
 
 // 'Packages' in bootfs can contain executable files but we need to account for the package name
 // path component, which can be anything. For example, 'pkg/my_package/bin' should be executable but
@@ -40,17 +45,9 @@ static constexpr std::string_view kExecutablePackageDirectories[] = {
     "lib/",
 };
 
-// TODO(joshuaseaton): use cpp20::starts_with().
-constexpr bool StartsWith(std::string_view s, std::string_view prefix) {
-  if (prefix.size() > s.size()) {
-    return false;
-  }
-  return s.substr(0, prefix.size()).compare(prefix) == 0;
-}
-
 static bool PathInExecutablePackageDirectory(std::string_view path) {
   // All packages in bootfs are located under a single directory.
-  if (!StartsWith(path, kBootfsPackagePrefix)) {
+  if (!cpp20::starts_with(path, kBootfsPackagePrefix)) {
     return false;
   }
 
@@ -61,7 +58,7 @@ static bool PathInExecutablePackageDirectory(std::string_view path) {
 
   // Finally, check if the path inside the package is one of the allowlisted paths.
   for (std::string_view prefix : kExecutablePackageDirectories) {
-    if (StartsWith(path, prefix)) {
+    if (cpp20::starts_with(path, prefix)) {
       return true;
     }
   }
@@ -83,7 +80,7 @@ static bool PathInExecutableDirectory(std::string_view path) {
   }
 
   for (std::string_view prefix : kExecutableDirectories) {
-    if (StartsWith(path, prefix)) {
+    if (cpp20::starts_with(path, prefix)) {
       return true;
     }
   }
@@ -108,33 +105,49 @@ zx_status_t BootfsService::Create(async_dispatcher_t* dispatcher, zx::resource v
 }
 
 zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
-  bootfs::Parser parser;
-  zx_status_t status = parser.Init(zx::unowned_vmo(bootfs_vmo));
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // The bootfs VnodeVmo nodes are all created from the same backing VMO with differing offsets, and
   // memfs creates clones as needed. Executable files use a duplicate handle to this same VMO which
   // has ZX_RIGHT_EXECUTE added. This is done once here rather than in PublishUnownedVmo to avoid
   // lots of repetitive unnecessary syscalls for every executable file.
   zx::vmo bootfs_exec_vmo;
-  status = DuplicateAsExecutable(bootfs_vmo, &bootfs_exec_vmo);
+  zx_status_t status = DuplicateAsExecutable(bootfs_vmo, &bootfs_exec_vmo);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Load all of the entries in the bootfs into the FS
-  status = parser.Parse([this, &bootfs_vmo,
-                         &bootfs_exec_vmo](const zbi_bootfs_dirent_t* entry) -> zx_status_t {
-    const zx::vmo& vmo = (PathInExecutableDirectory(entry->name)) ? bootfs_exec_vmo : bootfs_vmo;
-    PublishUnownedVmo(entry->name, vmo, entry->data_off, entry->data_len);
-    return ZX_OK;
-  });
+  // Load all of the entries in the bootfs into the FS.
+  zbitl::MapUnownedVmo mapvmo{bootfs_vmo.borrow()};
+  BootfsView bootfs;
+  if (auto result = BootfsView::Create(std::move(mapvmo)); result.is_error()) {
+    zbitl::PrintBootfsError(result.error_value());
+    return ZX_ERR_INTERNAL;
+  } else {
+    bootfs = std::move(result.value());
+  }
+
+  // A helper to have `status` encode the first error we come across: while it
+  // is ZX_OK, it will be overridden with the next status; once it is an error
+  // state, subsequent statuses will be ignored.
+  auto update_status = [&status](zx_status_t next) {
+    if (status == ZX_OK) {
+      status = next;
+    }
+  };
+
+  for (const auto& file : bootfs) {
+    const zx::vmo& vmo = PathInExecutableDirectory(file.name) ? bootfs_exec_vmo : bootfs_vmo;
+    update_status(PublishUnownedVmo(file.name, vmo, file.offset, file.size));
+  }
+  if (auto result = bootfs.take_error(); result.is_error()) {
+    zbitl::PrintBootfsError(result.error_value());
+    update_status(ZX_ERR_INTERNAL);
+  }
+
   // Add these VMOs to our list of owned VMOs even on failure, since we may have
-  // added a file
+  // added a file.
   owned_vmos_.push_back(std::move(bootfs_vmo));
   owned_vmos_.push_back(std::move(bootfs_exec_vmo));
+
   return status;
 }
 
