@@ -8,7 +8,25 @@ image. The correct driver will be built and loaded based on the
 [board](/docs/concepts/build_system/boards_and_products.md) that is selected
 when building.
 
-Include the following in your component manifest to enable access to the Vulkan driver:
+### Components V2
+
+For applications that are using [Components v2][cfv2], include the following in
+your [.cml][cml] file:
+
+```json
+{
+  include: [
+    "vukan/client.shard.cml"
+  ],
+  ...
+}
+```
+
+
+### Components V1
+
+For applications that are using [Components v1][cfv1], include the following in
+your [.cmx][cmx] file to enable access to the Vulkan driver:
 
 ```json
 {
@@ -31,9 +49,9 @@ these lines in its .cmx:
 }
 ```
 
-### Out of tree runtime dependencies
-An application that is not in the Fuchsia tree or which otherwise can't
-include the file above must include these features and services in its .cmx
+#### Out of tree runtime dependencies
+A [Components V1][cfv1] application that is not in the Fuchsia tree or which otherwise can't
+include the file above must include these features and services in its [.cmx][cmx]
 file:
 
 ```json
@@ -158,3 +176,8 @@ Again, may be an application error or driver bug. If you believe your app is inn
 ## Demo
 
 The magma build includes a spinning cube demo 'vkcube', which you can copy over to your Fuchsia system and execute via `netruncmd`.
+
+[cml]: /docs/concepts/components/v2/component_manifests.md
+[cmx]: /docs/concepts/components/v1/component_manifests.md
+[cfv2]: /docs/concepts/components/v2/README.md
+[cfv1]: /docs/concepts/components/v1/README.md
