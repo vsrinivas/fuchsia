@@ -38,6 +38,17 @@ driver_bind_rules("astro-backlight-bind") {
   ]
 }
 
+driver_bind_rules("astro-pwm-bind") {
+  rules = "astro-pwm.bind"
+  header_output = "astro-pwm-bind.h"
+  bind_output = "astro-pwm-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
 driver_module("astro-driver") {
   output_name = "astro"
   configs += [
@@ -77,6 +88,7 @@ driver_module("astro-driver") {
   deps = [
     ":astro-backlight-bind_header",
     ":astro-bind",
+    ":astro-pwm-bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",

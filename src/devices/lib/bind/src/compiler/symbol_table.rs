@@ -280,6 +280,9 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_SPI_BUS_ID".to_string(), 0x0A41));
     keys.push(("BIND_SPI_CHIP_SELECT".to_string(), 0x0A42));
 
+    // PWM binding variables at 0x0A5X
+    keys.push(("BIND_PWM_ID".to_string(), 0x0A50));
+
     // Registers binding variables at 0x0A8X
     keys.push(("BIND_REGISTER_ID".to_string(), 0x0A80));
 
