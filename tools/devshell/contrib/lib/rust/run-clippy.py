@@ -1,131 +1,109 @@
 #!/usr/bin/env python3.8
 #
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Runs `cargo clippy` on a target or on a set of files.
+# Runs `clippy` on a set of gn targets or rust source files
 
 import argparse
-import json
 import os
 import subprocess
 import sys
-
-from contextlib import contextmanager
+import time
 
 import rust
-from rust import FUCHSIA_BUILD_DIR, HOST_PLATFORM, PREBUILT_THIRD_PARTY_DIR, \
-    get_rust_target_from_file
-
-PATH = os.environ["PATH"]
-THIRD_PARTY_DEPS_DATA = os.path.join(
-    FUCHSIA_BUILD_DIR, 'rust_third_party_crates', 'deps_data.json')
-HOST_THIRD_PARTY_DEPS_DATA = os.path.join(
-    FUCHSIA_BUILD_DIR, 'host_x64', 'rust_third_party_crates', 'deps_data.json')
-
-# Cargo args to ignore from the deps_data.json files.
-CARGO_IGNORE_ARGS = ['--frozen', '--locked']
-
-
-@contextmanager
-def cwd(dir):
-    previous = os.getcwd()
-    os.chdir(dir)
-    try:
-        yield
-    finally:
-        os.chdir(previous)
+from rust import ROOT_PATH, FUCHSIA_BUILD_DIR, HOST_PLATFORM, PREBUILT_THIRD_PARTY_DIR
 
 
 def main():
-    parser = argparse.ArgumentParser("Run cargo clippy on a file or target.")
+    parser = argparse.ArgumentParser(
+        "Run cargo clippy on a set of targets or rust files"
+    )
+    parser.add_argument("-v", help="verbose", action="store_true", default=False)
     parser.add_argument(
-        "--target", help="GN target on which to run clippy", default=None)
+        "input",
+        nargs="+",
+        default=[],
+    )
     parser.add_argument(
-        "--file",
-        dest="files",
-        help="file on which to run clippy",
-        action="append",
-        default=[])
-    parser.add_argument(
-        "-v", help="verbose", action="store_true", default=False)
+        "--files",
+        action="store_true",
+        help="treat the inputs as source files rather than gn targets",
+    )
     args = parser.parse_args()
 
-    targets = set()
-    if args.target:
-        try:
-            targets.add(rust.GnTarget(args.target))
-        except ValueError as e:
-            # The target may not be a Rust one, so it's okay if it didn't find the Cargo.toml.
-            if args.v:
-                print("No Rust target found for %s:\n%s" % (args.target, e))
+    if not args.input:
+        parser.print_help()
+        return 1
 
-    for file in args.files:
-        # Skip non-rust files.
-        if not file.endswith(".rs"):
-            continue
+    if args.files:
+        files = [os.path.abspath(f) for f in args.input]
+        targets = rust.targets_from_files(files)
+    else:
+        targets = [rust.GnTarget(t) for t in args.input]
 
-        try:
-            target = get_rust_target_from_file(file)
-            if not target:
-                return 1
-        except ValueError as e:
-            # The target should be a Rust one, so any error is bad.
-            print("No Rust target found for %s:\n%s" % (file, e))
-            return 1
+    os.chdir(FUCHSIA_BUILD_DIR)  # the rustflags use relpaths from the build dir
+    write_config()
 
-        targets.add(target)
+    prebuilt_toolchain = os.path.join(PREBUILT_THIRD_PARTY_DIR, "rust", HOST_PLATFORM)
+    cargo = os.path.join(prebuilt_toolchain, "bin", "cargo")
 
-    cargos = set()
-    for target in targets:
-        cargo = target.manifest_path(FUCHSIA_BUILD_DIR)
-        if cargo and os.path.isfile(cargo):
-            cargos.add(cargo)
-        else:
-            print(
-                "Cargo.toml file not found for %s, try running fx build." %
-                target)
-            return 1
-
-    rust_tool_prebuilts = \
-        os.path.join(PREBUILT_THIRD_PARTY_DIR, "rust_tools", HOST_PLATFORM, "bin")
-    rust_prebuilts = os.path.join(
-        PREBUILT_THIRD_PARTY_DIR, "rust", HOST_PLATFORM, "bin")
-
-    # The third_party build records the arguments it used to invoke cargo. Use the same ones for
-    # the clippy invocation.
-    third_party_deps_data = json.load(open(THIRD_PARTY_DEPS_DATA, 'r'))
-    host_third_party_deps_data = json.load(
-        open(HOST_THIRD_PARTY_DEPS_DATA, 'r'))
-
-    env = {}
-    env['PATH'] = ":".join([rust_tool_prebuilts, rust_prebuilts, PATH])
     call_args = [
-        "cargo",
+        cargo,
         "clippy",
+        "--tests",
+        "--target-dir=" + os.path.join(FUCHSIA_BUILD_DIR, "target"),
     ]
-
     if args.v:
         call_args.append("-v")
+    # Some crates use #![deny(warnings)], which will cause clippy to fail entirely if it finds
+    # issues in those crates. Cap all lints at `warn` to avoid this.
+    clippy_args = ["--", "--cap-lints", "warn", "--no-deps"]
 
-    for cargo in cargos:
-        if 'host_x64' in cargo:
-            cargo_args = host_third_party_deps_data['cargo_args']
-        else:
-            cargo_args = third_party_deps_data['cargo_args']
-        cargo_args = filter(
-            lambda arg: arg not in CARGO_IGNORE_ARGS, cargo_args)
-        # Some crates use #![deny(warnings)], which will cause clippy to fail entirely if it finds
-        # issues in those crates. Cap all lints at `warn` to avoid this.
-        cargo_args += ['--', '--cap-lints', 'warn']
-        if args.v:
-            print(" ".join(call_args + cargo_args))
-        with cwd(os.path.dirname(cargo)):
-            return subprocess.call(call_args + cargo_args, env=env)
-
-    return 0
+    env = os.environ.copy()
+    env["RUSTUP_TOOLCHAIN"] = prebuilt_toolchain
+    for target in targets:
+        try:
+            toml = get_toml_path(target)
+        except ValueError as e:
+            print(
+                f"Cargo.toml file not found for {e}, either this isn't a rust target"
+                " or you need to run `fx set` with `--cargo-toml-gen` and `fx build`"
+            )
+            return 1
+        subprocess.run(call_args + ["--manifest-path", toml] + clippy_args, env=env)
 
 
-if __name__ == '__main__':
+def get_toml_path(target):
+    toml = target.manifest_path(FUCHSIA_BUILD_DIR)
+    if not os.path.isfile(toml):
+        raise ValueError(toml)
+    return toml
+
+
+CONFIG_FORMAT = """
+[target.x86_64-fuchsia]
+rustflags = "{}"
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "../../third_party/rust_crates/vendor"
+
+[build]
+target = "x86_64-fuchsia"
+"""
+
+
+def write_config():
+    rust_flags = " ".join(["-Cpanic=abort", "-Zpanic_abort_tests"])
+    os.makedirs(".cargo", exist_ok=True)
+    os.makedirs("target", exist_ok=True)
+    with open(".cargo/config", "w") as f:
+        f.write(CONFIG_FORMAT.format(rust_flags))
+
+
+if __name__ == "__main__":
     sys.exit(main())

@@ -217,7 +217,7 @@ function add_file_to_linter() {
       *.h) CLANG_TIDY_FILES+=(${file}) ;;
       *.hh) CLANG_TIDY_FILES+=(${file}) ;;
       *.hpp) CLANG_TIDY_FILES+=(${file}) ;;
-      # *.rs) RUST_LINT_FILES+=(${file}) ;;  # run-clippy.py is not working (fxbug.dev/72865)
+      *.rs) RUST_LINT_FILES+=(${file}) ;;
     esac
 
     # Note: clang-tidy can produce errors on header files (*.h, *.hh, *.hpp)
@@ -301,15 +301,8 @@ call_linters() {
   if (( "${#JSON_LINT_CMD[@]}" > 0 && "${#JSON_LINT_FILES[@]}" > 0 )); then
     execute "${JSON_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${JSON_LINT_FILES[@]}" || return $?
   fi
-  if [[ "${#RUST_LINT_CMD[@]}" > 0 && (( "${#RUST_LINT_FILES[@]}" > 0 || -n "${TARGET}" )) ]]; then
-    local args=()
-    if [[ -n "${TARGET}" ]]; then
-      args+=( "--target=${TARGET}" )
-    fi
-    for file in ${RUST_LINT_FILES}; do
-      args+=( "--file=${file}" )
-    done
-    execute "${RUST_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${args}" || return $?
+  if (( "${#RUST_LINT_CMD[@]}" > 0 && "${#RUST_LINT_FILES[@]}" > 0 )); then
+    execute "${RUST_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" --files "${RUST_LINT_FILES[@]}" || return $?
   fi
 }
 
