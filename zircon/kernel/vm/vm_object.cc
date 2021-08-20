@@ -364,6 +364,7 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
     const size_t op_end_offset = ktl::min(page_end_offset, end_offset);
 
     const size_t cache_op_len = op_end_offset - op_start_offset;
+    DEBUG_ASSERT(cache_op_len <= PAGE_SIZE);
 
     const size_t page_offset = op_start_offset % PAGE_SIZE;
 
