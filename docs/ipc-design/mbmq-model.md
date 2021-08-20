@@ -146,7 +146,7 @@ channel = ...;                          | channel_server_end = ...;
 msgq1 = zx_msgqueue_create();           | msgq2 = zx_msgqueue_create();
 callersref = zx_mbo_create();           | calleesref = zx_mbo_create_calleesref();
 zx_object_set_msgqueue(                 | zx_object_set_msgqueue(
-    callersref, msgq1);                 |     channel_server_end, msgq2);
+    callersref, msgq1, key);            |     channel_server_end, msgq2, key);
                                         |
 // MBO is in state 1                    |
                                         |
