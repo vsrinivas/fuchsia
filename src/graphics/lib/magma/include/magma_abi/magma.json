@@ -308,39 +308,6 @@
         ]
       },
       {
-        "ordinal": 31,
-        "name": "magma_execute_command_buffer_with_resources",
-        "type": "magma_status_t",
-        "description": "Submits a command buffer for execution on the GPU, with associated resources.",
-        "arguments": [
-          {
-            "name": "connection",
-            "type": "magma_connection_t",
-            "description": "An open connection."
-          },
-          {
-            "name": "context_id",
-            "type": "uint32_t",
-            "description": "A valid context ID."
-          },
-          {
-            "name": "command_buffer",
-            "type": "struct magma_system_command_buffer*",
-            "description": "A pointer to the command buffer to execute."
-          },
-          {
-            "name": "resources",
-            "type": "struct magma_system_exec_resource*",
-            "description": "An array of |command_buffer->resource_count| resources associated with the command buffer."
-          },
-          {
-            "name": "semaphore_ids",
-            "type": "uint64_t*",
-            "description": "An array of semaphore ids; first should be |command_buffer->wait_semaphore_count| wait semaphores followed by |command_buffer->signal_signal_semaphores| signal semaphores."
-          }
-        ]
-      },
-      {
         "ordinal": 33,
         "name": "magma_execute_immediate_commands2",
         "type": "magma_status_t",

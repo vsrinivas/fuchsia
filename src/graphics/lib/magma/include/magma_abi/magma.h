@@ -175,24 +175,6 @@ magma_status_t magma_import(
     magma_buffer_t* buffer_out);
 
 ///
-/// \brief Submits a command buffer for execution on the GPU, with associated resources.
-/// \param connection An open connection.
-/// \param context_id A valid context ID.
-/// \param command_buffer A pointer to the command buffer to execute.
-/// \param resources An array of |command_buffer->resource_count| resources associated with the
-///        command buffer.
-/// \param semaphore_ids An array of semaphore ids; first should be
-///        |command_buffer->wait_semaphore_count| wait semaphores followed by
-///        |command_buffer->signal_signal_semaphores| signal semaphores.
-///
-magma_status_t magma_execute_command_buffer_with_resources(
-    magma_connection_t connection,
-    uint32_t context_id,
-    struct magma_system_command_buffer* command_buffer,
-    struct magma_system_exec_resource* resources,
-    uint64_t* semaphore_ids);
-
-///
 /// \brief Submits a series of commands for execution on the GPU without using a command buffer.
 /// \param connection An open connection.
 /// \param context_id A valid context ID.

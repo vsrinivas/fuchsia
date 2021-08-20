@@ -835,21 +835,6 @@ class TestConnectionWithContext : public TestConnection {
 
   uint32_t context_id() { return context_id_; }
 
-  void ExecuteCommandBufferWithResources(uint32_t resource_count) {
-    ASSERT_TRUE(connection());
-
-    magma_system_command_buffer command_buffer = {.resource_count = resource_count};
-    magma_system_exec_resource resources[resource_count];
-
-    memset(resources, 0, sizeof(magma_system_exec_resource) * resource_count);
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_execute_command_buffer_with_resources(connection(), context_id(),
-                                                          &command_buffer, resources, nullptr));
-
-    // Command buffer is mostly zeros, so we expect an error here
-    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection()));
-  }
-
   void ExecuteCommandBufferWithResources2(uint32_t resource_count) {
     ASSERT_TRUE(connection());
 
@@ -987,10 +972,6 @@ TEST(MagmaAbi, SysmemLinearFormatModifier) {
 }
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c(TestConnection::device_name().c_str())); }
-
-TEST(MagmaAbi, ExecuteCommandBufferWithResources) {
-  TestConnectionWithContext().ExecuteCommandBufferWithResources(5);
-}
 
 TEST(MagmaAbi, ExecuteCommandBufferWithResources2) {
   TestConnectionWithContext().ExecuteCommandBufferWithResources2(5);

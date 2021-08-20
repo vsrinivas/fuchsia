@@ -257,33 +257,6 @@ magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t magma_execute_command_buffer_with_resources(
-    magma_connection_t connection, uint32_t context_id,
-    struct magma_system_command_buffer* system_command_buffer,
-    struct magma_system_exec_resource* resources, uint64_t* semaphore_ids) {
-  TRACE_DURATION("magma", "execute command buffer");
-  magma_command_buffer command_buffer = {
-      .resource_count = system_command_buffer->resource_count,
-      .batch_buffer_resource_index = system_command_buffer->batch_buffer_resource_index,
-      .batch_start_offset = system_command_buffer->batch_start_offset,
-      .wait_semaphore_count = system_command_buffer->wait_semaphore_count,
-      .signal_semaphore_count = system_command_buffer->signal_semaphore_count,
-      .flags = 0};
-  static_assert(sizeof(magma_system_exec_resource) == sizeof(magma_exec_resource));
-
-  if (command_buffer.resource_count > 0) {
-    DASSERT(command_buffer.batch_buffer_resource_index < command_buffer.resource_count);
-
-    uint64_t ATTRIBUTE_UNUSED id = resources[command_buffer.batch_buffer_resource_index].buffer_id;
-    TRACE_FLOW_BEGIN("magma", "command_buffer", id);
-  }
-
-  return magma::PlatformConnectionClient::cast(connection)
-      ->ExecuteCommandBufferWithResources(context_id, &command_buffer,
-                                          reinterpret_cast<magma_exec_resource*>(resources),
-                                          semaphore_ids);
-}
-
 magma_status_t magma_execute_command_buffer_with_resources2(
     magma_connection_t connection, uint32_t context_id, struct magma_command_buffer* command_buffer,
     struct magma_exec_resource* resources, uint64_t* semaphore_ids) {
