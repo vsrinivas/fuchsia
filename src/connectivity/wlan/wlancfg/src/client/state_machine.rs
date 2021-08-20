@@ -661,6 +661,7 @@ async fn connected_state(
                                 is_sme_reconnecting: fidl_info.is_sme_reconnecting,
                                 reason_code: fidl_info.reason_code,
                                 disconnect_source: fidl_info.disconnect_source,
+                                latest_ap_state: (*options.latest_ap_state).clone(),
                             };
                             common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
                             !fidl_info.is_sme_reconnecting
@@ -731,6 +732,7 @@ async fn connected_state(
                 match req {
                     Some(ManualRequest::Disconnect((reason, responder))) => {
                         debug!("Disconnect requested");
+                        let latest_ap_state = options.latest_ap_state;
                         let options = DisconnectingOptions {
                             disconnect_responder: Some(responder),
                             previous_network: Some((options.currently_fulfilled_request.target.network, types::DisconnectStatus::ConnectionStopped)),
@@ -743,6 +745,7 @@ async fn connected_state(
                             is_sme_reconnecting: false,
                             reason_code: options.reason as u16,
                             disconnect_source: fidl_sme::DisconnectSource::User,
+                            latest_ap_state: *latest_ap_state,
                         };
                         common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
                         return Ok(disconnecting_state(common_options, options).into_state());
@@ -758,6 +761,7 @@ async fn connected_state(
                                 connect_request: new_connect_request.clone(),
                                 attempt_counter: 0,
                             };
+                            let latest_ap_state = options.latest_ap_state;
                             let options = DisconnectingOptions {
                                 disconnect_responder: None,
                                 previous_network: Some((options.currently_fulfilled_request.target.network, types::DisconnectStatus::ConnectionStopped)),
@@ -778,6 +782,7 @@ async fn connected_state(
                                 is_sme_reconnecting: false,
                                 reason_code: options.reason as u16,
                                 disconnect_source: fidl_sme::DisconnectSource::User,
+                                latest_ap_state: *latest_ap_state,
                             };
                             common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
                             return Ok(disconnecting_state(common_options, options).into_state())
@@ -2536,7 +2541,7 @@ mod tests {
                 .expect("failed to create a connect txn channel");
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request,
-            latest_ap_state: Box::new(bss_description),
+            latest_ap_state: Box::new(bss_description.clone()),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -2606,6 +2611,7 @@ mod tests {
                     is_sme_reconnecting: false,
                     reason_code: fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest as u16,
                     disconnect_source: fidl_sme::DisconnectSource::User,
+                    latest_ap_state: bss_description,
                 });
             });
         });
@@ -2653,7 +2659,7 @@ mod tests {
         let connect_txn_handle = connect_txn_stream.control_handle();
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            latest_ap_state: Box::new(bss_description),
+            latest_ap_state: Box::new(bss_description.clone()),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
 
@@ -2687,6 +2693,7 @@ mod tests {
                     is_sme_reconnecting,
                     reason_code: fidl_disconnect_info.reason_code,
                     disconnect_source: fidl_disconnect_info.disconnect_source,
+                    latest_ap_state: bss_description,
                 });
             });
         });
@@ -2996,7 +3003,7 @@ mod tests {
                 .expect("failed to create a connect txn channel");
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            latest_ap_state: Box::new(bss_description),
+            latest_ap_state: Box::new(bss_description.clone()),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -3088,6 +3095,7 @@ mod tests {
                     is_sme_reconnecting: false,
                     reason_code: fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch as u16,
                     disconnect_source: fidl_sme::DisconnectSource::User,
+                    latest_ap_state: bss_description.clone(),
                 });
             });
         });
@@ -3648,7 +3656,7 @@ mod tests {
         exec.set_fake_time(fasync::Time::from_nanos(0));
 
         let test_values = test_setup();
-        let mut _telemetry_receiver = test_values.telemetry_receiver;
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = b"test".to_vec();
         let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
@@ -3657,8 +3665,6 @@ mod tests {
         let connect_txn_handle = connect_txn_stream.control_handle();
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
-        let sme_fut = test_values.sme_req_stream.into_future();
-        pin_mut!(sme_fut);
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -3669,11 +3675,21 @@ mod tests {
             .expect("failed to send signal report");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        // We don't have to way to view updated BssDescription, so this is just a quick
-        // check that state machine does not exit and there's no disconnect.
+        // Have SME notify Policy of disconnection so we can see whether the channel in the
+        // BssDescription has changed.
+        let is_sme_reconnecting = false;
+        let mut fidl_disconnect_info = generate_disconnect_info(is_sme_reconnecting);
+        connect_txn_handle
+            .send_on_disconnect(&mut fidl_disconnect_info)
+            .expect("failed to send disconnection event");
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        // Check that no disconnect request is sent to SME
-        assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+        // Verify telemetry event
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::Disconnected { info, .. } => {
+                assert_eq!(info.latest_ap_state.channel.primary, 10);
+            });
+        });
     }
 
     // Set up connected state, returning its fut, connect_txn_stream, and a view into

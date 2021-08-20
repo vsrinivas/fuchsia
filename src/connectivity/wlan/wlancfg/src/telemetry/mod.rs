@@ -26,6 +26,7 @@ use {
             Arc,
         },
     },
+    wlan_common::bss::BssDescription,
     wlan_metrics_registry as metrics,
 };
 
@@ -78,6 +79,7 @@ pub struct DisconnectInfo {
     pub is_sme_reconnecting: bool,
     pub reason_code: u16,
     pub disconnect_source: fidl_sme::DisconnectSource,
+    pub latest_ap_state: BssDescription,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -743,6 +745,12 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DISCONNECT_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
+            event_codes: vec![disconnect_info.latest_ap_state.channel.primary as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
         log_cobalt_1dot1_batch!(
             self.cobalt_1dot1_proxy,
             &mut metric_events.iter_mut(),
@@ -848,6 +856,7 @@ mod tests {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
+        fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device_service::{
             DeviceServiceGetIfaceStatsResponder, DeviceServiceRequest,
         },
@@ -855,6 +864,7 @@ mod tests {
         fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, Inspector},
         futures::{pin_mut, task::Poll, TryStreamExt},
         std::{cmp::min, pin::Pin},
+        wlan_common::fake_bss_description,
     };
 
     const STEP_INCREMENT: zx::Duration = zx::Duration::from_seconds(1);
@@ -1875,7 +1885,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_log_disconnect_metric() {
+    fn test_log_disconnect_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.advance_by(3.hours(), test_fut.as_mut());
         test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
@@ -1883,10 +1893,18 @@ mod tests {
 
         test_helper.advance_by(5.hours(), test_fut.as_mut());
 
+        let primary_channel = 8;
+        let channel = fidl_common::WlanChannel {
+            primary: primary_channel,
+            cbw: fidl_common::ChannelBandwidth::Cbw20,
+            secondary80: 0,
+        };
+        let latest_ap_state = fake_bss_description!(Wpa2, channel: channel);
         let info = DisconnectInfo {
             connected_duration: 5.hours(),
             reason_code: 3,
             disconnect_source: fidl_sme::DisconnectSource::Mlme,
+            latest_ap_state,
             ..fake_disconnect_info()
         };
         test_helper
@@ -1923,6 +1941,12 @@ mod tests {
             vec![3u32, metrics::ConnectivityWlanMetricDimensionDisconnectSource::Mlme as u32,]
         );
         assert_eq!(breakdowns_by_reason[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_channel = test_helper
+            .get_logged_metrics(metrics::DISCONNECT_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID);
+        assert_eq!(breakdowns_by_channel.len(), 1);
+        assert_eq!(breakdowns_by_channel[0].event_codes, vec![channel.primary as u32]);
+        assert_eq!(breakdowns_by_channel[0].payload, MetricEventPayload::Count(1));
     }
 
     struct TestHelper {
@@ -2241,6 +2265,7 @@ mod tests {
             is_sme_reconnecting: fidl_disconnect_info.is_sme_reconnecting,
             reason_code: fidl_disconnect_info.reason_code,
             disconnect_source: fidl_disconnect_info.disconnect_source,
+            latest_ap_state: fake_bss_description!(Wpa2),
         }
     }
 }
