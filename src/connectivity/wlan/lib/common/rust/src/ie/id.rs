@@ -19,6 +19,7 @@ impl Id {
     pub const RSNE: Self = Self(48);
     pub const EXT_SUPPORTED_RATES: Self = Self(50);
     pub const HT_OPERATION: Self = Self(61);
+    pub const RM_ENABLED_CAPABILITIES: Self = Self(70);
     pub const BSS_MAX_IDLE_PERIOD: Self = Self(90);
     pub const MESH_PEERING_MGMT: Self = Self(117);
     pub const PREQ: Self = Self(130);
@@ -60,6 +61,7 @@ impl IeType {
     ie_type_basic_const!(RSNE);
     ie_type_basic_const!(EXT_SUPPORTED_RATES);
     ie_type_basic_const!(HT_OPERATION);
+    ie_type_basic_const!(RM_ENABLED_CAPABILITIES);
     ie_type_basic_const!(BSS_MAX_IDLE_PERIOD);
     ie_type_basic_const!(MESH_PEERING_MGMT);
     ie_type_basic_const!(PREQ);

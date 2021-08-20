@@ -505,6 +505,7 @@ pub struct AselCapability(pub u8);
 pub struct HtOperation {
     pub primary_channel: u8, // Primary 20 MHz channel.
     // HT Operation Information is 40-bit field so it has to be split
+    // TODO(fxbug.dev/82503): This is a bit awkward, see if we can represent these as byte array
     pub ht_op_info_head: HtOpInfoHead,     // u32
     pub ht_op_info_tail: HtOpInfoTail,     // u8
     pub basic_ht_mcs_set: SupportedMcsSet, // u128
@@ -587,6 +588,59 @@ impl HtProtection {
     pub_const!(TWENTY_MHZ, 2);
     pub_const!(NON_HT_MIXED, 3);
 }
+
+// IEEE Std 802.11-2016, 9.4.2.45
+#[repr(C, packed)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
+pub struct RmEnabledCapabilities {
+    // Rm Enabled Capabilities is 40-bit field so it has to be split
+    // TODO(fxbug.dev/82503): This is a bit awkward, see if we can represent these as byte array
+    pub rm_enabled_caps_head: RmEnabledCapabilitiesHead, // u32
+    pub rm_enabled_caps_tail: RmEnabledCapabilitiesTail, // u8
+}
+
+#[bitfield(
+    0       link_measurement_enabled,
+    1       neighbor_report_enabled,
+    2       parallel_measurements_enabled,
+    3       repeated_measurements_enabled,
+    4       beacon_passive_measurement_enabled,
+    5       beacon_active_measurement_enabled,
+    6       beacon_table_measurement_enabled,
+    7       beacon_measurement_reporting_conditions_enabled,
+    8       frame_measurement_enabled,
+    9       channel_load_measurement_enabled,
+    10      noise_histogram_measurement_enabled,
+    11      statistics_measurement_enabled,
+    12      lci_measurement_enabled,
+    13      lci_azimuth_enabled,
+    14      tx_stream_category_measurement_enabled,
+    15      trigerred_tx_stream_category_measurement_enabled,
+    16      ap_channel_report_enabled,
+    17      rm_mib_enabled,
+    18..=20 operating_channel_max_measurement_duration,
+    21..=23 nonoperating_channel_max_measurement_duration,
+    24..=26 measurement_pilot_capability,
+    27      measurement_pilot_tx_info_enabled,
+    28      neighbor_report_tsf_offset_enabled,
+    29      rcpi_measurement_enabled,
+    30      rsni_measurement_enabled,
+    31      bss_average_access_delay_enabled,
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct RmEnabledCapabilitiesHead(pub u32);
+
+#[bitfield(
+    0       bss_available_admission_capacity_enabled,
+    1       antenna_enabled,
+    2       ftm_range_report_enabled,
+    3       civic_location_measurement_enabled,
+    4..=7   _,
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct RmEnabledCapabilitiesTail(pub u8);
 
 #[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy)]
 pub struct PcoPhase(pub u8);

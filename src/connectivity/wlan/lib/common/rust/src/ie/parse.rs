@@ -89,6 +89,13 @@ pub fn parse_ht_operation<B: ByteSlice>(
         .ok_or(FrameParseError::new("Invalid length of HT Operation element"))
 }
 
+pub fn parse_rm_enabled_capabilities<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<LayoutVerified<B, RmEnabledCapabilities>> {
+    LayoutVerified::new(raw_body)
+        .ok_or(FrameParseError::new("Invalid length of RM Enabled Capabilities element"))
+}
+
 pub fn parse_mpm_open<B: ByteSlice>(raw_body: B) -> FrameParseResult<MpmOpenView<B>> {
     let mut reader = BufferReader::new(raw_body);
     let header = reader
@@ -475,6 +482,34 @@ mod tests {
 
         let basic_mcs_set = ht_op.basic_ht_mcs_set;
         assert_eq!(basic_mcs_set.0, 0x00000000_cdab0000_00000000_000000ff);
+    }
+
+    #[test]
+    fn rm_enabled_capabilities_wrong_size() {
+        let err = parse_rm_enabled_capabilities(&[0u8; 4][..]).err().expect("expected Err");
+        assert_eq!("Invalid length of RM Enabled Capabilities element", err.debug_message());
+        let err = parse_rm_enabled_capabilities(&[0u8; 6][..]).err().expect("expected Err");
+        assert_eq!("Invalid length of RM Enabled Capabilities element", err.debug_message());
+    }
+
+    #[test]
+    fn rm_enabled_capabilities_ok() {
+        #[rustfmt::skip]
+        let raw_body = [
+            0x03, 0x00, 0x00, 0x00, // rm_enabled_capabilities_head(RmEnabledCapabilitiesHead(u32))
+            0x02,                   // rm_enabled_capabilities_tail(RmEnabledCapabilitiesTail(u8))
+        ];
+
+        let rm_enabled_caps =
+            parse_rm_enabled_capabilities(&raw_body[..]).expect("valid frame should result in OK");
+        let head = rm_enabled_caps.rm_enabled_caps_head;
+        assert!(head.link_measurement_enabled());
+        assert!(head.neighbor_report_enabled());
+        assert!(!head.lci_azimuth_enabled());
+
+        let tail = rm_enabled_caps.rm_enabled_caps_tail;
+        assert!(tail.antenna_enabled());
+        assert!(!tail.ftm_range_report_enabled());
     }
 
     #[test]
