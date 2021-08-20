@@ -60,6 +60,11 @@ template("isolated_devmgr_v2_component") {
 template("isolated_devmgr_unittest_v2_component") {
   if (!defined(invoker.manifest)) {
     generated_target = "${target_name}_generated_manifest"
+    target_url = "#meta/isolated-devmgr.cm"
+    if (defined(invoker.package_name)) {
+      target_url = "fuchsia-pkg://fuchsia.com/${invoker.package_name}#meta/isolated-devmgr.cm"
+    }
+
     fuchsia_test_component_manifest(generated_target) {
       forward_variables_from(invoker, [ "deps" ])
       visibility = [ ":*" ]
@@ -69,7 +74,7 @@ template("isolated_devmgr_unittest_v2_component") {
             children = [
               {
                 name = "isolated-devmgr"
-                url = "fuchsia-pkg://fuchsia.com/${invoker.package_name}#meta/isolated-devmgr.cm"
+                url = target_url
                 startup = "eager"
               },
             ]
