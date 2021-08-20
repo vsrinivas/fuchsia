@@ -823,6 +823,7 @@ mod tests {
         fuchsia_inspect::{self as inspect},
         fuchsia_zircon::prelude::*,
         futures::{task::Poll, Future},
+        ieee80211::Ssid,
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         test_case::test_case,
@@ -934,7 +935,8 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = b"bar".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1105,7 +1107,8 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = b"bar".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1308,7 +1311,8 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = b"bar".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier { ssid: next_network_ssid.clone(), type_ },
@@ -1404,7 +1408,8 @@ mod tests {
         let mut test_values = test_setup();
 
         let next_network_ssid = b"bar".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1570,7 +1575,8 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = b"bar".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1786,7 +1792,8 @@ mod tests {
             types::NetworkIdentifier { ssid: next_network_ssid.clone(), type_: next_security_type };
         let config_net_id =
             network_config::NetworkIdentifier::from(next_network_identifier.clone());
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         // save network to check that failed connect is recorded
         assert!(exec
             .run_singlethreaded(
@@ -1940,7 +1947,8 @@ mod tests {
             .is_none());
         let before_recording = zx::Time::get_monotonic();
 
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: next_network_identifier,
@@ -2030,7 +2038,8 @@ mod tests {
         let mut test_values = test_setup();
 
         let next_network_ssid = b"bar".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2167,7 +2176,8 @@ mod tests {
 
         let first_network_ssid = b"foo".to_vec();
         let second_network_ssid = b"bar".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: first_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&first_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2220,7 +2230,7 @@ mod tests {
         // Send a different connect request
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
-        let bss_desc2 = fake_fidl_bss_description!(Wpa2, ssid: second_network_ssid.clone());
+        let bss_desc2 = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&second_network_ssid));
         let connect_request2 = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2363,7 +2373,8 @@ mod tests {
         let mut test_values = test_setup();
 
         let first_network_ssid = b"foo".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: first_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&first_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2522,7 +2533,7 @@ mod tests {
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = b"test".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2641,7 +2652,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         // Build the values for the connected state.
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let bssid = bss_description.bssid;
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2709,7 +2720,7 @@ mod tests {
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = b"test".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2818,7 +2829,7 @@ mod tests {
         process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         // Enter the connecting state without a targeted BSS
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2921,7 +2932,7 @@ mod tests {
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = b"test".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2984,7 +2995,7 @@ mod tests {
 
         let first_network_ssid = b"foo".to_vec();
         let second_network_ssid = b"bar".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: first_network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&first_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3018,7 +3029,8 @@ mod tests {
         exec.set_fake_time(fasync::Time::after(12.hours()));
 
         // Send a different connect request
-        let second_bss_desc = fake_fidl_bss_description!(Wpa2, ssid: second_network_ssid.clone());
+        let second_bss_desc =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&second_network_ssid));
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let connect_request2 = types::ConnectRequest {
@@ -3185,7 +3197,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let network_ssid = b"foo".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3277,7 +3289,7 @@ mod tests {
         });
 
         // Check for a scan to find a new BSS to reconnect with
-        let new_bss_desc = fake_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let new_bss_desc = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![network_ssid.clone()],
             channels: vec![],
@@ -3363,7 +3375,7 @@ mod tests {
         let mut test_values = test_setup();
 
         let network_ssid = b"foo".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3443,7 +3455,7 @@ mod tests {
         test_values.common_options.network_selector = network_selector;
 
         let network_ssid = b"foo".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3531,7 +3543,7 @@ mod tests {
         });
 
         // Check for a scan to find a new BSS to reconnect with
-        let new_bss_description = fake_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let new_bss_description = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![network_ssid.clone()],
             channels: vec![],
@@ -3623,7 +3635,7 @@ mod tests {
         let mut _telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = b"test".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let (initial_state, connect_txn_stream) =
             connected_state_setup(test_values.common_options, bss_description);
         let connect_txn_handle = connect_txn_stream.control_handle();
@@ -3659,7 +3671,7 @@ mod tests {
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = b"test".to_vec();
-        let bss_description = fake_bss_description!(Wpa2, ssid: network_ssid.clone());
+        let bss_description = fake_bss_description!(Wpa2, ssid: Ssid::from(&network_ssid));
         let (initial_state, connect_txn_stream) =
             connected_state_setup(test_values.common_options, bss_description);
         let connect_txn_handle = connect_txn_stream.control_handle();
@@ -3702,7 +3714,7 @@ mod tests {
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
-                    ssid: bss_description.ssid().to_vec(),
+                    ssid: bss_description.ssid.to_vec(),
                     type_: match bss_description.protection() {
                         Protection::Open => types::SecurityType::None,
                         Protection::Wep => types::SecurityType::Wep,
@@ -3774,7 +3786,8 @@ mod tests {
 
         let previous_network_ssid = "foo";
         let next_network_ssid = b"bar".to_vec();
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::from(&next_network_ssid));
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {

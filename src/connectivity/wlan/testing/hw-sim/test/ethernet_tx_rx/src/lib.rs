@@ -12,7 +12,6 @@ use {
 };
 
 const BSS: mac::Bssid = mac::Bssid([0x65, 0x74, 0x68, 0x6e, 0x65, 0x74]);
-const SSID: &[u8] = b"ethernet";
 const PAYLOAD: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 async fn send_and_receive<'a>(
@@ -95,7 +94,7 @@ async fn ethernet_tx_rx() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    connect_open(&mut helper, SSID, &BSS).await;
+    connect_open(&mut helper, &AP_SSID, &BSS).await;
 
     let mut client = create_eth_client(&CLIENT_MAC_ADDR)
         .await

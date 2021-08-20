@@ -4,6 +4,7 @@
 
 use {
     boringssl_sys::SHA256_DIGEST_LENGTH,
+    ieee80211::Ssid,
     mundane::{
         hash::{Digest, Sha256},
         hmac::hmac,
@@ -38,7 +39,7 @@ impl WlanHasher {
         )
     }
 
-    pub fn hash_ssid(&self, ssid: &[u8]) -> String {
+    pub fn hash_ssid(&self, ssid: &Ssid) -> String {
         hex::encode(truncate_sha256_digest_to_8_bytes(&self.hash(ssid)))
     }
 }
@@ -86,14 +87,14 @@ mod tests {
     #[test]
     fn test_hash_ssid() {
         let hasher = WlanHasher::new(HASH_KEY_X);
-        let ssid_foo = String::from("foo").into_bytes();
-        let ssid_bar = String::from("bar").into_bytes();
+        let ssid_foo = Ssid::from("foo");
+        let ssid_bar = Ssid::from("bar");
         assert!(!hasher.hash_ssid(&ssid_foo).contains("foo"));
         assert_eq!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_foo));
         assert_ne!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_bar));
 
         // Verify that `&[u8]` argument is accepted.
-        assert_eq!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_foo[..]));
+        assert_eq!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_foo));
     }
 
     #[test]

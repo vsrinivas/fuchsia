@@ -16,6 +16,7 @@ use {
     banjo_fuchsia_hardware_wlan_info::*,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    ieee80211::Ssid,
     std::collections::VecDeque,
     wlan_common::{
         appendable::Appendable,
@@ -593,7 +594,7 @@ impl RemoteClient {
         ctx: &mut Context,
         capabilities: mac::CapabilityInfo,
         listen_interval: u16,
-        ssid: Option<Vec<u8>>,
+        ssid: Option<Ssid>,
         rates: Vec<u8>,
         rsne: Option<Vec<u8>>,
     ) -> Result<(), ClientRejection> {
@@ -904,7 +905,7 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         capabilities: mac::CapabilityInfo,
-        ssid: Option<Vec<u8>>,
+        ssid: Option<Ssid>,
         mgmt_hdr: mac::MgmtHdr,
         body: B,
     ) -> Result<(), ClientRejection> {
@@ -1579,7 +1580,7 @@ mod tests {
                 &mut ctx,
                 CapabilityInfo(0).with_short_preamble(true),
                 1,
-                Some(b"coolnet".to_vec()),
+                Some(Ssid::from("coolnet")),
                 vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 None,
             )
@@ -1593,7 +1594,7 @@ mod tests {
             fidl_mlme::AssociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
-                ssid: Some(b"coolnet".to_vec()),
+                ssid: Some(Ssid::from("coolnet").into()),
                 capability_info: CapabilityInfo(0).with_short_preamble(true).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: None,
@@ -2245,7 +2246,7 @@ mod tests {
             .handle_mgmt_frame(
                 &mut ctx,
                 mac::CapabilityInfo(0),
-                Some(b"coolnet".to_vec()),
+                Some(Ssid::from("coolnet")),
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
                     duration: 0,
@@ -2273,7 +2274,7 @@ mod tests {
             fidl_mlme::AssociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
-                ssid: Some(b"coolnet".to_vec()),
+                ssid: Some(Ssid::from("coolnet").into()),
                 capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: Some(vec![48, 2, 77, 88]),

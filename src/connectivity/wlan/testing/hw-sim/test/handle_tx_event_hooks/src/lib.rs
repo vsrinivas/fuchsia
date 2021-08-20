@@ -8,11 +8,11 @@ use {
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_async::futures::{channel::oneshot, join},
     fuchsia_zircon::prelude::*,
+    ieee80211::Ssid,
     pin_utils::pin_mut,
     wlan_common::{
         assert_variant_at_idx,
         bss::Protection,
-        format::SsidFmt as _,
         mac::{self, Bssid},
     },
     wlan_hw_sim::*,
@@ -26,7 +26,7 @@ use {
 fn handle_phy_event(
     event: &WlantapPhyEvent,
     phy: &WlantapPhyProxy,
-    ssid: &[u8],
+    ssid: &Ssid,
     bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
@@ -93,7 +93,6 @@ async fn handle_tx_event_hooks() {
     init_syslog();
 
     const BSSID: Bssid = Bssid(*b"wpa2ok");
-    const SSID: &[u8] = b"wpa2ssid";
     let passphrase = Some("wpa2good");
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
@@ -102,7 +101,7 @@ async fn handle_tx_event_hooks() {
     let phy = helper.proxy();
 
     // Validate the connect request.
-    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, SSID, p));
+    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, &AP_SSID, p));
     let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
     let protection = Protection::Wpa2Personal;
 
@@ -115,7 +114,7 @@ async fn handle_tx_event_hooks() {
     let connect_to_network_fut = async {
         join!(
             save_network_and_wait_until_connected(
-                SSID,
+                &AP_SSID,
                 fidl_policy::SecurityType::Wpa2,
                 passphrase
             ),
@@ -131,12 +130,12 @@ async fn handle_tx_event_hooks() {
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!("connecting to {} ({:02X?})", SSID.to_ssid_string_not_redactable(), BSSID),
+            format!("connecting to {} ({:02X?})", AP_SSID.to_string_not_redactable(), BSSID),
             |event| {
                 handle_phy_event(
                     &event,
                     &phy,
-                    SSID,
+                    &AP_SSID,
                     &BSSID,
                     &protection,
                     &mut authenticator,

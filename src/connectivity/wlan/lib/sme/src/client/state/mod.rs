@@ -37,7 +37,7 @@ use {
     wlan_common::{
         bss::BssDescription,
         channel::Channel,
-        format::{MacFmt as _, SsidFmt as _},
+        format::MacFmt as _,
         ie::{self, rsn::cipher},
         mac::Bssid,
         RadioConfig,
@@ -571,7 +571,7 @@ impl Associated {
                 last_rssi: self.latest_ap_state.rssi_dbm,
                 last_snr: self.latest_ap_state.snr_db,
                 bssid: self.latest_ap_state.bssid,
-                ssid: self.latest_ap_state.ssid().to_vec(),
+                ssid: self.latest_ap_state.ssid.clone(),
                 protection: self.latest_ap_state.protection(),
                 wsc: self.latest_ap_state.probe_resp_wsc(),
                 channel: Channel::from(self.latest_ap_state.channel),
@@ -649,7 +649,7 @@ impl Associated {
                     last_rssi: self.latest_ap_state.rssi_dbm,
                     last_snr: self.latest_ap_state.snr_db,
                     bssid: self.latest_ap_state.bssid,
-                    ssid: self.latest_ap_state.ssid().to_vec(),
+                    ssid: self.latest_ap_state.ssid.clone(),
                     protection: self.latest_ap_state.protection(),
                     wsc: self.latest_ap_state.probe_resp_wsc(),
                     channel: Channel::from(self.latest_ap_state.channel),
@@ -1060,8 +1060,8 @@ impl ClientState {
             ctx: msg,
             bssid: cmd.bss.bssid.to_mac_string(),
             bssid_hash: context.inspect.hasher.hash_mac_addr(&cmd.bss.bssid),
-            ssid: cmd.bss.ssid().to_ssid_string(),
-            ssid_hash: context.inspect.hasher.hash_ssid(cmd.bss.ssid()),
+            ssid: cmd.bss.ssid.to_string(),
+            ssid_hash: context.inspect.hasher.hash_ssid(&cmd.bss.ssid),
         });
         let state = Self::new(cfg.clone());
         match state {
@@ -1093,7 +1093,7 @@ impl ClientState {
                     last_rssi: state.latest_ap_state.rssi_dbm,
                     last_snr: state.latest_ap_state.snr_db,
                     bssid: state.latest_ap_state.bssid,
-                    ssid: state.latest_ap_state.ssid().to_vec(),
+                    ssid: state.latest_ap_state.ssid.clone(),
                     protection: state.latest_ap_state.protection(),
                     wsc: state.latest_ap_state.probe_resp_wsc(),
                     channel: Channel::from(state.latest_ap_state.channel),
@@ -1191,22 +1191,22 @@ impl ClientState {
     pub fn status(&self) -> ClientSmeStatus {
         match self {
             Self::Idle(_) => ClientSmeStatus::Idle,
-            Self::Joining(joining) => ClientSmeStatus::Connecting(joining.cmd.bss.ssid().to_vec()),
+            Self::Joining(joining) => ClientSmeStatus::Connecting(joining.cmd.bss.ssid.clone()),
             Self::Authenticating(authenticating) => {
-                ClientSmeStatus::Connecting(authenticating.cmd.bss.ssid().to_vec())
+                ClientSmeStatus::Connecting(authenticating.cmd.bss.ssid.clone())
             }
             Self::Associating(associating) => {
-                ClientSmeStatus::Connecting(associating.cmd.bss.ssid().to_vec())
+                ClientSmeStatus::Connecting(associating.cmd.bss.ssid.clone())
             }
             Self::Associated(associated) => match associated.link_state {
                 LinkState::EstablishingRsna { .. } => {
-                    ClientSmeStatus::Connecting(associated.latest_ap_state.ssid().to_vec())
+                    ClientSmeStatus::Connecting(associated.latest_ap_state.ssid.clone())
                 }
                 LinkState::LinkUp { .. } => {
                     let latest_ap_state = &associated.latest_ap_state;
                     ClientSmeStatus::Connected(ServingApInfo {
                         bssid: latest_ap_state.bssid.clone(),
-                        ssid: latest_ap_state.ssid().to_vec(),
+                        ssid: latest_ap_state.ssid.clone(),
                         rssi_dbm: latest_ap_state.rssi_dbm,
                         snr_db: latest_ap_state.snr_db,
                         signal_report_time: associated.last_signal_report_time,
@@ -1464,6 +1464,7 @@ mod tests {
     use fidl_fuchsia_wlan_common as fidl_common;
     use fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector};
     use futures::channel::mpsc;
+    use ieee80211::Ssid;
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
     use wlan_common::{
@@ -2325,7 +2326,7 @@ mod tests {
             },
         };
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_associating(state, &fake_bss_description!(Wpa2, ssid: b"wpa2".to_vec()));
+        assert_associating(state, &fake_bss_description!(Wpa2, ssid: Ssid::from("wpa2")));
 
         assert_data_tree!(h._inspector, root: contains {
             state_events: {
@@ -2403,7 +2404,7 @@ mod tests {
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, bss.ssid());
+            assert_eq!(info.ssid, bss.ssid);
             assert_eq!(info.wsc, None);
             assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, bss.bssid);
@@ -2440,7 +2441,7 @@ mod tests {
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, bss.ssid());
+            assert_eq!(info.ssid, bss.ssid);
             assert_eq!(info.wsc, None);
             assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, bss.bssid);
@@ -2522,7 +2523,7 @@ mod tests {
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, bss.ssid());
+            assert_eq!(info.ssid, bss.ssid);
             assert_eq!(info.wsc, None);
             assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, bss.bssid);
@@ -2542,7 +2543,7 @@ mod tests {
         let mut h = TestHelper::new();
         let (mut cmd, mut connect_txn_stream) = connect_command_one();
         cmd.bss = Box::new(fake_bss_description!(Open,
-            ssid: b"bar".to_vec(),
+            ssid: Ssid::from("bar"),
             bssid: [8; 6],
             rssi_dbm: 60,
             snr_db: 30,
@@ -2558,7 +2559,7 @@ mod tests {
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.ssid, Ssid::from("bar"));
             assert_eq!(info.wsc, Some(fake_probe_resp_wsc_ie()));
             assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, [8; 6]);
@@ -2578,7 +2579,7 @@ mod tests {
         let mut h = TestHelper::new();
         let (mut cmd, mut connect_txn_stream) = connect_command_one();
         cmd.bss = Box::new(fake_bss_description!(Open,
-            ssid: b"bar".to_vec(),
+            ssid: Ssid::from("bar"),
             bssid: [8; 6],
             channel: fidl_common::WlanChannel {
                 primary: 1,
@@ -2608,7 +2609,7 @@ mod tests {
     fn join_failure_capabilities_incompatible_softmac() {
         let (mut command, _connect_txn_stream) = connect_command_one();
         command.bss = Box::new(fake_bss_description!(Open,
-            ssid: b"foo".to_vec(),
+            ssid: Ssid::from("foo"),
             bssid: [7, 7, 7, 7, 7, 7],
             // Set a fake basic rate that our mocked client can't support, causing
             // `derive_join_and_capabilities` to fail, which in turn fails the join.
@@ -2627,7 +2628,7 @@ mod tests {
     fn join_failure_capabilities_incompatible_fullmac() {
         let (mut command, _connect_txn_stream) = connect_command_one();
         command.bss = Box::new(fake_bss_description!(Open,
-            ssid: b"foo".to_vec(),
+            ssid: Ssid::from("foo"),
             bssid: [7, 7, 7, 7, 7, 7],
             // Set a fake basic rate that our mocked client can't support, causing
             // `derive_join_and_capabilities` to fail, which in turn fails the join.
@@ -3214,7 +3215,7 @@ mod tests {
         let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let cmd = ConnectCommand {
             bss: Box::new(fake_bss_description!(Open,
-                ssid: b"foo".to_vec(),
+                ssid: Ssid::from("foo"),
                 bssid: [7, 7, 7, 7, 7, 7],
                 rssi_dbm: 60,
                 snr_db: 30
@@ -3230,7 +3231,7 @@ mod tests {
         let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let cmd = ConnectCommand {
             bss: Box::new(
-                fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8, 8, 8, 8, 8, 8]),
+                fake_bss_description!(Open, ssid: Ssid::from("bar"), bssid: [8, 8, 8, 8, 8, 8]),
             ),
             connect_txn_sink,
             protection: Protection::Open,
@@ -3242,7 +3243,7 @@ mod tests {
     fn connect_command_wep() -> (ConnectCommand, ConnectTransactionStream) {
         let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let cmd = ConnectCommand {
-            bss: Box::new(fake_bss_description!(Wep, ssid: b"wep".to_vec())),
+            bss: Box::new(fake_bss_description!(Wep, ssid: Ssid::from("wep"))),
             connect_txn_sink,
             protection: Protection::Wep(wep_deprecated::Key::Bits40([3; 5])),
             radio_cfg: RadioConfig::default(),
@@ -3256,7 +3257,7 @@ mod tests {
         let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let wpa_ie = make_wpa1_ie();
         let cmd = ConnectCommand {
-            bss: Box::new(fake_bss_description!(Wpa1, ssid: b"wpa1".to_vec())),
+            bss: Box::new(fake_bss_description!(Wpa1, ssid: Ssid::from("wpa1"))),
             connect_txn_sink,
             protection: Protection::LegacyWpa(Rsna {
                 negotiated_protection: NegotiatedProtection::from_legacy_wpa(&wpa_ie)
@@ -3272,7 +3273,7 @@ mod tests {
         supplicant: MockSupplicant,
     ) -> (ConnectCommand, ConnectTransactionStream) {
         let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
-        let bss = fake_bss_description!(Wpa2, ssid: b"wpa2".to_vec());
+        let bss = fake_bss_description!(Wpa2, ssid: Ssid::from("wpa2"));
         let rsne = Rsne::wpa2_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
@@ -3291,7 +3292,7 @@ mod tests {
         supplicant: MockSupplicant,
     ) -> (ConnectCommand, ConnectTransactionStream) {
         let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
-        let bss = fake_bss_description!(Wpa3, ssid: b"wpa3".to_vec());
+        let bss = fake_bss_description!(Wpa3, ssid: Ssid::from("wpa3"));
         let rsne = Rsne::wpa3_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),

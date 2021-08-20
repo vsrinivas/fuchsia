@@ -29,8 +29,6 @@ use {
     wlan_hw_sim::*,
 };
 
-const SSID: &[u8] = b"fuchsia";
-
 pub const CLIENT1_MAC_ADDR: [u8; 6] = [0x68, 0x62, 0x6f, 0x6e, 0x69, 0x6c];
 pub const CLIENT2_MAC_ADDR: [u8; 6] = [0x68, 0x62, 0x6f, 0x6e, 0x69, 0x6d];
 
@@ -69,7 +67,7 @@ async fn multiple_clients_ap() {
     let wlanstack_svc =
         connect_to_protocol::<DeviceServiceMarker>().expect("connecting to wlanstack service");
 
-    let network_config = NetworkConfigBuilder::open().ssid(&SSID.to_vec());
+    let network_config = NetworkConfigBuilder::open().ssid(&AP_SSID);
 
     let mut dc = CreateDeviceHelper::new(&wlanstack_svc);
 
@@ -113,10 +111,10 @@ async fn multiple_clients_ap() {
 
     // Start client 1
     let mut client1_connect_req = ConnectRequest {
-        ssid: SSID.to_vec(),
+        ssid: AP_SSID.to_vec(),
         bss_description: fake_fidl_bss_description!(
             Open,
-            ssid: SSID.to_vec(),
+            ssid: AP_SSID.clone(),
             bssid: AP_MAC_ADDR.0,
             channel: WLANCFG_DEFAULT_AP_CHANNEL,
         ),
@@ -140,7 +138,7 @@ async fn multiple_clients_ap() {
                         &client1_proxy,
                     )
                     .bssid(AP_MAC_ADDR)
-                    .ssid(SSID.to_vec())
+                    .ssid(&AP_SSID)
                     .protection(Open),
                 )
                 .on_tx(Rx::send(&ap_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
@@ -154,10 +152,10 @@ async fn multiple_clients_ap() {
 
     // Start client 2
     let mut client2_connect_req = ConnectRequest {
-        ssid: SSID.to_vec(),
+        ssid: AP_SSID.to_vec(),
         bss_description: fake_fidl_bss_description!(
             Open,
-            ssid: SSID.to_vec(),
+            ssid: AP_SSID.clone(),
             bssid: AP_MAC_ADDR.0,
             channel: WLANCFG_DEFAULT_AP_CHANNEL,
         ),
@@ -181,7 +179,7 @@ async fn multiple_clients_ap() {
                         &client2_proxy,
                     )
                     .bssid(AP_MAC_ADDR)
-                    .ssid(SSID.to_vec())
+                    .ssid(&AP_SSID)
                     .protection(Open),
                 )
                 .on_tx(Rx::send(&ap_proxy, WLANCFG_DEFAULT_AP_CHANNEL))

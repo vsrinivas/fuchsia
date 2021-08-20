@@ -12,15 +12,15 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::prelude::*,
     futures::StreamExt,
+    ieee80211::Ssid,
     log::{debug, info},
-    wlan_common::format::SsidFmt as _,
 };
 
 // Holds basic WLAN network configuration information and allows cloning and conversion to a policy
 // NetworkConfig.
 #[derive(Clone)]
 pub struct NetworkConfigBuilder {
-    ssid: Option<Vec<u8>>,
+    ssid: Option<Ssid>,
     security_type: fidl_policy::SecurityType,
     password: Option<Vec<u8>>,
 }
@@ -38,15 +38,15 @@ impl NetworkConfigBuilder {
         Self { ssid: None, security_type, password: Some(password.to_vec()) }
     }
 
-    pub fn ssid(self, ssid: &Vec<u8>) -> Self {
-        Self { ssid: Some(ssid.to_vec()), ..self }
+    pub fn ssid(self, ssid: &Ssid) -> Self {
+        Self { ssid: Some(ssid.clone()), ..self }
     }
 }
 
 impl From<NetworkConfigBuilder> for fidl_policy::NetworkConfig {
     fn from(config: NetworkConfigBuilder) -> fidl_policy::NetworkConfig {
         let ssid = match config.ssid {
-            None => vec![],
+            None => Ssid::empty(),
             Some(ssid) => ssid,
         };
 
@@ -66,7 +66,7 @@ impl From<NetworkConfigBuilder> for fidl_policy::NetworkConfig {
         };
 
         fidl_policy::NetworkConfig {
-            id: Some(fidl_policy::NetworkIdentifier { ssid, type_ }),
+            id: Some(fidl_policy::NetworkIdentifier { ssid: ssid.into(), type_ }),
             credential: Some(credential),
             ..fidl_policy::NetworkConfig::EMPTY
         }
@@ -214,7 +214,7 @@ async fn get_update_from_client_state_update_stream(
 
 pub async fn save_network(
     client_controller: &fidl_policy::ClientControllerProxy,
-    ssid: &[u8],
+    ssid: &Ssid,
     security_type: SecurityType,
     password: Option<&str>,
 ) {
@@ -230,7 +230,7 @@ pub async fn save_network(
 
 pub async fn remove_network(
     client_controller: &fidl_policy::ClientControllerProxy,
-    ssid: &[u8],
+    ssid: &Ssid,
     security_type: SecurityType,
     password: Option<&str>,
 ) {
@@ -238,7 +238,7 @@ pub async fn remove_network(
 
     info!(
         "Removing network. SSID: {}, Password: {:?}",
-        ssid.to_ssid_string_not_redactable(),
+        ssid.to_string_not_redactable(),
         password.map(|p| p.to_string())
     );
     client_controller

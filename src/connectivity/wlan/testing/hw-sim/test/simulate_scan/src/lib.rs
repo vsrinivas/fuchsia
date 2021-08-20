@@ -3,19 +3,24 @@
 // found in the LICENSE file.
 
 use {
+    ieee80211::Ssid,
+    lazy_static::lazy_static,
     wlan_common::{bss::Protection, mac::Bssid},
     wlan_hw_sim::*,
 };
 
 const BSS_FOO: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
 const BSS_FOO_2: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x66, 0x66]);
-const SSID_FOO: &[u8] = b"foo";
 const BSS_BAR: Bssid = Bssid([0x62, 0x73, 0x73, 0x62, 0x61, 0x72]);
 const BSS_BAR_2: Bssid = Bssid([0x63, 0x74, 0x74, 0x63, 0x62, 0x73]);
-const SSID_BAR: &[u8] = b"bar";
 const BSS_BAZ: Bssid = Bssid([0x62, 0x73, 0x73, 0x62, 0x61, 0x7a]);
 const BSS_BAZ_2: Bssid = Bssid([0x60, 0x70, 0x70, 0x60, 0x60, 0x70]);
-const SSID_BAZ: &[u8] = b"baz";
+
+lazy_static! {
+    static ref SSID_FOO: Ssid = Ssid::from("foo");
+    static ref SSID_BAR: Ssid = Ssid::from("bar");
+    static ref SSID_BAZ: Ssid = Ssid::from("baz");
+}
 
 /// Test scan is working by simulating some fake APs that sends out beacon frames on specific
 /// channel and verify all beacon frames are correctly reported as valid networks.
@@ -32,42 +37,42 @@ async fn simulate_scan() {
         test_utils::ScanTestBeacon {
             channel: 1,
             bssid: BSS_FOO,
-            ssid: SSID_FOO.to_vec(),
+            ssid: SSID_FOO.clone(),
             protection: Protection::Wpa2Personal,
             rssi: Some(-60),
         },
         test_utils::ScanTestBeacon {
             channel: 2,
             bssid: BSS_FOO_2,
-            ssid: SSID_FOO.to_vec(),
+            ssid: SSID_FOO.clone(),
             protection: Protection::Open,
             rssi: Some(-60),
         },
         test_utils::ScanTestBeacon {
             channel: 3,
             bssid: BSS_BAR,
-            ssid: SSID_BAR.to_vec(),
+            ssid: SSID_BAR.clone(),
             protection: Protection::Wpa2Personal,
             rssi: Some(-60),
         },
         test_utils::ScanTestBeacon {
             channel: 4,
             bssid: BSS_BAR_2,
-            ssid: SSID_BAR.to_vec(),
+            ssid: SSID_BAR.clone(),
             protection: Protection::Wpa2Personal,
             rssi: Some(-40),
         },
         test_utils::ScanTestBeacon {
             channel: 5,
             bssid: BSS_BAZ,
-            ssid: SSID_BAZ.to_vec(),
+            ssid: SSID_BAZ.clone(),
             protection: Protection::Open,
             rssi: Some(-60),
         },
         test_utils::ScanTestBeacon {
             channel: 6,
             bssid: BSS_BAZ_2,
-            ssid: SSID_BAZ.to_vec(),
+            ssid: SSID_BAZ.clone(),
             protection: Protection::Wpa2Personal,
             rssi: Some(-60),
         },
@@ -76,12 +81,12 @@ async fn simulate_scan() {
     scan_results.sort();
 
     let mut expected_aps = [
-        (SSID_FOO.to_vec(), BSS_FOO.0, true, -60),
-        (SSID_FOO.to_vec(), BSS_FOO_2.0, true, -60),
-        (SSID_BAR.to_vec(), BSS_BAR.0, true, -60),
-        (SSID_BAR.to_vec(), BSS_BAR_2.0, true, -40),
-        (SSID_BAZ.to_vec(), BSS_BAZ.0, true, -60),
-        (SSID_BAZ.to_vec(), BSS_BAZ_2.0, true, -60),
+        (SSID_FOO.clone(), BSS_FOO.0, true, -60),
+        (SSID_FOO.clone(), BSS_FOO_2.0, true, -60),
+        (SSID_BAR.clone(), BSS_BAR.0, true, -60),
+        (SSID_BAR.clone(), BSS_BAR_2.0, true, -40),
+        (SSID_BAZ.clone(), BSS_BAZ.0, true, -60),
+        (SSID_BAZ.clone(), BSS_BAZ_2.0, true, -60),
     ];
     expected_aps.sort();
     assert_eq!(&expected_aps, &scan_results[..]);

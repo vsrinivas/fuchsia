@@ -43,6 +43,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
     "//src/connectivity/wlan/lib/stash/:wlan-stash",
     "//src/lib/cobalt/rust:fuchsia-cobalt",

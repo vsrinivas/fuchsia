@@ -19,12 +19,13 @@ use {
         responder::Responder,
         sink::MlmeSink,
         timer::{self, EventId, TimedEvent, Timer},
-        MacAddr, MlmeRequest, Ssid,
+        MacAddr, MlmeRequest,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
+    ieee80211::Ssid,
     log::{debug, error, info, warn},
     std::collections::HashMap,
     wlan_common::{
@@ -149,7 +150,7 @@ impl ApSme {
                     Ok(o) => o,
                 };
 
-                let rsn_cfg_result = create_rsn_cfg(&config.ssid[..], &config.password[..]);
+                let rsn_cfg_result = create_rsn_cfg(&config.ssid, &config.password[..]);
                 let rsn_cfg = match rsn_cfg_result {
                     Err(e) => {
                         responder.respond(e);
@@ -227,7 +228,7 @@ impl ApSme {
             State::Idle { mut ctx } => {
                 // We don't have an SSID, so just do a best-effort StopAP request with no SSID
                 // filled in
-                let stop_req = fidl_mlme::StopRequest { ssid: vec![] };
+                let stop_req = fidl_mlme::StopRequest { ssid: Ssid::empty().into() };
                 let timeout = send_stop_req(&mut ctx, stop_req.clone());
                 State::Stopping {
                     ctx,
@@ -267,7 +268,7 @@ impl ApSme {
                     ));
                 }
 
-                let stop_req = fidl_mlme::StopRequest { ssid: bss.ssid.clone() };
+                let stop_req = fidl_mlme::StopRequest { ssid: bss.ssid.to_vec() };
                 let timeout = send_stop_req(&mut bss.ctx, stop_req.clone());
                 State::Stopping {
                     ctx: bss.ctx,
@@ -446,7 +447,7 @@ impl super::Station for ApSme {
                         if stop_responders.is_empty() {
                             State::Idle { ctx }
                         } else {
-                            let stop_req = fidl_mlme::StopRequest { ssid };
+                            let stop_req = fidl_mlme::StopRequest { ssid: ssid.to_vec() };
                             let timeout = send_stop_req(&mut ctx, stop_req.clone());
                             State::Stopping {
                                 ctx,
@@ -558,7 +559,7 @@ fn handle_start_conf(
         }
     } else {
         start_responder.respond(StartResult::Canceled);
-        let stop_req = fidl_mlme::StopRequest { ssid };
+        let stop_req = fidl_mlme::StopRequest { ssid: ssid.to_vec() };
         let timeout = send_stop_req(&mut ctx, stop_req.clone());
         State::Stopping { ctx, stop_req, responders: stop_responders, stop_timeout: Some(timeout) }
     }
@@ -733,7 +734,7 @@ impl InfraBss {
     }
 }
 
-fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, StartResult> {
+fn create_rsn_cfg(ssid: &Ssid, password: &[u8]) -> Result<Option<RsnCfg>, StartResult> {
     if password.is_empty() {
         Ok(None)
     } else {
@@ -769,7 +770,7 @@ fn create_start_request(
     let (channel_bandwidth, _secondary80) = op.channel.cbw.to_fidl();
 
     fidl_mlme::StartRequest {
-        ssid: ssid.clone(),
+        ssid: ssid.to_vec(),
         bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
@@ -794,6 +795,7 @@ mod tests {
         super::*,
         crate::{test_utils::*, MlmeStream, Station},
         fidl_fuchsia_wlan_mlme as fidl_mlme,
+        lazy_static::lazy_static,
         wlan_common::{
             assert_variant,
             channel::{Cbw, Phy},
@@ -803,10 +805,12 @@ mod tests {
         },
     };
 
+    lazy_static! {
+        static ref SSID: Ssid = Ssid::from([0x46, 0x55, 0x43, 0x48, 0x53, 0x49, 0x41]);
+    }
     const AP_ADDR: [u8; 6] = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
     const CLIENT_ADDR2: [u8; 6] = [0x22, 0x22, 0x22, 0x22, 0x22, 0x22];
-    const SSID: &'static [u8] = &[0x46, 0x55, 0x43, 0x48, 0x53, 0x49, 0x41];
     const RSNE: &'static [u8] = &[
         0x30, // element id
         0x2A, // length
@@ -828,12 +832,12 @@ mod tests {
     }
 
     fn unprotected_config() -> Config {
-        Config { ssid: SSID.to_vec(), password: vec![], radio_cfg: radio_cfg(11) }
+        Config { ssid: SSID.clone(), password: vec![], radio_cfg: radio_cfg(11) }
     }
 
     fn protected_config() -> Config {
         Config {
-            ssid: SSID.to_vec(),
+            ssid: SSID.clone(),
             password: vec![0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68],
             radio_cfg: radio_cfg(11),
         }
@@ -848,16 +852,24 @@ mod tests {
     #[test]
     fn test_validate_config() {
         assert_variant!(
-            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(15) }),
+            validate_config(&Config { ssid: Ssid::empty(), password: vec![], radio_cfg: radio_cfg(15) }),
             Err(e) => { assert!(matches!(e, StartResult::InvalidArguments { .. })); }
         );
         assert_eq!(
             Err(StartResult::DfsUnsupported),
-            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(52) })
+            validate_config(&Config {
+                ssid: Ssid::empty(),
+                password: vec![],
+                radio_cfg: radio_cfg(52)
+            })
         );
         assert_eq!(
             Ok(()),
-            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(40) })
+            validate_config(&Config {
+                ssid: Ssid::empty(),
+                password: vec![],
+                radio_cfg: radio_cfg(40)
+            })
         );
     }
 

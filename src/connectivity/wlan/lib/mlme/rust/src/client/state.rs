@@ -1241,6 +1241,7 @@ mod tests {
         banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
         banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
         fuchsia_zircon::{self as zx, DurationNum},
+        ieee80211::Ssid,
         wlan_common::{
             assert_variant,
             buffer_writer::BufferWriter,
@@ -1303,11 +1304,17 @@ mod tests {
     }
 
     fn make_client_station() -> Client {
-        Client::new(vec![], BSSID, IFACE_MAC, TimeUnit::DEFAULT_BEACON_INTERVAL.into(), false)
+        Client::new(
+            Ssid::empty(),
+            BSSID,
+            IFACE_MAC,
+            TimeUnit::DEFAULT_BEACON_INTERVAL.into(),
+            false,
+        )
     }
 
     fn make_protected_client_station() -> Client {
-        Client::new(vec![], BSSID, IFACE_MAC, TimeUnit::DEFAULT_BEACON_INTERVAL.into(), true)
+        Client::new(Ssid::empty(), BSSID, IFACE_MAC, TimeUnit::DEFAULT_BEACON_INTERVAL.into(), true)
     }
 
     fn empty_associate_conf() -> fidl_mlme::AssociateConfirm {

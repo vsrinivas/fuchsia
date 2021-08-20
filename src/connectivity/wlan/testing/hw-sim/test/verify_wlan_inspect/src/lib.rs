@@ -10,20 +10,20 @@ use {
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
     fuchsia_zircon::DurationNum,
+    ieee80211::Ssid,
     pin_utils::pin_mut,
     selectors,
     std::collections::HashSet,
     wlan_common::{
         assert_variant,
         bss::Protection,
-        format::{MacFmt as _, SsidFmt as _},
+        format::MacFmt as _,
         mac::{self, Bssid},
     },
     wlan_hw_sim::*,
 };
 
 const BSSID: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
-const SSID: &[u8] = b"open";
 
 #[rustfmt::skip]
 const WSC_IE_BODY: &'static [u8] = &[
@@ -62,11 +62,11 @@ const WLANSTACK_MONIKER: &'static str = "wlanstack";
 const DISCONNECT_CTX_SELECTOR: &'static str =
     "core/wlanstack:root/iface-0/state_events/*/disconnect_ctx";
 
-fn build_event_handler(
-    ssid: Vec<u8>,
+fn build_event_handler<'a>(
+    ssid: &'a Ssid,
     bssid: Bssid,
-    phy: &WlantapPhyProxy,
-) -> impl FnMut(wlantap::WlantapPhyEvent) + '_ {
+    phy: &'a WlantapPhyProxy,
+) -> impl FnMut(wlantap::WlantapPhyEvent) + 'a {
     EventHandlerBuilder::new()
         .on_tx(MatchTx::new().on_mgmt(move |frame: &Vec<u8>| {
             match mac::MacFrame::parse(&frame[..], false) {
@@ -92,7 +92,7 @@ fn build_event_handler(
                             send_probe_resp(
                                 &CHANNEL,
                                 &bssid,
-                                &ssid[..],
+                                ssid,
                                 &Protection::Open,
                                 Some(WSC_IE_BODY),
                                 &phy,
@@ -127,9 +127,9 @@ async fn verify_wlan_inspect() {
         wlan_hw_sim::init_client_controller().await;
     {
         let connect_fut = async {
-            save_network(&client_controller, SSID, fidl_policy::SecurityType::None, None).await;
+            save_network(&client_controller, &AP_SSID, fidl_policy::SecurityType::None, None).await;
             wait_until_client_state(&mut client_state_update_stream, |update| {
-                has_ssid_and_state(update, SSID, fidl_policy::ConnectionState::Connected)
+                has_ssid_and_state(update, &AP_SSID, fidl_policy::ConnectionState::Connected)
             })
             .await;
         };
@@ -139,8 +139,8 @@ async fn verify_wlan_inspect() {
         let () = helper
             .run_until_complete_or_timeout(
                 240.seconds(),
-                format!("connecting to {} ({:02X?})", SSID.to_ssid_string_not_redactable(), BSSID),
-                build_event_handler(SSID.to_vec(), BSSID, &proxy),
+                format!("connecting to {} ({:02X?})", AP_SSID.to_string_not_redactable(), BSSID),
+                build_event_handler(&AP_SSID, BSSID, &proxy),
                 connect_fut,
             )
             .await;
@@ -167,7 +167,7 @@ async fn verify_wlan_inspect() {
                     connected_to: contains {
                         bssid: BSSID.0.to_mac_string(),
                         bssid_hash: AnyProperty,
-                        ssid: SSID.to_ssid_string(),
+                        ssid: AP_SSID.to_string(),
                         ssid_hash: AnyProperty,
                         wsc: {
                             device_name: "ASUS Router",
@@ -195,9 +195,9 @@ async fn verify_wlan_inspect() {
     let properties = select_properties(hierarchy, DISCONNECT_CTX_SELECTOR);
     assert!(properties.is_empty(), "there should not be a disconnect_ctx yet");
 
-    remove_network(&client_controller, SSID, fidl_policy::SecurityType::None, None).await;
+    remove_network(&client_controller, &AP_SSID, fidl_policy::SecurityType::None, None).await;
     wait_until_client_state(&mut client_state_update_stream, |update| {
-        has_ssid_and_state(update, SSID, fidl_policy::ConnectionState::Disconnected)
+        has_ssid_and_state(update, &AP_SSID, fidl_policy::ConnectionState::Disconnected)
     })
     .await;
 
@@ -217,7 +217,7 @@ async fn verify_wlan_inspect() {
                     connected_duration: AnyProperty,
                     bssid: BSSID.0.to_mac_string(),
                     bssid_hash: AnyProperty,
-                    ssid: SSID.to_ssid_string(),
+                    ssid: AP_SSID.to_string(),
                     ssid_hash: AnyProperty,
                     wsc: {
                         device_name: "ASUS Router",
@@ -248,7 +248,7 @@ async fn verify_wlan_inspect() {
                     prev_connected_to: contains {
                         bssid: BSSID.0.to_mac_string(),
                         bssid_hash: AnyProperty,
-                        ssid: SSID.to_ssid_string(),
+                        ssid: AP_SSID.to_string(),
                         ssid_hash: AnyProperty,
                         wsc: {
                             device_name: "ASUS Router",

@@ -6,10 +6,14 @@ use anyhow::format_err;
 use fidl_fuchsia_wlan_mlme::DeviceInfo;
 
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use wlan_common::bss::BssDescription;
-use wlan_common::ie::rsn::{akm, cipher};
-use wlan_common::ie::wpa::WpaIe;
-use wlan_common::organization::Oui;
+use wlan_common::{
+    bss::BssDescription,
+    ie::{
+        rsn::{akm, cipher},
+        wpa::WpaIe,
+    },
+    organization::Oui,
+};
 use wlan_rsn::{self, nonce::NonceReader, NegotiatedProtection, ProtectionInfo};
 
 use super::rsn::{compute_psk, Rsna};
@@ -43,7 +47,7 @@ pub fn get_legacy_wpa_association(
     }
     let s_wpa = construct_s_wpa(&a_wpa);
     let negotiated_protection = NegotiatedProtection::from_legacy_wpa(&s_wpa)?;
-    let psk = compute_psk(credential, bss.ssid())?;
+    let psk = compute_psk(credential, &bss.ssid)?;
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.

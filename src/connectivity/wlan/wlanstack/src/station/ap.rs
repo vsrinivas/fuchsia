@@ -111,7 +111,7 @@ async fn handle_fidl_request(
 
 async fn start(sme: &Mutex<Sme>, config: fidl_sme::ApConfig) -> fidl_sme::StartApResultCode {
     let sme_config = ap_sme::Config {
-        ssid: config.ssid,
+        ssid: config.ssid.into(),
         password: config.password,
         radio_cfg: RadioConfig::from_fidl(config.radio_cfg),
     };

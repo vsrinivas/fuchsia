@@ -10,7 +10,6 @@ use {
 };
 
 const BSSID: &Bssid = &Bssid(*b"bessid");
-const SSID: &[u8] = b"test-ssid";
 const AUTHENTICATOR_PASSWORD: &str = "goodpassword";
 
 async fn connect_future(
@@ -19,19 +18,19 @@ async fn connect_future(
     security_type: fidl_policy::SecurityType,
     password: Option<&str>,
 ) {
-    save_network(client_controller, SSID, security_type, password).await;
+    save_network(client_controller, &AP_SSID, security_type, password).await;
     assert_connecting(
         client_state_update_stream,
-        fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type },
+        fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type },
     )
     .await;
     assert_failed(
         client_state_update_stream,
-        fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type },
+        fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type },
         fidl_policy::DisconnectStatus::ConnectionFailed,
     )
     .await;
-    remove_network(client_controller, SSID, security_type, password).await;
+    remove_network(client_controller, &AP_SSID, security_type, password).await;
 }
 
 /// Test a client fails to connect to a network if the wrong credential type is
@@ -50,7 +49,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
     // returned by policy.
     {
         let mut authenticator =
-            Some(create_wpa2_psk_authenticator(BSSID, SSID, AUTHENTICATOR_PASSWORD));
+            Some(create_wpa2_psk_authenticator(BSSID, &AP_SSID, AUTHENTICATOR_PASSWORD));
         let main_future = connect_future(
             &client_controller,
             &mut client_state_update_stream,
@@ -62,7 +61,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
         connect_to_ap(
             main_future,
             &mut helper,
-            SSID,
+            &AP_SSID,
             BSSID,
             &Protection::Wpa2Personal,
             &mut authenticator,
@@ -77,7 +76,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
     // returned by policy.
     {
         let mut authenticator =
-            Some(create_deprecated_wpa1_psk_authenticator(BSSID, SSID, AUTHENTICATOR_PASSWORD));
+            Some(create_deprecated_wpa1_psk_authenticator(BSSID, &AP_SSID, AUTHENTICATOR_PASSWORD));
         let main_future = connect_future(
             &client_controller,
             &mut client_state_update_stream,
@@ -89,7 +88,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
         connect_to_ap(
             main_future,
             &mut helper,
-            SSID,
+            &AP_SSID,
             BSSID,
             &Protection::Wpa1,
             &mut authenticator,
@@ -114,7 +113,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
         connect_to_ap(
             main_future,
             &mut helper,
-            SSID,
+            &AP_SSID,
             BSSID,
             &Protection::Wep,
             &mut None,
@@ -139,7 +138,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
         connect_to_ap(
             main_future,
             &mut helper,
-            SSID,
+            &AP_SSID,
             BSSID,
             &Protection::Open,
             &mut None,

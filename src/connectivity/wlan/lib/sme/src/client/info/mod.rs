@@ -14,12 +14,12 @@ use {
             ConnectFailure, ConnectResult,
         },
         timer::TimeoutDuration,
-        Ssid,
     },
     derivative::Derivative,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
+    ieee80211::Ssid,
     wlan_common::{
         self,
         bss::{BssDescription, Protection},

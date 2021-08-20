@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_wlan_common::DriverFeature,
     fidl_fuchsia_wlan_mlme::{DeviceInfo, EapolResultCode, SaeFrame},
     fidl_fuchsia_wlan_sme as fidl_sme,
+    ieee80211::Ssid,
     std::boxed::Box,
     wlan_common::{bss::BssDescription, ie::rsn::rsne},
     wlan_rsn::{
@@ -139,7 +140,7 @@ pub fn get_wpa2_rsna(
     let s_rsne = a_rsne.derive_wpa2_s_rsne()?;
     let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
 
-    let psk = compute_psk(credential, bss.ssid())?;
+    let psk = compute_psk(credential, &bss.ssid)?;
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.
@@ -156,7 +157,7 @@ pub fn get_wpa2_rsna(
 
 pub fn compute_psk(
     credential: &fidl_sme::Credential,
-    ssid: &[u8],
+    ssid: &Ssid,
 ) -> Result<auth::Config, anyhow::Error> {
     match credential {
         fidl_sme::Credential::Password(password) => {

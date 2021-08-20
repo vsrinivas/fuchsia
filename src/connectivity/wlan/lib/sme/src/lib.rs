@@ -21,8 +21,6 @@ use crate::client::InfoEvent;
 use crate::timer::TimedEvent;
 use wlan_common::mac::MacAddr;
 
-pub type Ssid = Vec<u8>;
-
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Config {
     pub wep_supported: bool,

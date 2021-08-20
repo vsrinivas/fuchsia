@@ -23,6 +23,7 @@ rustc_library("wlan-common") {
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/lib/fuchsia-async",
     "//src/lib/mundane",
     "//src/lib/zerocopy",

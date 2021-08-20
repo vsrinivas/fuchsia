@@ -9,8 +9,10 @@ rustc_test("configure_legacy_privacy_on") {
   deps = [
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:lazy_static",
   ]
 
   sources = [ "src/lib.rs" ]

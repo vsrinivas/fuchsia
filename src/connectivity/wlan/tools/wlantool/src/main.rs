@@ -21,6 +21,7 @@ use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use hex::{FromHex, ToHex};
+use ieee80211::Ssid;
 use itertools::Itertools;
 use std::fmt;
 use std::str::FromStr;
@@ -551,7 +552,7 @@ async fn do_rsn(cmd: opts::RsnCmd) -> Result<(), Error> {
 }
 
 fn generate_psk(passphrase: &str, ssid: &str) -> Result<String, Error> {
-    let psk = psk::compute(passphrase.as_bytes(), ssid.as_bytes())?;
+    let psk = psk::compute(passphrase.as_bytes(), &Ssid::from(ssid))?;
     let mut psk_hex = String::new();
     psk.write_hex(&mut psk_hex)?;
     return Ok(psk_hex);

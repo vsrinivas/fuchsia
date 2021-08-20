@@ -32,7 +32,7 @@ async fn open_ap_connect() {
     // -- end test data block
 
     // Start up the AP
-    let network_config = NetworkConfigBuilder::open().ssid(&b"fuchsia".to_vec());
+    let network_config = NetworkConfigBuilder::open().ssid(&AP_SSID);
     let mut helper =
         test_utils::TestHelper::begin_ap_test(default_wlantap_config_ap(), network_config).await;
 

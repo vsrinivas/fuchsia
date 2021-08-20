@@ -17,13 +17,14 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
+    ieee80211::Ssid,
+    lazy_static::lazy_static,
     log::{debug, error},
     pin_utils::pin_mut,
     std::{future::Future, marker::Unpin},
     wlan_common::{
         bss::Protection,
         data_writer,
-        format::SsidFmt as _,
         ie::{
             rsn::{
                 cipher::{CIPHER_CCMP_128, CIPHER_TKIP},
@@ -52,7 +53,9 @@ mod wlanstack_helper;
 
 pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 pub const AP_MAC_ADDR: mac::Bssid = mac::Bssid([0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f]);
-pub const AP_SSID: &[u8] = b"ap_ssid";
+lazy_static! {
+    pub static ref AP_SSID: Ssid = Ssid::from("ap_ssid");
+}
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: fidl_common::WlanChannel = fidl_common::WlanChannel {
     primary: 1,
@@ -104,7 +107,7 @@ pub fn create_rx_info(channel: &fidl_common::WlanChannel, rssi_dbm: i8) -> WlanR
 pub fn send_beacon(
     channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
-    ssid: &[u8],
+    ssid: &Ssid,
     protection: &Protection,
     proxy: &WlantapPhyProxy,
     rssi_dbm: i8,
@@ -157,7 +160,7 @@ pub fn send_beacon(
 pub fn send_probe_resp(
     channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
-    ssid: &[u8],
+    ssid: &Ssid,
     protection: &Protection,
     wsc_ie: Option<&[u8]>,
     proxy: &WlantapPhyProxy,
@@ -366,7 +369,7 @@ fn default_deprecated_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
 }
 
 pub fn create_network_config<S: ToString>(
-    ssid: &[u8],
+    ssid: &Ssid,
     security_type: SecurityType,
     password: Option<S>,
 ) -> NetworkConfig {
@@ -378,22 +381,22 @@ pub fn create_network_config<S: ToString>(
     NetworkConfig { id: Some(network_id), credential: Some(credential), ..NetworkConfig::EMPTY }
 }
 
-pub fn create_open_network_config(ssid: &[u8]) -> NetworkConfig {
+pub fn create_open_network_config(ssid: &Ssid) -> NetworkConfig {
     create_network_config(ssid, SecurityType::None, None::<String>)
 }
 
-pub fn create_wpa2_network_config<S: ToString>(ssid: &[u8], password: S) -> NetworkConfig {
+pub fn create_wpa2_network_config<S: ToString>(ssid: &Ssid, password: S) -> NetworkConfig {
     create_network_config(ssid, SecurityType::Wpa2, Some(password))
 }
 
-pub fn create_wpa3_network_config<S: ToString>(ssid: &[u8], password: S) -> NetworkConfig {
+pub fn create_wpa3_network_config<S: ToString>(ssid: &Ssid, password: S) -> NetworkConfig {
     create_network_config(ssid, SecurityType::Wpa3, Some(password))
 }
 
 // WPA1 still needs to be tested until we remove support.
 pub fn create_deprecated_wpa1_psk_authenticator(
     bssid: &mac::Bssid,
-    ssid: &[u8],
+    ssid: &Ssid,
     passphrase: &str,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
@@ -436,7 +439,7 @@ pub fn create_wpa3_authenticator(bssid: &mac::Bssid, passphrase: &str) -> wlan_r
 
 pub fn create_wpa2_psk_authenticator(
     bssid: &mac::Bssid,
-    ssid: &[u8],
+    ssid: &Ssid,
     passphrase: &str,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
@@ -503,7 +506,7 @@ pub fn process_tx_auth_updates(
 pub fn handle_set_channel_event(
     args: &SetChannelArgs,
     phy: &WlantapPhyProxy,
-    ssid: &[u8],
+    ssid: &Ssid,
     bssid: &mac::Bssid,
     protection: &Protection,
 ) {
@@ -656,7 +659,7 @@ pub fn handle_tx_event<F>(
 pub fn handle_connect_events(
     event: &WlantapPhyEvent,
     phy: &WlantapPhyProxy,
-    ssid: &[u8],
+    ssid: &Ssid,
     bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
@@ -687,7 +690,7 @@ pub fn handle_connect_events(
 }
 
 pub async fn save_network_and_wait_until_connected(
-    ssid: &[u8],
+    ssid: &Ssid,
     security_type: fidl_policy::SecurityType,
     password: Option<&str>,
 ) -> (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream) {
@@ -714,7 +717,7 @@ pub async fn save_network_and_wait_until_connected(
 pub async fn connect_to_ap<F, R>(
     connect_fut: F,
     helper: &mut test_utils::TestHelper,
-    ap_ssid: &[u8],
+    ap_ssid: &Ssid,
     ap_bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
@@ -732,11 +735,7 @@ where
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!(
-                "connecting to {} ({:02X?})",
-                ap_ssid.to_ssid_string_not_redactable(),
-                ap_bssid
-            ),
+            format!("connecting to {} ({:02X?})", ap_ssid.to_string_not_redactable(), ap_bssid),
             |event| {
                 handle_connect_events(
                     &event,
@@ -755,7 +754,7 @@ where
 
 async fn connect_with_security_type(
     helper: &mut test_utils::TestHelper,
-    ssid: &[u8],
+    ssid: &Ssid,
     bssid: &mac::Bssid,
     passphrase: Option<&str>,
     security_type: fidl_policy::SecurityType,
@@ -800,7 +799,7 @@ async fn connect_with_security_type(
 
 pub async fn connect_wpa3(
     helper: &mut test_utils::TestHelper,
-    ssid: &[u8],
+    ssid: &Ssid,
     bssid: &mac::Bssid,
     passphrase: &str,
 ) {
@@ -816,7 +815,7 @@ pub async fn connect_wpa3(
 
 pub async fn connect_wpa2(
     helper: &mut test_utils::TestHelper,
-    ssid: &[u8],
+    ssid: &Ssid,
     bssid: &mac::Bssid,
     passphrase: &str,
 ) {
@@ -832,7 +831,7 @@ pub async fn connect_wpa2(
 
 pub async fn connect_deprecated_wpa1(
     helper: &mut test_utils::TestHelper,
-    ssid: &[u8],
+    ssid: &Ssid,
     bssid: &mac::Bssid,
     passphrase: &str,
 ) {
@@ -846,7 +845,7 @@ pub async fn connect_deprecated_wpa1(
     .await;
 }
 
-pub async fn connect_open(helper: &mut test_utils::TestHelper, ssid: &[u8], bssid: &mac::Bssid) {
+pub async fn connect_open(helper: &mut test_utils::TestHelper, ssid: &Ssid, bssid: &mac::Bssid) {
     connect_with_security_type(helper, ssid, bssid, None, fidl_policy::SecurityType::None).await;
 }
 

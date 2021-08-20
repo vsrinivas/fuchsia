@@ -15,6 +15,7 @@ use {
     anyhow::Context,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_sme as fidl_sme,
+    ieee80211::Ssid,
 };
 
 #[rustfmt::skip]
@@ -82,7 +83,7 @@ pub struct BssDescriptionCreator {
 
     // *** Custom arguments
     pub protection_cfg: FakeProtectionCfg,
-    pub ssid: Vec<u8>,
+    pub ssid: Ssid,
     pub rates: Vec<u8>,
     pub ies_overrides: IesOverrides,
 }
@@ -231,7 +232,7 @@ pub fn build_fake_bss_description_creator__(
             .0,
 
         protection_cfg,
-        ssid: b"fake-ssid".to_vec(),
+        ssid: Ssid::from("fake-ssid"),
         rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         ies_overrides: IesOverrides::new(),
     }
@@ -298,7 +299,7 @@ mod tests {
     #[test]
     fn test_fake_bss_macro_ies() {
         let bss = fake_bss_description!(Wpa1Wpa2,
-            ssid: b"fuchsia".to_vec(),
+            ssid: Ssid::from("fuchsia"),
             rates: vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
             ies_overrides: IesOverrides::new()
                 .remove(IeType::new_vendor([0x00, 0x0b, 0x86, 0x01, 0x04, 0x08]))

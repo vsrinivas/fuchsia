@@ -3,17 +3,22 @@
 // found in the LICENSE file.
 
 use {
+    ieee80211::Ssid,
+    lazy_static::lazy_static,
     wlan_common::{bss::Protection, mac::Bssid},
     wlan_hw_sim::*,
 };
 
 const CHANNEL: u8 = 1;
 const BSS_WPA1: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
-const SSID_WPA1: &[u8] = b"wpa1___how_nice";
 const BSS_WEP: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x72]);
-const SSID_WEP: &[u8] = b"wep_is_soooo_secure";
 const BSS_MIXED: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x7a]);
-const SSID_MIXED: &[u8] = b"this_is_fine";
+
+lazy_static! {
+    static ref SSID_WPA1: Ssid = Ssid::from("wpa1___how_nice");
+    static ref SSID_WEP: Ssid = Ssid::from("wep_is_soooo_secure");
+    static ref SSID_MIXED: Ssid = Ssid::from("this_is_fine");
+}
 
 /// Test a client cannot connect to a wep or wpa network when configured off.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -29,21 +34,21 @@ async fn configure_legacy_privacy_off() {
         test_utils::ScanTestBeacon {
             channel: CHANNEL,
             bssid: BSS_WPA1,
-            ssid: SSID_WPA1.to_vec(),
+            ssid: SSID_WPA1.clone(),
             protection: Protection::Wpa1,
             rssi: None,
         },
         test_utils::ScanTestBeacon {
             channel: CHANNEL,
             bssid: BSS_WEP,
-            ssid: SSID_WEP.to_vec(),
+            ssid: SSID_WEP.clone(),
             protection: Protection::Wep,
             rssi: None,
         },
         test_utils::ScanTestBeacon {
             channel: CHANNEL,
             bssid: BSS_MIXED,
-            ssid: SSID_MIXED.to_vec(),
+            ssid: SSID_MIXED.clone(),
             protection: Protection::Wpa1Wpa2Personal,
             rssi: None,
         },
@@ -52,9 +57,9 @@ async fn configure_legacy_privacy_off() {
     scan_results.sort();
 
     let mut expected_aps = [
-        (SSID_WPA1.to_vec(), BSS_WPA1.0, false, 0),
-        (SSID_WEP.to_vec(), BSS_WEP.0, false, 0),
-        (SSID_MIXED.to_vec(), BSS_MIXED.0, true, 0),
+        (SSID_WPA1.clone(), BSS_WPA1.0, false, 0),
+        (SSID_WEP.clone(), BSS_WEP.0, false, 0),
+        (SSID_MIXED.clone(), BSS_MIXED.0, true, 0),
     ];
     expected_aps.sort();
     assert_eq!(&expected_aps, &scan_results[..]);

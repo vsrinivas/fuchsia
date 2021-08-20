@@ -18,6 +18,7 @@ use {
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
+    ieee80211::Ssid,
     log::{error, info, log},
     std::fmt,
     wlan_common::{
@@ -172,7 +173,7 @@ impl Ap {
 
         self.bss.replace(InfraBss::new(
             &mut self.ctx,
-            req.ssid.clone(),
+            Ssid::from(req.ssid),
             TimeUnit(req.beacon_period),
             req.dtim_period,
             CapabilityInfo(req.capability_info),
@@ -438,7 +439,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -507,7 +508,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -538,7 +539,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -592,7 +593,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -687,7 +688,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -728,7 +729,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -754,7 +755,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -823,7 +824,7 @@ mod tests {
             BSSID,
         );
         ap.handle_mlme_start_req(fidl_mlme::StartRequest {
-            ssid: b"coolnet".to_vec(),
+            ssid: Ssid::from("coolnet").into(),
             bss_type: fidl_internal::BssType::Infrastructure,
             beacon_period: 5,
             dtim_period: 1,
@@ -870,7 +871,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -882,7 +883,7 @@ mod tests {
         );
 
         ap.handle_mlme_start_req(fidl_mlme::StartRequest {
-            ssid: b"coolnet".to_vec(),
+            ssid: Ssid::from("coolnet").into(),
             bss_type: fidl_internal::BssType::Infrastructure,
             beacon_period: 5,
             dtim_period: 1,
@@ -920,7 +921,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -931,7 +932,7 @@ mod tests {
             .expect("expected InfraBss::new ok"),
         );
 
-        ap.handle_mlme_stop_req(fidl_mlme::StopRequest { ssid: b"coolnet".to_vec() })
+        ap.handle_mlme_stop_req(fidl_mlme::StopRequest { ssid: Ssid::from("coolnet").into() })
             .expect("expected Ap::handle_mlme_stop_request OK");
         assert!(ap.bss.is_none());
 
@@ -951,7 +952,7 @@ mod tests {
             BSSID,
         );
 
-        ap.handle_mlme_stop_req(fidl_mlme::StopRequest { ssid: b"coolnet".to_vec() })
+        ap.handle_mlme_stop_req(fidl_mlme::StopRequest { ssid: Ssid::from("coolnet").into() })
             .expect("expected Ap::handle_mlme_stop_request OK");
         assert!(ap.bss.is_none());
 
@@ -976,7 +977,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -1060,7 +1061,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -1101,7 +1102,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -1179,7 +1180,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -1218,7 +1219,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -1270,7 +1271,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -1329,7 +1330,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -1379,7 +1380,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),
@@ -1428,7 +1429,7 @@ mod tests {
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
-                b"coolnet".to_vec(),
+                Ssid::from("coolnet"),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
                 2,
                 CapabilityInfo(0),

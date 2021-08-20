@@ -14,6 +14,6 @@ async fn connect_to_wpa3_network() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let () = connect_wpa3(&mut helper, AP_SSID, &AP_MAC_ADDR, "password").await;
+    let () = connect_wpa3(&mut helper, &AP_SSID, &AP_MAC_ADDR, "password").await;
     helper.stop().await;
 }

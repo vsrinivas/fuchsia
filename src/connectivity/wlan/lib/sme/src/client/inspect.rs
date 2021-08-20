@@ -10,9 +10,10 @@ use {
     },
     fuchsia_inspect_contrib::nodes::{BoundedListNode, NodeExt, TimeProperty},
     fuchsia_zircon as zx,
+    ieee80211::Ssid,
     parking_lot::Mutex,
     wlan_common::{
-        format::{MacFmt as _, SsidFmt as _},
+        format::MacFmt as _,
         hasher::WlanHasher,
         ie::{self, wsc},
     },
@@ -218,11 +219,11 @@ impl ClientSmeStatusNode {
 
         match &new_status {
             ClientSmeStatus::Connecting(ssid) => match self.connecting_to.as_mut() {
-                Some(connecting_to) => connecting_to.update(&ssid[..], hasher),
+                Some(connecting_to) => connecting_to.update(&ssid, hasher),
                 None => {
                     self.connecting_to = Some(ConnectingToNode::new(
                         self.node.create_child("connecting_to"),
-                        &ssid[..],
+                        &ssid,
                         hasher,
                     ));
                 }
@@ -257,7 +258,7 @@ impl ServingApInfoNode {
         let mut serving_ap_info_node = Self {
             bssid: node.create_string("bssid", ap.bssid.to_mac_string()),
             bssid_hash: node.create_string("bssid_hash", hasher.hash_mac_addr(&ap.bssid)),
-            ssid: node.create_string("ssid", ap.ssid.to_ssid_string()),
+            ssid: node.create_string("ssid", ap.ssid.to_string()),
             ssid_hash: node.create_string("ssid_hash", hasher.hash_ssid(&ap.ssid)),
             rssi_dbm: node.create_int("rssi_dbm", ap.rssi_dbm as i64),
             snr_db: node.create_int("snr_db", ap.snr_db as i64),
@@ -285,7 +286,7 @@ impl ServingApInfoNode {
     fn update(&mut self, ap: &ServingApInfo, hasher: &WlanHasher) {
         self.bssid.set(&ap.bssid.to_mac_string());
         self.bssid_hash.set(&hasher.hash_mac_addr(&ap.bssid));
-        self.ssid.set(&ap.ssid.to_ssid_string());
+        self.ssid.set(&ap.ssid.to_string());
         self.ssid_hash.set(&hasher.hash_ssid(&ap.ssid));
         self.rssi_dbm.set(ap.rssi_dbm as i64);
         self.snr_db.set(ap.snr_db as i64);
@@ -493,14 +494,14 @@ pub struct ConnectingToNode {
 }
 
 impl ConnectingToNode {
-    fn new(node: Node, ssid: &[u8], hasher: &WlanHasher) -> Self {
+    fn new(node: Node, ssid: &Ssid, hasher: &WlanHasher) -> Self {
         let ssid_hash = node.create_string("ssid_hash", hasher.hash_ssid(ssid));
-        let ssid = node.create_string("ssid", ssid.to_ssid_string());
+        let ssid = node.create_string("ssid", ssid.to_string());
         Self { _node: node, ssid, ssid_hash }
     }
 
-    fn update(&mut self, ssid: &[u8], hasher: &WlanHasher) {
-        self.ssid.set(&ssid.to_ssid_string());
+    fn update(&mut self, ssid: &Ssid, hasher: &WlanHasher) {
+        self.ssid.set(&ssid.to_string());
         self.ssid_hash.set(&hasher.hash_ssid(ssid));
     }
 }
@@ -533,7 +534,7 @@ mod tests {
 
         // SME is connecting. Check that "connecting_to" field now appears, and that existing
         // fields are still kept.
-        let status = ClientSmeStatus::Connecting(b"foo".to_vec());
+        let status = ClientSmeStatus::Connecting(Ssid::from("foo"));
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: {

@@ -9,10 +9,10 @@ use {
     fuchsia_async::Task,
     fuchsia_zircon::prelude::*,
     futures::channel::oneshot,
+    ieee80211::Ssid,
     pin_utils::pin_mut,
     wlan_common::{
         bss::Protection,
-        format::SsidFmt as _,
         mac::{self, Bssid},
     },
     wlan_hw_sim::*,
@@ -23,7 +23,7 @@ use {
 };
 
 async fn test_actions(
-    ssid: &'static [u8],
+    ssid: &'static Ssid,
     password: Option<&str>,
     second_association_confirm_receiver: oneshot::Receiver<()>,
 ) {
@@ -50,7 +50,7 @@ async fn test_actions(
 fn handle_phy_event(
     event: &WlantapPhyEvent,
     phy: &WlantapPhyProxy,
-    ssid: &[u8],
+    ssid: &Ssid,
     bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
@@ -135,7 +135,6 @@ async fn reconnect_to_wpa2_network() {
     init_syslog();
 
     const BSSID: Bssid = Bssid(*b"wpa2ok");
-    const SSID: &[u8] = b"wpa2ssid";
     let passphrase = Some("wpa2good");
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
@@ -149,11 +148,11 @@ async fn reconnect_to_wpa2_network() {
         oneshot::channel();
     let mut second_association_confirm_sender_wrapper = Some(second_association_confirm_sender);
 
-    let test_actions_fut = test_actions(SSID, passphrase, second_association_confirm_receiver);
+    let test_actions_fut = test_actions(&AP_SSID, passphrase, second_association_confirm_receiver);
     pin_mut!(test_actions_fut);
 
     // Validate the connect request.
-    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, SSID, p));
+    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, &AP_SSID, p));
     let mut update_sink = match authenticator {
         Some(_) => Some(wlan_rsn::rsna::UpdateSink::default()),
         None => None,
@@ -163,12 +162,12 @@ async fn reconnect_to_wpa2_network() {
     helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!("connecting to {} ({:02X?})", SSID.to_ssid_string_not_redactable(), BSSID),
+            format!("connecting to {} ({:02X?})", AP_SSID.to_string_not_redactable(), BSSID),
             |event| {
                 handle_phy_event(
                     &event,
                     &phy,
-                    SSID,
+                    &AP_SSID,
                     &BSSID,
                     &protection,
                     &mut authenticator,

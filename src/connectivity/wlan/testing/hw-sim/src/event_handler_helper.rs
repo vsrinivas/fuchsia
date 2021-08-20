@@ -5,6 +5,7 @@
 use {
     crate::{create_rx_info, send_beacon},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_tap as wlantap,
+    ieee80211::Ssid,
     std::collections::hash_map::HashMap,
     wlan_common::{
         bss::Protection,
@@ -118,7 +119,7 @@ pub struct Beacon<'a> {
     phy: &'a wlantap::WlantapPhyProxy,
     primary_channel: u8,
     bssid: Bssid,
-    ssid: Vec<u8>,
+    ssid: Ssid,
     protection: Protection,
     rssi_dbm: i8,
 }
@@ -129,7 +130,7 @@ impl<'a> Beacon<'a> {
             phy,
             primary_channel,
             bssid: Bssid([1; 6]),
-            ssid: vec![],
+            ssid: Ssid::empty(),
             protection: Protection::Open,
             rssi_dbm: 0,
         }
@@ -139,8 +140,8 @@ impl<'a> Beacon<'a> {
         Self { bssid, ..self }
     }
 
-    pub fn ssid(self, ssid: Vec<u8>) -> Self {
-        Self { ssid, ..self }
+    pub fn ssid(self, ssid: &Ssid) -> Self {
+        Self { ssid: ssid.clone(), ..self }
     }
 
     pub fn protection(self, protection: Protection) -> Self {

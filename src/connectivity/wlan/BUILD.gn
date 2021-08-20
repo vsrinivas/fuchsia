@@ -55,6 +55,7 @@ group("tests") {
     "lib/common/rust:wlan-common-tests",
     "lib/eapol:eapol-tests",
     "lib/frame_writer:wlan-frame-writer-tests",
+    "lib/ieee80211:ieee80211-tests",
     "lib/inspect:wlan-inspect-tests",
     "lib/mlme/cpp/tests",
     "lib/mlme/rust:wlan-mlme-tests",

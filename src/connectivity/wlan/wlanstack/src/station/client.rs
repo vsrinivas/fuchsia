@@ -347,7 +347,7 @@ fn send_scan_results(
 fn convert_scan_result(s: ScanResult) -> fidl_sme::ScanResult {
     fidl_sme::ScanResult {
         bssid: s.bssid,
-        ssid: s.ssid,
+        ssid: s.ssid.into(),
         rssi_dbm: s.rssi_dbm,
         snr_db: s.snr_db,
         channel: s.channel.into(),
@@ -382,6 +382,7 @@ mod tests {
         fidl_fuchsia_wlan_sme::{self as fidl_sme},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{stream::StreamFuture, task::Poll},
+        ieee80211::Ssid,
         pin_utils::pin_mut,
         rand::{prelude::ThreadRng, Rng},
         std::convert::TryInto,
@@ -659,8 +660,9 @@ mod tests {
     fn random_scan_result(rng: &mut ThreadRng) -> ScanResult {
         let mut ies = vec![];
         // SSID
-        let ssid =
-            (0..fidl_ieee80211::MAX_SSID_BYTE_LEN).map(|_| rng.gen::<u8>()).collect::<Vec<_>>();
+        let ssid = Ssid::from(
+            (0..fidl_ieee80211::MAX_SSID_BYTE_LEN).map(|_| rng.gen::<u8>()).collect::<Vec<_>>(),
+        );
         ies.extend_from_slice(&[0, 32]);
         ies.extend_from_slice(&ssid[..]);
         // Supported rates

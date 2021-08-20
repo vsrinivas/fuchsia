@@ -29,6 +29,7 @@ use {
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
+    ieee80211::Ssid,
     log::{error, warn},
     scanner::Scanner,
     state::States,
@@ -227,7 +228,7 @@ impl ClientMlme {
         match self.join_device(&bss) {
             Ok(()) => {
                 self.sta.replace(Client::new(
-                    bss.ssid().to_vec(),
+                    bss.ssid.clone(),
                     Bssid(bss.bssid),
                     self.ctx.device.wlanmac_info().mac_addr,
                     bss.beacon_period,
@@ -377,7 +378,7 @@ impl ClientMlme {
 /// machine or track negotiated capabilities.
 pub struct Client {
     state: Option<States>,
-    pub ssid: Vec<u8>,
+    pub ssid: Ssid,
     pub bssid: Bssid,
     pub iface_mac: MacAddr,
     beacon_period: u16,
@@ -386,7 +387,7 @@ pub struct Client {
 
 impl Client {
     pub fn new(
-        ssid: Vec<u8>,
+        ssid: Ssid,
         bssid: Bssid,
         iface_mac: MacAddr,
         beacon_period: u16,
@@ -394,7 +395,7 @@ impl Client {
     ) -> Self {
         Self {
             state: Some(States::new_initial()),
-            ssid: ssid.to_vec(),
+            ssid,
             bssid,
             iface_mac,
             beacon_period,
@@ -1196,7 +1197,7 @@ mod tests {
     }
 
     fn make_client_station() -> Client {
-        Client::new(vec![], BSSID, IFACE_MAC, TimeUnit::DEFAULT_BEACON_INTERVAL.0, false)
+        Client::new(Ssid::empty(), BSSID, IFACE_MAC, TimeUnit::DEFAULT_BEACON_INTERVAL.0, false)
     }
 
     impl ClientMlme {
@@ -1258,7 +1259,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss_description!(Open, ssid: b"foo".to_vec()),
+            selected_bss: fake_fidl_bss_description!(Open, ssid: Ssid::from("foo")),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1275,7 +1276,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss_description!(Wpa2, ssid: b"foo".to_vec()),
+            selected_bss: fake_fidl_bss_description!(Wpa2, ssid: Ssid::from("foo")),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1293,7 +1294,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss_description!(Wpa1, ssid: b"foo".to_vec()),
+            selected_bss: fake_fidl_bss_description!(Wpa1, ssid: Ssid::from("foo")),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1311,7 +1312,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss_description!(Open, ssid: b"foo".to_vec()),
+            selected_bss: fake_fidl_bss_description!(Open, ssid: Ssid::from("foo")),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1614,7 +1615,7 @@ mod tests {
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        client.sta.ssid = [11, 22, 33, 44].to_vec();
+        client.sta.ssid = Ssid::from([11, 22, 33, 44]);
         client
             .send_assoc_req_frame(
                 0x1234,                               // capability info
