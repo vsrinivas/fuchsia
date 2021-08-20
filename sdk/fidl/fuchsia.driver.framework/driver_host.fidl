@@ -9,6 +9,7 @@ using fuchsia.data;
 using fuchsia.io;
 using fuchsia.url;
 
+const MAX_NAMESPACE_COUNT uint32 = fuchsia.component.runner.MAX_NAMESPACE_COUNT;
 const MAX_CAPABILITY_COUNT uint8 = 64;
 
 /// Capabilities for a driver.
@@ -49,8 +50,7 @@ type DriverStartArgs = resource table {
     4: program fuchsia.data.Dictionary;
 
     /// Incoming namespace provided to the driver.
-    5: ns
-            vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT;
+    5: ns vector<fuchsia.component.runner.ComponentNamespaceEntry>:MAX_NAMESPACE_COUNT;
 
     /// Outgoing directory served by the driver.
     6: outgoing_dir server_end:fuchsia.io.Directory;
