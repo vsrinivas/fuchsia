@@ -18,6 +18,7 @@ zx_library("boot-shim") {
     "lib/boot-shim/acpi.h",
     "lib/boot-shim/boot-shim.h",
     "lib/boot-shim/item-base.h",
+    "lib/boot-shim/pool-mem-config.h",
     "lib/boot-shim/test-serial-number.h",
   ]
 
@@ -36,12 +37,14 @@ zx_library("boot-shim") {
     "acpi.cc",
     "boot-shim.cc",
     "cmdline.cc",
+    "pool-mem-config.cc",
     "test-serial-number.cc",
   ]
 
   deps = [
     "//zircon/kernel/lib/acpi_lite",
     "//zircon/kernel/lib/boot-options",
+    "//zircon/kernel/phys/lib/memalloc",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/uart",
   ]
@@ -75,12 +78,14 @@ group("tests") {
 test("boot-shim-unittests") {
   sources = [
     "acpi-tests.cc",
+    "pool-mem-config-tests.cc",
     "test-serial-number-tests.cc",
   ]
   deps = [
     ":boot-shim",
     ":boot-shim-test",
     "//zircon/kernel/lib/acpi_lite",
+    "//zircon/kernel/phys/lib/memalloc",
     "//zircon/system/ulib/zxtest",
   ]
 }
