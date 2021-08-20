@@ -64,7 +64,8 @@ fn get_loggers(stdio: bool, file: Option<File>) -> Vec<Box<dyn simplelog::Shared
     }
 
     if let Some(file) = file {
-        loggers.push(WriteLogger::new(LevelFilter::Debug, config(), file));
+        let writer = std::io::LineWriter::new(file);
+        loggers.push(WriteLogger::new(LevelFilter::Debug, config(), writer));
     }
 
     loggers
