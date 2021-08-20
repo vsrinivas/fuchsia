@@ -8,6 +8,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/status.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 namespace isolated_devmgr {
@@ -50,10 +52,16 @@ zx::status<> BindDevfsToNamespace() {
   fuchsia::sys2::Realm_OpenExposedDir_Result result;
   status = zx::make_status(realm->OpenExposedDir(fuchsia::sys2::ChildRef{.name = "isolated-devmgr"},
                                                  exposed_dir.NewRequest(), &result));
-  if (status.is_error() || result.is_err()) {
-    FX_LOGS(ERROR) << "Unable to connect to child: " << status.status_string();
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Unable to connect to child(Transport Error): " << status.status_string();
     return status;
   }
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "Unable to connect to child(OpenExposedDir Error): "
+                   << static_cast<uint32_t>(result.err());
+    return zx::make_status(ZX_ERR_INTERNAL);
+  }
+
   zx::channel handle, request;
   status = zx::make_status(zx::channel::create(0, &handle, &request));
   if (status.is_error()) {
