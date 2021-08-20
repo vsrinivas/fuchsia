@@ -675,7 +675,6 @@ config("Wno-conversion") {
     "//src/lib/ddk/*",
     "//src/lib/elflib/*",
     "//src/lib/files/*",
-    "//src/lib/framebuffer/*",
     "//src/lib/fsl/socket/*",
     "//src/lib/fsl/vmo/*",
     "//src/lib/icu/tools/extractor/*",
