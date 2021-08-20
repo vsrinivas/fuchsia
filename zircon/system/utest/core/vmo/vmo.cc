@@ -1285,6 +1285,17 @@ TEST(VmoTestCase, CacheOp) {
   EXPECT_OK(zx_handle_close(phys.vmo.release()), "close handle (physical vmo)");
 }
 
+TEST(VmoTestCase, CacheOpOutOfRange) {
+  zx::vmo vmo;
+
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * 2, 0, &vmo));
+  // Commit the second page
+  EXPECT_OK(vmo.write("A", zx_system_get_page_size(), 1));
+  // Generate a bad cache op that exceeds the range of the vmo.
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                                              zx_system_get_page_size(), UINT64_MAX, nullptr, 0));
+}
+
 TEST(VmoTestCase, CacheFlush) {
   zx_handle_t vmo;
   const size_t size = 0x8000;
