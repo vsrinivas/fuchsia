@@ -172,6 +172,11 @@ isolated_devmgr_unittest_package("usb-hid-test-package") {
     "//src/devices/usb/drivers/usb-virtual-bus",
     "//src/ui/input/drivers/hid",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

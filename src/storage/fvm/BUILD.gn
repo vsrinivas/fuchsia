@@ -195,4 +195,9 @@ isolated_devmgr_unittest_package("fvm-integration-test") {
     "//src/storage/bin/minfs",
     "//src/storage/fvm/driver",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

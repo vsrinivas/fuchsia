@@ -58,4 +58,9 @@ fuchsia_component("telephony-tests") {
 
 fuchsia_test_package("telephony-tests-package") {
   test_components = [ ":telephony-tests" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

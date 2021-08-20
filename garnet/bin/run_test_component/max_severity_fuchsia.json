@@ -1,14 +1,6 @@
 {
     "tests": [
         {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/asix-88179-integration-test#meta/asix-88179-integration-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/bind-fail-test#meta/bind-fail-test.cmx"
-        },
-        {
             "max_severity": "FATAL",
             "url": "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_unittests.cmx"
         },
@@ -19,10 +11,6 @@
         {
             "max_severity": "FATAL",
             "url": "fuchsia-pkg://fuchsia.com/feedback-utils-tests#meta/oneshot_ptr_unittest.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/fvm-integration-test#meta/fvm-integration-test.cmx"
         },
         {
             "max_severity": "ERROR",
@@ -38,31 +26,11 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/paver-test#meta/paver-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/fake-at-query.cmx"
         },
         {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/telephony-qmi-usb-integration-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/telephony-tests-package#meta/telephony-tests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/ums-integration-test#meta/ums-integration-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/usb-hid-test#meta/usb-hid-test-package.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/zxcrypt-test#meta/zxcrypt-test.cmx"
         }
     ]
 }

@@ -93,6 +93,11 @@ isolated_devmgr_unittest_package("paver-test") {
     "//src/devices/nand/drivers/skip-block",
     "//src/storage/fvm/driver",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuzzer("paver-validation-fuzzer") {

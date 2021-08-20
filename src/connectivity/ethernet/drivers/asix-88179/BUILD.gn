@@ -133,6 +133,11 @@ isolated_devmgr_unittest_package("asix-88179-integration-test") {
     "//src/devices/usb/drivers/usb-peripheral",
     "//src/devices/usb/drivers/usb-virtual-bus",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
