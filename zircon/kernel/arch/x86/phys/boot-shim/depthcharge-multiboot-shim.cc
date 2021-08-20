@@ -57,23 +57,6 @@ void FixRamdiskSize() {
   }
 }
 
-bool IsProperZbi(LegacyBootShim::InputZbi zbi) {
-  bool result = true;
-  auto it = zbi.begin();
-  if (it != zbi.end()) {
-    result = it->header->type == arch::kZbiBootKernelType;
-  }
-  zbi.ignore_error();
-  return result;
-}
-
-bool LoadProperZbi(LegacyBootShim& shim, TrampolineBoot& boot) {
-  return shim.Check("Not a bootable ZBI", boot.Init(shim.input_zbi())) &&
-         shim.Check("Failed to load ZBI", boot.Load(shim.size_bytes())) &&
-         shim.Check("Failed to append boot loader items to data ZBI",
-                    shim.AppendItems(boot.DataZbi()));
-}
-
 bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
                             LegacyBootShim::InputZbi::iterator kernel_item) {
   auto append = [&shim, &zbi](const zbi_header_t& header, auto payload) {
@@ -157,27 +140,6 @@ bool LoadDepthchargeZbi(LegacyBootShim& shim, TrampolineBoot& boot) {
 
 void LegacyBootQuirks() { FixRamdiskSize(); }
 
-void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
-  StdoutInit();
-
-  ApplyRelocations();
-
-  // This also fills in gLegacyBoot.
-  InitMemory(ptr);
-
-  StdoutFromCmdline(gLegacyBoot.cmdline);
-
-  LegacyBootShim shim(Symbolize::kProgramName_, gLegacyBoot);
-  shim.set_build_id(Symbolize::GetInstance()->BuildIdString());
-
-  InitAcpi(shim);
-
-  TrampolineBoot boot;
-  if ((IsProperZbi(shim.input_zbi()) ? LoadProperZbi : LoadDepthchargeZbi)(shim, boot)) {
-    ArchSetUpAddressSpaceLate();
-    Allocation::GetPool().PrintMemoryRanges(Symbolize::kProgramName_);
-    boot.Boot();
-  }
-
-  abort();
+bool LegacyBootShim::BootQuirksLoad(TrampolineBoot& boot) {
+  return !IsProperZbi() && LoadDepthchargeZbi(*this, boot);
 }

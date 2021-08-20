@@ -145,16 +145,14 @@ zbi_test("x86-boot-shim-tests") {
 
 if (toolchain_environment == "kernel.phys32") {
   source_set("legacy-boot-shim") {
-    sources = [ "legacy-boot-shim.cc" ]
-    deps = [ ":legacy-boot-shim.common" ]
-  }
-
-  source_set("legacy-boot-shim.common") {
     public = [
       "acpi.h",
       "legacy-boot-shim.h",
     ]
-    sources = [ "acpi.cc" ]
+    sources = [
+      "acpi.cc",
+      "legacy-boot-shim.cc",
+    ]
     public_deps = [
       ":stdout",
       ":trampoline-boot",
@@ -214,7 +212,7 @@ if (toolchain_environment == "kernel.phys32") {
   phys_executable("depthcharge-multiboot-shim") {
     sources = [ "depthcharge-multiboot-shim.cc" ]
     deps = [
-      ":legacy-boot-shim.common",
+      ":legacy-boot-shim",
       "..:multiboot",
       "//zircon/kernel/phys:symbolize",
     ]
