@@ -13,6 +13,7 @@ use {
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
         mock::MockHandles,
+        RouteBuilder,
     },
     fuchsia_zircon as zx,
     futures::{FutureExt as _, StreamExt as _},
@@ -104,14 +105,17 @@ async fn start_with_cache_no_space() {
             }),
         )
         .await
-        .expect("failed to add mock cache component")
-        .add_route(CapabilityRoute {
-            capability: Capability::directory(CACHE_DIR_NAME, CACHE_DIR_PATH, fio2::RW_STAR_DIR),
-            source: RouteEndpoint::component(MOCK_CACHE_MONIKER),
-            targets: vec![RouteEndpoint::component(NETSTACK_MONIKER)],
-        })
-        .expect("failed to route cache to netstack");
+        .expect("failed to add mock cache component");
     let mut realm = builder.build();
+    let () = realm
+        .add_route(
+            RouteBuilder::directory(CACHE_DIR_NAME, CACHE_DIR_PATH, fio2::RW_STAR_DIR)
+                .source(RouteEndpoint::component(MOCK_CACHE_MONIKER))
+                .targets(vec![RouteEndpoint::component(NETSTACK_MONIKER)])
+                .force(),
+        )
+        .await
+        .expect("failed to route cache to netstack");
     let mut netstack_decl = realm
         .get_decl(&NETSTACK_MONIKER.into())
         .await

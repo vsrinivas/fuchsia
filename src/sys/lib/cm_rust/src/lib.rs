@@ -580,6 +580,19 @@ pub enum CapabilityDecl {
     Resolver(ResolverDecl),
 }
 
+impl CapabilityDeclCommon for CapabilityDecl {
+    fn name(&self) -> &CapabilityName {
+        match self {
+            Self::Service(c) => c.name(),
+            Self::Protocol(c) => c.name(),
+            Self::Directory(c) => c.name(),
+            Self::Storage(c) => c.name(),
+            Self::Runner(c) => c.name(),
+            Self::Resolver(c) => c.name(),
+        }
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ServiceDecl")]

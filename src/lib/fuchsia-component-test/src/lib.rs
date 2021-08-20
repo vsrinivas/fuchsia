@@ -126,6 +126,140 @@ impl Moniker {
     }
 }
 
+/// The source or destination of a capability route.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum RouteEndpoint {
+    /// One end of this capability route is a component in our custom realms. The value of this
+    /// should be a moniker that was used in a prior [`RealmBuilder::add_component`] call.
+    Component(String),
+
+    /// One end of this capability route is above the root component in the generated realms
+    AboveRoot,
+}
+
+impl Into<frealmbuilder::RouteEndpoint> for RouteEndpoint {
+    fn into(self) -> frealmbuilder::RouteEndpoint {
+        match self {
+            RouteEndpoint::AboveRoot => {
+                frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {})
+            }
+            RouteEndpoint::Component(moniker) => frealmbuilder::RouteEndpoint::Component(moniker),
+        }
+    }
+}
+
+impl From<frealmbuilder::RouteEndpoint> for RouteEndpoint {
+    fn from(input: frealmbuilder::RouteEndpoint) -> Self {
+        match input {
+            frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {}) => {
+                RouteEndpoint::AboveRoot
+            }
+            frealmbuilder::RouteEndpoint::Component(moniker) => RouteEndpoint::Component(moniker),
+            _ => panic!("unexpected input"),
+        }
+    }
+}
+
+impl RouteEndpoint {
+    pub fn component(path: impl Into<String>) -> Self {
+        Self::Component(path.into())
+    }
+
+    pub fn above_root() -> Self {
+        Self::AboveRoot
+    }
+
+    fn unwrap_component_moniker(&self) -> Moniker {
+        match self {
+            RouteEndpoint::Component(m) => m.clone().into(),
+            _ => panic!("capability source is not a component"),
+        }
+    }
+}
+
+/// `RouteBuilder` can be used to construct a new route, for use with [`Realm::add_route`].
+pub struct RouteBuilder {
+    capability: frealmbuilder::Capability,
+    source: Option<frealmbuilder::RouteEndpoint>,
+    targets: Vec<frealmbuilder::RouteEndpoint>,
+    force_route: bool,
+}
+
+impl RouteBuilder {
+    pub fn protocol(name: impl Into<String>) -> Self {
+        RouteBuilder::from_capability(frealmbuilder::Capability::Protocol(
+            frealmbuilder::ProtocolCapability {
+                name: Some(name.into()),
+                ..frealmbuilder::ProtocolCapability::EMPTY
+            },
+        ))
+    }
+
+    pub fn directory(
+        name: impl Into<String>,
+        path: impl Into<String>,
+        rights: fio2::Operations,
+    ) -> Self {
+        RouteBuilder::from_capability(frealmbuilder::Capability::Directory(
+            frealmbuilder::DirectoryCapability {
+                name: Some(name.into()),
+                path: Some(path.into()),
+                rights: Some(rights),
+                ..frealmbuilder::DirectoryCapability::EMPTY
+            },
+        ))
+    }
+
+    pub fn storage(name: impl Into<String>, path: impl Into<String>) -> Self {
+        RouteBuilder::from_capability(frealmbuilder::Capability::Storage(
+            frealmbuilder::StorageCapability {
+                name: Some(name.into()),
+                path: Some(path.into()),
+                ..frealmbuilder::StorageCapability::EMPTY
+            },
+        ))
+    }
+
+    fn from_capability(capability: impl Into<frealmbuilder::Capability>) -> Self {
+        RouteBuilder {
+            capability: capability.into(),
+            source: None,
+            targets: vec![],
+            force_route: false,
+        }
+    }
+
+    pub fn source(mut self, source: impl Into<frealmbuilder::RouteEndpoint>) -> Self {
+        self.source = Some(source.into());
+        self
+    }
+
+    pub fn targets(mut self, targets: Vec<impl Into<frealmbuilder::RouteEndpoint>>) -> Self {
+        self.targets = targets.into_iter().map(Into::into).collect();
+        self
+    }
+
+    pub fn force(mut self) -> Self {
+        self.force_route = true;
+        self
+    }
+}
+
+impl Into<frealmbuilder::CapabilityRoute> for RouteBuilder {
+    fn into(self) -> frealmbuilder::CapabilityRoute {
+        if self.targets.is_empty() {
+            panic!("targets was not specified for route");
+        }
+        frealmbuilder::CapabilityRoute {
+            capability: Some(self.capability),
+            source: Some(self.source.expect("source wsa not specified for route")),
+            targets: Some(self.targets),
+            force_route: Some(self.force_route),
+            ..frealmbuilder::CapabilityRoute::EMPTY
+        }
+    }
+}
+
 /// A running instance of a created [`Realm`]. When this struct is dropped the child components
 /// are destroyed.
 pub struct RealmInstance {
@@ -325,7 +459,11 @@ impl Realm {
     async fn flush_routes(&mut self) -> Result<(), Error> {
         let routes: Vec<_> = self.routes_to_add.drain(..).collect();
         for route in routes {
-            self.add_route(route).await?;
+            if let builder::Capability::Event(_, _) = &route.capability {
+                builder::RealmBuilder::add_event_route(self, route).await?;
+            } else {
+                self.add_route(route).await?;
+            }
         }
         Ok(())
     }
@@ -348,47 +486,13 @@ impl Realm {
         self.collection_name = collection_name.into();
     }
 
-    pub async fn add_route(&mut self, route: builder::CapabilityRoute) -> Result<(), Error> {
-        if let builder::Capability::Event(_, _) = &route.capability {
-            return builder::RealmBuilder::add_event_route(self, route).await;
-        }
-
-        let capability = match route.capability {
-            builder::Capability::Protocol(name) => {
-                frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
-                    name: Some(name),
-                    ..frealmbuilder::ProtocolCapability::EMPTY
-                })
-            }
-            builder::Capability::Directory(name, path, rights) => {
-                frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
-                    name: Some(name),
-                    path: Some(path),
-                    rights: Some(rights),
-                    ..frealmbuilder::DirectoryCapability::EMPTY
-                })
-            }
-            builder::Capability::Storage(name, path) => {
-                frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
-                    name: Some(name),
-                    path: Some(path),
-                    ..frealmbuilder::StorageCapability::EMPTY
-                })
-            }
-            builder::Capability::Event(_, _) => unreachable!(),
-        };
-
-        let source = route.source.to_frealmbuilder();
-        let targets =
-            route.targets.into_iter().map(builder::RouteEndpoint::to_frealmbuilder).collect();
-        let route = frealmbuilder::CapabilityRoute {
-            capability: Some(capability),
-            source: Some(source),
-            targets: Some(targets),
-            ..frealmbuilder::CapabilityRoute::EMPTY
-        };
+    pub async fn add_route(
+        &mut self,
+        route: impl Into<frealmbuilder::CapabilityRoute>,
+    ) -> Result<(), Error> {
+        info!("adding route!");
         self.framework_intermediary_proxy
-            .route_capability(route)
+            .route_capability(route.into())
             .await?
             .map_err(|s| Error::FailedToRoute(s))
     }
@@ -482,19 +586,21 @@ impl Realm {
             vec!["fuchsia.sys2.ComponentResolver", "fuchsia.component.runner.ComponentRunner"]
         {
             component_manager_realm
-                .add_route(builder::CapabilityRoute {
-                    capability: builder::Capability::protocol(protocol_name),
-                    source: builder::RouteEndpoint::above_root(),
-                    targets: vec![builder::RouteEndpoint::component("")],
-                })
+                .add_route(
+                    RouteBuilder::protocol(protocol_name)
+                        .source(builder::RouteEndpoint::above_root())
+                        .targets(vec![builder::RouteEndpoint::component("")])
+                        .force(),
+                )
                 .await?;
         }
         component_manager_realm
-            .add_route(builder::CapabilityRoute {
-                capability: builder::Capability::directory("hub", "/hub", fio2::RW_STAR_DIR),
-                source: builder::RouteEndpoint::component(""),
-                targets: vec![builder::RouteEndpoint::above_root()],
-            })
+            .add_route(
+                RouteBuilder::directory("hub", "/hub", fio2::RW_STAR_DIR)
+                    .source(builder::RouteEndpoint::component(""))
+                    .targets(vec![builder::RouteEndpoint::above_root()])
+                    .force(),
+            )
             .await?;
 
         let (component_manager_url, _, _) = component_manager_realm.initialize().await?;

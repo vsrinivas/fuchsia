@@ -14,6 +14,8 @@ use {
     std::{collections::HashMap, fmt},
 };
 
+pub use crate::RouteEndpoint;
+
 /// A capability that is routed through the custom realms
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Capability {
@@ -23,6 +25,59 @@ pub enum Capability {
     Event(Event, cm_rust::EventMode),
     // Name, path
     Storage(String, String),
+}
+
+impl Into<frealmbuilder::Capability> for Capability {
+    fn into(self) -> frealmbuilder::Capability {
+        match self {
+            Capability::Protocol(name) => {
+                frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
+                    name: Some(name),
+                    ..frealmbuilder::ProtocolCapability::EMPTY
+                })
+            }
+            Capability::Directory(name, path, rights) => {
+                frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
+                    name: Some(name),
+                    path: Some(path),
+                    rights: Some(rights),
+                    ..frealmbuilder::DirectoryCapability::EMPTY
+                })
+            }
+            Capability::Storage(name, path) => {
+                frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
+                    name: Some(name),
+                    path: Some(path),
+                    ..frealmbuilder::StorageCapability::EMPTY
+                })
+            }
+            Capability::Event(_, _) => {
+                panic!("routes for event capabilities must be provided to RealmBuilder, not Realm")
+            }
+        }
+    }
+}
+
+impl From<frealmbuilder::Capability> for Capability {
+    fn from(input: frealmbuilder::Capability) -> Self {
+        match input {
+            frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
+                name, ..
+            }) => Capability::Protocol(name.unwrap()),
+            frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
+                name,
+                path,
+                rights,
+                ..
+            }) => Capability::Directory(name.unwrap(), path.unwrap(), rights.unwrap()),
+            frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
+                name,
+                path,
+                ..
+            }) => Capability::Storage(name.unwrap(), path.unwrap()),
+            _ => panic!("unexpected input"),
+        }
+    }
 }
 
 impl Capability {
@@ -100,49 +155,38 @@ impl Event {
     }
 }
 
-/// The source or destination of a capability route.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum RouteEndpoint {
-    /// One end of this capability route is a component in our custom realms. The value of this
-    /// should be a moniker that was used in a prior [`RealmBuilder::add_component`] call.
-    Component(String),
-
-    /// One end of this capability route is above the root component in the generated realms
-    AboveRoot,
-}
-
-impl RouteEndpoint {
-    pub(crate) fn to_frealmbuilder(self) -> frealmbuilder::RouteEndpoint {
-        match self {
-            RouteEndpoint::AboveRoot => {
-                frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {})
-            }
-            RouteEndpoint::Component(moniker) => frealmbuilder::RouteEndpoint::Component(moniker),
-        }
-    }
-
-    pub fn component(path: impl Into<String>) -> Self {
-        Self::Component(path.into())
-    }
-
-    pub fn above_root() -> Self {
-        Self::AboveRoot
-    }
-
-    fn unwrap_component_moniker(&self) -> Moniker {
-        match self {
-            RouteEndpoint::Component(m) => m.clone().into(),
-            _ => panic!("capability source is not a component"),
-        }
-    }
-}
-
 /// A capability route from one source component to one or more target components.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CapabilityRoute {
     pub capability: Capability,
     pub source: RouteEndpoint,
     pub targets: Vec<RouteEndpoint>,
+}
+
+impl Into<frealmbuilder::CapabilityRoute> for CapabilityRoute {
+    fn into(self) -> frealmbuilder::CapabilityRoute {
+        frealmbuilder::CapabilityRoute {
+            capability: Some(self.capability.into()),
+            source: Some(self.source.into()),
+            targets: Some(self.targets.into_iter().map(Into::into).collect()),
+            force_route: Some(false),
+            ..frealmbuilder::CapabilityRoute::EMPTY
+        }
+    }
+}
+
+impl From<crate::RouteBuilder> for CapabilityRoute {
+    fn from(input: crate::RouteBuilder) -> Self {
+        let frealmbuilder_route: frealmbuilder::CapabilityRoute = input.into();
+        if frealmbuilder_route.force_route.unwrap() {
+            panic!("please provide routes with the `force` flag to `Realm::add_route`");
+        }
+        Self {
+            capability: frealmbuilder_route.capability.unwrap().into(),
+            source: frealmbuilder_route.source.unwrap().into(),
+            targets: frealmbuilder_route.targets.unwrap().into_iter().map(Into::into).collect(),
+        }
+    }
 }
 
 /// The source for a component
@@ -369,8 +413,8 @@ impl RealmBuilder {
 
     /// Adds a capability route between two points in the realm. Does nothing if the route
     /// already exists.
-    pub fn add_route(&mut self, route: CapabilityRoute) -> Result<&mut Self, Error> {
-        self.realm.routes_to_add.push(route);
+    pub fn add_route(&mut self, route: impl Into<CapabilityRoute>) -> Result<&mut Self, Error> {
+        self.realm.routes_to_add.push(route.into());
         Ok(self)
     }
 

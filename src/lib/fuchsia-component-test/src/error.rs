@@ -46,6 +46,9 @@ pub enum Error {
 
     #[error("unable to destroy realm, the destroy waiter for root has already been taken")]
     DestroyWaiterTaken,
+
+    #[error("routes for event capabilities must be provided to a RealmBuilder, not a Realm")]
+    EventRoutesOnlySupportedOnBuilder,
 }
 
 #[derive(Debug, Error)]

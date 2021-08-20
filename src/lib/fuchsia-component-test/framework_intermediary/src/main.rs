@@ -252,6 +252,12 @@ struct RealmNode {
     eager: bool,
     environment: Option<String>,
 
+    /// When a component decl comes directly from the test package directory, we should check the
+    /// component's manifest during route generation to see if it matches our expectations, instead
+    /// of blindly pushing things into it. This way we can detect common issues like "the source
+    /// component doesn't declare that capability".
+    component_loaded_from_pkg: bool,
+
     /// Children stored in this HashMap can be mutated. Children stored in `decl.children` can not.
     /// Any children stored in `mutable_children` do NOT have a corresponding `ChildDecl` stored in
     /// `decl.children`, the two should be fully mutually exclusive.
@@ -478,6 +484,7 @@ impl RealmNode {
                 .await
                 .map_err(Error::FailedToLoadComponentDecl)?;
             current_node.decl = fidl_decl.fidl_into_native();
+            current_node.component_loaded_from_pkg = true;
             current_node.validate(&current_moniker)?;
 
             // Look through the new decl's children. If there are any relative URLs, we need to
@@ -575,15 +582,24 @@ impl RealmNode {
                 }
             }
         }
+        let force_route = route.force_route.unwrap_or(false);
         for target in targets {
             if let frealmbuilder::RouteEndpoint::AboveRoot(_) = target {
                 // We're routing a capability from component within our constructed realm to
                 // somewhere above it
-                self.route_capability_to_above_root(&capability, source.clone().try_into()?)?;
+                self.route_capability_to_above_root(
+                    &capability,
+                    source.clone().try_into()?,
+                    force_route,
+                )?;
             } else if let frealmbuilder::RouteEndpoint::AboveRoot(_) = &source {
                 // We're routing a capability from above our constructed realm to a component
                 // within it
-                self.route_capability_from_above_root(&capability, target.try_into()?)?;
+                self.route_capability_from_above_root(
+                    &capability,
+                    target.try_into()?,
+                    force_route,
+                )?;
             } else {
                 // We're routing a capability from one component within our constructed realm to
                 // another
@@ -596,6 +612,7 @@ impl RealmNode {
                         &capability,
                         source_moniker,
                         target_moniker,
+                        force_route,
                     )?;
                 } else {
                     // The target is _not_ an ancestor of the source, so this is a classic "routing
@@ -605,6 +622,7 @@ impl RealmNode {
                         &capability,
                         source_moniker,
                         target_moniker,
+                        force_route,
                     )?;
                 }
             }
@@ -616,26 +634,29 @@ impl RealmNode {
         &mut self,
         capability: &frealmbuilder::Capability,
         source_moniker: Moniker,
+        force_route: bool,
     ) -> Result<(), Error> {
         let mut current_ancestor = self.get_node_mut(&Moniker::root(), GetBehavior::ErrorIfMissing);
         let mut current_moniker = Moniker::root();
         for child_name in source_moniker.path() {
             let current = current_ancestor?;
-            Self::add_expose_for_capability(
-                &mut current.decl.exposes,
+            current.add_expose_for_capability(
                 &capability,
-                Some(child_name),
+                cm_rust::ExposeSource::Child(child_name.to_string()),
+                force_route,
             )?;
-            // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
-            //current.validate(&current_moniker)?;
 
             current_ancestor = current.child(&child_name);
             current_moniker = current_moniker.child(child_name.clone());
         }
 
         if let Ok(source_node) = self.get_node_mut(&source_moniker, GetBehavior::ErrorIfMissing) {
-            Self::add_expose_for_capability(&mut source_node.decl.exposes, &capability, None)?;
-            Self::add_capability_decl(&mut source_node.decl.capabilities, &capability)?;
+            source_node.add_expose_for_capability(
+                &capability,
+                cm_rust::ExposeSource::Self_,
+                force_route,
+            )?;
+            source_node.add_capability_decl(&capability, force_route)?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //source_node.validate(&source_moniker)?;
         } else {
@@ -650,16 +671,17 @@ impl RealmNode {
         &mut self,
         capability: &frealmbuilder::Capability,
         target_moniker: Moniker,
+        force_route: bool,
     ) -> Result<(), Error> {
         let mut current_ancestor = self.get_node_mut(&Moniker::root(), GetBehavior::ErrorIfMissing);
         let mut current_moniker = Moniker::root();
         for child_name in target_moniker.path() {
             let current = current_ancestor?;
-            Self::add_offer_for_capability(
-                &mut current.decl.offers,
+            current.add_offer_for_capability(
                 &capability,
-                OfferSource::Parent,
+                cm_rust::OfferSource::Parent,
                 &child_name,
+                force_route,
             )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //current.validate(&current_moniker)?;
@@ -669,7 +691,11 @@ impl RealmNode {
         }
 
         if let Ok(target_node) = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing) {
-            Self::add_use_for_capability(&mut target_node.decl.uses, &capability, None)?;
+            target_node.add_use_for_capability(
+                &capability,
+                cm_rust::UseSource::Parent,
+                force_route,
+            )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //target_node.validate(&target_moniker)?;
         } else {
@@ -686,11 +712,15 @@ impl RealmNode {
         capability: &frealmbuilder::Capability,
         source_moniker: Moniker,
         target_moniker: Moniker,
+        force_route: bool,
     ) -> Result<(), Error> {
         let target_node = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing)?;
-        let child_source =
-            Some(target_moniker.downward_path_to(&source_moniker).get(0).unwrap().clone());
-        Self::add_use_for_capability(&mut target_node.decl.uses, &capability, child_source)?;
+        let child_source = target_moniker.downward_path_to(&source_moniker).get(0).unwrap().clone();
+        target_node.add_use_for_capability(
+            &capability,
+            cm_rust::UseSource::Child(child_source),
+            force_route,
+        )?;
         // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
         //target_node.validate(&target_moniker)?;
 
@@ -700,10 +730,10 @@ impl RealmNode {
         let mut current_node = target_node.child(&first_expose_name);
         for child_name in path_to_source {
             let current = current_node?;
-            Self::add_expose_for_capability(
-                &mut current.decl.exposes,
+            current.add_expose_for_capability(
                 &capability,
-                Some(&child_name),
+                cm_rust::ExposeSource::Child(child_name.to_string()),
+                force_route,
             )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //current.validate(&current_moniker)?;
@@ -711,12 +741,16 @@ impl RealmNode {
             current_moniker = current_moniker.child(child_name);
         }
         if let Ok(source_node) = current_node {
-            Self::add_capability_decl(&mut source_node.decl.capabilities, &capability)?;
-            Self::add_expose_for_capability(&mut source_node.decl.exposes, &capability, None)?;
+            source_node.add_capability_decl(&capability, force_route)?;
+            source_node.add_expose_for_capability(
+                &capability,
+                cm_rust::ExposeSource::Self_,
+                force_route,
+            )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //source_node.validate(&current_moniker)?;
         } else {
-            // `get_node_mut` only returns `Ok` for mutable nodes. If this node is immutable
+            // `RealmNode::child` only returns `Ok` for mutable nodes. If this node is immutable
             // (located behind a ChildDecl) we have to presume that the component already declares
             // the capability.
         }
@@ -728,9 +762,14 @@ impl RealmNode {
         capability: &frealmbuilder::Capability,
         source_moniker: Moniker,
         target_moniker: Moniker,
+        force_route: bool,
     ) -> Result<(), Error> {
         if let Ok(target_node) = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing) {
-            Self::add_use_for_capability(&mut target_node.decl.uses, &capability, None)?;
+            target_node.add_use_for_capability(
+                &capability,
+                cm_rust::UseSource::Parent,
+                force_route,
+            )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //target_node.validate(&target_moniker)?;
         } else {
@@ -739,12 +778,12 @@ impl RealmNode {
             // the capability.
         }
         if let Ok(source_node) = self.get_node_mut(&source_moniker, GetBehavior::ErrorIfMissing) {
-            Self::add_capability_decl(&mut source_node.decl.capabilities, &capability)?;
+            source_node.add_capability_decl(&capability, force_route)?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
-            //source_node.validate(&source_moniker)?;
+            //target_node.validate(&target_moniker)?;
         } else {
             // `get_node_mut` only returns `Ok` for mutable nodes. If this node is immutable
-            // (located behind a ChildDecl) we have to presume that the component already declares
+            // (located behind a ChildDecl) we have to presume that the component already uses
             // the capability.
         }
 
@@ -765,11 +804,11 @@ impl RealmNode {
 
         for child_name in path_to_target {
             let current = current_node?;
-            Self::add_offer_for_capability(
-                &mut current.decl.offers,
+            current.add_offer_for_capability(
                 &capability,
-                OfferSource::Parent,
+                cm_rust::OfferSource::Parent,
                 &child_name,
+                force_route,
             )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //current.validate(&current_ancestor_moniker)?;
@@ -782,11 +821,11 @@ impl RealmNode {
             // by walking up the tree
             let common_ancestor =
                 self.get_node_mut(&common_ancestor_moniker, GetBehavior::ErrorIfMissing)?;
-            Self::add_offer_for_capability(
-                &mut common_ancestor.decl.offers,
+            common_ancestor.add_offer_for_capability(
                 &capability,
-                OfferSource::Self_,
+                cm_rust::OfferSource::Self_,
                 &first_offer_name,
+                force_route,
             )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //common_ancestor.validate(&common_ancestor_moniker)?;
@@ -802,10 +841,10 @@ impl RealmNode {
 
         for child_name in path_to_target {
             let current = current_node?;
-            Self::add_expose_for_capability(
-                &mut current.decl.exposes,
+            current.add_expose_for_capability(
                 &capability,
-                Some(&child_name),
+                cm_rust::ExposeSource::Child(child_name.to_string()),
+                force_route,
             )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //current.validate(&current_ancestor_moniker)?;
@@ -814,20 +853,24 @@ impl RealmNode {
         }
 
         if let Ok(source_node) = current_node {
-            Self::add_expose_for_capability(&mut source_node.decl.exposes, &capability, None)?;
+            source_node.add_expose_for_capability(
+                &capability,
+                cm_rust::ExposeSource::Self_,
+                force_route,
+            )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //source_node.validate(&current_ancestor_moniker)?;
         } else {
-            // `get_node_mut` only returns `Ok` for mutable nodes. If this node is immutable
+            // `RealmNode::child` only returns `Ok` for mutable nodes. If this node is immutable
             // (located behind a ChildDecl) we have to presume that the component already exposes
             // the capability.
         }
 
-        Self::add_offer_for_capability(
-            &mut common_ancestor.decl.offers,
+        common_ancestor.add_offer_for_capability(
             &capability,
-            OfferSource::Child(first_expose_name.clone()),
+            cm_rust::OfferSource::Child(first_expose_name.clone()),
             &first_offer_name,
+            force_route,
         )?;
         // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
         //common_ancestor.validate(&common_ancestor_moniker)?;
@@ -849,8 +892,13 @@ impl RealmNode {
         async move {
             // Expose the fuchsia.component.Binder protocol from root in order to give users the ability to manually
             // start the realm.
-            let () =
-                self.route_capability_to_above_root(&*BINDER_PROTOCOL_CAPABILITY, Moniker::root())?;
+            if walked_path.is_empty() {
+                let () = self.route_capability_to_above_root(
+                    &*BINDER_PROTOCOL_CAPABILITY,
+                    Moniker::root(),
+                    true,
+                )?;
+            }
 
             let mut mutable_children = self.mutable_children.into_iter().collect::<Vec<_>>();
             mutable_children.sort_unstable_by_key(|t| t.0.clone());
@@ -880,42 +928,35 @@ impl RealmNode {
         .boxed()
     }
 
-    // Adds an expose decl for `route.capability` from `source` to `exposes`, checking first that
-    // there aren't any conflicting exposes.
+    /// This call ensures that an expose for the given capability exists in this component's decl.
+    /// If `self.component_loaded_from_pkg && !force_route` is true, we don't do anything.
     fn add_expose_for_capability(
-        exposes: &mut Vec<cm_rust::ExposeDecl>,
+        &mut self,
         capability: &frealmbuilder::Capability,
-        source: Option<&str>,
+        source: cm_rust::ExposeSource,
+        force_route: bool,
     ) -> Result<(), Error> {
-        let expose_source = source
-            .map(|s| cm_rust::ExposeSource::Child(s.to_string()))
-            .unwrap_or(cm_rust::ExposeSource::Self_);
-        let target = cm_rust::ExposeTarget::Parent;
-
+        if self.component_loaded_from_pkg && !force_route {
+            // We don't modify package-local components unless force_route is true
+            return Ok(());
+        }
+        let capability_name = get_capability_name(&capability)?;
         let new_decl = {
             match &capability {
-                frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
-                    name,
-                    ..
-                }) => {
-                    let name = name.as_ref().unwrap();
+                frealmbuilder::Capability::Protocol(_) => {
                     cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
-                        source: expose_source,
-                        source_name: name.clone().into(),
-                        target,
-                        target_name: name.clone().into(),
+                        source,
+                        source_name: capability_name.clone().into(),
+                        target: cm_rust::ExposeTarget::Parent,
+                        target_name: capability_name.into(),
                     })
                 }
-                frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
-                    name,
-                    ..
-                }) => {
-                    let name = name.as_ref().unwrap();
+                frealmbuilder::Capability::Directory(_) => {
                     cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
-                        source: expose_source,
-                        source_name: name.as_str().into(),
-                        target,
-                        target_name: name.as_str().into(),
+                        source,
+                        source_name: capability_name.clone().into(),
+                        target: cm_rust::ExposeTarget::Parent,
+                        target_name: capability_name.into(),
                         rights: None,
                         subdir: None,
                     })
@@ -928,34 +969,39 @@ impl RealmNode {
         };
         // A decl with the same source and name but different options will be caught during decl
         // validation later
-        if !exposes.contains(&new_decl) {
-            exposes.push(new_decl);
+        if !self.decl.exposes.contains(&new_decl) {
+            self.decl.exposes.push(new_decl);
         }
 
         Ok(())
     }
 
+    /// This call ensures that a declaration for the given capability and source exists in this
+    /// component's decl. If `self.component_loaded_from_pkg && !force_route` is true, we don't do
+    /// anything.
     fn add_capability_decl(
-        capability_decls: &mut Vec<cm_rust::CapabilityDecl>,
+        &mut self,
         capability: &frealmbuilder::Capability,
+        force_route: bool,
     ) -> Result<(), Error> {
+        if self.component_loaded_from_pkg && !force_route {
+            // We don't modify package-local components unless force_route is true
+            return Ok(());
+        }
+        let capability_name = get_capability_name(&capability)?;
         let capability_decl = match capability {
-            frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
-                name, ..
-            }) => {
-                let name = name.as_ref().unwrap();
+            frealmbuilder::Capability::Protocol(_) => {
                 Some(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
-                    name: name.as_str().try_into().unwrap(),
-                    source_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
+                    name: capability_name.as_str().try_into().unwrap(),
+                    source_path: format!("/svc/{}", capability_name).as_str().try_into().unwrap(),
                 }))
             }
             frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
-                name,
                 path,
                 rights,
                 ..
             }) => Some(cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
-                name: name.as_ref().unwrap().as_str().try_into().unwrap(),
+                name: capability_name.as_str().try_into().unwrap(),
                 source_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
                 rights: rights.as_ref().unwrap().clone(),
             })),
@@ -967,144 +1013,122 @@ impl RealmNode {
         if let Some(decl) = capability_decl {
             // A decl with the same source and name but different options will be caught during
             // decl validation later
-            if !capability_decls.contains(&decl) {
-                capability_decls.push(decl);
+            if !self.decl.capabilities.contains(&decl) {
+                self.decl.capabilities.push(decl);
             }
         }
         Ok(())
     }
 
+    /// This call ensures that a use for the given capability exists in this component's decl. If
+    /// `self.component_loaded_from_pkg && !force_route` is true, we don't do anything.
     fn add_use_for_capability(
-        uses: &mut Vec<cm_rust::UseDecl>,
+        &mut self,
         capability: &frealmbuilder::Capability,
-        child_source: Option<String>,
+        use_source: cm_rust::UseSource,
+        force_route: bool,
     ) -> Result<(), Error> {
-        let source =
-            child_source.map(cm_rust::UseSource::Child).unwrap_or(cm_rust::UseSource::Parent);
+        if self.component_loaded_from_pkg && !force_route {
+            // We don't modify package-local components unless force_route is true
+            return Ok(());
+        }
+        let capability_name = get_capability_name(&capability)?;
         let use_decl = match capability {
-            frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
-                name, ..
-            }) => cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-                source,
-                source_name: name.as_ref().unwrap().clone().try_into().unwrap(),
-                target_path: format!("/svc/{}", name.as_ref().unwrap())
-                    .as_str()
-                    .try_into()
-                    .unwrap(),
-                dependency_type: cm_rust::DependencyType::Strong,
-            }),
+            frealmbuilder::Capability::Protocol(_) => {
+                cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                    source: use_source,
+                    source_name: capability_name.as_str().try_into().unwrap(),
+                    target_path: format!("/svc/{}", capability_name).as_str().try_into().unwrap(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                })
+            }
             frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
-                name,
                 path,
                 rights,
                 ..
             }) => cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
-                source,
-                source_name: name.as_ref().unwrap().as_str().try_into().unwrap(),
+                source: use_source,
+                source_name: capability_name.as_str().try_into().unwrap(),
                 target_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
                 rights: rights.as_ref().unwrap().clone(),
                 subdir: None,
                 dependency_type: cm_rust::DependencyType::Strong,
             }),
             frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
-                name,
-                path,
-                ..
+                path, ..
             }) => {
-                if source != cm_rust::UseSource::Parent {
-                    // Storage can't be exposed, so we can't use it from a child, because how would
-                    // the child expose it?
+                if use_source != cm_rust::UseSource::Parent {
                     return Err(Error::UnableToExpose("storage"));
                 }
                 cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
-                    source_name: name.as_ref().unwrap().as_str().try_into().unwrap(),
+                    source_name: capability_name.as_str().try_into().unwrap(),
                     target_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
                 })
             }
             _ => return Err(Error::BadFidl),
         };
-        if !uses.contains(&use_decl) {
-            uses.push(use_decl);
+        if !self.decl.uses.contains(&use_decl) {
+            self.decl.uses.push(use_decl);
         }
         Ok(())
     }
 
+    /// This call ensures that a given offer for the given capability exists in this component's
+    /// decl. If `self.component_loaded_from_pkg && !force_route` is true, we don't do anything.
     fn add_offer_for_capability(
-        offers: &mut Vec<cm_rust::OfferDecl>,
+        &mut self,
         capability: &frealmbuilder::Capability,
-        offer_source: OfferSource,
+        offer_source: cm_rust::OfferSource,
         target_name: &str,
+        force_route: bool,
     ) -> Result<(), Error> {
+        if self.component_loaded_from_pkg && !force_route {
+            // We don't modify package-local components unless force_route is true
+            return Ok(());
+        }
+        if let cm_rust::OfferSource::Child(_) = &offer_source {
+            if let frealmbuilder::Capability::Storage(_) = capability {
+                return Err(Error::UnableToExpose("storage"));
+            }
+        }
+        let capability_name = get_capability_name(&capability)?;
+
         let offer_decl = match &capability {
-            frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
-                name, ..
-            }) => {
-                let name = name.as_ref().unwrap();
-                let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
-                    OfferSource::Child(n) => cm_rust::OfferSource::Child(n),
-                };
+            frealmbuilder::Capability::Protocol(_) => {
                 cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                     source: offer_source,
-                    source_name: name.clone().into(),
+                    source_name: capability_name.clone().into(),
                     target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: name.clone().into(),
+                    target_name: capability_name.into(),
                     dependency_type: cm_rust::DependencyType::Strong,
                 })
             }
-            frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
-                name,
-                ..
-            }) => {
-                let name = name.as_ref().unwrap();
-                let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
-                    OfferSource::Child(n) => cm_rust::OfferSource::Child(n),
-                };
+            frealmbuilder::Capability::Directory(_) => {
                 cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
                     source: offer_source,
-                    source_name: name.clone().into(),
+                    source_name: capability_name.clone().into(),
                     target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: name.clone().into(),
+                    target_name: capability_name.into(),
                     rights: None,
                     subdir: None,
                     dependency_type: cm_rust::DependencyType::Strong,
                 })
             }
-            frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
-                name, ..
-            }) => {
-                let name = name.as_ref().unwrap();
-                let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
-                    OfferSource::Child(_) => {
-                        return Err(Error::UnableToExpose("storage"));
-                    }
-                };
+            frealmbuilder::Capability::Storage(_) => {
                 cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
                     source: offer_source,
-                    source_name: name.clone().into(),
+                    source_name: capability_name.clone().into(),
                     target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: name.clone().into(),
+                    target_name: capability_name.into(),
                 })
             }
             _ => return Err(Error::BadFidl),
         };
-        if !offers.contains(&offer_decl) {
-            offers.push(offer_decl);
+        if !self.decl.offers.contains(&offer_decl) {
+            self.decl.offers.push(offer_decl);
         }
         Ok(())
     }
-}
-
-// This is needed because there are different enums for offer source depending on capability
-enum OfferSource {
-    Parent,
-    Self_,
-    Child(String),
 }
 
 // TODO(77771): use the moniker crate once there's an id-free version of it.
@@ -1153,7 +1177,7 @@ impl TryFrom<frealmbuilder::RouteEndpoint> for Moniker {
 impl Display for Moniker {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_root() {
-            write!(f, "<root of test realms>")
+            write!(f, "<root of test realm>")
         } else {
             write!(f, "{}", self.path.join("/"))
         }
@@ -1242,6 +1266,21 @@ fn is_relative_url(url: &str) -> bool {
         return false;
     }
     true
+}
+
+fn get_capability_name(capability: &frealmbuilder::Capability) -> Result<String, Error> {
+    match &capability {
+        frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability { name, .. }) => {
+            Ok(name.as_ref().unwrap().clone())
+        }
+        frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
+            name, ..
+        }) => Ok(name.as_ref().unwrap().clone()),
+        frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability { name, .. }) => {
+            Ok(name.as_ref().unwrap().clone())
+        }
+        _ => Err(Error::BadFidl),
+    }
 }
 
 #[cfg(test)]

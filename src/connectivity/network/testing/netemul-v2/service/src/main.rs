@@ -124,7 +124,10 @@ impl Into<zx::Status> for CreateRealmError {
                 fcomponent::error::Error::FailedToOpenPkgDir(anyhow::Error { .. }) => {
                     zx::Status::INTERNAL
                 }
-                fcomponent::error::Error::DestroyWaiterTaken => zx::Status::INTERNAL,
+                fcomponent::error::Error::DestroyWaiterTaken
+                | fcomponent::error::Error::EventRoutesOnlySupportedOnBuilder => {
+                    zx::Status::INTERNAL
+                }
             },
         }
     }

@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 library fuchsia.realm.builder;
 
 using fuchsia.component;
@@ -95,9 +96,19 @@ type Component = flexible union {
 /// A capability route, denoting where a capability comes from and where it goes
 /// to.
 type CapabilityRoute = table {
+    /// The capability to route
     1: capability Capability;
+
+    /// Where the capability comes from
     2: source RouteEndpoint;
+
+    /// Where the capability goes to
     3: targets vector<RouteEndpoint>:MAX_LEN_ROUTE_ENDPOINTS;
+
+    /// If true any components loaded in from the package will be modified as
+    /// needed to make the route valid. If false the package-local components
+    /// will not be modified.
+    4: force_route bool;
 };
 
 /// A capability to be routed

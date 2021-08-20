@@ -37,6 +37,18 @@ fuchsia_test_component("fuchsia_component_test_tests_component") {
   deps = [ ":fuchsia_component_test_tests_bin" ]
 }
 
+fuchsia_component("echo_client_empty_component") {
+  manifest = "meta/echo_client_empty.cml"
+  component_name = "echo_client_empty"
+  deps = [ "//examples/components/routing/echo_client" ]
+}
+
+fuchsia_component("echo_server_empty_component") {
+  manifest = "meta/echo_server_empty.cml"
+  component_name = "echo_server_empty"
+  deps = [ "//examples/components/routing/echo_server" ]
+}
+
 fuchsia_component("echo_client_component") {
   manifest = "meta/echo_client.cmx"
   component_name = "echo_client"
@@ -118,7 +130,9 @@ fuchsia_test_component("realm_with_wait_component") {
 fuchsia_test_package("fuchsia-component-test-tests") {
   deps = [
     ":echo_client_component",
+    ":echo_client_empty_component",
     ":echo_server_component",
+    ":echo_server_empty_component",
     ":fuchsia_component_test_tests_component",
     ":realm_component",
     ":realm_with_wait_component",
