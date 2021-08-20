@@ -198,7 +198,7 @@ while (true) {                          | while (true) {
     Creates a new CalleesRef.  The CalleesRef starts off not holding a
     reference to any MBO.
 
-*   `zx_mbo_read(mbo) -> (data, handles)`
+*   `zx_mbo_read(mbo) -> (data, handles) or (data_size, handle_count)`
 
     Reads from an MBO.  This reads the entire contents of the MBO.
     (Operations for partial reads will be defined later.)
