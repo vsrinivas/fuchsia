@@ -76,7 +76,7 @@ pub struct Idle {
 pub struct Joining {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    channel: Channel,
+    derived_channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -85,7 +85,7 @@ pub struct Joining {
 pub struct Authenticating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    channel: Channel,
+    derived_channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -94,7 +94,7 @@ pub struct Authenticating {
 pub struct Associating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    channel: Channel,
+    derived_channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -103,16 +103,17 @@ pub struct Associating {
 pub struct Associated {
     cfg: ClientConfig,
     connect_txn_sink: ConnectTransactionSink,
-    bss: Box<BssDescription>,
+    latest_ap_state: Box<BssDescription>,
     auth_method: Option<auth::MethodName>,
-    last_rssi: i8,
-    last_snr: i8,
     last_signal_report_time: zx::Time,
     link_state: LinkState,
     radio_cfg: RadioConfig,
-    channel: Channel,
     capability_info: Option<ClientCapabilities>,
+    // TODO(fxbug.dev/82653): There are two channels, one in `latest_ap_state` and one here.
+    //                        Revisit how we should handle this for OnChannelSwitched event.
+    derived_channel: Channel,
     protection_ie: Option<ProtectionIe>,
+    // TODO(fxbug.dev/82654): Remove `wmm_param` field when wlanstack telemetry is deprecated.
     wmm_param: Option<ie::WmmParam>,
     last_channel_switch_time: Option<zx::Time>,
 }
@@ -191,7 +192,7 @@ impl Joining {
                 Ok(Authenticating {
                     cfg: self.cfg,
                     cmd: self.cmd,
-                    channel: self.channel,
+                    derived_channel: self.derived_channel,
                     capability_info: self.capability_info,
                     protection_ie: self.protection_ie,
                 })
@@ -231,7 +232,7 @@ impl Authenticating {
                 Ok(Associating {
                     cfg: self.cfg,
                     cmd: self.cmd,
-                    channel: self.channel,
+                    derived_channel: self.derived_channel,
                     capability_info: self.capability_info,
 
                     protection_ie: self.protection_ie,
@@ -383,7 +384,7 @@ impl Associating {
                         return Err(Idle { cfg: self.cfg });
                     }
                     context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
-                        negotiated_cap.to_fidl_negotiated_capabilities(&self.channel),
+                        negotiated_cap.to_fidl_negotiated_capabilities(&self.derived_channel),
                     ))
                 }
 
@@ -435,13 +436,11 @@ impl Associating {
             cfg: self.cfg,
             connect_txn_sink: self.cmd.connect_txn_sink,
             auth_method,
-            last_rssi: self.cmd.bss.rssi_dbm,
-            last_snr: self.cmd.bss.snr_db,
             last_signal_report_time: now(),
-            bss: self.cmd.bss,
+            latest_ap_state: self.cmd.bss,
             link_state,
             radio_cfg: self.cmd.radio_cfg,
-            channel: self.channel,
+            derived_channel: self.derived_channel,
             capability_info: self.capability_info,
             protection_ie: self.protection_ie,
             wmm_param,
@@ -569,13 +568,13 @@ impl Associated {
         if let Some(duration) = connected_duration {
             let disconnect_info = DisconnectInfo {
                 connected_duration: duration,
-                last_rssi: self.last_rssi,
-                last_snr: self.last_snr,
-                bssid: self.bss.bssid,
-                ssid: self.bss.ssid().to_vec(),
-                protection: self.bss.protection(),
-                wsc: self.bss.probe_resp_wsc(),
-                channel: Channel::from(self.bss.channel),
+                last_rssi: self.latest_ap_state.rssi_dbm,
+                last_snr: self.latest_ap_state.snr_db,
+                bssid: self.latest_ap_state.bssid,
+                ssid: self.latest_ap_state.ssid().to_vec(),
+                protection: self.latest_ap_state.protection(),
+                wsc: self.latest_ap_state.probe_resp_wsc(),
+                channel: Channel::from(self.latest_ap_state.channel),
                 disconnect_source,
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
@@ -605,7 +604,7 @@ impl Associated {
 
         context.att_id += 1;
         let cmd = ConnectCommand {
-            bss: self.bss,
+            bss: self.latest_ap_state,
             connect_txn_sink: self.connect_txn_sink,
             protection,
             radio_cfg: self.radio_cfg,
@@ -619,7 +618,7 @@ impl Associated {
         Associating {
             cfg: self.cfg,
             cmd,
-            channel: self.channel,
+            derived_channel: self.derived_channel,
             capability_info: self.capability_info,
             protection_ie: self.protection_ie,
         }
@@ -647,13 +646,13 @@ impl Associated {
             Some(duration) => {
                 let disconnect_info = DisconnectInfo {
                     connected_duration: duration,
-                    last_rssi: self.last_rssi,
-                    last_snr: self.last_snr,
-                    bssid: self.bss.bssid,
-                    ssid: self.bss.ssid().to_vec(),
-                    protection: self.bss.protection(),
-                    wsc: self.bss.probe_resp_wsc(),
-                    channel: Channel::from(self.bss.channel),
+                    last_rssi: self.latest_ap_state.rssi_dbm,
+                    last_snr: self.latest_ap_state.snr_db,
+                    bssid: self.latest_ap_state.bssid,
+                    ssid: self.latest_ap_state.ssid().to_vec(),
+                    protection: self.latest_ap_state.protection(),
+                    wsc: self.latest_ap_state.probe_resp_wsc(),
+                    channel: Channel::from(self.latest_ap_state.channel),
                     disconnect_source,
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
@@ -702,23 +701,25 @@ impl Associated {
             &mut Context,
         ) -> Result<LinkState, EstablishRsnaFailureReason>,
     {
-        let link_state =
-            match update_handler(self.link_state, update, &self.bss, state_change_ctx, context) {
-                Ok(link_state) => link_state,
-                Err(failure_reason) => {
-                    report_connect_finished(
-                        &mut self.connect_txn_sink,
-                        context,
-                        EstablishRsnaFailure {
-                            auth_method: self.auth_method,
-                            reason: failure_reason,
-                        }
+        let link_state = match update_handler(
+            self.link_state,
+            update,
+            &self.latest_ap_state,
+            state_change_ctx,
+            context,
+        ) {
+            Ok(link_state) => link_state,
+            Err(failure_reason) => {
+                report_connect_finished(
+                    &mut self.connect_txn_sink,
+                    context,
+                    EstablishRsnaFailure { auth_method: self.auth_method, reason: failure_reason }
                         .into(),
-                    );
-                    send_deauthenticate_request(&self.bss, &context.mlme_sink);
-                    return Err(Idle { cfg: self.cfg });
-                }
-            };
+                );
+                send_deauthenticate_request(&self.latest_ap_state, &context.mlme_sink);
+                return Err(Idle { cfg: self.cfg });
+            }
+        };
 
         if let LinkState::LinkUp(_) = link_state {
             context.info.report_rsna_established(context.att_id);
@@ -735,19 +736,19 @@ impl Associated {
         context: &mut Context,
     ) -> Result<Self, Idle> {
         // Ignore unexpected EAPoL frames.
-        if !self.bss.needs_eapol_exchange() {
+        if !self.latest_ap_state.needs_eapol_exchange() {
             return Ok(self);
         }
 
         // Reject EAPoL frames from other BSS.
-        if ind.src_addr != self.bss.bssid {
+        if ind.src_addr != self.latest_ap_state.bssid {
             let eapol_pdu = &ind.data[..];
             inspect_log!(context.inspect.rsn_events.lock(), {
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 foreign_bssid: ind.src_addr.to_mac_string(),
                 foreign_bssid_hash: context.inspect.hasher.hash_mac_addr(&ind.src_addr),
-                current_bssid: self.bss.bssid.to_mac_string(),
-                current_bssid_hash: context.inspect.hasher.hash_mac_addr(&self.bss.bssid),
+                current_bssid: self.latest_ap_state.bssid.to_mac_string(),
+                current_bssid_hash: context.inspect.hasher.hash_mac_addr(&self.latest_ap_state.bssid),
                 status: "rejected (foreign BSS)",
             });
             return Ok(self);
@@ -767,7 +768,7 @@ impl Associated {
 
     fn on_channel_switched(&mut self, info: fidl_internal::ChannelSwitchInfo) {
         self.connect_txn_sink.send(ConnectTransactionEvent::OnChannelSwitched { info });
-        self.bss.channel.primary = info.new_channel;
+        self.latest_ap_state.channel.primary = info.new_channel;
         self.last_channel_switch_time.replace(now());
     }
 
@@ -804,7 +805,7 @@ impl Associated {
                     EstablishRsnaFailure { auth_method: self.auth_method, reason: failure_reason }
                         .into(),
                 );
-                send_deauthenticate_request(&self.bss, &context.mlme_sink);
+                send_deauthenticate_request(&self.latest_ap_state, &context.mlme_sink);
                 Err(Idle { cfg: self.cfg })
             }
         }
@@ -940,8 +941,8 @@ impl ClientState {
                 }
                 MlmeEvent::SignalReport { ind } => {
                     state.connect_txn_sink.send(ConnectTransactionEvent::OnSignalReport { ind });
-                    state.last_rssi = ind.rssi_dbm;
-                    state.last_snr = ind.snr_db;
+                    state.latest_ap_state.rssi_dbm = ind.rssi_dbm;
+                    state.latest_ap_state.snr_db = ind.snr_db;
                     state.last_signal_report_time = now();
                     state.into()
                 }
@@ -1010,7 +1011,7 @@ impl ClientState {
     }
 
     pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
-        let (channel, capability_info) = match derive_join_channel_and_capabilities(
+        let (derived_channel, capability_info) = match derive_join_channel_and_capabilities(
             Channel::from(cmd.bss.channel),
             cmd.radio_cfg.cbw,
             cmd.bss.rates(),
@@ -1065,7 +1066,13 @@ impl ClientState {
         let state = Self::new(cfg.clone());
         match state {
             Self::Idle(state) => state
-                .transition_to(Joining { cfg, cmd, channel, capability_info, protection_ie })
+                .transition_to(Joining {
+                    cfg,
+                    cmd,
+                    derived_channel,
+                    capability_info,
+                    protection_ie,
+                })
                 .into(),
             _ => unreachable!(),
         }
@@ -1083,13 +1090,13 @@ impl ClientState {
                 disconnected_from_link_up = true;
                 let disconnect_info = DisconnectInfo {
                     connected_duration: link_up.connected_duration(),
-                    last_rssi: state.last_rssi,
-                    last_snr: state.last_snr,
-                    bssid: state.bss.bssid,
-                    ssid: state.bss.ssid().to_vec(),
-                    protection: state.bss.protection(),
-                    wsc: state.bss.probe_resp_wsc(),
-                    channel: Channel::from(state.bss.channel),
+                    last_rssi: state.latest_ap_state.rssi_dbm,
+                    last_snr: state.latest_ap_state.snr_db,
+                    bssid: state.latest_ap_state.bssid,
+                    ssid: state.latest_ap_state.ssid().to_vec(),
+                    protection: state.latest_ap_state.protection(),
+                    wsc: state.latest_ap_state.probe_resp_wsc(),
+                    channel: Channel::from(state.latest_ap_state.channel),
                     disconnect_source,
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
@@ -1150,7 +1157,7 @@ impl ClientState {
                 state.cfg
             }
             Self::Associated(state) => {
-                send_deauthenticate_request(&state.bss, &context.mlme_sink);
+                send_deauthenticate_request(&state.latest_ap_state, &context.mlme_sink);
                 state.cfg
             }
         }
@@ -1193,21 +1200,21 @@ impl ClientState {
             }
             Self::Associated(associated) => match associated.link_state {
                 LinkState::EstablishingRsna { .. } => {
-                    ClientSmeStatus::Connecting(associated.bss.ssid().to_vec())
+                    ClientSmeStatus::Connecting(associated.latest_ap_state.ssid().to_vec())
                 }
                 LinkState::LinkUp { .. } => {
-                    let bss_description = &associated.bss;
+                    let latest_ap_state = &associated.latest_ap_state;
                     ClientSmeStatus::Connected(ServingApInfo {
-                        bssid: bss_description.bssid.clone(),
-                        ssid: bss_description.ssid().to_vec(),
-                        rssi_dbm: associated.last_rssi,
-                        snr_db: associated.last_snr,
+                        bssid: latest_ap_state.bssid.clone(),
+                        ssid: latest_ap_state.ssid().to_vec(),
+                        rssi_dbm: latest_ap_state.rssi_dbm,
+                        snr_db: latest_ap_state.snr_db,
                         signal_report_time: associated.last_signal_report_time,
-                        channel: Channel::from(bss_description.channel),
-                        protection: bss_description.protection(),
-                        ht_cap: bss_description.raw_ht_cap(),
-                        vht_cap: bss_description.raw_vht_cap(),
-                        probe_resp_wsc: bss_description.probe_resp_wsc(),
+                        channel: Channel::from(latest_ap_state.channel),
+                        protection: latest_ap_state.protection(),
+                        ht_cap: latest_ap_state.raw_ht_cap(),
+                        vht_cap: latest_ap_state.raw_vht_cap(),
+                        probe_resp_wsc: latest_ap_state.probe_resp_wsc(),
                         wmm_param: associated.wmm_param,
                     })
                 }
@@ -1712,7 +1719,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -1742,7 +1749,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -1775,7 +1782,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -2034,7 +2041,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd: command,
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -2343,7 +2350,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -2534,11 +2541,14 @@ mod tests {
     fn disconnect_reported_on_manual_disconnect_with_wsc() {
         let mut h = TestHelper::new();
         let (mut cmd, mut connect_txn_stream) = connect_command_one();
-        cmd.bss = Box::new(
-            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6], ies_overrides: IesOverrides::new().set_raw(
+        cmd.bss = Box::new(fake_bss_description!(Open,
+            ssid: b"bar".to_vec(),
+            bssid: [8; 6],
+            rssi_dbm: 60,
+            snr_db: 30,
+            ies_overrides: IesOverrides::new().set_raw(
                 get_vendor_ie_bytes_for_wsc_ie(&fake_probe_resp_wsc_ie_bytes()).expect("getting vendor ie bytes")
-            )),
-        );
+        )));
         println!("{:02x?}", cmd.bss);
 
         let state = link_up_state(cmd);
@@ -2582,11 +2592,11 @@ mod tests {
         let switch_ind = MlmeEvent::OnChannelSwitched { info: input_info.clone() };
 
         assert_variant!(&state, ClientState::Associated(state) => {
-            assert_eq!(state.bss.channel.primary, 1);
+            assert_eq!(state.latest_ap_state.channel.primary, 1);
         });
         let state = state.on_mlme_event(switch_ind, &mut h.context);
         assert_variant!(state, ClientState::Associated(state) => {
-            assert_eq!(state.bss.channel.primary, 36);
+            assert_eq!(state.latest_ap_state.channel.primary, 36);
         });
 
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnChannelSwitched { info })) => {
@@ -3203,9 +3213,12 @@ mod tests {
     fn connect_command_one() -> (ConnectCommand, ConnectTransactionStream) {
         let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let cmd = ConnectCommand {
-            bss: Box::new(
-                fake_bss_description!(Open, ssid: b"foo".to_vec(), bssid: [7, 7, 7, 7, 7, 7]),
-            ),
+            bss: Box::new(fake_bss_description!(Open,
+                ssid: b"foo".to_vec(),
+                bssid: [7, 7, 7, 7, 7, 7],
+                rssi_dbm: 60,
+                snr_db: 30
+            )),
             connect_txn_sink,
             protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
@@ -3305,7 +3318,7 @@ mod tests {
         testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3322,7 +3335,7 @@ mod tests {
         testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3333,7 +3346,7 @@ mod tests {
         testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3354,15 +3367,13 @@ mod tests {
                 .into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
-            bss: cmd.bss,
+            latest_ap_state: cmd.bss,
             auth_method,
             connect_txn_sink: cmd.connect_txn_sink,
-            last_rssi: 60,
-            last_snr: 0,
             last_signal_report_time: zx::Time::ZERO,
             link_state,
             radio_cfg: RadioConfig::default(),
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
             wmm_param: None,
@@ -3386,14 +3397,12 @@ mod tests {
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             connect_txn_sink: cmd.connect_txn_sink,
-            bss: cmd.bss,
+            latest_ap_state: cmd.bss,
             auth_method,
-            last_rssi: 60,
-            last_snr: 30,
             last_signal_report_time: zx::Time::ZERO,
             link_state,
             radio_cfg: RadioConfig::default(),
-            channel: fake_channel(),
+            derived_channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
             wmm_param,
