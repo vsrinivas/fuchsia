@@ -77,7 +77,6 @@ enum Command {
         output_bytecode: bool,
 
         /// Encode the bytecode in the new format if true. Otherwise, encode to the old format.
-        /// Currently the new bytecode format is unimplemented. See fxb/67440.
         #[structopt(short = "n", long = "use-new-bytecode")]
         use_new_bytecode: bool,
     },
