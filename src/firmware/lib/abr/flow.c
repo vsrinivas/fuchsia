@@ -220,7 +220,7 @@ static bool check_slot_index(AbrSlotIndex slot_index) {
   return true;
 }
 
-AbrResult AbrGetLastMarkActiveSlot(const AbrOps* abr_ops, AbrSlotIndex* out_slot) {
+AbrResult AbrGetSlotLastMarkedActive(const AbrOps* abr_ops, AbrSlotIndex* out_slot) {
   AbrData abr_data, abr_data_orig;
   AbrResult result = load_metadata(abr_ops, &abr_data, &abr_data_orig);
   if (result != kAbrResultOk) {

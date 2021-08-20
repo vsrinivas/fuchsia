@@ -406,6 +406,9 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
 
   void TestSysconfigWipeBufferedClient(uint32_t offset_in_pages, uint32_t sysconfig_pages);
 
+  void TestQueryConfigurationLastSetActive(fuchsia_paver::wire::Configuration this_slot,
+                                           fuchsia_paver::wire::Configuration other_slot);
+
   std::optional<fidl::WireSyncClient<fuchsia_paver::BootManager>> boot_manager_;
   std::optional<fidl::WireSyncClient<fuchsia_paver::DataSink>> data_sink_;
   std::optional<fidl::WireSyncClient<fuchsia_paver::Sysconfig>> sysconfig_;
@@ -529,6 +532,100 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kA);
+}
+
+void PaverServiceSkipBlockTest::TestQueryConfigurationLastSetActive(
+    fuchsia_paver::wire::Configuration this_slot, fuchsia_paver::wire::Configuration other_slot) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  AbrData abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  // Set both slots to the active state.
+  {
+    auto result = boot_manager_->SetConfigurationActive(other_slot);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  {
+    auto result = boot_manager_->SetConfigurationActive(this_slot);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  // Marking the slot successful shall not change the result.
+  {
+    auto result = boot_manager_->SetConfigurationHealthy(this_slot);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+
+    auto get_result = boot_manager_->QueryConfigurationLastSetActive();
+    ASSERT_OK(get_result.status());
+    ASSERT_TRUE(get_result->result.is_response());
+    ASSERT_EQ(get_result->result.response().configuration, this_slot);
+  }
+
+  // Marking the slot unbootable shall not change the result.
+  {
+    auto result = boot_manager_->SetConfigurationUnbootable(this_slot);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+
+    auto get_result = boot_manager_->QueryConfigurationLastSetActive();
+    ASSERT_OK(get_result.status());
+    ASSERT_TRUE(get_result->result.is_response());
+    ASSERT_EQ(get_result->result.response().configuration, this_slot);
+  }
+
+  // Marking the other slot successful shall not change the result.
+  {
+    auto result = boot_manager_->SetConfigurationHealthy(other_slot);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+
+    auto get_result = boot_manager_->QueryConfigurationLastSetActive();
+    ASSERT_OK(get_result.status());
+    ASSERT_TRUE(get_result->result.is_response());
+    ASSERT_EQ(get_result->result.response().configuration, this_slot);
+  }
+
+  // Marking the other slot unbootable shall not change the result.
+  {
+    auto result = boot_manager_->SetConfigurationUnbootable(other_slot);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+
+    auto get_result = boot_manager_->QueryConfigurationLastSetActive();
+    ASSERT_OK(get_result.status());
+    ASSERT_TRUE(get_result->result.is_response());
+    ASSERT_EQ(get_result->result.response().configuration, this_slot);
+  }
+
+  // Marking the other slot active does change the result.
+  {
+    auto result = boot_manager_->SetConfigurationActive(other_slot);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+
+    auto get_result = boot_manager_->QueryConfigurationLastSetActive();
+    ASSERT_OK(get_result.status());
+    ASSERT_TRUE(get_result->result.is_response());
+    ASSERT_EQ(get_result->result.response().configuration, other_slot);
+  }
+}
+
+TEST_F(PaverServiceSkipBlockTest, QueryConfigurationLastSetActiveSlotA) {
+  TestQueryConfigurationLastSetActive(fuchsia_paver::wire::Configuration::kA,
+                                      fuchsia_paver::wire::Configuration::kB);
+}
+
+TEST_F(PaverServiceSkipBlockTest, QueryConfigurationLastSetActiveSlotB) {
+  TestQueryConfigurationLastSetActive(fuchsia_paver::wire::Configuration::kB,
+                                      fuchsia_paver::wire::Configuration::kA);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotA) {

@@ -38,6 +38,7 @@ pub enum PaverEvent {
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
     WriteFirmware { configuration: paver::Configuration, firmware_type: String, payload: Vec<u8> },
     QueryActiveConfiguration,
+    QueryConfigurationLastSetActive,
     QueryCurrentConfiguration,
     QueryConfigurationStatus { configuration: paver::Configuration },
     SetConfigurationHealthy { configuration: paver::Configuration },
@@ -82,6 +83,9 @@ impl PaverEvent {
         match request {
             paver::BootManagerRequest::QueryActiveConfiguration { .. } => {
                 PaverEvent::QueryActiveConfiguration
+            }
+            paver::BootManagerRequest::QueryConfigurationLastSetActive { .. } => {
+                PaverEvent::QueryConfigurationLastSetActive
             }
             paver::BootManagerRequest::QueryCurrentConfiguration { .. } => {
                 PaverEvent::QueryCurrentConfiguration
@@ -159,6 +163,10 @@ pub mod hooks {
                     paver::BootManagerRequest::QueryActiveConfiguration { responder, .. } => {
                         responder.send(&mut Err(status.into_raw()))
                     }
+                    paver::BootManagerRequest::QueryConfigurationLastSetActive {
+                        responder,
+                        ..
+                    } => responder.send(&mut Err(status.into_raw())),
                     paver::BootManagerRequest::QueryCurrentConfiguration { responder, .. } => {
                         responder.send(&mut Err(status.into_raw()))
                     }
@@ -575,6 +583,10 @@ impl MockPaverService {
                         Ok(self.active_config)
                     };
                     responder.send(&mut result)
+                }
+                paver::BootManagerRequest::QueryConfigurationLastSetActive { responder } => {
+                    // TODO(zyecheng): Implement the mock logic for this API and add tests.
+                    responder.send(&mut Err(Status::NOT_SUPPORTED.into_raw()))
                 }
                 paver::BootManagerRequest::QueryCurrentConfiguration { responder } => {
                     responder.send(&mut Ok(self.current_config))

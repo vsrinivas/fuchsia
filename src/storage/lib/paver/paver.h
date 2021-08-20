@@ -216,6 +216,10 @@ class BootManager : public fidl::WireServer<fuchsia_paver::BootManager> {
   void QueryActiveConfiguration(QueryActiveConfigurationRequestView request,
                                 QueryActiveConfigurationCompleter::Sync& completer) override;
 
+  void QueryConfigurationLastSetActive(
+      QueryConfigurationLastSetActiveRequestView request,
+      QueryConfigurationLastSetActiveCompleter::Sync& completer) override;
+
   void QueryConfigurationStatus(QueryConfigurationStatusRequestView request,
                                 QueryConfigurationStatusCompleter::Sync& completer) override;
 

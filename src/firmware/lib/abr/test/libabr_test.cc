@@ -973,7 +973,7 @@ TEST(LibabrTest, UsesCustomMetadata) {
   EXPECT_EQ(1, ops.read_metadata_custom_count_);
 }
 
-void GetLastMarkActiveSlotTest(AbrSlotIndex slot_index) {
+void GetSlotLastMarkedActiveTest(AbrSlotIndex slot_index) {
   AbrSlotIndex other_slot_index = OtherSlot(slot_index);
 
   // Set both slots to active, with |slot_index| being the most recent one
@@ -983,47 +983,47 @@ void GetLastMarkActiveSlotTest(AbrSlotIndex slot_index) {
   ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, slot_index));
 
   AbrSlotIndex out;
-  ASSERT_EQ(kAbrResultOk, AbrGetLastMarkActiveSlot(ops, &out));
+  ASSERT_EQ(kAbrResultOk, AbrGetSlotLastMarkedActive(ops, &out));
   EXPECT_EQ(slot_index, out);
 
   // Marking the slot successful shall not change the result.
   ASSERT_EQ(kAbrResultOk, AbrMarkSlotSuccessful(ops, slot_index));
-  ASSERT_EQ(kAbrResultOk, AbrGetLastMarkActiveSlot(ops, &out));
+  ASSERT_EQ(kAbrResultOk, AbrGetSlotLastMarkedActive(ops, &out));
   EXPECT_EQ(slot_index, out);
 
   // Marking the slot unbootable shall not change the result
   ASSERT_EQ(kAbrResultOk, AbrMarkSlotUnbootable(ops, slot_index));
-  ASSERT_EQ(kAbrResultOk, AbrGetLastMarkActiveSlot(ops, &out));
+  ASSERT_EQ(kAbrResultOk, AbrGetSlotLastMarkedActive(ops, &out));
   EXPECT_EQ(slot_index, out);
 
   // Marking the other slot successful shall not change the result
   ASSERT_EQ(kAbrResultOk, AbrMarkSlotSuccessful(ops, other_slot_index));
-  ASSERT_EQ(kAbrResultOk, AbrGetLastMarkActiveSlot(ops, &out));
+  ASSERT_EQ(kAbrResultOk, AbrGetSlotLastMarkedActive(ops, &out));
   EXPECT_EQ(slot_index, out);
 
   // Marking the other slot unbootable shall not change the result.
   ASSERT_EQ(kAbrResultOk, AbrMarkSlotUnbootable(ops, other_slot_index));
-  ASSERT_EQ(kAbrResultOk, AbrGetLastMarkActiveSlot(ops, &out));
+  ASSERT_EQ(kAbrResultOk, AbrGetSlotLastMarkedActive(ops, &out));
   EXPECT_EQ(slot_index, out);
 
   // Setting one shot recovery shall not change the result
   ASSERT_EQ(kAbrResultOk, AbrSetOneShotRecovery(ops, true));
-  ASSERT_EQ(kAbrResultOk, AbrGetLastMarkActiveSlot(ops, &out));
+  ASSERT_EQ(kAbrResultOk, AbrGetSlotLastMarkedActive(ops, &out));
   EXPECT_EQ(slot_index, out);
 
   // Resetting one shot recovery shall not change the result
   ASSERT_EQ(kAbrResultOk, AbrSetOneShotRecovery(ops, false));
-  ASSERT_EQ(kAbrResultOk, AbrGetLastMarkActiveSlot(ops, &out));
+  ASSERT_EQ(kAbrResultOk, AbrGetSlotLastMarkedActive(ops, &out));
   EXPECT_EQ(slot_index, out);
 
   // Marking the other slot active does change the result
   ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, other_slot_index));
-  ASSERT_EQ(kAbrResultOk, AbrGetLastMarkActiveSlot(ops, &out));
+  ASSERT_EQ(kAbrResultOk, AbrGetSlotLastMarkedActive(ops, &out));
   EXPECT_EQ(other_slot_index, out);
 }
 
-TEST(LibabrTest, GetLastMarkActiveSlotTestA) { GetLastMarkActiveSlotTest(kAbrSlotIndexA); }
+TEST(LibabrTest, GetSlotLastMarkedActiveTestA) { GetSlotLastMarkedActiveTest(kAbrSlotIndexA); }
 
-TEST(LibabrTest, GetLastMarkActiveSlotTestB) { GetLastMarkActiveSlotTest(kAbrSlotIndexB); }
+TEST(LibabrTest, GetSlotLastMarkedActiveTestB) { GetSlotLastMarkedActiveTest(kAbrSlotIndexB); }
 
 }  // namespace

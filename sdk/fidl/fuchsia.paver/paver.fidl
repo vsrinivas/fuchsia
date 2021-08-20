@@ -277,6 +277,18 @@ protocol BootManager {
         configuration Configuration;
     }) error zx.status;
 
+    /// Queries the configuration that was last explicitly marked as active by
+    /// SetConfigurationActive(). The result is not affected by the current status of the slot.
+    ///
+    /// A newly updated slot is typically marked as active immediately. Therefore this interface
+    /// can be used as a way to identify the newest slot.
+    ///
+    /// Returns `ZX_ERR_IO` if fail to load abr metadata. Returns `ZX_ERR_INTERNAL` if invalid
+    /// slot index is returned by libabr routine.
+    QueryConfigurationLastSetActive() -> (struct {
+        configuration Configuration;
+    }) error zx.status;
+
     /// Queries status of `configuration`.
     ///
     /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via `configuration`.

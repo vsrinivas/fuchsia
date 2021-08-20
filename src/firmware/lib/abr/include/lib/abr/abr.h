@@ -122,7 +122,7 @@ AbrResult AbrMarkSlotActive(const AbrOps* abr_ops, AbrSlotIndex slot_index);
  *
  * If A/B/R metadata is not valid, it will be reset and slot A will be the default active slot.
  */
-AbrResult AbrGetLastMarkActiveSlot(const AbrOps* abr_ops, AbrSlotIndex* out_slot);
+AbrResult AbrGetSlotLastMarkedActive(const AbrOps* abr_ops, AbrSlotIndex* out_slot);
 
 /* Marks the given |slot_index| as unbootable. Returns kAbrResultOk on success.
  *

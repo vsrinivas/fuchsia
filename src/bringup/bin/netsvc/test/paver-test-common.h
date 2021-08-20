@@ -39,6 +39,7 @@ enum class Command {
   kInitializeAbr,
   kQueryCurrentConfiguration,
   kQueryActiveConfiguration,
+  kQueryConfigurationLastSetActive,
   kQueryConfigurationStatus,
   kSetConfigurationActive,
   kSetConfigurationUnbootable,
@@ -138,6 +139,14 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
                                 QueryActiveConfigurationCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryActiveConfiguration);
+    completer.ReplySuccess(fuchsia_paver::wire::Configuration::kA);
+  }
+
+  void QueryConfigurationLastSetActive(
+      QueryConfigurationLastSetActiveRequestView request,
+      QueryConfigurationLastSetActiveCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
+    AppendCommand(Command::kQueryConfigurationLastSetActive);
     completer.ReplySuccess(fuchsia_paver::wire::Configuration::kA);
   }
 

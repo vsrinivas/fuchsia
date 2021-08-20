@@ -423,7 +423,7 @@ zx::channel OpenServiceRoot() {
   return service_root;
 }
 
-std::optional<Configuration> SlotIndexToConfiguration(AbrSlotIndex slot_index) {
+Configuration SlotIndexToConfiguration(AbrSlotIndex slot_index) {
   switch (slot_index) {
     case kAbrSlotIndexA:
       return Configuration::kA;
@@ -433,7 +433,7 @@ std::optional<Configuration> SlotIndexToConfiguration(AbrSlotIndex slot_index) {
       return Configuration::kRecovery;
   }
   ERROR("Unknown Abr slot index %d\n", static_cast<int>(slot_index));
-  return std::nullopt;
+  ZX_ASSERT(false);  // Unreachable
 }
 
 std::optional<AbrSlotIndex> ConfigurationToSlotIndex(Configuration config) {
@@ -451,7 +451,11 @@ std::optional<AbrSlotIndex> ConfigurationToSlotIndex(Configuration config) {
 
 std::optional<Configuration> GetActiveConfiguration(const abr::Client& abr_client) {
   auto slot_index = abr_client.GetBootSlot(false, nullptr);
-  return slot_index == kAbrSlotIndexR ? std::nullopt : SlotIndexToConfiguration(slot_index);
+  if (slot_index == kAbrSlotIndexR) {
+    return std::nullopt;
+  } else {
+    return SlotIndexToConfiguration(slot_index);
+  }
 }
 
 // Helper to wrap a std::variant with a WriteFirmwareResult union.
@@ -911,6 +915,19 @@ void BootManager::QueryActiveConfiguration(QueryActiveConfigurationRequestView r
     return;
   }
   completer.ReplySuccess(config.value());
+}
+
+void BootManager::QueryConfigurationLastSetActive(
+    QueryConfigurationLastSetActiveRequestView request,
+    QueryConfigurationLastSetActiveCompleter::Sync& completer) {
+  auto status = abr_client_->GetSlotLastMarkedActive();
+  if (status.is_error()) {
+    ERROR("Failed to get slot most recently marked active\n");
+    completer.ReplyError(status.error_value());
+    return;
+  }
+
+  completer.ReplySuccess(SlotIndexToConfiguration(status.value()));
 }
 
 void BootManager::QueryConfigurationStatus(QueryConfigurationStatusRequestView request,

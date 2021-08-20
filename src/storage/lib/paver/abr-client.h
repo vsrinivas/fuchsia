@@ -45,6 +45,15 @@ class Client {
     return AbrGetBootSlot(&abr_ops_, update_metadata, is_slot_marked_successful);
   }
 
+  zx::status<AbrSlotIndex> GetSlotLastMarkedActive() const {
+    AbrSlotIndex slot;
+    auto status = AbrResultToZxStatus(AbrGetSlotLastMarkedActive(&abr_ops_, &slot));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    return zx::ok(slot);
+  }
+
   zx::status<> MarkSlotActive(AbrSlotIndex index) {
     return AbrResultToZxStatus(AbrMarkSlotActive(&abr_ops_, index));
   }
