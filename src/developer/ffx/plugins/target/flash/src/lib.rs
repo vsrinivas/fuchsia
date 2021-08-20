@@ -24,11 +24,7 @@ mod manifest;
 const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
 
 #[ffx_plugin()]
-pub async fn flash(
-    fastboot_proxy: FastbootProxy,
-    // TODO(fxb/74841): remove allow attribute
-    #[allow(unused_mut)] mut cmd: FlashCommand,
-) -> Result<()> {
+pub async fn flash(fastboot_proxy: FastbootProxy, cmd: FlashCommand) -> Result<()> {
     flash_plugin_impl(fastboot_proxy, cmd, &mut stdout()).await
 }
 
