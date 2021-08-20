@@ -49,7 +49,7 @@ driver_bind_rules("bind-v2") {
 }
 
 driver_module("bind-test-driver-v2-driver") {
-  output_name = "bind-test-v2"
+  output_name = "bind-test-v2-driver"
   test = true
   configs += [
     "//build/config:all_source",
@@ -64,6 +64,6 @@ driver_module("bind-test-driver-v2-driver") {
 }
 
 fuchsia_driver_component("bind-test-driver-v2") {
-  component_name = "bind-test-v2"
+  component_name = "bind-test-v2-driver"
   deps = [ ":bind-test-driver-v2-driver" ]
 }

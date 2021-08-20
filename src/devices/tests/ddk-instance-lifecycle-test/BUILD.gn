@@ -23,7 +23,7 @@ driver_bind_rules("test-lifecycle-bind") {
 }
 
 driver_module("driver_module") {
-  output_name = "ddk-instance-lifecycle-test"
+  output_name = "ddk-instance-lifecycle-test-driver"
 
   testonly = true
   sources = [
@@ -48,7 +48,7 @@ driver_module("driver_module") {
 
 fuchsia_driver_component("driver") {
   testonly = true
-  component_name = "ddk-instance-lifecycle-test"
+  component_name = "ddk-instance-lifecycle-test-driver"
   deps = [ ":driver_module" ]
 }
 

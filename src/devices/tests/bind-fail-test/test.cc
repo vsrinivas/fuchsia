@@ -18,7 +18,7 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 
 TEST(BindFailTest, BindFail) {
-  const char kDriver[] = "/boot/driver/bind-fail-test.so";
+  const char kDriver[] = "/boot/driver/bind-fail-test-driver.so";
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";

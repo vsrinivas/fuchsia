@@ -17,7 +17,7 @@
 
 const std::string kDevPrefix = "/dev/";
 const std::string kDriverTestDir = "/boot/driver/test";
-const std::string kDriverLibname = "bind-test-v2.so";
+const std::string kDriverLibname = "bind-test-v2-driver.so";
 const std::string kChildDeviceName = "child";
 
 using devmgr_integration_test::IsolatedDevmgr;

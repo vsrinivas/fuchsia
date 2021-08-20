@@ -43,7 +43,7 @@ TEST(MetadataTest, AddMetadataLargeInput) {
   size_t large_len = 1024u * 16;
   auto large = std::make_unique<char[]>(large_len);
   zx_status_t status = device_add_metadata(ddk_test_dev, 1, large.get(), large_len);
-  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "device_add_metadata shoud return ZX_ERR_INVALID_ARGS");
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "device_add_metadata should return ZX_ERR_INVALID_ARGS");
 }
 
 TEST(MetadataTest, PublishMetadata) {
