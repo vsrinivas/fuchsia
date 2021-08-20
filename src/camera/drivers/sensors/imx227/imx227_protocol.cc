@@ -58,11 +58,11 @@ zx_status_t Imx227Device::CameraSensor2GetAvailableModes(operating_mode_t* out_m
   if (modes_count > available_modes.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
-
-  for (size_t i = 0; i < available_modes.size(); i++) {
+  auto modes_to_copy = std::min(available_modes.size(), modes_count);
+  for (size_t i = 0; i < modes_to_copy; i++) {
     out_modes_list[i] = available_modes[i];
   }
-  *out_modes_actual = available_modes.size();
+  *out_modes_actual = modes_to_copy;
   return ZX_OK;
 }
 
