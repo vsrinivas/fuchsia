@@ -118,6 +118,7 @@ void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media:
 void AudioCoreImpl::LoadDefaults() {
   TRACE_DURATION("audio", "AudioCoreImpl::LoadDefaults");
   auto policy = PolicyLoader::LoadPolicy();
+  context_.device_router().SetIdlePowerOptionsFromPolicy(policy.idle_power_options());
   context_.audio_admin().SetInteractionsFromAudioPolicy(std::move(policy));
 }
 

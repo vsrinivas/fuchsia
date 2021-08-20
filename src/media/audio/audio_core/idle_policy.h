@@ -9,7 +9,9 @@
 
 #include "lib/zx/time.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/audio_admin.h"
+#include "src/media/audio/audio_core/audio_policy.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 
@@ -17,26 +19,11 @@ namespace media::audio {
 
 class AudioDevice;
 
-class IdlePolicy : public AudioAdmin::ActiveStreamCountReporter, public DeviceRouter {
+class IdlePolicy : public ActiveStreamCountReporter, public DeviceRouter {
  public:
-  // To save power, disable outputs when there are no active streams flowing to them.
-  static constexpr bool kDisableOutputChannelsOnIdle = true;
-  // When a device is added, immediately start an idle countdown in case it isn't used.
-  static constexpr bool kSetInitialIdleCountdownWhenConfigured = true;
-  // If multiple output channels are ultrasound-capable, only the first one need be enabled.
-  static constexpr bool kOnlyEnableFirstUltrasonicChannel = true;
-  static_assert(kDisableOutputChannelsOnIdle || !kSetInitialIdleCountdownWhenConfigured,
-                "Cannot set kSetInitialIdleCountdownWhenConfigured without "
-                "kDisableOutputChannelsOnIdle (device would be incapable of reawakening)");
-
-  // TODO(fxbug.dev/82408): extract these two values to a policy layer or static config.
-  // Wait for a period of inactivity before disabling (slow to disable; fast to reenable).
-  static constexpr zx::duration kOutputChannelsIdleCountdown = zx::sec(5);
-  // By default, power-down outputs if they aren't used in the first 2 minutes.
-  static constexpr zx::duration kInitialIdleCountdown = zx::min(2);
-
   // Informational logging for various aspects of the idle power-conservation mechanism
   static constexpr bool kLogChannelFrequencyRanges = false;
+  static constexpr bool kLogStaticConfigValues = true;
   static constexpr bool kLogIdlePolicyCounts = false;
   static constexpr bool kLogIdleTimers = false;
   static constexpr bool kLogSetActiveChannelsSupport = false;
@@ -53,6 +40,26 @@ class IdlePolicy : public AudioAdmin::ActiveStreamCountReporter, public DeviceRo
   // DeviceRouter implementation
   void AddDeviceToRoutes(AudioDevice* device) final FXL_LOCKS_EXCLUDED(idle_state_mutex_);
   void RemoveDeviceFromRoutes(AudioDevice* device) final FXL_LOCKS_EXCLUDED(idle_state_mutex_);
+  void SetIdlePowerOptionsFromPolicy(AudioPolicy::IdlePowerOptions options) override {
+    idle_countdown_duration_ = options.idle_countdown_duration;
+    startup_idle_countdown_duration_ = options.startup_idle_countdown_duration;
+    use_all_ultrasonic_channels_ = options.use_all_ultrasonic_channels;
+    if constexpr (kLogStaticConfigValues) {
+      FX_LOGS(INFO) << "idle_countdown_duration: "
+                    << idle_countdown_duration_.value_or(zx::duration(-1)).get()
+                    << ", startup_idle_countdown_duration: "
+                    << startup_idle_countdown_duration_.value_or(zx::duration(-1)).get()
+                    << ", use_all_ultrasonic_channels: " << use_all_ultrasonic_channels_;
+    }
+  }
+
+  static inline std::optional<zx::duration> idle_countdown_duration() {
+    return idle_countdown_duration_;
+  }
+  static inline std::optional<zx::duration> startup_idle_countdown_duration() {
+    return startup_idle_countdown_duration_;
+  }
+  static inline bool use_all_ultrasonic_channels() { return use_all_ultrasonic_channels_; }
 
  private:
   enum RoutingScope {
@@ -75,10 +82,21 @@ class IdlePolicy : public AudioAdmin::ActiveStreamCountReporter, public DeviceRo
   Context* context_;
 
   StreamUsageMask active_render_usages_ FXL_GUARDED_BY(idle_state_mutex_);
-  std::unordered_set<AudioDevice*> ultrasonic_devices_before_device_change_
-      FXL_GUARDED_BY(idle_state_mutex_);
   std::unordered_set<AudioDevice*> audible_devices_before_device_change_
       FXL_GUARDED_BY(idle_state_mutex_);
+  std::unordered_set<AudioDevice*> ultrasonic_devices_before_device_change_
+      FXL_GUARDED_BY(idle_state_mutex_);
+
+  // If this value is nullopt, the entire "power-down idle outputs" feature is disabled.
+  static std::optional<zx::duration> idle_countdown_duration_;
+
+  // Outputs are enabled at driver-start. When this value is nullopt, outputs remain enabled and
+  // ready indefinitely, until they are targeted by a render stream.
+  static std::optional<zx::duration> startup_idle_countdown_duration_;
+
+  // If true, all ultrasonic-capable channels will be enabled/disabled as an intact set.
+  // Else, ultrasonic content requires only the FIRST ultrasonic-capable channel to be enabled.
+  static bool use_all_ultrasonic_channels_;
 };
 
 }  // namespace media::audio

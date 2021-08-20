@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/lib/test/null_audio_capturer.h"
@@ -66,7 +67,7 @@ class MockActivityDispatcher : public AudioAdmin::ActivityDispatcher {
   std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> last_dispatched_capture_activity_;
 };
 
-class MockActiveStreamCountReporter : public AudioAdmin::ActiveStreamCountReporter {
+class MockActiveStreamCountReporter : public ActiveStreamCountReporter {
  public:
   MockActiveStreamCountReporter() {
     render_stream_counts_.fill(0);

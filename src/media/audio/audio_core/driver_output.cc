@@ -504,13 +504,6 @@ void DriverOutput::OnDriverConfigComplete() {
   audible_enabled_ = supports_audible_;
   ultrasonic_enabled_ = supports_ultrasonic_;
 
-  if constexpr (IdlePolicy::kSetInitialIdleCountdownWhenConfigured) {
-    StartCountdownToDisableAudible(IdlePolicy::kInitialIdleCountdown);
-    StartCountdownToDisableUltrasonic(IdlePolicy::kInitialIdleCountdown);
-  } else {
-    FX_LOGS(WARNING) << __FUNCTION__ << " not starting idle countdowns (policy disabled)";
-  }
-
   // Success
   state_ = State::Starting;
   cleanup.cancel();
@@ -570,6 +563,15 @@ void DriverOutput::OnDriverStartComplete() {
 
   reporter().StartSession(zx::clock::get_monotonic());
   state_ = State::Started;
+
+  // Once we are Started, begin the device-startup idle countdown
+  if (IdlePolicy::startup_idle_countdown_duration().has_value()) {
+    StartCountdownToDisableAudible(*IdlePolicy::startup_idle_countdown_duration());
+    StartCountdownToDisableUltrasonic(*IdlePolicy::startup_idle_countdown_duration());
+  } else {
+    FX_LOGS(WARNING) << __FUNCTION__ << " not starting idle countdowns (policy disabled)";
+  }
+
   Process();
 }
 
@@ -739,7 +741,7 @@ uint64_t DriverOutput::UpdateActiveChannels() {
         (ultrasonic_needed && channel_config_[channel_index].IncludesUltrasonic())) {
       active_channel_mask |= 1 << channel_index;
 
-      if constexpr (IdlePolicy::kOnlyEnableFirstUltrasonicChannel) {
+      if (!IdlePolicy::use_all_ultrasonic_channels()) {
         // Configure only the first channel that satisfies ultrasonic; clear the others.
         if (channel_config_[channel_index].IncludesUltrasonic()) {
           ultrasonic_needed = false;

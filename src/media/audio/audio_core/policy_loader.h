@@ -11,17 +11,19 @@
 
 #include "src/media/audio/audio_core/audio_policy.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class PolicyLoader {
  public:
   static AudioPolicy LoadPolicy();
 
   static fpromise::result<AudioPolicy> ParseConfig(const char* file_body);
+
+ private:
+  static bool ParseIdlePowerOptions(rapidjson::Document& doc,
+                                    AudioPolicy::IdlePowerOptions& options);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_POLICY_LOADER_H_

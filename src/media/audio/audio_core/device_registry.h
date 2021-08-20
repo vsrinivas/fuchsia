@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/audio_policy.h"
+
 namespace media::audio {
 
 class AudioDevice;
@@ -42,6 +44,8 @@ class DeviceRegistry {
 class DeviceRouter {
  public:
   // To be overridden by child implementations
+  virtual void SetIdlePowerOptionsFromPolicy(AudioPolicy::IdlePowerOptions) = 0;
+
   // A device is ready to be routed -- add it to the route graph as appropriate.
   virtual void AddDeviceToRoutes(AudioDevice* device) = 0;
 

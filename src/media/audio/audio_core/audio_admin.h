@@ -13,12 +13,12 @@
 #include <unordered_set>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/policy_loader.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class StreamVolumeManager;
 
@@ -52,15 +52,6 @@ class AudioAdmin {
     using CaptureActivity = std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT>;
     virtual void OnCaptureActivityChanged(
         std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity) = 0;
-  };
-
-  // An interface by which |AudioAdmin| reports changes in active stream counts, by Usage. This
-  // includes non-FIDL usages such as ULTRASOUND.
-  class ActiveStreamCountReporter {
-   public:
-    // To be overridden by child implementations
-    virtual void OnActiveRenderCountChanged(RenderUsage usage, uint32_t active_count) {}
-    virtual void OnActiveCaptureCountChanged(CaptureUsage usage, uint32_t active_count) {}
   };
 
   static constexpr BehaviorGain kDefaultGainBehavior = {
@@ -187,7 +178,6 @@ class AudioAdmin {
       active_streams_capture_[kStreamCaptureUsageCount] FXL_GUARDED_BY(fidl_thread_checker_);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_ADMIN_H_

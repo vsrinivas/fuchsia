@@ -10,6 +10,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
 
+#include "src/media/audio/audio_core/active_stream_count_reporter.h"
+#include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/clock/audio_clock_factory.h"
@@ -56,6 +58,8 @@ class Context {
   virtual const ProcessConfig& process_config() const = 0;
   virtual sys::ComponentContext& component_context() = 0;
   virtual AudioOutput* throttle_output() const = 0;
+  virtual DeviceRouter& device_router() = 0;
+  virtual ActiveStreamCountReporter& active_stream_count_reporter() = 0;
 
  protected:
   Context() = default;

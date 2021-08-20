@@ -48,6 +48,8 @@ class RouteGraph : public DeviceRouter {
 
   // DeviceRouter implementation
   //
+  void SetIdlePowerOptionsFromPolicy(AudioPolicy::IdlePowerOptions options) override {}
+
   // Adds an |AudioInput| or |AudioOutput| to the route graph. An audio input may be connected to
   // transmit samples to an |AudioCapturer|; an audio output receives samples from an
   // |AudioRenderer|.

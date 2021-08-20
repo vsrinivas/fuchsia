@@ -43,6 +43,7 @@ audio_core_package("audio_core") {
 
 source_set("audio_core_lib") {
   sources = [
+    "active_stream_count_reporter.h",
     "activity_dispatcher.cc",
     "activity_dispatcher.h",
     "audio_admin.cc",

@@ -9,6 +9,8 @@
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <string>
+
 #include <fbl/unique_fd.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/ostreamwrapper.h>
@@ -23,6 +25,10 @@ namespace media::audio {
 namespace {
 static constexpr size_t kMaxSettingFileSize = (64 << 10);
 static const std::string kPolicyPath = "/config/data/audio_policy.json";
+
+static const std::string kIdleCountdownMsKey = "idle_countdown_milliseconds";
+static const std::string kStartupCountdownMsKey = "startup_idle_countdown_milliseconds";
+static const std::string kUltrasonicChannelsKey = "use_all_ultrasonic_channels";
 
 std::optional<fuchsia::media::AudioRenderUsage> JsonToRenderUsage(const rapidjson::Value& usage) {
   static_assert(fuchsia::media::RENDER_USAGE_COUNT == 5,
@@ -183,9 +189,39 @@ fpromise::result<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
     }
   }
 
-  FX_LOGS(INFO) << "Successfully loaded " << rules.size() << " rules.";
+  AudioPolicy::IdlePowerOptions options;
+  if (!ParseIdlePowerOptions(doc, options)) {
+    return fpromise::error();
+  }
 
-  return fpromise::ok(AudioPolicy{std::move(rules)});
+  FX_LOGS(INFO) << "Successfully loaded " << rules.size() << " rules, plus policy options";
+
+  return fpromise::ok(AudioPolicy{std::move(rules), options});
+}
+
+bool PolicyLoader::ParseIdlePowerOptions(rapidjson::Document& doc,
+                                         AudioPolicy::IdlePowerOptions& options) {
+  if (!doc.HasMember(kIdleCountdownMsKey)) {
+    FX_LOGS(INFO) << "'" << kIdleCountdownMsKey << "' is missing; not enacting idle-power policy";
+    if (doc.HasMember(kStartupCountdownMsKey)) {
+      FX_LOGS(WARNING) << "'" << kStartupCountdownMsKey << "' will be ignored";
+    }
+    if (doc.HasMember(kUltrasonicChannelsKey)) {
+      FX_LOGS(WARNING) << "'" << kUltrasonicChannelsKey << "' will be ignored";
+    }
+    return true;
+  }
+  options.idle_countdown_duration = zx::msec(doc[kIdleCountdownMsKey].GetInt64());
+
+  if (doc.HasMember(kStartupCountdownMsKey)) {
+    options.startup_idle_countdown_duration = zx::msec(doc[kStartupCountdownMsKey].GetInt64());
+  }
+
+  if (doc.HasMember(kUltrasonicChannelsKey)) {
+    options.use_all_ultrasonic_channels = doc[kUltrasonicChannelsKey].GetBool();
+  }
+
+  return true;
 }
 
 fpromise::result<std::optional<AudioPolicy>> LoadConfigFromFile(const std::string config) {

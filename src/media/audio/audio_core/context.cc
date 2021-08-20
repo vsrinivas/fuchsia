@@ -93,6 +93,8 @@ class ContextImpl : public Context {
   const ProcessConfig& process_config() const override { return process_config_; }
   sys::ComponentContext& component_context() override { return *component_context_; }
   AudioOutput* throttle_output() const override { return throttle_output_; }
+  DeviceRouter& device_router() override { return idle_policy_; }
+  ActiveStreamCountReporter& active_stream_count_reporter() override { return idle_policy_; }
 
  private:
   std::unique_ptr<ThreadingModel> threading_model_;
