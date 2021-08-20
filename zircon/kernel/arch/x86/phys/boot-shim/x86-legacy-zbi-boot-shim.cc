@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/boot-shim/boot-shim.h>
+#include <lib/boot-shim/pool-mem-config.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/items/mem_config.h>
 #include <lib/zbitl/view.h>
@@ -13,7 +14,6 @@
 #include <zircon/assert.h>
 
 #include <ktl/algorithm.h>
-#include <ktl/optional.h>
 #include <ktl/string_view.h>
 #include <phys/allocation.h>
 #include <phys/boot-zbi.h>
@@ -32,10 +32,35 @@
 
 namespace {
 
-// Scan the ZBI for one of the old memory table item types.  If we find one,
-// we'll record it and then mark the original item as discarded.
-ktl::optional<zbitl::MemRangeTable> FindLegacyTable(BootZbi::InputZbi zbi) {
-  ktl::optional<zbitl::MemRangeTable> legacy_table;
+using MemConfigItem = boot_shim::PoolMemConfigItem;
+
+using Shim = boot_shim::BootShim<MemConfigItem>;
+
+// Populate a new table from the incoming table.  We can't do dynamic memory
+// allocation yet.  The E820 table format has entries smaller than the modern
+// zbi_mem_range_t entries, so we can't always rewrite the data in place.  So
+// we have to pick a fixed maximum table size and preallocate .bss space.  To
+// keep thing simple, we choose a large limit and do this for all formats, even
+// though we could rewrite other formats in place (or use the modern format as
+// is if we get it) and not have any fixed limit for those cases.
+
+constexpr size_t kMaxMemConfigEntries = 512;
+zbi_mem_range_t gMemConfigBuffer[kMaxMemConfigEntries];
+
+ktl::span<zbi_mem_range_t> GetMemoryRanges(const zbitl::MemRangeTable& table) {
+  const size_t count = table.size();
+  ZX_ASSERT_MSG(count <= ktl::size(gMemConfigBuffer),
+                "legacy table with %zu entries > fixed %zu shim table!", count,
+                ktl::size(gMemConfigBuffer));
+  ktl::span mem_config{gMemConfigBuffer, count};
+  ktl::copy(table.begin(), table.end(), mem_config.begin());
+  return mem_config;
+}
+
+// Scan the ZBI for any of the memory table item types, old or new.  If we find
+// one, we'll record it and then mark the original item as discarded.
+zbitl::MemRangeTable FindIncomingMemoryTable(BootZbi::InputZbi zbi) {
+  zbitl::MemRangeTable table;
 
   cpp20::span<ktl::byte> mutable_zbi{
       const_cast<ktl::byte*>(zbi.storage().data()),
@@ -44,58 +69,54 @@ ktl::optional<zbitl::MemRangeTable> FindLegacyTable(BootZbi::InputZbi zbi) {
 
   zbitl::View scan_zbi(mutable_zbi);
   for (auto it = scan_zbi.begin(); it != scan_zbi.end(); ++it) {
-    if (it->header->type == ZBI_TYPE_E820_TABLE || it->header->type == ZBI_TYPE_EFI_MEMORY_MAP) {
-      auto table = zbitl::MemRangeTable::FromSpan(it->header->type, it->payload);
-      if (table.is_error()) {
-        ktl::string_view type = zbitl::TypeName(it->header->type);
-        printf("%s: Bad legacy %.*s item: %.*s\n", Symbolize::kProgramName_,
-               static_cast<int>(type.size()), type.data(),
-               static_cast<int>(table.error_value().size()), table.error_value().data());
-      } else {
-        legacy_table = table.value();
-        auto result = scan_zbi.EditHeader(it, {.type = ZBI_TYPE_DISCARD});
-        ZX_ASSERT(result.is_ok());
-      }
+    switch (it->header->type) {
+      case ZBI_TYPE_MEM_CONFIG:
+      case ZBI_TYPE_E820_TABLE:
+      case ZBI_TYPE_EFI_MEMORY_MAP:
+        break;
+      default:
+        continue;
+    }
+    auto result = zbitl::MemRangeTable::FromSpan(it->header->type, it->payload);
+    if (result.is_error()) {
+      ktl::string_view type = zbitl::TypeName(it->header->type);
+      printf("%s: Bad legacy %.*s item: %.*s\n", Symbolize::kProgramName_,
+             static_cast<int>(type.size()), type.data(),
+             static_cast<int>(result.error_value().size()), result.error_value().data());
+    } else {
+      table = result.value();
+      auto edit_result = scan_zbi.EditHeader(it, {.type = ZBI_TYPE_DISCARD});
+      ZX_ASSERT(edit_result.is_ok());
     }
   }
   scan_zbi.ignore_error();
 
-  return legacy_table;
+  return table;
+}
+
+ktl::span<zbi_mem_range_t> GetZbiMemoryRanges(BootZbi::InputZbi input_zbi) {
+  return GetMemoryRanges(FindIncomingMemoryTable(input_zbi));
+}
+
+zbitl::ByteView GetInputZbi(void* zbi) {
+  return zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi));
 }
 
 }  // namespace
 
-using MemConfigItem = boot_shim::SingleItem<ZBI_TYPE_MEM_CONFIG>;
-using Shim = boot_shim::BootShim<MemConfigItem>;
-
 const char Symbolize::kProgramName_[] = "x86-legacy-zbi-boot-shim";
 
 void ZbiMain(void* zbi, arch::EarlyTicks boot_ticks) {
-  BootZbi::InputZbi input_zbi(zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi)));
+  BootZbi::InputZbi input_zbi(GetInputZbi(zbi));
 
-  ktl::optional<zbitl::MemRangeTable> legacy_table = FindLegacyTable(input_zbi);
+  ZbiInitMemory(zbi, GetZbiMemoryRanges(input_zbi));
 
   Shim shim(Symbolize::kProgramName_);
+  shim.set_build_id(Symbolize::GetInstance()->BuildIdString());
 
-  if (!legacy_table) {
-    // No legacy table, so there should be a normal ZBI_TYPE_MEM_CONFIG item.
-    InitMemory(zbi);
-  } else {
-    // There was a legacy table rather than a modern table in the ZBI, so
-    // InitMemory won't find it.  Populate a new table from the legacy table.
-    // We can't do dynamic memory allocation yet.  The E820 table format has
-    // entries smaller than zbi_mem_range_t, so we can't rewrite the data in
-    // place.  So we have to pick a fixed maximum table size and preallocate.
-    static zbi_mem_range_t mem_config_buffer[512];
-    const size_t count = legacy_table->size();
-    ZX_ASSERT_MSG(count <= ktl::size(mem_config_buffer),
-                  "legacy table with %zu entries > fixed %zu shim table!", count,
-                  ktl::size(mem_config_buffer));
-    ktl::span mem_config{mem_config_buffer, count};
-    ktl::copy(legacy_table->begin(), legacy_table->end(), mem_config.begin());
-    ZbiInitMemory(zbi, mem_config);
-    shim.Get<MemConfigItem>().set_payload(ktl::as_bytes(mem_config));
-  }
+  // The pool knows all the memory details, so populate the new ZBI item that
+  // way.  The incoming ZBI items in whatever format have been discarded.
+  shim.Get<MemConfigItem>().Init(Allocation::GetPool());
 
   BootZbi boot;
   if (shim.Check("Not a bootable ZBI", boot.Init(input_zbi)) &&
