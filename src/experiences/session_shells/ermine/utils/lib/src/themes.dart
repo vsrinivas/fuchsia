@@ -11,11 +11,11 @@ class AppTheme {
   static ThemeData get lightTheme => ThemeData(
         colorScheme: ColorScheme.light(
           // Used by controls.
-          primary: Color(0xff283238),
+          primary: Color(0xff0a7965),
           // Used by [ListTile]'s trailing text.
           secondary: Colors.grey[800]!,
           // Used by control backgrounds.
-          background: Color(0xff283238).withOpacity(0.3),
+          background: Color(0xff0a7965).withOpacity(0.3),
         ),
         fontFamily: 'Roboto Mono',
         // Used for the shell background.
@@ -28,9 +28,9 @@ class AppTheme {
         hoverColor: Colors.black.withOpacity(0.15),
         disabledColor: Colors.grey[500],
         // Used for error signals and messages.
-        errorColor: Colors.red[600],
+        errorColor: Color(0xffc7241f),
         // Used by Switch
-        toggleableActiveColor: Color(0xff283238),
+        toggleableActiveColor: Color(0xff0a7965),
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -96,11 +96,11 @@ class AppTheme {
   static ThemeData get darkTheme => ThemeData(
         colorScheme: ColorScheme.dark(
           // Used by control backgrounds.
-          primary: Color(0xfff1f3f4),
+          primary: Color(0xff13b294),
           // Used by [ListTile]'s trailing text.
           secondary: Colors.grey[400]!,
           // Used by control backgrounds.
-          background: Color(0xfff1f3f4).withOpacity(0.3),
+          background: Color(0xff13b294).withOpacity(0.3),
         ),
         fontFamily: 'Roboto Mono',
         // Used for the shell background.
@@ -113,9 +113,9 @@ class AppTheme {
         hoverColor: Colors.white.withOpacity(0.15),
         disabledColor: Colors.grey[700],
         // Used for error signals and messages.
-        errorColor: Colors.red[500],
+        errorColor: Color(0xffe25344),
         // Used by Switch.
-        toggleableActiveColor: Color(0xfff1f3f4),
+        toggleableActiveColor: Color(0xff13b294),
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
