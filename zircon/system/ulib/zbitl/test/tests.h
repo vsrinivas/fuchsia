@@ -36,6 +36,7 @@ enum class TestDataZbiType {
   kBadCrcItem,
   kMultipleSmallItems,
   kSecondItemOnPageBoundary,
+  kBootfs,
 };
 
 // Parameterizes the behavior of copying a single item.

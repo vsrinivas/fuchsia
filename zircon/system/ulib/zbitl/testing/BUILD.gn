@@ -13,9 +13,10 @@ fuzzer_package("zbitl-fuzzers") {
   fuzz_host = true
   cpp_fuzzers = [
     ":append-fuzzer",
+    ":bootfs-iteration-fuzzer",
     ":copy-fuzzer",
-    ":iteration-fuzzer",
     ":mem-config-fuzzer",
+    ":view-iteration-fuzzer",
   ]
 }
 
@@ -35,12 +36,17 @@ cpp_fuzzer("copy-fuzzer") {
   }
 }
 
-cpp_fuzzer("iteration-fuzzer") {
-  sources = [ "iteration-fuzzer.cc" ]
+cpp_fuzzer("bootfs-iteration-fuzzer") {
+  sources = [ "bootfs-iteration-fuzzer.cc" ]
   deps = [ ".." ]
 }
 
 cpp_fuzzer("mem-config-fuzzer") {
   sources = [ "mem-config-fuzzer.cc" ]
+  deps = [ ".." ]
+}
+
+cpp_fuzzer("view-iteration-fuzzer") {
+  sources = [ "view-iteration-fuzzer.cc" ]
   deps = [ ".." ]
 }

@@ -6,6 +6,7 @@
 #define LIB_ZBITL_ERROR_STDIO_H_
 
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 #include <string_view>
@@ -17,7 +18,7 @@ namespace zbitl {
 
 // Prints an error message from a View `Error` value.
 template <typename ViewError>
-void PrintViewError(const ViewError& error, FILE* f = stdout) {
+inline void PrintViewError(const ViewError& error, FILE* f = stdout) {
   fprintf(f, "%.*s at offset %" PRIu32, static_cast<int>(error.zbi_error.size()),
           error.zbi_error.data(), error.item_offset);
   if (error.storage_error) {
@@ -30,7 +31,7 @@ void PrintViewError(const ViewError& error, FILE* f = stdout) {
 
 // Prints an error message from a View `CopyError` value.
 template <typename ViewCopyError>
-void PrintViewCopyError(const ViewCopyError& error, FILE* f = stdout) {
+inline void PrintViewCopyError(const ViewCopyError& error, FILE* f = stdout) {
   fprintf(f, "%.*s", static_cast<int>(error.zbi_error.size()), error.zbi_error.data());
   if (error.read_error) {
     auto read_error = ViewCopyError::read_error_string(error.read_error.value());
@@ -44,6 +45,36 @@ void PrintViewCopyError(const ViewCopyError& error, FILE* f = stdout) {
             static_cast<int>(write_error_sv.size()), write_error_sv.data());
   }
   fprintf(f, "\n");  // To flush the buffer.
+}
+
+// Prints an error message from a BootfsView `Error` value, where Printer is a
+// callable type with a printf-like signature.
+template <typename BootfsError, typename Printer>
+inline void PrintBootfsError(const BootfsError& error, Printer&& printer) {
+  printer("%.*s", static_cast<int>(error.reason.size()), error.reason.data());
+  if (error.entry_offset > 0) {
+    printer(": at dirent offset %" PRIu32, error.entry_offset);
+  }
+  if (!error.filename.empty()) {
+    printer(": with filename \"%.*s\"", static_cast<int>(error.filename.size()),
+            error.filename.data());
+  }
+  if (error.storage_error) {
+    auto storage_error = BootfsError::storage_error_string(error.storage_error.value());
+    std::string_view storage_error_sv = storage_error;
+    printer(": %.*s", static_cast<int>(storage_error_sv.size()), storage_error_sv.data());
+  }
+  printer("\n");  // To flush the buffer.
+}
+
+template <typename BootfsError>
+inline void PrintBootfsError(const BootfsError& error, FILE* f = stdout) {
+  PrintBootfsError(error, [f](const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(f, fmt, args);
+    va_end(args);
+  });
 }
 
 }  // namespace zbitl

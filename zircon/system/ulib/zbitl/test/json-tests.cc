@@ -52,4 +52,6 @@ TEST(ZbitlJsonTests, SecondItemOnPageBoundaryZbi) {
   ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kSecondItemOnPageBoundary));
 }
 
+TEST(ZbitlJsonTests, BootfsZbi) { ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kBootfs)); }
+
 }  // namespace

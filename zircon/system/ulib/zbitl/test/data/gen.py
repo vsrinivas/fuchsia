@@ -11,6 +11,7 @@ import subprocess
 ZBI_ALIGNMENT = 8
 DEFAULT_ITEM_TYPE = "IMAGE_ARGS"
 RAMDISK_ITEM_TYPE = "RAMDISK"
+BOOTFS_ITEM_TYPE = "BOOTFS"
 
 TestDataZbi = collections.namedtuple(
     "TestDataZbi",
@@ -22,8 +23,9 @@ TestDataZbi = collections.namedtuple(
         # (str): The type of the ZBI items represented by the provided
         # payloads.
         "type",
+        "files",
     ],
-    defaults=["", [], DEFAULT_ITEM_TYPE],
+    defaults=["", [], DEFAULT_ITEM_TYPE, None],
 )
 
 TEST_DATA_ZBIS = (
@@ -59,6 +61,8 @@ TEST_DATA_ZBIS = (
     ),
     # The resulting ZBI will be modified below to indeed give it a bad CRC value.
     TestDataZbi(name="bad-crc-item", payloads=["hello world"]),
+    TestDataZbi(
+        name="bootfs", type=BOOTFS_ITEM_TYPE, files="files/manifest.txt"),
 )
 
 
@@ -69,15 +73,20 @@ def main():
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    zbi_tool = args.zbi
+    zbi_tool = os.path.realpath(args.zbi)
     for zbi in TEST_DATA_ZBIS:
         assert zbi.name
         output = "%s.zbi" % os.path.join(script_dir, zbi.name)
         json_output = "%s.json" % output
-        cmd = [zbi_tool, "--output", output, "--json-output", json_output]
+        cmd = [
+            zbi_tool, "--output", output, "--json-output", json_output,
+            "--type", zbi.type
+        ]
         for payload in zbi.payloads:
-            cmd.extend(["--type", zbi.type, "--entry", payload])
-        subprocess.run(cmd, check=True)
+            cmd.extend(["--entry", payload])
+        if zbi.files:
+            cmd.extend(["--files", os.path.join(script_dir, zbi.files)])
+        subprocess.run(cmd, cwd=script_dir, check=True)
 
         # Fill in the last |ZBI_ALIGNMENT|-many bytes, as that is sure to
         # affect the payload (and so invalidate the CRC).

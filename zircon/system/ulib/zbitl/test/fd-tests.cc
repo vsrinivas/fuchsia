@@ -4,6 +4,7 @@
 
 #include "fd-tests.h"
 
+#include "bootfs-tests.h"
 #include "tests.h"
 
 namespace {
@@ -17,5 +18,9 @@ TEST_ITERATION(ZbitlViewFdTests, FdTestTraits)
 TEST_MUTATION(ZbitlViewFdTests, FdTestTraits)
 
 TEST(ZbitlImageFdTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<FdTestTraits>()); }
+
+TEST(ZbitlBootfsFdTests, Iteration) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<FdTestTraits>());
+}
 
 }  // namespace

@@ -6,6 +6,7 @@
 
 #include <limits>
 
+#include "bootfs-tests.h"
 #include "tests.h"
 
 namespace {
@@ -111,6 +112,10 @@ TEST(StorageFromRawHeader, BadHeader) {
   zbitl::ByteView view = zbitl::StorageFromRawHeader(&header);
   EXPECT_EQ(view.size(), sizeof(zbi_header_t));
   EXPECT_EQ(view.data(), reinterpret_cast<const std::byte*>(&header));
+}
+
+TEST(ZbitlBootfsFblByteArrayTests, Iteration) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<FblByteArrayTestTraits>());
 }
 
 }  // namespace

@@ -7,6 +7,7 @@
 #include <string>
 #include <tuple>
 
+#include "bootfs-tests.h"
 #include "tests.h"
 
 namespace {
@@ -35,11 +36,19 @@ TEST(ZbitlImageByteSpanTests, Appending) {
   ASSERT_NO_FATAL_FAILURE(TestAppending<ByteSpanTestTraits>());
 }
 
+TEST(ZbitlBootfsByteSpanTests, Iteration) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<ByteSpanTestTraits>());
+}
+
 TEST(ZbitlViewStringTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<StringTestTraits>());
 }
 
 TEST_ITERATION(ZbitlViewStringTests, StringTestTraits)
+
+TEST(ZbitlBootfsStringTests, Iteration) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<StringTestTraits>());
+}
 
 TEST(ZbitlViewStringTests, TooSmallForNextHeader) {
   // "payload" here refers to that of the entire container.

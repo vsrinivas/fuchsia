@@ -43,6 +43,8 @@ std::string_view ZbiName(TestDataZbiType type) {
       return "multiple-small-items.zbi";
     case TestDataZbiType::kSecondItemOnPageBoundary:
       return "second-item-on-page-boundary.zbi";
+    case TestDataZbiType::kBootfs:
+      return "bootfs.zbi";
   }
 }
 
@@ -76,6 +78,9 @@ void GetExpectedPayloadCrc32(TestDataZbiType type, size_t idx, uint32_t* crc) {
       *crc = crcs[idx];
       break;
     }
+    case TestDataZbiType::kBootfs:
+      *crc = 3259698624;
+      break;
   }
 }
 
@@ -91,6 +96,8 @@ size_t GetExpectedItemType(TestDataZbiType type) {
       return ZBI_TYPE_IMAGE_ARGS;
     case TestDataZbiType::kCompressedItem:
       return ZBI_TYPE_STORAGE_RAMDISK;
+    case TestDataZbiType::kBootfs:
+      return ZBI_TYPE_STORAGE_BOOTFS;
   }
 }
 
@@ -103,6 +110,7 @@ bool ExpectItemsAreCompressed(TestDataZbiType type) {
     case TestDataZbiType::kSecondItemOnPageBoundary:
       return false;
     case TestDataZbiType::kCompressedItem:
+    case TestDataZbiType::kBootfs:
       return true;
   }
 }
@@ -119,6 +127,8 @@ size_t GetExpectedNumberOfItems(TestDataZbiType type) {
       return 10;
     case TestDataZbiType::kSecondItemOnPageBoundary:
       return 2;
+    case TestDataZbiType::kBootfs:
+      return 1;
   }
 }
 
@@ -224,6 +234,9 @@ void GetExpectedPayload(TestDataZbiType type, size_t idx, Bytes* contents) {
       *contents = payloads[idx];
       return;
     }
+    case TestDataZbiType::kBootfs:
+      // This function should not be called for this type.
+      __UNREACHABLE;
   }
 }
 
@@ -372,6 +385,21 @@ std::string GetExpectedJson(TestDataZbiType type) {
       "type": "IMAGE_ARGS",
       "size": 32,
       "crc32": 3746526874
+    }
+  ]
+})""";
+    case TestDataZbiType::kBootfs:
+      return R"""({
+  "offset": 0,
+  "type": "CONTAINER",
+  "size": 368,
+  "items": [
+    {
+      "offset": 32,
+      "type": "BOOTFS",
+      "size": 336,
+      "uncompressed_size": 16384,
+      "crc32": 693243498
     }
   ]
 })""";

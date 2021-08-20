@@ -22,6 +22,7 @@ test_data_zbis = [
   "data/bad-crc-item.zbi",
   "data/multiple-small-items.zbi",
   "data/second-item-on-page-boundary.zbi",
+  "data/bootfs.zbi",
 ]
 
 if (is_host) {

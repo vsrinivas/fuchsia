@@ -1,0 +1,3 @@
+A.txt=files/A.txt
+nested/B.txt=files/B.txt
+nested/again/C.txt=files/C.txt

@@ -1,0 +1,28 @@
+[
+    {
+        "contents": [
+            {
+                "length": 176,
+                "name": "A.txt",
+                "offset": 4096,
+                "size": 4096
+            },
+            {
+                "length": 131,
+                "name": "nested/B.txt",
+                "offset": 8192,
+                "size": 4096
+            },
+            {
+                "length": 47,
+                "name": "nested/again/C.txt",
+                "offset": 12288,
+                "size": 4096
+            }
+        ],
+        "crc32": 1810396353,
+        "size": 16384,
+        "type": "BOOTFS",
+        "uncompressed_size": 0
+    }
+]

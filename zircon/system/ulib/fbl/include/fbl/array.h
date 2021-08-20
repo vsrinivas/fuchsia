@@ -37,6 +37,8 @@ class __OWNER(T) Array {
 
   size_t size() const { return count_; }
 
+  bool empty() const { return size() == 0; }
+
   ~Array() { reset(); }
 
   Array& operator=(Array&& o) {

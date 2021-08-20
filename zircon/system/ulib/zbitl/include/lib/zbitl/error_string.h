@@ -43,6 +43,27 @@ std::string ViewCopyErrorString(const ViewCopyError& error) {
   return s;
 }
 
+// Returns an error string from a Bootfs `Error` value.
+template <typename BootfsError>
+std::string BootfsErrorString(const BootfsError& error) {
+  std::string s{error.reason};
+
+  if (error.entry_offset > 0) {
+    s += ": at dirent offset ";
+    s += std::to_string(error.entry_offset);
+  }
+  if (!error.filename.empty()) {
+    s += ": with filename \"";
+    s += error.filename;
+    s += "\"";
+  }
+  if (error.storage_error) {
+    s += ": ";
+    s += BootfsError::storage_error_string(error.storage_error.value());
+  }
+  return s;
+}
+
 }  // namespace zbitl
 
 #endif  // LIB_ZBITL_ERROR_STRING_H_
