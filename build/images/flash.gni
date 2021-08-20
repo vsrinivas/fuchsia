@@ -1,0 +1,157 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/args.gni")
+
+recovery_is_zedboot =
+    get_label_info(recovery_label, "label_with_toolchain") ==
+    get_label_info("//build/images/zedboot", "label_with_toolchain")
+
+generate_flash_script_path = "//build/images/generate_flash_script.sh"
+
+flash_manifest_version = 3
+
+image_suffix = "zbi"
+if (custom_signing_script != "" || use_vboot) {
+  image_suffix = "zbi.signed"
+}
+
+image = "$root_out_dir/fuchsia.${image_suffix}"
+vbmeta = "$root_out_dir/fuchsia.vbmeta"
+
+recovery_image = "$root_out_dir/recovery.zbi"
+recovery_vbmeta = "$root_out_dir/recovery.vbmeta"
+if (recovery_is_zedboot) {
+  recovery_image = "$root_out_dir/zedboot.${image_suffix}"
+  recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
+}
+
+# A list of partitions for the flash json manifest that will be
+# generated.  The first item should be the partition name and the
+# second should be the path to the image for the partition.
+parts = [
+  {
+    name = zircon_a_partition
+    path = rebase_path(image, root_build_dir)
+  },
+  {
+    name = zircon_b_partition
+    path = rebase_path(image, root_build_dir)
+  },
+  {
+    name = zircon_r_partition
+    path = rebase_path(recovery_image, root_build_dir)
+  },
+  {
+    name = vbmeta_a_partition
+    path = rebase_path(vbmeta, root_build_dir)
+  },
+  {
+    name = vbmeta_b_partition
+    path = rebase_path(vbmeta, root_build_dir)
+  },
+  {
+    name = vbmeta_r_partition
+    path = rebase_path(recovery_vbmeta, root_build_dir)
+  },
+]
+
+recovery_parts = [
+  {
+    name = zircon_a_partition
+    path = rebase_path(recovery_image, root_build_dir)
+  },
+  {
+    name = zircon_b_partition
+    path = rebase_path(recovery_image, root_build_dir)
+  },
+  {
+    name = zircon_r_partition
+    path = rebase_path(recovery_image, root_build_dir)
+  },
+  {
+    name = vbmeta_a_partition
+    path = rebase_path(recovery_vbmeta, root_build_dir)
+  },
+  {
+    name = vbmeta_b_partition
+    path = rebase_path(recovery_vbmeta, root_build_dir)
+  },
+  {
+    name = vbmeta_r_partition
+    path = rebase_path(recovery_vbmeta, root_build_dir)
+  },
+]
+
+archive_image_suffix = "zbi"
+if (custom_signing_script != "") {
+  archive_image_suffix = "signed.zbi.signed"
+}
+
+archive_image = "zircon-a.${archive_image_suffix}"
+archive_vbmeta = "zircon-a.vbmeta"
+
+archive_recovery_image = "zircon-r.zbi"
+if (recovery_is_zedboot) {
+  archive_recovery_image = "zircon-r.${archive_image_suffix}"
+}
+
+archive_recovery_vbmeta = "zircon-r.vbmeta"
+
+# A list of partitions for the flash json manifest that will be
+# generated.  The first item should be the partition name and the
+# second should be the path to the image for the partition.
+archive_parts = [
+  {
+    name = zircon_a_partition
+    path = archive_image
+  },
+  {
+    name = zircon_b_partition
+    path = archive_image
+  },
+  {
+    name = zircon_r_partition
+    path = archive_recovery_image
+  },
+  {
+    name = vbmeta_a_partition
+    path = archive_vbmeta
+  },
+  {
+    name = vbmeta_b_partition
+    path = archive_vbmeta
+  },
+  {
+    name = vbmeta_r_partition
+    path = archive_recovery_vbmeta
+  },
+]
+
+archive_recovery_parts = [
+  {
+    name = zircon_a_partition
+    path = archive_recovery_image
+  },
+  {
+    name = zircon_b_partition
+    path = archive_recovery_image
+  },
+  {
+    name = zircon_r_partition
+    path = archive_recovery_image
+  },
+  {
+    name = vbmeta_a_partition
+    path = archive_recovery_vbmeta
+  },
+  {
+    name = vbmeta_b_partition
+    path = archive_recovery_vbmeta
+  },
+  {
+    name = vbmeta_r_partition
+    path = archive_recovery_vbmeta
+  },
+]

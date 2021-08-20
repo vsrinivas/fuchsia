@@ -11,6 +11,7 @@ import("//build/dist/fini_manifest.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/args.gni")
 import("//build/images/custom_signing.gni")
+import("//build/images/flash.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
 import("//build/images/vbmeta.gni")
@@ -52,10 +53,6 @@ files = {
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
   }
 }
-
-recovery_is_zedboot =
-    get_label_info(recovery_label, "label_with_toolchain") ==
-    get_label_info("//build/images/zedboot", "label_with_toolchain")
 
 # Dependencies for all image targets referenced by paver_targets, i.e., the
 # images needed by the generated pave scripts.
@@ -559,138 +556,65 @@ default_image_deps += [ ":board_tools" ]
 ### Paver and flash scripts, and archives using those images and zedboot's images.
 ###
 
+# TODO(fxbug.dev/82862): Move the construction of the flash archive/manifest
+# into a separate BUILD.gn file.
+flash_script_outputs = [ "$root_out_dir/flash.sh" ]
+
+host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
+flash_script_args = [
+  "--image=" + rebase_path(image, root_build_dir),
+  "--recovery-image=" + rebase_path(recovery_image, root_build_dir),
+  "--output=" + rebase_path(flash_script_outputs[0], root_build_dir),
+  "--zircon-a=${zircon_a_partition}",
+  "--zircon-b=${zircon_b_partition}",
+  "--zircon-r=${zircon_r_partition}",
+  "--vbmeta-a=${vbmeta_a_partition}",
+  "--vbmeta-b=${vbmeta_b_partition}",
+  "--vbmeta-r=${vbmeta_r_partition}",
+  "--active=${active_partition}",
+  "--product=${fastboot_product}",
+  "--pre-erase-flash=${pre_erase_flash}",
+  "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
+]
+if (custom_signing_script != "") {
+  flash_script_args += [ "--signed=true" ]
+}
+flash_script_deps = [ ":fastboot" ]
+
+bootloader_parts = []
+
+foreach(info, firmware_info) {
+  flash_script_args += [ "--firmware=${info.partition}:${info.out_path}" ]
+  flash_script_deps += [ ":${info.name}" ]
+  bootloader_parts += [
+    {
+      name = info.partition
+      path = rebase_path("$root_out_dir/${info.out_path}", root_build_dir)
+    },
+  ]
+}
+if (supports_fastboot_fvm) {
+  flash_script_args += [
+    "--fvm-image=" + rebase_path(files.fvm_fastboot, root_build_dir),
+    "--fvm=${fvm_partition}",
+  ]
+  flash_script_deps += [ labels.images ]
+
+  parts += [
+    {
+      name = fvm_partition
+      path = rebase_path(files.fvm_fastboot, root_build_dir)
+    },
+  ]
+}
+
 action("flash_script") {
   # Required for dependency on testonly firmware image targets.
   testonly = true
-
-  script = "//build/images/generate_flash_script.sh"
-  outputs = [ "$root_out_dir/flash.sh" ]
-
-  if (custom_signing_script != "" || use_vboot) {
-    image_suffix = "zbi.signed"
-  } else {
-    image_suffix = "zbi"
-  }
-  image = "$root_out_dir/fuchsia.${image_suffix}"
-  vbmeta = "$root_out_dir/fuchsia.vbmeta"
-
-  if (recovery_is_zedboot) {
-    recovery_image = "$root_out_dir/zedboot.${image_suffix}"
-    recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
-  } else {
-    recovery_image = "$root_out_dir/recovery.zbi"
-    recovery_vbmeta = "$root_out_dir/recovery.vbmeta"
-  }
-
-  # A list of partitions for the flash json manifest that will be
-  # generated.  The first item should be the partition name and the
-  # second should be the path to the image for the partition.
-  parts = [
-    {
-      name = zircon_a_partition
-      path = rebase_path(image, root_build_dir)
-    },
-    {
-      name = zircon_b_partition
-      path = rebase_path(image, root_build_dir)
-    },
-    {
-      name = zircon_r_partition
-      path = rebase_path(recovery_image, root_build_dir)
-    },
-    {
-      name = vbmeta_a_partition
-      path = rebase_path(vbmeta, root_build_dir)
-    },
-    {
-      name = vbmeta_b_partition
-      path = rebase_path(vbmeta, root_build_dir)
-    },
-    {
-      name = vbmeta_r_partition
-      path = rebase_path(recovery_vbmeta, root_build_dir)
-    },
-  ]
-
-  recovery_parts = [
-    {
-      name = zircon_a_partition
-      path = rebase_path(recovery_image, root_build_dir)
-    },
-    {
-      name = zircon_b_partition
-      path = rebase_path(recovery_image, root_build_dir)
-    },
-    {
-      name = zircon_r_partition
-      path = rebase_path(recovery_image, root_build_dir)
-    },
-    {
-      name = vbmeta_a_partition
-      path = rebase_path(recovery_vbmeta, root_build_dir)
-    },
-    {
-      name = vbmeta_b_partition
-      path = rebase_path(recovery_vbmeta, root_build_dir)
-    },
-    {
-      name = vbmeta_r_partition
-      path = rebase_path(recovery_vbmeta, root_build_dir)
-    },
-  ]
-
-  host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
-  args = [
-    "--image=" + rebase_path(image, root_build_dir),
-    "--recovery-image=" + rebase_path(recovery_image, root_build_dir),
-    "--output=" + rebase_path(outputs[0], root_build_dir),
-    "--zircon-a=${zircon_a_partition}",
-    "--zircon-b=${zircon_b_partition}",
-    "--zircon-r=${zircon_r_partition}",
-    "--vbmeta-a=${vbmeta_a_partition}",
-    "--vbmeta-b=${vbmeta_b_partition}",
-    "--vbmeta-r=${vbmeta_r_partition}",
-    "--active=${active_partition}",
-    "--product=${fastboot_product}",
-    "--pre-erase-flash=${pre_erase_flash}",
-    "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
-  ]
-  if (custom_signing_script != "") {
-    args += [ "--signed=true" ]
-  }
-  deps = [ ":fastboot" ]
-
-  # A list of partitions for the flash json manifest that will be
-  # generated.  The first item should be the partition name and the
-  # second should be the path to the image for the partition. These
-  # are the images flashed for the firmware/bootloader.
-  bootloader_parts = []
-
-  foreach(info, firmware_info) {
-    args += [ "--firmware=${info.partition}:${info.out_path}" ]
-    deps += [ ":${info.name}" ]
-    bootloader_parts += [
-      {
-        name = info.partition
-        path = rebase_path("$root_out_dir/${info.out_path}", root_build_dir)
-      },
-    ]
-  }
-  if (supports_fastboot_fvm) {
-    args += [
-      "--fvm-image=" + rebase_path(files.fvm_fastboot, root_build_dir),
-      "--fvm=${fvm_partition}",
-    ]
-    deps += [ labels.images ]
-
-    parts += [
-      {
-        name = fvm_partition
-        path = rebase_path(files.fvm_fastboot, root_build_dir)
-      },
-    ]
-  }
-
+  script = generate_flash_script_path
+  outputs = flash_script_outputs
+  args = flash_script_args
+  deps = flash_script_deps
   metadata = {
     images = [
       {
@@ -701,39 +625,35 @@ action("flash_script") {
       },
     ]
     image_paths = [ "IMAGE_FLASH_SH=netboot.sh" ]
-    flash_manifest = [
-      {
-        version = 3
-        manifest = {
-          hw_revision = "${board_name}"
-          products = [
-            {
-              name = "recovery"
-              bootloader_partitions = bootloader_parts
-              partitions = recovery_parts
-              oem_files = []
-            },
-            {
-              name = "fuchsia"
-              bootloader_partitions = bootloader_parts
-              partitions = parts
-              oem_files = []
-            },
-
-            # "bootstrap" product is only responsible for flashing any bootstrap
-            # files and the bootloader itself, at which point the device is
-            # ready to be flashed using the standard means.
-            {
-              name = "bootstrap"
-              bootloader_partitions = bootstrap_parts + bootloader_parts
-              partitions = []
-              oem_files = []
-            },
-          ]
-        }
-      },
-    ]
   }
+}
+
+flash_manifest_content = {
+  hw_revision = "${board_name}"
+  products = [
+    {
+      name = "recovery"
+      bootloader_partitions = bootloader_parts
+      partitions = recovery_parts
+      oem_files = []
+    },
+    {
+      name = "fuchsia"
+      bootloader_partitions = bootloader_parts
+      partitions = parts
+      oem_files = []
+    },
+
+    # "bootstrap" product is only responsible for flashing any bootstrap
+    # files and the bootloader itself, at which point the device is
+    # ready to be flashed using the standard means.
+    {
+      name = "bootstrap"
+      bootloader_partitions = bootstrap_parts + bootloader_parts
+      partitions = []
+      oem_files = []
+    },
+  ]
 }
 
 fastboot_manifest_file = "$root_build_dir/flash.json"
@@ -741,8 +661,14 @@ generated_file("fastboot_manifest") {
   testonly = true
   outputs = [ fastboot_manifest_file ]
   output_conversion = "json"
-  data_keys = [ "flash_manifest" ]
   deps = [ ":flash_script" ]
+
+  contents = [
+    {
+      version = flash_manifest_version
+      manifest = flash_manifest_content
+    },
+  ]
 
   metadata = {
     images = [
@@ -759,79 +685,6 @@ generated_file("fastboot_manifest") {
 default_image_deps += [ ":fastboot_manifest" ]
 
 default_image_deps += [ recovery_label ]
-
-if (custom_signing_script != "") {
-  archive_image_suffix = "signed.zbi.signed"
-} else {
-  archive_image_suffix = "zbi"
-}
-archive_image = "zircon-a.${archive_image_suffix}"
-archive_vbmeta = "zircon-a.vbmeta"
-
-if (recovery_is_zedboot) {
-  archive_recovery_image = "zircon-r.${archive_image_suffix}"
-} else {
-  # Archived recovery image alway uses .zbi suffix whether signed or not.
-  archive_recovery_image = "zircon-r.zbi"
-}
-archive_recovery_vbmeta = "zircon-r.vbmeta"
-
-# A list of partitions for the flash json manifest that will be
-# generated.  The first item should be the partition name and the
-# second should be the path to the image for the partition.
-archive_parts = [
-  {
-    name = zircon_a_partition
-    path = archive_image
-  },
-  {
-    name = zircon_b_partition
-    path = archive_image
-  },
-  {
-    name = zircon_r_partition
-    path = archive_recovery_image
-  },
-  {
-    name = vbmeta_a_partition
-    path = archive_vbmeta
-  },
-  {
-    name = vbmeta_b_partition
-    path = archive_vbmeta
-  },
-  {
-    name = vbmeta_r_partition
-    path = archive_recovery_vbmeta
-  },
-]
-
-archive_recovery_parts = [
-  {
-    name = zircon_a_partition
-    path = archive_recovery_image
-  },
-  {
-    name = zircon_b_partition
-    path = archive_recovery_image
-  },
-  {
-    name = zircon_r_partition
-    path = archive_recovery_image
-  },
-  {
-    name = vbmeta_a_partition
-    path = archive_recovery_vbmeta
-  },
-  {
-    name = vbmeta_b_partition
-    path = archive_recovery_vbmeta
-  },
-  {
-    name = vbmeta_r_partition
-    path = archive_recovery_vbmeta
-  },
-]
 
 archive_outputs = [ "$root_out_dir/flash-archive.sh" ]
 archive_args = [
@@ -884,7 +737,7 @@ if (supports_fastboot_fvm) {
 
 action("flash_script_archive") {
   testonly = true
-  script = "//build/images/generate_flash_script.sh"
+  script = generate_flash_script_path
   outputs = archive_outputs
   args = archive_args
   deps = archive_deps
@@ -910,7 +763,7 @@ generated_file("fastboot_manifest_archive") {
   deps = [ ":flash_script_archive" ]
   contents = [
     {
-      version = 3
+      version = flash_manifest_version
       manifest = {
         hw_revision = "${board_name}"
         products = [
@@ -1485,6 +1338,7 @@ if (!bootfs_only) {
       kernel = rebase_path(qemu_kernel_file, root_out_dir)
       disk_images = [ rebase_path(files.fvm_blob_sparse, root_out_dir) ]
     }
+    flash_manifest = flash_manifest_content
   }
 }
 
