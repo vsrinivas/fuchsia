@@ -58,6 +58,9 @@ A blank line is required both before and after the three backticks
 (<code>```</code>). The backticks do not render in the final output.
 However, blank lines within a code block render in the final output.
 
+Note: To ensure compatibility between various markdown flavors, it is recommended to use fenced code
+blocks and avoid indents.
+
 *   {Markdown}
 
     <pre>
