@@ -790,7 +790,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     init_waitqueue_head(&mvm->rx_sync_waitq);
 #endif  // NEEDS_PORTING
 
-  atomic_store(&mvm->queue_sync_counter, 0);
+  atomic_set(&mvm->queue_sync_counter, 0);
 
 #if 0   // NEEDS_PORTING
     SET_IEEE80211_DEV(mvm->hw, mvm->trans->dev);

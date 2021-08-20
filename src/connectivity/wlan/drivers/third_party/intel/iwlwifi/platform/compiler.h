@@ -14,10 +14,6 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
-#if defined(__cplusplus)
-extern "C" {
-#endif  // defined(__cplusplus)
-
 typedef uint32_t __be32;
 typedef uint16_t __be16;
 typedef uint64_t __le64;
@@ -25,6 +21,29 @@ typedef uint32_t __le32;
 typedef uint16_t __le16;
 typedef uint8_t __s8;
 typedef uint8_t __u8;
+
+#if defined(__cplusplus)
+extern "C++" {
+#include <atomic>
+}  // extern "C++"
+#define _Atomic(T) std::atomic<T>
+using std::memory_order_relaxed;
+using std::memory_order_seq_cst;
+#else  // defined(__cplusplus)
+#include <stdatomic.h>
+#endif
+
+typedef struct {
+  _Atomic(int32_t) value;
+} atomic_t;
+
+typedef struct {
+  _Atomic(int64_t) value;
+} atomic64_t;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  // defined(__cplusplus)
 
 #define BIT(x) (1UL << (x))
 
@@ -96,65 +115,96 @@ static inline uint16_t be16_to_cpup(const uint16_t* x) {
 #define ROUND_UP(x, y) ((((x)-1) | __round_mask(x, y)) + 1)
 #define ROUND_DOWN(x, y) ((x) & ~__round_mask(x, y))
 
-typedef struct {
-  int value;
-} atomic_t;
-
-////
-// Inline functions
-////
-static inline int test_bit(long nbits, const volatile unsigned long* addr) {
-  return 1UL & (addr[nbits / BITS_PER_LONG] >> (nbits % BITS_PER_LONG));
+static inline void __set_bit(unsigned long bit, volatile unsigned long* addr) {
+  volatile unsigned long* p = addr + (bit / BITS_PER_LONG);
+  const unsigned long mask = 1ul << (bit % BITS_PER_LONG);
+  *p |= mask;
 }
 
-static inline bool test_and_set_bit(long bit, volatile unsigned long* addr) {
-  unsigned long mask = 1ul << (bit % BITS_PER_LONG);
-  return mask & __atomic_fetch_or(&addr[bit / BITS_PER_LONG], mask, __ATOMIC_SEQ_CST);
+// Atomic operations.  DANGER DANGER DANGER HERE BE DRAGONS
+// These implementations are heavily informed by ISO/IEC JTC1 SC22 WG21 P0124R7
+//   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0124r7.html
+
+static inline void set_bit(unsigned long bit, volatile unsigned long* addr) {
+  volatile unsigned long* const p = addr + (bit / BITS_PER_LONG);
+  const unsigned long mask = 1ul << (bit % BITS_PER_LONG);
+  atomic_fetch_or_explicit((_Atomic(unsigned long)*)p, mask, memory_order_relaxed);
 }
 
-static inline bool test_and_clear_bit(long bit, volatile unsigned long* addr) {
-  unsigned long mask = 1ul << (bit % BITS_PER_LONG);
-  return mask & __atomic_fetch_and(&addr[bit / BITS_PER_LONG], ~mask, __ATOMIC_SEQ_CST);
+static inline void clear_bit(unsigned long bit, volatile unsigned long* addr) {
+  volatile unsigned long* const p = addr + (bit / BITS_PER_LONG);
+  const unsigned long mask = 1ul << (bit % BITS_PER_LONG);
+  atomic_fetch_and_explicit((_Atomic(unsigned long)*)p, ~mask, memory_order_relaxed);
 }
 
-static inline void set_bit(long bit, unsigned long* addr) { test_and_set_bit(bit, addr); }
-
-static inline void clear_bit(long bit, volatile unsigned long* addr) {
-  test_and_clear_bit(bit, addr);
+static inline int test_bit(unsigned long bit, const volatile unsigned long* addr) {
+  const volatile unsigned long* const p = addr + (bit / BITS_PER_LONG);
+  const unsigned long mask = 1ul << (bit % BITS_PER_LONG);
+  atomic_thread_fence(memory_order_seq_cst);
+  const unsigned long value =
+      atomic_load_explicit((_Atomic(unsigned long)*)p, memory_order_relaxed);
+  atomic_thread_fence(memory_order_seq_cst);
+  return !!(value & mask);
 }
 
-// This is the non-atomic version of set_bit.
-static inline void __set_bit(long bit, unsigned long* addr) {
-  addr[bit / BITS_PER_LONG] |= 1ul << (bit % BITS_PER_LONG);
+static inline int test_and_set_bit(unsigned long bit, volatile unsigned long* addr) {
+  volatile unsigned long* const p = addr + (bit / BITS_PER_LONG);
+  const unsigned long mask = 1ul << (bit % BITS_PER_LONG);
+  atomic_thread_fence(memory_order_seq_cst);
+  const unsigned long value =
+      atomic_fetch_or_explicit((_Atomic(unsigned long)*)p, mask, memory_order_relaxed);
+  atomic_thread_fence(memory_order_seq_cst);
+  return !!(value & mask);
 }
 
-static inline int atomic_read(const atomic_t* atomic) {
-  return __atomic_load_n(&atomic->value, __ATOMIC_RELAXED);
+static inline int test_and_clear_bit(unsigned long bit, volatile unsigned long* addr) {
+  volatile unsigned long* const p = addr + (bit / BITS_PER_LONG);
+  const unsigned long mask = 1ul << (bit % BITS_PER_LONG);
+  atomic_thread_fence(memory_order_seq_cst);
+  const unsigned long value =
+      atomic_fetch_and_explicit((_Atomic(unsigned long)*)p, ~mask, memory_order_relaxed);
+  atomic_thread_fence(memory_order_seq_cst);
+  return !!(value & mask);
 }
 
-static inline void atomic_set(atomic_t* atomic, int value) {
-  __atomic_store_n(&atomic->value, value, __ATOMIC_RELAXED);
+static inline int32_t atomic_read(const atomic_t* atomic) {
+  return atomic_load_explicit(&atomic->value, memory_order_relaxed);
 }
 
-static inline int atomic_xchg(atomic_t* atomic, int value) {
-  return __atomic_exchange_n(&atomic->value, value, __ATOMIC_SEQ_CST);
+static inline void atomic_set(atomic_t* atomic, int32_t value) {
+  atomic_store_explicit(&atomic->value, value, memory_order_relaxed);
 }
 
-static inline int atomic_inc(atomic_t* atomic) {
-  return __atomic_fetch_add(&atomic->value, 1, __ATOMIC_SEQ_CST);
+static inline void atomic_inc(atomic_t* atomic) {
+  atomic_fetch_add_explicit(&atomic->value, 1, memory_order_relaxed);
 }
 
-static inline int atomic_dec_if_positive(atomic_t* atomic) {
-  int current = atomic_read(atomic);
+static inline int32_t atomic_xchg(atomic_t* atomic, int32_t value) {
+  atomic_thread_fence(memory_order_seq_cst);
+  const int32_t old = atomic_exchange_explicit(&atomic->value, value, memory_order_seq_cst);
+  atomic_thread_fence(memory_order_seq_cst);
+  return old;
+}
+
+static inline int32_t atomic_dec_if_positive(atomic_t* atomic) {
+  int32_t current = atomic_load_explicit(&atomic->value, memory_order_relaxed);
   while (1) {
     if (current <= 0) {
       return current;
     }
-    if (__atomic_compare_exchange_n(&atomic->value, &current, current - 1, false /* weak */,
-                                    __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
+    if (atomic_compare_exchange_weak_explicit(&atomic->value, &current, current - 1,
+                                              memory_order_seq_cst, memory_order_relaxed)) {
+      atomic_thread_fence(memory_order_seq_cst);
       return current - 1;
     }
   }
+}
+
+static inline int64_t atomic64_inc_return(atomic64_t* atomic) {
+  atomic_thread_fence(memory_order_seq_cst);
+  const int64_t old = atomic_fetch_add_explicit(&atomic->value, 1, memory_order_seq_cst);
+  atomic_thread_fence(memory_order_seq_cst);
+  return old + 1;
 }
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))

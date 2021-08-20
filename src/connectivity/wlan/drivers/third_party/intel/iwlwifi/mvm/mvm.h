@@ -62,6 +62,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
@@ -891,7 +892,7 @@ struct iwl_mvm {
   unsigned long status;
 
   uint32_t queue_sync_cookie;
-  atomic_int queue_sync_counter;
+  atomic_t queue_sync_counter;
   /*
    * for beacon filtering -
    * currently only one interface can be supported
