@@ -132,12 +132,11 @@ static void stuff_loader_bootstrap(const zx::debuglog& log, const zx::process& p
   check(log, status, "zx_channel_write of loader bootstrap message failed");
 }
 
-zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs,
-                           std::string_view root_prefix, const zx::process& proc,
-                           const zx::vmar& vmar, const zx::thread& thread,
+zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, Bootfs& bootfs, std::string_view root,
+                           const zx::process& proc, const zx::vmar& vmar, const zx::thread& thread,
                            std::string_view filename, const zx::channel& to_child,
                            size_t* stack_size, zx::channel* loader_svc) {
-  zx::vmo vmo = bootfs.Open(root_prefix, filename, "program");
+  zx::vmo vmo = bootfs.Open(root, filename, "program");
 
   uintptr_t interp_off = 0;
   size_t interp_len = 0;
@@ -172,7 +171,7 @@ zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs,
     printl(log, "'%.*s' has PT_INTERP \"%s\"", static_cast<int>(filename.size()), filename.data(),
            interp);
 
-    zx::vmo interp_vmo = bootfs.Open(root_prefix, interp, "dynamic linker");
+    zx::vmo interp_vmo = bootfs.Open(root, interp, "dynamic linker");
     zx::vmar interp_vmar;
     entry = load(log, interp, vmar, interp_vmo, NULL, NULL, &interp_vmar, NULL, true);
 

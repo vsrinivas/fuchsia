@@ -28,18 +28,18 @@ class LoaderService {
   void Serve(zx::channel);
 
  private:
-  static constexpr std::string_view kLoadObjectFilePrefix = "lib/";
+  static constexpr std::string_view kLoadObjectFileDir = "lib";
   zx::debuglog log_;
   Bootfs* fs_;
   std::string_view root_;
-  std::array<char, 32> prefix_;
-  size_t prefix_len_ = 0;
+  std::array<char, 32> subdir_;
+  size_t subdir_len_ = 0;
   bool exclusive_ = false;
 
   bool HandleRequest(const zx::channel&);
   void Config(std::string_view string);
   zx::vmo LoadObject(std::string_view name);
-  zx::vmo TryLoadObject(std::string_view name, bool use_prefix);
+  zx::vmo TryLoadObject(std::string_view name, bool use_subdir);
 };
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_LOADER_SERVICE_H_

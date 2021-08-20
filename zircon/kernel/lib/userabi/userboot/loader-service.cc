@@ -25,19 +25,18 @@ void LoaderService::Config(std::string_view string) {
     string.remove_suffix(1);
     exclusive_ = true;
   }
-  if (string.size() >= prefix_.size() - 1) {
+  if (string.size() >= subdir_.size() - 1) {
     fail(log_, "loader-service config string too long");
   }
-  string.copy(prefix_.data(), prefix_.size());
-  prefix_len_ = string.size();
-  prefix_[prefix_len_++] = '/';
+  string.copy(subdir_.data(), subdir_.size());
+  subdir_len_ = string.size();
 }
 
-zx::vmo LoaderService::TryLoadObject(std::string_view name, bool use_prefix) {
+zx::vmo LoaderService::TryLoadObject(std::string_view name, bool use_subdir) {
   fbl::StringBuffer<ZBI_BOOTFS_MAX_NAME_LEN> file;
-  file.Append(kLoadObjectFilePrefix);
-  if (use_prefix && prefix_len_) {
-    file.Append(prefix_.data(), prefix_len_);
+  file.Append(kLoadObjectFileDir).Append('/');
+  if (use_subdir && subdir_len_ > 0) {
+    file.Append(subdir_.data(), subdir_len_).Append('/');
   }
   file.Append(name);
   return fs_->Open(root_, file, "shared library");
@@ -45,7 +44,7 @@ zx::vmo LoaderService::TryLoadObject(std::string_view name, bool use_prefix) {
 
 zx::vmo LoaderService::LoadObject(std::string_view name) {
   zx::vmo vmo = TryLoadObject(name, true);
-  if (!vmo && prefix_len_ > 0 && !exclusive_) {
+  if (!vmo && subdir_len_ > 0 && !exclusive_) {
     vmo = TryLoadObject(name, false);
   }
   if (!vmo) {

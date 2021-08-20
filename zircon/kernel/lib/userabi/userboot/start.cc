@@ -54,14 +54,14 @@ using namespace userboot;
     __builtin_trap();
 }
 
-void load_child_process(const zx::debuglog& log, const struct options* o, const Bootfs& bootfs,
-                        const char* root_prefix, const zx::vmo& vdso_vmo, const zx::process& proc,
+void load_child_process(const zx::debuglog& log, const struct options* o, Bootfs& bootfs,
+                        std::string_view root, const zx::vmo& vdso_vmo, const zx::process& proc,
                         const zx::vmar& vmar, const zx::thread& thread, const zx::channel& to_child,
                         zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
                         zx::channel* loader_svc) {
   // Examine the bootfs image and find the requested file in it.
   // This will handle a PT_INTERP by doing a second lookup in bootfs.
-  *entry = elf_load_bootfs(log, bootfs, root_prefix, proc, vmar, thread, o->value[OPTION_FILENAME],
+  *entry = elf_load_bootfs(log, bootfs, root, proc, vmar, thread, o->value[OPTION_FILENAME],
                            to_child, stack_size, loader_svc);
 
   // Now load the vDSO into the child, so it has access to system calls.
@@ -214,33 +214,23 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     status = zx::resource::create(*system_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE,
                                   1, nullptr, 0, &vmex_resource);
     check(log, status, "zx_resource_create failed");
-    Bootfs bootfs{std::move(vmar_self), std::move(bootfs_vmo_dup), std::move(vmex_resource),
+    Bootfs bootfs{vmar_self.borrow(), std::move(bootfs_vmo_dup), std::move(vmex_resource),
                   std::move(log_dup)};
 
     // Pass the decompressed bootfs VMO on.
     handles[kBootfsVmo] = bootfs_vmo.release();
 
-    // Canonicalize the (possibly empty) userboot.root option string so that
-    // it never starts with a slash but always ends with a slash unless it's
-    // empty.  That lets us use it as a simple prefix on the full file name
-    // strings in the BOOTFS directory.
-    const char* root_option = o.value[OPTION_ROOT];
-    while (*root_option == '/') {
-      ++root_option;
+    std::string_view root{o.value[OPTION_ROOT]};
+    if (!root.empty()) {
+      if (root.front() == '/') {
+        fail(log, "`userboot.root` (\"%.*s\" must not begin with a \'/\'",
+             static_cast<int>(root.size()), root.data());
+      }
+      // Normalize away a trailing '/', if present.
+      if (root.back() == '/') {
+        root.remove_prefix(1);
+      }
     }
-    size_t root_len = strlen(root_option);
-    char root_prefix[NAME_MAX + 1];
-    if (root_len >= sizeof(root_prefix) - 1) {
-      fail(log, "`userboot.root` string too long (%zu > %zu)", root_len, sizeof(root_prefix) - 1);
-    }
-    memcpy(root_prefix, root_option, root_len);
-    while (root_len > 0 && root_prefix[root_len - 1] == '/') {
-      --root_len;
-    }
-    if (root_len > 0) {
-      root_prefix[root_len++] = '/';
-    }
-    root_prefix[root_len] = '\0';
 
     // Make the channel for the bootstrap message.
     zx::channel to_child, child_start_handle;
@@ -267,9 +257,8 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     zx_vaddr_t entry, vdso_base;
     size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
     zx::channel loader_service_channel;
-    load_child_process(log, &o, bootfs, root_prefix, *zx::unowned_vmo{handles[kFirstVdso]}, proc,
-                       vmar, thread, to_child, &entry, &vdso_base, &stack_size,
-                       &loader_service_channel);
+    load_child_process(log, &o, bootfs, root, *zx::unowned_vmo{handles[kFirstVdso]}, proc, vmar,
+                       thread, to_child, &entry, &vdso_base, &stack_size, &loader_service_channel);
 
     // Allocate the stack for the child.
     uintptr_t sp;
@@ -330,7 +319,7 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
       status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
       check(log, status, "zx_handle_duplicate failed on debuglog handle");
 
-      LoaderService ldsvc(std::move(log_dup), &bootfs, root_prefix);
+      LoaderService ldsvc(std::move(log_dup), &bootfs, root);
       ldsvc.Serve(std::move(loader_service_channel));
     }
 

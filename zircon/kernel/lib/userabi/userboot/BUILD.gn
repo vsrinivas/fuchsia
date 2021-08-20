@@ -96,7 +96,6 @@ if (toolchain_environment == "userboot") {
     libs = [ vdso_syms_ld ]
     deps = [
       ":gen-vdso-syms-ld",
-      "//sdk/lib/stdcompat",
       "//src/zircon/lib/zircon",
       "//zircon/kernel/lib/userabi:headers",
       "//zircon/system/ulib/elf-psabi",

@@ -32,7 +32,7 @@ zx_vaddr_t elf_load_vdso(const zx::debuglog& log, const zx::vmar& vmar, const zx
 // the dynamic linker) with the given log handle and a VMO for the
 // main executable and a loader-service channel, the other end of
 // which is returned here.
-zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& fs, std::string_view root_prefix,
+zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, Bootfs& fs, std::string_view root,
                            const zx::process& proc, const zx::vmar& vmar, const zx::thread& thread,
                            std::string_view filename, const zx::channel& to_child,
                            size_t* stack_size, zx::channel* loader_svc);
