@@ -31,7 +31,11 @@ driver_bind_rules("astro-backlight-bind") {
   header_output = "astro-backlight-bind.h"
   bind_output = "astro-backlight.bindbc"
   tests = "backlight-bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.ti.platform",
+  ]
 }
 
 driver_module("astro-driver") {

@@ -71,12 +71,13 @@ constexpr pbus_dev_t backlight_dev = []() {
 }();
 
 zx_status_t Astro::BacklightInit() {
-  auto status = pbus_.CompositeDeviceAdd(&backlight_dev,
-                                         reinterpret_cast<uint64_t>(astro_backlight_fragments),
-                                         countof(astro_backlight_fragments), "i2c");
+  auto status =
+      pbus_.AddComposite(&backlight_dev, reinterpret_cast<uint64_t>(astro_backlight_fragments),
+                         countof(astro_backlight_fragments), "i2c");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s DeviceAdd failed %d", __FUNCTION__, status);
   }
+
   return status;
 }
 

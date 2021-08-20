@@ -317,6 +317,44 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
   return DdkAddComposite(pdev->name, &comp_desc);
 }
 
+zx_status_t PlatformBus::PBusAddComposite(const pbus_dev_t* dev,
+                                          /* const device_fragment_t* */ uint64_t raw_fragments,
+                                          size_t fragment_count, const char* primary_fragment) {
+  const zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, dev->vid},
+      {BIND_PLATFORM_DEV_PID, 0, dev->pid},
+      {BIND_PLATFORM_DEV_DID, 0, dev->did},
+      {BIND_PLATFORM_DEV_INSTANCE_ID, 0, dev->instance_id},
+  };
+
+  const device_fragment_t* fragments = reinterpret_cast<const device_fragment_t*>(raw_fragments);
+
+  const bool is_primary_pdev = strcmp(primary_fragment, "pdev") == 0;
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .fragments = fragments,
+      .fragments_count = fragment_count,
+      .primary_fragment = primary_fragment,
+      .spawn_colocated = !is_primary_pdev,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  auto status = DdkAddComposite(dev->name, &comp_desc);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s DdkAddComposite failed %d", __FUNCTION__, status);
+    return status;
+  }
+
+  status = PBusDeviceAdd(dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s DeviceAdd failed %d", __FUNCTION__, status);
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
   switch (proto_id) {
       // DO NOT ADD ANY MORE PROTOCOLS HERE.

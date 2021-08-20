@@ -5,9 +5,19 @@
 composite astro_backlight;
 
 using fuchsia.i2c;
+using fuchsia.ti.platform;
+using fuchsia.platform;
 
 primary node "i2c" {
   fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
   fuchsia.BIND_I2C_BUS_ID == fuchsia.i2c.BIND_I2C_BUS_ID.ASTRO_3;
   fuchsia.BIND_I2C_ADDRESS == fuchsia.i2c.BIND_I2C_ADDRESS.BACKLIGHT;
+}
+
+ node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.ti.platform.BIND_PLATFORM_DEV_PID.LP8556;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.BACKLIGHT;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
 }

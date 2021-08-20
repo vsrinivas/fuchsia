@@ -155,6 +155,7 @@ protocol PBus {
     }) -> (struct {
         s zx.status;
     });
+    /// Deprecated, use AddComposite() instead.
     /// Adds a composite platform device to the bus. The platform device specified by |dev|
     /// is the zeroth fragment and the |fragments| array specifies fragments 1 through n.
     /// The composite device is started in a the driver host of the
@@ -167,6 +168,17 @@ protocol PBus {
         dev PbusDev;
         fragments uint64;
         fragments_count uint64;
+        primary_fragment string:MAX;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    /// Adds a composite platform device to the bus.
+    // TODO(fxb/69023): Restore |fragments| to device_fragment_t* type.
+    AddComposite(struct {
+        dev PbusDev;
+        fragments uint64;
+        fragment_count uint64;
         primary_fragment string:MAX;
     }) -> (struct {
         s zx.status;
