@@ -810,33 +810,12 @@ fn make_devfs() -> Result<(fio::DirectoryProxy, Arc<SimpleMutableDir>)> {
 const NETWORK_CONTEXT_COMPONENT_NAME: &str = "network-context";
 const ISOLATED_DEVMGR_COMPONENT_NAME: &str = "isolated-devmgr";
 
-#[derive(serde::Deserialize)]
-struct Package {
-    name: String,
-}
-
-// TODO(https://fxbug.dev/78313): remove once RealmBuilder supports relative
-// package URLs.
-const PACKAGE_IDENTITY_FILE: &str = "/pkg/meta/package";
-
-async fn get_this_package_name() -> Result<String> {
-    let contents = io_util::file::read_in_namespace_to_string(PACKAGE_IDENTITY_FILE)
-        .await
-        .context("error opening file")?;
-    let Package { name } =
-        serde_json::from_str(&contents).context("failed to deserialize package identity file")?;
-    Ok(name)
-}
-
 async fn setup_network_realm(
     sandbox_name: impl std::fmt::Display,
 ) -> Result<fcomponent::RealmInstance> {
-    let pkg = get_this_package_name().await?;
-    let package_url = |component_name: &str| {
-        format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cm", pkg, component_name)
-    };
-    let network_context_package_url = package_url(NETWORK_CONTEXT_COMPONENT_NAME);
-    let isolated_devmgr_package_url = package_url(ISOLATED_DEVMGR_COMPONENT_NAME);
+    let relative_url = |component_name: &str| format!("#meta/{}.cm", component_name);
+    let network_context_package_url = relative_url(NETWORK_CONTEXT_COMPONENT_NAME);
+    let isolated_devmgr_package_url = relative_url(ISOLATED_DEVMGR_COMPONENT_NAME);
 
     let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
     let _: &mut RealmBuilder = builder
@@ -1074,7 +1053,7 @@ mod tests {
     }
 
     const COUNTER_COMPONENT_NAME: &str = "counter";
-    const COUNTER_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/counter.cm";
+    const COUNTER_PACKAGE_URL: &str = "#meta/counter.cm";
     const COUNTER_A_PROTOCOL_NAME: &str = "fuchsia.netemul.test.CounterA";
     const COUNTER_B_PROTOCOL_NAME: &str = "fuchsia.netemul.test.CounterB";
     const DATA_PATH: &str = "/data";
@@ -2418,8 +2397,7 @@ mod tests {
     #[fixture(with_sandbox)]
     #[fuchsia::test]
     async fn devfs_subdirs_created_on_request(sandbox: fnetemul::SandboxProxy) {
-        const DEVFS_SUBDIR_USER_URL: &str =
-            "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/devfs-subdir-user.cm";
+        const DEVFS_SUBDIR_USER_URL: &str = "#meta/devfs-subdir-user.cm";
         const SUBDIR: &str = "class/ethernet";
         let realm = TestRealm::new(
             &sandbox,

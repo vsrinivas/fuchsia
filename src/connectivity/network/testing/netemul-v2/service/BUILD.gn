@@ -15,7 +15,6 @@ rustc_binary("bin") {
   name = "netemul_sandbox_v2"
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -40,8 +39,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
