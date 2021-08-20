@@ -1291,6 +1291,7 @@ void ForSomeServers(AllowServer allow, TestBody body) {
       });
       proxy.Start(proxy_url);
 
+      fidl::internal::HLCPPWireFormatV2Enabler enabler;
       body(loop, proxy.echo(), server_url, proxy_url);
       test_completed = true;
     }

@@ -14,9 +14,25 @@
 
 #include <zircon/fidl.h>
 
+#include <atomic>
 #include <vector>
 
 namespace fidl {
+
+namespace internal {
+
+extern std::atomic_int hlcpp_enable_v2_encode;
+
+struct HLCPPWireFormatV2Enabler {
+  HLCPPWireFormatV2Enabler() { hlcpp_enable_v2_encode++; }
+  ~HLCPPWireFormatV2Enabler() { hlcpp_enable_v2_encode--; }
+};
+
+static WireFormatVersion DefaultHLCPPEncoderWireFormat() {
+  return (hlcpp_enable_v2_encode > 0) ? WireFormatVersion::kV2 : WireFormatVersion::kV1;
+}
+
+}  // namespace internal
 
 class Encoder final {
  public:
@@ -68,7 +84,7 @@ class Encoder final {
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_disposition_t> handles_;
 
-  internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV1;
+  internal::WireFormatVersion wire_format_ = internal::DefaultHLCPPEncoderWireFormat();
 };
 
 }  // namespace fidl

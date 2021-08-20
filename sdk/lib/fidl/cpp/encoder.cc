@@ -9,6 +9,10 @@
 #include <zircon/fidl.h>
 
 namespace fidl {
+namespace internal {
+std::atomic_int hlcpp_enable_v2_encode(0);
+}
+
 namespace {
 
 size_t Align(size_t size) {

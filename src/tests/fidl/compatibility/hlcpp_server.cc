@@ -32,6 +32,7 @@ class EchoServerApp : public Echo {
   ~EchoServerApp() {}
 
   void EchoMinimal(std::string forward_to_server, EchoMinimalCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -58,6 +59,7 @@ class EchoServerApp : public Echo {
 
   void EchoMinimalWithError(std::string forward_to_server, RespondWith result_variant,
                             EchoMinimalWithErrorCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -71,6 +73,7 @@ class EchoServerApp : public Echo {
       app.echo()->EchoMinimalWithError(
           "", result_variant,
           [this, &called_back, &callback](Echo_EchoMinimalWithError_Result result) {
+            fidl::internal::HLCPPWireFormatV2Enabler enabler;
             called_back = true;
             callback(std::move(result));
             loop_->Quit();
@@ -91,6 +94,7 @@ class EchoServerApp : public Echo {
   }
 
   void EchoMinimalNoRetVal(std::string forward_to_server) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       std::unique_ptr<EchoClientApp> app(new EchoClientApp);
       app->echo().set_error_handler([this, forward_to_server](zx_status_t status) {
@@ -110,6 +114,7 @@ class EchoServerApp : public Echo {
 
   void EchoStruct(Struct value, std::string forward_to_server,
                   EchoStructCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -121,6 +126,7 @@ class EchoServerApp : public Echo {
       app.Start(forward_to_server);
       bool called_back = false;
       app.echo()->EchoStruct(std::move(value), "", [this, &called_back, &callback](Struct resp) {
+        fidl::internal::HLCPPWireFormatV2Enabler enabler;
         called_back = true;
         callback(std::move(resp));
         loop_->Quit();
@@ -137,6 +143,7 @@ class EchoServerApp : public Echo {
   void EchoStructWithError(Struct value, default_enum err, std::string forward_to_server,
                            RespondWith result_variant,
                            EchoStructWithErrorCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -150,6 +157,7 @@ class EchoServerApp : public Echo {
       app.echo()->EchoStructWithError(
           std::move(value), std::move(err), "", result_variant,
           [this, &called_back, &callback](Echo_EchoStructWithError_Result result) {
+            fidl::internal::HLCPPWireFormatV2Enabler enabler;
             called_back = true;
             callback(std::move(result));
             loop_->Quit();
@@ -170,6 +178,7 @@ class EchoServerApp : public Echo {
   }
 
   void EchoStructNoRetVal(Struct value, std::string forward_to_server) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       std::unique_ptr<EchoClientApp> app(new EchoClientApp);
       app->echo().set_error_handler([this, forward_to_server](zx_status_t status) {
@@ -193,6 +202,7 @@ class EchoServerApp : public Echo {
 
   void EchoArrays(ArraysStruct value, std::string forward_to_server,
                   EchoArraysCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -205,6 +215,7 @@ class EchoServerApp : public Echo {
       bool called_back = false;
       app.echo()->EchoArrays(std::move(value), "",
                              [this, &called_back, &callback](ArraysStruct resp) {
+                               fidl::internal::HLCPPWireFormatV2Enabler enabler;
                                called_back = true;
                                callback(std::move(resp));
                                loop_->Quit();
@@ -221,6 +232,7 @@ class EchoServerApp : public Echo {
   void EchoArraysWithError(ArraysStruct value, default_enum err, std::string forward_to_server,
                            RespondWith result_variant,
                            EchoArraysWithErrorCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -234,6 +246,7 @@ class EchoServerApp : public Echo {
       app.echo()->EchoArraysWithError(
           std::move(value), std::move(err), "", result_variant,
           [this, &called_back, &callback](Echo_EchoArraysWithError_Result result) {
+            fidl::internal::HLCPPWireFormatV2Enabler enabler;
             called_back = true;
             callback(std::move(result));
             loop_->Quit();
@@ -255,6 +268,7 @@ class EchoServerApp : public Echo {
 
   void EchoVectors(VectorsStruct value, std::string forward_to_server,
                    EchoVectorsCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -267,6 +281,7 @@ class EchoServerApp : public Echo {
       bool called_back = false;
       app.echo()->EchoVectors(std::move(value), "",
                               [this, &called_back, &callback](VectorsStruct resp) {
+                                fidl::internal::HLCPPWireFormatV2Enabler enabler;
                                 called_back = true;
                                 callback(std::move(resp));
                                 loop_->Quit();
@@ -283,6 +298,7 @@ class EchoServerApp : public Echo {
   void EchoVectorsWithError(VectorsStruct value, default_enum err, std::string forward_to_server,
                             RespondWith result_variant,
                             EchoVectorsWithErrorCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -296,6 +312,7 @@ class EchoServerApp : public Echo {
       app.echo()->EchoVectorsWithError(
           std::move(value), std::move(err), "", result_variant,
           [this, &called_back, &callback](Echo_EchoVectorsWithError_Result result) {
+            fidl::internal::HLCPPWireFormatV2Enabler enabler;
             called_back = true;
             callback(std::move(result));
             loop_->Quit();
@@ -317,6 +334,7 @@ class EchoServerApp : public Echo {
 
   void EchoTable(AllTypesTable value, std::string forward_to_server,
                  EchoTableCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -329,6 +347,7 @@ class EchoServerApp : public Echo {
       bool called_back = false;
       app.echo()->EchoTable(std::move(value), "",
                             [this, &called_back, &callback](AllTypesTable resp) {
+                              fidl::internal::HLCPPWireFormatV2Enabler enabler;
                               called_back = true;
                               callback(std::move(resp));
                               loop_->Quit();
@@ -345,6 +364,7 @@ class EchoServerApp : public Echo {
   void EchoTableWithError(AllTypesTable value, default_enum err, std::string forward_to_server,
                           RespondWith result_variant,
                           EchoTableWithErrorCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -358,6 +378,7 @@ class EchoServerApp : public Echo {
       app.echo()->EchoTableWithError(
           std::move(value), std::move(err), "", result_variant,
           [this, &called_back, &callback](Echo_EchoTableWithError_Result result) {
+            fidl::internal::HLCPPWireFormatV2Enabler enabler;
             called_back = true;
             callback(std::move(result));
             loop_->Quit();
@@ -379,6 +400,7 @@ class EchoServerApp : public Echo {
 
   void EchoXunions(std::vector<AllTypesXunion> value, std::string forward_to_server,
                    EchoXunionsCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -391,6 +413,7 @@ class EchoServerApp : public Echo {
       bool called_back = false;
       app.echo()->EchoXunions(std::move(value), "",
                               [this, &called_back, &callback](std::vector<AllTypesXunion> resp) {
+                                fidl::internal::HLCPPWireFormatV2Enabler enabler;
                                 called_back = true;
                                 callback(std::move(resp));
                                 loop_->Quit();
@@ -407,6 +430,7 @@ class EchoServerApp : public Echo {
   void EchoXunionsWithError(std::vector<AllTypesXunion> value, default_enum err,
                             std::string forward_to_server, RespondWith result_variant,
                             EchoXunionsWithErrorCallback callback) override {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
@@ -420,6 +444,7 @@ class EchoServerApp : public Echo {
       app.echo()->EchoXunionsWithError(
           std::move(value), std::move(err), "", result_variant,
           [this, &called_back, &callback](Echo_EchoXunionsWithError_Result result) {
+            fidl::internal::HLCPPWireFormatV2Enabler enabler;
             called_back = true;
             callback(std::move(result));
             loop_->Quit();
@@ -441,6 +466,7 @@ class EchoServerApp : public Echo {
 
  private:
   void HandleEchoEvent(Struct value) {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     for (const auto& binding : bindings_.bindings()) {
       Struct to_send;
       value.Clone(&to_send);
@@ -448,6 +474,7 @@ class EchoServerApp : public Echo {
     }
   }
   void HandleEchoMinimalEvent() {
+    fidl::internal::HLCPPWireFormatV2Enabler enabler;
     for (const auto& binding : bindings_.bindings()) {
       binding->events().EchoMinimalEvent();
     }
