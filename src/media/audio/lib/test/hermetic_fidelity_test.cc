@@ -19,6 +19,8 @@
 #include <test/thermal/cpp/fidl.h>
 
 #include "lib/zx/time.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
@@ -274,6 +276,34 @@ void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputForma
   }
 }
 
+template <ASF OutputFormat>
+bool HermeticFidelityTest::DeviceHasUnderflows(VirtualOutput<OutputFormat>* device) {
+  auto root = environment()->ReadInspect(HermeticAudioEnvironment::kAudioCoreComponent);
+  for (auto kind : {"device underflows", "pipeline underflows"}) {
+    std::vector<std::string> path = {
+        "output devices",
+        fxl::StringPrintf("%03lu", device->inspect_id()),
+        kind,
+    };
+    auto path_string = fxl::JoinStrings(path, "/");
+    auto h = root.GetByPath(path);
+    if (!h) {
+      ADD_FAILURE() << "Missing inspect hierarchy for " << path_string;
+      continue;
+    }
+    auto p = h->node().template get_property<inspect::UintPropertyValue>("count");
+    if (!p) {
+      ADD_FAILURE() << "Missing property: " << path_string << "[count]";
+      continue;
+    }
+    if (p->value() > 0) {
+      FX_LOGS(WARNING) << "Found underflow at " << path_string;
+      return true;
+    }
+  }
+  return false;
+}
+
 // Additional fidelity assessments, potentially added in the future:
 // (1) Dynamic range (1kHz input at -30/60/90 db: measure level, sinad. Overall gain sensitivity)
 //     This should clearly show the impact of dynamic compression in the effects chain.
@@ -508,7 +538,12 @@ void HermeticFidelityTest::Run(
     DisplaySummaryResults(tc);
   }
 
-  VerifyResults(tc);
+  // TODO(fxbug.dev/80003): Skipping checks until underflows are fixed.
+  if (DeviceHasUnderflows(device)) {
+    FX_LOGS(WARNING) << "Skipping threshold checks due to underflows";
+  } else {
+    VerifyResults(tc);
+  }
 }
 
 // We only run the pipeline fidelity tests with FLOAT inputs/outputs, for full data precision.
