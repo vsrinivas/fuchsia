@@ -3,4 +3,7 @@ boetger@google.com
 jwing@google.com
 raggi@google.com
 
+per-file repo.fidl = file: /src/sys/pkg/OWNERS
+# per-file-COMPONENT repo.fidl = Packages
+
 # COMPONENT: WorkflowTools
