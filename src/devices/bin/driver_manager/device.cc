@@ -330,20 +330,23 @@ fbl::RefPtr<SuspendTask> Device::RequestSuspendTask(uint32_t suspend_flags) {
   return active_suspend_;
 }
 
-zx_status_t Device::SendInit(InitCompletion completion) {
+void Device::SendInit(InitCompletion completion) {
   ZX_ASSERT(!init_completion_);
 
   VLOGF(1, "Initializing device %p '%s'", this, name_.data());
-  auto result = device_controller()->Init([dev = fbl::RefPtr(this)](auto* response) {
-    VLOGF(1, "Initialized device %p '%s': %s", dev.get(), dev->name().data(),
-          zx_status_get_string(response->status));
-    dev->CompleteInit(response->status);
-  });
-  if (!result.ok()) {
-    return result.status();
-  }
+  device_controller()->Init(
+      [dev = fbl::RefPtr(this)](
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Init>&& result) {
+        if (!result.ok()) {
+          dev->CompleteInit(result.status());
+          return;
+        }
+        auto* response = result.Unwrap();
+        VLOGF(1, "Initialized device %p '%s': %s", dev.get(), dev->name().data(),
+              zx_status_get_string(response->status));
+        dev->CompleteInit(response->status);
+      });
   init_completion_ = std::move(completion);
-  return ZX_OK;
 }
 
 zx_status_t Device::CompleteInit(zx_status_t status) {
@@ -354,7 +357,7 @@ zx_status_t Device::CompleteInit(zx_status_t status) {
   if (init_completion_) {
     init_completion_(status);
   }
-  active_init_ = nullptr;
+  DropInitTask();
   return ZX_OK;
 }
 
@@ -369,72 +372,79 @@ fbl::RefPtr<ResumeTask> Device::RequestResumeTask(uint32_t target_system_state) 
   return active_resume_;
 }
 
-zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
+void Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
   if (suspend_completion_) {
     // We already have a pending suspend
-    return ZX_ERR_UNAVAILABLE;
+    return completion(ZX_ERR_UNAVAILABLE);
   }
   VLOGF(1, "Suspending device %p '%s'", this, name_.data());
-  auto result = device_controller()->Suspend(flags, [dev = fbl::RefPtr(this)](auto* response) {
-    if (response->status == ZX_OK) {
-      LOGF(DEBUG, "Suspended device %p '%s'successfully", dev.get(), dev->name().data());
-    } else {
-      LOGF(ERROR, "Failed to suspended device %p '%s': %s", dev.get(), dev->name().data(),
-           zx_status_get_string(response->status));
-    }
-    dev->CompleteSuspend(response->status);
-  });
-  if (!result.ok()) {
-    return result.status();
-  }
+  device_controller()->Suspend(
+      flags,
+      [dev = fbl::RefPtr(this)](
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Suspend>&& result) {
+        if (!result.ok()) {
+          dev->CompleteSuspend(result.status());
+          return;
+        }
+        auto* response = result.Unwrap();
+        if (response->status == ZX_OK) {
+          LOGF(DEBUG, "Suspended device %p '%s' successfully", dev.get(), dev->name().data());
+        } else {
+          LOGF(ERROR, "Failed to suspended device %p '%s': %s", dev.get(), dev->name().data(),
+               zx_status_get_string(response->status));
+        }
+        dev->CompleteSuspend(response->status);
+      });
   set_state(Device::State::kSuspending);
   suspend_completion_ = std::move(completion);
-  return ZX_OK;
 }
 
-zx_status_t Device::SendResume(uint32_t target_system_state, ResumeCompletion completion) {
+void Device::SendResume(uint32_t target_system_state, ResumeCompletion completion) {
   if (resume_completion_) {
     // We already have a pending resume
-    return ZX_ERR_UNAVAILABLE;
+    return completion(ZX_ERR_UNAVAILABLE);
   }
   VLOGF(1, "Resuming device %p '%s'", this, name_.data());
 
-  auto result =
-      device_controller()->Resume(target_system_state, [dev = fbl::RefPtr(this)](auto* response) {
+  device_controller()->Resume(
+      target_system_state,
+      [dev = fbl::RefPtr(this)](
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Resume>&& result) {
+        if (!result.ok()) {
+          dev->CompleteResume(result.status());
+          return;
+        }
+        auto* response = result.Unwrap();
         LOGF(INFO, "Resumed device %p '%s': %s", dev.get(), dev->name().data(),
              zx_status_get_string(response->status));
         dev->CompleteResume(response->status);
       });
-  if (!result.ok()) {
-    return result.status();
-  }
   set_state(Device::State::kResuming);
   resume_completion_ = std::move(completion);
-  return ZX_OK;
 }
 
 void Device::CompleteSuspend(zx_status_t status) {
-  if (status == ZX_OK) {
-    // If a device is being removed, any existing suspend task will be forcibly completed,
-    // in which case we should not update the state.
-    if (state_ != Device::State::kDead) {
+  // If a device is being removed, any existing suspend task will be forcibly completed,
+  // in which case we should not update the state.
+  if (state_ != Device::State::kDead) {
+    if (status == ZX_OK) {
       set_state(Device::State::kSuspended);
+    } else {
+      set_state(Device::State::kActive);
     }
-  } else {
-    set_state(Device::State::kActive);
   }
 
-  active_suspend_ = nullptr;
   if (suspend_completion_) {
     suspend_completion_(status);
   }
+  DropSuspendTask();
 }
 
 void Device::CompleteResume(zx_status_t status) {
-  if (status != ZX_OK) {
-    set_state(Device::State::kSuspended);
-  } else {
+  if (status == ZX_OK) {
     set_state(Device::State::kResumed);
+  } else {
+    set_state(Device::State::kSuspended);
   }
   if (resume_completion_) {
     resume_completion_(status);
@@ -483,46 +493,52 @@ void Device::CreateUnbindRemoveTasks(UnbindTaskOpts opts) {
   }
 }
 
-zx_status_t Device::SendUnbind(UnbindCompletion& completion) {
+void Device::SendUnbind(UnbindCompletion& completion) {
   if (unbind_completion_) {
     // We already have a pending unbind
-    return ZX_ERR_UNAVAILABLE;
+    return completion(ZX_ERR_UNAVAILABLE);
   }
   VLOGF(1, "Unbinding device %p '%s'", this, name_.data());
   set_state(Device::State::kUnbinding);
-  auto result = device_controller()->Unbind([dev = fbl::RefPtr(this)](auto* response) {
-    LOGF(INFO, "Unbound device %p '%s': %s", dev.get(), dev->name().data(),
-         zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
-    dev->CompleteUnbind();
-  });
-  if (!result.ok()) {
-    return result.status();
-  }
-  // Only take ownership if sending succeeded, as otherwise the caller
-  // will want to handle calling the completion.
+  device_controller()->Unbind(
+      [dev = fbl::RefPtr(this)](
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Unbind>&& result) {
+        if (!result.ok()) {
+          dev->CompleteUnbind(result.status());
+          return;
+        }
+        auto* response = result.Unwrap();
+        LOGF(INFO, "Unbound device %p '%s': %s", dev.get(), dev->name().data(),
+             zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
+        dev->CompleteUnbind();
+      });
   unbind_completion_ = std::move(completion);
-  return ZX_OK;
 }
 
-zx_status_t Device::SendCompleteRemove(RemoveCompletion& completion) {
+void Device::SendCompleteRemove(RemoveCompletion& completion) {
   if (remove_completion_) {
     // We already have a pending remove.
-    return ZX_ERR_UNAVAILABLE;
+    return completion(ZX_ERR_UNAVAILABLE);
   }
   VLOGF(1, "Completing removal of device %p '%s'", this, name_.data());
   set_state(Device::State::kUnbinding);
-  auto result = device_controller()->CompleteRemoval([dev = fbl::RefPtr(this)](auto* response) {
-    LOGF(INFO, "Removed device %p '%s': %s", dev.get(), dev->name().data(),
-         zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
-    dev->CompleteRemove();
-  });
-  if (!result.ok()) {
-    return result.status();
-  }
-  // Only take ownership if sending succeeded, as otherwise the caller
-  // will want to handle calling the completion.
+  device_controller()->CompleteRemoval(
+      [dev = fbl::RefPtr(this)](
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::CompleteRemoval>&&
+              result) {
+        if (!result.ok()) {
+          if (dev->remove_completion_) {
+            dev->remove_completion_(result.status());
+          }
+          dev->DropRemoveTask();
+          return;
+        }
+        auto* response = result.Unwrap();
+        LOGF(INFO, "Removed device %p '%s': %s", dev.get(), dev->name().data(),
+             zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
+        dev->CompleteRemove();
+      });
   remove_completion_ = std::move(completion);
-  return ZX_OK;
 }
 
 zx_status_t Device::CompleteUnbind(zx_status_t status) {
@@ -533,7 +549,7 @@ zx_status_t Device::CompleteUnbind(zx_status_t status) {
   if (unbind_completion_) {
     unbind_completion_(status);
   }
-  active_unbind_ = nullptr;
+  DropUnbindTask();
   return ZX_OK;
 }
 
@@ -553,7 +569,7 @@ zx_status_t Device::CompleteRemove(zx_status_t status) {
     // For ancestor dependents in other driver_hosts, we want them to proceed removal as usual.
     remove_completion_(ZX_OK);
   }
-  active_remove_ = nullptr;
+  DropRemoveTask();
   return ZX_OK;
 }
 

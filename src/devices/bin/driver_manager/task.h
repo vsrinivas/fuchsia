@@ -61,6 +61,17 @@ class Task : public fbl::RefCounted<Task> {
   // Called to record a new dependency
   void AddDependency(const fbl::RefPtr<Task>& dependency);
 
+  // Returns a callable which extends the lifetime of this |Task| until the
+  // callable has executed.
+  //
+  // This is useful for creating completion callbacks that drop all other
+  // references to the current task during execution.
+  template <typename Callable>
+  auto ExtendLifetimeWith(Callable&& callable) {
+    return [lifetime = fbl::RefPtr<Task>(this), callable = std::forward<Callable>(callable)](
+               auto&& arg) { return callable(std::forward<decltype(arg)>(arg)); };
+  }
+
  private:
   // This will be called when all dependencies have completed.  If when the
   // task is created it has no dependencies, ExecuteTask() should be invoked

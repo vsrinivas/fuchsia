@@ -148,7 +148,7 @@ void UnbindTask::Run() {
   // as composite device disassociation may occur.
   ScheduleUnbindChildren();
 
-  Device::UnbindCompletion completion = [this](zx_status_t status) {
+  Device::UnbindCompletion completion = ExtendLifetimeWith([this](zx_status_t status) {
     // If this unbind task failed, force remove all devices from the driver_host.
     bool failed_unbind = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_unbind && device_->state() != Device::State::kDead) {
@@ -160,31 +160,18 @@ void UnbindTask::Run() {
     // The forced removal will schedule new unbind tasks if needed (e.g. for proxy tasks),
     // so we should not propagate errors other than ZX_ERR_UNAVAILABLE.
     Complete(status == ZX_OK ? ZX_OK : ZX_ERR_UNAVAILABLE);
-  };
+    device_->DropUnbindTask();
+  });
 
   // Check if we should send the unbind request to the driver_host. We do not want to send it if:
   //  - This device is not in a driver_host.  This happens for the top-level devices like /sys
   //    provided by devcoordinator, or if the device has already been removed.
   //  - device_remove does not call unbind on the device.
   bool send_unbind = (device_->host() != nullptr) && do_unbind_;
-  zx_status_t status = ZX_OK;
   if (send_unbind) {
-    status = device_->SendUnbind(completion);
-    if (status == ZX_OK) {
-      // Sent the unbind request, the driver_host will call our completion when ready.
-      return;
-    }
-  }
-  // Save a copy of the device in case this task's destructor runs after the
-  // completion returns.
-  fbl::RefPtr<Device> device = device_;
-  // No unbind request sent, need to call the completion now.
-  completion(status);
-  // Since the device didn't successfully send an Unbind request, it will not
-  // drop our unbind task reference. We need to drop it now unless the error was
-  // that the unbind request had already been sent (ZX_ERR_UNAVAILABLE).
-  if (status != ZX_ERR_UNAVAILABLE) {
-    device->DropUnbindTask();
+    device_->SendUnbind(completion);
+  } else {
+    completion(ZX_OK);
   }
 }
 
@@ -200,16 +187,7 @@ fbl::RefPtr<RemoveTask> RemoveTask::Create(fbl::RefPtr<Device> device, Completio
 
 void RemoveTask::Run() {
   LOGF(INFO, "Running remove task for device %p '%s'", device_.get(), device_->name().data());
-  Device::RemoveCompletion completion = [this](zx_status_t status) {
-    // If this task fails, the coordinator will forcibly remove the device
-    // and drop the last reference to this task. We need to keep an extra
-    // reference to ensure it stays alive until |Complete|.
-    //
-    // This is not an issue with UnbindTasks, as they will always add at least
-    // one dependent (the corresponding RemoveTask), which adds an additional
-    // reference not dropped until the end of the task's |Complete|.
-    fbl::RefPtr<Task> keep_alive(this);
-
+  Device::RemoveCompletion completion = ExtendLifetimeWith([this](zx_status_t status) {
     // If this remove task failed, force remove all devices from the driver_host.
     bool failed_remove = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_remove && device_->state() != Device::State::kDead) {
@@ -221,25 +199,12 @@ void RemoveTask::Run() {
     // The forced removal will schedule new remove tasks if needed (e.g. for proxy tasks),
     // so we should not propagate errors other than ZX_ERR_UNAVAILABLE.
     Complete(status == ZX_OK ? ZX_OK : ZX_ERR_UNAVAILABLE);
-  };
+    device_->DropRemoveTask();
+  });
 
-  zx_status_t status = ZX_OK;
   if (device_->host() != nullptr) {
-    status = device_->SendCompleteRemove(completion);
-    if (status == ZX_OK) {
-      // Sent the remove request, the driver_host will call our completion when ready.
-      return;
-    }
-  }
-  // Save a copy of the device in case this task's destructor runs after the
-  // completion returns.
-  fbl::RefPtr<Device> device = device_;
-  // No remove request sent, need to call the completion now.
-  completion(status);
-  // Since the device didn't successfully send an CompleteRemoval request, it will not
-  // drop our remove task reference. We need to drop it now unless the error was
-  // that the remove request had already been sent (ZX_ERR_UNAVAILABLE).
-  if (status != ZX_ERR_UNAVAILABLE) {
-    device->DropRemoveTask();
+    device_->SendCompleteRemove(completion);
+  } else {
+    completion(ZX_OK);
   }
 }

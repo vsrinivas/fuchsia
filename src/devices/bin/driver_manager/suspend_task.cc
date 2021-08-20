@@ -107,9 +107,9 @@ void SuspendTask::Run() {
     return Complete(ZX_OK);
   }
 
-  auto completion = [this](zx_status_t status) { Complete(status); };
-  zx_status_t status = device_->SendSuspend(flags_, std::move(completion));
-  if (status != ZX_OK) {
+  auto completion = ExtendLifetimeWith([this](zx_status_t status) {
     Complete(status);
-  }
+    device_->DropSuspendTask();
+  });
+  device_->SendSuspend(flags_, std::move(completion));
 }

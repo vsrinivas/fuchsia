@@ -39,7 +39,7 @@ void InitTask::Run() {
     return;
   }
 
-  auto completion = [this](zx_status_t status) {
+  auto completion = ExtendLifetimeWith([this](zx_status_t status) {
     // Only update the device state if we are not being forcibly removed.
     if (device_->state() != Device::State::kDead) {
       device_->set_state(Device::State::kActive);
@@ -58,19 +58,12 @@ void InitTask::Run() {
     // init task fails, as drivers expect init to always run before unbind.
     // TODO(jocelyndang): consider providing the parent init failure to the child init hook.
     Complete(ZX_OK);
-  };
+    device_->DropInitTask();
+  });
 
-  zx_status_t status = ZX_OK;
   if (device_->host() != nullptr) {
-    status = device_->SendInit(std::move(completion));
-    if (status == ZX_OK) {
-      // Sent the init request, the driver_host will call our completion when ready.
-      return;
-    }
+    device_->SendInit(std::move(completion));
+  } else {
+    completion(ZX_OK);
   }
-  // No init request sent, need to call the completion now.
-  completion(status);
-  // Since the device didn't successfully send an CompleteInit request, it will not
-  // drop our init task reference. We need to drop it now.
-  device_->DropInitTask();
 }

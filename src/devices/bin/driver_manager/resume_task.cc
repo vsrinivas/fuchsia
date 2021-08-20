@@ -175,9 +175,5 @@ void ResumeTask::Run() {
     return;
   };
 
-  zx_status_t status = device_->SendResume(target_system_state_, std::move(completion));
-  if (status != ZX_OK) {
-    device_->set_state(Device::State::kSuspended);
-    return Complete(status);
-  }
+  device_->SendResume(target_system_state_, std::move(completion));
 }

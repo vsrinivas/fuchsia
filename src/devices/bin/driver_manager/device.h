@@ -313,28 +313,28 @@ class Device
   using InitCompletion = fit::callback<void(zx_status_t)>;
   // Issue an Init request to this device.  When the response comes in, the
   // given completion will be invoked.
-  zx_status_t SendInit(InitCompletion completion);
+  void SendInit(InitCompletion completion);
 
   using SuspendCompletion = fit::callback<void(zx_status_t)>;
   // Issue a Suspend request to this device.  When the response comes in, the
   // given completion will be invoked.
-  zx_status_t SendSuspend(uint32_t flags, SuspendCompletion completion);
+  void SendSuspend(uint32_t flags, SuspendCompletion completion);
 
   using ResumeCompletion = fit::callback<void(zx_status_t)>;
   // Issue a Resume request to this device.  When the response comes in, the
   // given completion will be invoked.
-  zx_status_t SendResume(uint32_t target_system_state, ResumeCompletion completion);
+  void SendResume(uint32_t target_system_state, ResumeCompletion completion);
 
   using UnbindCompletion = fit::callback<void(zx_status_t)>;
   using RemoveCompletion = fit::callback<void(zx_status_t)>;
   // Issue an Unbind request to this device, which will run the unbind hook.
   // When the response comes in, the given completion will be invoked.
   // If successful, returns ZX_OK and takes ownership of |completion|.
-  zx_status_t SendUnbind(UnbindCompletion& completion);
+  void SendUnbind(UnbindCompletion& completion);
   // Issue a CompleteRemove request to this device.
   // When the response comes in, the given completion will be invoked.
   // If successful, returns ZX_OK and takes ownership of |completion|.
-  zx_status_t SendCompleteRemove(RemoveCompletion& completion);
+  void SendCompleteRemove(RemoveCompletion& completion);
 
   // Break the relationship between this device object and its parent
   void DetachFromParent();
@@ -451,8 +451,9 @@ class Device
   zx_status_t CompleteRemove(zx_status_t status = ZX_OK);
 
   // Drops the reference to the task.
-  // This should be called if the device will not send an init, unbind or remove request.
+  // This should be called if the device will not send an init, suspend, unbind or remove request.
   void DropInitTask() { active_init_ = nullptr; }
+  void DropSuspendTask() { active_suspend_ = nullptr; }
   void DropUnbindTask() { active_unbind_ = nullptr; }
   void DropRemoveTask() { active_remove_ = nullptr; }
 
