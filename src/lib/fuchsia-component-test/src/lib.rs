@@ -490,7 +490,6 @@ impl Realm {
         &mut self,
         route: impl Into<frealmbuilder::CapabilityRoute>,
     ) -> Result<(), Error> {
-        info!("adding route!");
         self.framework_intermediary_proxy
             .route_capability(route.into())
             .await?
