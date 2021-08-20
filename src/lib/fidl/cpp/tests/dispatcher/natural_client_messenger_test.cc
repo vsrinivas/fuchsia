@@ -121,6 +121,7 @@ TEST_F(NaturalClientMessengerTest, TwoWay) {
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_EQ(0, context().num_errors());
   messenger().TwoWay(good.type(), good.message(), &context());
+  loop().RunUntilIdle();
   EXPECT_EQ(1, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
@@ -139,6 +140,7 @@ TEST_F(NaturalClientMessengerTest, TwoWayInvalidMessage) {
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_EQ(0, context().num_errors());
   messenger().TwoWay(too_large.type(), too_large.message(), &context());
+  loop().RunUntilIdle();
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(1, context().num_errors());
@@ -159,6 +161,7 @@ TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
   messenger().TwoWay(good.type(), good.message(), &context());
+  loop().RunUntilIdle();
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_TRUE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
@@ -173,6 +176,7 @@ TEST_F(NaturalClientMessengerTest, OneWay) {
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
   fidl::Result result = messenger().OneWay(good.type(), good.message());
+  loop().RunUntilIdle();
   EXPECT_OK(result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
 
@@ -187,6 +191,7 @@ TEST_F(NaturalClientMessengerTest, OneWayInvalidMessage) {
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
   fidl::Result result = messenger().OneWay(too_large.type(), too_large.message());
+  loop().RunUntilIdle();
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
 
@@ -201,6 +206,7 @@ TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
   ASSERT_OK(loop().RunUntilIdle());
   EXPECT_EQ(0, impl()->GetTransactionCount());
   fidl::Result result = messenger().OneWay(good.type(), good.message());
+  loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_CANCELED, result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
 

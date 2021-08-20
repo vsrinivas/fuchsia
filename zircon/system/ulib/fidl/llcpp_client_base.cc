@@ -24,6 +24,7 @@ void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
       AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
                                  event_handler, std::move(teardown_observer), threading_policy);
   binding_ = binding;
+  dispatcher_ = dispatcher;
   binding->BeginFirstWait();
 }
 
@@ -97,6 +98,40 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
         context->OnError(info.ToError());
         break;
     }
+  }
+}
+
+fidl::Result ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context) {
+  if (auto channel = GetChannel()) {
+    PrepareAsyncTxn(context);
+    message.set_txid(context->Txid());
+    message.Write(channel->handle());
+    if (!message.ok()) {
+      ForgetAsyncTxn(context);
+      TryAsyncDeliverError(message.error(), context);
+    }
+    return fidl::Result(message);
+  }
+  TryAsyncDeliverError(fidl::Result::Unbound(), context);
+  return fidl::Result::Unbound();
+}
+
+fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message) {
+  if (auto channel = GetChannel()) {
+    message.set_txid(0);
+    message.Write(channel->handle());
+    if (!message.ok()) {
+      return message.error();
+    }
+    return fidl::Result::Ok();
+  }
+  return fidl::Result::Unbound();
+}
+
+void ClientBase::TryAsyncDeliverError(::fidl::Result error, ResponseContext* context) {
+  zx_status_t status = context->TryAsyncDeliverError(error, dispatcher_);
+  if (status != ZX_OK) {
+    context->OnError(error);
   }
 }
 

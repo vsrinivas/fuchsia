@@ -53,7 +53,7 @@ TEST(SyncClientErrorTest, DecodeError) {
     ASSERT_EQ(ZX_OK, endpoints->server.channel().wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
                                                           &observed));
     ASSERT_EQ(ZX_CHANNEL_READABLE, observed & ZX_CHANNEL_READABLE);
-    fidl::WireRequest<test::EnumMethods::GetEnum> request{0};
+    fidl::WireRequest<test::EnumMethods::GetEnum> request{};
     uint32_t actual;
     endpoints->server.channel().read(0, &request, nullptr, sizeof(request), 0, &actual, nullptr);
     ASSERT_EQ(sizeof(request), actual);

@@ -22,7 +22,7 @@ extern "C" const fidl_type_t
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
@@ -39,7 +39,7 @@ extern "C" const fidl_type_t
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
@@ -62,7 +62,7 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
@@ -78,7 +78,7 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
 fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
     return ::fidl::WireResult<
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
         ::fidl::UnownedClientEnd<
@@ -97,7 +97,7 @@ fidl::internal::WireClientImpl<
 fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
     return ::fidl::WireUnownedResult<
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
         ::fidl::UnownedClientEnd<
@@ -169,12 +169,10 @@ fidl::internal::WireClientImpl<
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
-                                   _context->Txid());
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -210,12 +208,10 @@ fidl::internal::WireClientImpl<
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
-                                   _context->Txid());
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -224,13 +220,10 @@ fidl::internal::WireClientImpl<
     GetFoo(::fidl::WireResponseContext<
            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
                _context) {
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
-                                   _context->Txid());
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 #endif  // __Fuchsia__
@@ -323,9 +316,9 @@ fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
 #endif  // __Fuchsia__
 
 void ::fidl::WireRequest<::fidl_test_foreigntypeinresponseusedthroughcompose::
-                             Top::GetFoo>::_InitHeader(zx_txid_t _txid) {
+                             Top::GetFoo>::_InitHeader() {
   fidl_init_txn_header(
-      &_hdr, _txid,
+      &_hdr, 0,
       ::fidl_test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal);
 }
 

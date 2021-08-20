@@ -25,7 +25,7 @@ TEST(ServiceDirectoryTest, Control) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  fidl::WireRequest<fio::Directory::Open> for_ordinal(zx_txid_t(0));
+  fidl::WireRequest<fio::Directory::Open> for_ordinal;
   EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
 }
 
@@ -41,7 +41,7 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  fidl::WireRequest<fio::Directory::Open> for_ordinal(zx_txid_t(0));
+  fidl::WireRequest<fio::Directory::Open> for_ordinal;
   EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
 }
 
@@ -57,7 +57,7 @@ TEST(ServiceDirectoryTest, Clone) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  fidl::WireRequest<fio::Directory::Clone> for_ordinal(zx_txid_t(0));
+  fidl::WireRequest<fio::Directory::Clone> for_ordinal;
   EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
 }
 

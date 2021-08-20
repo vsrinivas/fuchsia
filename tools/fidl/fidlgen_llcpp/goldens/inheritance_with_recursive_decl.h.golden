@@ -90,13 +90,12 @@ struct ::fidl::WireRequest<
   fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
   explicit WireRequest(
-      zx_txid_t _txid,
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request)
       : request(std::move(request)) {
-    _InitHeader(_txid);
+    _InitHeader();
   }
-  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+  WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_inheritancewithrecursivedecl::
@@ -116,15 +115,14 @@ struct ::fidl::WireRequest<
    public:
     UnownedEncodedMessage(
         uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-        zx_txid_t _txid,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, _txid,
+                                _backing_buffer, _backing_buffer_size,
                                 std::move(request)) {}
     UnownedEncodedMessage(
         uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-        uint32_t _backing_buffer_size, zx_txid_t _txid,
+        uint32_t _backing_buffer_size,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
@@ -137,7 +135,7 @@ struct ::fidl::WireRequest<
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireRequest _request(_txid, std::move(request));
+      FIDL_ALIGNDECL WireRequest _request{std::move(request)};
       message_.Encode<WireRequest>(&_request);
     }
     UnownedEncodedMessage(uint8_t* _backing_buffer,
@@ -191,18 +189,17 @@ struct ::fidl::WireRequest<
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        zx_txid_t _txid,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), _txid,
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    std::move(request)) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, zx_txid_t _txid,
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), _txid, std::move(request)) {}
+                   backing_buffer_.size(), std::move(request)) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    request) {}
@@ -276,7 +273,7 @@ struct ::fidl::WireRequest<
   };
 
  private:
-  void _InitHeader(zx_txid_t _txid);
+  void _InitHeader();
 };
 #endif  // __Fuchsia__
 
@@ -567,13 +564,12 @@ struct ::fidl::WireRequest<
   fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
   explicit WireRequest(
-      zx_txid_t _txid,
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request)
       : request(std::move(request)) {
-    _InitHeader(_txid);
+    _InitHeader();
   }
-  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+  WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_inheritancewithrecursivedecl::
@@ -593,15 +589,14 @@ struct ::fidl::WireRequest<
    public:
     UnownedEncodedMessage(
         uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-        zx_txid_t _txid,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, _txid,
+                                _backing_buffer, _backing_buffer_size,
                                 std::move(request)) {}
     UnownedEncodedMessage(
         uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-        uint32_t _backing_buffer_size, zx_txid_t _txid,
+        uint32_t _backing_buffer_size,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
@@ -614,7 +609,7 @@ struct ::fidl::WireRequest<
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireRequest _request(_txid, std::move(request));
+      FIDL_ALIGNDECL WireRequest _request{std::move(request)};
       message_.Encode<WireRequest>(&_request);
     }
     UnownedEncodedMessage(uint8_t* _backing_buffer,
@@ -668,18 +663,17 @@ struct ::fidl::WireRequest<
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        zx_txid_t _txid,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), _txid,
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    std::move(request)) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, zx_txid_t _txid,
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), _txid, std::move(request)) {}
+                   backing_buffer_.size(), std::move(request)) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    request) {}
@@ -752,7 +746,7 @@ struct ::fidl::WireRequest<
   };
 
  private:
-  void _InitHeader(zx_txid_t _txid);
+  void _InitHeader();
 };
 #endif  // __Fuchsia__
 
@@ -766,13 +760,12 @@ struct ::fidl::WireRequest<
   fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
   explicit WireRequest(
-      zx_txid_t _txid,
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request)
       : request(std::move(request)) {
-    _InitHeader(_txid);
+    _InitHeader();
   }
-  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+  WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_inheritancewithrecursivedecl::
@@ -792,15 +785,14 @@ struct ::fidl::WireRequest<
    public:
     UnownedEncodedMessage(
         uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-        zx_txid_t _txid,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, _txid,
+                                _backing_buffer, _backing_buffer_size,
                                 std::move(request)) {}
     UnownedEncodedMessage(
         uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-        uint32_t _backing_buffer_size, zx_txid_t _txid,
+        uint32_t _backing_buffer_size,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
@@ -813,7 +805,7 @@ struct ::fidl::WireRequest<
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireRequest _request(_txid, std::move(request));
+      FIDL_ALIGNDECL WireRequest _request{std::move(request)};
       message_.Encode<WireRequest>(&_request);
     }
     UnownedEncodedMessage(uint8_t* _backing_buffer,
@@ -867,18 +859,17 @@ struct ::fidl::WireRequest<
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        zx_txid_t _txid,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), _txid,
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    std::move(request)) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, zx_txid_t _txid,
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), _txid, std::move(request)) {}
+                   backing_buffer_.size(), std::move(request)) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    request) {}
@@ -952,7 +943,7 @@ struct ::fidl::WireRequest<
   };
 
  private:
-  void _InitHeader(zx_txid_t _txid);
+  void _InitHeader();
 };
 #endif  // __Fuchsia__
 

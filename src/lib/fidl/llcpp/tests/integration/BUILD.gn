@@ -57,6 +57,7 @@ test("fidl_llcpp_gen_api_tests_bin") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 }
 

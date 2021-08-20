@@ -26,13 +26,13 @@ struct {{ .WireRequest }} final {
     {{- end }}
 
   {{- if .RequestArgs }}
-  explicit {{ .WireRequest.Self }}({{ RenderParams "zx_txid_t _txid" .RequestArgs }})
+  explicit {{ .WireRequest.Self }}({{ RenderParams .RequestArgs }})
   {{ RenderInitMessage .RequestArgs }} {
-    _InitHeader(_txid);
+    _InitHeader();
   }
   {{- end }}
-  explicit {{ .WireRequest.Self }}(zx_txid_t _txid) {
-    _InitHeader(_txid);
+  {{ .WireRequest.Self }}() {
+    _InitHeader();
   }
 
   static constexpr const fidl_type_t* Type =
@@ -62,10 +62,10 @@ struct {{ .WireRequest }} final {
   class UnownedEncodedMessage final {
   public:
   UnownedEncodedMessage(
-    {{- RenderParams "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" "zx_txid_t _txid" .RequestArgs }})
-    : UnownedEncodedMessage({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "_backing_buffer" "_backing_buffer_size" "_txid" .RequestArgs }}) {}
+    {{- RenderParams "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" .RequestArgs }})
+    : UnownedEncodedMessage({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "_backing_buffer" "_backing_buffer_size" .RequestArgs }}) {}
   UnownedEncodedMessage(
-    {{- RenderParams "uint32_t _iovec_capacity" "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" "zx_txid_t _txid" .RequestArgs }})
+    {{- RenderParams "uint32_t _iovec_capacity" "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" .RequestArgs }})
     : message_(::fidl::OutgoingMessage::ConstructorArgs{
       .iovecs = iovecs_,
       .iovec_capacity = _iovec_capacity,
@@ -77,7 +77,7 @@ struct {{ .WireRequest }} final {
         .backing_buffer_capacity = _backing_buffer_size,
       }) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL {{ .WireRequest.Self }} _request({{ RenderForwardParams "_txid" .RequestArgs }});
+    FIDL_ALIGNDECL {{ .WireRequest.Self }} _request{ {{- RenderForwardParams .RequestArgs -}} };
     message_.Encode<{{ .WireRequest.Self }}>(&_request);
   }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
@@ -129,11 +129,11 @@ struct {{ .WireRequest }} final {
 
   class OwnedEncodedMessage final {
   public:
-    explicit OwnedEncodedMessage({{- RenderParams "zx_txid_t _txid" .RequestArgs }})
-      : message_({{ RenderForwardParams "1u" "backing_buffer_.data()" "backing_buffer_.size()" "_txid" .RequestArgs }}) {}
+    explicit OwnedEncodedMessage({{- RenderParams .RequestArgs }})
+      : message_({{ RenderForwardParams "1u" "backing_buffer_.data()" "backing_buffer_.size()" .RequestArgs }}) {}
     // Internal constructor.
-    explicit OwnedEncodedMessage({{- RenderParams "::fidl::internal::AllowUnownedInputRef allow_unowned" "zx_txid_t _txid" .RequestArgs }})
-      : message_({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "backing_buffer_.data()" "backing_buffer_.size()" "_txid" .RequestArgs }}) {}
+    explicit OwnedEncodedMessage({{- RenderParams "::fidl::internal::AllowUnownedInputRef allow_unowned" .RequestArgs }})
+      : message_({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "backing_buffer_.data()" "backing_buffer_.size()" .RequestArgs }}) {}
     explicit OwnedEncodedMessage({{ .WireRequest.Self }}* request)
       : message_(1u, backing_buffer_.data(), backing_buffer_.size(), request) {}
     // Internal constructor.
@@ -195,7 +195,7 @@ struct {{ .WireRequest }} final {
   };
 
  private:
-  void _InitHeader(zx_txid_t _txid);
+  void _InitHeader();
 };
 {{- if .Request.IsResource }}
 {{- EndifFuchsia -}}
@@ -211,8 +211,8 @@ struct {{ .WireRequest }} final {
 {{- if .Request.IsResource }}
 {{- IfdefFuchsia -}}
 {{- end }}
-  void {{ .WireRequest }}::_InitHeader(zx_txid_t _txid) {
-    fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
+  void {{ .WireRequest }}::_InitHeader() {
+    fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
   }
 
   {{ if .Request.IsResource }}

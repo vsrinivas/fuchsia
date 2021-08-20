@@ -10,6 +10,7 @@
 #include <lib/fit/defer.h>
 #include <lib/stdcompat/type_traits.h>
 #include <lib/sync/completion.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <string.h>
@@ -361,45 +362,143 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   EXPECT_EQ(1, server_ptr->num_one_way());
 }
 
-// If writing to the channel fails, the response context ownership should be
-// released back to the user with a call to |OnError|.
-TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
+fidl::Endpoints<Example> CreateEndpointsWithoutClientWriteRight() {
   zx::status endpoints = fidl::CreateEndpoints<Example>();
-  ASSERT_OK(endpoints.status_value());
+  EXPECT_OK(endpoints.status_value());
+  if (!endpoints.is_ok())
+    return {};
+
   auto [client_end, server_end] = std::move(*endpoints);
   {
     zx::channel client_channel_non_writable;
-    ASSERT_OK(
+    EXPECT_OK(
         client_end.channel().replace(ZX_RIGHT_READ | ZX_RIGHT_WAIT, &client_channel_non_writable));
     client_end.channel() = std::move(client_channel_non_writable);
   }
+
+  return fidl::Endpoints<Example>{std::move(client_end), std::move(server_end)};
+}
+
+class ExpectErrorResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {
+ public:
+  explicit ExpectErrorResponseContext(sync_completion_t* did_error, zx_status_t expected_status,
+                                      fidl::Reason expected_reason)
+      : did_error_(did_error),
+        expected_status_(expected_status),
+        expected_reason_(expected_reason) {}
+
+  void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& result) override {
+    EXPECT_TRUE(!result.ok());
+    EXPECT_STATUS(expected_status_, result.status());
+    EXPECT_EQ(expected_reason_, result.error().reason());
+    sync_completion_signal(did_error_);
+  }
+
+ private:
+  sync_completion_t* did_error_;
+  zx_status_t expected_status_;
+  fidl::Reason expected_reason_;
+};
+
+// If writing to the channel fails, the response context ownership should be
+// released back to the user with a call to |OnError|.
+TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
+  fidl::Endpoints<Example> endpoints;
+  ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
+  auto [client_end, server_end] = std::move(endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fidl::WireSharedClient<Example> client(std::move(client_end), loop.dispatcher());
   loop.StartThread("client-test");
 
-  class TestResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {
-   public:
-    explicit TestResponseContext(sync_completion_t* error) : error_(error) {}
-
-    void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& result) override {
-      ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
-      EXPECT_EQ(fidl::Reason::kTransportError, result.reason());
-      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.status());
-      sync_completion_signal(error_);
-    }
-
-   private:
-    sync_completion_t* error_;
-  };
-
-  sync_completion_t error;
-  TestResponseContext context(&error);
+  sync::Completion error;
+  ExpectErrorResponseContext context(error.get(), ZX_ERR_ACCESS_DENIED,
+                                     fidl::Reason::kTransportError);
 
   fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
   fidl::Result result = client->TwoWay(buffer.view(), "foo", &context);
   ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
-  ASSERT_OK(sync_completion_wait(&error, ZX_TIME_INFINITE));
+  ASSERT_OK(error.Wait());
+}
+
+TEST(GenAPITestCase, AsyncNotifySendError) {
+  auto do_test = [](auto&& client_instance_indicator) {
+    using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
+    fidl::Endpoints<Example> endpoints;
+    ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
+    auto [local, remote] = std::move(endpoints);
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ClientType client(std::move(local), loop.dispatcher());
+
+    sync::Completion error;
+    ExpectErrorResponseContext context(error.get(), ZX_ERR_ACCESS_DENIED,
+                                       fidl::Reason::kTransportError);
+
+    fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+    client->TwoWay(buffer.view(), "foo", &context);
+    // The context should be asynchronously notified.
+    EXPECT_FALSE(error.signaled());
+    loop.RunUntilIdle();
+    EXPECT_TRUE(error.signaled());
+  };
+
+  do_test(fidl::WireClient<Example>{});
+  do_test(fidl::WireSharedClient<Example>{});
+}
+
+TEST(GenAPITestCase, AsyncNotifyTeardownError) {
+  fidl::Endpoints<Example> endpoints;
+  ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
+  auto [local, remote] = std::move(endpoints);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+  client.AsyncTeardown();
+  loop.RunUntilIdle();
+
+  sync::Completion error;
+  ExpectErrorResponseContext context(error.get(), ZX_ERR_CANCELED, fidl::Reason::kUnbind);
+
+  fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+  client->TwoWay(buffer.view(), "foo", &context);
+  EXPECT_FALSE(error.signaled());
+  loop.RunUntilIdle();
+  EXPECT_TRUE(error.signaled());
+}
+
+TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
+  auto do_test = [](auto&& client_instance_indicator) {
+    using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
+    fidl::Endpoints<Example> endpoints;
+    ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
+    auto [local, remote] = std::move(endpoints);
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ClientType client(std::move(local), loop.dispatcher());
+
+    sync::Completion error;
+    // Note that the reason is |kUnbind| because shutting down the loop will
+    // synchronously teardown the client. Once the internal bindings object is
+    // destroyed, the client would forget what was the original reason for
+    // teardown (kDispatcherError).
+    //
+    // We may want to improve the post-teardown error fidelity by remembering
+    // the reason on the client object.
+    ExpectErrorResponseContext context(error.get(), ZX_ERR_CANCELED, fidl::Reason::kUnbind);
+
+    loop.Shutdown();
+    EXPECT_FALSE(error.signaled());
+
+    fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+    client->TwoWay(buffer.view(), "foo", &context);
+    // If the loop was shutdown, |context| should still be notified, although
+    // it has to happen on the current stack frame.
+    EXPECT_TRUE(error.signaled());
+  };
+
+  do_test(fidl::WireClient<Example>{});
+  do_test(fidl::WireSharedClient<Example>{});
 }
 
 // An integration-style test that verifies that user-supplied async callbacks

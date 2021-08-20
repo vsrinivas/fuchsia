@@ -57,7 +57,9 @@ class ::fidl::internal::WireClientImpl<fidl_testing::TestProtocol>
     }
   }
 
-  std::shared_ptr<internal::ChannelRef> GetChannel() { return internal::ClientBase::GetChannel(); }
+  std::shared_ptr<internal::ChannelRef> GetChannelForSyncCall() {
+    return internal::ClientBase::GetChannelForSyncCall();
+  }
 
   uint32_t GetEventCount() {
     std::unique_lock lock(lock_);

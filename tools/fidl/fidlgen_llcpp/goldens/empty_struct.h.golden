@@ -243,12 +243,10 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_emptystruct::wire::Empty e;
-  explicit WireRequest(zx_txid_t _txid,
-                       const ::fidl_test_emptystruct::wire::Empty& e)
-      : e(e) {
-    _InitHeader(_txid);
+  explicit WireRequest(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
+    _InitHeader();
   }
-  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+  WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_emptystruct::
@@ -266,13 +264,12 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, zx_txid_t _txid,
+                          uint32_t _backing_buffer_size,
                           const ::fidl_test_emptystruct::wire::Empty& e)
         : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, _txid,
-                                e) {}
+                                _backing_buffer, _backing_buffer_size, e) {}
     UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, zx_txid_t _txid,
+                          uint32_t _backing_buffer_size,
                           const ::fidl_test_emptystruct::wire::Empty& e)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
@@ -281,7 +278,7 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireRequest _request(_txid, e);
+      FIDL_ALIGNDECL WireRequest _request{e};
       message_.Encode<WireRequest>(&_request);
     }
     UnownedEncodedMessage(uint8_t* _backing_buffer,
@@ -332,16 +329,14 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(zx_txid_t _txid,
-                                 const ::fidl_test_emptystruct::wire::Empty& e)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), _txid,
-                   e) {}
+    explicit OwnedEncodedMessage(const ::fidl_test_emptystruct::wire::Empty& e)
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), e) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, zx_txid_t _txid,
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
         const ::fidl_test_emptystruct::wire::Empty& e)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), _txid, e) {}
+                   backing_buffer_.size(), e) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    request) {}
@@ -412,7 +407,7 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
   };
 
  private:
-  void _InitHeader(zx_txid_t _txid);
+  void _InitHeader();
 };
 template <>
 struct ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>
@@ -595,12 +590,10 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_emptystruct::wire::Empty e;
-  explicit WireRequest(zx_txid_t _txid,
-                       const ::fidl_test_emptystruct::wire::Empty& e)
-      : e(e) {
-    _InitHeader(_txid);
+  explicit WireRequest(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
+    _InitHeader();
   }
-  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+  WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_emptystruct::
@@ -620,13 +613,12 @@ struct ::fidl::WireRequest<
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, zx_txid_t _txid,
+                          uint32_t _backing_buffer_size,
                           const ::fidl_test_emptystruct::wire::Empty& e)
         : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, _txid,
-                                e) {}
+                                _backing_buffer, _backing_buffer_size, e) {}
     UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, zx_txid_t _txid,
+                          uint32_t _backing_buffer_size,
                           const ::fidl_test_emptystruct::wire::Empty& e)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
@@ -635,7 +627,7 @@ struct ::fidl::WireRequest<
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireRequest _request(_txid, e);
+      FIDL_ALIGNDECL WireRequest _request{e};
       message_.Encode<WireRequest>(&_request);
     }
     UnownedEncodedMessage(uint8_t* _backing_buffer,
@@ -686,16 +678,14 @@ struct ::fidl::WireRequest<
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(zx_txid_t _txid,
-                                 const ::fidl_test_emptystruct::wire::Empty& e)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), _txid,
-                   e) {}
+    explicit OwnedEncodedMessage(const ::fidl_test_emptystruct::wire::Empty& e)
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), e) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, zx_txid_t _txid,
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
         const ::fidl_test_emptystruct::wire::Empty& e)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), _txid, e) {}
+                   backing_buffer_.size(), e) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    request) {}
@@ -766,7 +756,7 @@ struct ::fidl::WireRequest<
   };
 
  private:
-  void _InitHeader(zx_txid_t _txid);
+  void _InitHeader();
 };
 template <>
 struct ::fidl::WireResponse<

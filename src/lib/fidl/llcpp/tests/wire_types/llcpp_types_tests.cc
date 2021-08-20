@@ -33,7 +33,7 @@ void HelperExpectPeerInvalid(zx::channel& channel) {
 }
 
 TEST(LlcppTypesTests, EncodedMessageTest) {
-  NonNullableChannelRequest msg(0);
+  NonNullableChannelRequest msg{};
 
   // Capture the extra handle here; it will not be cleaned by encoded_message
   zx::channel channel_1;
@@ -51,7 +51,7 @@ TEST(LlcppTypesTests, EncodedMessageTest) {
 
 // Start with a message, then encode, decode and encode again.
 TEST(LlcppTypesTests, RoundTripTest) {
-  NonNullableChannelRequest msg(10);
+  NonNullableChannelRequest msg{};
 
   // Capture the extra handle here; it will not be cleaned by encoded_message
   zx::channel channel_1;
@@ -66,6 +66,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
   auto* encoded =
       new fidl::UnownedEncodedMessage<NonNullableChannelRequest>(storage, sizeof(storage), &msg);
   EXPECT_EQ(encoded->status(), ZX_OK);
+  encoded->GetOutgoingMessage().set_txid(10);
   auto encoded_bytes = encoded->GetOutgoingMessage().CopyBytes();
   EXPECT_EQ(encoded_bytes.size(), sizeof(NonNullableChannelRequest));
 

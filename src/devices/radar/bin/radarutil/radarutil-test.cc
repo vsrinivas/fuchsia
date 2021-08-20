@@ -133,7 +133,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
     explicit FakeBurstReaderProvider(FakeRadarDevice& parent) : parent_(parent) {}
 
     void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
-      fidl::WireRequest<BurstReaderProvider::Connect> outgoing(0, std::move(request->server));
+      fidl::WireRequest<BurstReaderProvider::Connect> outgoing(std::move(request->server));
       parent_.Connect(&outgoing, completer);
     };
 

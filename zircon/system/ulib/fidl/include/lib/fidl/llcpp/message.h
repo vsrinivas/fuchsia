@@ -44,7 +44,12 @@ struct AllowUnownedInputRef {};
 
 }  // namespace internal
 
-// Class representing a FIDL message on the write path.
+// |OutgoingMessage| represents a FIDL message on the write path.
+//
+// This class takes ownership of handles in the message.
+//
+// For efficiency, errors are stored inside this object. |Write| operations are
+// no-op and return the contained error if the message is in an error state.
 class OutgoingMessage : public ::fidl::Result {
  public:
   struct ConstructorArgs {
@@ -74,11 +79,19 @@ class OutgoingMessage : public ::fidl::Result {
   // |c_msg| must contain an already-encoded message.
   static OutgoingMessage FromEncodedCMessage(const fidl_outgoing_msg_t* c_msg);
 
+  // Creates an empty outgoing message representing an error.
+  //
+  // |failure| must contain an error result.
+  explicit OutgoingMessage(const ::fidl::Result& failure);
+
   // Set the txid in the message header.
   // Requires that there are sufficient bytes to store the header in the buffer.
   void set_txid(zx_txid_t txid) {
+    if (!ok()) {
+      return;
+    }
     ZX_ASSERT(iovec_actual() >= 1 && iovecs()[0].capacity >= sizeof(fidl_message_header_t));
-    // The byte buffer is const becuase the kernel only reads the bytes.
+    // The byte buffer is const because the kernel only reads the bytes.
     // const_cast is needed to populate it here.
     reinterpret_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))->txid = txid;
   }
@@ -93,7 +106,7 @@ class OutgoingMessage : public ::fidl::Result {
   // Returns true iff the bytes in this message are identical to the bytes in the argument.
   bool BytesMatch(const OutgoingMessage& other) const;
 
-  // Holds a heap-allocated continguous copy of the bytes in this message.
+  // Holds a heap-allocated contiguous copy of the bytes in this message.
   //
   // This owns the allocated buffer and frees it when the object goes out of scope.
   // To create a |CopiedBytes|, use |CopyBytes|.
@@ -167,7 +180,7 @@ class OutgoingMessage : public ::fidl::Result {
     CallImpl(FidlType::Type, client_end.handle(), result_bytes, result_capacity, deadline);
   }
 
-  // For asynchronous clients, writes a request.
+  // TODO(fxbug.dev/75324): Remove this in favor of |ClientBase::TwoWay|.
   ::fidl::Result Write(::fidl::internal::ClientBase* client,
                        ::fidl::internal::ResponseContext* context);
 #endif

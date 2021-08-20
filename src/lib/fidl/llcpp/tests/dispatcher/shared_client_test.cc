@@ -259,7 +259,7 @@ TEST(WireSharedClient, CloneSupportsExplicitTeardown) {
   ASSERT_FALSE(observer.IsTeardown());
 
   // The channel being managed is still alive.
-  ASSERT_NOT_NULL(clone->GetChannel().get());
+  ASSERT_NOT_NULL(clone->GetChannelForSyncCall().get());
 
   // Now we call |AsyncTeardown| on the main client, the clone would be torn
   // down too.
@@ -267,8 +267,8 @@ TEST(WireSharedClient, CloneSupportsExplicitTeardown) {
 
   ASSERT_OK(loop.RunUntilIdle());
   EXPECT_TRUE(observer.IsTeardown());
-  EXPECT_NULL(clone->GetChannel().get());
-  EXPECT_NULL(client->GetChannel().get());
+  EXPECT_NULL(clone->GetChannelForSyncCall().get());
+  EXPECT_NULL(client->GetChannelForSyncCall().get());
 }
 
 }  // namespace

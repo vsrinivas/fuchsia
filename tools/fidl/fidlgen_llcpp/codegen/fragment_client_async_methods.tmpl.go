@@ -36,10 +36,9 @@ The request and callback are allocated on the heap.
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   {{ .WireRequest }}::OwnedEncodedMessage _request(
-    {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "_context->Txid()" .RequestArgs -}}
+    {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -66,10 +65,9 @@ The request and callback are allocated on the heap.
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   {{ .WireRequest }}::OwnedEncodedMessage _request(
-    {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "_context->Txid()" .RequestArgs -}}
+    {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 
@@ -84,17 +82,15 @@ The request and callback are allocated on the heap.
           {{ .WireResponseContext }}* _context
         {{- end -}}
     ) {
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ if .RequestArgs }}
     {{ .WireRequest }}::UnownedEncodedMessage _request(
       {{ RenderForwardParams "_request_buffer.data"
                              "_request_buffer.capacity"
-                             "_context->Txid()"
                              .RequestArgs }});
   {{- else }}
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     {{ .WireRequest }}::OwnedEncodedMessage _request(
-      {{ RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "_context->Txid()" .RequestArgs }});
+      {{ RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
   {{- end }}
   return _request.GetOutgoingMessage().Write(this, _context);
 }

@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_CLIENT_BASE_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/async/time.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
 #include <lib/fidl/llcpp/internal/client_details.h>
@@ -22,6 +23,35 @@
 
 namespace fidl {
 namespace internal {
+
+// A mixin into |ResponseContext| to handle the asynchronous error delivery
+// aspects.
+template <typename Derived>
+class ResponseContextAsyncErrorTask : private async_task_t {
+ public:
+  // Try to schedule an |ResponseContext::OnError| as a task on |dispatcher|.
+  //
+  // If successful, ownership of the context is passed to the |dispatcher| until
+  // the task is executed.
+  zx_status_t TryAsyncDeliverError(::fidl::Result error, async_dispatcher_t* dispatcher) {
+    error_ = error;
+    async_task_t* task = this;
+    *task = async_task_t{{ASYNC_STATE_INIT},
+                         &ResponseContextAsyncErrorTask::AsyncErrorDelivery,
+                         async_now(dispatcher)};
+    return async_post_task(dispatcher, task);
+  }
+
+ private:
+  static void AsyncErrorDelivery(async_dispatcher_t* /*unused*/, async_task_t* task,
+                                 zx_status_t status) {
+    auto* context = static_cast<Derived*>(task);
+    auto* self = static_cast<ResponseContextAsyncErrorTask*>(task);
+    context->OnError(self->error_);
+  }
+
+  ::fidl::Result error_;
+};
 
 // |ResponseContext| contains information about an outstanding asynchronous
 // method call. It inherits from an intrusive container node so that
@@ -48,7 +78,8 @@ namespace internal {
 // in order to safely iterate over outstanding transactions on |ClientBase|
 // destruction, releasing each outstanding response context.
 class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<ResponseContext*>,
-                        private list_node_t {
+                        private list_node_t,
+                        private ResponseContextAsyncErrorTask<ResponseContext> {
  public:
   explicit ResponseContext(uint64_t ordinal)
       : fidl::internal_wavl::WAVLTreeContainable<ResponseContext*>(),
@@ -104,6 +135,7 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   void OnError(::fidl::Result error) { OnRawResult(::fidl::IncomingMessage(error)); }
 
  private:
+  friend class ResponseContextAsyncErrorTask<ResponseContext>;
   friend class ClientBase;
 
   // For use with |fidl::internal_wavl::WAVLTree|.
@@ -209,17 +241,29 @@ class ClientBase {
   // contexts would be notified of that error.
   void ReleaseResponseContexts(fidl::UnbindInfo info);
 
-  // Returns a strong reference to the channel to prevent its destruction during a |zx_channel_call|
-  // or |zx_channel_write|. The caller must release the reference after making the call/write,
-  // so as not to indefinitely block operations such as |WaitForChannel|.
+  // Returns a strong reference to the channel to prevent its destruction during
+  // a |zx_channel_call|. The caller must release the reference after making the
+  // call, so as not to indefinitely block operations such as |WaitForChannel|.
   //
   // If the client has been unbound, returns |nullptr|.
-  std::shared_ptr<ChannelRef> GetChannel() {
-    if (auto binding = binding_.lock()) {
-      return binding->GetChannel();
-    }
-    return nullptr;
-  }
+  std::shared_ptr<ChannelRef> GetChannelForSyncCall() { return GetChannel(); }
+
+  // Sends a two way message.
+  //
+  // In the process, registers |context| for the corresponding reply and mints
+  // a new transaction ID. |message| will be updated with that transaction ID.
+  //
+  // Errors are notified via |context|.
+  //
+  // TODO(fxbug.dev/75324): Return void when synchronous errors are removed.
+  fidl::Result SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context);
+
+  // Sends a one way message.
+  //
+  // |message| will have its transaction ID set to zero.
+  //
+  // Errors are returned to the caller.
+  fidl::Result SendOneWay(::fidl::OutgoingMessage& message);
 
   // For debugging.
   size_t GetTransactionCount() {
@@ -283,6 +327,17 @@ class ClientBase {
                                                   AsyncEventHandler* maybe_event_handler) = 0;
 
  private:
+  // Try to asynchronously notify |context| of the |error|. If not possible
+  // (e.g. dispatcher shutting down), notify it synchronously as a last resort.
+  void TryAsyncDeliverError(::fidl::Result error, ResponseContext* context);
+
+  std::shared_ptr<ChannelRef> GetChannel() {
+    if (auto binding = binding_.lock()) {
+      return binding->GetChannel();
+    }
+    return nullptr;
+  }
+
   // TODO(fxbug.dev/82085): Instead of protecting methods and adding friends,
   // we should use composition over inheriting from ClientBase.
   friend class ClientController;
@@ -292,15 +347,22 @@ class ClientBase {
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncClientBinding> binding_;
 
+  // The dispatcher that is monitoring FIDL messages.
+  async_dispatcher_t* dispatcher_ = nullptr;
+
   // State for tracking outstanding transactions.
   std::mutex lock_;
+
   // The base node of an intrusive container of ResponseContexts corresponding to outstanding
   // asynchronous transactions.
   fidl::internal_wavl::WAVLTree<zx_txid_t, ResponseContext*, ResponseContext::Traits> contexts_
       __TA_GUARDED(lock_);
+
   // Mirror list used to safely invoke OnError() on outstanding ResponseContexts in ~ClientBase().
   list_node_t delete_list_ __TA_GUARDED(lock_) = LIST_INITIAL_VALUE(delete_list_);
-  zx_txid_t txid_base_ __TA_GUARDED(lock_) = 0;  // Value used to compute the next txid.
+
+  // Value used to compute the next txid.
+  zx_txid_t txid_base_ __TA_GUARDED(lock_) = 0;
 };
 
 // |ClientController| manages the lifetime of a |ClientImpl| instance.

@@ -156,7 +156,7 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   async_loop_t* loop = nullptr;
   ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
-  fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request(0);
+  fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request;
   FillRequestHandles handles;
   FillRequest(handles, request);
   fidl::OwnedEncodedMessage<fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct>>
@@ -185,7 +185,7 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
   async_loop_t* loop = nullptr;
   ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
-  fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request(0);
+  fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request;
   FillRequestHandles handles;
   FillRequest(handles, request);
   fidl::OwnedEncodedMessage<fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct>>

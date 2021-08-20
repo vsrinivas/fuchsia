@@ -33,7 +33,7 @@ class WireClientImpl<TestProtocol> : public ClientBase {
  public:
   void SomeWireMethod() {
     GoodMessage msg;
-    std::shared_ptr channel = ClientBase::GetChannel();
+    std::shared_ptr channel = ClientBase::GetChannelForSyncCall();
     zx_status_t status =
         zx_channel_write_etc(channel->handle(), 0, static_cast<void*>(msg.message().bytes().data()),
                              msg.message().bytes().actual(), msg.message().handles().data(),

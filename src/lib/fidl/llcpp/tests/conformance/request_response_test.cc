@@ -12,8 +12,8 @@ TEST(FidlHost, Request) {
   // Argument for the request.
   fidl_llcpp_types_test::wire::FooRequest req;
   req.bar = 10;
-  // The request (we don't use _txid).
-  fidl::WireRequest<fidl_llcpp_types_test::Baz::Foo> foo(/*_txid=*/0, req);
+  // The request.
+  fidl::WireRequest<fidl_llcpp_types_test::Baz::Foo> foo(req);
   // Serialized version of the request.
   fidl::OwnedEncodedMessage<fidl::WireRequest<fidl_llcpp_types_test::Baz::Foo>> message(&foo);
   EXPECT_EQ(message.status(), ZX_OK);

@@ -273,7 +273,7 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
                                         std::make_unique<EventHandler>(unbound));
 
   // Create a strong reference to the channel.
-  auto channel = client->GetChannel();
+  auto channel = client->GetChannelForSyncCall();
 
   // |AsyncTeardown| and the teardown notification should not be blocked by the
   // channel reference.

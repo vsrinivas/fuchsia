@@ -180,7 +180,7 @@ struct ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+  WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
@@ -197,11 +197,11 @@ struct ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, zx_txid_t _txid)
+                          uint32_t _backing_buffer_size)
         : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, _txid) {}
+                                _backing_buffer, _backing_buffer_size) {}
     UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, zx_txid_t _txid)
+                          uint32_t _backing_buffer_size)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
               .iovec_capacity = _iovec_capacity,
@@ -209,7 +209,7 @@ struct ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireRequest _request(_txid);
+      FIDL_ALIGNDECL WireRequest _request{};
       message_.Encode<WireRequest>(&_request);
     }
     UnownedEncodedMessage(uint8_t* _backing_buffer,
@@ -260,13 +260,13 @@ struct ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(zx_txid_t _txid)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), _txid) {}
+    explicit OwnedEncodedMessage()
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size()) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, zx_txid_t _txid)
+        ::fidl::internal::AllowUnownedInputRef allow_unowned)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), _txid) {}
+                   backing_buffer_.size()) {}
     explicit OwnedEncodedMessage(WireRequest* request)
         : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
                    request) {}
@@ -340,7 +340,7 @@ struct ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
   };
 
  private:
-  void _InitHeader(zx_txid_t _txid);
+  void _InitHeader();
 };
 template <>
 struct ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::

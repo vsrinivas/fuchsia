@@ -187,7 +187,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
       driver_start_args.set_ns(allocator, std::move(ns_entries));
       driver_start_args.set_outgoing_dir(allocator, std::move(outgoing_dir_endpoints->server));
       Completer completer(&transaction);
-      fidl::WireRequest<fdf::DriverHost::Start> request(0, driver_start_args,
+      fidl::WireRequest<fdf::DriverHost::Start> request(driver_start_args,
                                                         std::move(driver_endpoints->server));
       driver_host().Start(&request, completer);
     }
@@ -355,7 +355,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   ASSERT_TRUE(endpoints.is_ok());
   {
     Completer completer(&transaction);
-    fidl::WireRequest<fdf::DriverHost::Start> request(0, fdf::wire::DriverStartArgs(),
+    fidl::WireRequest<fdf::DriverHost::Start> request(fdf::wire::DriverStartArgs(),
                                                       std::move(endpoints->server));
     driver_host().Start(&request, completer);
   }
@@ -370,7 +370,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
 
-    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+    fidl::WireRequest<fdf::DriverHost::Start> request(std::move(driver_start_args),
                                                       std::move(endpoints->server));
     driver_host().Start(&request, completer);
   }
@@ -385,7 +385,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
     driver_start_args.set_ns(allocator);
-    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+    fidl::WireRequest<fdf::DriverHost::Start> request(std::move(driver_start_args),
                                                       std::move(endpoints->server));
     driver_host().Start(&request, completer);
   }
@@ -406,7 +406,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     driver_start_args.set_ns(allocator, std::move(entries1));
 
     Completer completer(&transaction);
-    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+    fidl::WireRequest<fdf::DriverHost::Start> request(std::move(driver_start_args),
                                                       std::move(endpoints->server));
     driver_host().Start(&request, completer);
   }
@@ -428,7 +428,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     driver_start_args.set_ns(allocator, std::move(entries2));
 
     Completer completer(&transaction);
-    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+    fidl::WireRequest<fdf::DriverHost::Start> request(std::move(driver_start_args),
                                                       std::move(endpoints->server));
     driver_host().Start(&request, completer);
   }
@@ -490,7 +490,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
     driver_start_args.set_program(allocator, std::move(dictionary));
     driver_start_args.set_ns(allocator, std::move(ns_entries));
 
-    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+    fidl::WireRequest<fdf::DriverHost::Start> request(std::move(driver_start_args),
                                                       std::move(driver_endpoints->server));
     driver_host().Start(&request, completer);
   }

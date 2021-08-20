@@ -33,7 +33,7 @@ extern "C" const fidl_type_t
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                               LibfuzzerNeedsNonemptyProtocol>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -52,7 +52,7 @@ extern "C" const fidl_type_t
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                               LibfuzzerNeedsNonemptyProtocol>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -70,7 +70,7 @@ namespace fidl_test_bindingsdenylist {
 fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
     return ::fidl::WireResult<
         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
             LibfuzzerNeedsNonemptyProtocol>(
@@ -146,11 +146,10 @@ fidl::internal::WireClientImpl<
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
-      _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid());
+      _request(::fidl::internal::AllowUnownedInputRef{});
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -187,11 +186,10 @@ fidl::internal::WireClientImpl<
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
-      _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid());
+      _request(::fidl::internal::AllowUnownedInputRef{});
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -201,12 +199,10 @@ fidl::internal::WireClientImpl<
         ::fidl::WireResponseContext<
             ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                 LibfuzzerNeedsNonemptyProtocol>* _context) {
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
-      _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid());
+      _request(::fidl::internal::AllowUnownedInputRef{});
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 #endif  // __Fuchsia__
@@ -290,11 +286,10 @@ fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<
-    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-        LibfuzzerNeedsNonemptyProtocol>::_InitHeader(zx_txid_t _txid) {
+void ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                             LibfuzzerNeedsNonemptyProtocol>::_InitHeader() {
   fidl_init_txn_header(
-      &_hdr, _txid,
+      &_hdr, 0,
       ::fidl_test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
 }

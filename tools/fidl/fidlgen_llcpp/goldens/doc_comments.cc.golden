@@ -34,7 +34,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Write(_client);
   SetResult(_outgoing);
@@ -46,13 +46,12 @@ namespace fidl_test_doccomments {
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>::Method() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
-        ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>(
-            _channel->handle()));
-    return _res;
-  }
-  return ::fidl::Result::Unbound();
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
+      _request(::fidl::internal::AllowUnownedInputRef{});
+  return ::fidl::internal::ClientBase::SendOneWay(
+      _request.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 
@@ -190,8 +189,8 @@ fidl::WireServer<::fidl_test_doccomments::Interface>::dispatch_message(
 #endif  // __Fuchsia__
 
 void ::fidl::WireRequest<
-    ::fidl_test_doccomments::Interface::Method>::_InitHeader(zx_txid_t _txid) {
-  fidl_init_txn_header(&_hdr, _txid,
+    ::fidl_test_doccomments::Interface::Method>::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0,
                        ::fidl_test_doccomments::kInterface_Method_Ordinal);
 }
 

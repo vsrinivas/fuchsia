@@ -67,7 +67,7 @@ zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch) {
 }
 
 zx_status_t CloseMessage(FidlDispatchFunction dispatch) {
-  fidl::WireRequest<fio::Node::Close>::OwnedEncodedMessage request(zx_txid_t(0));
+  fidl::WireRequest<fio::Node::Close>::OwnedEncodedMessage request;
   auto msg_bytes = request.GetOutgoingMessage().CopyBytes();
   fidl_incoming_msg_t msg = {
       .bytes = msg_bytes.data(),

@@ -63,6 +63,18 @@ OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg)
   is_transactional_ = true;
 }
 
+OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)
+    : fidl::Result(failure),
+      message_({.type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
+                .iovec = {
+                    .iovecs = nullptr,
+                    .num_iovecs = 0,
+                    .handles = nullptr,
+                    .num_handles = 0,
+                }}) {
+  ZX_DEBUG_ASSERT(failure.status() != ZX_OK);
+}
+
 OutgoingMessage::OutgoingMessage(ConstructorArgs args)
     : fidl::Result(fidl::Result::Ok()),
       message_({
@@ -149,18 +161,7 @@ void OutgoingMessage::WriteImpl(zx_handle_t channel) {
 
 fidl::Result OutgoingMessage::Write(::fidl::internal::ClientBase* client,
                                     ::fidl::internal::ResponseContext* context) {
-  if (auto channel = client->GetChannel()) {
-    Write(channel->handle());
-    if (!ok()) {
-      client->ForgetAsyncTxn(context);
-      context->OnError(fidl::Result(*this));
-    }
-  } else {
-    SetResult(fidl::Result::Unbound());
-    client->ForgetAsyncTxn(context);
-    context->OnError(fidl::Result::Unbound());
-  }
-  return fidl::Result(*this);
+  return client->SendTwoWay(*this, context);
 }
 
 void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t channel,
