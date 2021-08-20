@@ -12,8 +12,9 @@ import("//build/dist/generated_resource.gni")
 # zxcrypt master key to the system data partition.
 
 # The device should use an all-0's master key, as we lack support for any
-# secure on-device storage.
+# secure on-device storage.  This should never be used in production builds.
 generated_resource("null") {
+  deps = [ "//build/validate:non_production_tag" ]
   outputs = [ "config/zxcrypt" ]
   contents = "null"
 }
