@@ -65,7 +65,7 @@ zx_status_t AmlogicDisplay::RestartDisplay() {
   // Need to call this function since VPU/VPP registers were reset
   vpu_->SetFirstTimeDriverLoad();
 
-  return vout_->RestartDisplay(parent_);
+  return vout_->RestartDisplay();
 }
 
 zx_status_t AmlogicDisplay::DisplayInit() {

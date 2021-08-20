@@ -25,7 +25,7 @@ class Vout {
   zx_status_t InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t width, uint32_t height);
   zx_status_t InitHdmi(zx_device_t* parent);
 
-  zx_status_t RestartDisplay(zx_device_t* parent);
+  zx_status_t RestartDisplay();
 
   void PopulateAddedDisplayArgs(added_display_args_t* args, uint64_t display_id);
   bool IsFormatSupported(zx_pixel_format_t format);

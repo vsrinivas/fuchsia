@@ -50,56 +50,56 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
   dsi_.width = width;
   dsi_.height = height;
 
-  const display_setting_t* init_disp_table;
   switch (panel_type) {
     case PANEL_TV070WSM_FT:
     case PANEL_TV070WSM_FT_9365:
-      init_disp_table = &kDisplaySettingTV070WSM_FT;
+      dsi_.disp_setting = kDisplaySettingTV070WSM_FT;
       break;
     case PANEL_P070ACB_FT:
-      init_disp_table = &kDisplaySettingP070ACB_FT;
+      dsi_.disp_setting = kDisplaySettingP070ACB_FT;
       break;
     case PANEL_KD070D82_FT_9365:
     case PANEL_KD070D82_FT:
-      init_disp_table = &kDisplaySettingKD070D82_FT;
+      dsi_.disp_setting = kDisplaySettingKD070D82_FT;
       break;
     case PANEL_TV101WXM_FT_9365:
     case PANEL_TV101WXM_FT:
-      init_disp_table = &kDisplaySettingTV101WXM_FT;
+      dsi_.disp_setting = kDisplaySettingTV101WXM_FT;
       break;
     case PANEL_G101B158_FT:
-      init_disp_table = &kDisplaySettingG101B158_FT;
+      dsi_.disp_setting = kDisplaySettingG101B158_FT;
       break;
     case PANEL_TV080WXM_FT:
-      init_disp_table = &kDisplaySettingTV080WXM_FT;
+      dsi_.disp_setting = kDisplaySettingTV080WXM_FT;
       break;
     case PANEL_TV070WSM_ST7703I:
-      init_disp_table = &kDisplaySettingTV070WSM_ST7703I;
+      dsi_.disp_setting = kDisplaySettingTV070WSM_ST7703I;
       break;
     default:
       DISP_ERROR("Unsupported panel detected!\n");
       return ZX_ERR_NOT_SUPPORTED;
   }
 
-  dsi_.disp_setting.h_active = init_disp_table->h_active;
-  dsi_.disp_setting.v_active = init_disp_table->v_active;
-  dsi_.disp_setting.h_period = init_disp_table->h_period;
-  dsi_.disp_setting.v_period = init_disp_table->v_period;
-  dsi_.disp_setting.hsync_width = init_disp_table->hsync_width;
-  dsi_.disp_setting.hsync_bp = init_disp_table->hsync_bp;
-  dsi_.disp_setting.hsync_pol = init_disp_table->hsync_pol;
-  dsi_.disp_setting.vsync_width = init_disp_table->vsync_width;
-  dsi_.disp_setting.vsync_bp = init_disp_table->vsync_bp;
-  dsi_.disp_setting.vsync_pol = init_disp_table->vsync_pol;
-  dsi_.disp_setting.lcd_clock = init_disp_table->lcd_clock;
-  dsi_.disp_setting.clock_factor = init_disp_table->clock_factor;
-  dsi_.disp_setting.lane_num = init_disp_table->lane_num;
-  dsi_.disp_setting.bit_rate_max = init_disp_table->bit_rate_max;
-
+  dsi_.dsi_host = amlogic_display::AmlDsiHost::Create(parent, panel_type);
+  if (!dsi_.dsi_host) {
+    return ZX_ERR_NO_MEMORY;
+  }
   fbl::AllocChecker ac;
-  dsi_.dsi_host = fbl::make_unique_checked<amlogic_display::AmlDsiHost>(&ac, parent, panel_type);
+  dsi_.clock = fbl::make_unique_checked<amlogic_display::AmlogicDisplayClock>(&ac);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
+
+  ddk::PDev pdev;
+  auto status = ddk::PDev::FromFragment(parent, &pdev);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not get PDEV protocol\n");
+    return status;
+  }
+  status = dsi_.clock->Init(pdev);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not initialize Clock object\n");
+    return status;
   }
 
   return ZX_OK;
@@ -140,27 +140,10 @@ zx_status_t Vout::InitHdmi(zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t Vout::RestartDisplay(zx_device_t* parent) {
-  ddk::PDev pdev;
-  zx_status_t status = ddk::PDev::FromFragment(parent, &pdev);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get PDEV protocol\n");
-    return status;
-  }
-
-  fbl::AllocChecker ac;
+zx_status_t Vout::RestartDisplay() {
+  zx_status_t status;
   switch (type_) {
     case VoutType::kDsi:
-      dsi_.clock = fbl::make_unique_checked<amlogic_display::AmlogicDisplayClock>(&ac);
-      if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-      }
-
-      status = dsi_.clock->Init(pdev);
-      if (status != ZX_OK) {
-        DISP_ERROR("Could not initialize Clock object\n");
-        return status;
-      }
 
       // Enable all display related clocks
       status = dsi_.clock->Enable(dsi_.disp_setting);
@@ -170,13 +153,7 @@ zx_status_t Vout::RestartDisplay(zx_device_t* parent) {
       }
 
       // Program and Enable DSI Host Interface
-      status = dsi_.dsi_host->Init(dsi_.clock->GetBitrate());
-      if (status != ZX_OK) {
-        DISP_ERROR("Could not initialize DSI Host\n");
-        return status;
-      }
-
-      status = dsi_.dsi_host->HostOn(dsi_.disp_setting);
+      status = dsi_.dsi_host->Enable(dsi_.disp_setting, dsi_.clock->GetBitrate());
       if (status != ZX_OK) {
         DISP_ERROR("DSI Host On failed! %d\n", status);
         return status;

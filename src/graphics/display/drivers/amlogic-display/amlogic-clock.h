@@ -26,13 +26,20 @@ namespace amlogic_display {
 
 class AmlogicDisplayClock {
  public:
-  AmlogicDisplayClock() {}
+  AmlogicDisplayClock() = default;
+
+  // Map all necessary resources. This method does not change hardware state,
+  // and is therefore safe to use when adopting a bootloader initialized device.
   zx_status_t Init(ddk::PDev& pdev);
   zx_status_t Enable(const display_setting_t& d);
   void Disable();
   void Dump();
 
-  uint32_t GetBitrate() { return pll_cfg_.bitrate; }
+  // This is only safe to call when the clock is Enable'd.
+  uint32_t GetBitrate() const {
+    ZX_DEBUG_ASSERT(clock_enabled_);
+    return pll_cfg_.bitrate;
+  }
 
  private:
   void CalculateLcdTiming(const display_setting_t& disp_setting);

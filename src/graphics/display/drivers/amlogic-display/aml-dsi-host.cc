@@ -36,6 +36,42 @@ void AmlDsiHost::FixupPanelType() {
   }
 }
 
+AmlDsiHost::AmlDsiHost(zx_device_t* parent, uint32_t panel_type)
+    : pdev_(ddk::PDev::FromFragment(parent)),
+      dsiimpl_(parent, "dsi"),
+      lcd_gpio_(parent, "gpio"),
+      panel_type_(panel_type) {
+}
+
+// static
+std::unique_ptr<AmlDsiHost> AmlDsiHost::Create(zx_device_t* parent, uint32_t panel_type) {
+  fbl::AllocChecker ac;
+  auto self = fbl::make_unique_checked<AmlDsiHost>(&ac, AmlDsiHost(parent, panel_type));
+  if (!ac.check()) {
+    DISP_ERROR("No memory to allocate a DSI host\n");
+    return nullptr;
+  }
+  if (!self->pdev_.is_valid()) {
+    DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
+    return nullptr;
+  }
+
+  // Map MIPI DSI and HHI registers
+  zx_status_t status = self->pdev_.MapMmio(MMIO_MPI_DSI, &(self->mipi_dsi_mmio_));
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not map MIPI DSI mmio (%d)\n", status);
+    return nullptr;
+  }
+
+  status = self->pdev_.MapMmio(MMIO_HHI, &(self->hhi_mmio_));
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not map HHI mmio (%d)\n", status);
+    return nullptr;
+  }
+
+  return self;
+}
+
 zx_status_t AmlDsiHost::HostModeInit(const display_setting_t& disp_setting) {
   // Setup relevant TOP_CNTL register -- Undocumented --
   SET_BIT32(MIPI_DSI, MIPI_DSI_TOP_CNTL, SUPPORTED_DPI_FORMAT, TOP_CNTL_DPI_CLR_MODE_START,
@@ -81,8 +117,7 @@ void AmlDsiHost::PhyDisable() {
   WRITE32_REG(HHI, HHI_MIPI_CNTL2, 0);
 }
 
-void AmlDsiHost::HostOff(const display_setting_t& disp_setting) {
-  ZX_DEBUG_ASSERT(initialized_);
+void AmlDsiHost::Disable(const display_setting_t& disp_setting) {
   // turn host off only if it's been fully turned on
   if (!host_on_) {
     return;
@@ -103,9 +138,7 @@ void AmlDsiHost::HostOff(const display_setting_t& disp_setting) {
   host_on_ = false;
 }
 
-zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
-  ZX_DEBUG_ASSERT(initialized_);
-
+zx_status_t AmlDsiHost::Enable(const display_setting_t& disp_setting, uint32_t bitrate) {
   if (host_on_) {
     return ZX_OK;
   }
@@ -127,7 +160,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
   }
 
   // Load Phy configuration
-  status = phy_->PhyCfgLoad(bitrate_);
+  status = phy_->PhyCfgLoad(bitrate);
   if (status != ZX_OK) {
     DISP_ERROR("Error during phy config calculations! %d\n", status);
     return status;
@@ -189,36 +222,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
   return ZX_OK;
 }
 
-zx_status_t AmlDsiHost::Init(uint32_t bitrate) {
-  if (initialized_) {
-    return ZX_OK;
-  }
-
-  if (!pdev_.is_valid()) {
-    DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  // Map MIPI DSI and HHI registers
-  zx_status_t status = pdev_.MapMmio(MMIO_MPI_DSI, &mipi_dsi_mmio_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not map MIPI DSI mmio\n");
-    return status;
-  }
-
-  status = pdev_.MapMmio(MMIO_HHI, &hhi_mmio_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not map HHI mmio\n");
-    return status;
-  }
-
-  bitrate_ = bitrate;
-  initialized_ = true;
-  return ZX_OK;
-}
-
 void AmlDsiHost::Dump() {
-  ZX_DEBUG_ASSERT(initialized_);
   DISP_INFO("MIPI_DSI_TOP_SW_RESET = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_SW_RESET));
   DISP_INFO("MIPI_DSI_TOP_CLK_CNTL = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_CLK_CNTL));
   DISP_INFO("MIPI_DSI_TOP_CNTL = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_CNTL));
