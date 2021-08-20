@@ -23,14 +23,6 @@
         {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-stack-ncp-ver-query-mock-component.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/fake-at-query.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/telephony-qmi-usb-integration-test.cmx"
         }
     ]
 }

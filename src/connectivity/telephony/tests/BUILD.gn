@@ -67,10 +67,20 @@ fuchsia_component("tel-driver-unit-test") {
 fuchsia_test_package("telephony-tests") {
   test_components = [
     ":fake-at-driver-test",
-    ":fake-at-query",
     ":fake-qmi-query",
     ":snooper",
-    ":telephony-qmi-usb-integration-test",
     ":tel-driver-unit-test",
   ]
+}
+
+fuchsia_test_package("telephony-tests-with-error-logs") {
+  test_components = [
+    ":fake-at-query",
+    ":telephony-qmi-usb-integration-test",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

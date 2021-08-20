@@ -34,6 +34,7 @@ group("tests") {
     "//src/connectivity/telephony/telephony:tests",
     "//src/connectivity/telephony/telephony-snooper",
     "//src/connectivity/telephony/tests:telephony-tests",
+    "//src/connectivity/telephony/tests:telephony-tests-with-error-logs",
     "//src/connectivity/telephony/tests/fake-drivers/at-fake-transport:tests",
     "//src/connectivity/telephony/tests/fake-drivers/usb-qmi-function:tests",
   ]
