@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//src/storage/testing/decompressor_wrapper.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
 
 group("tests") {
@@ -67,8 +68,8 @@ fuchsia_unittest_component("external-decompressor-integration") {
   deps = [ ":external_decompressor_integration" ]
 }
 
-fuchsia_unittest_component("external-decompressor-runner") {
-  manifest = "meta/external_decompressor_runner.cml"
+wrap_with_decompressor("external-decompressor") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/external-decompressor-integration.cm"
 }
 
 test("blobfs_integration") {
@@ -105,8 +106,23 @@ test("blobfs_integration") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-integration") {
+storage_isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
   deps = [ ":blobfs_integration" ]
+  additional_services = [
+    {
+      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
+      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
+    },
+  ]
+}
+
+wrap_with_decompressor("blobfs-integration") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/blobfs-integration-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
 }
 
 test("blobfs_mount") {
@@ -132,8 +148,23 @@ test("blobfs_mount") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-mount") {
+storage_isolated_devmgr_unittest_v2_component("blobfs-mount-component") {
   deps = [ ":blobfs_mount" ]
+  additional_services = [
+    {
+      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
+      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
+    },
+  ]
+}
+
+wrap_with_decompressor("blobfs-mount") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/blobfs-mount-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
 }
 
 test("blobfs_query_service") {
@@ -157,8 +188,24 @@ test("blobfs_query_service") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-query-service") {
+storage_isolated_devmgr_unittest_v2_component(
+    "blobfs-query-service-component") {
   deps = [ ":blobfs_query_service" ]
+  additional_services = [
+    {
+      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
+      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
+    },
+  ]
+}
+
+wrap_with_decompressor("blobfs-query-service") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/blobfs-query-service-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
 }
 
 test("blobfs_sync") {
@@ -180,8 +227,23 @@ test("blobfs_sync") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-sync") {
+storage_isolated_devmgr_unittest_v2_component("blobfs-sync-component") {
   deps = [ ":blobfs_sync" ]
+  additional_services = [
+    {
+      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
+      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
+    },
+  ]
+}
+
+wrap_with_decompressor("blobfs-sync") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/blobfs-sync-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
 }
 
 test("blobfs_superblock") {
@@ -199,8 +261,23 @@ test("blobfs_superblock") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-superblock") {
+storage_isolated_devmgr_unittest_v2_component("blobfs-superblock-component") {
   deps = [ ":blobfs_superblock" ]
+  additional_services = [
+    {
+      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
+      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
+    },
+  ]
+}
+
+wrap_with_decompressor("blobfs-superblock") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/blobfs-superblock-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
 }
 
 test("blobfs_verifier_service") {
@@ -220,8 +297,24 @@ test("blobfs_verifier_service") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-verifier-service") {
+storage_isolated_devmgr_unittest_v2_component(
+    "blobfs-verifier-service-component") {
   deps = [ ":blobfs_verifier_service" ]
+  additional_services = [
+    {
+      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
+      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
+    },
+  ]
+}
+
+wrap_with_decompressor("blobfs-verifier-service") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/blobfs-verifier-service-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
 }
 
 test("executable_mount") {
@@ -238,17 +331,26 @@ test("executable_mount") {
   ]
 }
 
-fuchsia_component("executable-mount") {
+fuchsia_component("executable-mount-component") {
   testonly = true
-  manifest = "meta/executable_mount_test.cmx"
+  manifest = "meta/executable_mount_test.cml"
   deps = [ ":executable_mount" ]
+}
+
+wrap_with_decompressor("executable-mount") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/executable-mount-component.cm"
+  forwarded_protocols = [
+    "fuchsia.kernel.VmexResource",
+    "fuchsia.logger.LogSink",
+  ]
 }
 
 template("blobfs_large_integration_test") {
   test_name = target_name
+  bin_name = "${test_name}-bin"
   component_name = "${target_name}-component"
 
-  test(test_name) {
+  test(bin_name) {
     output_name = invoker.target_name
     sources = invoker.sources
 
@@ -274,8 +376,13 @@ template("blobfs_large_integration_test") {
   }
 
   storage_isolated_devmgr_unittest_v2_component(component_name) {
-    component_name = test_name
-    deps = [ ":$test_name" ]
+    additional_services = [
+      {
+        protocol = "fuchsia.blobfs.internal.DecompressorCreator"
+        path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
+      },
+    ]
+    deps = [ ":$bin_name" ]
   }
 }
 
@@ -283,16 +390,52 @@ blobfs_large_integration_test("blobfs-fragmentation") {
   sources = [ "large/fragmentation.cc" ]
 }
 
+wrap_with_decompressor("blobfs-fragmentation") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-large-integration#meta/blobfs-fragmentation-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
+}
+
 blobfs_large_integration_test("blobfs-max-reservation") {
   sources = [ "large/max_reservation.cc" ]
+}
+
+wrap_with_decompressor("blobfs-max-reservation") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-large-integration#meta/blobfs-max-reservation-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
 }
 
 blobfs_large_integration_test("blobfs-no-space") {
   sources = [ "large/no_space.cc" ]
 }
 
+wrap_with_decompressor("blobfs-no-space") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-large-integration#meta/blobfs-no-space-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
+}
+
 blobfs_large_integration_test("blobfs-use-second-bitmap") {
   sources = [ "large/use_second_bitmap.cc" ]
+}
+
+wrap_with_decompressor("blobfs-use-second-bitmap") {
+  test_url = "fuchsia-pkg://fuchsia.com/blobfs-large-integration#meta/blobfs-use-second-bitmap-component.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+    "fuchsia.sys.Launcher",
+  ]
 }
 
 fuchsia_test_package("blobfs-large-integration-package") {
@@ -303,12 +446,18 @@ fuchsia_test_package("blobfs-large-integration-package") {
   }
   package_name = "blobfs-large-integration"
   test_components = [
+    ":blobfs-fragmentation",
+    ":blobfs-max-reservation",
+    ":blobfs-no-space",
+    ":blobfs-use-second-bitmap",
+  ]
+  deps = [
     ":blobfs-fragmentation-component",
     ":blobfs-max-reservation-component",
     ":blobfs-no-space-component",
     ":blobfs-use-second-bitmap-component",
+    "//src/storage/bin/blobfs",
   ]
-  deps = [ "//src/storage/bin/blobfs" ]
 }
 
 fuchsia_test_package("blobfs-integration-package") {
@@ -326,9 +475,16 @@ fuchsia_test_package("blobfs-integration-package") {
     ":blobfs-superblock",
     ":blobfs-verifier-service",
     ":executable-mount",
-    ":external-decompressor-runner",
+    ":external-decompressor",
   ]
   deps = [
+    ":blobfs-integration-component",
+    ":blobfs-mount-component",
+    ":blobfs-query-service-component",
+    ":blobfs-superblock-component",
+    ":blobfs-sync-component",
+    ":blobfs-verifier-service-component",
+    ":executable-mount-component",
     ":external-decompressor-integration",
     "//src/storage/bin/blobfs",
     "//src/storage/blobfs:decompressor-sandbox",

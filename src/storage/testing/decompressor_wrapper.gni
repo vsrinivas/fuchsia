@@ -1,0 +1,83 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+# Takes a test and makes it the child of a component that also provides a decompressor sandbox
+# protocol by starting it up as a sibling to the test. This decompressor sandbox component handles
+# all decompression for the blobfs process and it will not start up the pager without it.
+# Parameters
+#   forwarded_protocols: A list of protocols to offer to the test from the parent.
+#   test_url:            The component url for the test that is being wrapped.
+template("wrap_with_decompressor") {
+  generated_target = "${target_name}_generated_wrapper_manifest"
+  forward_variables_from(invoker,
+                         [
+                           "forwarded_protocols",
+                           "test_url",
+                         ])
+  assert(defined(test_url))
+  if (!defined(forwarded_protocols)) {
+    forwarded_protocols = [ "fuchsia.logger.LogSink" ]
+  }
+  fuchsia_test_component_manifest(generated_target) {
+    visibility = [ ":*" ]
+    metadata = {
+      test_component_manifest_cml = [
+        {
+          children = [
+            {
+              name = "decompressor"
+              url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/decompressor-sandbox.cm"
+            },
+            {
+              name = "test"
+              url = test_url
+            },
+          ]
+          offer = [
+            {
+              protocol = forwarded_protocols
+              from = "parent"
+              to = "#test"
+            },
+            {
+              protocol = "fuchsia.logger.LogSink"
+              from = "parent"
+              to = "#decompressor"
+            },
+            {
+              protocol = "fuchsia.blobfs.internal.DecompressorCreator"
+              from = "#decompressor"
+              to = "#test"
+            },
+          ]
+          expose = [
+            {
+              protocol = "fuchsia.test.Suite"
+              from = "#test"
+            },
+          ]
+        },
+      ]
+    }
+  }
+  manifest = get_target_outputs(":$generated_target")
+  manifest = manifest[0]
+
+  fuchsia_unittest_component(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "visibility",
+                             "component_name",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$generated_target" ]
+  }
+}

@@ -13,6 +13,7 @@ template("storage_isolated_devmgr_unittest_v2_component") {
     }
     forward_variables_from(invoker,
                            [
+                             "additional_services",
                              "deps",
                              "manifest",
                              "visibility",

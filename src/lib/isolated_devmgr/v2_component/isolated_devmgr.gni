@@ -57,6 +57,14 @@ template("isolated_devmgr_v2_component") {
   }
 }
 
+# Creates a unittest component that also has an isolated devmgr as a child that offers their
+# services back to the parent.
+# Parameters
+#   deps
+#   visibility
+#   additional_services: Services to be offered to the test from the parent.
+#   component_name:      Name for output component.
+#   manifest:            Optional custom manifest to be used for the component.
 template("isolated_devmgr_unittest_v2_component") {
   if (!defined(invoker.manifest)) {
     generated_target = "${target_name}_generated_manifest"
@@ -66,7 +74,14 @@ template("isolated_devmgr_unittest_v2_component") {
     }
 
     fuchsia_test_component_manifest(generated_target) {
-      forward_variables_from(invoker, [ "deps" ])
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "additional_services",
+                             ])
+      if (!defined(additional_services)) {
+        additional_services = []
+      }
       visibility = [ ":*" ]
       metadata = {
         test_component_manifest_cml = [
@@ -79,14 +94,14 @@ template("isolated_devmgr_unittest_v2_component") {
               },
             ]
             use = [
-              {
-                protocol = "fuchsia.process.Launcher"
-              },
-              {
-                protocol = "fuchsia.sys2.Realm"
-                from = "framework"
-              },
-            ]
+                    {
+                      protocol = "fuchsia.process.Launcher"
+                    },
+                    {
+                      protocol = "fuchsia.sys2.Realm"
+                      from = "framework"
+                    },
+                  ] + additional_services
             offer = [
               {
                 protocol = [
