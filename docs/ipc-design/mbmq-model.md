@@ -82,51 +82,54 @@ An MBO switches between these states as it is sent to a callee,
 received, and sent back to the caller.
 
 Figure 1 shows how the MBO state transitions happen for simple usage
-of the core syscalls.
+of the core syscalls:
 
-A caller process creates an MBO using `zx_mbo_create()`, which returns
-a CallersRef for the MBO.  The MBO starts off in the `owned_by_caller`
-state.
+*   **Create MBO:** A caller process creates an MBO using
+    `zx_mbo_create()`, which returns a CallersRef for the MBO.  The
+    MBO starts off in the `owned_by_caller` state.
 
-To send a request, the caller process writes the request message into
-the MBO by calling `zx_mbo_write()`, passing the CallersRef handle,
-and then sends the MBO on a channel by calling `zx_channel_send()`.
-This enqueues the MBO onto the channel's associated MsgQueue and
-switches the MBO's state to `enqueued_as_request`.  In that state, the
-CallersRef handle can no longer be used to read or write the MBO, so
-the caller cannot modify the message after it has been sent.
+*   **Send request:** To send a request, the caller process writes the
+    request message into the MBO by calling `zx_mbo_write()`, passing
+    the CallersRef handle, and then sends the MBO on a channel by
+    calling `zx_channel_send()`.  This enqueues the MBO onto the
+    channel's associated MsgQueue and switches the MBO's state to
+    `enqueued_as_request`.  In that state, the CallersRef handle can
+    no longer be used to read or write the MBO, so the caller cannot
+    modify the message after it has been sent.
 
-The callee process can read the MBO from its MsgQueue using
-`zx_msgqueue_wait()`, supplying a CalleesRef object.  This removes the
-MBO from the message queue, sets the CalleesRef to point to the MBO,
-and sets the MBO's state to `owned_by_callee`.  This state gives the
-callee the ability to read and write the MBO's contents using the
-CalleesRef handle.  The caller can read the request message out of the
-MBO by passing the CalleesRef handle to `zx_mbo_read()`.  The caller
-can write a reply message into the MBO (overwriting its contents) by
-passing the CalleesRef handle to `zx_mbo_write()`.
+*   **Receive request:** The callee process can read the MBO from its
+    MsgQueue using `zx_msgqueue_wait()`, supplying a CalleesRef
+    object.  This removes the MBO from the message queue, sets the
+    CalleesRef to point to the MBO, and sets the MBO's state to
+    `owned_by_callee`.  This state gives the callee the ability to
+    read and write the MBO's contents using the CalleesRef handle.
+    The caller can read the request message out of the MBO by passing
+    the CalleesRef handle to `zx_mbo_read()`.  The caller can write a
+    reply message into the MBO (overwriting its contents) by passing
+    the CalleesRef handle to `zx_mbo_write()`.
 
-Once the callee has written a reply into the MBO, it can send the
-reply to the caller by invoking `zx_mbo_send_reply()` with the
-CalleesRef handle.  This enqueues the MBO on its associated MsgQueue,
-drops the CalleesRef's reference to the MBO (putting the CalleesRef
-back in the "unused" state), and sets the MBO's state to
-`enqueued_as_reply`.  The callee can now reuse this CalleesRef object
-in later calls to `zx_msgqueue_wait()`.
+*   **Send reply:** Once the callee has written a reply into the MBO,
+    it can send the reply to the caller by invoking
+    `zx_mbo_send_reply()` with the CalleesRef handle.  This enqueues
+    the MBO on its associated MsgQueue, drops the CalleesRef's
+    reference to the MBO (putting the CalleesRef back in the "unused"
+    state), and sets the MBO's state to `enqueued_as_reply`.  The
+    callee can now reuse this CalleesRef object in later calls to
+    `zx_msgqueue_wait()`.
 
-The caller process can then read the MBO from its MsgQueue using
-`zx_msgqueue_wait()`.  The caller supplies a CalleesRef object but in
-this case the CalleesRef is not used.  The `zx_msgqueue_wait()`
-syscall removes the MBO from the MsgQueue and sets the MBO's state
-back to `owned_by_callee`.  The caller can use the key value returned
-by `zx_msgqueue_wait()` to determine which MBO was returned, if
-necessary.  The CallersRef handle can now be used to read and write
-the MBO, so the caller can read the reply message from the MBO using
-`zx_mbo_read()`.
+*   **Receive reply:** The caller process can then read the MBO from
+    its MsgQueue using `zx_msgqueue_wait()`.  The caller supplies a
+    CalleesRef object but in this case the CalleesRef is not used.
+    The `zx_msgqueue_wait()` syscall removes the MBO from the MsgQueue
+    and sets the MBO's state back to `owned_by_callee`.  The caller
+    can use the key value returned by `zx_msgqueue_wait()` to
+    determine which MBO was returned, if necessary.  The CallersRef
+    handle can now be used to read and write the MBO, so the caller
+    can read the reply message from the MBO using `zx_mbo_read()`.
 
-The cycle can now repeat.  The caller can now write a new request
-message into the MBO and send it on a channel as above, potentially to
-a different callee.
+*   **Repeat:** The cycle can now repeat.  The caller can now write a
+    new request message into the MBO and send it on a channel as
+    above, potentially to a different callee.
 
 ---
 
