@@ -161,6 +161,7 @@ uint8_t* MergeProfiles(uint8_t* dst, const uint8_t* src, size_t size) {
 #endif
   const __llvm_profile_data* src_data_end = src_data_start + src_header->DataSize;
   const uint64_t* src_counters_start = reinterpret_cast<const uint64_t*>(src_data_end);
+  uintptr_t src_counters_delta = src_header->CountersDelta;
 
   __llvm_profile_header* dst_header = reinterpret_cast<__llvm_profile_header*>(dst);
   __llvm_profile_data* dst_data_start =
@@ -172,14 +173,19 @@ uint8_t* MergeProfiles(uint8_t* dst, const uint8_t* src, size_t size) {
 #endif
   __llvm_profile_data* dst_data_end = dst_data_start + dst_header->DataSize;
   uint64_t* dst_counters_start = reinterpret_cast<uint64_t*>(dst_data_end);
+  uintptr_t dst_counters_delta = dst_header->CountersDelta;
 
   const __llvm_profile_data* src_data = src_data_start;
   __llvm_profile_data* dst_data = dst_data_start;
   for (; src_data < src_data_end && dst_data < dst_data_end; src_data++, dst_data++) {
     const uint64_t* src_counters =
-        src_counters_start + (src_data->CounterPtr - src_header->CountersDelta) / sizeof(uint64_t);
+        src_counters_start + (src_data->CounterPtr - src_counters_delta) / sizeof(uint64_t);
+    if (src_header->Version >= 7)
+      src_counters_delta -= sizeof(*src_data);
     uint64_t* dst_counters =
-        dst_counters_start + (dst_data->CounterPtr - dst_header->CountersDelta) / sizeof(uint64_t);
+        dst_counters_start + (dst_data->CounterPtr - dst_counters_delta) / sizeof(uint64_t);
+    if (src_header->Version >= 7)
+      dst_counters_delta -= sizeof(*dst_data);
     for (unsigned i = 0; i < src_data->NumCounters; i++) {
       dst_counters[i] += src_counters[i];
     }
@@ -299,8 +305,8 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
         // Ensure that profiles are structuraly compatible.
         if (!ProfilesCompatible(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()),
                                 buffer_size)) {
-          warning_callback(fxl::StringPrintf("WARNING: Unable to merge profile data: %s\n",
-                                             "source profile file is not compatible"));
+          warning_callback(fxl::StringPrintf("WARNING: Unable to merge profile data for \"%s\": %s\n",
+                                             name.c_str(), "source profile file is not compatible"));
           continue;
         }
 
