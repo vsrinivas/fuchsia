@@ -105,8 +105,11 @@ fuchsia_test_package("dart-archive-reader-test") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":dart-archive-reader-test",
-    ":fuchsia_inspect_package_unittests($host_toolchain)",
-  ]
+  deps = [ ":fuchsia_inspect_package_unittests($host_toolchain)" ]
+
+  # TODO(fxbug.dev/83139): Test is consistently failing on coverage bot.
+  # Please fix the test and remove the condition below.
+  if (!is_coverage) {
+    deps += [ ":dart-archive-reader-test" ]
+  }
 }
