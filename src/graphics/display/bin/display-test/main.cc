@@ -67,6 +67,7 @@ enum TestBundle {
   FLIP,        // BUNDLE1
   INTEL,       // BUNDLE2
   BUNDLE3,
+  BLANK,
   BUNDLE_COUNT,
 };
 
@@ -644,11 +645,12 @@ void usage(void) {
       "                             hardware composition of 1 color layer and 3 primary layers.\n"
       "                             The tests include alpha blending, translation, scaling\n"
       "                             and rotation\n"
+      "                   bundle %d: Blank the screen and sleep for --num-frames.\n"
       "                   bundle %d: 4 layer hardware composition with alpha blending\n"
       "                             and image translation\n"
       "                   (default: bundle %d)\n\n"
       "--help           : Show this help message\n",
-      SIMPLE, FLIP, INTEL, BUNDLE3, INTEL);
+      SIMPLE, FLIP, INTEL, BUNDLE3, BLANK, INTEL);
 }
 
 Platforms GetPlatform() {
@@ -1088,6 +1090,9 @@ int main(int argc, const char* argv[]) {
       max_apply_configs = 1;
     }
     layers.push_back(std::move(layer1));
+  } else if (testbundle == BLANK) {
+    // 0 layers, applied one time
+    max_apply_configs = 1;
   }
 
   printf("Initializing layers\n");
@@ -1102,8 +1107,8 @@ int main(int argc, const char* argv[]) {
     display.Init(dc.get(), color_correction_args);
   }
 
-  if (capture && layers.size() > 1) {
-    printf("Capture verification disabled for multi-layer display tests\n");
+  if (capture && layers.size() != 1) {
+    printf("Capture disabled: verification only works for single-layer display tests\n");
     verify_capture = false;
   }
 
@@ -1156,8 +1161,8 @@ int main(int argc, const char* argv[]) {
       layer->Render(i);
     }
 
-    zx_status_t status;
-    while ((status = wait_for_vsync(layers)) == ZX_ERR_NEXT) {
+    zx_status_t status = ZX_OK;
+    while (layers.size() != 0 && (status = wait_for_vsync(layers)) == ZX_ERR_NEXT) {
     }
     ZX_ASSERT(status == ZX_OK);
     if (capture) {
