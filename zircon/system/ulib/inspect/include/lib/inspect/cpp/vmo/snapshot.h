@@ -95,6 +95,15 @@ class Snapshot final {
   std::shared_ptr<std::vector<uint8_t>> buffer_;
 };
 
+// This is needed to ensure that we are compatible with C++14.
+// In C++17 the declaration of a static constexpr is inline and a definition, but in C++14 this is
+// not the case.
+//
+// Without this line we cannot compile dependent files in C++14 debug builds.
+#if __cplusplus < 201703L
+constexpr Snapshot::Options Snapshot::kDefaultOptions;
+#endif
+
 namespace internal {
 // Get a pointer to a block in the snapshot by index.
 // Returns nullptr if the index is out of bounds.
