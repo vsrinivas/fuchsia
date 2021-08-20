@@ -158,7 +158,7 @@ pub struct ProductBundleV1 {
     /// or log them for the sake of analytics. Typical metadata keys are:
     /// build_info_board, build_info_product, is_debug.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<Vec<(String, String)>>,
+    pub metadata: Option<Vec<(String, MetadataValue)>>,
 
     /// A list of package bundles. Expect at least one entry.
     pub packages: Vec<PackageBundle>,
@@ -170,6 +170,15 @@ pub struct ProductBundleV1 {
     /// debugging or when writing this record to a json string.
     #[serde(rename = "type")]
     pub kind: ElementType,
+}
+
+/// Product bundle metadata can be an integer, string, or boolean.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum MetadataValue {
+    Integer(u64),
+    StringValue(String),
+    Boolean(bool),
 }
 
 impl JsonObject for Envelope<ProductBundleV1> {
