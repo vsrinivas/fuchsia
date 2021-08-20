@@ -2,12 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 group("time") {
   testonly = true
 
+  deps = [ ":time-examples" ]
+}
+
+fuchsia_package("time-examples") {
   deps = [
-    "c",
-    "cpp",
-    "rust",
+    "c:c-time-example-component",
+    "cpp:cpp-time-example-component",
+    "rust:rust-time-example-component",
   ]
 }

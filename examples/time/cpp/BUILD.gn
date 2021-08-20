@@ -20,14 +20,5 @@ executable("bin") {
 fuchsia_component("cpp-time-example-component") {
   deps = [ ":bin" ]
   component_name = "cpp-time-example"
-  manifest = "meta/cpp-time-example.cmx"
-}
-
-fuchsia_package("cpp-time-example") {
-  deps = [ ":cpp-time-example-component" ]
-}
-
-group("cpp") {
-  testonly = true
-  public_deps = [ ":cpp-time-example" ]
+  manifest = "meta/cpp-time-example.cml"
 }

@@ -5,10 +5,6 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-group("rust") {
-  deps = [ ":rust-time-example" ]
-}
-
 rustc_binary("bin") {
   name = "rust_time_example"
   edition = "2018"
@@ -26,9 +22,5 @@ rustc_binary("bin") {
 fuchsia_component("rust-time-example-component") {
   deps = [ ":bin" ]
   component_name = "rust-time-example"
-  manifest = "meta/rust-time-example.cmx"
-}
-
-fuchsia_package("rust-time-example") {
-  deps = [ ":rust-time-example-component" ]
+  manifest = "meta/rust-time-example.cml"
 }
