@@ -1,0 +1,20 @@
+{
+    include: [
+        // gtest runner
+        "//src/sys/test_runners/gtest/default.shard.cml",
+
+        // Required because a11y manager app depends on inspect.
+        "inspect/client.shard.cml",
+
+        // Enable system logging
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/a11y_manager_apptests",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.intl.PropertyProvider" ],
+        },
+    ],
+}

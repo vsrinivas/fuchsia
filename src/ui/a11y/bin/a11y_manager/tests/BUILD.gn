@@ -53,7 +53,7 @@ resource("l10n_en_resource") {
 }
 
 fuchsia_unittest_package("a11y-tests") {
-  manifest = "meta/a11y_manager_apptests.cmx"
+  manifest = "meta/a11y_manager_apptests.cml"
   deps = [
     ":a11y_manager_apptests",
     ":l10n_en_resource",
