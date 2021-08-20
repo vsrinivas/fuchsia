@@ -200,11 +200,6 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
             InvokeSceneReadyCallbacks(&scene_ready_callbacks_);
           }
         }
-      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected) {
-        const auto& view_holder_disconnected_event = gfx_event.view_holder_disconnected();
-        if (view_holder_disconnected_event.view_id == a11y_view_->id()) {
-          Initialize();
-        }
       }
     }
   }

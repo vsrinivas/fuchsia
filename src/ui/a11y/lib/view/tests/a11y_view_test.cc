@@ -226,27 +226,5 @@ TEST_F(AccessibilityViewTest, Reinitialize) {
   EXPECT_NE(a11y::GetKoid(views.begin()->second.view_ref), a11y::GetKoid(first_a11y_view_ref));
 }
 
-TEST_F(AccessibilityViewTest, TestViewHolderDisconnected) {
-  a11y::AccessibilityView a11y_view(context_provider_.context());
-
-  RunLoopUntilIdle();
-
-  // Save the a11y view viewref.
-  const auto& views = mock_session_->views();
-  ASSERT_EQ(views.size(), 1u);
-  fuchsia::ui::views::ViewRef first_a11y_view_ref;
-  first_a11y_view_ref = a11y::Clone(views.begin()->second.view_ref);
-
-  // Simulate a ViewHolderDisconnected scenic event.
-  const auto a11y_view_id = views.begin()->second.id;
-  mock_session_->SendViewHolderDisconnectedEvent(a11y_view_id);
-
-  RunLoopUntilIdle();
-
-  // Verify that a11y view was re-initialized with a new viewref.
-  ASSERT_EQ(views.size(), 1u);
-  EXPECT_NE(a11y::GetKoid(views.begin()->second.view_ref), a11y::GetKoid(first_a11y_view_ref));
-}
-
 }  // namespace
 }  // namespace accessibility_test
