@@ -20,3 +20,12 @@ type C = resource struct {
 type D = resource struct {
     qux C;
 };
+
+type E = table {
+    1: quux uint8;
+};
+
+
+type F = struct {
+    quuz E;
+};

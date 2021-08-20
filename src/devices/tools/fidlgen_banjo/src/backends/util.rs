@@ -286,6 +286,19 @@ pub fn name_size(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
     }
 }
 
+pub fn is_table_or_bits(ty: &Type, ir: &FidlIr) -> bool {
+    match ty {
+        Type::Identifier { identifier, .. } => match ir
+            .get_declaration(identifier)
+            .expect(&format!("Could not find declaration for {:?}", identifier))
+        {
+            Declaration::Bits | Declaration::Table => true,
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
 //--------------------------------------------
 // Utilities shared by the three C++ backends.
 

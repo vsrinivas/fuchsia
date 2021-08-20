@@ -6,7 +6,7 @@ use {
     super::{
         util::{
             array_bounds, for_banjo_transport, get_base_type_from_alias, get_declarations,
-            get_doc_comment, is_namespaced, name_buffer, name_size, not_callback,
+            get_doc_comment, is_namespaced, is_table_or_bits, name_buffer, name_size, not_callback,
             primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
         },
         Backend,
@@ -138,6 +138,15 @@ fn field_to_c_str(
     ir: &FidlIr,
 ) -> Result<String, Error> {
     let mut accum = String::new();
+
+    if is_table_or_bits(ty, ir) {
+        return Ok(format!(
+            "{indent}// Skipping type {ty:?}, see http:://fxbug.dev/82088",
+            indent = indent,
+            ty = ty,
+        ));
+    }
+
     accum.push_str(get_doc_comment(maybe_attributes, 1).as_str());
     let c_name = if preserve_names { String::from(&ident.0) } else { to_c_name(&ident.0) };
     if let Some(arg_type) = get_base_type_from_alias(&alias.as_ref().map(|t| &t.name)) {

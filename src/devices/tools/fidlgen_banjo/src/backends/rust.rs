@@ -4,7 +4,7 @@
 
 use {
     super::{
-        util::{get_declarations, to_c_name, Decl},
+        util::{get_declarations, is_table_or_bits, to_c_name, Decl},
         Backend,
     },
     crate::fidl::*,
@@ -250,6 +250,13 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 let mut partial_eq = true;
                 let mut parents = HashSet::new();
                 for field in &data.members {
+                    if is_table_or_bits(&field._type, ir) {
+                        field_str.push(format!(
+                            "    // Skipping type {:?}, see http:://fxbug.dev/82088",
+                            &field._type
+                        ));
+                        continue;
+                    }
                     parents.clear();
                     parents.insert(data.name.clone());
                     parents.clear();

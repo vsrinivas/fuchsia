@@ -25,6 +25,12 @@ pub struct D {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
+pub struct F {
+    // Skipping type Identifier { identifier: CompoundIdentifier("banjo.examples.tables/E"), nullable: false }, see http:://fxbug.dev/82088
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct B {
     pub bar: *mut A,
 }
