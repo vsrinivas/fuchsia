@@ -70,16 +70,19 @@ write its associated MBO.
 There are four possible states for an MBO, listed here in the order in
 which they are typically used:
 
-*   `owned_by_caller`: Owned by the caller via the CallersRef for the
+1.  `owned_by_caller`: Owned by the caller via the CallersRef for the
     MBO: contents accessible through the CallersRef handle
-*   `enqueued_as_request`: Enqueued on a MsgQueue (or a channel) as a
+2.  `enqueued_as_request`: Enqueued on a MsgQueue (or a channel) as a
     request
-*   `owned_by_callee`: Owned by a callee via a CalleesRef: contents
+3.  `owned_by_callee`: Owned by a callee via a CalleesRef: contents
     accessible through the CalleesRef handle
-*   `enqueued_as_reply`: Enqueued on a MsgQueue as a reply
+4.  `enqueued_as_reply`: Enqueued on a MsgQueue as a reply
 
 An MBO switches between these states as it is sent to a callee,
 received, and sent back to the caller.
+
+Figure 1 shows how the MBO state transitions happen for simple usage
+of the core syscalls.
 
 A caller process creates an MBO using `zx_mbo_create()`, which returns
 a CallersRef for the MBO.  The MBO starts off in the `owned_by_caller`
@@ -124,6 +127,60 @@ the MBO, so the caller can read the reply message from the MBO using
 The cycle can now repeat.  The caller can now write a new request
 message into the MBO and send it on a channel as above, potentially to
 a different callee.
+
+---
+
+*Figure 1.* Pseudocode for a simple client and a simple server.  This
+shows the basic usage of the core syscalls.  The two are shown side by
+side to illustrate how the MBO transitions between states for this
+particular interleaving of execution.
+
+```c
+// Client (caller)                      | // Server (callee)
+                                        |
+// Setup                                | // Setup
+channel = ...;                          | channel_server_end = ...;
+msgq1 = zx_msgqueue_create();           | msgq2 = zx_msgqueue_create();
+callersref = zx_mbo_create();           | calleesref = zx_mbo_create_calleesref();
+zx_object_set_msgqueue(                 | zx_object_set_msgqueue(
+    callersref, msgq1);                 |     channel_server_end, msgq2);
+                                        |
+// MBO is in state 1                    |
+                                        |
+// Loop to send multiple requests       | // Loop to handle multiple requests
+while (true) {                          | while (true) {
+  // Write request message into MBO     |
+  zx_mbo_write(callersref, ...);        |
+  // Send request on channel            |
+  zx_channel_send(channel, callersref); |
+                                        |
+  // MBO is now in state 2              |
+                                        |   // Wait for and unqueue a request
+                                        |   zx_msgqueue_wait(msgq2, calleesref);
+                                        |
+                                        |   // MBO is now in state 3
+                                        |
+                                        |   // Read request message from MBO
+                                        |   zx_mbo_read(calleesref, ...);
+                                        |   // Process the request
+                                        |   ...
+                                        |   // Write reply message into MBO
+                                        |   zx_mbo_write(calleesref, ...);
+                                        |   // Send the reply
+                                        |   zx_mbo_send_reply(calleesref);
+                                        |
+                                        |   // MBO is now in state 4
+  // Wait for and unqueue a reply       |
+  zx_msgqueue_wait(msgq1, ...);         |
+                                        |
+  // MBO is now in state 1              |
+                                        |
+  // Read reply message from MBO        |
+  zx_mbo_read(callersref, ...);         |
+}                                       | }
+```
+
+---
 
 ## Core operations
 
