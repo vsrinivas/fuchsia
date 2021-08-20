@@ -260,77 +260,18 @@ Client(fidl::ClientEnd<Protocol>, async_dispatcher_t*) -> Client<Protocol>;
 //
 // There are a number of ways to monitor the completion of teardown:
 //
-// ### Owned event handler
+// - Owned event handler: transfer the ownership of an event handler to the
+//   bindings as a |std::unique_ptr| when binding the client. After teardown is
+//   complete, the event handler will be destroyed. It is safe to destroy the
+//   user objects referenced by any client callbacks from within the event
+//   handler destructor.
 //
-// Transfer the ownership of an event handler to the bindings as an
-// implementation of |std::unique_ptr<fidl::AsyncEventHandler<Protocol>>|
-// when binding the client. After teardown is complete, the event handler will
-// be destroyed. It is safe to destroy the user objects referenced by any client
-// callbacks from within the event handler destructor.
+// - Teardown observer: provide an instance of |fidl::AnyTeardownObserver| to
+//   the bindings. The observer will be notified when teardown is complete.
 //
-// Here is an example for this pattern:
-//
-//     // A |DatabaseClient| makes requests using a FIDL client. It may be
-//     // called from multiple threads.
-//     class DatabaseClient {
-//      public:
-//       // Creates a database client that is owned by the FIDL bindings.
-//       // Call |Teardown| to schedule the destruction of the client.
-//       static DatabaseClient* Create() { return new DatabaseClient(); }
-//
-//       void Teardown() { client_.AsyncTeardown(); }
-//
-//      private:
-//       DatabaseClient() {
-//         // Pass in a |TeardownObserver| (see below) to listen for the
-//         // completion of FIDL client teardown.
-//         client_.Bind(client_end, dispatcher, std::make_unique<TeardownObserver>(this));
-//       }
-//       fidl::SharedClient<DbProtocol> client_;
-//     };
-//
-//     class TeardownObserver : public fidl::AsyncEventHandler<DbProtocol> {
-//      public:
-//       ~TeardownObserver() override {
-//         // Delete the client that was allocated in |DatabaseClient::Create|.
-//         delete database_client_;
-//       }
-//      private:
-//       DatabaseClient* database_client_;
-//     };
-//
-// ### Custom teardown observer
-//
-// Provide an instance of |fidl::AnyTeardownObserver| to the bindings.
-// The observer will be notified when teardown is complete. There are several
-// ways to create a teardown observer:
-//
-// |fidl::ObserveTeardown| takes an arbitrary callable and wraps it in a
-// teardown observer:
-//
-//     fidl::SharedClient<DbProtocol> client;
-//
-//     // Let's say |db_client| is constructed on the heap;
-//     DatabaseClient* db_client = CreateDatabaseClient();
-//     // ... and needs to be freed by |DestroyDatabaseClient|.
-//     auto observer = fidl::ObserveTeardown([] { DestroyDatabaseClient(); });
-//
-//     // |db_client| may implement |fidl::AsyncEventHandler<DbProtocol>|.
-//     // |observer| will be notified and destroy |db_client| after teardown.
-//     client.Bind(client_end, dispatcher, db_client, std::move(observer));
-//
-// |fidl::ShareUntilTeardown| takes a |std::shared_ptr<T>|, and arranges the
-// binding to destroy its shared reference after teardown:
-//
-//     // Let's say |db_client| is always managed by a shared pointer.
-//     std::shared_ptr<DatabaseClient> db_client = CreateDatabaseClient();
-//
-//     // |db_client| will be kept alive as long as the binding continues
-//     // to exist. After teardown completes, |db_client| will be destroyed
-//     // only if there are no other shared references (such as from other
-//     // related user objects).
-//     auto observer = fidl::ShareUntilTeardown(db_client);
-//     client.Bind(client_end, dispatcher, *db_client, std::move(observer));
+// See
+// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/llcpp-threading
+// for detailed examples.
 //
 // A |SharedClient| may be |Clone|d, with the clone referencing the same
 // endpoint. Automatic teardown occurs when the last clone bound to the
