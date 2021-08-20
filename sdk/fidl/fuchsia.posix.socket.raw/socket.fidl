@@ -58,8 +58,17 @@ type SendControlData = table {};
 type RecvControlData = table {};
 
 /// A raw network socket.
+///
+/// Once a socket has been retrieved from a provider, this interface is then used to further
+/// configure and use the socket. This interface is essentially POSIX.
+///
+/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+///
+/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
+/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
+/// and clients that couple directly to this protocol will make those changes more difficult.
 protocol Socket {
-    compose fuchsia.posix.socket.BaseSocket;
+    compose fuchsia.posix.socket.BaseNetworkSocket;
 
     /// Receives a message from the socket.
     ///

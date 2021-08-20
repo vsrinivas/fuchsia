@@ -372,13 +372,13 @@ func (ep *endpoint) SetAttr(fidl.Context, uint32, fidlio.NodeAttributes) (int32,
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseSocketBindResult, error) {
+func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseNetworkSocketBindResult, error) {
 	addr, err := toTCPIPFullAddress(sockaddr)
 	if err != nil {
-		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
+		return socket.BaseNetworkSocketBindResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
 	}
 	if err := ep.ep.Bind(addr); err != nil {
-		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketBindResultWithErr(tcpipErrorToCode(err)), nil
 	}
 
 	{
@@ -389,18 +389,18 @@ func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket
 		_ = syslog.DebugTf("bind", "%p: local=%+v", ep, localAddr)
 	}
 
-	return socket.BaseSocketBindResultWithResponse(socket.BaseSocketBindResponse{}), nil
+	return socket.BaseNetworkSocketBindResultWithResponse(socket.BaseNetworkSocketBindResponse{}), nil
 }
 
-func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseSocketConnectResult, error) {
+func (ep *endpoint) connect(address fidlnet.SocketAddress) tcpip.Error {
 	addr, err := toTCPIPFullAddress(address)
 	if err != nil {
-		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
+		return &tcpip.ErrBadAddress{}
 	}
 	if l := len(addr.Addr); l > 0 {
 		if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
 			_ = syslog.DebugTf("connect", "%p: unsupported address %s", ep, addr.Addr)
-			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
+			return &tcpip.ErrAddressFamilyNotSupported{}
 		}
 	}
 
@@ -432,7 +432,7 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 					err = terminal
 				}
 			}
-			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
+			return err
 		}
 	}
 
@@ -453,32 +453,32 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 		}
 	}
 
-	return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
+	return nil
 }
 
-func (ep *endpoint) Disconnect(fidl.Context) (socket.BaseSocketDisconnectResult, error) {
+func (ep *endpoint) Disconnect(fidl.Context) (socket.BaseNetworkSocketDisconnectResult, error) {
 	if err := ep.ep.Disconnect(); err != nil {
-		return socket.BaseSocketDisconnectResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketDisconnectResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketDisconnectResultWithResponse(socket.BaseSocketDisconnectResponse{}), nil
+	return socket.BaseNetworkSocketDisconnectResultWithResponse(socket.BaseNetworkSocketDisconnectResponse{}), nil
 }
 
-func (ep *endpoint) GetSockName(fidl.Context) (socket.BaseSocketGetSockNameResult, error) {
+func (ep *endpoint) GetSockName(fidl.Context) (socket.BaseNetworkSocketGetSockNameResult, error) {
 	addr, err := ep.ep.GetLocalAddress()
 	if err != nil {
-		return socket.BaseSocketGetSockNameResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetSockNameResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketGetSockNameResultWithResponse(socket.BaseSocketGetSockNameResponse{
+	return socket.BaseNetworkSocketGetSockNameResultWithResponse(socket.BaseNetworkSocketGetSockNameResponse{
 		Addr: toNetSocketAddress(ep.netProto, addr),
 	}), nil
 }
 
-func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseSocketGetPeerNameResult, error) {
+func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseNetworkSocketGetPeerNameResult, error) {
 	addr, err := ep.ep.GetRemoteAddress()
 	if err != nil {
-		return socket.BaseSocketGetPeerNameResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetPeerNameResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketGetPeerNameResultWithResponse(socket.BaseSocketGetPeerNameResponse{
+	return socket.BaseNetworkSocketGetPeerNameResultWithResponse(socket.BaseNetworkSocketGetPeerNameResponse{
 		Addr: toNetSocketAddress(ep.netProto, addr),
 	}), nil
 }
@@ -700,271 +700,271 @@ func (ep *endpoint) GetNoCheck(fidl.Context) (socket.BaseSocketGetNoCheckResult,
 	return socket.BaseSocketGetNoCheckResultWithResponse(socket.BaseSocketGetNoCheckResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpv6Only(_ fidl.Context, value bool) (socket.BaseSocketSetIpv6OnlyResult, error) {
+func (ep *endpoint) SetIpv6Only(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6OnlyResult, error) {
 	ep.ep.SocketOptions().SetV6Only(value)
-	return socket.BaseSocketSetIpv6OnlyResultWithResponse(socket.BaseSocketSetIpv6OnlyResponse{}), nil
+	return socket.BaseNetworkSocketSetIpv6OnlyResultWithResponse(socket.BaseNetworkSocketSetIpv6OnlyResponse{}), nil
 }
 
-func (ep *endpoint) GetIpv6Only(fidl.Context) (socket.BaseSocketGetIpv6OnlyResult, error) {
+func (ep *endpoint) GetIpv6Only(fidl.Context) (socket.BaseNetworkSocketGetIpv6OnlyResult, error) {
 	value := ep.ep.SocketOptions().GetV6Only()
-	return socket.BaseSocketGetIpv6OnlyResultWithResponse(socket.BaseSocketGetIpv6OnlyResponse{Value: value}), nil
+	return socket.BaseNetworkSocketGetIpv6OnlyResultWithResponse(socket.BaseNetworkSocketGetIpv6OnlyResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpv6TrafficClass(_ fidl.Context, value socket.OptionalUint8) (socket.BaseSocketSetIpv6TrafficClassResult, error) {
+func (ep *endpoint) SetIpv6TrafficClass(_ fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpv6TrafficClassResult, error) {
 	v, err := optionalUint8ToInt(value, 0)
 	if err != nil {
-		return socket.BaseSocketSetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	if err := ep.ep.SetSockOptInt(tcpip.IPv6TrafficClassOption, v); err != nil {
-		return socket.BaseSocketSetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketSetIpv6TrafficClassResultWithResponse(socket.BaseSocketSetIpv6TrafficClassResponse{}), nil
+	return socket.BaseNetworkSocketSetIpv6TrafficClassResultWithResponse(socket.BaseNetworkSocketSetIpv6TrafficClassResponse{}), nil
 }
 
-func (ep *endpoint) GetIpv6TrafficClass(fidl.Context) (socket.BaseSocketGetIpv6TrafficClassResult, error) {
+func (ep *endpoint) GetIpv6TrafficClass(fidl.Context) (socket.BaseNetworkSocketGetIpv6TrafficClassResult, error) {
 	value, err := ep.ep.GetSockOptInt(tcpip.IPv6TrafficClassOption)
 	if err != nil {
-		return socket.BaseSocketGetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
 	}
 
-	return socket.BaseSocketGetIpv6TrafficClassResultWithResponse(
-		socket.BaseSocketGetIpv6TrafficClassResponse{
+	return socket.BaseNetworkSocketGetIpv6TrafficClassResultWithResponse(
+		socket.BaseNetworkSocketGetIpv6TrafficClassResponse{
 			Value: uint8(value),
 		},
 	), nil
 }
 
-func (ep *endpoint) SetIpv6MulticastInterface(_ fidl.Context, value uint64) (socket.BaseSocketSetIpv6MulticastInterfaceResult, error) {
+func (ep *endpoint) SetIpv6MulticastInterface(_ fidl.Context, value uint64) (socket.BaseNetworkSocketSetIpv6MulticastInterfaceResult, error) {
 	opt := tcpip.MulticastInterfaceOption{
 		NIC: tcpip.NICID(value),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
-		return socket.BaseSocketSetIpv6MulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpv6MulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketSetIpv6MulticastInterfaceResultWithResponse(socket.BaseSocketSetIpv6MulticastInterfaceResponse{}), nil
+	return socket.BaseNetworkSocketSetIpv6MulticastInterfaceResultWithResponse(socket.BaseNetworkSocketSetIpv6MulticastInterfaceResponse{}), nil
 }
 
-func (ep *endpoint) GetIpv6MulticastInterface(fidl.Context) (socket.BaseSocketGetIpv6MulticastInterfaceResult, error) {
+func (ep *endpoint) GetIpv6MulticastInterface(fidl.Context) (socket.BaseNetworkSocketGetIpv6MulticastInterfaceResult, error) {
 	var value tcpip.MulticastInterfaceOption
 	if err := ep.ep.GetSockOpt(&value); err != nil {
-		return socket.BaseSocketGetIpv6MulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetIpv6MulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketGetIpv6MulticastInterfaceResultWithResponse(socket.BaseSocketGetIpv6MulticastInterfaceResponse{Value: uint64(value.NIC)}), nil
+	return socket.BaseNetworkSocketGetIpv6MulticastInterfaceResultWithResponse(socket.BaseNetworkSocketGetIpv6MulticastInterfaceResponse{Value: uint64(value.NIC)}), nil
 }
 
-func (ep *endpoint) SetIpv6MulticastHops(_ fidl.Context, value socket.OptionalUint8) (socket.BaseSocketSetIpv6MulticastHopsResult, error) {
+func (ep *endpoint) SetIpv6MulticastHops(_ fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpv6MulticastHopsResult, error) {
 	v, err := optionalUint8ToInt(value, 1)
 	if err != nil {
-		return socket.BaseSocketSetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	if err := ep.ep.SetSockOptInt(tcpip.MulticastTTLOption, v); err != nil {
-		return socket.BaseSocketSetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketSetIpv6MulticastHopsResultWithResponse(socket.BaseSocketSetIpv6MulticastHopsResponse{}), nil
+	return socket.BaseNetworkSocketSetIpv6MulticastHopsResultWithResponse(socket.BaseNetworkSocketSetIpv6MulticastHopsResponse{}), nil
 }
 
-func (ep *endpoint) GetIpv6MulticastHops(fidl.Context) (socket.BaseSocketGetIpv6MulticastHopsResult, error) {
+func (ep *endpoint) GetIpv6MulticastHops(fidl.Context) (socket.BaseNetworkSocketGetIpv6MulticastHopsResult, error) {
 	value, err := ep.ep.GetSockOptInt(tcpip.MulticastTTLOption)
 	if err != nil {
-		return socket.BaseSocketGetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketGetIpv6MulticastHopsResultWithResponse(
-		socket.BaseSocketGetIpv6MulticastHopsResponse{
+	return socket.BaseNetworkSocketGetIpv6MulticastHopsResultWithResponse(
+		socket.BaseNetworkSocketGetIpv6MulticastHopsResponse{
 			Value: uint8(value),
 		},
 	), nil
 }
 
-func (ep *endpoint) SetIpv6MulticastLoopback(_ fidl.Context, value bool) (socket.BaseSocketSetIpv6MulticastLoopbackResult, error) {
+func (ep *endpoint) SetIpv6MulticastLoopback(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6MulticastLoopbackResult, error) {
 	ep.ep.SocketOptions().SetMulticastLoop(value)
-	return socket.BaseSocketSetIpv6MulticastLoopbackResultWithResponse(socket.BaseSocketSetIpv6MulticastLoopbackResponse{}), nil
+	return socket.BaseNetworkSocketSetIpv6MulticastLoopbackResultWithResponse(socket.BaseNetworkSocketSetIpv6MulticastLoopbackResponse{}), nil
 }
 
-func (ep *endpoint) GetIpv6MulticastLoopback(fidl.Context) (socket.BaseSocketGetIpv6MulticastLoopbackResult, error) {
+func (ep *endpoint) GetIpv6MulticastLoopback(fidl.Context) (socket.BaseNetworkSocketGetIpv6MulticastLoopbackResult, error) {
 	value := ep.ep.SocketOptions().GetMulticastLoop()
-	return socket.BaseSocketGetIpv6MulticastLoopbackResultWithResponse(socket.BaseSocketGetIpv6MulticastLoopbackResponse{Value: value}), nil
+	return socket.BaseNetworkSocketGetIpv6MulticastLoopbackResultWithResponse(socket.BaseNetworkSocketGetIpv6MulticastLoopbackResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpTtl(_ fidl.Context, value socket.OptionalUint8) (socket.BaseSocketSetIpTtlResult, error) {
+func (ep *endpoint) SetIpTtl(_ fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpTtlResult, error) {
 	v, err := optionalUint8ToInt(value, -1)
 	if err != nil {
-		return socket.BaseSocketSetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	switch v {
 	case -1:
 		// Unset maps to default value
 		v = 0
 	case 0:
-		return socket.BaseSocketSetIpTtlResultWithErr(posix.ErrnoEinval), nil
+		return socket.BaseNetworkSocketSetIpTtlResultWithErr(posix.ErrnoEinval), nil
 	}
 	if err := ep.ep.SetSockOptInt(tcpip.TTLOption, v); err != nil {
-		return socket.BaseSocketSetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketSetIpTtlResultWithResponse(socket.BaseSocketSetIpTtlResponse{}), nil
+	return socket.BaseNetworkSocketSetIpTtlResultWithResponse(socket.BaseNetworkSocketSetIpTtlResponse{}), nil
 
 }
 
-func (ep *endpoint) GetIpTtl(fidl.Context) (socket.BaseSocketGetIpTtlResult, error) {
+func (ep *endpoint) GetIpTtl(fidl.Context) (socket.BaseNetworkSocketGetIpTtlResult, error) {
 	value, err := ep.ep.GetSockOptInt(tcpip.TTLOption)
 	if err != nil {
-		return socket.BaseSocketGetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	if value == 0 {
 		// This is Linux's default TTL.
 		value = 64
 	}
-	return socket.BaseSocketGetIpTtlResultWithResponse(socket.BaseSocketGetIpTtlResponse{Value: uint8(value)}), nil
+	return socket.BaseNetworkSocketGetIpTtlResultWithResponse(socket.BaseNetworkSocketGetIpTtlResponse{Value: uint8(value)}), nil
 }
 
-func (ep *endpoint) SetIpMulticastTtl(_ fidl.Context, value socket.OptionalUint8) (socket.BaseSocketSetIpMulticastTtlResult, error) {
+func (ep *endpoint) SetIpMulticastTtl(_ fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpMulticastTtlResult, error) {
 	// Linux translates -1 (unset) to 1
 	v, err := optionalUint8ToInt(value, 1)
 	if err != nil {
-		return socket.BaseSocketSetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	if err := ep.ep.SetSockOptInt(tcpip.MulticastTTLOption, v); err != nil {
-		return socket.BaseSocketSetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketSetIpMulticastTtlResultWithResponse(socket.BaseSocketSetIpMulticastTtlResponse{}), nil
+	return socket.BaseNetworkSocketSetIpMulticastTtlResultWithResponse(socket.BaseNetworkSocketSetIpMulticastTtlResponse{}), nil
 }
 
-func (ep *endpoint) GetIpMulticastTtl(fidl.Context) (socket.BaseSocketGetIpMulticastTtlResult, error) {
+func (ep *endpoint) GetIpMulticastTtl(fidl.Context) (socket.BaseNetworkSocketGetIpMulticastTtlResult, error) {
 	value, err := ep.ep.GetSockOptInt(tcpip.MulticastTTLOption)
 	if err != nil {
-		return socket.BaseSocketGetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketGetIpMulticastTtlResultWithResponse(socket.BaseSocketGetIpMulticastTtlResponse{Value: uint8(value)}), nil
+	return socket.BaseNetworkSocketGetIpMulticastTtlResultWithResponse(socket.BaseNetworkSocketGetIpMulticastTtlResponse{Value: uint8(value)}), nil
 }
 
-func (ep *endpoint) SetIpMulticastInterface(_ fidl.Context, iface uint64, value fidlnet.Ipv4Address) (socket.BaseSocketSetIpMulticastInterfaceResult, error) {
+func (ep *endpoint) SetIpMulticastInterface(_ fidl.Context, iface uint64, value fidlnet.Ipv4Address) (socket.BaseNetworkSocketSetIpMulticastInterfaceResult, error) {
 	opt := tcpip.MulticastInterfaceOption{
 		NIC:           tcpip.NICID(iface),
 		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(value),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
-		return socket.BaseSocketSetIpMulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpMulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketSetIpMulticastInterfaceResultWithResponse(socket.BaseSocketSetIpMulticastInterfaceResponse{}), nil
+	return socket.BaseNetworkSocketSetIpMulticastInterfaceResultWithResponse(socket.BaseNetworkSocketSetIpMulticastInterfaceResponse{}), nil
 }
 
-func (ep *endpoint) GetIpMulticastInterface(fidl.Context) (socket.BaseSocketGetIpMulticastInterfaceResult, error) {
+func (ep *endpoint) GetIpMulticastInterface(fidl.Context) (socket.BaseNetworkSocketGetIpMulticastInterfaceResult, error) {
 	var v tcpip.MulticastInterfaceOption
 	if err := ep.ep.GetSockOpt(&v); err != nil {
-		return socket.BaseSocketGetIpMulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetIpMulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var addr fidlnet.Ipv4Address
 	if len(v.InterfaceAddr) == header.IPv4AddressSize {
 		copy(addr.Addr[:], v.InterfaceAddr)
 	}
-	return socket.BaseSocketGetIpMulticastInterfaceResultWithResponse(
-		socket.BaseSocketGetIpMulticastInterfaceResponse{
+	return socket.BaseNetworkSocketGetIpMulticastInterfaceResultWithResponse(
+		socket.BaseNetworkSocketGetIpMulticastInterfaceResponse{
 			Value: addr,
 		},
 	), nil
 }
 
-func (ep *endpoint) SetIpMulticastLoopback(_ fidl.Context, value bool) (socket.BaseSocketSetIpMulticastLoopbackResult, error) {
+func (ep *endpoint) SetIpMulticastLoopback(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpMulticastLoopbackResult, error) {
 	ep.ep.SocketOptions().SetMulticastLoop(value)
-	return socket.BaseSocketSetIpMulticastLoopbackResultWithResponse(socket.BaseSocketSetIpMulticastLoopbackResponse{}), nil
+	return socket.BaseNetworkSocketSetIpMulticastLoopbackResultWithResponse(socket.BaseNetworkSocketSetIpMulticastLoopbackResponse{}), nil
 }
 
-func (ep *endpoint) GetIpMulticastLoopback(fidl.Context) (socket.BaseSocketGetIpMulticastLoopbackResult, error) {
+func (ep *endpoint) GetIpMulticastLoopback(fidl.Context) (socket.BaseNetworkSocketGetIpMulticastLoopbackResult, error) {
 	value := ep.ep.SocketOptions().GetMulticastLoop()
-	return socket.BaseSocketGetIpMulticastLoopbackResultWithResponse(socket.BaseSocketGetIpMulticastLoopbackResponse{Value: value}), nil
+	return socket.BaseNetworkSocketGetIpMulticastLoopbackResultWithResponse(socket.BaseNetworkSocketGetIpMulticastLoopbackResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpTypeOfService(_ fidl.Context, value uint8) (socket.BaseSocketSetIpTypeOfServiceResult, error) {
+func (ep *endpoint) SetIpTypeOfService(_ fidl.Context, value uint8) (socket.BaseNetworkSocketSetIpTypeOfServiceResult, error) {
 	if err := ep.ep.SetSockOptInt(tcpip.IPv4TOSOption, int(value)); err != nil {
-		return socket.BaseSocketSetIpTypeOfServiceResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketSetIpTypeOfServiceResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketSetIpTypeOfServiceResultWithResponse(socket.BaseSocketSetIpTypeOfServiceResponse{}), nil
+	return socket.BaseNetworkSocketSetIpTypeOfServiceResultWithResponse(socket.BaseNetworkSocketSetIpTypeOfServiceResponse{}), nil
 }
 
-func (ep *endpoint) GetIpTypeOfService(fidl.Context) (socket.BaseSocketGetIpTypeOfServiceResult, error) {
+func (ep *endpoint) GetIpTypeOfService(fidl.Context) (socket.BaseNetworkSocketGetIpTypeOfServiceResult, error) {
 	value, err := ep.ep.GetSockOptInt(tcpip.IPv4TOSOption)
 	if err != nil {
-		return socket.BaseSocketGetIpTypeOfServiceResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketGetIpTypeOfServiceResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	if value < 0 || value > math.MaxUint8 {
 		value = 0
 	}
-	return socket.BaseSocketGetIpTypeOfServiceResultWithResponse(socket.BaseSocketGetIpTypeOfServiceResponse{Value: uint8(value)}), nil
+	return socket.BaseNetworkSocketGetIpTypeOfServiceResultWithResponse(socket.BaseNetworkSocketGetIpTypeOfServiceResponse{Value: uint8(value)}), nil
 }
 
-func (ep *endpoint) AddIpMembership(_ fidl.Context, membership socket.IpMulticastMembership) (socket.BaseSocketAddIpMembershipResult, error) {
+func (ep *endpoint) AddIpMembership(_ fidl.Context, membership socket.IpMulticastMembership) (socket.BaseNetworkSocketAddIpMembershipResult, error) {
 	opt := tcpip.AddMembershipOption{
 		NIC:           tcpip.NICID(membership.Iface),
 		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.LocalAddr),
 		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.McastAddr),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
-		return socket.BaseSocketAddIpMembershipResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketAddIpMembershipResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketAddIpMembershipResultWithResponse(socket.BaseSocketAddIpMembershipResponse{}), nil
+	return socket.BaseNetworkSocketAddIpMembershipResultWithResponse(socket.BaseNetworkSocketAddIpMembershipResponse{}), nil
 }
 
-func (ep *endpoint) DropIpMembership(_ fidl.Context, membership socket.IpMulticastMembership) (socket.BaseSocketDropIpMembershipResult, error) {
+func (ep *endpoint) DropIpMembership(_ fidl.Context, membership socket.IpMulticastMembership) (socket.BaseNetworkSocketDropIpMembershipResult, error) {
 	opt := tcpip.RemoveMembershipOption{
 		NIC:           tcpip.NICID(membership.Iface),
 		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.LocalAddr),
 		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.McastAddr),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
-		return socket.BaseSocketDropIpMembershipResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketDropIpMembershipResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketDropIpMembershipResultWithResponse(socket.BaseSocketDropIpMembershipResponse{}), nil
+	return socket.BaseNetworkSocketDropIpMembershipResultWithResponse(socket.BaseNetworkSocketDropIpMembershipResponse{}), nil
 }
 
-func (ep *endpoint) AddIpv6Membership(_ fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseSocketAddIpv6MembershipResult, error) {
+func (ep *endpoint) AddIpv6Membership(_ fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseNetworkSocketAddIpv6MembershipResult, error) {
 	opt := tcpip.AddMembershipOption{
 		NIC:           tcpip.NICID(membership.Iface),
 		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv6(membership.McastAddr),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
-		return socket.BaseSocketAddIpv6MembershipResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketAddIpv6MembershipResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketAddIpv6MembershipResultWithResponse(socket.BaseSocketAddIpv6MembershipResponse{}), nil
+	return socket.BaseNetworkSocketAddIpv6MembershipResultWithResponse(socket.BaseNetworkSocketAddIpv6MembershipResponse{}), nil
 }
 
-func (ep *endpoint) DropIpv6Membership(_ fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseSocketDropIpv6MembershipResult, error) {
+func (ep *endpoint) DropIpv6Membership(_ fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseNetworkSocketDropIpv6MembershipResult, error) {
 	opt := tcpip.RemoveMembershipOption{
 		NIC:           tcpip.NICID(membership.Iface),
 		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv6(membership.McastAddr),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
-		return socket.BaseSocketDropIpv6MembershipResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseNetworkSocketDropIpv6MembershipResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.BaseSocketDropIpv6MembershipResultWithResponse(socket.BaseSocketDropIpv6MembershipResponse{}), nil
+	return socket.BaseNetworkSocketDropIpv6MembershipResultWithResponse(socket.BaseNetworkSocketDropIpv6MembershipResponse{}), nil
 }
 
-func (ep *endpoint) SetIpv6ReceiveTrafficClass(_ fidl.Context, value bool) (socket.BaseSocketSetIpv6ReceiveTrafficClassResult, error) {
+func (ep *endpoint) SetIpv6ReceiveTrafficClass(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResult, error) {
 	ep.ep.SocketOptions().SetReceiveTClass(value)
-	return socket.BaseSocketSetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseSocketSetIpv6ReceiveTrafficClassResponse{}), nil
+	return socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResponse{}), nil
 }
 
-func (ep *endpoint) GetIpv6ReceiveTrafficClass(fidl.Context) (socket.BaseSocketGetIpv6ReceiveTrafficClassResult, error) {
+func (ep *endpoint) GetIpv6ReceiveTrafficClass(fidl.Context) (socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResult, error) {
 	value := ep.ep.SocketOptions().GetReceiveTClass()
-	return socket.BaseSocketGetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseSocketGetIpv6ReceiveTrafficClassResponse{Value: value}), nil
+	return socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpReceiveTypeOfService(_ fidl.Context, value bool) (socket.BaseSocketSetIpReceiveTypeOfServiceResult, error) {
+func (ep *endpoint) SetIpReceiveTypeOfService(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResult, error) {
 	ep.ep.SocketOptions().SetReceiveTOS(value)
-	return socket.BaseSocketSetIpReceiveTypeOfServiceResultWithResponse(socket.BaseSocketSetIpReceiveTypeOfServiceResponse{}), nil
+	return socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResponse{}), nil
 }
 
-func (ep *endpoint) GetIpReceiveTypeOfService(fidl.Context) (socket.BaseSocketGetIpReceiveTypeOfServiceResult, error) {
+func (ep *endpoint) GetIpReceiveTypeOfService(fidl.Context) (socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResult, error) {
 	value := ep.ep.SocketOptions().GetReceiveTOS()
-	return socket.BaseSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseSocketGetIpReceiveTypeOfServiceResponse{Value: value}), nil
+	return socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpPacketInfo(_ fidl.Context, value bool) (socket.BaseSocketSetIpPacketInfoResult, error) {
+func (ep *endpoint) SetIpPacketInfo(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpPacketInfoResult, error) {
 	ep.ep.SocketOptions().SetReceivePacketInfo(value)
-	return socket.BaseSocketSetIpPacketInfoResultWithResponse(socket.BaseSocketSetIpPacketInfoResponse{}), nil
+	return socket.BaseNetworkSocketSetIpPacketInfoResultWithResponse(socket.BaseNetworkSocketSetIpPacketInfoResponse{}), nil
 }
 
-func (ep *endpoint) GetIpPacketInfo(fidl.Context) (socket.BaseSocketGetIpPacketInfoResult, error) {
+func (ep *endpoint) GetIpPacketInfo(fidl.Context) (socket.BaseNetworkSocketGetIpPacketInfoResult, error) {
 	value := ep.ep.SocketOptions().GetReceivePacketInfo()
-	return socket.BaseSocketGetIpPacketInfoResultWithResponse(socket.BaseSocketGetIpPacketInfoResponse{Value: value}), nil
+	return socket.BaseNetworkSocketGetIpPacketInfoResultWithResponse(socket.BaseNetworkSocketGetIpPacketInfoResponse{Value: value}), nil
 }
 
 // endpointWithSocket implements a network socket that uses a zircon socket for
@@ -1077,6 +1077,13 @@ func (epe *endpointWithEvent) describe() (zx.Handle, error) {
 	return event, err
 }
 
+func (epe *endpointWithEvent) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
+	if err := epe.endpoint.connect(address); err != nil {
+		return socket.BaseNetworkSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseNetworkSocketConnectResultWithResponse(socket.BaseNetworkSocketConnectResponse{}), nil
+}
+
 func (epe *endpointWithEvent) shutdown(how socket.ShutdownMode) (posix.Errno, error) {
 	var signals zx.Signals
 	var flags tcpip.ShutdownFlags
@@ -1105,23 +1112,23 @@ func (epe *endpointWithEvent) shutdown(how socket.ShutdownMode) (posix.Errno, er
 	return 0, nil
 }
 
-func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdownResult, error) {
+func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdownResult, error) {
 	if errno, err := epe.shutdown(how); err != nil {
-		return socket.BaseSocketShutdownResult{}, err
+		return socket.BaseNetworkSocketShutdownResult{}, err
 	} else if errno != 0 {
-		return socket.BaseSocketShutdownResultWithErr(errno), nil
+		return socket.BaseNetworkSocketShutdownResultWithErr(errno), nil
 	}
-	return socket.BaseSocketShutdownResultWithResponse(socket.BaseSocketShutdownResponse{}), nil
+	return socket.BaseNetworkSocketShutdownResultWithResponse(socket.BaseNetworkSocketShutdownResponse{}), nil
 }
 
 // TODO(https://fxbug.dev/78129): Remove after ABI transition.
-func (epe *endpointWithEvent) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdown2Result, error) {
+func (epe *endpointWithEvent) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdown2Result, error) {
 	if errno, err := epe.shutdown(how); err != nil {
-		return socket.BaseSocketShutdown2Result{}, err
+		return socket.BaseNetworkSocketShutdown2Result{}, err
 	} else if errno != 0 {
-		return socket.BaseSocketShutdown2ResultWithErr(errno), nil
+		return socket.BaseNetworkSocketShutdown2ResultWithErr(errno), nil
 	}
-	return socket.BaseSocketShutdown2ResultWithResponse(socket.BaseSocketShutdown2Response{}), nil
+	return socket.BaseNetworkSocketShutdown2ResultWithResponse(socket.BaseNetworkSocketShutdown2Response{}), nil
 }
 
 const localSignalClosing = zx.SignalUser1
@@ -1250,18 +1257,11 @@ func (eps *endpointWithSocket) startReadWriteLoops() {
 	}
 }
 
-func (eps *endpointWithSocket) Connect(ctx fidl.Context, address fidlnet.SocketAddress) (socket.BaseSocketConnectResult, error) {
-	result, err := eps.endpoint.Connect(ctx, address)
-	if err != nil {
-		return socket.BaseSocketConnectResult{}, err
-	}
-	switch result.Which() {
-	case socket.BaseSocketConnectResultErr:
-		if result.Err != posix.ErrnoEinprogress {
-			break
-		}
-		fallthrough
-	case socket.BaseSocketConnectResultResponse:
+func (eps *endpointWithSocket) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
+	err := eps.endpoint.connect(address)
+
+	switch err.(type) {
+	case *tcpip.ErrConnectStarted, nil:
 		// It is possible to call `connect` on a listening socket - such a call
 		// would fail above, so we register the callback only in the success case
 		// to avoid incorrectly handling events on connected sockets.
@@ -1293,7 +1293,11 @@ func (eps *endpointWithSocket) Connect(ctx fidl.Context, address fidlnet.SocketA
 			}
 		})
 	}
-	return result, nil
+
+	if err != nil {
+		return socket.BaseNetworkSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseNetworkSocketConnectResultWithResponse(socket.BaseNetworkSocketConnectResponse{}), nil
 }
 
 func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAddress, *endpointWithSocket, error) {
@@ -1634,23 +1638,23 @@ func (eps *endpointWithSocket) shutdown(how socket.ShutdownMode) (posix.Errno, e
 	return 0, nil
 }
 
-func (eps *endpointWithSocket) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdownResult, error) {
+func (eps *endpointWithSocket) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdownResult, error) {
 	if errno, err := eps.shutdown(how); err != nil {
-		return socket.BaseSocketShutdownResult{}, err
+		return socket.BaseNetworkSocketShutdownResult{}, err
 	} else if errno != 0 {
-		return socket.BaseSocketShutdownResultWithErr(errno), nil
+		return socket.BaseNetworkSocketShutdownResultWithErr(errno), nil
 	}
-	return socket.BaseSocketShutdownResultWithResponse(socket.BaseSocketShutdownResponse{}), nil
+	return socket.BaseNetworkSocketShutdownResultWithResponse(socket.BaseNetworkSocketShutdownResponse{}), nil
 }
 
 // TODO(https://fxbug.dev/78129): Remove after ABI transition.
-func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdown2Result, error) {
+func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdown2Result, error) {
 	if errno, err := eps.shutdown(how); err != nil {
-		return socket.BaseSocketShutdown2Result{}, err
+		return socket.BaseNetworkSocketShutdown2Result{}, err
 	} else if errno != 0 {
-		return socket.BaseSocketShutdown2ResultWithErr(errno), nil
+		return socket.BaseNetworkSocketShutdown2ResultWithErr(errno), nil
 	}
-	return socket.BaseSocketShutdown2ResultWithResponse(socket.BaseSocketShutdown2Response{}), nil
+	return socket.BaseNetworkSocketShutdown2ResultWithResponse(socket.BaseNetworkSocketShutdown2Response{}), nil
 }
 
 type datagramSocket struct {
@@ -2872,5 +2876,577 @@ func tcpipErrorToCode(err tcpip.Error) posix.Errno {
 		return posix.ErrnoEinval
 	default:
 		panic(fmt.Sprintf("unknown error %v", err))
+	}
+}
+
+func (ep *endpoint) BaseSocketAddIpMembership(ctx fidl.Context, membership socket.IpMulticastMembership) (socket.BaseNetworkSocketBaseSocketAddIpMembershipResult, error) {
+	res, err := ep.AddIpMembership(ctx, membership)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketAddIpMembershipResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketAddIpMembershipResultResponse:
+		return socket.BaseNetworkSocketBaseSocketAddIpMembershipResultWithResponse(socket.BaseNetworkSocketBaseSocketAddIpMembershipResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketAddIpMembershipResultErr:
+		return socket.BaseNetworkSocketBaseSocketAddIpMembershipResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketAddIpv6Membership(ctx fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseNetworkSocketBaseSocketAddIpv6MembershipResult, error) {
+	res, err := ep.AddIpv6Membership(ctx, membership)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketAddIpv6MembershipResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketAddIpv6MembershipResultResponse:
+		return socket.BaseNetworkSocketBaseSocketAddIpv6MembershipResultWithResponse(socket.BaseNetworkSocketBaseSocketAddIpv6MembershipResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketAddIpv6MembershipResultErr:
+		return socket.BaseNetworkSocketBaseSocketAddIpv6MembershipResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketBind(ctx fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseNetworkSocketBaseSocketBindResult, error) {
+	res, err := ep.Bind(ctx, sockaddr)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketBindResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketBindResultResponse:
+		return socket.BaseNetworkSocketBaseSocketBindResultWithResponse(socket.BaseNetworkSocketBaseSocketBindResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketBindResultErr:
+		return socket.BaseNetworkSocketBaseSocketBindResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (epe *endpointWithEvent) BaseSocketConnect(ctx fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseNetworkSocketBaseSocketConnectResult, error) {
+	res, err := epe.Connect(ctx, sockaddr)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketConnectResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketConnectResultResponse:
+		return socket.BaseNetworkSocketBaseSocketConnectResultWithResponse(socket.BaseNetworkSocketBaseSocketConnectResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketConnectResultErr:
+		return socket.BaseNetworkSocketBaseSocketConnectResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (eps *endpointWithSocket) BaseSocketConnect(ctx fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseNetworkSocketBaseSocketConnectResult, error) {
+	res, err := eps.Connect(ctx, sockaddr)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketConnectResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketConnectResultResponse:
+		return socket.BaseNetworkSocketBaseSocketConnectResultWithResponse(socket.BaseNetworkSocketBaseSocketConnectResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketConnectResultErr:
+		return socket.BaseNetworkSocketBaseSocketConnectResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketDisconnect(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketDisconnectResult, error) {
+	res, err := ep.Disconnect(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketDisconnectResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketDisconnectResultResponse:
+		return socket.BaseNetworkSocketBaseSocketDisconnectResultWithResponse(socket.BaseNetworkSocketBaseSocketDisconnectResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketDisconnectResultErr:
+		return socket.BaseNetworkSocketBaseSocketDisconnectResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketDropIpMembership(ctx fidl.Context, membership socket.IpMulticastMembership) (socket.BaseNetworkSocketBaseSocketDropIpMembershipResult, error) {
+	res, err := ep.DropIpMembership(ctx, membership)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketDropIpMembershipResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketDropIpMembershipResultResponse:
+		return socket.BaseNetworkSocketBaseSocketDropIpMembershipResultWithResponse(socket.BaseNetworkSocketBaseSocketDropIpMembershipResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketDropIpMembershipResultErr:
+		return socket.BaseNetworkSocketBaseSocketDropIpMembershipResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketDropIpv6Membership(ctx fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseNetworkSocketBaseSocketDropIpv6MembershipResult, error) {
+	res, err := ep.DropIpv6Membership(ctx, membership)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketDropIpv6MembershipResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketDropIpv6MembershipResultResponse:
+		return socket.BaseNetworkSocketBaseSocketDropIpv6MembershipResultWithResponse(socket.BaseNetworkSocketBaseSocketDropIpv6MembershipResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketDropIpv6MembershipResultErr:
+		return socket.BaseNetworkSocketBaseSocketDropIpv6MembershipResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketGetIpMulticastInterface(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpMulticastInterfaceResult, error) {
+	res, err := ep.GetIpMulticastInterface(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastInterfaceResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpMulticastInterfaceResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastInterfaceResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpMulticastInterfaceResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpMulticastInterfaceResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastInterfaceResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketGetIpMulticastLoopback(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpMulticastLoopbackResult, error) {
+	res, err := ep.GetIpMulticastLoopback(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastLoopbackResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpMulticastLoopbackResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastLoopbackResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpMulticastLoopbackResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpMulticastLoopbackResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastLoopbackResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketGetIpMulticastTtl(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpMulticastTtlResult, error) {
+	res, err := ep.GetIpMulticastTtl(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastTtlResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpMulticastTtlResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastTtlResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpMulticastTtlResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpMulticastTtlResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpMulticastTtlResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+
+func (ep *endpoint) BaseSocketGetIpPacketInfo(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpPacketInfoResult, error) {
+	res, err := ep.GetIpPacketInfo(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpPacketInfoResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpPacketInfoResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpPacketInfoResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpPacketInfoResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpPacketInfoResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpPacketInfoResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpReceiveTypeOfService(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpReceiveTypeOfServiceResult, error) {
+	res, err := ep.GetIpReceiveTypeOfService(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpReceiveTypeOfServiceResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpReceiveTypeOfServiceResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpReceiveTypeOfServiceResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpReceiveTypeOfServiceResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpReceiveTypeOfServiceResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpTtl(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpTtlResult, error) {
+	res, err := ep.GetIpTtl(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpTtlResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpTtlResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpTtlResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpTtlResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpTtlResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpTtlResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpTypeOfService(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpTypeOfServiceResult, error) {
+	res, err := ep.GetIpTypeOfService(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpTypeOfServiceResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpTypeOfServiceResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpTypeOfServiceResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpTypeOfServiceResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpTypeOfServiceResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpTypeOfServiceResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpv6MulticastHops(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpv6MulticastHopsResult, error) {
+	res, err := ep.GetIpv6MulticastHops(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastHopsResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpv6MulticastHopsResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastHopsResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpv6MulticastHopsResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpv6MulticastHopsResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastHopsResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpv6MulticastInterface(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpv6MulticastInterfaceResult, error) {
+	res, err := ep.GetIpv6MulticastInterface(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastInterfaceResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpv6MulticastInterfaceResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastInterfaceResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpv6MulticastInterfaceResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpv6MulticastInterfaceResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastInterfaceResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpv6MulticastLoopback(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpv6MulticastLoopbackResult, error) {
+	res, err := ep.GetIpv6MulticastLoopback(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastLoopbackResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpv6MulticastLoopbackResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastLoopbackResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpv6MulticastLoopbackResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpv6MulticastLoopbackResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6MulticastLoopbackResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpv6Only(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpv6OnlyResult, error) {
+	res, err := ep.GetIpv6Only(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpv6OnlyResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpv6OnlyResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6OnlyResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpv6OnlyResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpv6OnlyResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6OnlyResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpv6ReceiveTrafficClass(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpv6ReceiveTrafficClassResult, error) {
+	res, err := ep.GetIpv6ReceiveTrafficClass(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpv6ReceiveTrafficClassResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpv6ReceiveTrafficClassResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpv6ReceiveTrafficClassResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpv6ReceiveTrafficClassResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6ReceiveTrafficClassResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetIpv6TrafficClass(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetIpv6TrafficClassResult, error) {
+	res, err := ep.GetIpv6TrafficClass(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetIpv6TrafficClassResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetIpv6TrafficClassResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6TrafficClassResultWithResponse(socket.BaseNetworkSocketBaseSocketGetIpv6TrafficClassResponse{Value: res.Response.Value}), nil
+	case socket.BaseNetworkSocketBaseSocketGetIpv6TrafficClassResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetIpv6TrafficClassResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetPeerName(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetPeerNameResult, error) {
+	res, err := ep.GetPeerName(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetPeerNameResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetPeerNameResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetPeerNameResultWithResponse(socket.BaseNetworkSocketBaseSocketGetPeerNameResponse{Addr: res.Response.Addr}), nil
+	case socket.BaseNetworkSocketBaseSocketGetPeerNameResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetPeerNameResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketGetSockName(ctx fidl.Context) (socket.BaseNetworkSocketBaseSocketGetSockNameResult, error) {
+	res, err := ep.GetSockName(ctx)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketGetSockNameResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketGetSockNameResultResponse:
+		return socket.BaseNetworkSocketBaseSocketGetSockNameResultWithResponse(socket.BaseNetworkSocketBaseSocketGetSockNameResponse{Addr: res.Response.Addr}), nil
+	case socket.BaseNetworkSocketBaseSocketGetSockNameResultErr:
+		return socket.BaseNetworkSocketBaseSocketGetSockNameResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpMulticastInterface(ctx fidl.Context, iface uint64, value fidlnet.Ipv4Address) (socket.BaseNetworkSocketBaseSocketSetIpMulticastInterfaceResult, error) {
+	res, err := ep.SetIpMulticastInterface(ctx, iface, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastInterfaceResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpMulticastInterfaceResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastInterfaceResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpMulticastInterfaceResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpMulticastInterfaceResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastInterfaceResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpMulticastLoopback(ctx fidl.Context, value bool) (socket.BaseNetworkSocketBaseSocketSetIpMulticastLoopbackResult, error) {
+	res, err := ep.SetIpMulticastLoopback(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastLoopbackResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpMulticastLoopbackResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastLoopbackResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpMulticastLoopbackResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpMulticastLoopbackResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastLoopbackResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpMulticastTtl(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketBaseSocketSetIpMulticastTtlResult, error) {
+	res, err := ep.SetIpMulticastTtl(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastTtlResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpMulticastTtlResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastTtlResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpMulticastTtlResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpMulticastTtlResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpMulticastTtlResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpPacketInfo(ctx fidl.Context, value bool) (socket.BaseNetworkSocketBaseSocketSetIpPacketInfoResult, error) {
+	res, err := ep.SetIpPacketInfo(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpPacketInfoResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpPacketInfoResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpPacketInfoResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpPacketInfoResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpPacketInfoResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpPacketInfoResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpReceiveTypeOfService(ctx fidl.Context, value bool) (socket.BaseNetworkSocketBaseSocketSetIpReceiveTypeOfServiceResult, error) {
+	res, err := ep.SetIpReceiveTypeOfService(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpReceiveTypeOfServiceResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpReceiveTypeOfServiceResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpReceiveTypeOfServiceResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpReceiveTypeOfServiceResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpReceiveTypeOfServiceResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpTtl(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketBaseSocketSetIpTtlResult, error) {
+	res, err := ep.SetIpTtl(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpTtlResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpTtlResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpTtlResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpTtlResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpTtlResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpTtlResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpTypeOfService(ctx fidl.Context, value uint8) (socket.BaseNetworkSocketBaseSocketSetIpTypeOfServiceResult, error) {
+	res, err := ep.SetIpTypeOfService(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpTypeOfServiceResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpTypeOfServiceResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpTypeOfServiceResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpTypeOfServiceResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpTypeOfServiceResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpTypeOfServiceResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpv6MulticastHops(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketBaseSocketSetIpv6MulticastHopsResult, error) {
+	res, err := ep.SetIpv6MulticastHops(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastHopsResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpv6MulticastHopsResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastHopsResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpv6MulticastHopsResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpv6MulticastHopsResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastHopsResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpv6MulticastInterface(ctx fidl.Context, iface uint64) (socket.BaseNetworkSocketBaseSocketSetIpv6MulticastInterfaceResult, error) {
+	res, err := ep.SetIpv6MulticastInterface(ctx, iface)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastInterfaceResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpv6MulticastInterfaceResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastInterfaceResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpv6MulticastInterfaceResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpv6MulticastInterfaceResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastInterfaceResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpv6MulticastLoopback(ctx fidl.Context, value bool) (socket.BaseNetworkSocketBaseSocketSetIpv6MulticastLoopbackResult, error) {
+	res, err := ep.SetIpv6MulticastLoopback(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastLoopbackResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpv6MulticastLoopbackResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastLoopbackResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpv6MulticastLoopbackResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpv6MulticastLoopbackResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6MulticastLoopbackResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpv6Only(ctx fidl.Context, value bool) (socket.BaseNetworkSocketBaseSocketSetIpv6OnlyResult, error) {
+	res, err := ep.SetIpv6Only(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpv6OnlyResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpv6OnlyResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6OnlyResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpv6OnlyResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpv6OnlyResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6OnlyResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpv6ReceiveTrafficClass(ctx fidl.Context, value bool) (socket.BaseNetworkSocketBaseSocketSetIpv6ReceiveTrafficClassResult, error) {
+	res, err := ep.SetIpv6ReceiveTrafficClass(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpv6ReceiveTrafficClassResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpv6ReceiveTrafficClassResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpv6ReceiveTrafficClassResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpv6ReceiveTrafficClassResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6ReceiveTrafficClassResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (ep *endpoint) BaseSocketSetIpv6TrafficClass(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketBaseSocketSetIpv6TrafficClassResult, error) {
+	res, err := ep.SetIpv6TrafficClass(ctx, value)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketSetIpv6TrafficClassResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketSetIpv6TrafficClassResultResponse:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6TrafficClassResultWithResponse(socket.BaseNetworkSocketBaseSocketSetIpv6TrafficClassResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketSetIpv6TrafficClassResultErr:
+		return socket.BaseNetworkSocketBaseSocketSetIpv6TrafficClassResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (epe *endpointWithEvent) BaseSocketShutdown(ctx fidl.Context, mode socket.ShutdownMode) (socket.BaseNetworkSocketBaseSocketShutdownResult, error) {
+	res, err := epe.Shutdown(ctx, mode)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketShutdownResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketShutdownResultResponse:
+		return socket.BaseNetworkSocketBaseSocketShutdownResultWithResponse(socket.BaseNetworkSocketBaseSocketShutdownResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketShutdownResultErr:
+		return socket.BaseNetworkSocketBaseSocketShutdownResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (epe *endpointWithEvent) BaseSocketShutdown2(ctx fidl.Context, mode socket.ShutdownMode) (socket.BaseNetworkSocketBaseSocketShutdown2Result, error) {
+	res, err := epe.Shutdown2(ctx, mode)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketShutdown2Result{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketShutdown2ResultResponse:
+		return socket.BaseNetworkSocketBaseSocketShutdown2ResultWithResponse(socket.BaseNetworkSocketBaseSocketShutdown2Response{}), nil
+	case socket.BaseNetworkSocketBaseSocketShutdown2ResultErr:
+		return socket.BaseNetworkSocketBaseSocketShutdown2ResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (eps *endpointWithSocket) BaseSocketShutdown(ctx fidl.Context, mode socket.ShutdownMode) (socket.BaseNetworkSocketBaseSocketShutdownResult, error) {
+	res, err := eps.Shutdown(ctx, mode)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketShutdownResult{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketShutdownResultResponse:
+		return socket.BaseNetworkSocketBaseSocketShutdownResultWithResponse(socket.BaseNetworkSocketBaseSocketShutdownResponse{}), nil
+	case socket.BaseNetworkSocketBaseSocketShutdownResultErr:
+		return socket.BaseNetworkSocketBaseSocketShutdownResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
+	}
+}
+func (eps *endpointWithSocket) BaseSocketShutdown2(ctx fidl.Context, mode socket.ShutdownMode) (socket.BaseNetworkSocketBaseSocketShutdown2Result, error) {
+	res, err := eps.Shutdown2(ctx, mode)
+	if err != nil {
+		return socket.BaseNetworkSocketBaseSocketShutdown2Result{}, err
+	}
+	switch w := res.Which(); w {
+	case socket.BaseNetworkSocketBaseSocketShutdown2ResultResponse:
+		return socket.BaseNetworkSocketBaseSocketShutdown2ResultWithResponse(socket.BaseNetworkSocketBaseSocketShutdown2Response{}), nil
+	case socket.BaseNetworkSocketBaseSocketShutdown2ResultErr:
+		return socket.BaseNetworkSocketBaseSocketShutdown2ResultWithErr(res.Err), nil
+	default:
+		panic(fmt.Sprintf("unhandled variant = %d", w))
 	}
 }
