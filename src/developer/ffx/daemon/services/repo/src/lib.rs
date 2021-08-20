@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
     fidl_fuchsia_pkg::RepositoryManagerMarker,
     fidl_fuchsia_pkg_rewrite::EngineMarker,
-    fidl_fuchsia_pkg_rewrite_ext::{do_transaction, EditTransaction, EditTransactionError, Rule},
+    fidl_fuchsia_pkg_rewrite_ext::{do_transaction, Rule},
     fuchsia_async as fasync,
     fuchsia_zircon_status::Status,
     futures::{FutureExt as _, StreamExt as _},
@@ -20,6 +20,7 @@ use {
     pkg::repository::{self, listen_addr, Repository, RepositoryManager, RepositoryServer},
     services::prelude::*,
     std::{
+        collections::HashSet,
         convert::{TryFrom, TryInto},
         net,
         sync::Arc,
@@ -169,47 +170,7 @@ async fn register_target(
     }
 
     if !target_info.aliases.is_empty() {
-        let alias_rules = target_info
-            .aliases
-            .iter()
-            .map(|alias| {
-                Rule::new(
-                    alias.to_string(),
-                    repo.name().to_string(),
-                    "/".to_string(),
-                    "/".to_string(),
-                )
-            })
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|err| {
-                log::warn!("failed to construct rule: {:#?}", err);
-                bridge::RepositoryError::RewriteEngineError
-            })?;
-
-        let rewrite_proxy = match cx
-            .open_target_proxy::<EngineMarker>(
-                target_info.target_identifier.clone(),
-                REWRITE_SERVICE_SELECTOR,
-            )
-            .await
-        {
-            Ok(p) => p,
-            Err(err) => {
-                log::warn!(
-                    "Failed to open Rewrite Engine target proxy with target name {:?}: {:#?}",
-                    target_info.target_identifier,
-                    err
-                );
-                return Err(bridge::RepositoryError::TargetCommunicationFailure);
-            }
-        };
-
-        do_transaction(&rewrite_proxy, |transaction| create_aliases(transaction, &alias_rules))
-            .await
-            .map_err(|err| {
-                log::warn!("failed to create transactions: {:#?}", err);
-                bridge::RepositoryError::RewriteEngineError
-            })?;
+        let () = create_aliases(cx, repo.name(), &target_nodename, &target_info.aliases).await?;
     }
 
     if save_config == SaveConfig::Save {
@@ -222,27 +183,132 @@ async fn register_target(
     Ok(())
 }
 
+fn aliases_to_rules(
+    repo_name: &str,
+    aliases: &[String],
+) -> Result<Vec<Rule>, bridge::RepositoryError> {
+    let rules = aliases
+        .iter()
+        .map(|alias| {
+            Rule::new(alias.to_string(), repo_name.to_string(), "/".to_string(), "/".to_string())
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|err| {
+            log::warn!("failed to construct rule: {:#?}", err);
+            bridge::RepositoryError::RewriteEngineError
+        })?;
+
+    Ok(rules)
+}
+
 async fn create_aliases(
-    transaction: EditTransaction,
-    alias_rules: &[Rule],
-) -> Result<EditTransaction, EditTransactionError> {
-    // Prepend the alias rules to the front so they take priority.
-    let mut rules = alias_rules.iter().cloned().rev().collect::<Vec<_>>();
-    rules.extend(transaction.list_dynamic().await?);
+    cx: &Context,
+    repo_name: &str,
+    target_nodename: &str,
+    aliases: &[String],
+) -> Result<(), bridge::RepositoryError> {
+    let alias_rules = aliases_to_rules(repo_name, &aliases)?;
 
-    // Clear the list, since we'll be adding it back later.
-    transaction.reset_all()?;
+    let rewrite_proxy = match cx
+        .open_target_proxy::<EngineMarker>(
+            Some(target_nodename.to_string()),
+            REWRITE_SERVICE_SELECTOR,
+        )
+        .await
+    {
+        Ok(p) => p,
+        Err(err) => {
+            log::warn!(
+                "Failed to open Rewrite Engine target proxy with target name {:?}: {:#?}",
+                target_nodename,
+                err
+            );
+            return Err(bridge::RepositoryError::TargetCommunicationFailure);
+        }
+    };
 
-    // Remove duplicated rules while preserving order.
-    rules.dedup();
+    do_transaction(&rewrite_proxy, |transaction| async {
+        // Prepend the alias rules to the front so they take priority.
+        let mut rules = alias_rules.iter().cloned().rev().collect::<Vec<_>>();
+        rules.extend(transaction.list_dynamic().await?);
 
-    // Add the rules back into the transaction. We do it in reverse, because `.add()`
-    // always inserts rules into the front of the list.
-    for rule in rules.into_iter().rev() {
-        transaction.add(rule).await?
-    }
+        // Clear the list, since we'll be adding it back later.
+        transaction.reset_all()?;
 
-    Ok(transaction)
+        // Remove duplicated rules while preserving order.
+        rules.dedup();
+
+        // Add the rules back into the transaction. We do it in reverse, because `.add()`
+        // always inserts rules into the front of the list.
+        for rule in rules.into_iter().rev() {
+            transaction.add(rule).await?
+        }
+
+        Ok(transaction)
+    })
+    .await
+    .map_err(|err| {
+        log::warn!("failed to create transactions: {:#?}", err);
+        bridge::RepositoryError::RewriteEngineError
+    })?;
+
+    Ok(())
+}
+
+async fn remove_aliases(
+    cx: &Context,
+    repo_name: &str,
+    target_nodename: &str,
+    aliases: &[String],
+) -> Result<(), bridge::RepositoryError> {
+    let alias_rules = aliases_to_rules(repo_name, &aliases)?.into_iter().collect::<HashSet<_>>();
+
+    let rewrite_proxy = match cx
+        .open_target_proxy::<EngineMarker>(
+            Some(target_nodename.to_string()),
+            REWRITE_SERVICE_SELECTOR,
+        )
+        .await
+    {
+        Ok(p) => p,
+        Err(err) => {
+            log::warn!(
+                "Failed to open Rewrite Engine target proxy with target name {:?}: {:#?}",
+                target_nodename,
+                err
+            );
+            return Err(bridge::RepositoryError::TargetCommunicationFailure);
+        }
+    };
+
+    do_transaction(&rewrite_proxy, |transaction| async {
+        // Prepend the alias rules to the front so they take priority.
+        let mut rules = transaction.list_dynamic().await?;
+
+        // Clear the list, since we'll be adding it back later.
+        transaction.reset_all()?;
+
+        // Remove duplicated rules while preserving order.
+        rules.dedup();
+
+        // Add the rules back into the transaction. We do it in reverse, because `.add()`
+        // always inserts rules into the front of the list.
+        for rule in rules.into_iter().rev() {
+            // Only add the rule if it doesn't match our alias rule.
+            if alias_rules.get(&rule).is_none() {
+                transaction.add(rule).await?
+            }
+        }
+
+        Ok(transaction)
+    })
+    .await
+    .map_err(|err| {
+        log::warn!("failed to create transactions: {:#?}", err);
+        bridge::RepositoryError::RewriteEngineError
+    })?;
+
+    Ok(())
 }
 
 impl<T: EventHandlerProvider> Repo<T> {
@@ -316,6 +382,10 @@ impl<T: EventHandlerProvider> Repo<T> {
         self.manager.remove(repo_name)
     }
 
+    /// Deregister the repository from the target.
+    ///
+    /// This only works for repositories managed by `ffx`. If the repository named `repo_name` is
+    /// unknown to this service, error out rather than trying to remove the registration.
     async fn deregister_target(
         &self,
         cx: &Context,
@@ -329,6 +399,8 @@ impl<T: EventHandlerProvider> Repo<T> {
             .get(&repo_name)
             .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
 
+        // Connect to the target. Error out if we can't connect, since we can't remove the registration
+        // from it.
         let (target, proxy) = cx
             .open_target_proxy_with_info::<RepositoryManagerMarker>(
                 target_identifier.clone(),
@@ -345,10 +417,33 @@ impl<T: EventHandlerProvider> Repo<T> {
             })?;
 
         let target_nodename = target.nodename.ok_or_else(|| {
-            log::warn!("target {:?} does not have a nodename", target_identifier);
+            log::warn!("Target {:?} does not have a nodename", target_identifier);
             bridge::RepositoryError::InternalError
         })?;
 
+        // Look up the the registration info. Error out if we don't have any registrations for this
+        // device.
+        let registration_info = pkg::config::get_registration(&repo_name, &target_nodename)
+            .await
+            .map_err(|err| {
+                log::warn!(
+                    "Failed to find registration info for repo {:?} and target {:?}: {:#?}",
+                    repo_name,
+                    target_nodename,
+                    err
+                );
+                bridge::RepositoryError::InternalError
+            })?
+            .ok_or_else(|| bridge::RepositoryError::NoMatchingRegistration)?;
+
+        // Check if we created any aliases. If so, remove them from the device before removing the
+        // repository.
+        if !registration_info.aliases.is_empty() {
+            let () = remove_aliases(cx, repo.name(), &target_nodename, &registration_info.aliases)
+                .await?;
+        }
+
+        // Remove the repository from the device.
         match proxy.remove(&repo.repo_url()).await {
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
@@ -365,6 +460,7 @@ impl<T: EventHandlerProvider> Repo<T> {
             }
         }
 
+        // Finally, remove the registration config from the ffx config.
         pkg::config::remove_registration(&repo_name, &target_nodename).await.map_err(|err| {
             log::warn!("Failed to remove registration from config: {:#?}", err);
             bridge::RepositoryError::InternalError
@@ -1285,7 +1381,15 @@ mod tests {
             assert!(proxy.remove_repository(REPO_NAME).await.expect("communicated with proxy"));
 
             // We should have removed the alias from the repository manager.
-            assert_eq!(fake_engine.take_events(), vec![]);
+            assert_eq!(
+                fake_engine.take_events(),
+                vec![
+                    EngineEvent::ListDynamic,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::ResetAll,
+                    EngineEvent::EditTransactionCommit,
+                ]
+            );
 
             assert_eq!(get_target_registrations(&proxy).await, vec![]);
 
@@ -1392,9 +1496,23 @@ mod tests {
                 .expect("target unregistration to succeed");
 
             // We should have removed the alias from the repository manager.
-            assert_eq!(fake_engine.take_events(), vec![]);
+            assert_eq!(
+                fake_engine.take_events(),
+                vec![
+                    EngineEvent::ListDynamic,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::ResetAll,
+                    EngineEvent::EditTransactionCommit,
+                ]
+            );
 
-            assert_eq!(get_target_registrations(&proxy).await, vec![]);
+            assert_eq!(
+                get_target_registrations(&proxy).await,
+                vec![
+                    /*
+                    */
+                ]
+            );
 
             // The registration should have been cleared from the config.
             assert_matches!(
@@ -1641,7 +1759,7 @@ mod tests {
             );
 
             // We shouldn't have made any rewrite rules.
-            assert_eq!(fake_engine.take_events(), vec![],);
+            assert_eq!(fake_engine.take_events(), vec![]);
 
             assert_eq!(
                 get_target_registrations(&proxy).await,

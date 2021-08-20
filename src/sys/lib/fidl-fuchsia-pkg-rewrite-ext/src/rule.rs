@@ -11,7 +11,7 @@ use {
 };
 
 /// A `Rule` can be used to re-write parts of a [`PkgUrl`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Hash)]
 pub struct Rule {
     host_match: String,
     host_replacement: String,

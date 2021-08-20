@@ -173,4 +173,6 @@ type RepositoryError = strict enum : uint32 {
     INTERNAL_ERROR = 9;
     /// Repository metadata is expired.
     EXPIRED_REPOSITORY_METADATA = 10;
+    /// No repository registration matches the provided repository and target.
+    NO_MATCHING_REGISTRATION = 11;
 };

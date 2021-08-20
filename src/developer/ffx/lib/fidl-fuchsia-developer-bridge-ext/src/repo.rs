@@ -172,6 +172,9 @@ pub enum RepositoryError {
 
     #[error("repository metadata is expired")]
     ExpiredRepositoryMetadata,
+
+    #[error("repository registration does not exist")]
+    NoMatchingRegistration,
 }
 
 impl From<fidl::RepositoryError> for RepositoryError {
@@ -194,6 +197,9 @@ impl From<fidl::RepositoryError> for RepositoryError {
             fidl::RepositoryError::InternalError => RepositoryError::InternalError,
             fidl::RepositoryError::ExpiredRepositoryMetadata => {
                 RepositoryError::ExpiredRepositoryMetadata
+            }
+            fidl::RepositoryError::NoMatchingRegistration => {
+                RepositoryError::NoMatchingRegistration
             }
         }
     }
@@ -219,6 +225,9 @@ impl From<RepositoryError> for fidl::RepositoryError {
             RepositoryError::InternalError => fidl::RepositoryError::InternalError,
             RepositoryError::ExpiredRepositoryMetadata => {
                 fidl::RepositoryError::ExpiredRepositoryMetadata
+            }
+            RepositoryError::NoMatchingRegistration => {
+                fidl::RepositoryError::NoMatchingRegistration
             }
         }
     }
