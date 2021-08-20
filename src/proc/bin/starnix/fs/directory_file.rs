@@ -6,6 +6,8 @@ use parking_lot::Mutex;
 use std::ops::Bound;
 
 use super::*;
+use crate::errno;
+use crate::error;
 use crate::fd_impl_directory;
 use crate::task::*;
 use crate::types::*;
@@ -19,12 +21,12 @@ impl FsNodeOps for ROMemoryDirectory {
     }
 
     fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        Err(ENOENT)
+        error!(ENOENT)
     }
 
     fn unlink(&self, _parent: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
         // TODO: use MS_RDONLY instead
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }
 
@@ -67,10 +69,10 @@ impl FileOps for MemoryDirectoryFile {
             SeekOrigin::CUR => (*current_offset).checked_add(offset),
             SeekOrigin::END => None,
         }
-        .ok_or(EINVAL)?;
+        .ok_or(errno!(EINVAL))?;
 
         if new_offset < 0 {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
 
         // Nothing to do.

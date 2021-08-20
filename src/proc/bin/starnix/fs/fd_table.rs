@@ -7,6 +7,7 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::errno;
 use crate::fs::*;
 use crate::types::*;
 
@@ -84,7 +85,7 @@ impl FdTable {
         let _removed_file;
         let result = {
             let mut table = self.table.write();
-            let file = table.get(&oldfd).map(|entry| entry.file.clone()).ok_or(EBADF)?;
+            let file = table.get(&oldfd).map(|entry| entry.file.clone()).ok_or(errno!(EBADF))?;
             let fd = if let Some(fd) = newfd {
                 _removed_file = table.remove(&fd);
                 fd
@@ -99,7 +100,7 @@ impl FdTable {
 
     pub fn get(&self, fd: FdNumber) -> Result<FileHandle, Errno> {
         let table = self.table.read();
-        table.get(&fd).map(|entry| entry.file.clone()).ok_or(EBADF)
+        table.get(&fd).map(|entry| entry.file.clone()).ok_or(errno!(EBADF))
     }
 
     pub fn close(&self, fd: FdNumber) -> Result<(), Errno> {
@@ -109,12 +110,12 @@ impl FdTable {
             let mut table = self.table.write();
             table.remove(&fd)
         };
-        removed.ok_or(EBADF).map(|_| {})
+        removed.ok_or(errno!(EBADF)).map(|_| {})
     }
 
     pub fn get_fd_flags(&self, fd: FdNumber) -> Result<FdFlags, Errno> {
         let table = self.table.read();
-        table.get(&fd).map(|entry| entry.flags).ok_or(EBADF)
+        table.get(&fd).map(|entry| entry.flags).ok_or(errno!(EBADF))
     }
 
     pub fn set_fd_flags(&self, fd: FdNumber, flags: FdFlags) -> Result<(), Errno> {
@@ -124,7 +125,7 @@ impl FdTable {
             .map(|entry| {
                 entry.flags = flags;
             })
-            .ok_or(EBADF)
+            .ok_or(errno!(EBADF))
     }
 
     fn get_lowest_available_fd(&self, table: &HashMap<FdNumber, FdTableEntry>) -> FdNumber {
@@ -145,6 +146,7 @@ impl FdTable {
 mod test {
     use super::*;
 
+    use crate::error;
     use crate::fs::fuchsia::SyslogFile;
     use crate::task::*;
 
@@ -161,7 +163,7 @@ mod test {
 
         assert!(Arc::ptr_eq(&files.get(fd0).unwrap(), &file));
         assert!(Arc::ptr_eq(&files.get(fd1).unwrap(), &file));
-        assert_eq!(files.get(FdNumber::from_raw(fd1.raw() + 1)).map(|_| ()), Err(EBADF));
+        assert_eq!(files.get(FdNumber::from_raw(fd1.raw() + 1)).map(|_| ()), error!(EBADF));
     }
 
     #[test]

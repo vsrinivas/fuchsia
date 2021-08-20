@@ -31,6 +31,7 @@ use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
+use crate::errno;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
 use crate::fs::tmpfs::TmpFs;
@@ -223,7 +224,7 @@ fn create_filesystem_from_spec<'a>(
     // common code that also handles the mount() system call.
     let fs = match fs_type {
         "bind" => {
-            let task = task.ok_or(ENOENT)?;
+            let task = task.ok_or(errno!(ENOENT))?;
             Dir(task
                 .lookup_node(task.fs.root.clone(), fs_src.as_bytes(), SymlinkMode::max_follow())?
                 .entry)

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::error;
 use crate::types::*;
 
 pub struct DevptsFs;
@@ -16,6 +17,6 @@ impl DevptsFs {
 struct DevptsDirectory;
 impl FsNodeOps for DevptsDirectory {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }

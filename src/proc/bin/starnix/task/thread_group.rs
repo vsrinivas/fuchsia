@@ -8,6 +8,8 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
+use crate::errno;
+use crate::from_status_like_fdio;
 use crate::signals::signal_handling::send_checked_signal;
 use crate::signals::types::*;
 use crate::task::*;
@@ -134,6 +136,6 @@ impl ThreadGroup {
     }
 
     pub fn set_name(&self, name: &CStr) -> Result<(), Errno> {
-        self.process.set_name(name).map_err(Errno::from_status_like_fdio)
+        self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
     }
 }

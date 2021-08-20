@@ -13,6 +13,8 @@ use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
+use crate::errno;
+use crate::error;
 use crate::fd_impl_directory;
 use crate::logging::impossible_error;
 use crate::task::Task;
@@ -32,9 +34,9 @@ struct ExtNode {
 
 impl ExtFilesystem {
     pub fn new(vmo: zx::Vmo) -> Result<FileSystemHandle, Errno> {
-        let size = vmo.get_size().map_err(|_| EIO)?;
+        let size = vmo.get_size().map_err(|_| errno!(EIO))?;
         let vmo_reader = ExtVmoReader::new(Arc::new(fidl_fuchsia_mem::Buffer { vmo, size }));
-        let parser = ExtParser::new(AndroidSparseReader::new(vmo_reader).map_err(|_| EIO)?);
+        let parser = ExtParser::new(AndroidSparseReader::new(vmo_reader).map_err(|_| errno!(EIO))?);
         let fs = Arc::new(Self { parser });
         let ops = ExtDirectory { inner: ExtNode::new(fs.clone(), ext_structs::ROOT_INODE_NUM)? };
         Ok(FileSystem::new(
@@ -69,7 +71,7 @@ impl FsNodeOps for ExtDirectory {
     fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         let dir_entries =
             self.inner.fs().parser.entries_from_inode(&self.inner.inode).map_err(ext_error)?;
-        let entry = dir_entries.iter().find(|e| e.name_bytes() == name).ok_or(ENOENT)?;
+        let entry = dir_entries.iter().find(|e| e.name_bytes() == name).ok_or(errno!(ENOENT))?;
         let ext_node = ExtNode::new(self.inner.fs(), entry.e2d_ino.into())?;
         let inode_num = ext_node.inode_num as ino_t;
         node.fs().get_or_create_node(Some(inode_num as ino_t), |inode_num| {
@@ -132,7 +134,7 @@ struct ExtSymlink {
 
 impl FsNodeOps for ExtSymlink {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 
     fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
@@ -215,12 +217,12 @@ fn directory_entry_type(entry_type: ext_structs::EntryType) -> DirectoryEntryTyp
 
 fn ext_error(err: ext_structs::ParsingError) -> Errno {
     log::error!("ext4 error: {:?}", err);
-    EIO
+    errno!(EIO)
 }
 
 fn vmo_error(err: zx::Status) -> Errno {
     match err {
-        zx::Status::NO_MEMORY => ENOMEM,
+        zx::Status::NO_MEMORY => errno!(ENOMEM),
         _ => impossible_error(err),
     }
 }

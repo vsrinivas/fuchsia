@@ -7,6 +7,8 @@ use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
 
+use crate::errno;
+use crate::from_status_like_fdio;
 use crate::logging::*;
 use crate::mm::*;
 use crate::task::*;
@@ -22,7 +24,9 @@ fn populate_initial_stack(
 ) -> Result<UserAddress, Errno> {
     let mut stack_pointer = original_stack_start_addr;
     let write_stack = |data: &[u8], addr: UserAddress| {
-        stack_vmo.write(data, (addr - stack_base) as u64).map_err(Errno::from_status_like_fdio)
+        stack_vmo
+            .write(data, (addr - stack_base) as u64)
+            .map_err(|status| from_status_like_fdio!(status))
     };
 
     let mut string_data = vec![];
@@ -91,13 +95,13 @@ struct LoadedElf {
 // TODO: Improve the error reporting produced by this function by mapping ElfParseError to Errno more precisely.
 fn elf_parse_error_to_errno(err: elf_parse::ElfParseError) -> Errno {
     log::warn!("elf parse error: {:?}", err);
-    EINVAL
+    errno!(EINVAL)
 }
 
 // TODO: Improve the error reporting produced by this function by mapping ElfLoadError to Errno more precisely.
 fn elf_load_error_to_errno(err: elf_load::ElfLoadError) -> Errno {
     log::warn!("elf load error: {:?}", err);
-    EINVAL
+    errno!(EINVAL)
 }
 
 fn load_elf(vmo: &zx::Vmo, mm: &MemoryManager) -> Result<LoadedElf, Errno> {
@@ -135,14 +139,16 @@ pub fn load_executable(
     let interp_elf = if let Some(interp_hdr) = main_elf
         .headers
         .program_header_with_type(elf_parse::SegmentType::Interp)
-        .map_err(|_| EINVAL)?
+        .map_err(|_| errno!(EINVAL))?
     {
         let mut interp = vec![0; interp_hdr.filesz as usize];
         executable
             .read(&mut interp, interp_hdr.offset as u64)
-            .map_err(Errno::from_status_like_fdio)?;
-        let interp =
-            CStr::from_bytes_with_nul(&interp).map_err(|_| EINVAL)?.to_str().map_err(|_| EINVAL)?;
+            .map_err(|status| from_status_like_fdio!(status))?;
+        let interp = CStr::from_bytes_with_nul(&interp)
+            .map_err(|_| errno!(EINVAL))?
+            .to_str()
+            .map_err(|_| errno!(EINVAL))?;
         let interp_file = task.open_file(interp.as_bytes(), OpenFlags::RDONLY)?;
         let interp_vmo =
             interp_file.get_vmo(task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
@@ -158,7 +164,7 @@ pub fn load_executable(
     // TODO(tbodt): implement MAP_GROWSDOWN and then reset this to 1 page. The current value of
     // this is based on adding 0x1000 each time a segfault appears.
     let stack_size: usize = 0x7000;
-    let stack_vmo = Arc::new(zx::Vmo::create(stack_size as u64).map_err(|_| ENOMEM)?);
+    let stack_vmo = Arc::new(zx::Vmo::create(stack_size as u64).map_err(|_| errno!(ENOMEM))?);
     stack_vmo
         .as_ref()
         .set_name(CStr::from_bytes_with_nul(b"[stack]\0").unwrap())

@@ -7,6 +7,8 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::sync::Arc;
 
+use crate::errno;
+use crate::error;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::mm::PAGE_SIZE;
@@ -75,10 +77,10 @@ impl Pipe {
 
     fn set_size(&mut self, mut requested_size: usize) -> Result<(), Errno> {
         if requested_size > PIPE_MAX_SIZE {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
         if requested_size < self.used {
-            return Err(EBUSY);
+            return error!(EBUSY);
         }
         let page_size = *PAGE_SIZE as usize;
         if requested_size < page_size {
@@ -119,7 +121,7 @@ impl Pipe {
         // return that we have read zero bytes, which will let the caller
         // know that they're done reading the pipe.
         if self.used == 0 && self.writer_count > 0 {
-            return Err(EAGAIN);
+            return error!(EAGAIN);
         }
 
         let mut dst = UserBuffer::default();
@@ -139,7 +141,7 @@ impl Pipe {
             // should always exist because we the iterator promised us enough
             // space to reach |remaining|.
             if dst_offset == dst.length {
-                dst = it.next(remaining).ok_or(EFAULT)?;
+                dst = it.next(remaining).ok_or(errno!(EFAULT))?;
                 dst_offset = 0;
             }
 
@@ -148,7 +150,7 @@ impl Pipe {
             // one. Such a chunk should always exist because the pipe promised
             // us enough data to reach |remaining|.
             if src_offset == src.len() {
-                src = self.pop_front().ok_or(EFAULT)?;
+                src = self.pop_front().ok_or(errno!(EFAULT))?;
                 src_offset = 0;
             }
 
@@ -194,7 +196,7 @@ impl Pipe {
     fn write(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
         if self.reader_count == 0 {
             send_checked_signal(task, Signal::SIGPIPE);
-            return Err(EPIPE);
+            return error!(EPIPE);
         }
 
         let mut remaining = self.get_available();
@@ -223,7 +225,7 @@ impl Pipe {
                 self.set_size(arg as usize)?;
                 Ok(self.get_size().into())
             }
-            _ => Err(EINVAL),
+            _ => error!(EINVAL),
         }
     }
 
@@ -238,7 +240,7 @@ impl Pipe {
         match request {
             FIONREAD => {
                 let addr = UserRef::<i32>::new(in_addr);
-                let value: i32 = self.used.try_into().map_err(|_| EINVAL)?;
+                let value: i32 = self.used.try_into().map_err(|_| errno!(EINVAL))?;
                 task.mm.write_object(addr, &value)?;
                 Ok(SUCCESS)
             }
@@ -328,11 +330,11 @@ impl FileOps for PipeFileObject {
                         }
                         chunk
                     }
-                    Err(EPIPE) if actual > 0 => return Ok(actual),
+                    Err(errno) if errno == EPIPE && actual > 0 => return Ok(actual),
                     Err(errno) => return Err(errno),
                 };
                 if actual < requested {
-                    return Err(EAGAIN);
+                    return error!(EAGAIN);
                 }
                 Ok(actual)
             },

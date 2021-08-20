@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::errno;
+use crate::error;
 use crate::types::*;
 
 #[derive(Default, Clone)]
@@ -16,10 +18,10 @@ pub struct Credentials {
 }
 
 fn parse_id_number(id: Option<&str>) -> Result<u32, Errno> {
-    let id_str = id.ok_or(EINVAL)?;
-    let id_no: u32 = id_str.parse().map_err(|_| return EINVAL)?;
+    let id_str = id.ok_or(errno!(EINVAL))?;
+    let id_no: u32 = id_str.parse().map_err(|_| return errno!(EINVAL))?;
     if id_str != id_no.to_string() {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     Ok(id_no)
 }
@@ -29,10 +31,10 @@ impl Credentials {
     // /etc/passwd line.
     pub fn from_passwd(passwd_line: &str) -> Result<Credentials, Errno> {
         let mut fields = passwd_line.split(':');
-        let name = fields.next().ok_or_else(|| return EINVAL)?;
-        let passwd = fields.next().ok_or_else(|| return EINVAL)?;
+        let name = fields.next().ok_or_else(|| return errno!(EINVAL))?;
+        let passwd = fields.next().ok_or_else(|| return errno!(EINVAL))?;
         if name.len() == 0 || passwd.len() == 0 {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
         let uid: uid_t = parse_id_number(fields.next())?;
         let gid: gid_t = parse_id_number(fields.next())?;

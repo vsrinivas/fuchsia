@@ -5,6 +5,8 @@
 use std::convert::TryInto;
 use std::usize;
 
+use crate::errno;
+use crate::error;
 use crate::fs::memfd::*;
 use crate::fs::pipe::*;
 use crate::fs::*;
@@ -72,10 +74,10 @@ pub fn sys_fcntl(
             if arg > std::i32::MAX as u64 {
                 // Negative values are process groups.
                 not_implemented!("fcntl(F_SETOWN) does not support process groups");
-                return Err(EINVAL);
+                return error!(EINVAL);
             }
             let file = ctx.task.files.get(fd)?;
-            let task = ctx.task.get_task(arg.try_into().map_err(|_| EINVAL)?);
+            let task = ctx.task.get_task(arg.try_into().map_err(|_| errno!(EINVAL))?);
             file.set_async_owner(task.map_or(0, |task| task.id));
             Ok(SUCCESS)
         }
@@ -104,7 +106,7 @@ pub fn sys_fcntl(
         }
         _ => {
             not_implemented!("fcntl command {} not implemented", cmd);
-            Err(ENOSYS)
+            error!(ENOSYS)
         }
     }
 }
@@ -117,7 +119,7 @@ pub fn sys_pread64(
     offset: off_t,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let offset = offset.try_into().map_err(|_| EINVAL)?;
+    let offset = offset.try_into().map_err(|_| errno!(EINVAL))?;
     Ok(file.read_at(&ctx.task, offset, &[UserBuffer { address, length }])?.into())
 }
 
@@ -129,7 +131,7 @@ pub fn sys_pwrite64(
     offset: off_t,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let offset = offset.try_into().map_err(|_| EINVAL)?;
+    let offset = offset.try_into().map_err(|_| errno!(EINVAL))?;
     Ok(file.write_at(&ctx.task, offset, &[UserBuffer { address, length }])?.into())
 }
 
@@ -236,7 +238,7 @@ fn lookup_at(
             let (node, _) = task.resolve_dir_fd(dir_fd, path)?;
             return Ok(node);
         }
-        return Err(ENOENT);
+        return error!(ENOENT);
     }
     let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
     parent.lookup(task, basename, options.symlink_mode)
@@ -266,7 +268,7 @@ pub fn sys_faccessat(
     const R_OK: u32 = 4;
 
     if mode & !(X_OK | W_OK | R_OK) != 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     let name = lookup_at(
@@ -287,13 +289,13 @@ pub fn sys_faccessat(
     // that exists.
     let stat = node.stat()?;
     if mode & X_OK != 0 && stat.st_mode & S_IXUSR == 0 {
-        return Err(EACCES);
+        return error!(EACCES);
     }
     if mode & W_OK != 0 && stat.st_mode & S_IWUSR == 0 {
-        return Err(EACCES);
+        return error!(EACCES);
     }
     if mode & R_OK != 0 && stat.st_mode & S_IRUSR == 0 {
-        return Err(EACCES);
+        return error!(EACCES);
     }
 
     Ok(SUCCESS)
@@ -371,7 +373,7 @@ pub fn sys_newfstatat(
 ) -> Result<SyscallResult, Errno> {
     if flags & !(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH) != 0 {
         not_implemented!("newfstatat: flags 0x{:x}", flags);
-        return Err(ENOSYS);
+        return error!(ENOSYS);
     }
     let options = LookupOptions {
         allow_empty_path: flags & AT_EMPTY_PATH != 0,
@@ -399,7 +401,7 @@ pub fn sys_readlinkat(
         // TODO(security): This check is obviously not correct, and should be updated once
         // we have an auth system.
         if stat.st_mode & S_IRUSR == 0 {
-            return Err(EACCES);
+            return error!(EACCES);
         }
         Ok(parent.lookup(ctx.task, basename, SymlinkMode::NoFollow)?.entry)
     })?;
@@ -426,7 +428,7 @@ pub fn sys_truncate(
     user_path: UserCString,
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
-    let length = length.try_into().map_err(|_| EINVAL)?;
+    let length = length.try_into().map_err(|_| errno!(EINVAL))?;
     let name = lookup_at(&ctx.task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
     // TODO: Check for writability.
     name.entry.node.truncate(length)?;
@@ -438,7 +440,7 @@ pub fn sys_ftruncate(
     fd: FdNumber,
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
-    let length = length.try_into().map_err(|_| EINVAL)?;
+    let length = length.try_into().map_err(|_| errno!(EINVAL))?;
     let file = ctx.task.files.get(fd)?;
     // TODO: Check for writability.
     file.node().truncate(length)?;
@@ -472,7 +474,7 @@ pub fn sys_mknodat(
         | FileMode::IFIFO
         | FileMode::IFSOCK => mode & FileMode::IFMT,
         FileMode::EMPTY => FileMode::IFREG,
-        _ => return Err(EINVAL),
+        _ => return error!(EINVAL),
     };
     let mode = file_type | ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
@@ -491,7 +493,7 @@ pub fn sys_linkat(
 ) -> Result<SyscallResult, Errno> {
     if flags & !(AT_SYMLINK_FOLLOW | AT_EMPTY_PATH) != 0 {
         not_implemented!("linkat: flags 0x{:x}", flags);
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     // TODO: AT_EMPTY_PATH requires CAP_DAC_READ_SEARCH.
@@ -505,11 +507,11 @@ pub fn sys_linkat(
     };
     let target = lookup_at(ctx.task, old_dir_fd, old_user_path, options)?;
     if target.entry.node.is_dir() {
-        return Err(EPERM);
+        return error!(EPERM);
     }
     lookup_parent_at(ctx.task, new_dir_fd, new_user_path, |parent, basename| {
         if !NamespaceNode::mount_eq(&target, &parent) {
-            return Err(EXDEV);
+            return error!(EXDEV);
         }
         parent.entry.link(basename, &target.entry.node)
     })?;
@@ -524,7 +526,7 @@ pub fn sys_unlinkat(
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
     if flags & !AT_REMOVEDIR != 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     let kind =
         if flags & AT_REMOVEDIR != 0 { UnlinkKind::Directory } else { UnlinkKind::NonDirectory };
@@ -551,7 +553,7 @@ pub fn sys_renameat(
     let (new_parent, new_basename) = lookup(new_dir_fd, new_user_path)?;
 
     if !NamespaceNode::mount_eq(&old_parent, &new_parent) {
-        return Err(EXDEV);
+        return error!(EXDEV);
     }
 
     DirEntry::rename(&old_parent.entry, &old_basename, &new_parent.entry, &new_basename)?;
@@ -564,7 +566,7 @@ pub fn sys_fchmod(
     mode: FileMode,
 ) -> Result<SyscallResult, Errno> {
     if mode & FileMode::IFMT != FileMode::EMPTY {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     let file = ctx.task.files.get(dir_fd)?;
     file.name.entry.node.info_write().mode = mode;
@@ -578,7 +580,7 @@ pub fn sys_fchmodat(
     mode: FileMode,
 ) -> Result<SyscallResult, Errno> {
     if mode & FileMode::IFMT != FileMode::EMPTY {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     let name = lookup_at(&ctx.task, dir_fd, user_path, LookupOptions::default())?;
     name.entry.node.chmod(mode);
@@ -605,7 +607,7 @@ pub fn sys_getcwd(
     let mut bytes = ctx.task.fs.cwd().path();
     bytes.push(b'\0');
     if bytes.len() > size {
-        return Err(ERANGE);
+        return error!(ERANGE);
     }
     ctx.task.mm.write_memory(buf, &bytes)?;
     return Ok(bytes.len().into());
@@ -630,7 +632,7 @@ pub fn sys_pipe2(
 ) -> Result<SyscallResult, Errno> {
     let supported_file_flags = OpenFlags::NONBLOCK | OpenFlags::DIRECT;
     if flags & !(O_CLOEXEC | supported_file_flags.bits()) != 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     let (read, write) = new_pipe(ctx.kernel())?;
 
@@ -669,20 +671,20 @@ pub fn sys_symlinkat(
     let mut buf = [0u8; PATH_MAX as usize];
     let target = ctx.task.mm.read_c_string(user_target, &mut buf)?;
     if target.len() == 0 {
-        return Err(ENOENT);
+        return error!(ENOENT);
     }
 
     let mut buf = [0u8; PATH_MAX as usize];
     let path = ctx.task.mm.read_c_string(user_path, &mut buf)?;
     // TODO: This check could probably be moved into parent.symlink(..).
     if path.len() == 0 {
-        return Err(ENOENT);
+        return error!(ENOENT);
     }
 
     lookup_parent_at(ctx.task, new_dir_fd, user_path, |parent, basename| {
         let stat = parent.entry.node.stat()?;
         if stat.st_mode & S_IWUSR == 0 {
-            return Err(EACCES);
+            return error!(EACCES);
         }
         parent.symlink(basename, target)
     })?;
@@ -701,9 +703,9 @@ pub fn sys_dup3(
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
     if oldfd == newfd {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
-    let valid_flags = FdFlags::from_bits(flags).ok_or(EINVAL)?;
+    let valid_flags = FdFlags::from_bits(flags).ok_or(errno!(EINVAL))?;
 
     ctx.task.files.duplicate(oldfd, Some(newfd), valid_flags)?;
     Ok(newfd.into())
@@ -779,7 +781,7 @@ mod tests {
             sys_lseek(&ctx, fd, 0, SeekOrigin::END as u32)?,
             SyscallResult::Success(file_size as u64)
         );
-        assert_eq!(sys_lseek(&ctx, fd, -5, SeekOrigin::SET as u32), Err(EINVAL));
+        assert_eq!(sys_lseek(&ctx, fd, -5, SeekOrigin::SET as u32), error!(EINVAL));
 
         // Make sure that the failed call above did not change the offset.
         assert_eq!(
@@ -791,7 +793,7 @@ mod tests {
         assert_eq!(sys_lseek(&ctx, fd, 3, SeekOrigin::SET as u32)?, SyscallResult::Success(3));
 
         // Check for overflow.
-        assert_eq!(sys_lseek(&ctx, fd, i64::MAX, SeekOrigin::CUR as u32), Err(EINVAL));
+        assert_eq!(sys_lseek(&ctx, fd, i64::MAX, SeekOrigin::CUR as u32), error!(EINVAL));
 
         Ok(())
     }
@@ -808,13 +810,13 @@ mod tests {
         if let SyscallResult::Success(value) = syscall_result {
             newfd = FdNumber::from_raw(value as i32);
         } else {
-            return Err(EBADF);
+            return error!(EBADF);
         }
 
         assert_ne!(oldfd, newfd);
         assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(newfd).unwrap()));
 
-        assert_eq!(sys_dup(&ctx, FdNumber::from_raw(3)), Err(EBADF));
+        assert_eq!(sys_dup(&ctx, FdNumber::from_raw(3)), error!(EBADF));
 
         Ok(())
     }
@@ -834,11 +836,11 @@ mod tests {
         assert_eq!(files.get_fd_flags(oldfd).unwrap(), FdFlags::empty());
         assert_eq!(files.get_fd_flags(newfd).unwrap(), FdFlags::CLOEXEC);
 
-        assert_eq!(sys_dup3(&ctx, oldfd, oldfd, FdFlags::CLOEXEC.bits()), Err(EINVAL));
+        assert_eq!(sys_dup3(&ctx, oldfd, oldfd, FdFlags::CLOEXEC.bits()), error!(EINVAL));
 
         // Pass invalid flags.
         let invalid_flags = 1234;
-        assert_eq!(sys_dup3(&ctx, oldfd, newfd, invalid_flags), Err(EINVAL));
+        assert_eq!(sys_dup3(&ctx, oldfd, newfd, invalid_flags), error!(EINVAL));
 
         // Makes sure that dup closes the old file handle before the fd points
         // to the new file handle.

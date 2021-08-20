@@ -13,6 +13,9 @@ use std::ops;
 use std::sync::Arc;
 
 use crate::auth::{Credentials, ShellJobControl};
+use crate::errno;
+use crate::error;
+use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::loader::*;
 use crate::logging::*;
@@ -168,9 +171,10 @@ impl Task {
         let (process, root_vmar) = kernel
             .job
             .create_child_process(comm.as_bytes())
-            .map_err(Errno::from_status_like_fdio)?;
-        let thread =
-            process.create_thread(comm.as_bytes()).map_err(Errno::from_status_like_fdio)?;
+            .map_err(|status| from_status_like_fdio!(status))?;
+        let thread = process
+            .create_thread(comm.as_bytes())
+            .map_err(|status| from_status_like_fdio!(status))?;
 
         // TODO: Stop giving MemoryManager a duplicate of the process handle once a process
         // handle is not needed to implement read_memory or write_memory.
@@ -190,7 +194,7 @@ impl Task {
             files,
             Arc::new(
                 MemoryManager::new(duplicate_process, root_vmar)
-                    .map_err(Errno::from_status_like_fdio)?,
+                    .map_err(|status| from_status_like_fdio!(status))?,
             ),
             fs,
             creds,
@@ -219,7 +223,7 @@ impl Task {
             .thread_group
             .process
             .create_thread(self.command.read().as_bytes())
-            .map_err(Errno::from_status_like_fdio)?;
+            .map_err(|status| from_status_like_fdio!(status))?;
 
         let mut pids = self.thread_group.kernel.pids.write();
         let id = pids.allocate_pid();
@@ -277,12 +281,12 @@ impl Task {
             not_implemented!(
                 "clone requires CLONE_THREAD, CLONE_VM, and CLONE_SIGHAND to all be set or unset"
             );
-            return Err(ENOSYS);
+            return error!(ENOSYS);
         }
 
         if flags & !IMPLEMENTED_FLAGS != 0 {
             not_implemented!("clone does not implement flags: 0x{:x}", flags & !IMPLEMENTED_FLAGS);
-            return Err(ENOSYS);
+            return error!(ENOSYS);
         }
 
         let raw_child_exist_signal = flags & (CSIGNAL as u64);
@@ -353,7 +357,7 @@ impl Task {
 
         *self.signal_stack.lock() = None;
 
-        self.mm.exec().map_err(Errno::from_status_like_fdio)?;
+        self.mm.exec().map_err(|status| from_status_like_fdio!(status))?;
 
         // TODO: The file descriptor table is unshared, undoing the effect of
         //       the CLONE_FILES flag of clone(2).
@@ -431,7 +435,7 @@ impl Task {
         if flags.contains(OpenFlags::CREAT) {
             // In order to support OpenFlags::CREAT we would need to take a
             // FileMode argument.
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
         self.open_file_at(FdNumber::AT_FDCWD, path, flags, FileMode::default())
     }
@@ -468,11 +472,11 @@ impl Task {
                     if remaining_follows == 0 && must_create {
                         // Since `must_create` is set, and a node was found, this returns EEXIST
                         // instead of ELOOP.
-                        return Err(EEXIST);
+                        return error!(EEXIST);
                     } else if remaining_follows == 0 {
                         // A symlink was found, but too many symlink traversals have been
                         // attempted.
-                        return Err(ELOOP);
+                        return error!(ELOOP);
                     }
 
                     let path = name.entry.node.readlink(self)?;
@@ -486,12 +490,12 @@ impl Task {
                     )
                 } else {
                     if must_create {
-                        return Err(EEXIST);
+                        return error!(EEXIST);
                     }
                     Ok(name)
                 }
             }
-            Err(ENOENT) if flags.contains(OpenFlags::CREAT) => {
+            Err(e) if e == errno!(ENOENT) && flags.contains(OpenFlags::CREAT) => {
                 let access = self.fs.apply_umask(mode & FileMode::ALLOW_ALL);
                 parent.create_node(&basename, FileMode::IFREG | access, DeviceType::NONE)
             }
@@ -545,13 +549,13 @@ impl Task {
 
         let mode = name.entry.node.info().mode;
         if nofollow && mode.is_lnk() {
-            return Err(ELOOP);
+            return error!(ELOOP);
         }
         if flags.contains(OpenFlags::DIRECTORY) && !mode.is_dir() {
-            return Err(ENOTDIR);
+            return error!(ENOTDIR);
         }
         if flags.can_write() && mode.is_dir() {
-            return Err(EISDIR);
+            return error!(EISDIR);
         }
 
         if flags.contains(OpenFlags::TRUNC) {
@@ -569,7 +573,7 @@ impl Task {
                         name.entry.node.truncate(0)?;
                     }
                 }
-                FileMode::IFDIR => return Err(EISDIR),
+                FileMode::IFDIR => return error!(EISDIR),
                 _ => (),
             }
         }

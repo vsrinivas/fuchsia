@@ -7,6 +7,7 @@ use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::{Arc, Weak};
 
 use crate::device::*;
+use crate::error;
 use crate::fs::*;
 use crate::task::Task;
 use crate::types::*;
@@ -79,7 +80,7 @@ pub trait FsNodeOps: Send + Sync {
     /// The child parameter is an empty node. Operations other than initialize may panic before
     /// initialize is called.
     fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        Err(ENOTDIR)
+        error!(ENOTDIR)
     }
 
     /// Create and return the given child node.
@@ -90,12 +91,12 @@ pub trait FsNodeOps: Send + Sync {
     /// This function is never called with FileMode::IFDIR. The mkdir function
     /// is used to create directories instead.
     fn mknod(&self, _node: &FsNode, _name: &FsStr, _mode: FileMode) -> Result<FsNodeHandle, Errno> {
-        Err(ENOTDIR)
+        error!(ENOTDIR)
     }
 
     /// Create and return the given child node as a subdirectory.
     fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        Err(ENOTDIR)
+        error!(ENOTDIR)
     }
 
     /// Creates a symlink with the given `target` path.
@@ -105,17 +106,17 @@ pub trait FsNodeOps: Send + Sync {
         _name: &FsStr,
         _target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
-        Err(ENOTDIR)
+        error!(ENOTDIR)
     }
 
     /// Reads the symlink from this node.
     fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
-        Err(EINVAL)
+        error!(EINVAL)
     }
 
     /// Create a hard link with the given name to the given child.
     fn link(&self, _node: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
-        Err(EPERM)
+        error!(EPERM)
     }
 
     /// Remove the child with the given name, if the child exists.
@@ -123,12 +124,12 @@ pub trait FsNodeOps: Send + Sync {
     /// The UnlinkKind parameter indicates whether the caller intends to unlink
     /// a directory or a non-directory child.
     fn unlink(&self, _node: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
-        Err(ENOTDIR)
+        error!(ENOTDIR)
     }
 
     /// Change the length of the file.
     fn truncate(&self, _node: &FsNode, _length: u64) -> Result<(), Errno> {
-        Err(EINVAL)
+        error!(EINVAL)
     }
 
     /// Update node.info as needed.

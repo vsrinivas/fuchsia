@@ -7,6 +7,8 @@ use parking_lot::Mutex;
 use std::fmt;
 use std::sync::Arc;
 
+use crate::errno;
+use crate::error;
 use crate::fs::*;
 use crate::not_implemented;
 use crate::syscalls::SyscallResult;
@@ -27,7 +29,7 @@ impl SeekOrigin {
             SEEK_SET => Ok(SeekOrigin::SET),
             SEEK_CUR => Ok(SeekOrigin::CUR),
             SEEK_END => Ok(SeekOrigin::END),
-            _ => Err(EINVAL),
+            _ => error!(EINVAL),
         }
     }
 }
@@ -80,7 +82,7 @@ pub trait FileOps: Send + Sync {
         _task: &Task,
         _prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
-        Err(ENODEV)
+        error!(ENODEV)
     }
 
     fn readdir(
@@ -89,7 +91,7 @@ pub trait FileOps: Send + Sync {
         _task: &Task,
         _sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
-        Err(ENOTDIR)
+        error!(ENOTDIR)
     }
 
     /// Establish a one-shot, asynchronous wait for the given FdEvents for the given file and task.
@@ -115,7 +117,7 @@ pub trait FileOps: Send + Sync {
         _cmd: u32,
         _arg: u64,
     ) -> Result<SyscallResult, Errno> {
-        Err(EINVAL)
+        error!(EINVAL)
     }
 }
 
@@ -131,7 +133,7 @@ macro_rules! fd_impl_nonseekable {
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            Err(ESPIPE)
+            Err(errno!(ESPIPE))
         }
         fn write_at(
             &self,
@@ -140,7 +142,7 @@ macro_rules! fd_impl_nonseekable {
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            Err(ESPIPE)
+            Err(errno!(ESPIPE))
         }
         fn seek(
             &self,
@@ -149,7 +151,7 @@ macro_rules! fd_impl_nonseekable {
             _offset: off_t,
             _whence: SeekOrigin,
         ) -> Result<off_t, Errno> {
-            Err(ESPIPE)
+            Err(errno!(ESPIPE))
         }
     };
 }
@@ -200,10 +202,10 @@ macro_rules! fd_impl_seekable {
                     offset.checked_add(stat.st_size as off_t)
                 }
             }
-            .ok_or(EINVAL)?;
+            .ok_or(errno!(EINVAL))?;
 
             if new_offset < 0 {
-                return Err(EINVAL);
+                return error!(EINVAL);
             }
 
             *current_offset = new_offset;
@@ -221,7 +223,7 @@ macro_rules! fd_impl_directory {
             _task: &Task,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            Err(EISDIR)
+            error!(EISDIR)
         }
 
         fn read_at(
@@ -231,7 +233,7 @@ macro_rules! fd_impl_directory {
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            Err(EISDIR)
+            error!(EISDIR)
         }
 
         fn write(
@@ -240,7 +242,7 @@ macro_rules! fd_impl_directory {
             _task: &Task,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            Err(EISDIR)
+            error!(EISDIR)
         }
 
         fn write_at(
@@ -250,14 +252,14 @@ macro_rules! fd_impl_directory {
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            Err(EISDIR)
+            error!(EISDIR)
         }
     };
 }
 
 pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
     not_implemented!("ioctl: request=0x{:x}", request);
-    Err(ENOTTY)
+    error!(ENOTTY)
 }
 
 pub struct OPathOps {}
@@ -270,7 +272,7 @@ impl OPathOps {
 
 impl FileOps for OPathOps {
     fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
-        Err(EBADF)
+        error!(EBADF)
     }
     fn read_at(
         &self,
@@ -279,7 +281,7 @@ impl FileOps for OPathOps {
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(EBADF)
+        error!(EBADF)
     }
     fn write(
         &self,
@@ -287,7 +289,7 @@ impl FileOps for OPathOps {
         _task: &Task,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(EBADF)
+        error!(EBADF)
     }
     fn write_at(
         &self,
@@ -296,7 +298,7 @@ impl FileOps for OPathOps {
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(EBADF)
+        error!(EBADF)
     }
     fn seek(
         &self,
@@ -305,7 +307,7 @@ impl FileOps for OPathOps {
         _offset: off_t,
         _whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
-        Err(EBADF)
+        error!(EBADF)
     }
     fn get_vmo(
         &self,
@@ -313,7 +315,7 @@ impl FileOps for OPathOps {
         _task: &Task,
         _prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
-        Err(EBADF)
+        error!(EBADF)
     }
     fn readdir(
         &self,
@@ -321,7 +323,7 @@ impl FileOps for OPathOps {
         _task: &Task,
         _sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
-        Err(EBADF)
+        error!(EBADF)
     }
 
     fn ioctl(
@@ -332,7 +334,7 @@ impl FileOps for OPathOps {
         _in_addr: UserAddress,
         _out_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        Err(EBADF)
+        error!(EBADF)
     }
 
     fn fcntl(
@@ -343,7 +345,7 @@ impl FileOps for OPathOps {
         _arg: u64,
     ) -> Result<SyscallResult, Errno> {
         // Note: this can be a valid operation for files opened with O_PATH.
-        Err(EINVAL)
+        error!(EINVAL)
     }
 }
 
@@ -427,7 +429,7 @@ impl FileObject {
     {
         loop {
             match op() {
-                Err(EAGAIN) if !self.flags().contains(OpenFlags::NONBLOCK) => {
+                Err(errno) if errno == EAGAIN && !self.flags().contains(OpenFlags::NONBLOCK) => {
                     self.ops().wait_async(self, &task.waiter, events);
                     task.waiter.wait()?;
                 }
@@ -438,21 +440,21 @@ impl FileObject {
 
     pub fn read(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         if !self.can_read() {
-            return Err(EBADF);
+            return error!(EBADF);
         }
         self.blocking_op(task, || self.ops().read(self, task, data), FdEvents::POLLIN)
     }
 
     pub fn read_at(&self, task: &Task, offset: usize, data: &[UserBuffer]) -> Result<usize, Errno> {
         if !self.can_read() {
-            return Err(EBADF);
+            return error!(EBADF);
         }
         self.blocking_op(task, || self.ops().read_at(self, task, offset, data), FdEvents::POLLIN)
     }
 
     pub fn write(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         if !self.can_write() {
-            return Err(EBADF);
+            return error!(EBADF);
         }
         self.blocking_op(
             task,
@@ -476,7 +478,7 @@ impl FileObject {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         if !self.can_write() {
-            return Err(EBADF);
+            return error!(EBADF);
         }
         self.blocking_op(
             task,
@@ -494,10 +496,10 @@ impl FileObject {
 
     pub fn get_vmo(&self, task: &Task, prot: zx::VmarFlags) -> Result<zx::Vmo, Errno> {
         if prot.contains(zx::VmarFlags::PERM_READ) && !self.can_read() {
-            return Err(EACCES);
+            return error!(EACCES);
         }
         if prot.contains(zx::VmarFlags::PERM_WRITE) && !self.can_write() {
-            return Err(EACCES);
+            return error!(EACCES);
         }
         // TODO: Check for PERM_EXECUTE by checking whether the filesystem is mounted as noexec.
         self.ops().get_vmo(self, task, prot)
@@ -513,8 +515,8 @@ impl FileObject {
             // because EINVAL is a very generic error. We only want to perform
             // this transformation in exactly the case where there was not
             // sufficient space in the DirentSink.
-            Err(ENOSPC) if sink.actual() > 0 => Ok(()),
-            Err(ENOSPC) => Err(EINVAL),
+            Err(errno) if errno == ENOSPC && sink.actual() > 0 => Ok(()),
+            Err(errno) if errno == ENOSPC => Err(errno),
             result => result,
         }
     }
@@ -573,10 +575,10 @@ impl FileObject {
             SeekOrigin::CUR => (*current_offset).checked_add(offset),
             SeekOrigin::END => Some(MAX_LFS_FILESIZE as i64),
         }
-        .ok_or(EINVAL)?;
+        .ok_or(errno!(EINVAL))?;
 
         if new_offset < 0 {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
 
         *current_offset = new_offset;

@@ -4,6 +4,7 @@
 
 use fuchsia_zircon as zx;
 
+use crate::error;
 use crate::types::*;
 
 pub const NANOS_PER_SECOND: i64 = 1000 * 1000 * 1000;
@@ -25,7 +26,7 @@ pub fn timespec_from_duration(duration: zx::Duration) -> timespec {
 
 pub fn duration_from_timespec(ts: timespec) -> Result<zx::Duration, Errno> {
     if ts.tv_nsec >= NANOS_PER_SECOND {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     return Ok(zx::Duration::from_seconds(ts.tv_sec) + zx::Duration::from_nanos(ts.tv_nsec));
 }

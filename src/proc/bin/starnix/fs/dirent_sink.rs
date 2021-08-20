@@ -6,6 +6,8 @@ use std::mem;
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
+use crate::errno;
+use crate::error;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
 use crate::task::*;
@@ -74,7 +76,7 @@ const DIRENT32_HEADER_SIZE: usize = mem::size_of::<DirentHeader32>() - DIRENT32_
 pub trait DirentSink {
     /// Add the given directory entry to this buffer.
     ///
-    /// Returns Err(ENOSPC) if the entry does not fit.
+    /// Returns error!(ENOSPC) if the entry does not fit.
     fn add(
         &mut self,
         inode_num: ino_t,
@@ -111,7 +113,7 @@ impl DirentSink for DirentSink64 {
         let content_size = DIRENT64_HEADER_SIZE + name.len();
         let entry_size = round_up_to_increment(content_size + 1, 8); // +1 for the null terminator.
         if self.actual + entry_size > self.user_capacity {
-            return Err(ENOSPC);
+            return error!(ENOSPC);
         }
         let mut buffer = Vec::with_capacity(entry_size);
         let header = DirentHeader64 {
@@ -131,7 +133,7 @@ impl DirentSink for DirentSink64 {
         self.task
             .mm
             .write_memory(self.user_buffer + self.actual, buffer.as_slice())
-            .map_err(|_| ENOSPC)?;
+            .map_err(|_| errno!(ENOSPC))?;
         self.actual += entry_size;
         Ok(())
     }
@@ -165,7 +167,7 @@ impl DirentSink for DirentSink32 {
         let content_size = DIRENT32_HEADER_SIZE + name.len();
         let entry_size = round_up_to_increment(content_size + 2, 8); // +1 for the null terminator, +1 for the type.
         if self.actual + entry_size > self.user_capacity {
-            return Err(ENOSPC);
+            return error!(ENOSPC);
         }
         let mut buffer = Vec::with_capacity(entry_size);
         let header = DirentHeader32 {
@@ -185,7 +187,7 @@ impl DirentSink for DirentSink32 {
         self.task
             .mm
             .write_memory(self.user_buffer + self.actual, buffer.as_slice())
-            .map_err(|_| ENOSPC)?;
+            .map_err(|_| errno!(ENOSPC))?;
         self.actual += entry_size;
         Ok(())
     }

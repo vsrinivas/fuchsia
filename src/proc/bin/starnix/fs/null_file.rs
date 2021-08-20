@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::errno;
+use crate::error;
 use crate::fd_impl_nonseekable;
 use crate::fs::FileObject;
 use crate::fs::FileOps;
@@ -16,7 +18,7 @@ impl FileOps for NullFile {
     fd_impl_nonseekable!();
 
     fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
-        Err(EINVAL)
+        error!(EINVAL)
     }
 
     fn write(
@@ -25,6 +27,6 @@ impl FileOps for NullFile {
         _task: &Task,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(EINVAL)
+        error!(EINVAL)
     }
 }

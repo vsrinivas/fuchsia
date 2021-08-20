@@ -17,6 +17,7 @@ use super::proc::proc_fs;
 use super::sysfs::sys_fs;
 use super::tmpfs::TmpFs;
 use super::*;
+use crate::error;
 use crate::selinux::selinux_fs;
 use crate::task::Kernel;
 use crate::task::Task;
@@ -101,7 +102,7 @@ pub fn create_filesystem(
         b"selinuxfs" => Fs(selinux_fs(kernel).clone()),
         b"sysfs" => Fs(sys_fs(kernel).clone()),
         b"tmpfs" => Fs(TmpFs::new()),
-        _ => return Err(ENODEV),
+        _ => return error!(ENODEV),
     })
 }
 
@@ -169,7 +170,7 @@ impl NamespaceNode {
         // TODO: Figure out what these errors should be, and if they are consistent across
         // callsites. If so, checks can be removed from, for example, sys_symlinkat.
         if name.is_empty() || name == b"." || name == b".." {
-            return Err(EEXIST);
+            return error!(EEXIST);
         }
         Ok(self.with_new_entry(mk_callback()?))
     }
@@ -189,13 +190,13 @@ impl NamespaceNode {
 
     pub fn unlink(&self, task: &Task, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
         if name.is_empty() || name == b"." || name == b".." {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
         let child = self.lookup(task, name, SymlinkMode::NoFollow)?;
 
         let unlink = || {
             if child.mountpoint().is_some() {
-                return Err(EBUSY);
+                return error!(EBUSY);
             }
             self.entry.unlink(name, kind)
         };
@@ -220,7 +221,7 @@ impl NamespaceNode {
         symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
         if !self.entry.node.is_dir() {
-            Err(ENOTDIR)
+            error!(ENOTDIR)
         } else if name == b"." || name == b"" {
             Ok(self.clone())
         } else if name == b".." {
@@ -244,7 +245,7 @@ impl NamespaceNode {
                         )?;
                     }
                     SymlinkMode::Follow(0) => {
-                        return Err(ELOOP);
+                        return error!(ELOOP);
                     }
                     _ => {
                         break;
@@ -308,7 +309,7 @@ impl NamespaceNode {
             match namespace.mount_points.write().entry(self.clone()) {
                 Entry::Occupied(_) => {
                     log::warn!("mount shadowing is unimplemented");
-                    Err(EBUSY)
+                    error!(EBUSY)
                 }
                 Entry::Vacant(v) => {
                     let mount = self.mount.as_ref().unwrap();
@@ -329,7 +330,7 @@ impl NamespaceNode {
                 }
             }
         } else {
-            Err(EBUSY)
+            error!(EBUSY)
         }
     }
 
@@ -372,6 +373,7 @@ impl Hash for NamespaceNode {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::errno;
     use crate::fs::tmpfs::TmpFs;
     use crate::testing::*;
 
@@ -399,10 +401,10 @@ mod test {
         let pts = dev
             .lookup(&task_owner.task, b"pts", SymlinkMode::max_follow())
             .expect("failed to lookup pts");
-        let pts_parent = pts.parent().ok_or(ENOENT).expect("failed to get parent of pts");
+        let pts_parent = pts.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
-        let dev_parent = dev.parent().ok_or(ENOENT).expect("failed to get parent of dev");
+        let dev_parent = dev.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of dev");
         assert!(Arc::ptr_eq(&dev_parent.entry, &ns.root().entry));
         Ok(())
     }

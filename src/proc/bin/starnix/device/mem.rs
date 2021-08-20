@@ -4,6 +4,7 @@
 
 use fuchsia_cprng::cprng_draw;
 
+use crate::error;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
@@ -16,7 +17,7 @@ pub fn open_mem_device(minor: u32) -> Result<Box<dyn FileOps>, Errno> {
         DevRandom::MINOR => Ok(Box::new(DevRandom)),
         DevRandom::URANDOM_MINOR => Ok(Box::new(DevRandom)),
         DevKmsg::MINOR => Ok(Box::new(DevKmsg)),
-        _ => Err(ENODEV),
+        _ => error!(ENODEV),
     }
 }
 
@@ -131,7 +132,7 @@ impl FileOps for DevFull {
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(ENOSPC)
+        error!(ENOSPC)
     }
 
     fn read_at(

@@ -15,6 +15,8 @@ use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::collections::*;
+use crate::errno;
+use crate::error;
 use crate::logging::*;
 use crate::mm::FutexTable;
 use crate::types::*;
@@ -163,7 +165,7 @@ impl MemoryManagerState {
         match unsafe { self.user_vmar.unmap(addr.ptr(), length) } {
             Ok(_) => Ok(()),
             Err(zx::Status::NOT_FOUND) => Ok(()),
-            Err(zx::Status::INVALID_ARGS) => Err(EINVAL),
+            Err(zx::Status::INVALID_ARGS) => error!(EINVAL),
             Err(status) => Err(impossible_error(status)),
         }?;
         let end = (addr + length).round_up(*PAGE_SIZE);
@@ -177,15 +179,15 @@ impl MemoryManagerState {
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<(), Errno> {
-        let (_, mapping) = self.mappings.get(&addr).ok_or(EINVAL)?;
+        let (_, mapping) = self.mappings.get(&addr).ok_or(errno!(EINVAL))?;
         let mapping = mapping.with_flags(flags);
 
         // SAFETY: This is safe because the vmar belongs to a different process.
         unsafe { self.user_vmar.protect(addr.ptr(), length, flags) }.map_err(|s| match s {
-            zx::Status::INVALID_ARGS => EINVAL,
+            zx::Status::INVALID_ARGS => errno!(EINVAL),
             // TODO: This should still succeed and change protection on whatever is mapped.
-            zx::Status::NOT_FOUND => EINVAL,
-            zx::Status::ACCESS_DENIED => EACCES,
+            zx::Status::NOT_FOUND => errno!(EINVAL),
+            zx::Status::ACCESS_DENIED => errno!(EACCES),
             _ => impossible_error(s),
         })?;
 
@@ -257,7 +259,7 @@ impl MemoryManager {
         // Ensure that a program break exists by mapping at least one page.
         let mut brk = match state.brk {
             None => {
-                let vmo = zx::Vmo::create(PROGRAM_BREAK_LIMIT).map_err(|_| ENOMEM)?;
+                let vmo = zx::Vmo::create(PROGRAM_BREAK_LIMIT).map_err(|_| errno!(ENOMEM))?;
                 vmo.set_name(CStr::from_bytes_with_nul(b"starnix-brk\0").unwrap())
                     .map_err(impossible_error)?;
                 let length = *PAGE_SIZE as usize;
@@ -286,7 +288,7 @@ impl MemoryManager {
             return Ok(brk.current);
         }
 
-        let (range, mapping) = state.mappings.get(&brk.current).ok_or(EFAULT)?;
+        let (range, mapping) = state.mappings.get(&brk.current).ok_or(errno!(EFAULT))?;
 
         brk.current = addr;
 
@@ -405,11 +407,11 @@ impl MemoryManager {
 
     fn get_errno_for_map_err(status: zx::Status) -> Errno {
         match status {
-            zx::Status::INVALID_ARGS => EINVAL,
-            zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
-            zx::Status::NOT_SUPPORTED => ENODEV,
-            zx::Status::NO_MEMORY => ENOMEM,
-            zx::Status::OUT_OF_RANGE => ENOMEM,
+            zx::Status::INVALID_ARGS => errno!(EINVAL),
+            zx::Status::ACCESS_DENIED => errno!(EACCES), // or EPERM?
+            zx::Status::NOT_SUPPORTED => errno!(ENODEV),
+            zx::Status::NO_MEMORY => errno!(ENOMEM),
+            zx::Status::OUT_OF_RANGE => errno!(ENOMEM),
             _ => impossible_error(status),
         }
     }
@@ -452,9 +454,9 @@ impl MemoryManager {
         name: CString,
     ) -> Result<(), Errno> {
         let mut state = self.state.write();
-        let (range, mapping) = state.mappings.get_mut(&addr).ok_or(EINVAL)?;
+        let (range, mapping) = state.mappings.get_mut(&addr).ok_or(errno!(EINVAL))?;
         if range.end - addr < length {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
         let _result = mapping.vmo.set_name(&name);
         mapping.name = name;
@@ -464,7 +466,7 @@ impl MemoryManager {
     #[cfg(test)]
     pub fn get_mapping_name(&self, addr: UserAddress) -> Result<CString, Errno> {
         let state = self.state.read();
-        let (_, mapping) = state.mappings.get(&addr).ok_or(EFAULT)?;
+        let (_, mapping) = state.mappings.get(&addr).ok_or(errno!(EFAULT))?;
         Ok(mapping.name.clone())
     }
 
@@ -488,9 +490,9 @@ impl MemoryManager {
     }
 
     pub fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
-        let actual = self.process.read_memory(addr.ptr(), bytes).map_err(|_| EFAULT)?;
+        let actual = self.process.read_memory(addr.ptr(), bytes).map_err(|_| errno!(EFAULT))?;
         if actual != bytes.len() {
-            return Err(EFAULT);
+            return error!(EFAULT);
         }
         Ok(())
     }
@@ -508,9 +510,9 @@ impl MemoryManager {
         string: UserCString,
         buffer: &'a mut [u8],
     ) -> Result<&'a [u8], Errno> {
-        let actual = self.process.read_memory(string.ptr(), buffer).map_err(|_| EFAULT)?;
+        let actual = self.process.read_memory(string.ptr(), buffer).map_err(|_| errno!(EFAULT))?;
         let buffer = &mut buffer[..actual];
-        let null_index = memchr::memchr(b'\0', buffer).ok_or(ENAMETOOLONG)?;
+        let null_index = memchr::memchr(b'\0', buffer).ok_or(errno!(ENAMETOOLONG))?;
         Ok(&buffer[..null_index])
     }
 
@@ -519,9 +521,9 @@ impl MemoryManager {
         iovec_addr: UserAddress,
         iovec_count: i32,
     ) -> Result<Vec<UserBuffer>, Errno> {
-        let iovec_count: usize = iovec_count.try_into().map_err(|_| EINVAL)?;
+        let iovec_count: usize = iovec_count.try_into().map_err(|_| errno!(EINVAL))?;
         if iovec_count > UIO_MAXIOV as usize {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
 
         let mut data = vec![UserBuffer::default(); iovec_count];
@@ -562,13 +564,13 @@ impl MemoryManager {
                 return Ok(());
             }
         }
-        Err(EFAULT)
+        error!(EFAULT)
     }
 
     pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
-        let actual = self.process.write_memory(addr.ptr(), bytes).map_err(|_| EFAULT)?;
+        let actual = self.process.write_memory(addr.ptr(), bytes).map_err(|_| errno!(EFAULT))?;
         if actual != bytes.len() {
-            return Err(EFAULT);
+            return error!(EFAULT);
         }
         Ok(())
     }
@@ -615,7 +617,7 @@ impl MemoryManager {
                 return Ok(());
             }
         }
-        Err(EFAULT)
+        error!(EFAULT)
     }
 }
 
@@ -807,7 +809,7 @@ mod tests {
         assert_eq!(&data[64..66], &buffer[25..27]);
 
         buffer = vec![0u8; 42];
-        assert_eq!(Err(EFAULT), mm.read_all(&iovec, &mut buffer));
+        assert_eq!(error!(EFAULT), mm.read_all(&iovec, &mut buffer));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -884,6 +886,6 @@ mod tests {
         assert_eq!(&written[..25], &data[..25]);
         assert_eq!(&written[64..66], &data[25..27]);
 
-        assert_eq!(Err(EFAULT), mm.write_all(&iovec, &&data[..42]));
+        assert_eq!(error!(EFAULT), mm.write_all(&iovec, &&data[..42]));
     }
 }

@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
+use crate::error;
 use crate::fs::pipe::Pipe;
 use crate::types::*;
 
@@ -42,7 +43,7 @@ impl FsNodeOps for TmpfsDirectory {
     }
 
     fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        Err(ENOENT)
+        error!(ENOENT)
     }
 
     fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
@@ -56,7 +57,7 @@ impl FsNodeOps for TmpfsDirectory {
             FileMode::IFIFO => Box::new(FifoNode::new()),
             FileMode::IFBLK => Box::new(DeviceNode),
             FileMode::IFCHR => Box::new(DeviceNode),
-            _ => return Err(EACCES),
+            _ => return error!(EACCES),
         };
         Ok(node.fs().create_node(ops, mode))
     }
@@ -105,7 +106,7 @@ pub struct DeviceNode;
 
 impl FsNodeOps for DeviceNode {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }
 
@@ -118,6 +119,7 @@ mod test {
     use std::sync::Arc;
     use zerocopy::AsBytes;
 
+    use crate::errno;
     use crate::mm::*;
     use crate::testing::*;
 
@@ -226,7 +228,10 @@ mod test {
 
         task.open_file(b"/usr/bin", OpenFlags::RDONLY | OpenFlags::DIRECTORY)
             .expect("failed to open /usr/bin");
-        assert_eq!(ENOENT, task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err());
+        assert_eq!(
+            errno!(ENOENT),
+            task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err()
+        );
         task.open_file_at(
             FdNumber::AT_FDCWD,
             b"/usr/bin/test.txt",
@@ -243,19 +248,25 @@ mod test {
             .name
             .unlink(task, b"test.txt", UnlinkKind::NonDirectory)
             .expect("failed to unlink test.text");
-        assert_eq!(ENOENT, task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err());
         assert_eq!(
-            ENOENT,
+            errno!(ENOENT),
+            task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err()
+        );
+        assert_eq!(
+            errno!(ENOENT),
             usr_bin.name.unlink(task, b"test.txt", UnlinkKind::NonDirectory).unwrap_err()
         );
 
         assert_eq!(0, txt.read(task, &[]).expect("failed to read"));
         std::mem::drop(txt);
-        assert_eq!(ENOENT, task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err());
+        assert_eq!(
+            errno!(ENOENT),
+            task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err()
+        );
         std::mem::drop(usr_bin);
 
         let usr = task.open_file(b"/usr", OpenFlags::RDONLY).expect("failed to open /usr");
-        assert_eq!(ENOENT, task.open_file(b"/usr/foo", OpenFlags::RDONLY).unwrap_err());
+        assert_eq!(errno!(ENOENT), task.open_file(b"/usr/foo", OpenFlags::RDONLY).unwrap_err());
         usr.name.unlink(task, b"bin", UnlinkKind::Directory).expect("failed to unlink /usr/bin");
     }
 }

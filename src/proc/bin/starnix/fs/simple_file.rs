@@ -5,6 +5,8 @@
 use std::sync::Arc;
 
 use super::*;
+use crate::errno;
+use crate::error;
 use crate::fd_impl_seekable;
 use crate::task::*;
 use crate::types::*;

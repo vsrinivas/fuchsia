@@ -6,6 +6,8 @@ use fuchsia_zircon::{self as zx, AsHandleRef};
 use std::ffi::CStr;
 use std::sync::Arc;
 
+use crate::errno;
+use crate::error;
 use crate::fs::*;
 use crate::logging::*;
 use crate::mm::*;
@@ -40,11 +42,11 @@ pub fn sys_mmap(
     // These are the flags that are currently supported.
     if prot & !(PROT_READ | PROT_WRITE | PROT_EXEC) != 0 {
         not_implemented!("mmap: prot: 0x{:x}", prot);
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     if flags & MAP_32BIT != 0 {
         not_implemented!("mmap flag MAP_32BIT not implemented.");
-        return Err(ENOSYS);
+        return error!(ENOSYS);
     }
     if flags
         & !(MAP_PRIVATE
@@ -57,25 +59,25 @@ pub fn sys_mmap(
         != 0
     {
         not_implemented!("mmap: flags: 0x{:x}", flags);
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     if flags & (MAP_PRIVATE | MAP_SHARED) == 0
         || flags & (MAP_PRIVATE | MAP_SHARED) == MAP_PRIVATE | MAP_SHARED
     {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     if length == 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     if offset % *PAGE_SIZE != 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     // TODO(tbodt): should we consider MAP_NORESERVE?
 
     if flags & MAP_ANONYMOUS != 0 && fd.raw() != -1 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     let mut zx_flags = mmap_prot_to_vm_opt(prot) | zx::VmarFlags::ALLOW_FAULTS;
@@ -91,8 +93,8 @@ pub fn sys_mmap(
 
     let vmo = if flags & MAP_ANONYMOUS != 0 {
         let mut vmo = zx::Vmo::create(length as u64).map_err(|s| match s {
-            zx::Status::NO_MEMORY => ENOMEM,
-            zx::Status::OUT_OF_RANGE => ENOMEM,
+            zx::Status::NO_MEMORY => errno!(ENOMEM),
+            zx::Status::OUT_OF_RANGE => errno!(ENOMEM),
             _ => impossible_error(s),
         })?;
         vmo.set_name(CStr::from_bytes_with_nul(b"starnix-anon\0").unwrap())
@@ -130,7 +132,11 @@ pub fn sys_mmap(
     let try_map =
         |addr, flags| ctx.task.mm.map(addr, Arc::clone(&vmo), vmo_offset, length, flags, options);
     let addr = match try_map(addr, zx_flags) {
-        Err(EINVAL) if zx_flags.contains(zx::VmarFlags::SPECIFIC) && (flags & MAP_FIXED == 0) => {
+        Err(errno)
+            if errno == EINVAL
+                && zx_flags.contains(zx::VmarFlags::SPECIFIC)
+                && (flags & MAP_FIXED == 0) =>
+        {
             try_map(UserAddress::default(), zx_flags - zx::VmarFlags::SPECIFIC)
         }
         result => result,
@@ -196,7 +202,7 @@ mod tests {
 
         // Verify that the memory is no longer readable.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), Err(EFAULT));
+        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
     }
 
     /// It is ok to call munmap on an unmapped range.
@@ -217,7 +223,7 @@ mod tests {
         let ctx = SyscallContext::new(&task_owner.task);
 
         let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&ctx, mapped_address, 0), Err(EINVAL));
+        assert_eq!(sys_munmap(&ctx, mapped_address, 0), error!(EINVAL));
     }
 
     /// It is an error to call munmap with an address that is not a multiple of the page size.
@@ -227,7 +233,7 @@ mod tests {
         let ctx = SyscallContext::new(&task_owner.task);
 
         let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&ctx, mapped_address + 1u64, *PAGE_SIZE as usize), Err(EINVAL));
+        assert_eq!(sys_munmap(&ctx, mapped_address + 1u64, *PAGE_SIZE as usize), error!(EINVAL));
 
         // Verify that the memory is still readable.
         let mut data: [u8; 5] = [0; 5];
@@ -245,10 +251,10 @@ mod tests {
 
         // Verify that memory can't be read in either half of the page.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), Err(EFAULT));
+        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
         assert_eq!(
             ctx.task.mm.read_memory(mapped_address + (*PAGE_SIZE - 2), &mut data),
-            Err(EFAULT)
+            error!(EFAULT)
         );
     }
 
@@ -263,10 +269,10 @@ mod tests {
 
         // Verify that neither page is readable.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), Err(EFAULT));
+        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
         assert_eq!(
             ctx.task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data),
-            Err(EFAULT)
+            error!(EFAULT)
         );
     }
 
@@ -281,7 +287,7 @@ mod tests {
 
         // Verify that the second page is still readable.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), Err(EFAULT));
+        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
         assert_eq!(ctx.task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data), Ok(()));
     }
 }

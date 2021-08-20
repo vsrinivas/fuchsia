@@ -7,6 +7,8 @@ use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Weak};
 
+use crate::errno;
+use crate::error;
 use crate::fs::*;
 use crate::types::*;
 
@@ -134,7 +136,7 @@ impl DirEntry {
     {
         assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
         if DirEntry::is_reserved_name(name) {
-            return Err(EEXIST);
+            return error!(EEXIST);
         }
         let (entry, exists) = self.get_or_create_child(name, || {
             let node = create_node_fn()?;
@@ -147,7 +149,7 @@ impl DirEntry {
             Ok(node)
         })?;
         if exists {
-            return Err(EEXIST);
+            return error!(EEXIST);
         }
         self.node.touch();
         entry.node.fs().did_create_dir_entry(&entry);
@@ -200,14 +202,14 @@ impl DirEntry {
 
     pub fn link(self: &DirEntryHandle, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
         if DirEntry::is_reserved_name(name) {
-            return Err(EEXIST);
+            return error!(EEXIST);
         }
         let (entry, exists) = self.get_or_create_child(name, || {
             self.node.link(name, child)?;
             Ok(child.clone())
         })?;
         if exists {
-            return Err(EEXIST);
+            return error!(EEXIST);
         }
         self.node.touch();
         entry.node.fs().did_create_dir_entry(&entry);
@@ -216,7 +218,7 @@ impl DirEntry {
 
     pub fn unlink(self: &DirEntryHandle, name: &FsStr, _kind: UnlinkKind) -> Result<(), Errno> {
         let mut state = self.state.write();
-        let child = state.children.get(name).ok_or(ENOENT)?.upgrade().unwrap();
+        let child = state.children.get(name).ok_or(errno!(ENOENT))?.upgrade().unwrap();
         // TODO: Check _kind against the child's mode.
         self.node.unlink(name, &child.node)?;
         state.children.remove(name);
@@ -246,7 +248,7 @@ impl DirEntry {
         // If either the old_basename or the new_basename is a reserved name
         // (e.g., "." or ".."), then we cannot do the rename.
         if DirEntry::is_reserved_name(old_basename) || DirEntry::is_reserved_name(new_basename) {
-            return Err(EBUSY);
+            return error!(EBUSY);
         }
 
         // If the names and parents are the same, then there's nothing to do
@@ -317,7 +319,7 @@ impl DirEntry {
             // If new_parent is a descendant of renamed, the operation would
             // create a cycle. That's disallowed.
             if is_descendant_of(&new_parent, &renamed) {
-                return Err(EINVAL);
+                return error!(EINVAL);
             }
 
             // We need to check if there is already a DirEntry with
@@ -341,7 +343,7 @@ impl DirEntry {
                         // either not exist, or it must specify an empty directory."
                         if replaced.node.is_dir() {
                             if !renamed.node.is_dir() {
-                                return Err(EISDIR);
+                                return error!(EISDIR);
                             }
 
                             // We are not allowed to replace the old_parent. This check is a
@@ -350,24 +352,24 @@ impl DirEntry {
                             // deadlocks while trying to acquire the state lock for the
                             // replaced entry.
                             if Arc::ptr_eq(&old_parent, &replaced) {
-                                return Err(ENOTEMPTY);
+                                return error!(ENOTEMPTY);
                             }
                             // TODO: This check only covers whether the cache is non-empty.
                             // We actually need to check whether the underlying directory is
                             // empty by asking the node. (ENOTEMPTY)
                             let replaced_state = replaced.state.write();
                             if !replaced_state.children.is_empty() {
-                                return Err(ENOTEMPTY);
+                                return error!(ENOTEMPTY);
                             }
 
                             // TODO: Check whether renamed is a mount point. (EBUSY)
                         } else if renamed.node.is_dir() {
-                            return Err(ENOTDIR);
+                            return error!(ENOTDIR);
                         }
                         Some(replaced)
                     }
                     // It's fine for the lookup to fail to find a child.
-                    Err(ENOENT) => None,
+                    Err(errno) if errno == errno!(ENOENT) => None,
                     // However, other errors are fatal.
                     Err(e) => return Err(e),
                 };
@@ -440,7 +442,7 @@ impl DirEntry {
         assert!(!DirEntry::is_reserved_name(name));
         // Only directories can have children.
         if !self.node.is_dir() {
-            return Err(ENOTDIR);
+            return error!(ENOTDIR);
         }
         // Check if the child is already in children. In that case, we can
         // simply return the child and we do not need to call init_fn.

@@ -4,6 +4,8 @@
 
 use log::info;
 
+use crate::errno;
+use crate::error;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::syscalls::SyscallResult;
@@ -45,7 +47,7 @@ impl FileOps for SyslogFile {
         _out_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         match request {
-            TCGETS => Err(ENOTTY),
+            TCGETS => error!(ENOTTY),
             _ => default_ioctl(request),
         }
     }

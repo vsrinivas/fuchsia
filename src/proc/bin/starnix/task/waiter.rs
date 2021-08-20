@@ -5,6 +5,7 @@
 use fuchsia_zircon as zx;
 use std::sync::Arc;
 
+use crate::error;
 use crate::logging::*;
 use crate::types::*;
 
@@ -37,7 +38,7 @@ impl Waiter {
         match self.port.wait(deadline) {
             Ok(packet) => match packet.status() {
                 zx::sys::ZX_OK => Ok(()),
-                _ => Err(EINTR),
+                _ => error!(EINTR),
             },
             Err(zx::Status::TIMED_OUT) => Ok(()),
             Err(errno) => Err(impossible_error(errno)),

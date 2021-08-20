@@ -6,7 +6,9 @@ use fuchsia_zircon as zx;
 
 use std::sync::Arc;
 
+use crate::errno;
 use crate::fd_impl_nonseekable;
+use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
@@ -45,7 +47,8 @@ impl FileOps for FuchsiaPipe {
     fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut size = 0;
         task.mm.read_each(data, |bytes| {
-            let actual = self.socket.write(&bytes).map_err(Errno::from_status_like_fdio)?;
+            let actual =
+                self.socket.write(&bytes).map_err(|status| from_status_like_fdio!(status))?;
             size += actual;
             if actual != bytes.len() {
                 return Ok(None);
@@ -58,7 +61,8 @@ impl FileOps for FuchsiaPipe {
     fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut size = 0;
         task.mm.write_each(data, |bytes| {
-            let actual = self.socket.read(bytes).map_err(Errno::from_status_like_fdio)?;
+            let actual =
+                self.socket.read(bytes).map_err(|status| from_status_like_fdio!(status))?;
             size += actual;
             Ok(&bytes[0..actual])
         })?;

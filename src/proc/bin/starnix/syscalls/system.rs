@@ -6,6 +6,9 @@ use fuchsia_runtime::utc_time;
 use fuchsia_zircon::{self as zx, Task};
 use log::warn;
 
+use crate::errno;
+use crate::error;
+use crate::from_status_like_fdio;
 use crate::logging::*;
 use crate::not_implemented;
 use crate::syscalls::decls::SyscallDecl;
@@ -91,7 +94,7 @@ pub fn sys_clock_gettime(
             }
             CLOCK_THREAD_CPUTIME_ID => get_thread_cpu_time(ctx, ctx.task.id)?,
             CLOCK_PROCESS_CPUTIME_ID => get_process_cpu_time(ctx, ctx.task.id)?,
-            _ => return Err(EINVAL),
+            _ => return error!(EINVAL),
         }
     };
     let tv = timespec { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND };
@@ -138,15 +141,15 @@ pub fn sys_nanosleep(
 pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<SyscallResult, Errno> {
     warn!(target: "unknown_syscall", "UNKNOWN syscall({}): {}", syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
-    Err(ENOSYS)
+    error!(ENOSYS)
 }
 
 /// Returns the cpu time for the task with the given `pid`.
 ///
 /// Returns EINVAL if no such task can be found.
 fn get_thread_cpu_time(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<i64, Errno> {
-    let task = ctx.task.get_task(pid).ok_or(EINVAL)?;
-    Ok(task.thread.get_runtime_info().map_err(Errno::from_status_like_fdio)?.cpu_time)
+    let task = ctx.task.get_task(pid).ok_or(errno!(EINVAL))?;
+    Ok(task.thread.get_runtime_info().map_err(|status| from_status_like_fdio!(status))?.cpu_time)
 }
 
 /// Returns the cpu time for the process associated with the given `pid`. `pid`
@@ -155,8 +158,13 @@ fn get_thread_cpu_time(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<i64, Errn
 ///
 /// Returns EINVAL if no such process can be found.
 fn get_process_cpu_time(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<i64, Errno> {
-    let task = ctx.task.get_task(pid).ok_or(EINVAL)?;
-    Ok(task.thread_group.process.get_runtime_info().map_err(Errno::from_status_like_fdio)?.cpu_time)
+    let task = ctx.task.get_task(pid).ok_or(errno!(EINVAL))?;
+    Ok(task
+        .thread_group
+        .process
+        .get_runtime_info()
+        .map_err(|status| from_status_like_fdio!(status))?
+        .cpu_time)
 }
 
 /// Returns the type of cpu clock that `clock` encodes.
@@ -201,7 +209,7 @@ fn is_thread_clock(clock: i32) -> bool {
 ///   - The remaining bits encode the pid of the thread/process.
 fn get_dynamic_clock(ctx: &SyscallContext<'_>, which_clock: i32) -> Result<i64, Errno> {
     if !is_valid_cpu_clock(which_clock) {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     let pid = pid_of_clock_id(which_clock);

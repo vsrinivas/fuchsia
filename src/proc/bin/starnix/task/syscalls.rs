@@ -7,6 +7,8 @@ use log::info;
 use std::ffi::CString;
 use zerocopy::AsBytes;
 
+use crate::errno;
+use crate::error;
 use crate::mm::*;
 use crate::not_implemented;
 use crate::runner::*;
@@ -58,7 +60,7 @@ fn read_c_string_vector(
             break;
         }
         let string = mm.read_c_string(user_string, buf)?;
-        vector.push(CString::new(string).map_err(|_| EINVAL)?);
+        vector.push(CString::new(string).map_err(|_| errno!(EINVAL))?);
         user_current = user_current.next();
     }
     Ok(vector)
@@ -71,7 +73,8 @@ pub fn sys_execve(
     user_environ: UserRef<UserCString>,
 ) -> Result<SyscallResult, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
-    let path = CString::new(ctx.task.mm.read_c_string(user_path, &mut buf)?).map_err(|_| EINVAL)?;
+    let path = CString::new(ctx.task.mm.read_c_string(user_path, &mut buf)?)
+        .map_err(|_| errno!(EINVAL))?;
     // TODO: What is the maximum size for an argument?
     let argv = read_c_string_vector(&ctx.task.mm, user_argv, &mut buf)?;
     let environ = read_c_string_vector(&ctx.task.mm, user_environ, &mut buf)?;
@@ -89,7 +92,7 @@ pub fn sys_getsid(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<SyscallResult,
     if pid == 0 {
         return Ok(ctx.task.get_sid().into());
     }
-    Ok(ctx.task.get_task(pid).ok_or(ESRCH)?.get_sid().into())
+    Ok(ctx.task.get_task(pid).ok_or(errno!(ESRCH))?.get_sid().into())
 }
 
 pub fn sys_gettid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
@@ -108,7 +111,7 @@ pub fn sys_getpgid(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<SyscallResult
     if pid == 0 {
         return Ok(ctx.task.get_pgrp().into());
     }
-    Ok(ctx.task.get_task(pid).ok_or(ESRCH)?.get_pgrp().into())
+    Ok(ctx.task.get_task(pid).ok_or(errno!(ESRCH))?.get_pgrp().into())
 }
 
 pub fn sys_getuid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
@@ -214,7 +217,7 @@ pub fn sys_getitimer(
             ctx.task.mm.write_object(user_curr_value, &signal_state.itimer_prof)?;
         }
         _ => {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
     }
     Ok(SUCCESS)
@@ -246,7 +249,7 @@ pub fn sys_setitimer(
             signal_state.itimer_prof = new_value;
         }
         _ => {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
     }
 
@@ -269,14 +272,14 @@ pub fn sys_prctl(
         PR_SET_VMA => {
             if arg2 != PR_SET_VMA_ANON_NAME as u64 {
                 not_implemented!("prctl: PR_SET_VMA: Unknown arg2: 0x{:x}", arg2);
-                return Err(ENOSYS);
+                return error!(ENOSYS);
             }
             let addr = UserAddress::from(arg3);
             let length = arg4 as usize;
             let name = UserCString::new(UserAddress::from(arg5));
             let mut buf = [0u8; PATH_MAX as usize]; // TODO: How large can these names be?
             let name = ctx.task.mm.read_c_string(name, &mut buf)?;
-            let name = CString::new(name).map_err(|_| EINVAL)?;
+            let name = CString::new(name).map_err(|_| errno!(EINVAL))?;
             ctx.task.mm.set_mapping_name(addr, length, name)?;
             Ok(SUCCESS)
         }
@@ -295,7 +298,7 @@ pub fn sys_prctl(
         }
         _ => {
             not_implemented!("prctl: Unknown option: 0x{:x}", option);
-            Err(ENOSYS)
+            error!(ENOSYS)
         }
     }
 }
@@ -312,7 +315,7 @@ pub fn sys_arch_prctl(
         }
         _ => {
             not_implemented!("arch_prctl: Unknown code: code=0x{:x} addr={}", code, addr);
-            Err(ENOSYS)
+            error!(ENOSYS)
         }
     }
 }
@@ -337,7 +340,7 @@ pub fn sys_getrusage(
         RUSAGE_CHILDREN => (),
         RUSAGE_SELF => (),
         RUSAGE_THREAD => (),
-        _ => return Err(EINVAL),
+        _ => return error!(EINVAL),
     };
 
     if !user_usage.is_null() {
@@ -363,7 +366,7 @@ pub fn sys_futex(
     let is_realtime = op & FUTEX_CLOCK_REALTIME != 0;
     if is_realtime {
         not_implemented!("futex: Realtime futex are not implemented.");
-        return Err(ENOSYS);
+        return error!(ENOSYS);
     }
 
     let cmd = op & (FUTEX_CMD_MASK as u32);
@@ -377,20 +380,20 @@ pub fn sys_futex(
         }
         FUTEX_WAIT_BITSET => {
             if value3 == 0 {
-                return Err(EINVAL);
+                return error!(EINVAL);
             }
             let deadline = zx::Time::INFINITE;
             ctx.task.mm.futex.wait(&ctx.task, addr, value, value3, deadline)?;
         }
         FUTEX_WAKE_BITSET => {
             if value3 == 0 {
-                return Err(EINVAL);
+                return error!(EINVAL);
             }
             ctx.task.mm.futex.wake(addr, value as usize, value3);
         }
         _ => {
             not_implemented!("futex: command 0x{:x} not implemented.", cmd);
-            return Err(ENOSYS);
+            return error!(ENOSYS);
         }
     }
     Ok(SUCCESS)
@@ -411,13 +414,13 @@ pub fn sys_setgroups(
     groups_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     if size > NGROUPS_MAX as usize {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     let mut groups: Vec<gid_t> = vec![0; size];
     ctx.task.mm.read_memory(groups_addr, groups.as_mut_slice().as_bytes_mut())?;
     let mut creds = ctx.task.creds.write();
     if !creds.is_superuser() {
-        return Err(EPERM);
+        return error!(EPERM);
     }
     creds.groups = groups;
     Ok(SUCCESS)
@@ -432,7 +435,7 @@ pub fn sys_getgroups(
     let groups = &creds.groups;
     if size != 0 {
         if size < groups.len() {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
         ctx.task.mm.write_memory(groups_addr, groups.as_slice().as_bytes())?;
     }
@@ -473,7 +476,7 @@ mod tests {
         );
 
         sys_munmap(&ctx, mapped_address, *PAGE_SIZE as usize).expect("failed to unmap memory");
-        assert_eq!(Err(EFAULT), ctx.task.mm.get_mapping_name(mapped_address + 24u64));
+        assert_eq!(error!(EFAULT), ctx.task.mm.get_mapping_name(mapped_address + 24u64));
     }
 
     #[fasync::run_singlethreaded(test)]

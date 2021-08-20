@@ -8,13 +8,15 @@ use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
 use syncio::{zxio::zxio_get_posix_mode, zxio_node_attributes_t, Zxio};
 
+use crate::errno;
+use crate::error;
 use crate::fd_impl_seekable;
+use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::logging::impossible_error;
 use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
-
 pub struct RemoteFs;
 impl FileSystemOps for RemoteFs {}
 
@@ -60,12 +62,15 @@ impl FsNodeOps for RemoteNode {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
             EINVAL
         })?;
-        let zxio =
-            Arc::new(self.zxio.open(self.rights, 0, name).map_err(Errno::from_status_like_fdio)?);
+        let zxio = Arc::new(
+            self.zxio
+                .open(self.rights, 0, name)
+                .map_err(|status| from_status_like_fdio!(status))?,
+        );
 
         // TODO: It's unfortunate to have another round-trip. We should be able
         // to set the mode based on the information we get during open.
-        let attrs = zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
+        let attrs = zxio.attr_get().map_err(|status| from_status_like_fdio!(status))?;
 
         let ops = Box::new(RemoteNode { zxio, rights: self.rights });
         let mode =
@@ -81,11 +86,11 @@ impl FsNodeOps for RemoteNode {
     }
 
     fn truncate(&self, _node: &FsNode, length: u64) -> Result<(), Errno> {
-        self.zxio.truncate(length).map_err(Errno::from_status_like_fdio)
+        self.zxio.truncate(length).map_err(|status| from_status_like_fdio!(status))
     }
 
     fn update_info<'a>(&self, node: &'a FsNode) -> Result<RwLockReadGuard<'a, FsNodeInfo>, Errno> {
-        let attrs = self.zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
+        let attrs = self.zxio.attr_get().map_err(|status| from_status_like_fdio!(status))?;
         let mut info = node.info_write();
         update_into_from_attrs(&mut info, attrs);
         Ok(RwLockWriteGuard::downgrade(info))
@@ -111,8 +116,10 @@ impl FileOps for RemoteFileObject {
     ) -> Result<usize, Errno> {
         let total = UserBuffer::get_total_length(data);
         let mut bytes = vec![0u8; total];
-        let actual =
-            self.zxio.read_at(offset as u64, &mut bytes).map_err(Errno::from_status_like_fdio)?;
+        let actual = self
+            .zxio
+            .read_at(offset as u64, &mut bytes)
+            .map_err(|status| from_status_like_fdio!(status))?;
         task.mm.write_all(data, &bytes[0..actual])?;
         Ok(actual)
     }
@@ -127,8 +134,10 @@ impl FileOps for RemoteFileObject {
         let total = UserBuffer::get_total_length(data);
         let mut bytes = vec![0u8; total];
         task.mm.read_all(data, &mut bytes)?;
-        let actual =
-            self.zxio.write_at(offset as u64, &bytes).map_err(Errno::from_status_like_fdio)?;
+        let actual = self
+            .zxio
+            .write_at(offset as u64, &bytes)
+            .map_err(|status| from_status_like_fdio!(status))?;
         Ok(actual)
     }
 
@@ -140,7 +149,8 @@ impl FileOps for RemoteFileObject {
     ) -> Result<zx::Vmo, Errno> {
         let has_execute = prot.contains(zx::VmarFlags::PERM_EXECUTE);
         prot -= zx::VmarFlags::PERM_EXECUTE;
-        let (mut vmo, _size) = self.zxio.vmo_get(prot).map_err(Errno::from_status_like_fdio)?;
+        let (mut vmo, _size) =
+            self.zxio.vmo_get(prot).map_err(|status| from_status_like_fdio!(status))?;
         if has_execute {
             vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
         }
@@ -151,6 +161,7 @@ impl FileOps for RemoteFileObject {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::errno;
     use crate::testing::*;
     use fidl::endpoints::Proxy;
     use fidl_fuchsia_io as fio;
@@ -165,7 +176,7 @@ mod test {
         let root = ns.root();
         assert_eq!(
             root.lookup(&task_owner.task, b"nib", SymlinkMode::max_follow()).err(),
-            Some(ENOENT)
+            Some(errno!(ENOENT))
         );
         root.lookup(&task_owner.task, b"lib", SymlinkMode::max_follow()).unwrap();
 

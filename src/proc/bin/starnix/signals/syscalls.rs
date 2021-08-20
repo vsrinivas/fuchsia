@@ -6,6 +6,8 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 
 use super::waiting::*;
+use crate::errno;
+use crate::error;
 use crate::not_implemented;
 use crate::signals::signal_handling::*;
 use crate::signals::*;
@@ -21,7 +23,7 @@ pub fn sys_rt_sigaction(
     sigset_size: usize,
 ) -> Result<SyscallResult, Errno> {
     if sigset_size != std::mem::size_of::<sigset_t>() {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     let signal = Signal::try_from(signum)?;
@@ -31,7 +33,7 @@ pub fn sys_rt_sigaction(
         // still be returned in `user_old_action`, so only return early if the intention is to
         // set an action (i.e., the user_action is non-null).
         if signal == Signal::SIGKILL || signal == Signal::SIGSTOP {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
 
         let mut signal_action = sigaction_t::default();
@@ -65,11 +67,11 @@ pub fn sys_rt_sigprocmask(
     sigset_size: usize,
 ) -> Result<SyscallResult, Errno> {
     if sigset_size != std::mem::size_of::<sigset_t>() {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     match how {
         SIG_BLOCK | SIG_UNBLOCK | SIG_SETMASK => (),
-        _ => return Err(EINVAL),
+        _ => return error!(EINVAL),
     };
 
     // Read the new mask. This must be done before the old maks is written to `user_old_set`
@@ -118,11 +120,11 @@ pub fn sys_sigaltstack(
     let mut ss = sigaltstack_t::default();
     if !user_ss.is_null() {
         if on_signal_stack {
-            return Err(EPERM);
+            return error!(EPERM);
         }
         ctx.task.mm.read_object(user_ss, &mut ss)?;
         if (ss.ss_flags & !(SS_AUTODISARM | SS_DISABLE)) != 0 {
-            return Err(EINVAL);
+            return error!(EINVAL);
         }
     }
 
@@ -154,7 +156,7 @@ pub fn sys_rt_sigsuspend(
     sigset_size: usize,
 ) -> Result<SyscallResult, Errno> {
     if sigset_size != std::mem::size_of::<sigset_t>() {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     let mut mask = sigset_t::default();
@@ -197,7 +199,7 @@ pub fn sys_rt_sigsuspend(
     *ctx.task.saved_signal_mask.lock() = Some(old_mask);
 
     // sigsuspend always returns an error.
-    Err(EINTR)
+    error!(EINTR)
 }
 
 pub fn sys_kill(
@@ -210,9 +212,9 @@ pub fn sys_kill(
         pid if pid > 0 => {
             // "If pid is positive, then signal sig is sent to the process with
             // the ID specified by pid."
-            let target = task.get_task(pid).ok_or(ESRCH)?;
+            let target = task.get_task(pid).ok_or(errno!(ESRCH))?;
             if !task.can_signal(&target, &unchecked_signal) {
-                return Err(EPERM);
+                return error!(EPERM);
             }
             send_signal(&target, &unchecked_signal)?;
         }
@@ -274,16 +276,16 @@ pub fn sys_tgkill(
 ) -> Result<SyscallResult, Errno> {
     // Linux returns EINVAL when the tgid or tid <= 0.
     if tgid <= 0 || tid <= 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
-    let target = ctx.task.get_task(tid).ok_or(ESRCH)?;
+    let target = ctx.task.get_task(tid).ok_or(errno!(ESRCH))?;
     if target.get_pid() != tgid {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     if !ctx.task.can_signal(&target, &unchecked_signal) {
-        return Err(EPERM);
+        return error!(EPERM);
     }
 
     send_signal(&target, &unchecked_signal)?;
@@ -313,15 +315,15 @@ fn signal_thread_groups<F>(
 where
     F: Iterator<Item = Arc<ThreadGroup>>,
 {
-    let mut last_error = ESRCH;
+    let mut last_error = errno!(ESRCH);
     let mut sent_signal = false;
 
     // This loop keeps track of whether a signal was sent, so that "on
     // success (at least one signal was sent), zero is returned."
     for thread_group in thread_groups {
-        let leader = task.get_task(thread_group.leader).ok_or(ESRCH)?;
+        let leader = task.get_task(thread_group.leader).ok_or(errno!(ESRCH))?;
         if !task.can_signal(&leader, &unchecked_signal) {
-            last_error = EPERM;
+            last_error = errno!(EPERM);
         }
 
         match send_signal(&leader, unchecked_signal) {
@@ -346,11 +348,11 @@ pub fn sys_waitid(
 ) -> Result<SyscallResult, Errno> {
     // waitid requires at least one option to be provided.
     if options == 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     if options & !(WSTOPPED | WCONTINUED | WNOWAIT) != 0 {
         not_implemented!("Waitid does support options: {:?}", options);
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     match id_type {
@@ -371,9 +373,9 @@ pub fn sys_waitid(
         }
         P_ALL | P_PIDFD | P_PGID => {
             not_implemented!("waitid currently only supports P_ID");
-            Err(ENOSYS)
+            error!(ENOSYS)
         }
-        _ => Err(EINVAL),
+        _ => error!(EINVAL),
     }
 }
 
@@ -385,7 +387,7 @@ pub fn sys_wait4(
     user_rusage: UserRef<rusage>,
 ) -> Result<SyscallResult, Errno> {
     if pid < -1 || pid == 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
 
     if let Some(zombie_task) = wait_on_pid(ctx.task, pid, (options & WNOHANG) == 0)? {
@@ -474,11 +476,11 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&ctx, how, set, old_set, std::mem::size_of::<sigset_t>() * 2),
-            Err(EINVAL)
+            error!(EINVAL)
         );
         assert_eq!(
             sys_rt_sigprocmask(&ctx, how, set, old_set, std::mem::size_of::<sigset_t>() / 2),
-            Err(EINVAL)
+            error!(EINVAL)
         );
     }
 
@@ -495,7 +497,7 @@ mod tests {
 
         assert_eq!(
             sys_rt_sigprocmask(&ctx, how, set, old_set, std::mem::size_of::<sigset_t>()),
-            Err(EINVAL)
+            error!(EINVAL)
         );
     }
 
@@ -735,7 +737,7 @@ mod tests {
                 UserRef::<sigaction_t>::default(),
                 std::mem::size_of::<sigset_t>(),
             ),
-            Err(EINVAL)
+            error!(EINVAL)
         );
         assert_eq!(
             sys_rt_sigaction(
@@ -746,7 +748,7 @@ mod tests {
                 UserRef::<sigaction_t>::default(),
                 std::mem::size_of::<sigset_t>(),
             ),
-            Err(EINVAL)
+            error!(EINVAL)
         );
         assert_eq!(
             sys_rt_sigaction(
@@ -757,7 +759,7 @@ mod tests {
                 UserRef::<sigaction_t>::default(),
                 std::mem::size_of::<sigset_t>(),
             ),
-            Err(EINVAL)
+            error!(EINVAL)
         );
     }
 
@@ -846,7 +848,7 @@ mod tests {
         let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
 
-        assert_eq!(sys_kill(&ctx, 9, SIGINT.into()), Err(ESRCH));
+        assert_eq!(sys_kill(&ctx, 9, SIGINT.into()), error!(ESRCH));
     }
 
     /// A task should not be able to send an invalid signal.
@@ -855,7 +857,7 @@ mod tests {
         let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
 
-        assert_eq!(sys_kill(&ctx, task_owner.task.id, UncheckedSignal::from(75)), Err(EINVAL));
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, UncheckedSignal::from(75)), error!(EINVAL));
     }
 
     /// Sending a blocked signal should result in a pending signal.
@@ -959,7 +961,7 @@ mod tests {
 
             assert_eq!(
                 sys_rt_sigsuspend(&ctx, user_ref, std::mem::size_of::<sigset_t>()),
-                Err(EINTR)
+                error!(EINTR)
             );
         });
 
@@ -1010,7 +1012,7 @@ mod tests {
 
             assert_eq!(
                 sys_rt_sigsuspend(&ctx, user_ref, std::mem::size_of::<sigset_t>()),
-                Err(EINTR)
+                error!(EINTR)
             );
         });
 

@@ -5,6 +5,8 @@
 use super::inode_numbers::*;
 use super::node_holder::*;
 use super::pid_directory::*;
+use crate::errno;
+use crate::error;
 use crate::fd_impl_directory;
 use crate::fs::*;
 use crate::task::*;
@@ -58,8 +60,8 @@ impl FsNodeOps for ProcDirectory {
         match self.nodes.lock().get_mut(name) {
             Some(node_holder) => node_holder.get_or_create_node(&node.fs()),
             None => {
-                let pid_string = std::str::from_utf8(name).map_err(|_| ENOENT)?;
-                let pid = pid_string.parse::<pid_t>().map_err(|_| ENOENT)?;
+                let pid_string = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
+                let pid = pid_string.parse::<pid_t>().map_err(|_| errno!(ENOENT))?;
                 if let Some(task) = self.kernel.upgrade().unwrap().pids.read().get_task(pid) {
                     node.fs().get_or_create_node(Some(dir_inode_num(pid)), |inode_num| {
                         Ok(FsNode::new(
@@ -70,7 +72,7 @@ impl FsNodeOps for ProcDirectory {
                         ))
                     })
                 } else {
-                    Err(ENOENT)
+                    error!(ENOENT)
                 }
             }
         }

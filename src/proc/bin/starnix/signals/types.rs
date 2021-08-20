@@ -4,6 +4,8 @@
 
 #![allow(dead_code)]
 
+use crate::errno;
+use crate::error;
 use crate::types::*;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -116,7 +118,7 @@ impl TryFrom<UncheckedSignal> for Signal {
     type Error = Errno;
 
     fn try_from(value: UncheckedSignal) -> Result<Self, Self::Error> {
-        let value = u32::try_from(value.0).map_err(|_| EINVAL)?;
+        let value = u32::try_from(value.0).map_err(|_| errno!(EINVAL))?;
         match value {
             uapi::SIGHUP => Ok(Signal::SIGHUP),
             uapi::SIGINT => Ok(Signal::SIGINT),
@@ -156,7 +158,7 @@ impl TryFrom<UncheckedSignal> for Signal {
             uapi::SIGRTMIN..=Signal::NUM_SIGNALS => {
                 Ok(Signal { number: u32::from(value), name: "" })
             }
-            _ => Err(EINVAL),
+            _ => error!(EINVAL),
         }
     }
 }

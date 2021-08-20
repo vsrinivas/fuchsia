@@ -6,6 +6,8 @@ use std::sync::Arc;
 
 use super::inode_numbers::fd_inode_num;
 use super::node_holder::*;
+use crate::errno;
+use crate::error;
 use crate::fd_impl_directory;
 use crate::fs::FsNodeOps;
 use crate::fs::*;
@@ -42,7 +44,7 @@ impl FsNodeOps for PidDirectory {
     fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         match self.nodes.lock().get_mut(name) {
             Some(node_holder) => node_holder.get_or_create_node(&node.fs()),
-            None => Err(ENOENT),
+            None => error!(ENOENT),
         }
     }
 }
@@ -140,8 +142,8 @@ impl FsNodeOps for FdDirectory {
     }
 
     fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let name = std::str::from_utf8(name).map_err(|_| ENOENT)?;
-        let num = name.parse::<i32>().map_err(|_| ENOENT)?;
+        let name = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
+        let num = name.parse::<i32>().map_err(|_| errno!(ENOENT))?;
         let fd = FdNumber::from_raw(num);
 
         // Make sure that the file descriptor exists before fetching the node.
@@ -158,7 +160,7 @@ impl FsNodeOps for FdDirectory {
                 },
             )
         } else {
-            Err(ENOENT)
+            error!(ENOENT)
         }
     }
 }
@@ -256,7 +258,7 @@ impl FsNodeOps for ExeSymlink {
         if let Some(node) = &*self.task.executable_node.read() {
             Ok(node.path())
         } else {
-            Err(ENOENT)
+            error!(ENOENT)
         }
     }
 }
@@ -286,7 +288,7 @@ impl FsNodeOps for FdSymlink {
     }
 
     fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
-        let file = self.task.files.get(self.fd).map_err(|_| ENOENT)?;
+        let file = self.task.files.get(self.fd).map_err(|_| errno!(ENOENT))?;
         let name = file.name.path();
         if name.is_empty() {
             // TODO: this should be an error once we set up stdio nodes correctly.

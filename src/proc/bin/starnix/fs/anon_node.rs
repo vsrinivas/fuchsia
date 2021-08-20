@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::error;
 use crate::task::Kernel;
 use crate::types::*;
 
@@ -10,7 +11,7 @@ pub struct Anon;
 
 impl FsNodeOps for Anon {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }
 
