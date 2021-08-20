@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/zircon-internal/thread_annotations.h>
+
 #include <lockdep/lockdep.h>
 #include <zxtest/zxtest.h>
 
@@ -159,6 +160,7 @@ TEST(LockDep, WrappedGlobalLockAssertHeld) {
 struct FakeLockable {
   int guarded_field __TA_GUARDED(lock) = 0;
   LOCK_DEP_INSTRUMENT(FakeLockable, FakeMutex) lock;
+  lockdep::Lock<FakeMutex>* get_lock() __TA_RETURN_CAPABILITY(lock) { return &lock; }
 };
 
 TEST(LockDep, LockableObjectLockGuard) {
@@ -200,5 +202,17 @@ TEST(LockDep, LockableObjectLockAssertHeld) {
   // Release the lock.
   SecretlyReleaseLock(&lockable.lock);
 }
+
+// TODO(33187): Enable this test when lockdep has a userspace runtime and
+// validation can be tested in userspace.
+#if false && ZX_DEBUG_ASSERT_IMPLEMENTED
+TEST(LockDep, ZxDebugAssertOnNonNestableLock) {
+  // Verify the tagged constructor asserts in debug builds.
+  ASSERT_DEATH(([] {
+    FakeLockable lockable;
+    Guard<FakeMutex> guard{lockdep::AssertOrderedLock, lockable.get_lock(), 0};
+  }));
+}
+#endif
 
 }  // namespace

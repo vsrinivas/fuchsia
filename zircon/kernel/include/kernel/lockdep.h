@@ -16,6 +16,7 @@
 // should just be used from the lockdep namespace?
 using lockdep::AdoptLock;
 using lockdep::AssertHeld;
+using lockdep::AssertOrderedLock;
 using lockdep::Guard;
 using lockdep::GuardMultiple;
 using lockdep::Lock;

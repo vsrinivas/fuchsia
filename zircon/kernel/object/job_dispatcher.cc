@@ -11,8 +11,8 @@
 #include <platform.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
-#include <zircon/types.h>
 #include <zircon/syscalls/policy.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
@@ -343,11 +343,7 @@ bool JobDispatcher::KillJobWithKillOnOOM() {
 
 void JobDispatcher::CollectJobsWithOOMBit(OOMBitJobArray* into, int* count) {
   // As CollectJobsWithOOMBit will recurse we need to give a lock order to the guard.
-  Guard<Mutex> guard{&lock_, LockOrder()};
-  // We had to take the guard directly on lock_ above as the get_lock() virtual method erases the
-  // Nestasble type information. The AssertHeld here allows us to restore the clang capability
-  // analysis.
-  AssertHeld(*get_lock());
+  Guard<Mutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
 
   if (kill_on_oom_) {
     if (*count >= static_cast<int>(into->size())) {
@@ -498,11 +494,7 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
 
   {
     // As EnumerateChildren will recurse we need to give a lock order to the guard.
-    Guard<Mutex> guard{&lock_, LockOrder()};
-    // We had to take the guard directly on lock_ above as the get_lock() virtual method erases the
-    // Nestasble type information. The AssertHeld here allows us to restore the clang capability
-    // analysis.
-    AssertHeld(*get_lock());
+    Guard<Mutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
 
     proc_refs =
         ForEachChildInLocked(procs_, &result, [&](const fbl::RefPtr<ProcessDispatcher>& proc) {

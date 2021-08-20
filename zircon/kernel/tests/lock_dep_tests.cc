@@ -225,6 +225,8 @@ template <typename LockType, lockdep::LockFlags Flags = lockdep::LockFlagsNone>
 struct Baz {
   LOCK_DEP_INSTRUMENT(Baz, LockType, Flags) lock;
 
+  lockdep::Lock<LockType>* get_lock() TA_RET_CAP(lock) { return &lock; }
+
   void TestRequire() TA_REQ(lock) {}
   void TestExclude() TA_EXCL(lock) {}
   void TestShared() TA_REQ_SHARED(lock) {}
@@ -269,6 +271,7 @@ void ResetTrackingState() {
 static bool lock_dep_dynamic_analysis_tests() {
   BEGIN_TEST;
 
+  using lockdep::AssertOrderedLock;
   using lockdep::Guard;
   using lockdep::GuardMultiple;
   using lockdep::kInvalidLockClassId;
@@ -524,6 +527,53 @@ static bool lock_dep_dynamic_analysis_tests() {
       EXPECT_TRUE(auto_baz1);
       EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult());
     }
+  }
+
+  // Test external order invariant with nestable flag supplied on the lock
+  // member, rather than the lock type, using the type-erased lock type.
+  {
+    Baz<Mutex, LockFlagsNestable> baz1;
+    Baz<Mutex, LockFlagsNestable> baz2;
+
+    {
+      Guard<Mutex> auto_baz1{AssertOrderedLock, baz1.get_lock(), 0};
+      EXPECT_TRUE(auto_baz1);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> auto_baz2{AssertOrderedLock, baz2.get_lock(), 1};
+      EXPECT_TRUE(auto_baz2);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+
+    {
+      Guard<Mutex> auto_baz2{AssertOrderedLock, baz2.get_lock(), 0};
+      EXPECT_TRUE(auto_baz2);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> auto_baz1{AssertOrderedLock, baz1.get_lock(), 1};
+      EXPECT_TRUE(auto_baz1);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+
+    {
+      Guard<Mutex> auto_baz2{AssertOrderedLock, baz2.get_lock(), 1};
+      EXPECT_TRUE(auto_baz2);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> auto_baz1{AssertOrderedLock, baz1.get_lock(), 0};
+      EXPECT_TRUE(auto_baz1);
+      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult());
+    }
+  }
+
+  // Test using a non-nestable lock with the AssertOrderedLock tag.
+  // TODO(33187): Enable the userspace death test when lockdep has a userspace
+  // runtime and validation can be tested in userspace.
+  {
+#if TEST_WILL_DEBUG_ASSERT || 0
+    Baz<Mutex> baz3;
+    Guard<Mutex> auto_baz3{AssertOrderedLock, baz3.get_lock(), 0};
+#endif
   }
 
   // Test irq-safety invariant.

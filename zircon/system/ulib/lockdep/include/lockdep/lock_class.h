@@ -174,22 +174,22 @@ class __TA_CAPABILITY("mutex") Lock {
   // Provides direct access to the underlying lock. Care should be taken when
   // manipulating the underlying lock. Incorrect manipulation could confuse
   // the validator, trigger lock assertions, and/or deadlock.
-  LockType& lock() { return lock_; }
-  const LockType& lock() const { return lock_; }
+  LockType& lock() { return state_.lock_; }
+  const LockType& lock() const { return state_.lock_; }
 
   // Returns the capability of the underlying lock. This is expected by Guard
   // as an additional static assertion target.
-  LockType& capability() __TA_RETURN_CAPABILITY(lock_) { return lock_; }
-  const LockType& capability() const __TA_RETURN_CAPABILITY(lock_) { return lock_; }
+  LockType& capability() __TA_RETURN_CAPABILITY(state_.lock_) { return state_.lock_; }
+  const LockType& capability() const __TA_RETURN_CAPABILITY(state_.lock_) { return state_.lock_; }
 
   // Returns the LockClassId of the lock class this lock belongs to.
-  LockClassId id() const { return id_.value(); }
+  constexpr LockClassId id() const { return state_.id(); }
 
  protected:
   // Initializes the Lock instance with the given LockClassId and passes any
   // additional arguments to the underlying lock constructor.
   template <typename... Args>
-  constexpr Lock(LockClassId id, Args&&... args) : id_{id}, lock_(std::forward<Args>(args)...) {}
+  constexpr Lock(LockClassId id, Args&&... args) : state_{id, std::forward<Args>(args)...} {}
 
  private:
   template <typename, typename, typename>
@@ -197,27 +197,35 @@ class __TA_CAPABILITY("mutex") Lock {
   template <size_t, typename, typename>
   friend class GuardMultiple;
 
-  // Value type that stores the LockClassId for this lock when validation is
-  // enabled.
-  struct Value {
-    LockClassId value_;
-    LockClassId value() const { return value_; }
+  // State type when lock validation is enabled.
+  struct ValidatedState {
+    template <typename... Args>
+    explicit ValidatedState(LockClassId id, Args&&... args)
+        : id_{id}, lock_(std::forward<Args>(args)...) {}
+
+    LockClassId id() const { return id_; }
+
+    LockClassId id_;
+    LockType lock_;
   };
 
-  // Dummy type that stores nothing when validation is disabled.
-  struct Dummy {
-    constexpr Dummy(LockClassId) {}
-    LockClassId constexpr value() const { return kInvalidLockClassId; }
+  // State type when validation is disabled.
+  struct UnvalidatedState {
+    template <typename... Args>
+    explicit UnvalidatedState(LockClassId id, Args&&... args)
+        : lock_(std::forward<Args>(args)...) {}
+
+    constexpr LockClassId id() const { return kInvalidLockClassId; }
+
+    LockType lock_;
   };
 
-  // Selects between Value or Dummy based on whether validation is enabled.
-  using IdValue = IfLockValidationEnabled<Value, Dummy>;
+  // Selects which state type to use based on whether validation is enabled.
+  using State = IfLockValidationEnabled<ValidatedState, UnvalidatedState>;
 
-  // Stores the lock class id of this lock when validation is enabled.
-  IdValue id_;
-
-  // The underlying lock managed by this dependency tracking wrapper.
-  LockType lock_;
+  // State instance holding the underlying lock and, when validation is enabled,
+  // the lock class id.
+  State state_;
 };
 
 // Specialization of Lock<LockType> that wraps a static/global raw lock. This

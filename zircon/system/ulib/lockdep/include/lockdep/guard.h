@@ -97,6 +97,9 @@ void AssertHeld(const Lockable& lock) __TA_ASSERT(lock) __TA_ASSERT(lock.lock())
 // Type tag to select the (private) ordered Guard constructor.
 enum OrderedLockTag { OrderedLock };
 
+// Type tag to select the ordered Guard constructor for type erased locks.
+enum AssertOrderedLockTag { AssertOrderedLock };
+
 // Type tag to select the adopting Guard constructor.
 enum AdoptLockTag { AdoptLock };
 
@@ -141,6 +144,16 @@ class __TA_SCOPED_CAPABILITY
   __WARN_UNUSED_CONSTRUCTOR Guard(Lockable* lock, uintptr_t order, Args&&... state_args)
       __TA_ACQUIRE(lock) __TA_ACQUIRE(lock->capability())
       : Guard{OrderedLock, lock, order, std::forward<Args>(state_args)...} {}
+
+  // Acquires the given type erased lock. The caller asserts the underlying lock
+  // type is nestable, which is verified by a runtime check in debug builds.
+  template <typename... Args>
+  __WARN_UNUSED_CONSTRUCTOR Guard(AssertOrderedLockTag, Lock<LockType>* lock, uintptr_t order,
+                                  Args&&... state_args) __TA_ACQUIRE(lock)
+      __TA_ACQUIRE(lock->capability())
+      : Guard{OrderedLock, lock, order, std::forward<Args>(state_args)...} {
+    ZX_DEBUG_ASSERT(lock->id() == kInvalidLockClassId || LockClassState::IsNestable(lock->id()));
+  }
 
   // Destructor that automatically releases the lock if not already released.
   ~Guard() __TA_RELEASE() { Release(); }
@@ -326,6 +339,16 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   __WARN_UNUSED_CONSTRUCTOR Guard(Lockable* lock, uintptr_t order, Args&&... state_args)
       __TA_ACQUIRE_SHARED(lock) __TA_ACQUIRE_SHARED(lock->capability())
       : Guard{OrderedLock, lock, order, std::forward<Args>(state_args)...} {}
+
+  // Acquires the given type erased lock. The caller asserts the underlying lock
+  // type is nestable, which is verified by a runtime check in debug builds.
+  template <typename... Args>
+  __WARN_UNUSED_CONSTRUCTOR Guard(AssertOrderedLockTag, Lock<LockType>* lock, uintptr_t order,
+                                  Args&&... state_args) __TA_ACQUIRE_SHARED(lock)
+      __TA_ACQUIRE_SHARED(lock->capability())
+      : Guard{OrderedLock, lock, order, std::forward<Args>(state_args)...} {
+    ZX_DEBUG_ASSERT(lock->id() == kInvalidLockClassId || LockClassState::IsNestable(lock->id()));
+  }
 
   // Destructor that automatically releases the lock if not already released.
   ~Guard() __TA_RELEASE() { Release(); }
