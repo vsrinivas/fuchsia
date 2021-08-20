@@ -559,7 +559,6 @@ config("default_warnings") {
 
     # TODO(fxbug.dev/77973): Temporarily disable this warning until we address the
     # issues in first party code and suppress the warning in third party code.
-    "-Wno-unused-but-set-parameter",
     "-Wno-unused-but-set-variable",
   ]
   cflags_cc = [
@@ -804,6 +803,7 @@ config("Wno-conversion-generated") {
 config("Wno-unused-but-set-parameter") {
   cflags = [ "-Wno-unused-but-set-parameter" ]
   visibility = [
+    "//src/virtualization/bin/vmm/device:*",
     "//third_party/*",
     "//vendor/*",
     "//zircon/third_party/uapp/dash",

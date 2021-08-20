@@ -363,6 +363,9 @@ executable("device_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO: remove the line below and fix compilation errors.
+  configs += [ "//build/config:Wno-unused-but-set-parameter" ]
 }
 
 action("virtio_magma_generic") {
