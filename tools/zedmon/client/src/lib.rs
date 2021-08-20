@@ -78,6 +78,7 @@ struct ZedmonRecord {
     power: f32,
 }
 
+#[derive(Debug)]
 struct DownsamplerState {
     last_output_micros: u64,
     prev_record: ZedmonRecord,
@@ -549,7 +550,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
 
             match self.interface.borrow_mut().read(&mut buffer) {
                 Err(e) => {
-                    eprint!("USB read error: {}.", e);
+                    eprintln!("USB read error: {}.", e);
                     if num_retries > 0 {
                         num_retries -= 1;
                         continue;
@@ -719,12 +720,23 @@ pub fn list() -> Vec<String> {
 }
 
 pub fn zedmon() -> ZedmonClient<usb_bulk::Interface> {
-    let interface = usb_bulk::Interface::open(&mut zedmon_match).unwrap();
-    let result = ZedmonClient::new(interface);
-    if result.is_err() {
-        eprintln!("Error initializing ZedmonClient: {:?}", result);
+    const MAX_ATTEMPTS: u32 = 3;
+
+    for attempt in 1..=MAX_ATTEMPTS {
+        let interface = usb_bulk::Interface::open(&mut zedmon_match).unwrap();
+
+        match ZedmonClient::new(interface) {
+            Ok(z) => return z,
+            Err(e) => {
+                eprintln!("Error initializing ZedmonClient: {:?}", e);
+                if attempt < MAX_ATTEMPTS {
+                    eprintln!("Will retry in 1 second.");
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+            }
+        }
     }
-    result.unwrap()
+    panic!("Failed to create Zedmon client after {} attempts. Aborting.", MAX_ATTEMPTS);
 }
 
 #[cfg(test)]
@@ -1704,7 +1716,6 @@ mod tests {
             // Endpoints of the interval for this sample, in microseconds.
             let t1 = t_start_micros + (i as u64) * downsampling_interval_micros;
             let t2 = t1 + downsampling_interval_micros;
-            println!("t1: {}, t2: {}", t1, t2);
             assert_eq!(record.timestamp_micros, t2);
             assert_near!(record.shunt_voltage, shunt_voltage_average(t1, t2), 1e-4);
             assert_near!(record.bus_voltage, bus_voltage_average(t1, t2), 1e-4);
