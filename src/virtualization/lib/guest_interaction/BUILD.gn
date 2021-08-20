@@ -114,6 +114,7 @@ source_set("integration_test_lib") {
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
     "//src/virtualization/tests:fake_netstack",
     "//src/virtualization/tests:guest_console",
   ]

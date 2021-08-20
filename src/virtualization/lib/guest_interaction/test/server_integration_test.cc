@@ -53,9 +53,7 @@ static int run_grpc_client(void* client_to_run) {
 }
 
 static void ConvertSocketToNonBlockingFd(zx::socket socket, fbl::unique_fd& fd) {
-  zx_status_t status;
-  ASSERT_EQ((status = fdio_fd_create(socket.release(), fd.reset_and_get_address())), ZX_OK)
-      << zx_status_get_string(status);
+  ASSERT_OK(fdio_fd_create(socket.release(), fd.reset_and_get_address()));
   int result;
   ASSERT_EQ((result = SetNonBlocking(fd)), 0) << strerror(result);
 }
@@ -66,20 +64,16 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   // Connect the gRPC client to the guest under test.
   fuchsia::virtualization::HostVsockEndpointPtr ep;
-  realm_->GetHostVsockEndpoint(ep.NewRequest());
+  realm()->GetHostVsockEndpoint(ep.NewRequest());
 
   zx::socket local_socket, remote_socket;
-  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket));
 
-  bool connect_complete = false;
-  ep->Connect(cid_, GUEST_INTERACTION_PORT, std::move(remote_socket),
-              [&connect_complete, &status](zx_status_t connect_status) {
-                status = connect_status;
-                connect_complete = true;
-              });
-  RunLoopUntil([&connect_complete] { return connect_complete; });
-  ASSERT_EQ(status, ZX_OK);
+  std::optional<zx_status_t> status;
+  ep->Connect(cid(), GUEST_INTERACTION_PORT, std::move(remote_socket),
+              [&status](zx_status_t connect_status) { status = connect_status; });
+  RunLoopUntil([&status]() { return status.has_value(); });
+  ASSERT_OK(status.value());
 
   fbl::unique_fd vsock_fd;
   ASSERT_NO_FATAL_FAILURE(ConvertSocketToNonBlockingFd(std::move(local_socket), vsock_fd));
@@ -88,29 +82,29 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   // Push the bash script to the guest
   zx::channel put_local, put_remote;
-  zx::channel::create(0, &put_local, &put_remote);
-  zx_status_t open_status =
-      fdio_open(kTestScriptSource, fuchsia::io::OPEN_RIGHT_READABLE, put_local.release());
-  ASSERT_EQ(open_status, ZX_OK);
+  ASSERT_OK(zx::channel::create(0, &put_local, &put_remote));
+  ASSERT_OK(fdio_open(kTestScriptSource, fuchsia::io::OPEN_RIGHT_READABLE, put_local.release()));
 
-  zx_status_t transfer_status = ZX_ERR_IO;
-  client.Put(std::move(put_remote), kGuestScriptDestination, [&](zx_status_t put_result) {
-    transfer_status = put_result;
-    client.Stop();
-  });
+  status.reset();
+  client.Put(std::move(put_remote), kGuestScriptDestination,
+             [&client, &status](zx_status_t put_result) {
+               status = put_result;
+               client.Stop();
+             });
   client.Run();
-  ASSERT_EQ(transfer_status, ZX_OK);
+  ASSERT_TRUE(status.has_value());
+  ASSERT_OK(status.value());
 
   // Run the bash script in the guest.  The script will write to stdout and
   // stderr.  The script will also block waiting to receive input from stdin.
   zx::socket stdin_writer, stdin_reader;
-  zx::socket::create(0, &stdin_writer, &stdin_reader);
+  ASSERT_OK(zx::socket::create(0, &stdin_writer, &stdin_reader));
 
   zx::socket stdout_writer, stdout_reader;
-  zx::socket::create(0, &stdout_writer, &stdout_reader);
+  ASSERT_OK(zx::socket::create(0, &stdout_writer, &stdout_reader));
 
   zx::socket stderr_writer, stderr_reader;
-  zx::socket::create(0, &stderr_writer, &stderr_reader);
+  ASSERT_OK(zx::socket::create(0, &stderr_writer, &stderr_reader));
 
   // Once the subprocess has started, write to stdin.
   std::string to_write = kTestScriptInput;
@@ -125,15 +119,13 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
                                               {"STDERR_STRING", kTestStderr}};
   std::string std_out;
   std::string std_err;
-  zx_status_t exec_started_status = ZX_ERR_PEER_CLOSED;
-  zx_status_t exec_terminated_status = ZX_ERR_PEER_CLOSED;
-  bool exec_started = false;
-  bool exec_terminated = false;
+  std::optional<zx_status_t> exec_started;
+  std::optional<zx_status_t> exec_terminated;
   int32_t ret_code = -1;
 
   fuchsia::netemul::guest::CommandListenerPtr listener;
   listener.events().OnStarted = [&](zx_status_t status) {
-    exec_started_status = status;
+    exec_started = status;
     if (status == ZX_OK) {
       while (bytes_written < to_write.size()) {
         size_t curr_bytes_written = write(stdin_fd.get(), &(to_write.c_str()[bytes_written]),
@@ -147,16 +139,14 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
     }
     client.Stop();
     stdin_fd.reset();
-    exec_started = true;
   };
   listener.events().OnTerminated = [&](zx_status_t exec_result, int32_t exit_code) {
-    exec_terminated_status = exec_result;
+    exec_terminated = exec_result;
     ret_code = exit_code;
 
     std_out = drain_socket(std::move(stdout_reader));
     std_err = drain_socket(std::move(stderr_reader));
     client.Stop();
-    exec_terminated = true;
   };
 
   client.Exec(command, env_vars, std::move(stdin_reader), std::move(stdout_writer),
@@ -165,39 +155,41 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   // Ensure that the process started cleanly.
   thrd_t client_run_thread;
   thrd_create_with_name(&client_run_thread, run_grpc_client, &client, "gRPC run");
-  RunLoopUntil([&exec_started] { return exec_started; });
+  RunLoopUntil([&exec_started] { return exec_started.has_value(); });
   int32_t thread_ret_code;
   thrd_join(client_run_thread, &thread_ret_code);
 
-  ASSERT_EQ(exec_started_status, ZX_OK);
+  ASSERT_TRUE(exec_started.has_value());
+  ASSERT_OK(exec_started.value());
 
   // Ensure the gRPC operation completed successfully and validate the stdout
   // and stderr.
   thrd_create_with_name(&client_run_thread, run_grpc_client, &client, "gRPC run");
-  RunLoopUntil([&exec_terminated] { return exec_terminated; });
+  RunLoopUntil([&exec_terminated] { return exec_terminated.has_value(); });
   thrd_join(client_run_thread, &thread_ret_code);
 
-  ASSERT_EQ(exec_terminated_status, ZX_OK);
+  ASSERT_TRUE(exec_terminated.has_value());
+  ASSERT_OK(exec_terminated.value());
   ASSERT_EQ(fxl::TrimString(std_out, "\n"), std::string_view(kTestStdout));
   ASSERT_EQ(fxl::TrimString(std_err, "\n"), std::string_view(kTestStderr));
 
   // The bash script will create a file with contents that were written to
   // stdin.  Pull this file back and inspect its contents.
   zx::channel get_local, get_remote;
-  zx::channel::create(0, &get_local, &get_remote);
-  open_status = fdio_open(kHostOuputCopyLocation,
-                          fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
-                              fuchsia::io::OPEN_FLAG_TRUNCATE,
-                          get_local.release());
-  ASSERT_EQ(open_status, ZX_OK);
+  ASSERT_OK(zx::channel::create(0, &get_local, &get_remote));
+  ASSERT_OK(fdio_open(kHostOuputCopyLocation,
+                      fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                          fuchsia::io::OPEN_FLAG_TRUNCATE,
+                      get_local.release()));
 
-  transfer_status = ZX_ERR_IO;
+  status.reset();
   client.Get(kGuestFileOutputLocation, std::move(get_remote), [&](zx_status_t get_result) {
-    transfer_status = get_result;
+    status = get_result;
     client.Stop();
   });
   client.Run();
-  ASSERT_EQ(transfer_status, ZX_OK);
+  ASSERT_TRUE(status.has_value());
+  ASSERT_OK(status.value());
 
   // Verify the contents that were communicated through stdin.
   std::string output_string;
@@ -223,20 +215,17 @@ TEST_F(GuestInteractionTest, DISABLED_GrpcPutGetTest) {
 
   // Connect the gRPC client to the guest under test.
   fuchsia::virtualization::HostVsockEndpointPtr ep;
-  realm_->GetHostVsockEndpoint(ep.NewRequest());
+  realm()->GetHostVsockEndpoint(ep.NewRequest());
 
   zx::socket local_socket, remote_socket;
-  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket));
 
-  bool connect_complete = false;
-  ep->Connect(cid_, GUEST_INTERACTION_PORT, std::move(remote_socket),
-              [&connect_complete, &status](zx_status_t connect_status) {
-                status = connect_status;
-                connect_complete = true;
-              });
-  RunLoopUntil([&connect_complete] { return connect_complete; });
-  ASSERT_EQ(status, ZX_OK);
+  std::optional<zx_status_t> status;
+  ep->Connect(cid(), GUEST_INTERACTION_PORT, std::move(remote_socket),
+              [&status](zx_status_t connect_status) { status = connect_status; });
+  RunLoopUntil([&status] { return status.has_value(); });
+  ASSERT_TRUE(status.has_value());
+  ASSERT_OK(status.value());
 
   fbl::unique_fd vsock_fd;
   ASSERT_NO_FATAL_FAILURE(ConvertSocketToNonBlockingFd(std::move(local_socket), vsock_fd));
@@ -263,35 +252,34 @@ TEST_F(GuestInteractionTest, DISABLED_GrpcPutGetTest) {
 
   // Push the test file to the guest
   zx::channel put_local, put_remote;
-  zx::channel::create(0, &put_local, &put_remote);
-  zx_status_t open_status =
-      fdio_open(test_file, fuchsia::io::OPEN_RIGHT_READABLE, put_local.release());
-  ASSERT_EQ(open_status, ZX_OK);
+  ASSERT_OK(zx::channel::create(0, &put_local, &put_remote));
+  ASSERT_OK(fdio_open(test_file, fuchsia::io::OPEN_RIGHT_READABLE, put_local.release()));
 
-  zx_status_t transfer_status = ZX_ERR_IO;
+  status.reset();
   client.Put(std::move(put_remote), guest_destination, [&](zx_status_t put_result) {
-    transfer_status = put_result;
+    status = put_result;
     client.Stop();
   });
   client.Run();
-  ASSERT_EQ(transfer_status, ZX_OK);
+  ASSERT_TRUE(status.has_value());
+  ASSERT_OK(status.value());
 
   // Copy back the file that was sent to the guest.
   zx::channel get_local, get_remote;
-  zx::channel::create(0, &get_local, &get_remote);
-  open_status = fdio_open(host_verification_file,
-                          fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
-                              fuchsia::io::OPEN_FLAG_TRUNCATE,
-                          get_local.release());
-  ASSERT_EQ(open_status, ZX_OK);
+  ASSERT_OK(zx::channel::create(0, &get_local, &get_remote));
+  ASSERT_OK(fdio_open(host_verification_file,
+                      fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                          fuchsia::io::OPEN_FLAG_TRUNCATE,
+                      get_local.release()));
 
-  transfer_status = ZX_ERR_IO;
+  status.reset();
   client.Get(guest_destination, std::move(get_remote), [&](zx_status_t get_result) {
-    transfer_status = get_result;
+    status = get_result;
     client.Stop();
   });
   client.Run();
-  ASSERT_EQ(transfer_status, OperationStatus::OK);
+  ASSERT_TRUE(status.has_value());
+  ASSERT_OK(status.value());
 
   // Verify the contents that were communicated through stdin.
   std::string verification_string;

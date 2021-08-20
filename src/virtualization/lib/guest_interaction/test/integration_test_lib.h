@@ -15,6 +15,8 @@
 #include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
 
+#include "src/lib/testing/predicates/status.h"
+
 static constexpr char kGuestLabel[] = "debian_guest";
 static constexpr char kGuestManagerUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
@@ -40,28 +42,25 @@ static constexpr char kHostOuputCopyLocation[] = "/data/copy";
 class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
  public:
   void CreateEnvironment() {
-    ASSERT_TRUE(services_ && !env_);
+    ASSERT_NE(services_, nullptr);
+    ASSERT_EQ(env_, nullptr);
 
     env_ = CreateNewEnclosingEnvironment("GuestInteractionEnvironment", std::move(services_));
   }
 
   void LaunchDebianGuest() {
-    zx::time deadline = zx::deadline_after(kLaunchTimeout);
-
     // Launch the Debian guest
     fuchsia::virtualization::GuestConfig cfg;
     cfg.set_virtio_gpu(false);
 
     fuchsia::virtualization::ManagerPtr manager;
     fuchsia::virtualization::GuestPtr guest;
-    cid_ = -1;
 
     env_->ConnectToService(manager.NewRequest());
     manager->Create(fuchsia::netemul::guest::DEFAULT_REALM, realm_.NewRequest());
     realm_->LaunchInstance(kDebianGuestUrl, kGuestLabel, std::move(cfg), guest.NewRequest(),
-                           [&](uint32_t callback_cid) { cid_ = callback_cid; });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return cid_ >= 0; },
-                                          deadline - zx::clock::get_monotonic()));
+                           [this](uint32_t cid) { cid_ = cid; });
+    RunLoopUntil([this]() { return cid_.has_value(); });
 
     // Start a GuestConsole.  When the console starts, it waits until it
     // receives some sensible output from the guest to ensure that the guest is
@@ -71,48 +70,28 @@ class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
         [&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
           get_console_result = std::move(result);
         });
-    ASSERT_TRUE(
-        RunLoopWithTimeoutOrUntil([&get_console_result] { return get_console_result.has_value(); },
-                                  deadline - zx::clock::get_monotonic()));
-    ASSERT_TRUE(!get_console_result->is_err());
+    RunLoopUntil([&get_console_result]() { return get_console_result.has_value(); });
+    fuchsia::virtualization::Guest_GetConsole_Result& result = get_console_result.value();
+    switch (result.Which()) {
+      case fuchsia::virtualization::Guest_GetConsole_Result::Tag::kResponse: {
+        GuestConsole serial(std::make_unique<ZxSocket>(std::move(result.response().socket)));
+        ASSERT_OK(serial.Start(zx::time::infinite()));
 
-    GuestConsole serial(
-        std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
-    zx_status_t status = serial.Start(deadline);
-    ASSERT_EQ(status, ZX_OK);
-
-    // Wait until sysctl shows that the guest_interaction_daemon is running.
-    RunLoopWithTimeoutOrUntil(
-        [&status, &serial, deadline]() -> bool {
-          std::string output;
-          status = serial.ExecuteBlocking("journalctl -u guest_interaction_daemon | grep Listening",
-                                          "$", deadline, &output);
-
-          // If the command cannot be executed, break out of the loop so the test can fail.
-          if (status != ZX_OK) {
-            return true;
-          }
-
-          // Ensure that the output from the command indicates that guest_interaction_daemon is
-          // active.
-          if (output.find("Listening") != std::string::npos) {
-            return true;
-          }
-          return false;
-        },
-        deadline - zx::clock::get_monotonic());
-
-    ASSERT_EQ(status, ZX_OK);
+        // Wait until sysctl shows that the guest_interaction_daemon is running.
+        ASSERT_OK(serial.ExecuteBlocking(
+            "journalctl -f --no-tail -u guest_interaction_daemon | grep -m1 Listening", "$",
+            zx::time::infinite(), nullptr));
+        break;
+      }
+      case fuchsia::virtualization::Guest_GetConsole_Result::Tag::kErr:
+        FAIL() << zx_status_get_string(result.err());
+      case fuchsia::virtualization::Guest_GetConsole_Result::Tag::Invalid:
+        FAIL() << "fuchsia.virtualization/Guest.GetConsole: invalid FIDL tag";
+    }
   }
 
-  uint32_t cid_;
-  fuchsia::virtualization::RealmPtr realm_;
-  std::unique_ptr<sys::testing::EnvironmentServices> services_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
-  FakeNetstack fake_netstack_;
-
  protected:
-  void SetUp() {
+  void SetUp() override {
     services_ = CreateServices();
 
     // Add Netstack services
@@ -120,12 +99,13 @@ class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
     services_->AddService(fake_netstack_.GetHandler(), fuchsia::net::stack::Stack::Name_);
 
     // Add guest service
-    fuchsia::sys::LaunchInfo guest_manager_launch_info;
-    guest_manager_launch_info.url = kGuestManagerUrl;
-    guest_manager_launch_info.out = sys::CloneFileDescriptor(1);
-    guest_manager_launch_info.err = sys::CloneFileDescriptor(2);
-    services_->AddServiceWithLaunchInfo(std::move(guest_manager_launch_info),
-                                        fuchsia::virtualization::Manager::Name_);
+    services_->AddServiceWithLaunchInfo(
+        {
+            .url = kGuestManagerUrl,
+            .out = sys::CloneFileDescriptor(1),
+            .err = sys::CloneFileDescriptor(2),
+        },
+        fuchsia::virtualization::Manager::Name_);
 
     // Allow hypervisor resource for virtualization.
     services_->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
@@ -133,8 +113,17 @@ class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
     services_->AllowParentService(fuchsia::kernel::VmexResource::Name_);
   }
 
+  uint32_t cid() const { return cid_.value(); }
+  const fuchsia::virtualization::RealmPtr& realm() const { return realm_; }
+  sys::testing::EnvironmentServices& services() { return *services_; };
+  sys::testing::EnclosingEnvironment& env() { return *env_; };
+
  private:
-  static constexpr zx::duration kLaunchTimeout = zx::sec(60);
+  std::optional<uint32_t> cid_;
+  fuchsia::virtualization::RealmPtr realm_;
+  std::unique_ptr<sys::testing::EnvironmentServices> services_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
+  FakeNetstack fake_netstack_;
 };
 
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_INTEGRATION_TEST_LIB_H_
