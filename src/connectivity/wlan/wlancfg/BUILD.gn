@@ -103,6 +103,7 @@ rustc_library("lib") {
     "src/mode_management/mod.rs",
     "src/mode_management/phy_manager.rs",
     "src/regulatory_manager.rs",
+    "src/telemetry/convert.rs",
     "src/telemetry/mod.rs",
     "src/telemetry/windowed_stats.rs",
     "src/util/fuse_pending.rs",

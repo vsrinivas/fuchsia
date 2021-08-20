@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod convert;
 mod windowed_stats;
 
 use {
-    crate::telemetry::windowed_stats::WindowedStats,
+    crate::telemetry::{convert::convert_disconnect_source, windowed_stats::WindowedStats},
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_stats::MlmeStats,
@@ -87,11 +88,11 @@ pub enum TelemetryEvent {
     /// Notify the telemetry event loop that network selection is complete.
     NetworkSelectionDecision {
         /// Type of network selection. If it's undirected and no candidate network is found,
-        /// telemetry will toggle the `no_saved_neighbor` flag.
+        /// telemetry will toggle the "no saved neighbor" flag.
         network_selection_type: NetworkSelectionType,
         /// When there's a scan error, `num_candidates` should be Err.
         /// When `num_candidates` is `Ok(0)` for an undirected network selection, telemetry
-        /// will toggle the `no_saved_neighbor` flag.  If the event loop is tracking downtime,
+        /// will toggle the "no saved neighbor" flag.  If the event loop is tracking downtime,
         /// the subsequent downtime period will also be used to increment the,
         /// `downtime_no_saved_neighbor_duration` counter. This counter is used to
         /// adjust the raw downtime.
@@ -178,18 +179,23 @@ pub fn serve_telemetry(
     (TelemetrySender::new(sender), fut)
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 enum ConnectionState {
     // Like disconnected, but no downtime is tracked.
     Idle,
-    Connected {
-        iface_id: u16,
-        prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats>,
-    },
-    Disconnected {
-        /// Flag to track whether there's a saved neighbor in vicinity.
-        latest_no_saved_neighbor_time: Option<fasync::Time>,
-    },
+    Connected { iface_id: u16, prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats> },
+    Disconnected(DisconnectedState),
+}
+
+#[derive(Debug, Clone)]
+struct DisconnectedState {
+    disconnected_since: fasync::Time,
+    disconnect_info: DisconnectInfo,
+    /// The latest time when the device's no saved neighbor duration was accounted.
+    /// If this has a value, then conceptually we say that "no saved neighbor" flag
+    /// is set.
+    latest_no_saved_neighbor_time: Option<fasync::Time>,
+    accounted_no_saved_neighbor_duration: zx::Duration,
 }
 
 fn record_inspect_counters(
@@ -312,13 +318,15 @@ impl Telemetry {
                     }
                 }
             }
-            ConnectionState::Disconnected { latest_no_saved_neighbor_time } => {
+            ConnectionState::Disconnected(state) => {
                 self.stats_logger.log_stat(StatOp::AddDowntimeDuration(duration)).await;
-                if let Some(prev) = latest_no_saved_neighbor_time.take() {
+                if let Some(prev) = state.latest_no_saved_neighbor_time.take() {
+                    let duration = now - prev;
+                    state.accounted_no_saved_neighbor_duration += duration;
                     self.stats_logger
-                        .log_stat(StatOp::AddDowntimeNoSavedNeighborDuration(now - prev))
+                        .log_stat(StatOp::AddDowntimeNoSavedNeighborDuration(duration))
                         .await;
-                    *latest_no_saved_neighbor_time = Some(now);
+                    state.latest_no_saved_neighbor_time = Some(now);
                 }
             }
         }
@@ -335,28 +343,26 @@ impl Telemetry {
             } => {
                 match num_candidates {
                     Ok(n) if n > 0 => {
-                        // Saved neighbors are seen, so clear the `no_saved_neighbor` flag. Account
+                        // Saved neighbors are seen, so clear the "no saved neighbor" flag. Account
                         // for any untracked time to the `downtime_no_saved_neighbor_duration`
                         // counter.
-                        if let ConnectionState::Disconnected { latest_no_saved_neighbor_time } =
-                            &mut self.connection_state
-                        {
-                            if let Some(prev) = latest_no_saved_neighbor_time.take() {
+                        if let ConnectionState::Disconnected(state) = &mut self.connection_state {
+                            if let Some(prev) = state.latest_no_saved_neighbor_time.take() {
+                                let duration = now - prev;
+                                state.accounted_no_saved_neighbor_duration += duration;
                                 self.stats_logger.queue_stat_op(
-                                    StatOp::AddDowntimeNoSavedNeighborDuration(now - prev),
+                                    StatOp::AddDowntimeNoSavedNeighborDuration(duration),
                                 );
                             }
                         }
                     }
                     Ok(0) if network_selection_type == NetworkSelectionType::Undirected => {
-                        // No saved neighbor is seen. If `no_saved_neighbor` flag isn't set, then
+                        // No saved neighbor is seen. If "no saved neighbor" flag isn't set, then
                         // set it to the current time. Otherwise, do nothing because the telemetry
                         // loop will account for untracked downtime during periodic telemetry run.
-                        if let ConnectionState::Disconnected { latest_no_saved_neighbor_time } =
-                            &mut self.connection_state
-                        {
-                            if latest_no_saved_neighbor_time.is_none() {
-                                *latest_no_saved_neighbor_time = Some(now);
+                        if let ConnectionState::Disconnected(state) = &mut self.connection_state {
+                            if state.latest_no_saved_neighbor_time.is_none() {
+                                state.latest_no_saved_neighbor_time = Some(now);
                             }
                         }
                     }
@@ -364,9 +370,28 @@ impl Telemetry {
                 }
             }
             TelemetryEvent::Connected { iface_id } => {
-                let duration = now - self.last_checked_connection_state;
-                if let ConnectionState::Disconnected { .. } = self.connection_state {
-                    self.stats_logger.queue_stat_op(StatOp::AddDowntimeDuration(duration));
+                if let ConnectionState::Disconnected(state) = &self.connection_state {
+                    if state.latest_no_saved_neighbor_time.is_some() {
+                        warn!("'No saved neighbor' flag still set even though connected");
+                    }
+                    self.stats_logger.queue_stat_op(StatOp::AddDowntimeDuration(
+                        now - self.last_checked_connection_state,
+                    ));
+                    let total_downtime = now - state.disconnected_since;
+                    if total_downtime < state.accounted_no_saved_neighbor_duration {
+                        warn!(
+                            "Total downtime is less than no-saved-neighbor duration. \
+                               Total downtime: {:?}, No saved neighbor duration: {:?}",
+                            total_downtime, state.accounted_no_saved_neighbor_duration
+                        )
+                    }
+                    let adjusted_downtime = max(
+                        total_downtime - state.accounted_no_saved_neighbor_duration,
+                        0.seconds(),
+                    );
+                    self.stats_logger
+                        .log_downtime_cobalt_metrics(adjusted_downtime, &state.disconnect_info)
+                        .await;
                 }
                 self.connection_state =
                     ConnectionState::Connected { iface_id, prev_counters: None };
@@ -374,14 +399,21 @@ impl Telemetry {
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
                 self.stats_logger.log_stat(StatOp::AddDisconnectCount).await;
-                self.stats_logger.log_stat(StatOp::LogDisconnectInfo(info)).await;
+                self.stats_logger.log_disconnect_cobalt_metrics(&info).await;
 
                 let duration = now - self.last_checked_connection_state;
                 if let ConnectionState::Connected { .. } = self.connection_state {
                     self.stats_logger.queue_stat_op(StatOp::AddConnectedDuration(duration));
                 }
                 self.connection_state = if track_subsequent_downtime {
-                    ConnectionState::Disconnected { latest_no_saved_neighbor_time: None }
+                    ConnectionState::Disconnected(DisconnectedState {
+                        disconnected_since: now,
+                        disconnect_info: info,
+                        // We assume that there's a saved neighbor in vicinity until proven
+                        // otherwise from scan result.
+                        latest_no_saved_neighbor_time: None,
+                        accounted_no_saved_neighbor_duration: 0.seconds(),
+                    })
                 } else {
                     ConnectionState::Idle
                 };
@@ -475,10 +507,6 @@ impl StatsLogger {
                 StatCounters { downtime_no_saved_neighbor_duration: duration, ..zero }
             }
             StatOp::AddDisconnectCount => StatCounters { disconnect_count: 1, ..zero },
-            StatOp::LogDisconnectInfo(info) => {
-                self.log_disconnect_metrics(info).await;
-                zero
-            }
             StatOp::AddTxHighPacketDropDuration(duration) => {
                 StatCounters { tx_high_packet_drop_duration: duration, ..zero }
             }
@@ -689,7 +717,7 @@ impl StatsLogger {
         );
     }
 
-    async fn log_disconnect_metrics(&mut self, disconnect_info: DisconnectInfo) {
+    async fn log_disconnect_cobalt_metrics(&mut self, disconnect_info: &DisconnectInfo) {
         let mut metric_events = vec![];
         metric_events.push(MetricEvent {
             metric_id: metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID,
@@ -731,14 +759,7 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
-        let disconnect_source_dim = {
-            use metrics::ConnectivityWlanMetricDimensionDisconnectSource::*;
-            match disconnect_info.disconnect_source {
-                fidl_sme::DisconnectSource::Ap => Ap,
-                fidl_sme::DisconnectSource::User => User,
-                fidl_sme::DisconnectSource::Mlme => Mlme,
-            }
-        };
+        let disconnect_source_dim = convert_disconnect_source(&disconnect_info.disconnect_source);
         metric_events.push(MetricEvent {
             metric_id: metrics::DISCONNECT_BREAKDOWN_BY_REASON_CODE_METRIC_ID,
             event_codes: vec![disconnect_info.reason_code as u32, disconnect_source_dim as u32],
@@ -754,7 +775,22 @@ impl StatsLogger {
         log_cobalt_1dot1_batch!(
             self.cobalt_1dot1_proxy,
             &mut metric_events.iter_mut(),
-            "log_disconnect_metrics",
+            "log_disconnect_cobalt_metrics",
+        );
+    }
+
+    async fn log_downtime_cobalt_metrics(
+        &mut self,
+        downtime: zx::Duration,
+        disconnect_info: &DisconnectInfo,
+    ) {
+        let disconnect_source_dim = convert_disconnect_source(&disconnect_info.disconnect_source);
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_integer,
+            metrics::DOWNTIME_BREAKDOWN_BY_DISCONNECT_REASON_METRIC_ID,
+            downtime.into_micros(),
+            &[disconnect_info.reason_code as u32, disconnect_source_dim as u32],
         );
     }
 }
@@ -766,7 +802,6 @@ enum StatOp {
     // Downtime with no saved network in vicinity
     AddDowntimeNoSavedNeighborDuration(zx::Duration),
     AddDisconnectCount,
-    LogDisconnectInfo(DisconnectInfo),
     AddTxHighPacketDropDuration(zx::Duration),
     AddRxHighPacketDropDuration(zx::Duration),
     AddNoRxDuration(zx::Duration),
@@ -1885,7 +1920,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_log_disconnect_metrics() {
+    fn test_log_disconnect_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.advance_by(3.hours(), test_fut.as_mut());
         test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
@@ -1947,6 +1982,60 @@ mod tests {
         assert_eq!(breakdowns_by_channel.len(), 1);
         assert_eq!(breakdowns_by_channel[0].event_codes, vec![channel.primary as u32]);
         assert_eq!(breakdowns_by_channel[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
+    fn test_log_downtime_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        let info = DisconnectInfo {
+            reason_code: 3,
+            disconnect_source: fidl_sme::DisconnectSource::Mlme,
+            ..fake_disconnect_info()
+        };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(42.minutes(), test_fut.as_mut());
+        // Indicate that there's no saved neighbor in vicinity
+        test_helper.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: NetworkSelectionType::Undirected,
+            num_candidates: Ok(0),
+            selected_any: false,
+        });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(5.minutes(), test_fut.as_mut());
+        // Indicate that there's some saved neighbor in vicinity
+        test_helper.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: NetworkSelectionType::Undirected,
+            num_candidates: Ok(5),
+            selected_any: true,
+        });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(7.minutes(), test_fut.as_mut());
+        // Reconnect
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_reason = test_helper
+            .get_logged_metrics(metrics::DOWNTIME_BREAKDOWN_BY_DISCONNECT_REASON_METRIC_ID);
+        assert_eq!(breakdowns_by_reason.len(), 1);
+        assert_eq!(
+            breakdowns_by_reason[0].event_codes,
+            vec![3u32, metrics::ConnectivityWlanMetricDimensionDisconnectSource::Mlme as u32,]
+        );
+        assert_eq!(
+            breakdowns_by_reason[0].payload,
+            MetricEventPayload::IntegerValue(49.minutes().into_micros())
+        );
     }
 
     struct TestHelper {
