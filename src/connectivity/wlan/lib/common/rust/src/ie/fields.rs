@@ -698,6 +698,58 @@ pub struct MpmCloseView<B> {
     pub pmk: Option<LayoutVerified<B, MpmPmk>>,
 }
 
+// IEEE Std 802.11-2016, 9.4.2.27, Table 9-135
+pub struct ExtCapabilitiesView<B> {
+    // Extended capabilities has a variable number of bytes.
+    // The spec defines up to bit 72, but we only need the first 3 bytes right now.
+    pub ext_caps_octet_1: Option<LayoutVerified<B, ExtCapabilitiesOctet1>>,
+    pub ext_caps_octet_2: Option<LayoutVerified<B, ExtCapabilitiesOctet2>>,
+    pub ext_caps_octet_3: Option<LayoutVerified<B, ExtCapabilitiesOctet3>>,
+    pub remaining: B,
+}
+
+#[bitfield(
+    0       twenty_forty_bss_coexistence_mgmt_support,
+    1       _, // reserved
+    2       extended_channel_switching,
+    3       _, // reserved
+    4       psmp_capability,
+    5       _, // reserved
+    6       s_psmp_support,
+    7       event,
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy, Unaligned)]
+pub struct ExtCapabilitiesOctet1(u8);
+
+#[bitfield(
+    0       diagnostics,
+    1       multicast_diagnostics,
+    2       location_tracking,
+    3       fms,
+    4       proxy_arp_service,
+    5       collocated_interference_reporting,
+    6       civic_location,
+    7       geospatial_location,
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy, Unaligned)]
+pub struct ExtCapabilitiesOctet2(u8);
+
+#[bitfield(
+    0       tfs,
+    1       wnm_sleep_mode,
+    2       tim_broadcast,
+    3       bss_transition,
+    4       qos_traffic_capability,
+    5       ac_station_count,
+    6       multiple_bssid,
+    7       timing_measurement,
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy, Unaligned)]
+pub struct ExtCapabilitiesOctet3(u8);
+
 // IEEE Std 802.11-2016, 9.4.2.113, Figure 9-478
 #[bitfield(
     0       gate_announcement,

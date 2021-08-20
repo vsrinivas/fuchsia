@@ -22,6 +22,7 @@ impl Id {
     pub const RM_ENABLED_CAPABILITIES: Self = Self(70);
     pub const BSS_MAX_IDLE_PERIOD: Self = Self(90);
     pub const MESH_PEERING_MGMT: Self = Self(117);
+    pub const EXT_CAPABILITIES: Self = Self(127);
     pub const PREQ: Self = Self(130);
     pub const PREP: Self = Self(131);
     pub const PERR: Self = Self(132);
@@ -64,6 +65,7 @@ impl IeType {
     ie_type_basic_const!(RM_ENABLED_CAPABILITIES);
     ie_type_basic_const!(BSS_MAX_IDLE_PERIOD);
     ie_type_basic_const!(MESH_PEERING_MGMT);
+    ie_type_basic_const!(EXT_CAPABILITIES);
     ie_type_basic_const!(PREQ);
     ie_type_basic_const!(PREP);
     ie_type_basic_const!(PERR);

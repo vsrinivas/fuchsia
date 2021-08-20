@@ -145,6 +145,19 @@ pub fn parse_mpm_close<B: ByteSlice>(raw_body: B) -> FrameParseResult<MpmCloseVi
     Ok(MpmCloseView { header, peer_link_id, reason_code, pmk })
 }
 
+pub fn parse_ext_capabilities<B: ByteSlice>(raw_body: B) -> ExtCapabilitiesView<B> {
+    let mut reader = BufferReader::new(raw_body);
+    let ext_caps_octet_1 = reader.read();
+    let ext_caps_octet_2 = reader.read();
+    let ext_caps_octet_3 = reader.read();
+    ExtCapabilitiesView {
+        ext_caps_octet_1,
+        ext_caps_octet_2,
+        ext_caps_octet_3,
+        remaining: reader.into_remaining(),
+    }
+}
+
 pub fn parse_preq<B: ByteSlice>(raw_body: B) -> FrameParseResult<PreqView<B>> {
     let mut reader = BufferReader::new(raw_body);
     let header = reader
@@ -690,6 +703,24 @@ mod tests {
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
         let err = parse_mpm_close(&data[..]).err().expect("expected Err");
         assert_eq!("Extra bytes at the end of the MPM Close element", err.debug_message());
+    }
+
+    #[test]
+    fn ext_capabilities_ok() {
+        let data = [0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x40];
+        let ext_capabilities = parse_ext_capabilities(&data[..]);
+        assert_variant!(ext_capabilities.ext_caps_octet_1, Some(caps) => {
+            assert!(caps.extended_channel_switching());
+            assert!(!caps.psmp_capability());
+        });
+        assert_variant!(ext_capabilities.ext_caps_octet_2, Some(caps) => {
+            assert!(!caps.civic_location());
+        });
+        assert_variant!(ext_capabilities.ext_caps_octet_3, Some(caps) => {
+            assert!(caps.bss_transition());
+            assert!(!caps.ac_station_count());
+        });
+        assert_eq!(ext_capabilities.remaining, &[0x00, 0x00, 0x00, 0x00, 0x40]);
     }
 
     #[test]
