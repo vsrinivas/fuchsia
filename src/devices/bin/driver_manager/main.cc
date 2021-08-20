@@ -271,7 +271,8 @@ int main(int argc, char** argv) {
 
   SuspendCallback suspend_callback = [&driver_manager_args](zx_status_t status) {
     if (status != ZX_OK) {
-      LOGF(ERROR, "Error suspending devices while stopping the component:%s",
+      // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
+      LOGF(WARNING, "Error suspending devices while stopping the component:%s",
            zx_status_get_string(status));
     }
     if (!driver_manager_args.no_exit_after_suspend) {
