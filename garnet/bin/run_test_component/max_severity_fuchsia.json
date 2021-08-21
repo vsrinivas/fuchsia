@@ -15,10 +15,6 @@
         {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/magma_intel_gen_nonhardware_tests#meta/msd_intel_gen_nonhardware_tests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-stack-ncp-ver-query-mock-component.cmx"
         }
     ]
 }

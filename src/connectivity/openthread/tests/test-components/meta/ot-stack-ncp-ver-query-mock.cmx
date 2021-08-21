@@ -3,12 +3,12 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.lowpan.spinel.Device": [
-                    "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-stack.cmx",
+                    "fuchsia-pkg://fuchsia.com/ot-stack-component-tests#meta/ot-stack.cmx",
                     "-t",
                     "class/ot-radio/000"
                 ],
                 "fuchsia.openthread.devmgr.IsolatedDevmgr": [
-                    "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-devmgr-component-integration.cmx"
+                    "fuchsia-pkg://fuchsia.com/ot-stack-component-tests#meta/ot-devmgr-component-integration.cmx"
                 ]
             }
         }

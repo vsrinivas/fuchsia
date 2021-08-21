@@ -152,11 +152,19 @@ fuchsia_test_package("ot-radio-component-tests") {
   package_name = "ot-radio-component-tests"
   test_components = [
     ":ot-radio-ncp-ver-query-mock-component",
-    ":ot-stack-ncp-ver-query-mock-component",
-
     # fxbug.dev/66957: This test is broken.
     # Prior to fxrev.dev/465714 this test wasn't really passing,
     # it was actually running ot_stack_ncp_ver_query_mock.
     #":ot-stack-soft-reset-mock-component",
   ]
+}
+
+fuchsia_test_package("ot-stack-component-tests") {
+  package_name = "ot-stack-component-tests"
+  test_components = [ ":ot-stack-ncp-ver-query-mock-component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
