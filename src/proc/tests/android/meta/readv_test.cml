@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/readv_test",
-        args: [ "--gunit_filter=:-*.TruncatedAtMax" ],
+        args: [ "--gunit_filter=-*.TruncatedAtMax" ],
     },
 }

@@ -536,7 +536,7 @@ impl MemoryManager {
         F: FnMut(&[u8]) -> Result<Option<()>, Errno>,
     {
         for buffer in data {
-            if buffer.length == 0 {
+            if buffer.address.is_null() && buffer.length == 0 {
                 continue;
             }
             let mut bytes = vec![0; buffer.length];
@@ -554,7 +554,7 @@ impl MemoryManager {
         }
         let mut offset = 0;
         for buffer in data {
-            if buffer.length == 0 {
+            if buffer.address.is_null() && buffer.length == 0 {
                 continue;
             }
             let end = std::cmp::min(offset + buffer.length, bytes.len());
@@ -588,7 +588,7 @@ impl MemoryManager {
         F: FnMut(&mut [u8]) -> Result<&[u8], Errno>,
     {
         for buffer in data {
-            if buffer.length == 0 {
+            if buffer.address.is_null() && buffer.length == 0 {
                 continue;
             }
             let mut bytes = vec![0; buffer.length];
@@ -607,7 +607,7 @@ impl MemoryManager {
         }
         let mut offset = 0;
         for buffer in data {
-            if buffer.length == 0 {
+            if buffer.address.is_null() && buffer.length == 0 {
                 continue;
             }
             let end = std::cmp::min(offset + buffer.length, bytes.len());
