@@ -115,20 +115,19 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
   }
   session_running_ = true;
   fpromise::bridge<DeviceInfo, zx_status_t> bridge;
-  fidl::Result result =
-      device_->GetInfo([res = std::move(bridge.completer)](
-                           fidl::WireResponse<netdev::Device::GetInfo>* response) mutable {
-        zx::status info = DeviceInfo::Create(response->info);
-        if (info.is_error()) {
-          res.complete_error(info.status_value());
-        } else {
-          res.complete_ok(std::move(info.value()));
-        }
-      });
-  if (!result.ok()) {
-    callback(result.status());
-    return;
-  }
+  device_->GetInfo([res = std::move(bridge.completer)](
+                       fidl::WireUnownedResult<netdev::Device::GetInfo>&& result) mutable {
+    if (!result.ok()) {
+      res.complete_error(result.status());
+      return;
+    }
+    zx::status info = DeviceInfo::Create(result->info);
+    if (info.is_error()) {
+      res.complete_error(info.status_value());
+    } else {
+      res.complete_ok(std::move(info.value()));
+    }
+  });
 
   auto prepare_session = [this, cfg = std::move(config_factory)](
                              DeviceInfo& info) -> fpromise::result<void, zx_status_t> {
@@ -147,17 +146,21 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
     if (session_info.is_error()) {
       return fpromise::make_error_promise(session_info.error_value());
     }
-    fidl::Result result = device_->OpenSession(
+    device_->OpenSession(
         fidl::StringView::FromExternal(name), session_info.value(),
         [this, res = std::move(bridge.completer)](
-            fidl::WireResponse<netdev::Device::OpenSession>* response) mutable {
-          netdev::wire::DeviceOpenSessionResult& result = response->result;
-          switch (result.which()) {
+            fidl::WireUnownedResult<netdev::Device::OpenSession>&& result) mutable {
+          if (!result.ok()) {
+            res.complete_error(result.status());
+            return;
+          }
+          netdev::wire::DeviceOpenSessionResult& open_result = result->result;
+          switch (open_result.which()) {
             case netdev::wire::DeviceOpenSessionResult::Tag::kErr:
-              res.complete_error(result.err());
+              res.complete_error(open_result.err());
               break;
             case netdev::wire::DeviceOpenSessionResult::Tag::kResponse:
-              netdev::wire::DeviceOpenSessionResponse& response = result.mutable_response();
+              netdev::wire::DeviceOpenSessionResponse& response = open_result.mutable_response();
               session_.Bind(std::move(response.session), dispatcher_, this);
               rx_fifo_ = std::move(response.fifos.rx);
               tx_fifo_ = std::move(response.fifos.tx);
@@ -165,9 +168,6 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
               break;
           }
         });
-    if (!result.ok()) {
-      return fpromise::make_error_promise(result.status());
-    }
     return bridge.consumer.promise();
   };
   auto prepare_descriptors = [this]() -> fpromise::result<void, zx_status_t> {
@@ -265,22 +265,23 @@ void NetworkDeviceClient::AttachPort(uint8_t port_id,
       return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
     }
     fpromise::bridge<void, zx_status_t> bridge;
-    fidl::Result result = session_->Attach(
-        port_id, fidl::VectorView<netdev::wire::FrameType>::FromExternal(rx_frame_types),
-        [completer = std::move(bridge.completer)](
-            fidl::WireResponse<netdev::Session::Attach>* response) mutable {
-          switch (response->result.which()) {
-            case netdev::wire::SessionAttachResult::Tag::kResponse:
-              completer.complete_ok();
-              break;
-            case netdev::wire::SessionAttachResult::Tag::kErr:
-              completer.complete_error(response->result.err());
-              break;
-          }
-        });
-    if (!result.ok()) {
-      return fpromise::make_error_promise(result.status());
-    }
+    session_->Attach(port_id,
+                     fidl::VectorView<netdev::wire::FrameType>::FromExternal(rx_frame_types),
+                     [completer = std::move(bridge.completer)](
+                         fidl::WireUnownedResult<netdev::Session::Attach>&& result) mutable {
+                       if (!result.ok()) {
+                         completer.complete_error(result.status());
+                         return;
+                       }
+                       switch (result->result.which()) {
+                         case netdev::wire::SessionAttachResult::Tag::kResponse:
+                           completer.complete_ok();
+                           break;
+                         case netdev::wire::SessionAttachResult::Tag::kErr:
+                           completer.complete_error(result->result.err());
+                           break;
+                       }
+                     });
     return bridge.consumer.promise();
   }();
   ScheduleCallbackPromise(std::move(promise), std::move(callback));
@@ -292,21 +293,22 @@ void NetworkDeviceClient::DetachPort(uint8_t port_id, ErrorCallback callback) {
       return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
     }
     fpromise::bridge<void, zx_status_t> bridge;
-    fidl::Result result = session_->Detach(
-        port_id, [completer = std::move(bridge.completer)](
-                     fidl::WireResponse<netdev::Session::Detach>* response) mutable {
-          switch (response->result.which()) {
-            case netdev::wire::SessionDetachResult::Tag::kResponse:
-              completer.complete_ok();
-              break;
-            case netdev::wire::SessionDetachResult::Tag::kErr:
-              completer.complete_error(response->result.err());
-              break;
-          }
-        });
-    if (!result.ok()) {
-      return fpromise::make_error_promise(result.status());
-    }
+    session_->Detach(port_id,
+                     [completer = std::move(bridge.completer)](
+                         fidl::WireUnownedResult<netdev::Session::Detach>&& result) mutable {
+                       if (!result.ok()) {
+                         completer.complete_error(result.status());
+                         return;
+                       }
+                       switch (result->result.which()) {
+                         case netdev::wire::SessionDetachResult::Tag::kResponse:
+                           completer.complete_ok();
+                           break;
+                         case netdev::wire::SessionDetachResult::Tag::kErr:
+                           completer.complete_error(result->result.err());
+                           break;
+                       }
+                     });
     return bridge.consumer.promise();
   }();
   ScheduleCallbackPromise(std::move(promise), std::move(callback));
@@ -893,11 +895,15 @@ size_t NetworkDeviceClient::BufferRegion::PadTo(size_t size) {
 }
 
 void NetworkDeviceClient::StatusWatchHandle::Watch() {
-  watcher_->WatchStatus([this](fidl::WireResponse<netdev::StatusWatcher::WatchStatus>* response) {
-    callback_(std::move(response->port_status));
-    // Watch again, we only stop watching when StatusWatchHandle is destroyed.
-    Watch();
-  });
+  watcher_->WatchStatus(
+      [this](fidl::WireUnownedResult<netdev::StatusWatcher::WatchStatus>&& result) {
+        if (!result.ok()) {
+          return;
+        }
+        callback_(result->port_status);
+        // Watch again, we only stop watching when StatusWatchHandle is destroyed.
+        Watch();
+      });
 }
 
 }  // namespace client
