@@ -49,6 +49,7 @@ use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use test_call_manager::TestCallManager as HfpFacade;
+use test_rfcomm_client::RfcommManager as RfcommFacade;
 
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
@@ -255,6 +256,7 @@ impl Sl4f {
                 "netstack_facade" => NetstackFacade::default(),
                 "ram_facade" => RamFacade::new(),
                 "repo_facade" => RepositoryManagerFacade::new(),
+                "rfcomm_facade" => RfcommFacade::new()?,
                 "paver" => PaverFacade::new(),
                 "profile_server_facade" => ProfileServerFacade::new(),
                 "proxy_facade" => ProxyFacade::new(),

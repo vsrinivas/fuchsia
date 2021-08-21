@@ -74,7 +74,8 @@ impl ProfileServerFacade {
             }
             None => {
                 fx_log_info!(tag: &with_line!(tag), "Setting new profile server proxy");
-                let profile_server_proxy = component::client::connect_to_protocol::<ProfileMarker>();
+                let profile_server_proxy =
+                    component::client::connect_to_protocol::<ProfileMarker>();
                 if let Err(err) = profile_server_proxy {
                     fx_err_and_bail!(
                         &with_line!(tag),

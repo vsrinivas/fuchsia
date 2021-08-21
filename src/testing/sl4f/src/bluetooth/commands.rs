@@ -5,13 +5,17 @@
 use crate::server::Facade;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
+use bt_rfcomm::ServerChannel;
+use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_hfp::{CallDirection, CallState, NetworkInformation, SignalStrength};
 use fidl_fuchsia_bluetooth_le::ScanFilter;
 use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
 use parking_lot::RwLock;
 use serde_json::{from_value, to_value, Value};
+use std::convert::TryFrom;
 use test_call_manager::TestCallManager as HfpFacade;
+use test_rfcomm_client::RfcommManager as RfcommFacade;
 
 // Bluetooth-related functionality
 use crate::bluetooth::avdtp_facade::AvdtpFacade;
@@ -939,6 +943,57 @@ impl Facade for HfpFacade {
                 Ok(to_value(())?)
             }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),
+        }
+    }
+}
+
+#[async_trait(?Send)]
+impl Facade for RfcommFacade {
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "RfcommInit" => {
+                let result = self.advertise()?;
+                Ok(to_value(result)?)
+            }
+            "RfcommRemoveService" => {
+                let result = self.clear_services();
+                Ok(to_value(result)?)
+            }
+            "DisconnectSession" => {
+                let id = PeerId { value: parse_arg!(args, as_u64, "peer_id")? };
+                let result = self.close_session(id.into())?;
+                Ok(to_value(result)?)
+            }
+            "ConnectRfcommChannel" => {
+                let id = PeerId { value: parse_arg!(args, as_u64, "peer_id")? };
+                let channel_number = parse_arg!(args, as_u64, "server_channel_number")?;
+                let channel_number = ServerChannel::try_from(u8::try_from(channel_number)?)?;
+                let result = self.outgoing_rfcomm_channel(id.into(), channel_number).await?;
+                Ok(to_value(result)?)
+            }
+            "DisconnectRfcommChannel" => {
+                let id = PeerId { value: parse_arg!(args, as_u64, "peer_id")? };
+                let channel_number = parse_arg!(args, as_u64, "server_channel_number")?;
+                let channel_number = ServerChannel::try_from(u8::try_from(channel_number)?)?;
+                let result = self.close_rfcomm_channel(id.into(), channel_number)?;
+                Ok(to_value(result)?)
+            }
+            "SendRemoteLineStatus" => {
+                let id = PeerId { value: parse_arg!(args, as_u64, "peer_id")? };
+                let channel_number = parse_arg!(args, as_u64, "server_channel_number")?;
+                let channel_number = ServerChannel::try_from(u8::try_from(channel_number)?)?;
+                let result = self.send_rls(id.into(), channel_number)?;
+                Ok(to_value(result)?)
+            }
+            "RfcommWrite" => {
+                let id = PeerId { value: parse_arg!(args, as_u64, "peer_id")? };
+                let channel_number = parse_arg!(args, as_u64, "server_channel_number")?;
+                let channel_number = ServerChannel::try_from(u8::try_from(channel_number)?)?;
+                let data = parse_arg!(args, as_str, "data")?.to_string();
+                let result = self.send_user_data(id.into(), channel_number, data.into_bytes())?;
+                Ok(to_value(result)?)
+            }
+            _ => bail!("Invalid RFCOMM method: {:?}", method),
         }
     }
 }

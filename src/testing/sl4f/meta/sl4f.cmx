@@ -36,6 +36,7 @@
             "fuchsia.bluetooth.gatt.Server",
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.bluetooth.rfcomm.test.RfcommTest",
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.bluetooth.sys.Configuration",
             "fuchsia.bluetooth.sys.HostWatcher",
