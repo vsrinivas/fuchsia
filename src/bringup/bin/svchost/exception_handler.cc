@@ -85,12 +85,13 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
   exception_info.thread_koid = info.tid;
   exception_info.type = static_cast<fuchsia_exception::wire::ExceptionType>(info.type);
 
-  if (const auto result = connection_->OnException(
-          std::move(exception), exception_info,
-          [](fidl::WireResponse<fuchsia_exception::Handler::OnException>* response) {});
-      result.status() != ZX_OK) {
-    LogError("Failed to pass exception to handler", info, result.status());
-  }
+  connection_->OnException(
+      std::move(exception), exception_info,
+      [info](fidl::WireUnownedResult<fuchsia_exception::Handler::OnException>&& result) {
+        if (!result.ok()) {
+          LogError("Failed to pass exception to handler", info, result.status());
+        }
+      });
 }
 
 bool ExceptionHandler::ConnectedToServer() const { return !server_endpoint_.is_valid(); }
