@@ -151,6 +151,9 @@ executable("server_operation_test") {
     "//third_party/grpc:grpc++",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
+
+  # TODO: delete the below and fix compilation errors.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
 
 fuchsia_test_component("client_operation_test_cmp") {

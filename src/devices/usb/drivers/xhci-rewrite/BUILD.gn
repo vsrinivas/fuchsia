@@ -153,6 +153,9 @@ test("xhci-core-unittest-bin") {
 
   # TODO(fxbug.dev/54318): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  # TODO: delete the below and fix compiler errors.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
 
 test("xhci-event-ring-unittest-bin") {

@@ -102,6 +102,9 @@ test("fvm-driver-unittests") {
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO: delete the below and fix compiler errors.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
 
 fuchsia_unittest_package("fvm-driver-unittests-package") {

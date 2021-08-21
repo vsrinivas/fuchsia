@@ -75,6 +75,9 @@ source_set("shared") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  # TODO: delete the below and fix compiler errors.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
 
 driver_module("usb-audio-driver") {
