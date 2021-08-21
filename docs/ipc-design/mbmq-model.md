@@ -294,12 +294,12 @@ while (true) {                          | while (true) {
 *   `zx_object_wait_async_mbo(handle, callersref, signals, options)`
 
     This is a replacement for `zx_object_wait_async()`.  Like that
-    syscall, it waits until one or more of the given signals is
-    asserted on the object specified by `handle`.  The difference is
-    that rather than returning the notification by sending a port
-    packet to a port, the new syscall returns the notification as a
-    reply on the given MBO.  The notification is returned as if by an
-    invocation of `zx_cmd_send_reply()`, enqueuing the MBO onto its
+    syscall, it sends a notification when one or more of the given
+    signals is asserted on the object specified by `handle`.  The
+    difference is that rather than sending the notification by sending
+    a port packet to a port, the new syscall sends the notification as
+    a reply on the given MBO.  The notification is returned as if by
+    an invocation of `zx_cmd_send_reply()`, enqueuing the MBO onto its
     associated reply queue.
 
     This means that waiting for a signal on an object is like making a
