@@ -284,6 +284,8 @@ source_set("report_id") {
 
 source_set("report_util") {
   sources = [
+    "dart_module_parser.cc",
+    "dart_module_parser.h",
     "report_util.cc",
     "report_util.h",
   ]
@@ -303,6 +305,7 @@ source_set("report_util") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 }
