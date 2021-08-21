@@ -124,6 +124,20 @@ executable("crash_server_unittest_exe") {
   ]
 }
 
+executable("dart_module_parser_unittest_exe") {
+  testonly = true
+
+  sources = [ "dart_module_parser_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:report_util",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("default_annotations_unittest_exe") {
   testonly = true
 
@@ -342,6 +356,14 @@ fuchsia_component("crash_server_unittest") {
   deps = [ ":crash_server_unittest_exe" ]
 }
 
+fuchsia_component("dart_module_parser_unittest") {
+  testonly = true
+
+  manifest = "meta/dart_module_parser_unittest.cml"
+
+  deps = [ ":dart_module_parser_unittest_exe" ]
+}
+
 fuchsia_component("default_annotations_unittest") {
   testonly = true
 
@@ -424,6 +446,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":crash_register_unittest",
     ":crash_reporter_unittest",
     ":crash_server_unittest",
+    ":dart_module_parser_unittest",
     ":default_annotations_unittest",
     ":reporting_policy_watcher_unittest",
     ":inspect_manager_unittest",

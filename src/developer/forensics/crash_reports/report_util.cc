@@ -12,8 +12,10 @@
 #include <string>
 
 #include "src/developer/forensics/crash_reports/constants.h"
+#include "src/developer/forensics/crash_reports/dart_module_parser.h"
 #include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/crash_reports/report.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -81,6 +83,7 @@ const char kDartTypeValue[] = "DartError";
 const char kDartExceptionMessageKey[] = "error_message";
 const char kDartExceptionRuntimeTypeKey[] = "error_runtime_type";
 const char kDartExceptionStackTraceKey[] = "DartError";
+const char kDartModulesKey[] = "dart_modules";
 const char kReportTimeMillis[] = "reportTimeMillis";
 const char kIsFatalKey[] = "isFatal";
 const char kProcessNameKey[] = "crash.process.name";
@@ -89,6 +92,22 @@ const char kThreadNameKey[] = "crash.thread.name";
 // Extra keys that the crash server does *not* have a dependency on.
 const char kProcessKoidKey[] = "crash.process.koid";
 const char kThreadKoidKey[] = "crash.thread.koid";
+
+std::pair<bool, std::optional<std::string>> ParseDartModules(
+    const fuchsia::mem::Buffer& stack_trace) {
+  if (!stack_trace.vmo.is_valid()) {
+    return {false, std::nullopt};
+  }
+
+  std::string text_stack_trace(stack_trace.size, '\0');
+
+  if (!fsl::StringFromVmo(stack_trace, &text_stack_trace)) {
+    FX_LOGS(ERROR) << "Failed to read Dart stack trace vmo";
+    return {false, std::nullopt};
+  }
+
+  return ParseDartModulesFromStackTrace(text_stack_trace);
+}
 
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                       AnnotationMap* annotations,
@@ -131,6 +150,16 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
       annotations->Set(kDartExceptionMessageKey, dart_report.exception_message());
     } else {
       FX_LOGS(WARNING) << "no Dart exception message to attach to Crashpad report";
+    }
+
+    if (dart_report.has_exception_stack_trace()) {
+      if (const auto [is_unsymbolicated, dart_modules] =
+              ParseDartModules(dart_report.exception_stack_trace());
+          dart_modules.has_value()) {
+        annotations->Set(kDartModulesKey, *dart_modules);
+      } else if (is_unsymbolicated) {
+        FX_LOGS(WARNING) << "Failed to parse Dart modules from stack trace";
+      }
     }
   }
 
@@ -207,8 +236,8 @@ void AddCrashServerAnnotations(const std::string& program_name,
       .Set("channel", product.channel);
 
   // Program.
-  // TODO(fxbug.dev/57502): for historical reasons, we used ptype to benefit from Chrome's "Process
-  // type" handling in the crash server UI. Remove once the UI can fallback on "Program".
+  // TODO(fxbug.dev/57502): for historical reasons, we used ptype to benefit from Chrome's
+  // "Process type" handling in the crash server UI. Remove once the UI can fallback on "Program".
   annotations->Set("ptype", program_name);
   annotations->Set("program", program_name);
 
