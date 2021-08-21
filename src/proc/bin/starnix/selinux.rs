@@ -9,7 +9,8 @@ struct SeLinuxFs;
 impl FileSystemOps for SeLinuxFs {}
 impl SeLinuxFs {
     fn new() -> FileSystemHandle {
-        let fs = FileSystem::new(SeLinuxFs, FsNode::new_root(ROMemoryDirectory), None, true);
+        let fs = FileSystem::new_with_permanent_entries(SeLinuxFs);
+        fs.set_root(ROMemoryDirectory);
         fs
     }
 }

@@ -149,7 +149,7 @@ pub trait FsNodeOps: Send + Sync {
 
 impl FsNode {
     pub fn new_root(ops: impl FsNodeOps + 'static) -> FsNode {
-        Self::new_internal(Box::new(ops), Weak::new(), 0, FileMode::IFDIR | FileMode::ALLOW_ALL)
+        Self::new_internal(Box::new(ops), Weak::new(), 1, FileMode::IFDIR | FileMode::ALLOW_ALL)
     }
 
     pub fn new(

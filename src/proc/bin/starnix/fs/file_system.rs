@@ -53,29 +53,40 @@ pub struct FileSystem {
 }
 
 impl FileSystem {
-    /// Create a new file system.
-    pub fn new(
+    /// Create a new filesystem.
+    pub fn new(ops: impl FileSystemOps + 'static) -> FileSystemHandle {
+        Self::new_internal(ops, false)
+    }
+
+    /// Create a new filesystem with the permanent_entries flag set.
+    pub fn new_with_permanent_entries(ops: impl FileSystemOps + 'static) -> FileSystemHandle {
+        Self::new_internal(ops, true)
+    }
+
+    /// Create a new filesystem and call set_root in one step.
+    pub fn new_with_root(
         ops: impl FileSystemOps + 'static,
-        mut root_node: FsNode,
-        root_inode_num: Option<ino_t>,
-        permanent_entries: bool,
+        root: impl FsNodeOps + 'static,
     ) -> FileSystemHandle {
-        // TODO(tbodt): I would like to use Arc::new_cyclic
-        let fs = Self::new_internal(ops, permanent_entries);
-        root_node.set_fs(&fs);
-        root_node.inode_num = root_inode_num.unwrap_or(fs.next_inode_num());
-        let root_node = Arc::new(root_node);
-        fs.nodes.lock().insert(root_node.inode_num, Arc::downgrade(&root_node));
-        let root = DirEntry::new(root_node, None, FsString::new());
-        if fs.root.set(root).is_err() {
-            panic!("there's no way fs.root could have been set");
-        }
+        let fs = Self::new_with_permanent_entries(ops);
+        fs.set_root(root);
         fs
     }
 
-    /// Create a file system with no root directory.
-    pub fn new_no_root(ops: impl FileSystemOps + 'static) -> FileSystemHandle {
-        Self::new_internal(ops, false)
+    pub fn set_root(self: &FileSystemHandle, root: impl FsNodeOps + 'static) {
+        self.set_root_node(FsNode::new_root(root));
+    }
+
+    /// Set up the root of the filesystem. Must not be called more than once.
+    pub fn set_root_node(self: &FileSystemHandle, mut root: FsNode) {
+        if root.inode_num == 0 {
+            root.inode_num = self.next_inode_num();
+        }
+        root.set_fs(self);
+        let root_node = Arc::new(root);
+        self.nodes.lock().insert(root_node.inode_num, Arc::downgrade(&root_node));
+        let root = DirEntry::new(root_node, None, FsString::new());
+        assert!(self.root.set(root).is_ok(), "FileSystem::set_root can't be called more than once");
     }
 
     fn new_internal(
@@ -84,7 +95,7 @@ impl FileSystem {
     ) -> FileSystemHandle {
         Arc::new(FileSystem {
             root: OnceCell::new(),
-            next_inode: AtomicU64::new(0),
+            next_inode: AtomicU64::new(1),
             ops: Box::new(ops),
             permanent_entries,
             rename_mutex: Mutex::new(()),

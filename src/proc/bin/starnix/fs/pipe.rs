@@ -272,7 +272,7 @@ pub fn new_pipe(kernel: &Kernel) -> Result<(FileHandle, FileHandle), Errno> {
 struct PipeFs;
 impl FileSystemOps for PipeFs {}
 fn pipe_fs(kernel: &Kernel) -> &FileSystemHandle {
-    kernel.pipe_fs.get_or_init(|| FileSystem::new_no_root(PipeFs))
+    kernel.pipe_fs.get_or_init(|| FileSystem::new(PipeFs))
 }
 
 struct PipeFileObject {

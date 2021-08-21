@@ -12,7 +12,8 @@ impl FileSystemOps for SysFs {}
 
 impl SysFs {
     fn new() -> Result<FileSystemHandle, Errno> {
-        let fs = FileSystem::new(SysFs, FsNode::new_root(ROMemoryDirectory), None, true);
+        let fs = FileSystem::new_with_permanent_entries(SysFs);
+        fs.set_root(ROMemoryDirectory);
         let root = fs.root();
         let dir_fs = root.add_node_ops(b"fs", mode!(IFDIR, 0o755), ROMemoryDirectory)?;
         let _fs_selinux = dir_fs.add_node_ops(b"selinux", mode!(IFDIR, 0755), ROMemoryDirectory)?;

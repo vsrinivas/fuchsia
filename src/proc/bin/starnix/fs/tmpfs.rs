@@ -30,8 +30,9 @@ impl FileSystemOps for Arc<TmpFs> {
 
 impl TmpFs {
     pub fn new() -> FileSystemHandle {
-        let ops = Arc::new(TmpFs(()));
-        FileSystem::new(ops, FsNode::new_root(TmpfsDirectory), None, true)
+        let fs = FileSystem::new_with_permanent_entries(Arc::new(TmpFs(())));
+        fs.set_root(TmpfsDirectory);
+        fs
     }
 }
 

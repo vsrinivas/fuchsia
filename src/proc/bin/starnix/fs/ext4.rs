@@ -39,12 +39,11 @@ impl ExtFilesystem {
         let parser = ExtParser::new(AndroidSparseReader::new(vmo_reader).map_err(|_| errno!(EIO))?);
         let fs = Arc::new(Self { parser });
         let ops = ExtDirectory { inner: ExtNode::new(fs.clone(), ext_structs::ROOT_INODE_NUM)? };
-        Ok(FileSystem::new(
-            fs,
-            FsNode::new_root(ops),
-            Some(ext_structs::ROOT_INODE_NUM as ino_t),
-            false,
-        ))
+        let mut root = FsNode::new_root(ops);
+        root.inode_num = ext_structs::ROOT_INODE_NUM as ino_t;
+        let fs = FileSystem::new(fs);
+        fs.set_root_node(root);
+        Ok(fs)
     }
 }
 
