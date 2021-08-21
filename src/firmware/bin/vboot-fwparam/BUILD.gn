@@ -13,20 +13,13 @@ group("tests") {
 
 rustc_binary("bin") {
   output_name = "vboot-fwparam"
-  force_opt = "z"
   with_unit_tests = true
 
-  # TODO(fxbug.dev/64097): extract to a template
-  # This must always be small (even in debug builds) since it is part of bootfs.
-  #
-  # The add/remove/add ensures we get the configuration without producing errors for builds which
-  # enable ThinLTO themselves.
-  configs += [ "//build/config/lto:thinlto" ]
-  configs -= [ "//build/config/lto:thinlto" ]
-  configs += [ "//build/config/lto:thinlto" ]
+  configs += [ "//build/config/rust:bootfs" ]
 
-  # we can't dynamically link std when we're in the zbi
+  # Can't dynamically link libstd and libtest for ZBI binaries
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+
   configs -= [ "//build/config/rust:allow_unused_results" ]
 
   deps = [

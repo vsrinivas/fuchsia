@@ -100,20 +100,12 @@ rustc_library("lib") {
 rustc_binary("bin") {
   output_name = "iquery"
   edition = "2018"
-  force_opt = "z"
   source_root = "src/main.rs"
 
   if (is_fuchsia) {
-    # TODO(fxbug.dev/64097): extract to a template
-    # iquery must always be small (even in debug builds) since it is part of bootfs.
-    #
-    # The add/remove/add ensures we get the configuration without producing errors for builds which
-    # enable ThinLTO themselves.
-    configs += [ "//build/config/lto:thinlto" ]
-    configs -= [ "//build/config/lto:thinlto" ]
-    configs += [ "//build/config/lto:thinlto" ]
+    configs += [ "//build/config/rust:bootfs" ]
 
-    # we can't dynamically link std when we're in the zbi
+    # Can't dynamically link libstd and libtest for ZBI binaries
     configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
   }
 

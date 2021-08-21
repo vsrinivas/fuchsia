@@ -94,6 +94,10 @@ rustc_binary("bin") {
     "//src/sys/lib/stdout-to-debuglog/rust",
     "//third_party/rust_crates:anyhow",
   ]
+
+  configs += [ "//build/config/rust:bootfs" ]
+
+  # Can't dynamically link libstd and libtest for ZBI binaries
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 }
 
