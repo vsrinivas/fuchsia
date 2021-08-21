@@ -1708,7 +1708,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/2a822c5626ab1ed40366758e4740b4f0ea40237d/config.gni#12)
+From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/a38aef9142ace942a8bf166020c569f4cda0f8d3/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1717,7 +1717,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"69"`
 
-From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/2a822c5626ab1ed40366758e4740b4f0ea40237d/version.gni#9)
+From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/a38aef9142ace942a8bf166020c569f4cda0f8d3/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1725,7 +1725,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/2a822c5626ab1ed40366758e4740b4f0ea40237d/config.gni#8)
+From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/a38aef9142ace942a8bf166020c569f4cda0f8d3/config.gni#8)
 
 ### include_fvm_blob_sparse
 Include fvm.blob.sparse.blk image into the build if set to true
