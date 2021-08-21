@@ -50,82 +50,66 @@ resource("semantic_tree_data_resource") {
 }
 
 fuchsia_unittest_component("annotation-tests-component") {
-  manifest = "meta/annotation_tests.cmx"
   deps = [ "annotation/tests" ]
 }
 
 fuchsia_unittest_component("configuration-tests-component") {
-  manifest = "meta/configuration_tests.cmx"
   deps = [ "configuration/tests" ]
 }
 
 fuchsia_unittest_component("focus-chain-manager-tests-component") {
-  manifest = "meta/focus_chain_manager_tests.cmx"
   deps = [ "focus_chain/tests" ]
 }
 
 fuchsia_unittest_component("gesture-arena-tests-component") {
-  manifest = "meta/gesture_arena_tests.cmx"
   deps = [ "gesture_manager/arena/tests" ]
 }
 
 fuchsia_unittest_component("gesture-recognizers-tests-component") {
-  manifest = "meta/gesture_recognizers_tests.cmx"
   deps = [ "gesture_manager/recognizers/tests" ]
 }
 
 fuchsia_unittest_component("gesture-manager-tests-component") {
-  manifest = "meta/gesture_manager_tests.cmx"
   deps = [ "gesture_manager/tests" ]
 }
 
 fuchsia_unittest_component("magnifier-tests-component") {
-  manifest = "meta/magnifier_tests.cmx"
   deps = [ "magnifier/tests" ]
 }
 
 fuchsia_unittest_component("focus-manager-tests-component") {
-  manifest = "meta/focus_manager_tests.cmx"
   deps = [ "screen_reader/focus/tests" ]
 }
 
 fuchsia_unittest_component("i18n-tests-component") {
-  manifest = "meta/i18n_tests.cmx"
   deps = [ "screen_reader/i18n/tests" ]
 }
 
 fuchsia_unittest_component("screen-reader-tests-component") {
-  manifest = "meta/screen_reader_tests.cmx"
   deps = [ "screen_reader/tests" ]
 }
 
 fuchsia_unittest_component("screen-reader-util-tests-component") {
-  manifest = "meta/screen_reader_util_tests.cmx"
   deps = [ "screen_reader/util/tests" ]
 }
 
 fuchsia_unittest_component("semantics-tests-component") {
-  manifest = "meta/semantics_tests.cmx"
   deps = [ "semantics/tests:unit" ]
 }
 
 fuchsia_unittest_component("semantics-util-tests-component") {
-  manifest = "meta/semantics_util_tests.cmx"
   deps = [ "semantics/util/tests" ]
 }
 
 fuchsia_unittest_component("tts-manager-tests-component") {
-  manifest = "meta/tts_manager_tests.cmx"
   deps = [ "tts/tests" ]
 }
 
 fuchsia_unittest_component("util-tests-component") {
-  manifest = "meta/util_tests.cmx"
   deps = [ "util/tests" ]
 }
 
 fuchsia_unittest_component("view-tests-component") {
-  manifest = "meta/view_tests.cmx"
   deps = [ "view/tests" ]
 }
 
