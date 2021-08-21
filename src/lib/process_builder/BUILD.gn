@@ -43,7 +43,7 @@ rustc_library("process_builder") {
   test_deps = [
     ":test-util-fidl-rustc",
     "//src/lib/fdio/rust:fdio",
-    "//src/lib/storage/pseudo-fs",
+    "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:matches",
   ]
 

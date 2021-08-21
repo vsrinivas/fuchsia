@@ -993,12 +993,12 @@ mod tests {
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
         fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs::{
-            directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
-        },
         matches::assert_matches,
-        std::iter,
         std::mem,
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::vmo::read_only_const, pseudo_directory,
+        },
         zerocopy::LayoutVerified,
     };
 
@@ -1393,37 +1393,30 @@ mod tests {
 
         let test_content1_bytes = test_content1.clone().into_bytes();
         let (dir1_server, dir1_client) = zx::Channel::create()?;
-        fasync::Task::spawn(async move {
-            let mut dir1 = pseudo_directory! {
-                "test_file1" => read_only(|| Ok(test_content1_bytes.clone())),
-            };
-            dir1.open(
-                fio::OPEN_RIGHT_READABLE,
-                fio::MODE_TYPE_DIRECTORY,
-                &mut iter::empty(),
-                ServerEnd::new(dir1_server),
-            );
-            dir1.await;
-            panic!("Psuedo dir stopped serving!");
-        })
-        .detach();
+        let dir_scope = ExecutionScope::new();
+        let dir1 = pseudo_directory! {
+            "test_file1" => read_only_const(test_content1_bytes.as_ref()),
+        };
+        dir1.open(
+            dir_scope.clone(),
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            vfs::path::Path::dot(),
+            ServerEnd::new(dir1_server),
+        );
 
         let test_content2_bytes = test_content2.clone().into_bytes();
         let (dir2_server, dir2_client) = zx::Channel::create()?;
-        fasync::Task::spawn(async move {
-            let mut dir2 = pseudo_directory! {
-                "test_file2" => read_only(|| Ok(test_content2_bytes.clone())),
-            };
-            dir2.open(
-                fio::OPEN_RIGHT_READABLE,
-                fio::MODE_TYPE_DIRECTORY,
-                &mut iter::empty(),
-                ServerEnd::new(dir2_server),
-            );
-            dir2.await;
-            panic!("Psuedo dir stopped serving!");
-        })
-        .detach();
+        let dir2 = pseudo_directory! {
+            "test_file2" => read_only_const(test_content2_bytes.as_ref()),
+        };
+        dir2.open(
+            dir_scope.clone(),
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            vfs::path::Path::dot(),
+            ServerEnd::new(dir2_server),
+        );
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_namespace_entries(vec![
