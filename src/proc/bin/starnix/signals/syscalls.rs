@@ -350,7 +350,7 @@ pub fn sys_waitid(
     if options == 0 {
         return error!(EINVAL);
     }
-    if options & !(WSTOPPED | WCONTINUED | WNOWAIT) != 0 {
+    if options & !(WEXITED | WNOHANG) != 0 {
         not_implemented!("Waitid does support options: {:?}", options);
         return error!(EINVAL);
     }
@@ -1036,5 +1036,26 @@ mod tests {
         // sigsuspend.
         assert_eq!(*first_task_clone.signal_mask.lock(), suspended_signal_mask);
         assert_eq!(*first_task_clone.saved_signal_mask.lock(), Some(original_signal_mask));
+    }
+
+    /// Waitid does not support all options.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_waitid_options() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let id = 1;
+        assert_eq!(sys_waitid(&ctx, P_PID, id, UserRef::default(), 0), Err(EINVAL));
+        assert_eq!(sys_waitid(&ctx, P_PID, id, UserRef::default(), WSTOPPED), Err(EINVAL));
+        assert_eq!(sys_waitid(&ctx, P_PID, id, UserRef::default(), WCONTINUED), Err(EINVAL));
+        assert_eq!(sys_waitid(&ctx, P_PID, id, UserRef::default(), WNOWAIT), Err(EINVAL));
+        assert_eq!(
+            sys_waitid(&ctx, P_PID, id, UserRef::default(), WEXITED | WSTOPPED),
+            Err(EINVAL)
+        );
+        assert_eq!(
+            sys_waitid(&ctx, P_PID, id, UserRef::default(), WEXITED | WCONTINUED),
+            Err(EINVAL)
+        );
+        assert_eq!(sys_waitid(&ctx, P_PID, id, UserRef::default(), WEXITED | WNOWAIT), Err(EINVAL));
     }
 }
