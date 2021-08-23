@@ -124,10 +124,12 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
-  auto result = client->BindDriver(
+  client->BindDriver(
       ::fidl::StringView(""), std::move(vmo),
-      [](fidl::WireResponse<fuchsia_device_manager::DeviceController::BindDriver>* response) {});
-  ASSERT_OK(result.status());
+      [](fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::BindDriver>&& result) {
+        ASSERT_STATUS(ZX_ERR_CANCELED, result.status());
+        ASSERT_EQ(fidl::Reason::kUnbind, result.reason());
+      });
 
   ASSERT_OK(ctx.loop().RunUntilIdle());
   ASSERT_TRUE(unbound);
@@ -210,11 +212,11 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   fidl::WireClient client(std::move(device_ends->client), ctx.loop().dispatcher());
 
   bool unbind_successful = false;
-  auto result = client->Unbind(
-      [&](fidl::WireResponse<fuchsia_device_manager::DeviceController::Unbind>* response) {
-        unbind_successful = response->result.is_response();
+  client->Unbind(
+      [&](fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Unbind>&& result) {
+        ASSERT_OK(result.status());
+        unbind_successful = result->result.is_response();
       });
-  ASSERT_OK(result.status());
 
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
