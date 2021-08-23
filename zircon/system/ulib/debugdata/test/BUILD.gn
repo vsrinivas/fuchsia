@@ -15,8 +15,12 @@ test("debugdata") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  sources = [ "debugdata.cc" ]
+  sources = [
+    "datasink.cc",
+    "debugdata.cc",
+  ]
   deps = [
+    "//src/lib/files",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -34,6 +38,7 @@ test("debugdata") {
 
 fuchsia_unittest_package("debugdata-test-pkg") {
   package_name = "debugdata-test"
+  manifest = "meta/debugdata-test.cml"
   deps = [ ":debugdata" ]
 }
 

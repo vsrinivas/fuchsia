@@ -1,0 +1,10 @@
+{
+    include: [
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/debugdata-test",
+    },
+}

@@ -34,6 +34,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 #include <fbl/string.h>
@@ -86,6 +87,22 @@ bool SetUpForTestComponent(const char* test_path, fbl::String* out_component_exe
   }
 
   return true;
+}
+
+// Run the loop until |deadline|, or until the specified |signal| is asserted on the |handle|.
+zx_status_t RunLoopUntilSignalOrDeadline(async::Loop& loop, zx::time deadline, zx_handle_t handle,
+                                         zx_signals_t signal) {
+  async::WaitOnce process_wait(handle, signal);
+  zx_status_t wait_status = ZX_ERR_TIMED_OUT;
+  process_wait.Begin(loop.dispatcher(), [&loop, &wait_status](async_dispatcher_t*, async::WaitOnce*,
+                                                              zx_status_t wait_status_inner,
+                                                              const zx_packet_signal_t*) {
+    wait_status = wait_status_inner;
+    loop.Quit();
+  });
+  loop.Run(deadline);
+  loop.ResetQuit();
+  return wait_status;
 }
 
 std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, const char* test_name,
@@ -156,7 +173,16 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
   // destructor. We do this explicitly at the end of the function in the non-error case, but in
   // error cases we just rely on the destructors to clean things up.
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  bool data_collection_err_occurred = false;
+  fbl::unique_fd data_sink_dir_fd;
   std::unique_ptr<debugdata::DebugData> debug_data;
+  std::unique_ptr<debugdata::DataSink> debug_data_sink;
+  debugdata::DataSinkCallback on_data_collection_error_callback = [&](const std::string& error) {
+    fprintf(stderr, "FAILURE: %s\n", error.c_str());
+    data_collection_err_occurred = true;
+  };
+  debugdata::DataSinkCallback on_data_collection_warning_callback =
+      [&](const std::string& warning) { fprintf(stderr, "WARNING: %s\n", warning.c_str()); };
 
   // Export the root namespace.
   fdio_flat_namespace_t* flat;
@@ -202,8 +228,21 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
       }
     }
 
+    data_sink_dir_fd = fbl::unique_fd(open(output_dir, O_RDONLY | O_DIRECTORY));
+    if (!data_sink_dir_fd) {
+      fprintf(stderr, "FAILURE: Could not open output directory %s: %s\n", output_dir,
+              strerror(errno));
+      return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
+    }
+
     // Setup DebugData service implementation.
-    debug_data = std::make_unique<debugdata::DebugData>(std::move(root_dir_fd));
+    debug_data_sink = std::make_unique<debugdata::DataSink>(data_sink_dir_fd);
+    debug_data = std::make_unique<debugdata::DebugData>(
+        loop.dispatcher(), std::move(root_dir_fd), [&](std::string data_sink, zx::vmo vmo) {
+          debug_data_sink->ProcessSingleDebugData(data_sink, std::move(vmo),
+                                                  on_data_collection_error_callback,
+                                                  on_data_collection_warning_callback);
+        });
 
     // Setup proxy dir.
     proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(svc_handle));
@@ -216,7 +255,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     // Setup VFS.
     vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
     vfs->ServeDirectory(std::move(proxy_dir), std::move(svc_proxy), fs::Rights::ReadWrite());
-    loop.StartThread();
   } else {
     for (size_t i = 0; i < flat->count; ++i) {
       fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
@@ -278,7 +316,9 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     deadline = zx::deadline_after(zx::msec(timeout_msec));
   }
 
-  status = process.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
+  // Run the loop until the process terminates. Until the process terminates, asynchronously
+  // handle any debug data that becomes ready.
+  status = RunLoopUntilSignalOrDeadline(loop, deadline, process.get(), ZX_PROCESS_TERMINATED);
   const zx::time end_time = zx::clock::get_monotonic();
   const int64_t duration_milliseconds = (end_time - start_time).to_msecs();
   if (status != ZX_OK) {
@@ -300,30 +340,17 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     return std::make_unique<Result>(test_name, FAILED_TO_RETURN_CODE, 0, duration_milliseconds);
   }
 
-  // The emitted signature, eg "[runtests][PASSED] /test/name", is used by the CQ/CI testrunners to
-  // match test names and outcomes. Changes to this format must be matched in
-  // https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/runtests/output.go
-  std::unique_ptr<Result> result;
-  if (proc_info.return_code == 0) {
-    result = std::make_unique<Result>(test_name, SUCCESS, 0, duration_milliseconds);
-  } else {
-    fprintf(stderr, "%s exited with nonzero status: %" PRId64, test_name, proc_info.return_code);
-    result = std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code,
-                                      duration_milliseconds);
-  }
-
-  if (output_dir == nullptr) {
-    return result;
-  }
-
-  // Make sure that all job processes are dead before touching any data.
+  // Make a best effort to wait for any other tasks in the loop to terminate.
   auto_call_kill_job.call();
-
-  // Stop the loop.
-  loop.Quit();
-
-  // Wait for any unfinished work to be completed.
-  loop.JoinThreads();
+  status = RunLoopUntilSignalOrDeadline(loop, deadline, test_job.get(), ZX_TASK_TERMINATED);
+  if (status != ZX_OK) {
+    if (status == ZX_ERR_TIMED_OUT) {
+      fprintf(stderr, "WARNING: Timed out waiting for test job to terminate\n");
+    } else {
+      fprintf(stderr, "WARNING: Failed to wait for job to terminate: %d (%s)\n", status,
+              zx_status_get_string(status));
+    }
+  }
 
   // Run one more time until there are no unprocessed messages.
   loop.ResetQuit();
@@ -332,21 +359,29 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
   // Tear down the the VFS.
   vfs.reset();
 
-  fbl::unique_fd data_sink_dir_fd{open(output_dir, O_RDONLY | O_DIRECTORY)};
-  if (!data_sink_dir_fd) {
-    fprintf(stderr, "FAILURE: Could not open output directory %s: %s\n", "/tmp", strerror(errno));
-    return result;
+  // The emitted signature, eg "[runtests][PASSED] /test/name", is used by the CQ/CI testrunners to
+  // match test names and outcomes. Changes to this format must be matched in
+  // https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/runtests/output.go
+  std::unique_ptr<Result> result;
+  if (proc_info.return_code == 0) {
+    result = std::make_unique<Result>(test_name, SUCCESS, 0, duration_milliseconds);
+    if (data_collection_err_occurred) {
+      result->launch_status = FAILED_COLLECTING_SINK_DATA;
+    }
+  } else {
+    fprintf(stderr, "%s exited with nonzero status: %" PRId64, test_name, proc_info.return_code);
+    result = std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code,
+                                      duration_milliseconds);
   }
-
-  result->data_sinks = debugdata::ProcessDebugData(
-      data_sink_dir_fd, debug_data->TakeData(),
-      [&](const std::string& error) {
-        fprintf(stderr, "FAILURE: %s\n", error.c_str());
-        if (result->return_code == 0) {
-          result->launch_status = FAILED_COLLECTING_SINK_DATA;
-        }
-      },
-      [&](const std::string& warning) { fprintf(stderr, "WARNING: %s\n", warning.c_str()); });
+  if (debug_data) {
+    debug_data->DrainData();
+    auto written_files = debug_data_sink->FlushToDirectory(on_data_collection_error_callback,
+                                                           on_data_collection_warning_callback);
+    for (auto& [data_sink, files] : written_files) {
+      std::vector<debugdata::DumpFile> vec_files(files.begin(), files.end());
+      result->data_sinks.emplace(data_sink, std::move(vec_files));
+    }
+  }
 
   return result;
 }

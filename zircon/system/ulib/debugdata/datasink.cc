@@ -194,144 +194,6 @@ uint8_t* MergeProfiles(uint8_t* dst, const uint8_t* src, size_t size) {
   return dst;
 }
 
-// This function processes all raw profiles that were published via data sink
-// in an efficient manner. Concretely, rather than writing each data sink into
-// a separate file, it merges all profiles from the same binary into a single
-// profile. First it groups all VMOs by name which uniquely identifies each
-// binary. Then it merges together all VMOs for the same binary together with
-// data that's already on the disk (if it exists). Finally it writes the data
-// back to disk (or creates the file if necessary). This ensures that at the
-// end, we have exactly one profile for each binary in total, and each profile
-// is read and written at most once per call to ProcessProfiles.
-std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>& data,
-                                                     const fbl::unique_fd& data_sink_dir_fd,
-                                                     DataSinkCallback& error_callback,
-                                                     DataSinkCallback& warning_callback) {
-  zx_status_t status;
-
-  if (mkdirat(data_sink_dir_fd.get(), kProfileSink, 0777) != 0 && errno != EEXIST) {
-    error_callback(fxl::StringPrintf("FAILURE: cannot mkdir \"%s\" for data-sink: %s\n",
-                                     kProfileSink, strerror(errno)));
-    return {};
-  }
-  fbl::unique_fd sink_dir_fd{openat(data_sink_dir_fd.get(), kProfileSink, O_RDONLY | O_DIRECTORY)};
-  if (!sink_dir_fd) {
-    error_callback(fxl::StringPrintf("FAILURE: cannot open data-sink directory \"%s\": %s\n",
-                                     kProfileSink, strerror(errno)));
-    return {};
-  }
-
-  std::unordered_map<std::string, std::forward_list<std::reference_wrapper<const zx::vmo>>>
-      profiles;
-  std::vector<DumpFile> dump_files;
-
-  // Group data by profile name. The name is a hash computed from profile metadata and
-  // should be unique across all binaries (modulo hash collisions).
-  for (const auto& vmo : data) {
-    auto name = GetVMOName(vmo);
-    if (!name) {
-      error_callback(fxl::StringPrintf("FAILURE: Cannot get a name for the VMO\n"));
-      return {};
-    }
-    profiles[*name].push_front(std::cref(vmo));
-  }
-
-  for (auto& [name, vmos] : profiles) {
-    fbl::unique_fd fd{openat(sink_dir_fd.get(), name.c_str(), O_RDWR | O_CREAT, 0666)};
-    if (!fd) {
-      error_callback(fxl::StringPrintf("FAILURE: Cannot open data-sink file \"%s\": %s\n",
-                                       name.c_str(), strerror(errno)));
-      return {};
-    }
-
-    uint64_t buffer_size;
-    std::unique_ptr<uint8_t[]> buffer;
-
-    struct stat stat;
-    if (fstat(fd.get(), &stat) == -1) {
-      error_callback(fxl::StringPrintf("FAILURE: Cannot stat data-sink file \"%s\": %s\n",
-                                       name.c_str(), strerror(errno)));
-      return {};
-    }
-    if (auto file_size = static_cast<uint64_t>(stat.st_size); file_size > 0) {
-      // The file already exists, use it to initialize the buffer...
-      buffer_size = file_size;
-      buffer = std::make_unique<uint8_t[]>(buffer_size);
-      if (std::error_code ec = ReadFile(fd, buffer.get(), file_size); ec) {
-        error_callback(fxl::StringPrintf("FAILURE: Cannot read data from \"%s\": %s\n",
-                                         name.c_str(), strerror(ec.value())));
-        return {};
-      }
-    }
-
-    while (!vmos.empty()) {
-      // Merge all VMOs into the buffer.
-      const zx::vmo& vmo = vmos.front();
-      vmos.pop_front();
-
-      uint64_t vmo_size;
-      status = vmo.get_size(&vmo_size);
-      if (status != ZX_OK) {
-        error_callback(
-            fxl::StringPrintf("FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",
-                              name.c_str(), kProfileSink, zx_status_get_string(status)));
-        return {};
-      }
-
-      fzl::VmoMapper mapper;
-      if (vmo_size > 0) {
-        zx_status_t status = mapper.Map(vmo, 0, vmo_size, ZX_VM_PERM_READ);
-        if (status != ZX_OK) {
-          error_callback(
-              fxl::StringPrintf("FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n",
-                                name.c_str(), kProfileSink, zx_status_get_string(status)));
-          return {};
-        }
-      } else {
-        warning_callback(
-            fxl::StringPrintf("WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n",
-                              kProfileSink, name.c_str()));
-        continue;
-      }
-
-      if (likely(buffer)) {
-        if (buffer_size != vmo_size) {
-          error_callback(
-              fxl::StringPrintf("FAILURE: Mismatch between content sizes for \"%s\": %lu != %lu\n",
-                                name.c_str(), buffer_size, vmo_size));
-        }
-        ZX_ASSERT(buffer_size == vmo_size);
-
-        // Ensure that profiles are structuraly compatible.
-        if (!ProfilesCompatible(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()),
-                                buffer_size)) {
-          warning_callback(fxl::StringPrintf("WARNING: Unable to merge profile data for \"%s\": %s\n",
-                                             name.c_str(), "source profile file is not compatible"));
-          continue;
-        }
-
-        MergeProfiles(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()), buffer_size);
-      } else {
-        // ...Otherwise use the first non-empty VMO in the list to initialize the buffer.
-        buffer_size = vmo_size;
-        buffer = std::make_unique<uint8_t[]>(buffer_size);
-        memcpy(buffer.get(), mapper.start(), buffer_size);
-      }
-    }
-
-    // Write the data back to the file.
-    if (std::error_code ec = WriteFile(fd, buffer.get(), buffer_size); ec) {
-      error_callback(fxl::StringPrintf("FAILURE: Cannot write data to \"%s\": %s\n", name.c_str(),
-                                       strerror(ec.value())));
-      return {};
-    }
-
-    dump_files.push_back(DumpFile{name, JoinPath(kProfileSink, name).c_str()});
-  }
-
-  return dump_files;
-}
-
 // Process all data sink dumps and write to the disk.
 std::optional<DumpFile> ProcessDataSinkDump(const std::string& sink_name, const zx::vmo& file_data,
                                             const fbl::unique_fd& data_sink_dir_fd,
@@ -409,27 +271,166 @@ std::optional<DumpFile> ProcessDataSinkDump(const std::string& sink_name, const 
 
 }  // namespace
 
-std::unordered_map<std::string, std::vector<DumpFile>> ProcessDebugData(
-    const fbl::unique_fd& data_sink_dir_fd,
-    std::unordered_map<std::string, std::vector<zx::vmo>> debug_data,
-    DataSinkCallback error_callback, DataSinkCallback warning_callback) {
-  std::unordered_map<std::string, std::vector<DumpFile>> data_sinks;
-  for (const auto& [sink_name, data] : debug_data) {
-    if (sink_name == kProfileSink) {
-      if (auto dump_files =
-              ProcessProfiles(data, data_sink_dir_fd, error_callback, warning_callback)) {
-        data_sinks.emplace(sink_name, std::move(*dump_files));
-      }
-    } else {
-      for (const auto& file_data : data) {
-        if (auto dump_file = ProcessDataSinkDump(sink_name, file_data, data_sink_dir_fd,
-                                                 error_callback, warning_callback)) {
-          data_sinks[sink_name].push_back(*dump_file);
-        }
-      }
+void DataSink::ProcessSingleDebugData(const std::string& data_sink, zx::vmo debug_data,
+                                      DataSinkCallback& error_callback,
+                                      DataSinkCallback& warning_callback) {
+  if (data_sink == kProfileSink) {
+    ProcessProfile(debug_data, error_callback, warning_callback);
+  } else {
+    auto dump_file = ProcessDataSinkDump(data_sink, debug_data, data_sink_dir_fd_, error_callback,
+                                         warning_callback);
+    if (dump_file) {
+      dump_files_[data_sink].emplace(*dump_file);
     }
   }
-  return data_sinks;
+}
+
+DataSinkFileMap DataSink::FlushToDirectory(DataSinkCallback& error_callback,
+                                           DataSinkCallback& warning_callback) {
+  if (mkdirat(data_sink_dir_fd_.get(), kProfileSink, 0777) != 0 && errno != EEXIST) {
+    error_callback(fxl::StringPrintf("FAILURE: cannot mkdir \"%s\" for data-sink: %s\n",
+                                     kProfileSink, strerror(errno)));
+    return {};
+  }
+  fbl::unique_fd sink_dir_fd{openat(data_sink_dir_fd_.get(), kProfileSink, O_RDONLY | O_DIRECTORY)};
+  if (!sink_dir_fd) {
+    error_callback(fxl::StringPrintf("FAILURE: cannot open data-sink directory \"%s\": %s\n",
+                                     kProfileSink, strerror(errno)));
+    return {};
+  }
+
+  for (auto& [name, buffer_and_size] : merged_profiles_) {
+    auto& [buffer, buffer_size] = buffer_and_size;
+    fbl::unique_fd fd{openat(sink_dir_fd.get(), name.c_str(), O_RDWR | O_CREAT, 0666)};
+    if (!fd) {
+      error_callback(fxl::StringPrintf("FAILURE: Cannot open data-sink file \"%s\": %s\n",
+                                       name.c_str(), strerror(errno)));
+      return {};
+    }
+    struct stat stat;
+    if (fstat(fd.get(), &stat) == -1) {
+      error_callback(fxl::StringPrintf("FAILURE: Cannot stat data-sink file \"%s\": %s\n",
+                                       name.c_str(), strerror(errno)));
+      return {};
+    }
+    if (auto file_size = static_cast<uint64_t>(stat.st_size); file_size > 0) {
+      // The file already exists. Merge with buffer and write back.
+      std::unique_ptr<uint8_t[]> file_buffer = std::make_unique<uint8_t[]>(file_size);
+      if (std::error_code ec = ReadFile(fd, file_buffer.get(), file_size); ec) {
+        error_callback(fxl::StringPrintf("FAILURE: Cannot read data from \"%s\": %s\n",
+                                         name.c_str(), strerror(ec.value())));
+        return {};
+      }
+      if (buffer_size != file_size) {
+        error_callback(
+            fxl::StringPrintf("FAILURE: Mismatch between content sizes for \"%s\": %lu != %lu\n",
+                              name.c_str(), buffer_size, file_size));
+      }
+      ZX_ASSERT(buffer_size == file_size);
+
+      // Ensure that profiles are structuraly compatible.
+      if (!ProfilesCompatible(buffer.get(), file_buffer.get(), buffer_size)) {
+        warning_callback(fxl::StringPrintf("WARNING: Unable to merge profile data: %s\n",
+                                           "source profile file is not compatible"));
+        continue;
+      }
+      MergeProfiles(buffer.get(), file_buffer.get(), file_size);
+    }
+
+    if (std::error_code ec = WriteFile(fd, buffer.get(), buffer_size); ec) {
+      error_callback(fxl::StringPrintf("FAILURE: Cannot write data to \"%s\": %s\n", name.c_str(),
+                                       strerror(ec.value())));
+      return {};
+    }
+    dump_files_[kProfileSink].emplace(DumpFile{name, JoinPath(kProfileSink, name).c_str()});
+  }
+  std::unordered_map<std::string, std::unordered_set<DumpFile, HashDumpFile, EqDumpFile>> result;
+  std::swap(result, dump_files_);
+  return result;
+}
+
+// This function processes all raw profiles that were published via data sink
+// in an efficient manner. It merges all profiles from the same binary into a single
+// profile. First it groups all VMOs by name which uniquely identifies each
+// binary. Then it merges together all VMOs for the same binary. This ensures that at the
+// end, we have exactly one profile for each binary in total.
+void DataSink::ProcessProfile(const zx::vmo& vmo, DataSinkCallback& error_callback,
+                              DataSinkCallback& warning_callback) {
+  // Group data by profile name. The name is a hash computed from profile metadata and
+  // should be unique across all binaries (modulo hash collisions).
+  auto optional_name = GetVMOName(vmo);
+  if (!optional_name) {
+    error_callback(fxl::StringPrintf("FAILURE: Cannot get a name for the VMO\n"));
+    return;
+  }
+  std::string name = *optional_name;
+
+  zx_status_t status;
+  uint64_t vmo_size;
+  status = vmo.get_size(&vmo_size);
+  if (status != ZX_OK) {
+    error_callback(
+        fxl::StringPrintf("FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",
+                          name.c_str(), kProfileSink, zx_status_get_string(status)));
+    return;
+  }
+
+  fzl::VmoMapper mapper;
+  if (vmo_size > 0) {
+    zx_status_t status = mapper.Map(vmo, 0, vmo_size, ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+      error_callback(fxl::StringPrintf("FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n",
+                                       name.c_str(), kProfileSink, zx_status_get_string(status)));
+      return;
+    }
+  } else {
+    warning_callback(fxl::StringPrintf("WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n",
+                                       kProfileSink, name.c_str()));
+    return;
+  }
+
+  auto existing_buffer_and_size = merged_profiles_.find(name);
+  if (existing_buffer_and_size == merged_profiles_.end()) {
+    // new profile name, create a new buffer
+    std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(vmo_size);
+    memcpy(buffer.get(), mapper.start(), vmo_size);
+
+    merged_profiles_.emplace(name, std::make_pair(std::move(buffer), vmo_size));
+  } else {
+    // profile name exists, merge with existing
+    auto& [buffer, buffer_size] = existing_buffer_and_size->second;
+
+    if (buffer_size != vmo_size) {
+      error_callback(
+          fxl::StringPrintf("FAILURE: Mismatch between content sizes for \"%s\": %lu != %lu\n",
+                            name.c_str(), buffer_size, vmo_size));
+    }
+    ZX_ASSERT(buffer_size == vmo_size);
+
+    // Ensure that profiles are structuraly compatible.
+    if (!ProfilesCompatible(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()),
+                            buffer_size)) {
+      warning_callback(fxl::StringPrintf("WARNING: Unable to merge profile data: %s\n",
+                                         "source profile file is not compatible"));
+      return;
+    }
+
+    MergeProfiles(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()), buffer_size);
+  }
+}
+
+DataSinkFileMap ProcessDebugData(const fbl::unique_fd& data_sink_dir_fd,
+                                 std::unordered_map<std::string, std::vector<zx::vmo>> debug_data,
+                                 DataSinkCallback error_callback,
+                                 DataSinkCallback warning_callback) {
+  DataSink data_sink(data_sink_dir_fd);
+  for (auto& [data_sink_name, vmos] : debug_data) {
+    for (auto& vmo : vmos) {
+      data_sink.ProcessSingleDebugData(data_sink_name, std::move(vmo), error_callback,
+                                       warning_callback);
+    }
+  }
+  return data_sink.FlushToDirectory(error_callback, warning_callback);
 }
 
 }  // namespace debugdata
