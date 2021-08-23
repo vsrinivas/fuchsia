@@ -210,6 +210,7 @@ void MockSession::SendViewPropertiesChangedEvent(uint32_t view_id,
 }
 
 void MockSession::SendViewDetachedFromSceneEvent(uint32_t view_id) {
+  FX_DCHECK(views_.count(view_id));
   fuchsia::ui::gfx::ViewDetachedFromSceneEvent view_detached_from_scene_event = {.view_id =
                                                                                      view_id};
   fuchsia::ui::gfx::Event event;
@@ -219,6 +220,7 @@ void MockSession::SendViewDetachedFromSceneEvent(uint32_t view_id) {
 }
 
 void MockSession::SendViewAttachedToSceneEvent(uint32_t view_id) {
+  FX_DCHECK(views_.count(view_id));
   fuchsia::ui::gfx::ViewAttachedToSceneEvent view_attached_to_scene_event = {
       .view_id = view_id, .properties = kDefaultViewProperties};
   fuchsia::ui::gfx::Event event;
@@ -228,9 +230,20 @@ void MockSession::SendViewAttachedToSceneEvent(uint32_t view_id) {
 }
 
 void MockSession::SendViewConnectedEvent(uint32_t view_holder_id) {
+  FX_DCHECK(view_holders_.count(view_holder_id));
   fuchsia::ui::gfx::ViewConnectedEvent view_connected_event = {.view_holder_id = view_holder_id};
   fuchsia::ui::gfx::Event event;
   event.set_view_connected(view_connected_event);
+
+  SendGfxEvent(std::move(event));
+}
+
+void MockSession::SendViewHolderDisconnectedEvent(uint32_t view_id) {
+  FX_DCHECK(views_.count(view_id));
+  fuchsia::ui::gfx::ViewHolderDisconnectedEvent view_holder_disconnected_event = {.view_id =
+                                                                                      view_id};
+  fuchsia::ui::gfx::Event event;
+  event.set_view_holder_disconnected(view_holder_disconnected_event);
 
   SendGfxEvent(std::move(event));
 }
