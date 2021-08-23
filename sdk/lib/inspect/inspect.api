@@ -9,7 +9,7 @@
   "pkg/inspect/include/lib/inspect/cpp/vmo/heap.h": "37e95c1415e222cf2b26d71e3c3689f2",
   "pkg/inspect/include/lib/inspect/cpp/vmo/limits.h": "33a042644a5479a5171f0dff46a856d0",
   "pkg/inspect/include/lib/inspect/cpp/vmo/scanner.h": "eddde27e2cc24b722fea75cdc024a850",
-  "pkg/inspect/include/lib/inspect/cpp/vmo/snapshot.h": "f8a4b2f07c8959699fab057b133118af",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/snapshot.h": "941028c179b3a503cda42967672cafca",
   "pkg/inspect/include/lib/inspect/cpp/vmo/state.h": "e7cf6ffe5fead11625c4c57cbe394bcd",
   "pkg/inspect/include/lib/inspect/cpp/vmo/types.h": "417064d63ae14168ebf0481e9de0b26a"
 }

@@ -45,10 +45,8 @@ class Snapshot final {
   // Type for observing reads on the VMO.
   using ReadObserver = fit::function<void(uint8_t* buffer, size_t buffer_size)>;
 
-  // By default, ensure consistency of the incoming Inspect VMO and retry up to
-  // 1024 times.
-  static constexpr Options kDefaultOptions = {.read_attempts = 1024,
-                                              .skip_consistency_check = false};
+  // Default options for snapshotting from a VMO.
+  const static Options kDefaultOptions;
 
   // Create a new snapshot of the given VMO using default options.
   static zx_status_t Create(const zx::vmo& vmo, Snapshot* out_snapshot);
@@ -94,15 +92,6 @@ class Snapshot final {
   // The buffer storing the snapshot.
   std::shared_ptr<std::vector<uint8_t>> buffer_;
 };
-
-// This is needed to ensure that we are compatible with C++14.
-// In C++17 the declaration of a static constexpr is inline and a definition, but in C++14 this is
-// not the case.
-//
-// Without this line we cannot compile dependent files in C++14 debug builds.
-#if __cplusplus < 201703L
-constexpr Snapshot::Options Snapshot::kDefaultOptions;
-#endif
 
 namespace internal {
 // Get a pointer to a block in the snapshot by index.

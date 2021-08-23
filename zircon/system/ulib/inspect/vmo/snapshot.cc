@@ -15,6 +15,11 @@ using inspect::internal::kMinOrderSize;
 
 namespace inspect {
 
+// By default, ensure consistency of the incoming Inspect VMO and retry up to
+// 1024 times.
+const Snapshot::Options Snapshot::kDefaultOptions = {.read_attempts = 1024,
+                                                     .skip_consistency_check = false};
+
 Snapshot::Snapshot(std::vector<uint8_t> buffer)
     : buffer_(std::make_shared<std::vector<uint8_t>>(std::move(buffer))) {}
 
