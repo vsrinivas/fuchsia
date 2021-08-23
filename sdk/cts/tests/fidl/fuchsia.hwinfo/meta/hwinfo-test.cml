@@ -1,0 +1,19 @@
+{
+    include: [
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/hwinfo-test",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+        },
+    ],
+}

@@ -23,7 +23,7 @@ cts_executable("hwinfo-test-bin") {
 }
 
 cts_fuchsia_component("hwinfo-test") {
-  manifest = "meta/hwinfo-test.cmx"
+  manifest = "meta/hwinfo-test.cml"
   testonly = true
 
   deps = [ ":hwinfo-test-bin" ]
@@ -56,10 +56,7 @@ cts_copy_to_sdk("build") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fuchsia-hwinfo-tests",
-    "//src/hwinfo:fake_legacy_hwinfo",
-  ]
+  deps = [ ":fuchsia-hwinfo-tests" ]
 }
 
 sdk_molecule("test_sdks") {

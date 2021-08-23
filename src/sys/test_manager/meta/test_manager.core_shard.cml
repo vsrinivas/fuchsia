@@ -74,6 +74,15 @@
             dependency: "weak_for_migration",
         },
         {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: "#test_manager",
+        },
+        {
             protocol: "fuchsia.vulkan.loader.Loader",
             from: "#vulkan_loader",
             to: "#test_manager",
