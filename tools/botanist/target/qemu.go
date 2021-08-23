@@ -249,7 +249,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if storageFull.Path != "" {
 		if t.config.FVMTool != "" {
 			if err := extendStorageFull(ctx, &storageFull, t.config.FVMTool, storageFullMinSize); err != nil {
-				return fmt.Errorf("failed to extend fvm.blk to %d bytes: %w", storageFullMinSize, err)
+				return fmt.Errorf("%s to %d bytes: %w", constants.FailedToExtendFVMMsg, storageFullMinSize, err)
 			}
 		}
 		qemuCmd.AddVirtioBlkPciDrive(qemu.Drive{

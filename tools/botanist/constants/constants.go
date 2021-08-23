@@ -12,6 +12,7 @@ const (
 	FailedToResolveIPErrorMsg = "could not resolve target IP address"
 	PackageRepoSetupErrorMsg  = "failed to set up a package repository"
 	SerialReadErrorMsg        = "error reading serial log line"
+	FailedToExtendFVMMsg      = "failed to extend fvm.blk"
 
 	NodenameEnvKey     = "FUCHSIA_NODENAME"
 	SSHKeyEnvKey       = "FUCHSIA_SSH_KEY"

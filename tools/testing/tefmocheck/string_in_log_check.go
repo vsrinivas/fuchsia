@@ -253,6 +253,13 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.SerialReadErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/68743.
 	ret = append(ret, &stringInLogCheck{String: botanistconstants.FailedToCopyImageMsg, Type: swarmingOutputType})
+	// For fxbug.dev/82454.
+	ret = append(ret, &stringInLogCheck{String: botanistconstants.FailedToExtendFVMMsg, Type: swarmingOutputType})
+	// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/559948a1a4cbd995d765e26c32923ed862589a61/src/storage/lib/paver/paver.cc#175
+	ret = append(ret, &stringInLogCheck{String: "Failed to stream partitions to FVM", Type: swarmingOutputType})
+	// Emitted by the GCS Go library from within botanist during image download.
+	// https://github.com/googleapis/google-cloud-go/blob/bc966a3c318d162263ebce3d71bc39b3880c8e90/storage/reader.go#L416
+	ret = append(ret, &stringInLogCheck{String: "storage: bad CRC on read", Type: swarmingOutputType})
 	// For fxbug.dev/53101.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Type: swarmingOutputType})
 	// For fxbug.dev/51441.
