@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/build_api_module.gni")
+import("//build/sdk/sdk.gni")
+import("//sdk/cts/build/allowed_cts_deps.gni")
+
+# Defines the CTS SDK.
+#
+# This is equivalent to a regular Fuchsia SDK, with a few additional actions
+# required to integrate with Fuchsia infrastructure.
+#
+# For information on available parameters, see //build/sdk/sdk.gni.
+#
+template("cts_sdk") {
+  sdk_target_name = "${target_name}_sdk"
+
+  # TODO(jcecil): remove "_v2" suffix after fxr/559550 lands.
+  build_api_target_name = "${target_name}_artifacts_v2"
+  main_target_name = "${target_name}"
+
+  # Create the CTS SDK
+  sdk(sdk_target_name) {
+    forward_variables_from(invoker, "*")
+  }
+
+  # Generate a manifest file that lists the paths of every item in the SDK,
+  # relative to the root of the SDK.
+  build_api_module(build_api_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    data_keys = [ "cts_artifacts" ]
+    deps = [ ":${sdk_target_name}" ]
+  }
+
+  group(main_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    if (!defined(public_deps)) {
+      public_deps = []
+    }
+    public_deps += [
+      ":${build_api_target_name}",
+      ":${sdk_target_name}",
+      "//sdk/cts:cts_artifacts",
+    ]
+  }
+}

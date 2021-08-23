@@ -10,6 +10,7 @@ import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
+import("//sdk/cts/build/cts_sdk.gni")
 import("config.gni")
 
 _sdk_public_deps = [
@@ -111,7 +112,7 @@ sdk_documentation("musl_license") {
   ]
 }
 
-sdk("cts") {
+cts_sdk("cts") {
   testonly = true
   category = "cts"
   deps = [

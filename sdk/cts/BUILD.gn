@@ -12,7 +12,7 @@ build_api_module("cts_artifacts") {
   #
   # Type: list(string)
   testonly = true
-  data_keys = [ "cts_artifacts" ]
+  data_keys = [ "cts_artifacts_old" ]
   deps = [
     ":cts_data_files",
     "//sdk/cts/tests:prebuilts",

@@ -29,7 +29,9 @@ template("cts_artifacts") {
   group(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     metadata = {
+      # TODO(jcecil): Remove "_old" entry after fxr/559550 lands.
       cts_artifacts = []
+      cts_artifacts_old = []
     }
 
     _cts_artifacts_dir = "$root_out_dir/cts"
@@ -52,7 +54,9 @@ template("cts_artifacts") {
       }
 
       foreach(o, get_target_outputs(":$copy_archives_target_name")) {
+        # TODO(jcecil): Remove "_old" entry after fxr/559550 lands.
         metadata.cts_artifacts += [ rebase_path(o, root_build_dir) ]
+        metadata.cts_artifacts_old += [ rebase_path(o, root_build_dir) ]
       }
 
       deps += [ ":$copy_archives_target_name" ]
@@ -67,7 +71,9 @@ template("cts_artifacts") {
       }
 
       foreach(o, get_target_outputs(":$copy_data_target_name")) {
+        # TODO(jcecil): Remove "_old" entry after fxr/559550 lands.
         metadata.cts_artifacts += [ rebase_path(o, root_build_dir) ]
+        metadata.cts_artifacts_old += [ rebase_path(o, root_build_dir) ]
       }
 
       deps += [ ":$copy_data_target_name" ]

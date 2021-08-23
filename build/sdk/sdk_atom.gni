@@ -307,6 +307,19 @@ template("sdk_atom") {
         rebase_path(invoker.file_list, root_build_dir),
       ]
     }
+
+    cts_artifacts = []
+    foreach(f, invoker.files) {
+      cts_artifacts += [ "cts/" + f.dest ]
+    }
+
+    if (!defined(invoker.metadata)) {
+      metadata = {
+      }
+    }
+
+    # Used by the build API module in the //sdk:cts target.
+    metadata.cts_artifacts = cts_artifacts
   }
 }
 
