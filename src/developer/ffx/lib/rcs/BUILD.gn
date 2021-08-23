@@ -21,7 +21,7 @@ rustc_library("lib") {
   sources = [ "src/lib.rs" ]
 }
 
-group("events") {
+group("rcs") {
   testonly = true
   deps = [ ":lib" ]
 }

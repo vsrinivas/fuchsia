@@ -11,6 +11,7 @@ if (is_host) {
     "gcs",
     "netext",
     "pkg",
+    "rcs",
     "services",
     "timeout",
   ]
