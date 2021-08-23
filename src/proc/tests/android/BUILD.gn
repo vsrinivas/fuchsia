@@ -71,6 +71,16 @@ template("gvisor_test_component") {
   }
 }
 
+template("wayland_test_component") {
+  # Without this gn gives an error: `You set the variable "invoker" here and it was unused before it
+  # went out of scope.`
+  not_needed([ "invoker" ])
+
+  test_dir = "wayland"
+  starnix_test_component(target_name) {
+  }
+}
+
 gvisor_tests = [
   "access_test",
   "brk_test",
@@ -108,6 +118,13 @@ foreach(test_name, gvisor_tests) {
   }
 }
 
+wayland_tests = [ "array-test" ]
+
+foreach(test_name, wayland_tests) {
+  wayland_test_component(test_name) {
+  }
+}
+
 fuchsia_test_package("test_android_distro") {
   deps = [
     ":android_system_image",
@@ -118,6 +135,9 @@ fuchsia_test_package("test_android_distro") {
 
   test_components = [ ":sh_test" ]
   foreach(test_name, gvisor_tests) {
+    test_components += [ ":${test_name}" ]
+  }
+  foreach(test_name, wayland_tests) {
     test_components += [ ":${test_name}" ]
   }
 
