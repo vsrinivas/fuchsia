@@ -27,7 +27,7 @@ const MINIMUM_THUMB_RATIO: f32 = 0.05;
 const SCROLL_BAR_MOVEMENT_THRESHOLD: f32 = 1.0;
 
 static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
+    include_bytes!("../../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
 
 fn make_color(term_color: &term_model::term::color::Rgb) -> Color {
     Color { r: term_color.r, g: term_color.g, b: term_color.b, a: 0xFF }

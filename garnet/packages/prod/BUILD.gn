@@ -380,7 +380,7 @@ group("telephony") {
 
 group("terminal") {
   testonly = true
-  public_deps = [ "//garnet/bin/terminal" ]
+  public_deps = [ "//src/ui/bin/terminal" ]
 }
 
 group("tiles") {

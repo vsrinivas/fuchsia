@@ -28,7 +28,6 @@ group("bin") {
     "setui_client",
     "sshd-host",
     "sysmgr",
-    "terminal",
     "time",
     "timezone",
     "trace",

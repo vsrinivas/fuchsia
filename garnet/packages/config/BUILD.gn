@@ -39,7 +39,7 @@ group("amber_auto_ota") {
 
 group("terminal") {
   testonly = true
-  public_deps = [ "//garnet/bin/terminal:tiles_config" ]
+  public_deps = [ "//src/ui/bin/terminal:tiles_config" ]
 }
 
 group("services") {

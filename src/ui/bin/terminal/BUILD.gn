@@ -22,7 +22,6 @@ rustc_library("lib") {
 
   deps = [
     "third_party/term-model",
-    "//garnet/bin/terminal/third_party/term-model",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",

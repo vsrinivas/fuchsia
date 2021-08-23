@@ -41,7 +41,6 @@ rustc_library("lib") {
     "src/view.rs",
   ]
   deps = [
-    "//garnet/bin/terminal/third_party/term-model",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
@@ -59,6 +58,7 @@ rustc_library("lib") {
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/stdout-to-debuglog/rust",
+    "//src/ui/bin/terminal/third_party/term-model",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",

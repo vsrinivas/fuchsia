@@ -24,5 +24,6 @@ group("tests") {
     "input-pipeline:tests",
     "root_presenter:tests",
     "shortcut:tests",
+    "terminal:tests",
   ]
 }
