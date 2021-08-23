@@ -19,6 +19,7 @@ use {
     settings::ServiceConfiguration,
     settings::ServiceFlags,
     std::collections::HashSet,
+    std::path::Path,
     std::sync::Arc,
 };
 
@@ -61,9 +62,15 @@ fn main() -> Result<(), Error> {
             .expect("invalid service flag configuration")
             .expect("no default service flags");
 
+    // Temporary solution for FEMU to have an agent config without camera agent.
+    let agent_config = "/config/data/agent_configuration.json";
+    let board_agent_config = "/config/data/board_agent_configuration.json";
+    let agent_configuration_file_path =
+        if Path::new(board_agent_config).exists() { board_agent_config } else { agent_config };
+
     let agent_types = DefaultSetting::new(
         Some(AgentConfiguration { agent_types: get_default_agent_types() }),
-        "/config/data/agent_configuration.json",
+        agent_configuration_file_path,
     )
     .load_default_value()
     .expect("invalid default agent configuration")
