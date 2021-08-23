@@ -6,7 +6,7 @@ use {
     crate::io::Directory,
     anyhow::{format_err, Context, Result},
     fuchsia_async::TimeoutExt,
-    futures::future::{join_all, BoxFuture},
+    futures::future::{join, join_all, BoxFuture},
     futures::FutureExt,
 };
 
@@ -68,103 +68,122 @@ pub fn find_components(
 fn find_cmx_realms(
     query: String,
     moniker: String,
-    realm_dir: Directory,
+    hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
-        let mut futures = vec![];
+        let c_dir = hub_dir.open_dir("c")?;
+        let c_future = find_cmx_components_in_c_dir(query.clone(), moniker.clone(), c_dir);
 
-        let c_dir = realm_dir.open_dir("c")?;
+        let r_dir = hub_dir.open_dir("r")?;
+        let r_future = find_cmx_realms_in_r_dir(query, moniker, r_dir);
 
-        for child_name in c_dir.entries().await? {
-            let child_moniker = format!("{}/{}", moniker, child_name);
-            let job_id_dir = c_dir.open_dir(&child_name)?;
-            let child_future = find_cmx_components_skip_process_ids(
-                query.clone(),
-                child_name,
-                child_moniker,
-                job_id_dir,
-            );
-            futures.push(child_future);
-        }
+        let (matching_components_c, matching_components_r) = join(c_future, r_future).await;
 
-        let r_dir = realm_dir.open_dir("r")?;
+        let mut matching_components_c = matching_components_c?;
+        let mut matching_components_r = matching_components_r?;
 
-        for realm_name in r_dir.entries().await? {
-            let realm_moniker = format!("{}/{}", moniker, realm_name);
-            let job_id_dir = r_dir.open_dir(&realm_name)?;
-            let realm_future =
-                find_cmx_realms_skip_job_ids(query.clone(), realm_moniker, job_id_dir);
-            futures.push(realm_future);
-        }
+        matching_components_c.append(&mut matching_components_r);
 
-        let results = join_all(futures).await;
-        let mut matching_components = vec![];
-        for result in results {
-            let mut result = result?;
-            matching_components.append(&mut result);
-        }
-
-        Ok(matching_components)
+        Ok(matching_components_c)
     }
     .boxed()
 }
 
-// Given a directory containing job IDs of a realm, collect components whose URL matches the given
-// |query|. |moniker| corresponds to the moniker of the component.
-fn find_cmx_realms_skip_job_ids(
-    query: String,
-    moniker: String,
-    job_id_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<Component>>> {
-    async move {
-        let mut futures = vec![];
-        for job_id in job_id_dir.entries().await? {
-            let realm_dir = job_id_dir.open_dir(&job_id)?;
-            let future = find_cmx_realms(query.clone(), moniker.clone(), realm_dir);
-            futures.push(future);
-        }
-
-        let results = join_all(futures).await;
-        let mut matching_components = vec![];
-        for result in results {
-            let mut result = result?;
-            matching_components.append(&mut result);
-        }
-
-        Ok(matching_components)
-    }
-    .boxed()
-}
-
-// Given a directory containing process IDs of a component, collect components whose URL matches
-// the given |query|. |name| and |moniker| corresponds to the name and moniker of the component.
-fn find_cmx_components_skip_process_ids(
-    query: String,
+// Given a v1 component directory, collect components whose URL matches the given |query|.
+// |moniker| corresponds to the moniker of the current component.
+fn find_cmx_components(
     name: String,
+    query: String,
     moniker: String,
-    job_id_dir: Directory,
+    hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
-        let mut futures = vec![];
-        for job_id in job_id_dir.entries().await? {
-            let hub_dir = job_id_dir.open_dir(&job_id)?;
-            let should_include =
-                name.contains(&query) || does_url_match_query(&query, &hub_dir).await;
-            if should_include {
-                let future = Component::parse_cmx(moniker.clone(), hub_dir);
-                futures.push(future);
-            }
+        let mut matching_components = vec![];
+
+        // Component runners can have a `c` dir with child components
+        if hub_dir.exists("c").await? {
+            let c_dir = hub_dir.open_dir("c")?;
+            let mut child_components =
+                find_cmx_components_in_c_dir(query.clone(), moniker.clone(), c_dir).await?;
+            matching_components.append(&mut child_components);
         }
 
-        let results = join_all(futures).await;
-        let mut matching_components = vec![];
-        for result in results {
-            matching_components.push(result?);
+        let should_include = name.contains(&query) || does_url_match_query(&query, &hub_dir).await;
+        if should_include {
+            let component = Component::parse_cmx(moniker, hub_dir).await?;
+            matching_components.push(component);
         }
 
         Ok(matching_components)
     }
     .boxed()
+}
+
+async fn find_cmx_components_in_c_dir(
+    query: String,
+    moniker: String,
+    c_dir: Directory,
+) -> Result<Vec<Component>> {
+    // Get all CMX child components
+    let child_component_names = c_dir.entries().await?;
+    let mut future_children = vec![];
+    for child_component_name in child_component_names {
+        let child_moniker = format!("{}/{}", moniker, child_component_name);
+        let job_ids_dir = c_dir.open_dir(&child_component_name)?;
+        let hub_dirs = open_all_job_ids(job_ids_dir).await?;
+        for hub_dir in hub_dirs {
+            let future_child = find_cmx_components(
+                child_component_name.clone(),
+                query.clone(),
+                child_moniker.clone(),
+                hub_dir,
+            );
+            future_children.push(future_child);
+        }
+    }
+
+    let results = join_all(future_children).await;
+    let mut flattened_components = vec![];
+    for result in results {
+        let mut components = result?;
+        flattened_components.append(&mut components);
+    }
+    Ok(flattened_components)
+}
+
+async fn find_cmx_realms_in_r_dir(
+    query: String,
+    moniker: String,
+    r_dir: Directory,
+) -> Result<Vec<Component>> {
+    // Get all CMX child realms
+    let mut future_realms = vec![];
+    for child_realm_name in r_dir.entries().await? {
+        let child_moniker = format!("{}/{}", moniker, child_realm_name);
+        let job_ids_dir = r_dir.open_dir(&child_realm_name)?;
+        let hub_dirs = open_all_job_ids(job_ids_dir).await?;
+        for hub_dir in hub_dirs {
+            let future_realm = find_cmx_realms(query.clone(), child_moniker.clone(), hub_dir);
+            future_realms.push(future_realm);
+        }
+    }
+    let results = join_all(future_realms).await;
+    let mut flattened_components = vec![];
+    for result in results {
+        let mut components = result?;
+        flattened_components.append(&mut components);
+    }
+    Ok(flattened_components)
+}
+
+async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
+    // Recurse on the job_ids
+    let mut dirs = vec![];
+    for job_id in job_ids_dir.entries().await? {
+        let dir = job_ids_dir.open_dir(&job_id)?;
+        dirs.push(dir);
+    }
+    Ok(dirs)
 }
 
 // Get all entries in a capabilities directory. If there is a "svc" directory, traverse it and
@@ -190,7 +209,7 @@ async fn get_capabilities(capability_dir: Directory) -> Result<Vec<String>> {
 #[derive(Debug, Eq, PartialEq)]
 pub struct ElfRuntime {
     pub job_id: u32,
-    pub process_id: u32,
+    pub process_id: Option<u32>,
     pub process_start_time: Option<i64>,
     pub process_start_time_utc_estimate: Option<String>,
 }
@@ -206,7 +225,7 @@ impl ElfRuntime {
 
         let job_id = job_id?.parse::<u32>().context("Job ID is not u32")?;
 
-        let process_id = process_id?.parse::<u32>().context("Process ID is not u32")?;
+        let process_id = Some(process_id?.parse::<u32>().context("Process ID is not u32")?);
 
         let process_start_time =
             process_start_time.ok().map(|time_string| time_string.parse::<i64>().ok()).flatten();
@@ -222,7 +241,11 @@ impl ElfRuntime {
 
         let job_id = job_id?.parse::<u32>().context("Job ID is not u32")?;
 
-        let process_id = process_id?.parse::<u32>().context("Process ID is not u32")?;
+        let process_id = if hub_dir.exists("process-id").await? {
+            Some(process_id?.parse::<u32>().context("Process ID is not u32")?)
+        } else {
+            None
+        };
 
         Ok(Self {
             job_id,
@@ -236,7 +259,10 @@ impl ElfRuntime {
 impl std::fmt::Display for ElfRuntime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Job ID: {}", self.job_id)?;
-        writeln!(f, "Process ID: {}", self.process_id)?;
+
+        if let Some(process_id) = &self.process_id {
+            writeln!(f, "Process ID: {}", process_id)?;
+        }
 
         if let Some(ticks) = &self.process_start_time {
             writeln!(f, "Process Start Time (ticks): {}", ticks)?;
@@ -853,7 +879,8 @@ mod tests {
         assert!(execution.elf_runtime.is_some());
         let elf_runtime = execution.elf_runtime.as_ref().unwrap();
         assert_eq!(elf_runtime.job_id, 5454);
-        assert_eq!(elf_runtime.process_id, 9898);
+        let process_id = elf_runtime.process_id.unwrap();
+        assert_eq!(process_id, 9898);
 
         assert!(elf_runtime.process_start_time.is_some());
         let process_start_time = elf_runtime.process_start_time.unwrap();
@@ -1028,7 +1055,8 @@ mod tests {
         assert!(execution.elf_runtime.is_some());
         let elf_runtime = execution.elf_runtime.as_ref().unwrap();
         assert_eq!(elf_runtime.job_id, 5454);
-        assert_eq!(elf_runtime.process_id, 9898);
+        let process_id = elf_runtime.process_id.unwrap();
+        assert_eq!(process_id, 9898);
         assert!(elf_runtime.process_start_time.is_none());
         assert!(elf_runtime.process_start_time_utc_estimate.is_none());
 
@@ -1155,7 +1183,8 @@ mod tests {
             assert!(execution.elf_runtime.is_some());
             let elf_runtime = execution.elf_runtime.as_ref().unwrap();
             assert_eq!(elf_runtime.job_id, 5454);
-            assert_eq!(elf_runtime.process_id, 9898);
+            let process_id = elf_runtime.process_id.unwrap();
+            assert_eq!(process_id, 9898);
         }
 
         {
@@ -1170,7 +1199,8 @@ mod tests {
             assert!(execution.elf_runtime.is_some());
             let elf_runtime = execution.elf_runtime.as_ref().unwrap();
             assert_eq!(elf_runtime.job_id, 5454);
-            assert_eq!(elf_runtime.process_id, 8787);
+            let process_id = elf_runtime.process_id.unwrap();
+            assert_eq!(process_id, 8787);
         }
     }
 
@@ -1196,15 +1226,14 @@ mod tests {
         //                            |- r
         //                            |- c
         //                               |- sshd.cmx
-        //                                  |- 9898
+        //                                  |- 1765
         //                                     |- job-id
-        //                                     |- process-id
         //                                     |- url
         //                                     |- in
         //                                     |- out
         //                   |- c
         //                      |- sshd.cmx
-        //                         |- 8787
+        //                         |- 5454
         //                            |- job-id
         //                            |- process-id
         //                            |- url
@@ -1237,7 +1266,7 @@ mod tests {
             fs::create_dir_all(appmgr.join("exec/out/hub/r/sys/1765/r")).unwrap();
 
             {
-                let sshd_1 = appmgr.join("exec/out/hub/c/sshd.cmx/8787");
+                let sshd_1 = appmgr.join("exec/out/hub/c/sshd.cmx/5454");
                 fs::create_dir_all(&sshd_1).unwrap();
                 fs::create_dir(sshd_1.join("in")).unwrap();
                 fs::create_dir(sshd_1.join("out")).unwrap();
@@ -1254,7 +1283,7 @@ mod tests {
             }
 
             {
-                let sshd_2 = appmgr.join("exec/out/hub/r/sys/1765/c/sshd.cmx/9898");
+                let sshd_2 = appmgr.join("exec/out/hub/r/sys/1765/c/sshd.cmx/1765");
                 fs::create_dir_all(&sshd_2).unwrap();
                 fs::create_dir(sshd_2.join("in")).unwrap();
                 fs::create_dir(sshd_2.join("out")).unwrap();
@@ -1264,10 +1293,6 @@ mod tests {
                     .write_all("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".as_bytes())
                     .unwrap();
                 File::create(sshd_2.join("job-id")).unwrap().write_all("1765".as_bytes()).unwrap();
-                File::create(sshd_2.join("process-id"))
-                    .unwrap()
-                    .write_all("9898".as_bytes())
-                    .unwrap();
             }
         }
 
@@ -1291,7 +1316,8 @@ mod tests {
             assert!(execution.elf_runtime.is_some());
             let elf_runtime = execution.elf_runtime.as_ref().unwrap();
             assert_eq!(elf_runtime.job_id, 5454);
-            assert_eq!(elf_runtime.process_id, 8787);
+            let process_id = elf_runtime.process_id.unwrap();
+            assert_eq!(process_id, 8787);
         }
 
         {
@@ -1306,7 +1332,123 @@ mod tests {
             assert!(execution.elf_runtime.is_some());
             let elf_runtime = execution.elf_runtime.as_ref().unwrap();
             assert_eq!(elf_runtime.job_id, 1765);
-            assert_eq!(elf_runtime.process_id, 9898);
+            assert!(elf_runtime.process_id.is_none());
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn runner_cmx() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // .
+        // |- children
+        //       |- appmgr
+        //          |- children
+        //          |- component_type
+        //          |- url
+        //          |- exec
+        //             |- in
+        //             |- out
+        //                |- hub
+        //                   |- c
+        //                      |- sshd.cmx
+        //                         |- 5454
+        //                            |- job-id
+        //                            |- process-id
+        //                            |- url
+        //                            |- in
+        //                            |- out
+        //                            |- c
+        //                               |- foo.cmx
+        //                                  |- 1234
+        //                                     |- job-id
+        //                                     |- process-id
+        //                                     |- url
+        //                                     |- in
+        //                                     |- out
+        // |- component_type
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        {
+            let appmgr = root.join("children/appmgr");
+            fs::create_dir(&appmgr).unwrap();
+            fs::create_dir(appmgr.join("children")).unwrap();
+            File::create(appmgr.join("component_type"))
+                .unwrap()
+                .write_all("static".as_bytes())
+                .unwrap();
+            File::create(appmgr.join("url"))
+                .unwrap()
+                .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
+                .unwrap();
+
+            fs::create_dir_all(appmgr.join("exec/in")).unwrap();
+            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
+
+            {
+                let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/5454");
+                fs::create_dir_all(&sshd).unwrap();
+                fs::create_dir(sshd.join("in")).unwrap();
+                fs::create_dir(sshd.join("out")).unwrap();
+
+                File::create(sshd.join("url"))
+                    .unwrap()
+                    .write_all("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".as_bytes())
+                    .unwrap();
+                File::create(sshd.join("job-id")).unwrap().write_all("5454".as_bytes()).unwrap();
+                File::create(sshd.join("process-id"))
+                    .unwrap()
+                    .write_all("8787".as_bytes())
+                    .unwrap();
+                {
+                    let foo = sshd.join("c/foo.cmx/1234");
+                    fs::create_dir_all(&foo).unwrap();
+                    fs::create_dir(foo.join("in")).unwrap();
+                    fs::create_dir(foo.join("out")).unwrap();
+
+                    File::create(foo.join("url"))
+                        .unwrap()
+                        .write_all("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".as_bytes())
+                        .unwrap();
+                    File::create(foo.join("job-id")).unwrap().write_all("1234".as_bytes()).unwrap();
+                    File::create(foo.join("process-id"))
+                        .unwrap()
+                        .write_all("4536".as_bytes())
+                        .unwrap();
+                }
+            }
+        }
+
+        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let components =
+            find_components("foo.cmx".to_string(), ".".to_string(), ".".to_string(), hub_dir)
+                .await
+                .unwrap();
+
+        assert_eq!(components.len(), 1);
+
+        {
+            let component = &components[0];
+            assert_eq!(component.moniker, "./appmgr/sshd.cmx/foo.cmx");
+            assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx");
+            assert_eq!(component.component_type, "CMX component");
+
+            assert!(component.execution.is_some());
+            let execution = component.execution.as_ref().unwrap();
+
+            assert!(execution.elf_runtime.is_some());
+            let elf_runtime = execution.elf_runtime.as_ref().unwrap();
+            assert_eq!(elf_runtime.job_id, 1234);
+            let process_id = elf_runtime.process_id.unwrap();
+            assert_eq!(process_id, 4536);
         }
     }
 }

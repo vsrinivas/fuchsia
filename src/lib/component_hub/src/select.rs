@@ -6,7 +6,7 @@ use {
     crate::io::Directory,
     anyhow::Result,
     fuchsia_async::TimeoutExt,
-    futures::future::{join_all, BoxFuture},
+    futures::future::{join, join_all, BoxFuture},
     futures::FutureExt,
 };
 
@@ -55,41 +55,52 @@ pub fn find_components(
     .boxed()
 }
 
-// Given a v1 realm directory, collect components that expose |capability|.
+// Given a v1 realm directory, return monikers of components that expose |capability|.
 // |moniker| corresponds to the moniker of the current realm.
 fn find_cmx_realms(
     capability: String,
     moniker: String,
-    realm_dir: Directory,
+    hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<String>>> {
     async move {
-        let mut futures = vec![];
+        let c_dir = hub_dir.open_dir("c")?;
+        let c_future = find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir);
 
-        let c_dir = realm_dir.open_dir("c")?;
+        let r_dir = hub_dir.open_dir("r")?;
+        let r_future = find_cmx_realms_in_r_dir(capability, moniker, r_dir);
 
-        for child_name in c_dir.entries().await? {
-            let child_moniker = format!("{}/{}", moniker, child_name);
-            let job_id_dir = c_dir.open_dir(&child_name)?;
-            let child_future =
-                find_cmx_components_skip_process_ids(capability.clone(), child_moniker, job_id_dir);
-            futures.push(child_future);
-        }
+        let (matching_components_c, matching_components_r) = join(c_future, r_future).await;
 
-        let r_dir = realm_dir.open_dir("r")?;
+        let mut matching_components_c = matching_components_c?;
+        let mut matching_components_r = matching_components_r?;
 
-        for realm_name in r_dir.entries().await? {
-            let realm_moniker = format!("{}/{}", moniker, realm_name);
-            let job_id_dir = r_dir.open_dir(&realm_name)?;
-            let realm_future =
-                find_cmx_realms_skip_job_ids(capability.clone(), realm_moniker, job_id_dir);
-            futures.push(realm_future);
-        }
+        matching_components_c.append(&mut matching_components_r);
 
-        let results = join_all(futures).await;
+        Ok(matching_components_c)
+    }
+    .boxed()
+}
+
+// Given a v1 component directory, return monikers of components that expose |capability|.
+// |moniker| corresponds to the moniker of the current component.
+fn find_cmx_components(
+    capability: String,
+    moniker: String,
+    hub_dir: Directory,
+) -> BoxFuture<'static, Result<Vec<String>>> {
+    async move {
         let mut matching_components = vec![];
-        for result in results {
-            let mut result = result?;
-            matching_components.append(&mut result);
+
+        // Component runners can have a `c` dir with child components
+        if hub_dir.exists("c").await? {
+            let c_dir = hub_dir.open_dir("c")?;
+            let mut child_components =
+                find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir).await?;
+            matching_components.append(&mut child_components);
+        }
+
+        if exposed_capability_exists_v1(hub_dir, capability).await? {
+            matching_components.push(moniker);
         }
 
         Ok(matching_components)
@@ -97,59 +108,67 @@ fn find_cmx_realms(
     .boxed()
 }
 
-// Given a directory containing job IDs of a realm, collect components that expose |capability|.
-// |moniker| corresponds to the moniker of the component.
-fn find_cmx_realms_skip_job_ids(
+async fn find_cmx_components_in_c_dir(
     capability: String,
     moniker: String,
-    job_id_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<String>>> {
-    async move {
-        let mut futures = vec![];
-        for job_id in job_id_dir.entries().await? {
-            let realm_dir = job_id_dir.open_dir(&job_id)?;
-            let future = find_cmx_realms(capability.clone(), moniker.clone(), realm_dir);
-            futures.push(future);
+    c_dir: Directory,
+) -> Result<Vec<String>> {
+    // Get all CMX child components
+    let child_component_names = c_dir.entries().await?;
+    let mut future_children = vec![];
+    for child_component_name in child_component_names {
+        let child_moniker = format!("{}/{}", moniker, child_component_name);
+        let job_ids_dir = c_dir.open_dir(&child_component_name)?;
+        let hub_dirs = open_all_job_ids(job_ids_dir).await?;
+        for hub_dir in hub_dirs {
+            let future_child =
+                find_cmx_components(capability.clone(), child_moniker.clone(), hub_dir);
+            future_children.push(future_child);
         }
-
-        let results = join_all(futures).await;
-        let mut matching_components = vec![];
-        for result in results {
-            let mut result = result?;
-            matching_components.append(&mut result);
-        }
-
-        Ok(matching_components)
     }
-    .boxed()
+
+    let results = join_all(future_children).await;
+    let mut flattened_components = vec![];
+    for result in results {
+        let mut components = result?;
+        flattened_components.append(&mut components);
+    }
+    Ok(flattened_components)
 }
 
-// Given a directory containing process IDs of a component, collect components that expose
-// |capability|. |name| and |moniker| corresponds to the name and moniker of the component.
-fn find_cmx_components_skip_process_ids(
+async fn find_cmx_realms_in_r_dir(
     capability: String,
     moniker: String,
-    job_id_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<String>>> {
-    async move {
-        let mut futures = vec![];
-        for job_id in job_id_dir.entries().await? {
-            let hub_dir = job_id_dir.open_dir(&job_id)?;
-            let future = exposed_capability_exists_v1(hub_dir, capability.clone());
-            futures.push(future);
+    r_dir: Directory,
+) -> Result<Vec<String>> {
+    // Get all CMX child realms
+    let mut future_realms = vec![];
+    for child_realm_name in r_dir.entries().await? {
+        let child_moniker = format!("{}/{}", moniker, child_realm_name);
+        let job_ids_dir = r_dir.open_dir(&child_realm_name)?;
+        let hub_dirs = open_all_job_ids(job_ids_dir).await?;
+        for hub_dir in hub_dirs {
+            let future_realm = find_cmx_realms(capability.clone(), child_moniker.clone(), hub_dir);
+            future_realms.push(future_realm);
         }
-
-        let results = join_all(futures).await;
-        let mut matching_components = vec![];
-        for result in results {
-            if result? {
-                matching_components.push(moniker.clone());
-            }
-        }
-
-        Ok(matching_components)
     }
-    .boxed()
+    let results = join_all(future_realms).await;
+    let mut flattened_components = vec![];
+    for result in results {
+        let mut components = result?;
+        flattened_components.append(&mut components);
+    }
+    Ok(flattened_components)
+}
+
+async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
+    // Recurse on the job_ids
+    let mut dirs = vec![];
+    for job_id in job_ids_dir.entries().await? {
+        let dir = job_ids_dir.open_dir(&job_id)?;
+        dirs.push(dir);
+    }
+    Ok(dirs)
 }
 
 // Returns true if |capability| is exposed by this v2 component. False otherwise.
@@ -360,6 +379,57 @@ mod tests {
         assert_eq!(components.len(), 1);
         let component = &components[0];
         assert_eq!(component.as_str(), "./appmgr/sshd.cmx");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn runner_cmx() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // .
+        // |- children
+        //       |- appmgr
+        //          |- children
+        //          |- exec
+        //             |- out
+        //                |- hub
+        //                   |- r
+        //                   |- c
+        //                      |- sshd.cmx
+        //                         |- 9898
+        //                            |- c
+        //                               |- foo.cmx
+        //                                  |- 1919
+        //                                     |- out
+        //                                        |- dev
+        fs::create_dir(root.join("children")).unwrap();
+
+        {
+            let appmgr = root.join("children/appmgr");
+            fs::create_dir(&appmgr).unwrap();
+            fs::create_dir(appmgr.join("children")).unwrap();
+            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
+
+            {
+                let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
+                fs::create_dir_all(&sshd).unwrap();
+                {
+                    let dev = sshd.join("c/foo.cmx/1919/out/dev");
+                    fs::create_dir_all(&dev).unwrap();
+                }
+            }
+        }
+
+        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let components =
+            find_components("dev".to_string(), ".".to_string(), ".".to_string(), hub_dir)
+                .await
+                .unwrap();
+
+        assert_eq!(components.len(), 1);
+        let component = &components[0];
+        assert_eq!(component.as_str(), "./appmgr/sshd.cmx/foo.cmx");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

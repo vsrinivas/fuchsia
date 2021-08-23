@@ -5,7 +5,7 @@
 use {
     crate::io::Directory,
     anyhow::Result,
-    futures::future::{join_all, BoxFuture, FutureExt},
+    futures::future::{join, join_all, BoxFuture, FutureExt},
     std::str::FromStr,
 };
 
@@ -77,7 +77,7 @@ impl Component {
             if name == "appmgr" {
                 // Get all CMX components + realms
                 let realm_dir = hub_dir.open_dir("exec/out/hub")?;
-                let component = Component::parse_cmx("".to_string(), realm_dir).await?;
+                let component = Component::parse_cmx_realm("".to_string(), realm_dir).await?;
                 children.extend(component.children);
             }
 
@@ -86,43 +86,38 @@ impl Component {
         .boxed()
     }
 
-    fn parse_cmx(
+    fn parse_cmx_component(name: String, dir: Directory) -> BoxFuture<'static, Result<Component>> {
+        async move {
+            // Runner CMX components may have child components
+            let children = if dir.exists("c").await? {
+                let children_dir = dir.open_dir("c")?;
+                Component::parse_cmx_components_in_c_dir(children_dir).await?
+            } else {
+                vec![]
+            };
+
+            // CMX components are always running if they exist in tree.
+            Ok(Component { name, children, is_cmx: true, is_running: true })
+        }
+        .boxed()
+    }
+
+    fn parse_cmx_realm(
         realm_name: String,
         realm_dir: Directory,
     ) -> BoxFuture<'static, Result<Component>> {
         async move {
-            // Get all CMX child components
             let children_dir = realm_dir.open_dir("c")?;
-            let child_component_names = children_dir.entries().await?;
-            let mut children = vec![];
-            for child_component_name in child_component_names {
-                // CMX components are leaf nodes (no children).
-                // CMX components are always running if they exist in tree.
-                children.push(Component {
-                    name: child_component_name,
-                    is_cmx: true,
-                    is_running: true,
-                    children: vec![],
-                })
-            }
+            let realms_dir = realm_dir.open_dir("r")?;
 
-            // Recurse on the CMX child realms
-            let mut future_realm_lists = vec![];
-            let child_realms_dir = realm_dir.open_dir("r")?;
-            for child_realm_name in child_realms_dir.entries().await? {
-                let job_ids_dir = child_realms_dir.open_dir(&child_realm_name)?;
-                let future_realm_list = Component::parse_cmx_job_ids(child_realm_name, job_ids_dir);
-                future_realm_lists.push(future_realm_list);
-            }
-            let results = join_all(future_realm_lists).await;
-            let mut realm_lists = vec![];
-            for result in results {
-                let realm_list = result?;
-                realm_lists.push(realm_list);
-            }
+            let future_children = Component::parse_cmx_components_in_c_dir(children_dir);
+            let future_realms = Component::parse_cmx_realms_in_r_dir(realms_dir);
 
-            let realms: Vec<Component> = realm_lists.into_iter().flatten().collect();
-            children.extend(realms);
+            let (children, realms) = join(future_children, future_realms).await;
+            let mut children = children?;
+            let mut realms = realms?;
+
+            children.append(&mut realms);
 
             // Consider a realm as a CMX component that has children.
             // This is not technically true, but works as a generalization.
@@ -131,28 +126,48 @@ impl Component {
         .boxed()
     }
 
-    fn parse_cmx_job_ids(
-        realm_name: String,
-        job_ids_dir: Directory,
-    ) -> BoxFuture<'static, Result<Vec<Component>>> {
-        async move {
-            // Recurse on the job_ids
-            let mut future_realms = vec![];
-            for job_id in job_ids_dir.entries().await? {
-                let realm_dir = job_ids_dir.open_dir(&job_id)?;
-                let future_realm = Component::parse_cmx(realm_name.clone(), realm_dir);
-                future_realms.push(future_realm)
+    async fn parse_cmx_components_in_c_dir(children_dir: Directory) -> Result<Vec<Component>> {
+        // Get all CMX child components
+        let child_component_names = children_dir.entries().await?;
+        let mut future_children = vec![];
+        for child_component_name in child_component_names {
+            let job_ids_dir = children_dir.open_dir(&child_component_name)?;
+            let child_dirs = Component::open_all_job_ids(job_ids_dir).await?;
+            for child_dir in child_dirs {
+                let future_child =
+                    Component::parse_cmx_component(child_component_name.clone(), child_dir);
+                future_children.push(future_child);
             }
-
-            let results = join_all(future_realms).await;
-            let mut components = vec![];
-            for result in results {
-                let component = result?;
-                components.push(component)
-            }
-            Ok(components)
         }
-        .boxed()
+
+        let results = join_all(future_children).await;
+        results.into_iter().collect()
+    }
+
+    async fn parse_cmx_realms_in_r_dir(realms_dir: Directory) -> Result<Vec<Component>> {
+        // Get all CMX child realms
+        let mut future_realms = vec![];
+        for child_realm_name in realms_dir.entries().await? {
+            let job_ids_dir = realms_dir.open_dir(&child_realm_name)?;
+            let child_realm_dirs = Component::open_all_job_ids(job_ids_dir).await?;
+            for child_realm_dir in child_realm_dirs {
+                let future_realm =
+                    Component::parse_cmx_realm(child_realm_name.clone(), child_realm_dir);
+                future_realms.push(future_realm);
+            }
+        }
+        let results = join_all(future_realms).await;
+        results.into_iter().collect()
+    }
+
+    async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
+        // Recurse on the job_ids
+        let mut dirs = vec![];
+        for job_id in job_ids_dir.entries().await? {
+            let dir = job_ids_dir.open_dir(&job_id)?;
+            dirs.push(dir);
+        }
+        Ok(dirs)
     }
 
     fn should_print(&self, list_filter: &ListFilter) -> bool {
@@ -253,10 +268,12 @@ mod tests {
         // |- exec
         //    |- out
         //       |- hub
+        //          |- r
         //          |- c
         //             |- foo.cmx
+        //                |- 123
         fs::create_dir(root.join("children")).unwrap();
-        fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx")).unwrap();
+        fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx/123")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/r")).unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("appmgr".to_string(), root_dir).await.unwrap();
@@ -271,6 +288,48 @@ mod tests {
         assert!(child.is_running);
         assert!(child.is_cmx);
         assert!(child.children.is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn runner_cmx() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // appmgr
+        // |- children
+        // |- exec
+        //    |- out
+        //       |- hub
+        //          |- r
+        //          |- c
+        //             |- foo.cmx
+        //                |- 123
+        //                   |- c
+        //                      |- bar.cmx
+        //                         |- 456
+        fs::create_dir(root.join("children")).unwrap();
+        fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456")).unwrap();
+        fs::create_dir_all(root.join("exec/out/hub/r")).unwrap();
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let component = Component::parse("appmgr".to_string(), root_dir).await.unwrap();
+
+        assert!(!component.is_cmx);
+        assert!(component.is_running);
+        assert_eq!(component.name, "appmgr");
+        assert_eq!(component.children.len(), 1);
+
+        let child = component.children.get(0).unwrap();
+        assert_eq!(child.name, "foo.cmx");
+        assert!(child.is_running);
+        assert!(child.is_cmx);
+        assert_eq!(child.children.len(), 1);
+
+        let child = child.children.get(0).unwrap();
+        assert_eq!(child.name, "bar.cmx");
+        assert!(child.is_running);
+        assert!(child.is_cmx);
+        assert_eq!(child.children.len(), 0);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
