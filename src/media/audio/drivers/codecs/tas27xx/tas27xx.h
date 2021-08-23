@@ -101,6 +101,13 @@ class Tas27xx : public SimpleCodecServer {
   static constexpr float kMinGain = -100.0;
   static constexpr float kGainStep = 0.5;
 
+  struct State {
+    inspect::IntProperty seconds;
+    inspect::UintProperty latched_interrupt_state;
+    inspect::IntProperty temperature;
+    inspect::UintProperty voltage;
+  };
+
   zx_status_t WriteReg(uint8_t reg, uint8_t value);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value);
   int Thread();
@@ -111,15 +118,20 @@ class Tas27xx : public SimpleCodecServer {
   zx_status_t UpdatePowerControl();
   zx_status_t GetTemperature(float* temperature);
   zx_status_t GetVbat(float* voltage);
+  bool InErrorState();
+  void ReportState(State& registers, const char* description);
 
   bool started_ = false;
   GainState gain_state_ = {};
   thrd_t thread_;
   metadata::ti::TasConfig metadata_ = {};
+  zx::port port_;
 
   uint8_t channels_to_use_bitmask_ = 1;  // Right channel if I2S.
-  inspect::IntProperty status_time_;
-  inspect::UintProperty codec_status_;
+  inspect::Node driver_inspect_;
+  State state_after_interrupt_;
+  State state_after_error_;
+  State state_after_timer_;
 };
 }  // namespace audio
 
