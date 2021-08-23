@@ -98,6 +98,7 @@ gvisor_tests = [
   "lseek_test",
   "mmap_test",
   "munmap_test",
+  "open_create_test",
   "open_test",
   "pipe_test",
   "pread64_test",
