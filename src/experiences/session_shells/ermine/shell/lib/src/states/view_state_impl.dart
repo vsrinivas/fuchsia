@@ -18,6 +18,7 @@ class ViewStateImpl with Disposable implements ViewState {
   @override
   final String title;
 
+  @override
   final String? id;
 
   @override

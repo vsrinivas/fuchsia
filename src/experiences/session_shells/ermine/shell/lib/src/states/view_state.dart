@@ -14,6 +14,7 @@ abstract class ViewState with Store {
   ViewHandle get view;
   String get title;
   String? get url;
+  String? get id;
   Rect? get viewport;
 
   ObservableValue<bool> get hitTestable;

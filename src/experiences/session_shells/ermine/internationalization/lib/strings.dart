@@ -796,6 +796,12 @@ class Strings {
         desc: 'The prompt text to wait or close unresponsive app.',
         args: [title],
       );
+  static String applicationFailedToStart(String title) => Intl.message(
+        '$title failed to start',
+        name: 'application failed to load',
+        desc: 'The alert dialog title for an application that failed to start.',
+        args: [title],
+      );
   static String get wait => Intl.message(
         'Wait',
         name: 'wait',

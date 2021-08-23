@@ -51,6 +51,7 @@ class AppStateImpl with Disposable implements AppState {
     required this.preferencesService,
     required this.pointerEventsService,
   }) : localeStream = startupService.stream.asObservable() {
+    launchService.onControllerClosed = _onElementClosed;
     focusService.onFocusMoved = _onFocusMoved;
     presenterService
       ..onPresenterDisposed = dispose
@@ -588,6 +589,39 @@ class AppStateImpl with Disposable implements AppState {
           }
         }
       });
+
+  // This callback is triggered only for the views launched from the shell.
+  void _onElementClosed(String id) {
+    // Find the view with id that was terminated without closing its view. There
+    // two scenarios where this can happen:
+    // - VIEW_LOADED: The underlying component self exited or was killed from
+    //   terminal or it crashed AFTER the view was loaded. Currently there is no
+    //   way to distinguish the actual reason. Filed https://fxbug.dev/83165
+    // - VIEW_NOT_LOADED: The view did not load because the component url is
+    //   invalid. Ideally, this would be handled by ElementController throwing
+    //   a [ProposeElementError.NOT_FOUND].
+    //  TODO(https://fxbug.dev/83164): Handle ProposeElementError once
+    //  implemented.
+    final stuckViews = views.where((view) => view.id == id);
+    if (stuckViews.isNotEmpty) {
+      final view = stuckViews.first;
+      //   TODO(https://fxbug.dev/83165): Ignore rendered/loaded views.
+      if (view.rendered.value) {
+        return;
+      }
+      final description = Strings.applicationFailedToStart(view.title);
+      alerts.add(AlertInfo(
+        title: description,
+        content: 'Url: ${view.url}',
+        buttons: {
+          Strings.close: () {
+            alerts.removeAt(0);
+            view.close();
+          }
+        },
+      ));
+    }
+  }
 
   Map<String, dynamic> _getInspectData() {
     final data = <String, dynamic>{};
