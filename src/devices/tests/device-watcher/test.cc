@@ -22,17 +22,21 @@ TEST(DeviceWatcherTest, WatchUSBDevice) {
   auto response = client->NextDevice_Sync();
   ASSERT_EQ(response.status(), ZX_OK);
 
+  using NextDevice = fuchsia_device_manager::DeviceWatcher::NextDevice;
   // This response should never return because we already got the single device.
-  auto response_two = client->NextDevice([](auto response) { ASSERT_TRUE(false); });
-  ASSERT_EQ(response_two.status(), ZX_OK);
+  client->NextDevice([](fidl::WireUnownedResult<NextDevice>&& result) {
+    ASSERT_EQ(result.status(), ZX_ERR_CANCELED);
+    ASSERT_EQ(result.reason(), fidl::Reason::kUnbind);
+  });
 
   // This response should return an error because response two is already waiting.
-  auto response_three = client->NextDevice([&loop](auto response) {
+  client->NextDevice([&loop](fidl::WireUnownedResult<NextDevice>&& result) {
+    ASSERT_EQ(result.status(), ZX_OK);
+    auto* response = result.Unwrap();
     ASSERT_TRUE(response->result.is_err());
     ASSERT_EQ(response->result.err(), ZX_ERR_ALREADY_BOUND);
     loop.Quit();
   });
-  ASSERT_EQ(response_three.status(), ZX_OK);
 
   loop.Run();
 }
