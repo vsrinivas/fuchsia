@@ -42,12 +42,9 @@ base_resolver_deps = [
 rustc_binary("bin") {
   output_name = "base_resolver"
 
-  # base-resolver must always be small (even in debug builds) since it is part of the
-  # Zircon boot image.
-  force_opt = "z"
-  configs += [ "//build/config/lto:thinlto" ]
-  configs -= [ "//build/config/lto:thinlto" ]
-  configs += [ "//build/config/lto:thinlto" ]
+  configs += [ "//build/config/rust:bootfs" ]
+
+  # Can't dynamically link libstd and libtest for ZBI binaries
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
   deps = base_resolver_deps
