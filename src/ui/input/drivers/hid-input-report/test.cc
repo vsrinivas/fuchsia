@@ -345,9 +345,10 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
   }
 
   // Read the report. This will hang until a report is sent.
-  auto status = reader->ReadInputReports(
-      [&](fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
+  reader->ReadInputReports(
+      [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&&
               response) {
+        ASSERT_OK(response.status());
         ASSERT_FALSE(response->result.is_err());
         auto& reports = response->result.response().reports;
         ASSERT_EQ(1, reports.count());
@@ -364,7 +365,6 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
         ASSERT_EQ(0x70, mouse.movement_y());
         loop.Quit();
       });
-  ASSERT_OK(status.status());
   loop.RunUntilIdle();
 
   // Send the report.
@@ -397,10 +397,12 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
   }
 
   // Queue a report.
-  auto status = reader->ReadInputReports(
-      [&](fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
-              response) { ASSERT_TRUE(response->result.is_err()); });
-  ASSERT_OK(status.status());
+  reader->ReadInputReports(
+      [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&&
+              result) {
+        ASSERT_STATUS(ZX_ERR_CANCELED, result.status());
+        ASSERT_EQ(fidl::Reason::kUnbind, result.reason());
+      });
   loop.RunUntilIdle();
 
   // Unbind the reader now that the report is waiting.
