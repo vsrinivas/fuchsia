@@ -9,7 +9,7 @@ use {
     async_trait::async_trait,
     bridge::DaemonError,
     ffx_daemon_core::events::{self, EventSynthesizer},
-    ffx_daemon_events::{DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo},
+    ffx_daemon_events::{DaemonEvent, TargetEvent, TargetInfo},
     fidl_fuchsia_developer_bridge as bridge,
     std::cell::RefCell,
     std::collections::HashMap,
@@ -150,16 +150,7 @@ impl TargetCollection {
             to_update.addrs_extend(addrs.drain(..).collect::<Vec<TargetAddrEntry>>());
             to_update.update_boot_timestamp(new_target.boot_timestamp_nanos());
 
-            to_update.update_connection_state(|current_state| {
-                let new_state = new_target.get_connection_state();
-                match (&current_state, &new_state) {
-                    // Don't downgrade a targets connection state / drop RCS
-                    (TargetConnectionState::Rcs(_), TargetConnectionState::Mdns(_)) => {
-                        current_state
-                    }
-                    _ => new_state,
-                }
-            });
+            to_update.update_connection_state(|_| new_target.get_connection_state());
 
             to_update.events.push(TargetEvent::Rediscovered).unwrap_or_else(|err| {
                 log::warn!("unable to enqueue rediscovered event: {:#}", err)
@@ -366,6 +357,7 @@ mod tests {
         crate::target::clone_target,
         crate::target::TargetAddrType,
         chrono::{TimeZone, Utc},
+        ffx_daemon_events::TargetConnectionState,
         fuchsia_async::Task,
         futures::prelude::*,
         std::collections::BTreeSet,

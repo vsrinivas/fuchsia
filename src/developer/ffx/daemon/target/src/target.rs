@@ -499,19 +499,36 @@ impl Target {
         let mut new_state = (func)(former_state.clone());
 
         match &new_state {
+            // A new disconnected state is always observed. Ideally this should only be triggered by
+            // a call to .disconnect(). If the target is a manual target, it actually transitions to
+            // the manual state.
             TargetConnectionState::Disconnected => {
                 if self.is_manual() {
                     new_state = TargetConnectionState::Manual;
                 }
             }
-            TargetConnectionState::Mdns(_) => {
+            // If a target is observed over mdns, as happens regularly due to broadcasts, or it is
+            // re-added manually, if the target is presently in an RCS state, that state is
+            // preserved, and the last response time is just adjusted to represent the observation.
+            TargetConnectionState::Mdns(_) | TargetConnectionState::Manual => {
                 // Do not transition connection state for RCS -> MDNS.
                 if former_state.is_rcs() {
                     self.update_last_response(Utc::now());
                     return;
                 }
             }
-            _ => {}
+            // If the target is observed in RCS, it is always desirable to transition to that state.
+            // If it was already in an RCS state, this could indicate that we missed a peer node ID
+            // drop, and perhaps that could be tracked/logged in more detail in future. Ideally we
+            // would preserve all potentially active overnet peer id's for a target, however, it's
+            // also most likely that a target should only have one overnet peer ID at a time, as it
+            // should only have one overnetstack, but it is possible for it to have more than one.
+            TargetConnectionState::Rcs(_) => {}
+            // The following states are unconditional transitions, as they're states that are
+            // difficult to otherwise interrogate, but also states that are known to invalidate all
+            // other states.
+            TargetConnectionState::Fastboot(_) => {}
+            TargetConnectionState::Zedboot(_) => {}
         }
 
         if former_state == new_state {
@@ -1229,6 +1246,20 @@ mod test {
         // Attempt to set the state to TargetConnectionState::Mdns, this transition should fail, as in
         // this transition RCS should be retained.
         t.update_connection_state(|_| TargetConnectionState::Mdns(Instant::now()));
+
+        assert_eq!(t.get_connection_state(), rcs_state);
+    }
+
+    #[test]
+    fn test_target_connection_state_will_not_drop_rcs_on_manual_events() {
+        let t = Target::new_named("hello-kitty");
+        let rcs_state =
+            TargetConnectionState::Rcs(RcsConnection::new(&mut NodeId { id: 1234 }).unwrap());
+        t.set_state(rcs_state.clone());
+
+        // Attempt to set the state to TargetConnectionState::Manual, this transition should fail, as in
+        // this transition RCS should be retained.
+        t.update_connection_state(|_| TargetConnectionState::Manual);
 
         assert_eq!(t.get_connection_state(), rcs_state);
     }
