@@ -501,73 +501,58 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
   ASSERT_FALSE(devfs_has_watchers(root_node));
 }
 
+// This functor accepts a |fidl::WireUnownedResult<FidlMethod>&&| and checks that
+// the call completed with an application error |s| of |ZX_ERR_NOT_SUPPORTED|.
+class UnsupportedErrorMatcher {
+ public:
+  template <typename FidlMethod>
+  void operator()(fidl::WireUnownedResult<FidlMethod>&& result) {
+    ASSERT_OK(result.status());
+    ASSERT_EQ(result->s, ZX_ERR_NOT_SUPPORTED);
+  }
+};
+
 TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   zx::channel chan = devfs_root_clone();
   fidl::WireClient client(fidl::ClientEnd<fuchsia_io::DirectoryAdmin>(std::move(chan)),
                           coordinator_loop()->dispatcher());
 
+  client->GetDevicePath(UnsupportedErrorMatcher());
   {
-    auto result = client->GetDevicePath([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_OK(endpoints.status_value());
+    client->Mount(std::move(endpoints->client), UnsupportedErrorMatcher());
   }
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_OK(endpoints.status_value());
-    auto result = client->Mount(std::move(endpoints->client),
-                                [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_OK(result.status());
+    client->MountAndCreate(std::move(endpoints->client), "", 0, UnsupportedErrorMatcher());
   }
-  {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    ASSERT_OK(endpoints.status_value());
-    auto result = client->MountAndCreate(std::move(endpoints->client), "", 0, [](auto* ret) {
-      ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED);
-    });
-    ASSERT_EQ(result.status(), ZX_OK);
-  }
-  {
-    auto result = client->Unmount([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
-  }
-  {
-    auto result = client->UnmountNode([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
-  }
-  {
-    auto result = client->GetDevicePath([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
-  }
+  client->Unmount(UnsupportedErrorMatcher());
+  client->UnmountNode(UnsupportedErrorMatcher());
+  client->GetDevicePath(UnsupportedErrorMatcher());
   {
     zx::channel s, c;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
-    auto result = client->Link("", std::move(s), "",
-                               [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
+    client->Link("", std::move(s), "", UnsupportedErrorMatcher());
   }
   {
     zx::event e;
     fuchsia_io::wire::DirectoryRename2Result x;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &e));
-    auto result = client->Rename2("", std::move(e), "", [](auto* ret) {
-      ASSERT_TRUE(ret->result.is_err());
-      ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);
-    });
-    ASSERT_EQ(result.status(), ZX_OK);
+    client->Rename2("", std::move(e), "",
+                    [](fidl::WireUnownedResult<fuchsia_io::DirectoryAdmin::Rename2>&& ret) {
+                      ASSERT_OK(ret.status());
+                      ASSERT_TRUE(ret->result.is_err());
+                      ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);
+                    });
   }
-  {
-    auto result = client->GetToken([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
-  }
+  client->GetToken(UnsupportedErrorMatcher());
   {
     fuchsia_io::wire::NodeAttributes attrs = {};
-    auto result =
-        client->SetAttr(0, attrs, [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
+    client->SetAttr(0, attrs, UnsupportedErrorMatcher());
   }
-  {
-    auto result = client->Sync([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
-  }
+  client->Sync(UnsupportedErrorMatcher());
 
   coordinator_loop()->RunUntilIdle();
 }

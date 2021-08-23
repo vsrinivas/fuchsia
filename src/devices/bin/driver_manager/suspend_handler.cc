@@ -185,23 +185,18 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
 }
 
 void SuspendHandler::ShutdownFilesystems(fit::callback<void(zx_status_t)> callback) {
-  auto callback_ptr = std::make_shared<fit::callback<void(zx_status_t)>>(std::move(callback));
-
-  auto result = fshost_admin_client_->Shutdown(
-      [callback_ptr](fidl::WireResponse<fuchsia_fshost::Admin::Shutdown>* response) {
-        LOGF(INFO, "Successfully waited for VFS exit completion\n");
-        if (*callback_ptr) {
-          (*callback_ptr)(ZX_OK);
+  fshost_admin_client_->Shutdown(
+      [callback = std::move(callback)](
+          fidl::WireUnownedResult<fuchsia_fshost::Admin::Shutdown>&& result) mutable {
+        if (!result.ok()) {
+          LOGF(WARNING,
+               "Failed to cause VFS exit ourselves, this is expected during orderly shutdown: %s",
+               result.error().FormatDescription().c_str());
+        } else {
+          LOGF(INFO, "Successfully waited for VFS exit completion\n");
         }
+        callback(ZX_OK);
       });
-  if (result.status() != ZX_OK) {
-    LOGF(WARNING,
-         "Failed to cause VFS exit ourselves, this is expected during orderly shutdown: %s",
-         zx_status_get_string(result.status()));
-    if (*callback_ptr) {
-      (*callback_ptr)(ZX_OK);
-    }
-  }
 }
 
 void SuspendHandler::UnregisterSystemStorageForShutdown(SuspendCallback callback) {

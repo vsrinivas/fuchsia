@@ -85,16 +85,17 @@ void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
     return;
   }
 
-  auto result = driver_index_->WaitForBaseDrivers(
+  driver_index_->WaitForBaseDrivers(
       [this, callback = std::move(callback)](
-          fidl::WireResponse<fdf::DriverIndex::WaitForBaseDrivers>* response) mutable {
+          fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>&& result) mutable {
+        if (!result.ok()) {
+          LOGF(ERROR, "Failed to connect to DriverIndex: %s",
+               result.error().FormatDescription().c_str());
+          return;
+        }
         include_fallback_drivers_ = true;
         callback();
       });
-
-  if (result.status() != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to DriverIndex: %d", result.status());
-  }
 }
 
 const Driver* DriverLoader::LoadDriverUrl(const std::string& driver_url) {
