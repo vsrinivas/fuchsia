@@ -23,7 +23,8 @@ intel)
     icd_load \
     vkreadback \
     vkloop \
-    vkext_unprotected
+    vkext_unprotected \
+    mesa_integration_tests
   ;;
 mali)
   fx-command-run test --no-build --simple -o \

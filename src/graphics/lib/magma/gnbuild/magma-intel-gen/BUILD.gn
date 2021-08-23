@@ -24,16 +24,6 @@ group("test-driver") {
   ]
 }
 
-fuchsia_test_component("msd_intel_gen_nonhardware_tests") {
-  deps = [ "//src/graphics/drivers/msd-intel-gen:tests" ]
-  manifest = "meta/msd_intel_gen_nonhardware_tests.cmx"
-}
-
-fuchsia_test_component("msd_intel_gen_integration_tests") {
-  deps = [ "//src/graphics/drivers/msd-intel-gen/tests/integration" ]
-  manifest = "meta/msd_intel_gen_integration_tests.cmx"
-}
-
 # Mesa Intel Vulkan driver requires x64 build
 if (target_cpu == "x64") {
   resource("vulkan_metadata") {
@@ -68,54 +58,50 @@ if (target_cpu == "x64") {
     resource_path = "meta/icd.d"
   }
 
-  fuchsia_test_component("mesa_unit_tests") {
+  fuchsia_test_component("mesa_unit_tests_component") {
     deps = [ "//third_party/mesa/tests:mesa_unit_tests" ]
     manifest = "meta/mesa_unit_tests.cmx"
   }
 
-  fuchsia_test_component("state_pool") {
+  fuchsia_test_component("state_pool_component") {
     deps = [ "//third_party/mesa/src/intel/vulkan/tests:state_pool" ]
     manifest = "meta/state_pool.cmx"
   }
 
-  fuchsia_test_component("state_pool_free_list_only") {
+  fuchsia_test_component("state_pool_free_list_only_component") {
     deps = [
       "//third_party/mesa/src/intel/vulkan/tests:state_pool_free_list_only",
     ]
     manifest = "meta/state_pool_free_list_only.cmx"
   }
 
-  fuchsia_test_component("state_pool_no_free") {
+  fuchsia_test_component("state_pool_no_free_component") {
     deps = [ "//third_party/mesa/src/intel/vulkan/tests:state_pool_no_free" ]
     manifest = "meta/state_pool_no_free.cmx"
   }
 
-  fuchsia_test_component("block_pool_no_free") {
+  fuchsia_test_component("block_pool_no_free_component") {
     deps = [ "//third_party/mesa/src/intel/vulkan/tests:block_pool_no_free" ]
     manifest = "meta/block_pool_no_free.cmx"
   }
 
-  fuchsia_test_package("magma_intel_gen_nonhardware_tests") {
+  fuchsia_test_package("mesa_unit_tests") {
     test_components = [
-      ":msd_intel_gen_nonhardware_tests",
-      ":mesa_unit_tests",
-      ":state_pool",
-      ":state_pool_free_list_only",
-      ":state_pool_no_free",
-      ":block_pool_no_free",
+      ":mesa_unit_tests_component",
+      ":state_pool_component",
+      ":state_pool_free_list_only_component",
+      ":state_pool_no_free_component",
+      ":block_pool_no_free_component",
     ]
   }
 
-  fuchsia_test_component("mesa_integration_tests") {
+  fuchsia_test_component("mesa_integration_tests_component") {
     deps = [ "//third_party/mesa:tests" ]
     manifest = "meta/mesa_integration_tests.cmx"
   }
 
-  fuchsia_test_package("magma_intel_gen_integration_tests") {
-    test_components = [
-      ":msd_intel_gen_integration_tests",
-      ":mesa_integration_tests",
-    ]
+  fuchsia_test_package("mesa_integration_tests") {
+    test_components = [ ":mesa_integration_tests_component" ]
     test_specs = {
       environments = intel_gpu_envs
     }

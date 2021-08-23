@@ -21,6 +21,7 @@ group("tests") {
   # Add driver dependencies:
   public_deps += [
     "//garnet/packages/prod:vulkan",
+    "//src/graphics/drivers/msd-intel-gen/tests",
     "//src/graphics/drivers/msd-vsi-vip/tests/integration",
     "//src/graphics/drivers/msd-vsi-vip/tests/unit_tests:msd-vsi-vip-nonhardware-tests",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
@@ -28,8 +29,8 @@ group("tests") {
   ]
   if (target_cpu == "x64") {
     public_deps += [
-      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
-      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:mesa_integration_tests",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:mesa_unit_tests",
     ]
   }
 

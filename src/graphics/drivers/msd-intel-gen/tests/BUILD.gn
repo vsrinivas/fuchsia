@@ -1,0 +1,54 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":integration",
+    ":nonhardware_tests",
+    "..:msd_intel_bind_test",
+  ]
+}
+
+group("nonhardware_tests") {
+  testonly = true
+  deps = [ ":msd_intel_gen_nonhardware_tests" ]
+}
+
+group("integration") {
+  testonly = true
+  deps = [ ":msd_intel_gen_integration_tests" ]
+}
+
+fuchsia_test_component("msd_intel_gen_nonhardware_tests_component") {
+  deps = [ "unit_tests:msd_intel_gen_nonhardware_tests" ]
+  manifest = "meta/msd_intel_gen_nonhardware_tests.cmx"
+}
+
+fuchsia_test_package("msd_intel_gen_nonhardware_tests") {
+  test_components = [ ":msd_intel_gen_nonhardware_tests_component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_test_component("msd_intel_gen_integration_tests_component") {
+  deps = [ "integration:msd_intel_gen_integration_tests" ]
+  manifest = "meta/msd_intel_gen_integration_tests.cmx"
+}
+
+fuchsia_test_package("msd_intel_gen_integration_tests") {
+  test_components = [ ":msd_intel_gen_integration_tests_component" ]
+  test_specs = {
+    environments = intel_gpu_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}

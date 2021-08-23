@@ -116,14 +116,6 @@ source_set("msd_intel_test_entry") {
   ]
 }
 
-group("tests") {
-  testonly = true
-  public_deps = [
-    ":msd_intel_bind_test",
-    "tests/unit_tests:msd_intel_gen_nonhardware_tests",
-  ]
-}
-
 # This config allows inclusion of headers via relative paths
 config("msd_tests_include_config") {
   include_dirs = [ "tests" ]

@@ -7,14 +7,6 @@
         {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers_test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/magma_intel_gen_integration_tests#meta/msd_intel_gen_integration_tests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/magma_intel_gen_nonhardware_tests#meta/msd_intel_gen_nonhardware_tests.cmx"
         }
     ]
 }
