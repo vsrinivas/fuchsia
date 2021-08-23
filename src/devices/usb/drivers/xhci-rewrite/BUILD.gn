@@ -32,6 +32,7 @@ driver_module("xhci-driver") {
   }
   sources = [
     "usb-xhci.cc",
+    "xhci-device-state.cc",
     "xhci-enumeration.cc",
     "xhci-event-ring.cc",
     "xhci-transfer-ring.cc",
@@ -148,6 +149,7 @@ test("xhci-core-unittest-bin") {
   sources = [
     "usb-xhci-test.cc",
     "usb-xhci.cc",
+    "xhci-device-state.cc",
   ]
   deps = [ ":test-libs" ]
 

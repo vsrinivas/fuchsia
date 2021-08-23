@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_HUB_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_HUB_H_
 
+#include <fuchsia/hardware/usb/descriptor/cpp/banjo.h>
 #include <zircon/hw/usb.h>
 
 #include <fbl/slab_allocator.h>
