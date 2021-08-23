@@ -54,7 +54,7 @@
                 "fuchsia.time.Maintenance",
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.kernel.Reader",
-                "fuchsia.vboot.FirmwareParam",
+                "fuchsia.vboot.fwparam.FirmwareParam",
                 "fuchsia.virtualconsole.SessionManager",
             ],
             from: "parent",

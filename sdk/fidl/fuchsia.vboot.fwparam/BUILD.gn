@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.vboot") {
-  sources = [ "vboot.fidl" ]
+fidl("fuchsia.vboot.fwparam") {
+  sources = [ "fwparam.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

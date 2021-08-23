@@ -7,7 +7,7 @@ mod param;
 use crate::param::{Parameter, PARAMETERS};
 use anyhow::{Context, Error};
 use argh::FromArgs;
-use fidl_fuchsia_vboot::{FirmwareParamMarker, FirmwareParamProxy};
+use fidl_fuchsia_vboot_fwparam::{FirmwareParamMarker, FirmwareParamProxy};
 use fuchsia_zircon as zx;
 
 #[derive(FromArgs, PartialEq, Debug)]

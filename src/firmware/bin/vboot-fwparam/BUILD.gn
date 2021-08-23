@@ -33,7 +33,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.nvram:fuchsia.hardware.nvram-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.nand.flashmap:fuchsia.nand.flashmap-rustc",
-    "//sdk/fidl/fuchsia.vboot:fuchsia.vboot-rustc",
+    "//sdk/fidl/fuchsia.vboot.fwparam:fuchsia.vboot.fwparam-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",

@@ -11,7 +11,7 @@
         binary: "bin/vboot-fwparam",
     },
     capabilities: [
-        { protocol: "fuchsia.vboot.FirmwareParam" },
+        { protocol: "fuchsia.vboot.fwparam.FirmwareParam" },
     ],
     use: [
         {
@@ -23,7 +23,7 @@
     ],
     expose: [
         {
-            protocol: "fuchsia.vboot.FirmwareParam",
+            protocol: "fuchsia.vboot.fwparam.FirmwareParam",
             from: "self",
         },
     ],

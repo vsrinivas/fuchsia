@@ -8,7 +8,7 @@ pub mod flash;
 use crate::{error::NvdataError, nvdata::flash::Flash};
 use anyhow::{Context, Error};
 use fidl_fuchsia_hardware_nvram as nvram;
-use fidl_fuchsia_vboot::{FirmwareParamRequest, FirmwareParamRequestStream, Key};
+use fidl_fuchsia_vboot_fwparam::{FirmwareParamRequest, FirmwareParamRequestStream, Key};
 use fuchsia_inspect::{self as inspect, Property};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
@@ -69,17 +69,17 @@ enum NvdataOffset {
     /// See |nvram::Boot|.
     Boot = 1,
     /// Recovery reason. See 2recovery_reasons.h in vboot_reference.
-    /// fuchsia.vboot/Key.RECOVERY_REQUEST.
+    /// fuchsia.vboot.fwparam/Key.RECOVERY_REQUEST.
     Recovery = 2,
     /// Locale ID, used for localisation of firmware screens.
-    /// fuchsia.vboot/Key.LOCALIZATION_INDEX.
+    /// fuchsia.vboot.fwparam/Key.LOCALIZATION_INDEX.
     Localization = 3,
     /// See |nvram::Dev|.
     Dev = 4,
     /// See |nvram::Tpm|.
     Tpm = 5,
     /// Recovery reason subcode.
-    /// fuchsia.vboot/Key.RECOVERY_SUBCODE.
+    /// fuchsia.vboot.fwparam/Key.RECOVERY_SUBCODE.
     RecoverySubcode = 6,
     /// See |nvram::Boot2|.
     Boot2 = 7,
@@ -87,12 +87,12 @@ enum NvdataOffset {
     Misc = 8,
     /// Bits 0-7 of KernelMaxRollForward.
     /// Used to restrict how far forward rollback prevention will go.
-    /// fuchsia.vboot/Key.KERNEL_MAX_ROLLFORWARD.
+    /// fuchsia.vboot.fwparam/Key.KERNEL_MAX_ROLLFORWARD.
     KernelMaxRollForward1 = 9,
     /// Bits 8-15 of KernelMaxRollForward.
     KernelMaxRollForward2 = 10,
     /// Bits 0-7 of Kernel.
-    /// fuchsia.vboot/Key.KERNEL_FIELD.
+    /// fuchsia.vboot.fwparam/Key.KERNEL_FIELD.
     Kernel1 = 11,
     /// Bits 8-15 of Kernel.
     Kernel2 = 12,
@@ -105,7 +105,7 @@ enum NvdataOffset {
 
     // Everything past this point is only present in V2.
     /// Bits 0-7 of FirmwareMaxRollForward.
-    /// fuchsia.vboot/Key.FW_MAX_ROLLFORWARD.
+    /// fuchsia.vboot.fwparam/Key.FW_MAX_ROLLFORWARD.
     FirmwareMaxRollForward1 = 16,
     /// Bits 8-15 of FirmwareMaxRollForward.
     FirmwareMaxRollForward2 = 17,
