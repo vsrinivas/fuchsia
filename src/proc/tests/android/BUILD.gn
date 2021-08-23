@@ -119,7 +119,20 @@ foreach(test_name, gvisor_tests) {
   }
 }
 
-wayland_tests = [ "array-test" ]
+wayland_tests = [
+  "array-test",
+  "fixed-test",
+  "headers-protocol-core-test",
+  "headers-protocol-test",
+  "interface-test",
+  "list-test",
+  "map-test",
+  "message-test",
+  "newsignal-test",
+  "os-wrappers-test",
+  "protocol-logger-test",
+  "signal-test",
+]
 
 foreach(test_name, wayland_tests) {
   wayland_test_component(test_name) {
