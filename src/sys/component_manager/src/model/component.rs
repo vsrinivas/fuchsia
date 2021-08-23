@@ -163,11 +163,14 @@ pub struct Package {
 impl TryFrom<ResolvedComponent> for Component {
     type Error = ModelError;
 
-    fn try_from(component: ResolvedComponent) -> Result<Self, Self::Error> {
-        let decl: cm_rust::ComponentDecl =
-            component.decl.try_into().map_err(|_| ModelError::ComponentInvalid)?;
-        let package = component.package.map(|p| p.try_into()).transpose()?;
-        Ok(Self { resolved_url: component.resolved_url, decl, package })
+    fn try_from(
+        ResolvedComponent { resolved_url, decl, package }: ResolvedComponent,
+    ) -> Result<Self, Self::Error> {
+        let decl: cm_rust::ComponentDecl = decl
+            .try_into()
+            .map_err(|err| ModelError::component_decl_invalid(&resolved_url, err))?;
+        let package = package.map(|p| p.try_into()).transpose()?;
+        Ok(Self { resolved_url, decl, package })
     }
 }
 
@@ -176,11 +179,11 @@ impl TryFrom<fsys::Package> for Package {
 
     fn try_from(package: fsys::Package) -> Result<Self, Self::Error> {
         Ok(Self {
-            package_url: package.package_url.ok_or(ModelError::ComponentInvalid)?,
+            package_url: package.package_url.ok_or(ModelError::PackageUrlMissing)?,
             package_dir: Arc::new(
                 package
                     .package_dir
-                    .ok_or(ModelError::ComponentInvalid)?
+                    .ok_or(ModelError::PackageDirectoryMissing)?
                     .into_proxy()
                     .expect("could not convert package dir to proxy"),
             ),

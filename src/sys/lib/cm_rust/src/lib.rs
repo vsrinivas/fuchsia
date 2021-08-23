@@ -1391,7 +1391,7 @@ impl TryFrom<ComponentDecl> for fsys::ComponentDecl {
 }
 
 /// Errors produced by cm_rust.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum Error {
     #[error("Fidl validation failed: {}", err)]
     Validate {

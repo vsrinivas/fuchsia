@@ -19,7 +19,7 @@ const MAX_NAME_LENGTH: usize = 100;
 const MAX_URL_LENGTH: usize = 4096;
 
 /// Enum type that can represent any error encountered during validation.
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Clone)]
 pub enum Error {
     #[error("{} missing {}", .0.decl, .0.field)]
     MissingField(DeclField),
@@ -203,7 +203,7 @@ impl Error {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct DeclField {
     pub decl: String,
     pub field: String,
@@ -216,7 +216,7 @@ impl fmt::Display for DeclField {
 }
 
 /// Represents a list of errors encountered during validation.
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Clone)]
 pub struct ErrorList {
     pub errs: Vec<Error>,
 }

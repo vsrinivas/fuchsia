@@ -36,8 +36,10 @@ pub enum ModelError {
     ContextNotFound,
     #[error("{} is not supported", feature)]
     Unsupported { feature: String },
-    #[error("component declaration invalid")]
-    ComponentInvalid,
+    #[error("package URL missing")]
+    PackageUrlMissing,
+    #[error("package directory handle missing")]
+    PackageDirectoryMissing,
     #[error("path is not utf-8: {:?}", path)]
     PathIsNotUtf8 { path: PathBuf },
     #[error("path is not valid: {:?}", path)]
@@ -46,11 +48,11 @@ pub enum ModelError {
     NameIsNotUtf8 { name: OsString },
     #[error("expected a component instance moniker")]
     UnexpectedComponentManagerMoniker,
-    #[error("component manifest invalid {}: {}", url, err)]
-    ManifestInvalid {
+    #[error("ComponentDecl invalid {}: {}", url, err)]
+    ComponentDeclInvalid {
         url: String,
         #[source]
-        err: ClonableError,
+        err: cm_rust::Error,
     },
     #[error("The model is not available")]
     ModelNotAvailable,
@@ -199,8 +201,8 @@ impl ModelError {
         ModelError::RebootFailed { err: err.into().into() }
     }
 
-    pub fn manifest_invalid(url: impl Into<String>, err: impl Into<Error>) -> ModelError {
-        ModelError::ManifestInvalid { url: url.into(), err: err.into().into() }
+    pub fn component_decl_invalid(url: impl Into<String>, err: cm_rust::Error) -> ModelError {
+        ModelError::ComponentDeclInvalid { url: url.into(), err }
     }
 
     pub fn model_not_available() -> ModelError {
