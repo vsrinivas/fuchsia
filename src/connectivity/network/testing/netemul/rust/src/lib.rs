@@ -670,7 +670,10 @@ impl<'a> TestEndpoint<'a> {
         let netstack = realm
             .connect_to_protocol::<fnetstack::NetstackMarker>()
             .context("failed to connect to netstack")?;
-        Ok(TestInterface { endpoint: self, id, stack, netstack })
+        let interface_state = realm
+            .connect_to_protocol::<fnet_interfaces::StateMarker>()
+            .context("failed to connect to interfaces state")?;
+        Ok(TestInterface { endpoint: self, id, stack, netstack, interface_state })
     }
 }
 
@@ -681,6 +684,7 @@ pub struct TestInterface<'a> {
     id: u64,
     stack: fnet_stack::StackProxy,
     netstack: fnetstack::NetstackProxy,
+    interface_state: fnet_interfaces::StateProxy,
 }
 
 impl<'a> std::ops::Deref for TestInterface<'a> {
@@ -738,19 +742,36 @@ impl<'a> TestInterface<'a> {
         )
     }
 
-    /// Gets the interface's info.
-    pub async fn get_info(&self) -> Result<fnet_stack::InterfaceInfo> {
-        self.stack.get_interface_info(self.id).await.squash_result().with_context(|| {
-            format!(
-                "stack.get_interface_info({}) for endpoint {} failed",
-                self.id, self.endpoint.name
-            )
-        })
+    /// Gets the interface's properties.
+    async fn get_properties(&self) -> Result<fidl_fuchsia_net_interfaces_ext::Properties> {
+        let properties = fidl_fuchsia_net_interfaces_ext::existing(
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&self.interface_state)?,
+            fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(self.id),
+        )
+        .await
+        .context("failed to get existing interfaces")?;
+        match properties {
+            fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id) => Err(anyhow::anyhow!(
+                "could not find interface {} for endpoint {}",
+                id,
+                self.endpoint.name
+            )),
+            fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(properties) => Ok(properties),
+        }
     }
 
     /// Gets the interface's addresses.
-    pub async fn get_addrs(&self) -> Result<Vec<fnet::Subnet>> {
-        Ok(self.get_info().await?.properties.addresses)
+    pub async fn get_addrs(&self) -> Result<Vec<fidl_fuchsia_net_interfaces_ext::Address>> {
+        let fidl_fuchsia_net_interfaces_ext::Properties {
+            addresses,
+            id: _,
+            name: _,
+            device_class: _,
+            online: _,
+            has_default_ipv4_route: _,
+            has_default_ipv6_route: _,
+        } = self.get_properties().await?;
+        Ok(addresses)
     }
 
     async fn get_dhcp_client(&self) -> Result<fnet_dhcp::ClientProxy> {

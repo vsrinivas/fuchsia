@@ -456,14 +456,22 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         let iterations = usize::try_from(iterations).expect("integer conversion");
         let () = fasync::Interval::new(STEP).take(iterations).collect().await;
 
-        let addr = net::Subnet {
+        let link_local_addr = net::Subnet {
             addr: net::IpAddress::Ipv6(net::Ipv6Address {
                 addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
             }),
             prefix_len: 64,
         };
         let addrs = iface.get_addrs().await.expect("error getting interface addresses");
-        assert!(!addrs.contains(&addr), "DAD did not fail, found {:?} in {:?}", addr, addrs);
+        assert!(
+            !addrs
+                .iter()
+                .any(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| *addr
+                    == link_local_addr),
+            "DAD did not fail, found {:?} in {:?}",
+            link_local_addr,
+            addrs
+        );
     }
 
     /// Transmits a Neighbor Solicitation message and expects `ipv6_consts::LINK_LOCAL_ADDR`
