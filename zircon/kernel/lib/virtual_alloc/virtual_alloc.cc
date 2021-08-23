@@ -56,8 +56,9 @@ zx_status_t VirtualAlloc::Init(vaddr_t base, size_t size, size_t alloc_guard, si
   if (align_log2 < PAGE_SIZE_SHIFT) {
     return ZX_ERR_INVALID_ARGS;
   }
+  align_log2_ = align_log2;
 
-  const size_t vaddr_align = 1ul << align_log2;
+  const size_t vaddr_align = 1ul << align_log2_;
 
   if (size == 0 || !ZX_IS_ALIGNED(size, vaddr_align) || !ZX_IS_ALIGNED(base, vaddr_align) ||
       base + size < base) {
@@ -93,7 +94,6 @@ zx_status_t VirtualAlloc::Init(vaddr_t base, size_t size, size_t alloc_guard, si
   next_search_start_ = bitmap_pages;
 
   alloc_guard_ = alloc_guard;
-  align_log2_ = align_log2;
   return ZX_OK;
 }
 
