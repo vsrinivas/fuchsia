@@ -4,7 +4,7 @@
 
 //! Fuchsia Ethernet client
 
-#![deny(missing_docs)]
+// #![deny(missing_docs)]
 
 use bitflags::bitflags;
 use fidl_fuchsia_hardware_ethernet as sys;
@@ -25,7 +25,8 @@ use std::sync::{Arc, Mutex};
 use std::task::Poll;
 
 mod buffer;
-mod ethernet_sys;
+/// TODO low level ethernet definitions
+pub mod ethernet_sys;
 
 pub use buffer::RxBuffer;
 
