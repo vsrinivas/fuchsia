@@ -687,11 +687,6 @@
             ],
         },
         {
-            protocol: [ "fuchsia.vboot.fwparam.FirmwareParam" ],
-            from: "#vboot-fwparam",
-            to: "#console-launcher",
-        },
-        {
             protocol: [ "fuchsia.fshost.BlockWatcher" ],
             from: "#fshost",
             to: [
@@ -860,10 +855,6 @@
                 "fuchsia.driver.registrar.DriverRegistrar",
             ],
             from: "#driver_manager",
-        },
-        {
-            protocol: [ "fuchsia.vboot.fwparam.FirmwareParam" ],
-            from: "#vboot-fwparam",
         },
         {
             protocol: "fuchsia.sys2.ComponentResolver",

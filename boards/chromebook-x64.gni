@@ -28,7 +28,6 @@ _common_bootfs_deps = [
   "//src/devices/nand/drivers/intel-spi-flash",
   "//src/devices/tpm/drivers/cr50-spi",
   "//src/firmware/bin/vboot-fwparam:bootfs",
-  "//src/firmware/bin/vboot-fwparam/client:cros-nvtool",
   "//src/storage/flashmap:bootfs",
 ]
 

@@ -8,10 +8,7 @@ import("//build/rust/rustc_binary.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":vboot-fwparam-unittests",
-    "client:tests",
-  ]
+  deps = [ ":vboot-fwparam-unittests" ]
 }
 
 rustc_binary("bin") {
