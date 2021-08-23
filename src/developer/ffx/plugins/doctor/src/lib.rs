@@ -6,7 +6,7 @@ use {
     crate::constants::*,
     crate::daemon_manager::{DaemonManager, DefaultDaemonManager},
     crate::recorder::{DoctorRecorder, Recorder},
-    anyhow::{Context, Error, Result},
+    anyhow::{anyhow, Context, Error, Result},
     async_lock::Mutex,
     async_trait::async_trait,
     errors::ffx_bail,
@@ -545,7 +545,31 @@ async fn doctor(
                 r.add_content(USER_CONFIG_FILENAME, config_str);
             }
 
-            r.generate(output_dir)?
+            match r.generate(output_dir.clone()) {
+                Ok(p) => p,
+                Err(e) => {
+                    let path = &output_dir.to_str().unwrap_or("path undefined");
+                    let advice = "You can change the output directory for the generated zip file \
+                                  using `--output-dir`.";
+                    let default_err_msg =
+                        Err(anyhow!("{}\nCould not write to: {}\n{}", e, &path, advice));
+
+                    match e.downcast_ref::<zip::result::ZipError>() {
+                        Some(zip::result::ZipError::Io(io_error)) => {
+                            match io_error.raw_os_error() {
+                                Some(27) => Err(anyhow!(
+                                    "{}\nMake sure you can write files larger than 1MB to: {}\n{}",
+                                    e,
+                                    &path,
+                                    advice
+                                ))?,
+                                _ => default_err_msg?,
+                            }
+                        }
+                        _ => default_err_msg?,
+                    }
+                }
+            }
         };
 
         step_handler.result(StepResult::Success).await?;
