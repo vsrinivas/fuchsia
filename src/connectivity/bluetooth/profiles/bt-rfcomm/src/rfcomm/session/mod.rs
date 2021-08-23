@@ -875,6 +875,7 @@ impl SessionInner {
         let mut w_inner = inner.lock().await;
         w_inner.cancel_pending_channels();
         w_inner.inspect.disconnect();
+        w_inner.outgoing_frame_sender.close_channel();
         Ok(())
     }
 }
@@ -960,14 +961,13 @@ impl Session {
         let peer_processing_task =
             Session::peer_processing_task(l2cap, frame_receiver, data_sender).boxed().fuse();
 
-        // If the `peer_processing_task` terminates first, then the peer disconnected. In this case,
-        // we wait for the `session_inner_task` to clean up state and complete.
-        match futures::future::select(session_inner_task, peer_processing_task).await {
-            futures::future::Either::Left((_, _)) => {}
-            futures::future::Either::Right((_, session_task)) => {
-                let _ = session_task.await;
-            }
-        }
+        // If the `peer_processing_task` terminates first, then the peer disconnected unexpectedly.
+        // In this case, we expect the `session_inner_task` will clean up and terminate.
+        // If the `session_inner_task` terminates first then a Disconnect frame was received (in
+        // either direction). In this case, the finishing of the `session_inner_task` will result
+        // in the `peer_processing_task` to close.
+        let _ = futures::future::join(session_inner_task, peer_processing_task).await;
+
         // Session has finished; notify any subscribed clients.
         info!("Session with peer {:?} ended", id);
         let _ = termination_sender.send(());
@@ -1001,10 +1001,20 @@ impl Session {
                         }
                     }
                 }
-                frame_to_be_written = pending_writes.select_next_some() => {
-                    trace!("Sending frame to remote: {:?}", frame_to_be_written);
-                    let mut buf = vec![0; frame_to_be_written.encoded_len()];
-                    if let Err(e) = frame_to_be_written.encode(&mut buf[..]) {
+                frame_to_be_written = pending_writes.next() => {
+                    let frame = match frame_to_be_written {
+                        Some(frame) => frame,
+                        None => {
+                            // The SessionInner task finished and closed its end of the channel.
+                            // This means a Disconnect frame was received (in either direction), and
+                            // we can terminate.
+                            trace!("SessionInner task finished, closing peer_processing_task.");
+                            return;
+                        }
+                    };
+                    trace!("Sending frame to remote: {:?}", frame);
+                    let mut buf = vec![0; frame.encoded_len()];
+                    if let Err(e) = frame.encode(&mut buf[..]) {
                         warn!("Couldn't encode frame: {:?}", e);
                         continue;
                     }
@@ -1737,34 +1747,46 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_disconnect_over_mux_control_closes_session() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
-        let (session_fut, remote) = setup_session_task();
+        let (session_fut, mut remote) = setup_session_task();
         pin_mut!(session_fut);
         exec.run_until_stalled(&mut session_fut)
             .expect_pending("shouldn't be done while remote is live");
 
-        let remote_closed_fut = remote.closed();
-        pin_mut!(remote_closed_fut);
-        exec.run_until_stalled(&mut remote_closed_fut)
-            .expect_pending("shouldn't be done while remote is live");
+        {
+            let remote_closed_fut = remote.closed();
+            pin_mut!(remote_closed_fut);
+            exec.run_until_stalled(&mut remote_closed_fut)
+                .expect_pending("shouldn't be done while remote is live");
+        }
 
         // Remote sends SABM to start up session multiplexer.
         let sabm = Frame::make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
         send_peer_frame(remote.as_ref(), sabm);
         exec.run_until_stalled(&mut session_fut)
             .expect_pending("shouldn't be done while remote is live");
+        // Expect the outgoing acknowledgement for the SABM.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
 
         // Remote sends us a disconnect frame over the Mux Control DLCI.
         let disconnect = Frame::make_disc_command(Role::Initiator, DLCI::MUX_CONTROL_DLCI);
         send_peer_frame(remote.as_ref(), disconnect);
+        // Once we process the disconnect, the session should terminate.
+        let _ = exec.run_until_stalled(&mut session_fut).expect("Session is done now");
+        // Expect the outgoing acknowledgement for the disconnect.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
 
-        // Once we process the frame, the session should terminate.
-        assert!(exec.run_until_stalled(&mut session_fut).is_ready());
         // Remote should be closed, since the session has terminated.
-        assert!(exec.run_until_stalled(&mut remote_closed_fut).is_ready());
+        {
+            let remote_closed_fut = remote.closed();
+            pin_mut!(remote_closed_fut);
+            let _ = exec
+                .run_until_stalled(&mut remote_closed_fut)
+                .expect("L2CAP channel should be closed now");
+        }
     }
 
     #[test]
