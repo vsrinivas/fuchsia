@@ -465,6 +465,18 @@ TEST_F(TcpSocketTest, GetReadBufferAvailable) {
   EXPECT_EQ(available, data_size);
 }
 
+TEST_F(TcpSocketTest, PollNoEvents) {
+  ASSERT_NO_FATAL_FAILURES(set_connected());
+  struct pollfd pfds[] = {
+      {
+          .fd = client_fd().get(),
+          .events = 0,
+      },
+  };
+
+  EXPECT_EQ(poll(pfds, std::size(pfds), 5), 0, "error: %s", strerror(errno));
+}
+
 using UdpSocketTest = BaseTest<ZX_SOCKET_DATAGRAM>;
 TEST_F(UdpSocketTest, DatagramSendMsg) {
   ASSERT_NO_FATAL_FAILURES(set_connected());
