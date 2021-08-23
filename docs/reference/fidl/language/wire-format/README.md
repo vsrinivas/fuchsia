@@ -836,7 +836,8 @@ of the `ZX_HANDLE_INVALID` constant.
 
 #### Footnote 2
 
-Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on the subject.
+Read [The Lost Art of Structure Packing][lostart]{:.external} for an in-depth
+treatise on the subject.
 
 [channel call]: /docs/reference/syscalls/channel_call.md
 [channel write]: /docs/reference/syscalls/channel_write.md
