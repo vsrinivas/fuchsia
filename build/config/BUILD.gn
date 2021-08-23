@@ -820,7 +820,6 @@ config("Wno-unused-but-set-variable") {
     "//src/media/audio/drivers/usb-audio/*",
     "//src/media/codec/codecs/sw/low_layer/aac:*",
     "//src/storage/fvm/driver/*",
-    "//src/virtualization/lib/guest_interaction/*",
     "//third_party/*",
     "//vendor/*",
     "//zircon/third_party/uapp/dash",

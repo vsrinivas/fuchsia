@@ -29,17 +29,18 @@ TEST_F(AsyncEndToEndTest, ServerMissingFile) {
 
   // Create components required to perform a client Get request.
   grpc::ClientContext client_ctx;
-  grpc::Status grpc_status;
-  OperationStatus op_status;
-  GetResponse get_response;
-  GetRequest get_request;
-  get_request.set_source("/some/bogus/path");
-
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
-      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader = stub_->AsyncGet(
+      &client_ctx,
+      []() {
+        GetRequest get_request;
+        get_request.set_source("/some/bogus/path");
+        return get_request;
+      }(),
+      client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out, and then request to read from the server.
   ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  GetResponse get_response;
   reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request and reply that the
@@ -50,8 +51,9 @@ TEST_F(AsyncEndToEndTest, ServerMissingFile) {
   // Client should get the server's message and then wait for the server to
   // call Finish.
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
-  op_status = get_response.status();
-  ASSERT_EQ(op_status, OperationStatus::SERVER_MISSING_FILE_FAILURE);
+  ASSERT_EQ(get_response.status(), OperationStatus::SERVER_MISSING_FILE_FAILURE);
+  ASSERT_EQ(get_response.data(), "");
+  grpc::Status grpc_status;
   reader->Finish(&grpc_status, reader.get());
 
   // Server finishes.
@@ -75,17 +77,18 @@ TEST_F(AsyncEndToEndTest, ServerFileOpenFailure) {
 
   // Create components required to perform a client Get request.
   grpc::ClientContext client_ctx;
-  grpc::Status grpc_status;
-  OperationStatus op_status;
-  GetResponse get_response;
-  GetRequest get_request;
-  get_request.set_source("/file/with/permissions/issues");
-
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
-      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader = stub_->AsyncGet(
+      &client_ctx,
+      []() {
+        GetRequest get_request;
+        get_request.set_source("/file/with/permissions/issues");
+        return get_request;
+      }(),
+      client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out, and then request to read from the server.
   ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  GetResponse get_response;
   reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request and reply that the
@@ -96,8 +99,9 @@ TEST_F(AsyncEndToEndTest, ServerFileOpenFailure) {
   // Client should get the server's message and then wait for the server to
   // call Finish.
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
-  op_status = get_response.status();
-  ASSERT_EQ(op_status, OperationStatus::SERVER_FILE_READ_FAILURE);
+  ASSERT_EQ(get_response.status(), OperationStatus::SERVER_FILE_READ_FAILURE);
+  ASSERT_EQ(get_response.data(), "");
+  grpc::Status grpc_status;
   reader->Finish(&grpc_status, reader.get());
 
   // Server finishes.
@@ -125,17 +129,18 @@ TEST_F(AsyncEndToEndTest, ServerUnfragmentedRead) {
 
   // Create components required to perform a client Get request.
   grpc::ClientContext client_ctx;
-  grpc::Status grpc_status;
-  OperationStatus op_status;
-  GetResponse get_response;
-  GetRequest get_request;
-  get_request.set_source("/some/test/file");
-
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
-      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader = stub_->AsyncGet(
+      &client_ctx,
+      []() {
+        GetRequest get_request;
+        get_request.set_source("/some/test/file");
+        return get_request;
+      }(),
+      client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out, and then request to read from the server.
   ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  GetResponse get_response;
   reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request, open the file, and
@@ -145,8 +150,8 @@ TEST_F(AsyncEndToEndTest, ServerUnfragmentedRead) {
 
   // Client should get the server's message and then wait for more data.
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
-  ASSERT_STREQ(get_response.data().c_str(), "test");
-  op_status = get_response.status();
+  ASSERT_EQ(get_response.status(), OperationStatus::OK);
+  ASSERT_EQ(get_response.data(), "test");
   reader->Read(&get_response, reader.get());
 
   // The server should hit EOF and send an empty chunk of data back to the
@@ -156,7 +161,8 @@ TEST_F(AsyncEndToEndTest, ServerUnfragmentedRead) {
   server_call_data->Proceed(true);
 
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
-  op_status = get_response.status();
+  ASSERT_EQ(get_response.status(), OperationStatus::OK);
+  ASSERT_EQ(get_response.data(), "");
   reader->Read(&get_response, reader.get());
 
   // The server should then call Finish.
@@ -167,6 +173,7 @@ TEST_F(AsyncEndToEndTest, ServerUnfragmentedRead) {
 
   // The client read should fail and then it should finish.
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), false);
+  grpc::Status grpc_status;
   reader->Finish(&grpc_status, reader.get());
 
   // Client gets final status from server.
@@ -188,17 +195,18 @@ TEST_F(AsyncEndToEndTest, ServerFragmentedRead) {
 
   // Create components required to perform a client Get request.
   grpc::ClientContext client_ctx;
-  grpc::Status grpc_status;
-  OperationStatus op_status;
-  GetResponse get_response;
-  GetRequest get_request;
-  get_request.set_source("/some/test/file");
-
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
-      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader = stub_->AsyncGet(
+      &client_ctx,
+      []() {
+        GetRequest get_request;
+        get_request.set_source("/some/test/file");
+        return get_request;
+      }(),
+      client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out, and then request to read from the server.
   ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  GetResponse get_response;
   reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request, open the file, and
@@ -208,8 +216,8 @@ TEST_F(AsyncEndToEndTest, ServerFragmentedRead) {
 
   // Client should get the server's message and then wait for more data.
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
-  ASSERT_EQ(get_response.data(), std::string("test"));
-  op_status = get_response.status();
+  ASSERT_EQ(get_response.status(), OperationStatus::OK);
+  ASSERT_EQ(get_response.data(), "test");
   reader->Read(&get_response, reader.get());
 
   // Repeat the process.
@@ -217,8 +225,8 @@ TEST_F(AsyncEndToEndTest, ServerFragmentedRead) {
   server_call_data->Proceed(true);
 
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
-  ASSERT_EQ(get_response.data(), std::string("test"));
-  op_status = get_response.status();
+  ASSERT_EQ(get_response.status(), OperationStatus::OK);
+  ASSERT_EQ(get_response.data(), "test");
   reader->Read(&get_response, reader.get());
 
   // The server should hit EOF and send an empty chunk of data back to the
@@ -228,7 +236,8 @@ TEST_F(AsyncEndToEndTest, ServerFragmentedRead) {
   server_call_data->Proceed(true);
 
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
-  op_status = get_response.status();
+  ASSERT_EQ(get_response.status(), OperationStatus::OK);
+  ASSERT_EQ(get_response.data(), "");
   reader->Read(&get_response, reader.get());
 
   // The server should then call Finish.
@@ -239,6 +248,7 @@ TEST_F(AsyncEndToEndTest, ServerFragmentedRead) {
 
   // The client read should fail and then it should finish.
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), false);
+  grpc::Status grpc_status;
   reader->Finish(&grpc_status, reader.get());
 
   // Client gets final status from server.
@@ -259,17 +269,18 @@ TEST_F(AsyncEndToEndTest, ServerBadFile) {
 
   // Create components required to perform a client Get request.
   grpc::ClientContext client_ctx;
-  grpc::Status grpc_status;
-  OperationStatus op_status;
-  GetResponse get_response;
-  GetRequest get_request;
-  get_request.set_source("/some/test/file");
-
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
-      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader = stub_->AsyncGet(
+      &client_ctx,
+      []() {
+        GetRequest get_request;
+        get_request.set_source("/some/test/file");
+        return get_request;
+      }(),
+      client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out and then request to read from the server.
   ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  GetResponse get_response;
   reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request, open the file, and
@@ -279,7 +290,8 @@ TEST_F(AsyncEndToEndTest, ServerBadFile) {
 
   // Client should get the server's message and then wait for more data.
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
-  op_status = get_response.status();
+  ASSERT_EQ(get_response.status(), OperationStatus::SERVER_FILE_READ_FAILURE);
+  ASSERT_EQ(get_response.data(), "");
   reader->Read(&get_response, reader.get());
 
   // The server should finish.
@@ -290,8 +302,7 @@ TEST_F(AsyncEndToEndTest, ServerBadFile) {
 
   // The client will get back a bad status and finish.
   ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), false);
-  op_status = get_response.status();
-  ASSERT_EQ(op_status, OperationStatus::SERVER_FILE_READ_FAILURE);
+  grpc::Status grpc_status;
   reader->Finish(&grpc_status, reader.get());
 
   // Client gets final status from server.
