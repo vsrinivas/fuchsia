@@ -15,12 +15,6 @@ declare_args() {
   # Enable incremental rust compilation. Takes a path to the directory to use
   # as the cache.
   rust_incremental = ""
-
-  # Whether to force 1 codegen unit in Rust bootfs binaries.
-  # Fewer codegen units lead to smaller code, at the expense of slower
-  # incremental rebuild times. Disable this behavior when you are iterating
-  # on a bootfs Rust binary for faster builds.
-  enable_one_codegen_unit_for_rust_bootfs = true
 }
 
 # Defines a Rust cfg flag with the value of the rust_panic build arg.
@@ -57,26 +51,6 @@ config("incremental") {
   if (rust_incremental != "") {
     rustflags = [ "-Cincremental=" + rust_incremental ]
   }
-}
-
-# Best practices for Rust binaries that go into size-constrained bootfs.
-config("bootfs") {
-  # Optimize for size.
-  rustflags = [ "-Copt-level=z" ]
-
-  # Fewer codegen units produce smaller binaries at the cost of slower
-  # incremental builds.
-  # See: https://fxbug.dev/80514#c31
-  if (enable_one_codegen_unit_for_rust_bootfs) {
-    rustflags += [ "-Ccodegen-units=1" ]
-  }
-
-  # Can't dynamically link libstd and libtest for ZBI binaries.
-  # TODO(fxbug.dev/83081): reconsider this.
-  # TODO(fxbug.dev/83131): re-enable the below, remove subtraction of
-  # dynamic_rust_standard_library config from targets that use bootfs.
-  # See: https://fuchsia-review.googlesource.com/c/fuchsia/+/570385/comments/2fb50a51_c8fef636
-  #rustflags += [ "-Cprefer-dynamic=no" ]
 }
 
 config("netstack3_only_specialization_feature") {

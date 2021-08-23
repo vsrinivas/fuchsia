@@ -274,11 +274,26 @@ component_manager("component_manager_boot_env_test") {
 rustc_binary("bin") {
   name = "component_manager"
   edition = "2018"
-
-  configs += [ "//build/config/rust:bootfs" ]
+  force_opt = "z"
 
   # Can't dynamically link libstd and libtest for ZBI binaries
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+
+  # If max ZBI size is <=16 MiB
+  if (max_fuchsia_zbi_size > 0 && max_fuchsia_zbi_size <= 16777216) {
+    # Past experience tells us that this binary is too large to fit into a ZBI
+    # that's capped at 16 MiB unless we enable Thin LTO.
+    # Thin LTO provides a ~65% decrease in binary size, at a cost of a ~5x
+    # increase in compile wall time.
+    # Regular ("fat") LTO provides a ~70% size decrease but is ~6x slower than
+    # Thin LTO.
+    # The team decided that Thin LTO is a reasonable compromise.
+    # It's not entirely clear why Thin LTO produces size improvements.
+    # See: fxbug.dev/80514
+    configs += [ "//build/config/lto:thinlto" ]
+    configs -= [ "//build/config/lto:thinlto" ]
+    configs += [ "//build/config/lto:thinlto" ]
+  }
 
   deps = [
     ":lib",

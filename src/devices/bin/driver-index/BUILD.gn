@@ -25,10 +25,13 @@ group("tests") {
 
 rustc_binary("bin") {
   output_name = "driver_index"
+  force_opt = "z"
 
-  configs += [ "//build/config/rust:bootfs" ]
-
-  # Can't dynamically link libstd and libtest for ZBI binaries
+  # Driver Index must always be small (even in debug builds) since it
+  # is part of the Zircon boot image.
+  configs += [ "//build/config/lto:thinlto" ]
+  configs -= [ "//build/config/lto:thinlto" ]
+  configs += [ "//build/config/lto:thinlto" ]
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
   # Generates a GN target for unit-tests with the label `bin_test`, and
