@@ -16,7 +16,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetControlMarker,
-        TargetControlProxy,
+        TargetControlProxy, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
@@ -124,6 +124,10 @@ impl Injector for Injection {
 
     async fn is_experiment(&self, key: &str) -> bool {
         ffx_config::get(key).await.unwrap_or(false)
+    }
+
+    async fn build_info(&self) -> Result<VersionInfo> {
+        Ok::<VersionInfo, anyhow::Error>(ffx_build_version::build_info())
     }
 }
 
@@ -297,7 +301,8 @@ async fn run() -> Result<i32> {
 
     let analytics_disabled = ffx_config::get("ffx.analytics.disabled").await.unwrap_or(false);
 
-    init_metrics_svc().await; // one time call to initialize app analytics
+    let injection = Injection::default();
+    init_metrics_svc(injection.build_info().await?).await; // one time call to initialize app analytics
     if analytics_disabled {
         opt_out_for_this_invocation().await?
     }
@@ -309,7 +314,7 @@ async fn run() -> Result<i32> {
     let analytics_start = Instant::now();
 
     let command_start = Instant::now();
-    let res = ffx_lib_suite::ffx_plugin_impl(Injection::default(), app).await;
+    let res = ffx_lib_suite::ffx_plugin_impl(injection, app).await;
     let command_done = Instant::now();
     log::info!("Command completed. Success: {}", res.is_ok());
     let command_duration = (command_done - command_start).as_secs_f32();

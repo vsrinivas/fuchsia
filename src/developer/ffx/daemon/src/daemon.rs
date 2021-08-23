@@ -11,7 +11,8 @@ use {
     async_trait::async_trait,
     chrono::Utc,
     diagnostics_data::Timestamp,
-    ffx_core::{build_info, TryStreamUtilExt},
+    ffx_build_version::build_info,
+    ffx_core::TryStreamUtilExt,
     ffx_daemon_core::events::{self, EventHandler},
     ffx_daemon_events::{
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,

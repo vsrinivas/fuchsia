@@ -7,7 +7,7 @@ pub use core_macros::{ffx_command, ffx_plugin};
 use {
     anyhow::Result,
     async_trait::async_trait,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootProxy, TargetControlProxy},
+    fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootProxy, TargetControlProxy, VersionInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     futures::stream::{FuturesUnordered, StreamExt, TryStream},
     futures::{future::FusedFuture, Future},
@@ -20,8 +20,6 @@ use {
 
 pub mod metrics;
 
-pub use ffx_build_version::build_info;
-
 #[async_trait]
 pub trait Injector {
     async fn daemon_factory(&self) -> Result<DaemonProxy>;
@@ -29,6 +27,7 @@ pub trait Injector {
     async fn fastboot_factory(&self) -> Result<FastbootProxy>;
     async fn target_factory(&self) -> Result<TargetControlProxy>;
     async fn is_experiment(&self, key: &str) -> bool;
+    async fn build_info(&self) -> Result<VersionInfo>;
 }
 
 pub struct PluginResult(Result<i32>);

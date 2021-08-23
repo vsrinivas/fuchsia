@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::build_info;
 use analytics::{init, make_batch, metrics_event_batch::MetricsEventBatch};
 use anyhow::Result;
+use fidl_fuchsia_developer_bridge::VersionInfo;
 use std::collections::BTreeMap;
 
 pub const GA_PROPERTY_ID: &str = "UA-127897021-9";
@@ -13,8 +13,7 @@ pub const FUCHSIA_DISCOVERY_LEGACY_ENV_VAR_NAME: &str = "FUCSHIA_DISABLED_legacy
 
 pub const ANALYTICS_LEGACY_DISCOVERY_CUSTOM_DIMENSION_KEY: &str = "cd4";
 
-pub async fn init_metrics_svc() {
-    let build_info = build_info();
+pub async fn init_metrics_svc(build_info: VersionInfo) {
     let build_version = build_info.build_version;
     init(String::from("ffx"), build_version, GA_PROPERTY_ID.to_string()).await;
 }

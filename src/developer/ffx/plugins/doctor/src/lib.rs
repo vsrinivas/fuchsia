@@ -11,7 +11,7 @@ use {
     async_trait::async_trait,
     errors::ffx_bail,
     ffx_config::{get, print_config},
-    ffx_core::{build_info, ffx_plugin},
+    ffx_core::ffx_plugin,
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target, TargetState, VersionInfo},
@@ -356,11 +356,12 @@ enum TargetCheckResult {
 }
 
 #[ffx_plugin()]
-pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
-    doctor_cmd_impl(cmd, stdout()).await
+pub async fn doctor_cmd(build_info: VersionInfo, cmd: DoctorCommand) -> Result<()> {
+    doctor_cmd_impl(build_info, cmd, stdout()).await
 }
 
 pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
+    build_info: VersionInfo,
     cmd: DoctorCommand,
     mut writer: W,
 ) -> Result<()> {
@@ -450,7 +451,7 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
         cmd.retry_count,
         delay,
         cmd.restart_daemon,
-        build_info().build_version,
+        build_info.build_version,
         default_target,
         DoctorRecorderParameters {
             record,

@@ -28,7 +28,7 @@ config("env") {
 
 if (current_toolchain == default_toolchain) {
   action("gen_version_info") {
-    script = "//src/developer/ffx/core/version/build/gn_write_version_info.sh"
+    script = "//src/developer/ffx/lib/version/build/gn_write_version_info.sh"
 
     # NOTE: Using a depfile instead of explicit sources is intentional
     # See https://fxbug.dev/77607 for context.
@@ -40,7 +40,7 @@ if (current_toolchain == default_toolchain) {
     ]
 
     inputs =
-        [ "//src/developer/ffx/core/version/build/gn_write_version_info.sh" ]
+        [ "//src/developer/ffx/lib/version/build/gn_write_version_info.sh" ]
     outputs = [ base_output_file ]
   }
 }

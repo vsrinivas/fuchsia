@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     chrono::{Local, Offset, TimeZone},
-    ffx_core::{build_info, ffx_plugin},
+    ffx_core::ffx_plugin,
     ffx_version_args::VersionCommand,
     fidl_fuchsia_developer_bridge::{self as bridge, VersionInfo},
     std::fmt::Display,
@@ -45,8 +45,12 @@ fn format_version_info<O: Offset + Display>(
 }
 
 #[ffx_plugin()]
-pub async fn version(daemon_proxy: bridge::DaemonProxy, cmd: VersionCommand) -> Result<()> {
-    version_cmd(&build_info(), cmd, daemon_proxy, &mut std::io::stdout(), Local).await
+pub async fn version(
+    daemon_proxy: bridge::DaemonProxy,
+    build_info: VersionInfo,
+    cmd: VersionCommand,
+) -> Result<()> {
+    version_cmd(&build_info, cmd, daemon_proxy, &mut std::io::stdout(), Local).await
 }
 
 pub async fn version_cmd<W: Write, O: Offset + Display>(

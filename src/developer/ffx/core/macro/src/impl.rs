@@ -34,11 +34,12 @@ const UNRECOGNIZED_PARAMETER: &str = "If this is a proxy, make sure the paramete
 const DAEMON_SERVICE_IDENT: &str = "daemon::service";
 
 lazy_static! {
-    static ref KNOWN_PROXIES: Vec<(&'static str, &'static str)> = vec![
-        ("RemoteControlProxy", "remote_factory"),
-        ("DaemonProxy", "daemon_factory"),
-        ("FastbootProxy", "fastboot_factory"),
-        ("TargetControlProxy", "target_factory"),
+    static ref KNOWN_PROXIES: Vec<(&'static str, &'static str, bool)> = vec![
+        ("RemoteControlProxy", "remote_factory", true),
+        ("DaemonProxy", "daemon_factory", true),
+        ("FastbootProxy", "fastboot_factory", true),
+        ("TargetControlProxy", "target_factory", true),
+        ("VersionInfo", "build_info", false),
     ];
 }
 
@@ -329,8 +330,12 @@ fn generate_known_proxy(
                 let output_fut_res =
                     Ident::new(&format!("{}_fut_res", factory_name), Span::call_site());
                 let implementation = quote! { let #output_fut = injector.#factory_name(); };
-                let testing =
-                    generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path);
+                let testing = if known_proxy.2 {
+                    generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path)
+                } else {
+                    quote! {}
+                };
+
                 let arg = proxy_wrapper_type.result_stream(&output_fut_res);
                 return Ok(Some(GeneratedProxyParts {
                     arg,
