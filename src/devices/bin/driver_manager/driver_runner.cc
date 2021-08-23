@@ -4,10 +4,12 @@
 
 #include "src/devices/bin/driver_manager/driver_runner.h"
 
+#include <fuchsia/driver/framework/llcpp/fidl.h>
 #include <fuchsia/process/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/status.h>
 
@@ -658,18 +660,27 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
 }
 
 void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
-  auto match_callback = [this, &node](fidl::WireResponse<fdf::DriverIndex::MatchDriver>* response) {
+  auto match_callback = [this,
+                         &node](fidl::WireUnownedResult<fdf::DriverIndex::MatchDriver>&& result) {
     auto driver_node = &node;
     auto orphaned = [this, &driver_node] {
       orphaned_nodes_.push_back(driver_node->weak_from_this());
     };
-    if (response->result.is_err()) {
+
+    if (!result.ok()) {
       orphaned();
-      LOGF(ERROR, "Failed to match Node '%s': %s", driver_node->name().data(),
-           zx_status_get_string(response->result.err()));
+      LOGF(ERROR, "Failed to call match Node '%s': %s", node.name().data(),
+           result.error().FormatDescription().c_str());
       return;
     }
-    auto& matched_driver = response->result.response().driver;
+
+    if (result->result.is_err()) {
+      orphaned();
+      LOGF(ERROR, "Failed to match Node '%s': %s", driver_node->name().data(),
+           zx_status_get_string(result->result.err()));
+      return;
+    }
+    auto& matched_driver = result->result.response().driver;
     if (!matched_driver.has_url()) {
       orphaned();
       LOGF(ERROR, "Failed to match Node '%s', the driver URL is missing",
@@ -695,12 +706,7 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
     }
     node.OnBind();
   };
-  auto match_result = driver_index_->MatchDriver(std::move(args), std::move(match_callback));
-  if (!match_result.ok()) {
-    orphaned_nodes_.push_back(node.weak_from_this());
-    LOGF(ERROR, "Failed to call match Node '%s': %s", node.name().data(),
-         match_result.FormatDescription().c_str());
-  }
+  driver_index_->MatchDriver(args, std::move(match_callback));
 }
 
 zx::status<Node*> DriverRunner::CreateCompositeNode(
@@ -789,32 +795,38 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
                                                                           std::string url,
                                                                           std::string collection,
                                                                           zx::handle token) {
-  auto endpoints = fidl::CreateEndpoints<fio::Directory>();
+  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto open_callback = [name, url](fidl::WireResponse<fsys::Realm::OpenExposedDir>* response) {
-    if (response->result.is_err()) {
+  auto open_callback = [name, url](fidl::WireUnownedResult<fsys::Realm::OpenExposedDir>&& result) {
+    if (!result.ok()) {
+      LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %s", name.data(),
+           url.data(), result.FormatDescription().c_str());
+      return;
+    }
+    if (result->result.is_err()) {
       LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %u", name.data(),
-           url.data(), response->result.err());
+           url.data(), result->result.err());
     }
   };
   auto create_callback = [this, name, url, collection, server_end = std::move(endpoints->server),
                           open_callback = std::move(open_callback)](
-                             fidl::WireResponse<fsys::Realm::CreateChild>* response) mutable {
-    if (response->result.is_err()) {
-      LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.data(), url.data(),
-           response->result.err());
+                             fidl::WireUnownedResult<fsys::Realm::CreateChild>&& result) mutable {
+    if (!result.ok()) {
+      LOGF(ERROR, "Failed to create component '%s' (%s): %s", name.c_str(), url.c_str(),
+           result.error().FormatDescription().c_str());
       return;
     }
-    auto open = realm_->OpenExposedDir(
+    if (result->result.is_err()) {
+      LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.c_str(), url.c_str(),
+           result->result.err());
+      return;
+    }
+    realm_->OpenExposedDir(
         fsys::wire::ChildRef{.name = fidl::StringView::FromExternal(name),
                              .collection = fidl::StringView::FromExternal(collection)},
         std::move(server_end), std::move(open_callback));
-    if (!open.ok()) {
-      LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %s", name.data(),
-           url.data(), open.FormatDescription().c_str());
-    }
   };
   fidl::Arena allocator;
   fsys::wire::ChildDecl child_decl(allocator);
@@ -831,13 +843,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
     child_args.set_numbered_handles(
         allocator, fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(&handle_info, 1));
   }
-  auto create = realm_->CreateChild(
-      fsys::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)},
-      std::move(child_decl), std::move(child_args), std::move(create_callback));
-  if (!create.ok()) {
-    LOGF(ERROR, "Failed to create component '%s': %s", name.data(),
-         create.FormatDescription().c_str());
-    return zx::error(ZX_ERR_INTERNAL);
-  }
+  realm_->CreateChild(fsys::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)},
+                      child_decl, child_args, std::move(create_callback));
   return zx::ok(std::move(endpoints->client));
 }
