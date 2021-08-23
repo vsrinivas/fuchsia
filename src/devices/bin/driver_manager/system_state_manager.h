@@ -8,7 +8,7 @@
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
-#include "coordinator.h"
+class Coordinator;
 
 namespace device_manager_fidl = fuchsia_device_manager;
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;

@@ -479,9 +479,9 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
 
   ASSERT_OK(fidl::BindSingleInFlightOnly(coordinator_loop()->dispatcher(),
                                          std::move(power_endpoints->server), &mock_power_manager));
-  ASSERT_OK(coordinator().RegisterWithPowerManager(std::move(power_endpoints->client),
-                                                   std::move(endpoints->client),
-                                                   std::move(dev_endpoints->client)));
+  coordinator().RegisterWithPowerManager(
+      std::move(power_endpoints->client), std::move(endpoints->client),
+      std::move(dev_endpoints->client), [](zx_status_t status) { ASSERT_OK(status); });
   mock_power_manager.wait_until_register_called();
 }
 

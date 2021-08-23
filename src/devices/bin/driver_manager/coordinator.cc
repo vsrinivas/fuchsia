@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/pkg/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -27,6 +28,7 @@
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
+#include <lib/zx/time.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -50,8 +52,6 @@
 #include <inspector/inspector.h>
 
 #include "driver_host_loader_service.h"
-#include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
-#include "lib/zx/time.h"
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/driver_host_loader_service.h"
@@ -147,57 +147,63 @@ bool Coordinator::InResume() const {
   return (resume_context().flags() == ResumeContext::Flags::kResume);
 }
 
-zx_status_t Coordinator::RegisterWithPowerManager(fidl::ClientEnd<fio::Directory> devfs) {
+void Coordinator::RegisterWithPowerManager(fidl::ClientEnd<fio::Directory> devfs,
+                                           RegisterWithPowerManagerCompletion completion) {
   auto system_state_endpoints = fidl::CreateEndpoints<fdm::SystemStateTransition>();
   if (system_state_endpoints.is_error()) {
-    return system_state_endpoints.error_value();
+    completion(system_state_endpoints.error_value());
+    return;
   }
   std::unique_ptr<SystemStateManager> system_state_manager;
   auto status = SystemStateManager::Create(
       dispatcher_, this, std::move(system_state_endpoints->server), &system_state_manager);
   if (status != ZX_OK) {
-    return status;
+    completion(status);
+    return;
   }
   set_system_state_manager(std::move(system_state_manager));
   auto result = service::Connect<fpm::DriverManagerRegistration>();
   if (result.is_error()) {
     LOGF(ERROR, "Failed to connect to fuchsia.power.manager: %s", result.status_string());
-    return result.error_value();
+    completion(result.error_value());
+    return;
   }
 
-  status = RegisterWithPowerManager(std::move(*result), std::move(system_state_endpoints->client),
-                                    std::move(devfs));
-  if (status == ZX_OK) {
-    set_power_manager_registered(true);
-  }
-  return ZX_OK;
+  RegisterWithPowerManager(std::move(*result), std::move(system_state_endpoints->client),
+                           std::move(devfs), std::move(completion));
 }
 
-zx_status_t Coordinator::RegisterWithPowerManager(
+void Coordinator::RegisterWithPowerManager(
     fidl::ClientEnd<fpm::DriverManagerRegistration> power_manager,
     fidl::ClientEnd<fdm::SystemStateTransition> system_state_transition,
-    fidl::ClientEnd<fio::Directory> devfs) {
+    fidl::ClientEnd<fio::Directory> devfs, RegisterWithPowerManagerCompletion completion) {
   power_manager_client_.Bind(std::move(power_manager), dispatcher_);
-  auto result = power_manager_client_->Register(
+  power_manager_client_->Register(
       std::move(system_state_transition), std::move(devfs),
-      [](fidl::WireResponse<fpm::DriverManagerRegistration::Register>* response) {
-        if (response->result.is_err()) {
-          fpm::wire::RegistrationError err = response->result.err();
+      [this, completion = std::move(completion)](
+          fidl::WireUnownedResult<fpm::DriverManagerRegistration::Register>&& result) mutable {
+        if (!result.ok()) {
+          LOGF(INFO, "Failed to register with power_manager: %s\n",
+               result.error().FormatDescription().c_str());
+          completion(result.status());
+          return;
+        }
+
+        if (result->result.is_err()) {
+          fpm::wire::RegistrationError err = result->result.err();
           if (err == fpm::wire::RegistrationError::kInvalidHandle) {
-            LOGF(ERROR, "Failed to register with power_manager.Invalid handle.\n");
+            LOGF(ERROR, "Failed to register with power_manager. Invalid handle.\n");
+            completion(ZX_ERR_BAD_HANDLE);
             return;
           }
           LOGF(ERROR, "Failed to register with power_manager\n");
+          completion(ZX_ERR_INTERNAL);
           return;
         }
         LOGF(INFO, "Registered with power manager successfully");
+        set_power_manager_registered(true);
+        completion(ZX_OK);
       });
-  if (!result.ok()) {
-    LOGF(INFO, "Failed to register with power_manager: %d\n", result.status());
-    return result.status();
-  }
-
-  return ZX_OK;
 }
 
 zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
@@ -1041,14 +1047,21 @@ zx_status_t BindDriver(const fbl::RefPtr<Device>& dev, const char* libname) {
   if (status != ZX_OK) {
     return status;
   }
-  auto result = dev->device_controller()->BindDriver(
+  dev->device_controller()->BindDriver(
       fidl::StringView::FromExternal(libname, strlen(libname)), std::move(vmo),
-      [dev](auto* response) {
-        if (response->status != ZX_OK) {
-          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(),
-               zx_status_get_string(response->status));
+      [dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>&& result) {
+        if (!result.ok()) {
+          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(), result.status_string());
+          dev->flags &= (~DEV_CTX_BOUND);
           return;
         }
+        if (result->status != ZX_OK) {
+          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(),
+               zx_status_get_string(result->status));
+          dev->flags &= (~DEV_CTX_BOUND);
+          return;
+        }
+
         fbl::RefPtr<Device> real_parent;
         if (dev->flags & DEV_CTX_PROXY) {
           real_parent = dev->parent();
@@ -1080,19 +1093,16 @@ zx_status_t BindDriver(const fbl::RefPtr<Device>& dev, const char* libname) {
             break;
           }
         }
-        if (response->test_output.is_valid()) {
+        if (result->test_output.is_valid()) {
           LOGF(INFO, "Setting test channel for driver '%s'", dev->name().data());
-          auto status = dev->set_test_output(std::move(response->test_output),
-                                             dev->coordinator->dispatcher());
+          auto status =
+              dev->set_test_output(std::move(result->test_output), dev->coordinator->dispatcher());
           if (status != ZX_OK) {
             LOGF(ERROR, "Failed to wait on test output for driver '%s': %s", dev->name().data(),
                  zx_status_get_string(status));
           }
         }
       });
-  if (!result.ok()) {
-    return result.status();
-  }
   dev->flags |= DEV_CTX_BOUND;
   return ZX_OK;
 }

@@ -341,11 +341,13 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // Returns path to driver that should be bound to fragments of composite devices.
   std::string GetFragmentDriverPath() const;
 
-  zx_status_t RegisterWithPowerManager(fidl::ClientEnd<fuchsia_io::Directory> devfs);
-  zx_status_t RegisterWithPowerManager(
+  using RegisterWithPowerManagerCompletion = fit::callback<void(zx_status_t)>;
+  void RegisterWithPowerManager(fidl::ClientEnd<fuchsia_io::Directory> devfs,
+                                RegisterWithPowerManagerCompletion completion);
+  void RegisterWithPowerManager(
       fidl::ClientEnd<fuchsia_power_manager::DriverManagerRegistration> power_manager,
       fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> system_state_transition,
-      fidl::ClientEnd<fuchsia_io::Directory> devfs);
+      fidl::ClientEnd<fuchsia_io::Directory> devfs, RegisterWithPowerManagerCompletion completion);
   void ScheduleBaseDriverLoading();
 
  private:

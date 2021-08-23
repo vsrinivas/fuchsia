@@ -7,6 +7,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <zircon/status.h>
 
+#include "coordinator.h"
 #include "src/devices/lib/log/log.h"
 
 zx_status_t SystemStateManager::Create(

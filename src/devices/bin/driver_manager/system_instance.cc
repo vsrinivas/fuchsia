@@ -82,10 +82,11 @@ void SystemInstance::InstallDevFsIntoNamespace() {
 }
 
 void SystemInstance::ServiceStarter(Coordinator* coordinator) {
-  zx_status_t status = coordinator->RegisterWithPowerManager(CloneFs("dev"));
-  if (status != ZX_OK) {
-    LOGF(WARNING, "Unable to RegisterWithPowerManager: %d", status);
-  }
+  coordinator->RegisterWithPowerManager(CloneFs("dev"), [](zx_status_t status) {
+    if (status != ZX_OK) {
+      LOGF(WARNING, "Unable to RegisterWithPowerManager: %d", status);
+    }
+  });
 
   coordinator->StartLoadingNonBootDrivers();
 }
