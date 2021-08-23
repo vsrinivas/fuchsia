@@ -43,7 +43,7 @@ Extension in VS Code:
 After [installing the SSH extension](#install-ssh-extension), connect to your
 SSH environment:
 
-1. Press `CMD/CTRL + SHIFT + P` to open **Command Palette**.
+1. Press `F1` or `CMD/CTRL + SHIFT + P` to open **Command Palette**.
 1. Type in the field, `Remote-SSH: Connect to Host…` and press enter.
    <img class="vscode-image"
         alt="This figure shows the command palette field in VS Code. The field
