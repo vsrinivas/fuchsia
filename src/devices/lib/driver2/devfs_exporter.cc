@@ -42,19 +42,17 @@ fpromise::promise<void, zx_status_t> DevfsExporter::Export(std::string_view serv
   }
   fpromise::bridge<void, zx_status_t> bridge;
   auto callback = [completer = std::move(bridge.completer)](
-                      fidl::WireResponse<fdfs::Exporter::Export>* response) mutable {
-    if (response->result.is_err()) {
+                      fidl::WireUnownedResult<fdfs::Exporter::Export>&& response) mutable {
+    if (!response.ok()) {
+      completer.complete_error(response.status());
+    } else if (response->result.is_err()) {
       completer.complete_error(response->result.err());
     } else {
       completer.complete_ok();
     }
   };
-  auto result =
-      exporter_->Export(std::move(endpoints->client), fidl::StringView::FromExternal(devfs_path),
-                        protocol_id, std::move(callback));
-  if (!result.ok()) {
-    return fpromise::make_error_promise(result.status());
-  }
+  exporter_->Export(std::move(endpoints->client), fidl::StringView::FromExternal(devfs_path),
+                    protocol_id, std::move(callback));
   return bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE));
 }
 
