@@ -9,9 +9,5 @@
             "/proc:proc",
         ],
         apex_hack: [ "com.android.runtime" ],
-        environ: [
-            "TEST_TMPDIR=/data/tmp",
-            "TEST_ON_GVISOR=1",
-        ],
     },
 }

@@ -1,5 +1,5 @@
 {
-    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/getdents_test",
         args: [ "--gunit_filter=*.VerifyEntries:*.VerifyPadding:*.SmallDir:*.LargeDir:*.PartialBuffer:*.NotDir:*.SeekResetsCursor:*.OpenDir:*.GoneAfterRemoveCache" ],

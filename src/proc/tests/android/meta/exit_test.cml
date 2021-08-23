@@ -1,5 +1,5 @@
 {
-    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/exit_test",
     },

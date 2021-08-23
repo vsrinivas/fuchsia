@@ -40,12 +40,11 @@ resource("starnix_data_tmp_placeholder") {
   outputs = [ "data/tmp/.placeholder" ]
 }
 
-template("gvisor_test_component") {
+template("starnix_test_component") {
   test_name = target_name
 
   resource("${test_name}_bin") {
-    sources =
-        [ "//prebuilt/starnix/tests/syscalls/linux-amd64/linux/${test_name}" ]
+    sources = [ "//prebuilt/starnix/tests/syscalls/linux-amd64/${invoker.test_dir}/${test_name}" ]
     outputs = [ "data/tests/${test_name}" ]
   }
 
@@ -59,6 +58,16 @@ template("gvisor_test_component") {
       ":${test_name}_bin",
       ":android_system_image",
     ]
+  }
+}
+
+template("gvisor_test_component") {
+  # Without this gn gives an error: `You set the variable "invoker" here and it was unused before it
+  # went out of scope.`
+  not_needed([ "invoker" ])
+
+  test_dir = "linux"
+  starnix_test_component(target_name) {
   }
 }
 
