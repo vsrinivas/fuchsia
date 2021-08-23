@@ -33,15 +33,15 @@ VirtioQueueFake::VirtioQueueFake(const PhysMem& phys_mem, zx_gpaddr_t addr, uint
 
 void VirtioQueueFake::Configure(zx_gpaddr_t data_addr, size_t data_len) {
   // Configure the descriptor table.
-  ring_.desc = phys_mem_.as<vring_desc>(desc_, avail_ - desc_);
+  ring_.desc = phys_mem_.aligned_as<vring_desc>(desc_, avail_ - desc_);
 
   // Configure the available ring.
-  ring_.avail = phys_mem_.as<vring_avail>(avail_, used_ - sizeof(uint16_t) - avail_);
-  ring_.used_event = phys_mem_.as<uint16_t>(used_ - sizeof(uint16_t));
+  ring_.avail = phys_mem_.aligned_as<vring_avail>(avail_, used_ - sizeof(uint16_t) - avail_);
+  ring_.used_event = phys_mem_.aligned_as<uint16_t>(used_ - sizeof(uint16_t));
 
   // Configure the used ring.
-  ring_.used = phys_mem_.as<vring_used>(used_, end_ - sizeof(uint16_t) - used_);
-  ring_.avail_event = phys_mem_.as<uint16_t>(end_ - sizeof(uint16_t));
+  ring_.used = phys_mem_.aligned_as<vring_used>(used_, end_ - sizeof(uint16_t) - used_);
+  ring_.avail_event = phys_mem_.aligned_as<uint16_t>(end_ - sizeof(uint16_t));
 
   // Configure data addresses.
   data_begin_ = align_addr(data_addr);
@@ -55,7 +55,7 @@ zx_status_t VirtioQueueFake::WriteDesc(void** buf, uint32_t len, uint16_t flags,
     return ZX_ERR_NO_MEMORY;
   }
 
-  void* data = phys_mem_.as<void>(data_begin_, len);
+  void* data = phys_mem_.ptr(data_begin_, len);
   if (flags & VRING_DESC_F_WRITE) {
     *buf = data;
   } else {

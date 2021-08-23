@@ -199,8 +199,7 @@ fuchsia_test_package("guest_interaction_tests") {
     ":server_daemon_test_cmp",
   ]
   test_specs = {
-    # TODO(fxbug.dev/48129): Currently hangs in ASan. Fix and switch to [ nuc_env ].
-    environments = nuc_env_fails_on_asan
+    environments = [ nuc_env ]
   }
 }
 

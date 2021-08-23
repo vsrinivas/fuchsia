@@ -91,7 +91,7 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
   zbi_header_t kernel_item_header;
   zbi_kernel_t kernel_payload_header;
   {
-    if (auto ret = read(zbi_fd.get(), phys_mem.as<void>(kernel_zbi_off, sizeof(complete_zbi_t)),
+    if (auto ret = read(zbi_fd.get(), phys_mem.ptr(kernel_zbi_off, sizeof(complete_zbi_t)),
                         sizeof(complete_zbi_t));
         ret != sizeof(complete_zbi_t)) {
       FX_LOGS(ERROR) << "Failed to read initial ZBI headers: " << strerror(errno);
@@ -105,9 +105,9 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
     // Dereference and copy for good measure, as we will soon be overwriting
     // the kernel ZBI range.
     kernel_item_header =
-        *phys_mem.as<zbi_header_t>(kernel_zbi_off + offsetof(complete_zbi_t, hdr_kernel));
+        phys_mem.read<zbi_header_t>(kernel_zbi_off + offsetof(complete_zbi_t, hdr_kernel));
     kernel_payload_header =
-        *phys_mem.as<zbi_kernel_t>(kernel_zbi_off + offsetof(complete_zbi_t, data_kernel));
+        phys_mem.read<zbi_kernel_t>(kernel_zbi_off + offsetof(complete_zbi_t, data_kernel));
   }
   const uint32_t reserved_size = offsetof(complete_zbi_t, data_kernel) + kernel_item_header.length +
                                  kernel_payload_header.reserve_memory_size;
@@ -132,8 +132,9 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
   auto second = std::next(first);
   size_t kernel_zbi_size = second.item_offset();
   size_t data_zbi_size = view.size_bytes() - (second.item_offset() - first.item_offset());
-  cpp20::span<std::byte> kernel_zbi{phys_mem.as<std::byte>(kernel_zbi_off), kernel_zbi_size};
-  cpp20::span<std::byte> data_zbi{phys_mem.as<std::byte>(data_zbi_off), data_zbi_size};
+  cpp20::span<std::byte> kernel_zbi{phys_mem.aligned_as<std::byte>(kernel_zbi_off),
+                                    kernel_zbi_size};
+  cpp20::span<std::byte> data_zbi{phys_mem.aligned_as<std::byte>(data_zbi_off), data_zbi_size};
 
   // Now that we have performed basic data integrity checks and know that the
   // kernel and data ZBI ranges do not overlap, copy.
@@ -169,7 +170,7 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
                                   const PhysMem& phys_mem, const DevMem& dev_mem,
                                   const std::vector<PlatformDevice*>& devices, uintptr_t zbi_off) {
   const size_t zbi_max = phys_mem.size() - zbi_off;
-  cpp20::span<std::byte> zbi{phys_mem.as<std::byte>(zbi_off), zbi_max};
+  cpp20::span<std::byte> zbi{phys_mem.aligned_as<std::byte>(zbi_off), zbi_max};
   zbitl::Image image(zbi);
 
   // Command line.

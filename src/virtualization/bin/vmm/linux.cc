@@ -106,24 +106,40 @@ enum Xlf : uint16_t {
 
 // clang-format on
 
-static uint8_t& bp(const PhysMem& phys_mem, Bp8 off) {
-  return *phys_mem.as<uint8_t>(kKernelOffset + off);
+static uint8_t read_bp(const PhysMem& phys_mem, Bp8 off) {
+  return phys_mem.read<uint8_t>(kKernelOffset + off);
 }
 
-static uint16_t& bp(const PhysMem& phys_mem, Bp16 off) {
-  return *phys_mem.as<uint16_t>(kKernelOffset + off);
+static uint16_t read_bp(const PhysMem& phys_mem, Bp16 off) {
+  return phys_mem.read<uint16_t>(kKernelOffset + off);
 }
 
-static uint32_t& bp(const PhysMem& phys_mem, Bp32 off) {
-  return *phys_mem.as<uint32_t>(kKernelOffset + off);
+static uint32_t read_bp(const PhysMem& phys_mem, Bp32 off) {
+  return phys_mem.read<uint32_t>(kKernelOffset + off);
 }
 
-static uint64_t& bp(const PhysMem& phys_mem, Bp64 off) {
-  return *phys_mem.as<uint64_t>(kKernelOffset + off);
+[[maybe_unused]] static uint64_t read_bp(const PhysMem& phys_mem, Bp64 off) {
+  return phys_mem.read<uint64_t>(kKernelOffset + off);
+}
+
+static void write_bp(const PhysMem& phys_mem, Bp8 off, uint8_t data) {
+  phys_mem.write<uint8_t>(kKernelOffset + off, data);
+}
+
+[[maybe_unused]] static void write_bp(const PhysMem& phys_mem, Bp16 off, uint16_t data) {
+  phys_mem.write<uint16_t>(kKernelOffset + off, data);
+}
+
+static void write_bp(const PhysMem& phys_mem, Bp32 off, uint32_t data) {
+  phys_mem.write<uint32_t>(kKernelOffset + off, data);
+}
+
+static void write_bp(const PhysMem& phys_mem, Bp64 off, uint64_t data) {
+  phys_mem.write<uint64_t>(kKernelOffset + off, data);
 }
 
 static bool is_boot_params(const PhysMem& phys_mem) {
-  return bp(phys_mem, BOOTFLAG) == kBootFlagMagic && bp(phys_mem, HEADER) == kHeaderMagic;
+  return read_bp(phys_mem, BOOTFLAG) == kBootFlagMagic && read_bp(phys_mem, HEADER) == kHeaderMagic;
 }
 
 // MZ header used to boot ARM64 kernels.
@@ -160,7 +176,7 @@ static zx_status_t read_fd(const int fd, const PhysMem& phys_mem, const uintptr_
     FX_LOGS(ERROR) << "Failed to stat file";
     return ZX_ERR_IO;
   }
-  ret = read(fd, phys_mem.as<void>(off, stat.st_size), stat.st_size);
+  ret = read(fd, phys_mem.ptr(off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
     FX_LOGS(ERROR) << "Failed to read file";
     return ZX_ERR_IO;
@@ -191,7 +207,7 @@ static zx_status_t read_device_tree(const int fd, const PhysMem& phys_mem, const
     FX_LOGS(ERROR) << "Device tree is too large";
     return ZX_ERR_OUT_OF_RANGE;
   }
-  *dtb = phys_mem.as<void>(off, *dtb_size);
+  *dtb = phys_mem.ptr(off, *dtb_size);
   int ret = fdt_check_header(*dtb);
   if (ret != 0) {
     FX_LOGS(ERROR) << "Invalid device tree " << ret;
@@ -202,29 +218,29 @@ static zx_status_t read_device_tree(const int fd, const PhysMem& phys_mem, const
 
 static zx_status_t read_boot_params(const PhysMem& phys_mem, uintptr_t* guest_ip) {
   // Validate kernel configuration.
-  uint16_t xloadflags = bp(phys_mem, XLOADFLAGS);
+  uint16_t xloadflags = read_bp(phys_mem, XLOADFLAGS);
   if (~xloadflags & (KERNEL_64 | CAN_BE_LOADED_ABOVE_4G)) {
     FX_LOGS(ERROR) << "Unsupported Linux kernel";
     return ZX_ERR_NOT_SUPPORTED;
   }
-  uint16_t protocol = bp(phys_mem, VERSION);
-  uint8_t loadflags = bp(phys_mem, LOADFLAGS);
+  uint16_t protocol = read_bp(phys_mem, VERSION);
+  uint8_t loadflags = read_bp(phys_mem, LOADFLAGS);
   if (protocol < kMinBootProtocol || !(loadflags & LOAD_HIGH)) {
     FX_LOGS(ERROR) << "Linux kernel is not a bzImage";
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (bp(phys_mem, RELOCATABLE) == 0) {
+  if (read_bp(phys_mem, RELOCATABLE) == 0) {
     FX_LOGS(ERROR) << "Linux kernel is not relocatable";
     return ZX_ERR_NOT_SUPPORTED;
   }
-  uint64_t kernel_align = bp(phys_mem, KERNEL_ALIGN);
+  uint64_t kernel_align = read_bp(phys_mem, KERNEL_ALIGN);
   if (kKernelOffset % kernel_align != 0) {
     FX_LOGS(ERROR) << "Linux kernel has unsupported alignment";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Calculate the offset to the protected mode kernel.
-  uint8_t setup_sects = bp(phys_mem, SETUP_SECTS);
+  uint8_t setup_sects = read_bp(phys_mem, SETUP_SECTS);
   if (setup_sects == 0) {
     // 0 here actually means 4, see boot.txt.
     setup_sects = 4;
@@ -238,17 +254,17 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
                                      const std::string& cmdline, fbl::unique_fd dtb_overlay_fd,
                                      const size_t ramdisk_size) {
   // Set type of bootloader.
-  bp(phys_mem, LOADER_TYPE) = kLoaderTypeUnspecified;
+  write_bp(phys_mem, LOADER_TYPE, kLoaderTypeUnspecified);
 
   // Zero video, columns and lines to skip early video init.
-  bp(phys_mem, VIDEO_MODE) = 0;
-  bp(phys_mem, VIDEO_COLS) = 0;
-  bp(phys_mem, VIDEO_LINES) = 0;
+  write_bp(phys_mem, VIDEO_MODE, 0);
+  write_bp(phys_mem, VIDEO_COLS, 0);
+  write_bp(phys_mem, VIDEO_LINES, 0);
 
   // Set the address and size of the initial RAM disk.
   if (ramdisk_size > 0) {
-    bp(phys_mem, RAMDISK_IMAGE) = kRamdiskOffset;
-    bp(phys_mem, RAMDISK_SIZE) = static_cast<uint32_t>(ramdisk_size);
+    write_bp(phys_mem, RAMDISK_IMAGE, kRamdiskOffset);
+    write_bp(phys_mem, RAMDISK_SIZE, static_cast<uint32_t>(ramdisk_size));
   }
 
   // Copy the command line string.
@@ -258,8 +274,8 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
     return ZX_ERR_OUT_OF_RANGE;
   }
   uint32_t cmdline_off = phys_mem.size() - PAGE_SIZE;
-  memcpy(phys_mem.as<void>(cmdline_off, cmdline_len), cmdline.c_str(), cmdline_len);
-  bp(phys_mem, COMMAND_LINE) = cmdline_off;
+  memcpy(phys_mem.ptr(cmdline_off, cmdline_len), cmdline.c_str(), cmdline_len);
+  write_bp(phys_mem, COMMAND_LINE, cmdline_off);
 
   // If specified, load a device tree overlay.
   if (dtb_overlay_fd) {
@@ -271,10 +287,11 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
       FX_LOGS(ERROR) << "Failed to read device tree";
       return status;
     }
-    auto setup_data = phys_mem.as<SetupData>(kDtbOffset);
-    setup_data->type = SetupData::Dtb;
-    setup_data->len = dtb_size;
-    bp(phys_mem, SETUP_DATA) = kDtbOffset;
+    auto setup_data = phys_mem.read<SetupData>(kDtbOffset);
+    setup_data.type = SetupData::Dtb;
+    setup_data.len = dtb_size;
+    phys_mem.write<SetupData>(kDtbOffset, setup_data);
+    write_bp(phys_mem, SETUP_DATA, kDtbOffset);
   }
 
 #if __x86_64__
@@ -288,17 +305,19 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
     FX_LOGS(ERROR) << "Not enough space for e820 memory map";
     return ZX_ERR_BAD_STATE;
   }
-  bp(phys_mem, E820_COUNT) = static_cast<uint8_t>(e820_entries);
+  write_bp(phys_mem, E820_COUNT, static_cast<uint8_t>(e820_entries));
   const size_t e820_size = e820_entries * sizeof(e820entry_t);
-  e820entry_t* e820_addr = phys_mem.as<e820entry_t>(kKernelOffset + kE820MapOffset, e820_size);
+  static_assert(((kKernelOffset + kE820MapOffset) % alignof(e820entry_t)) == 0);
+  e820entry_t* e820_addr =
+      phys_mem.aligned_as<e820entry_t>(kKernelOffset + kE820MapOffset, e820_size);
   e820_map.copy(e820_addr);
 #endif
   return ZX_OK;
 }
 
 static zx_status_t read_mz(const PhysMem& phys_mem, uintptr_t* guest_ip) {
-  MzHeader* mz_header = phys_mem.as<MzHeader>(kKernelOffset);
-  if (!is_mz(mz_header)) {
+  MzHeader mz_header = phys_mem.read<MzHeader>(kKernelOffset);
+  if (!is_mz(&mz_header)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

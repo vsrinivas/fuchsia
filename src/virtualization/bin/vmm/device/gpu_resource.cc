@@ -64,7 +64,7 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2d(const virtio_gpu_rect_t& rect
       }
 
       zx_vaddr_t src_vaddr = entry.addr + off - entry_off;
-      memcpy(&host_backing_[off], phys_mem_->as<void>(src_vaddr, copy_size), copy_size);
+      memcpy(&host_backing_[off], phys_mem_->ptr(src_vaddr, copy_size), copy_size);
       transfer_bytes_remaining -= copy_size;
       off = off_next;
     }

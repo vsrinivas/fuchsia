@@ -18,21 +18,21 @@ void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, 
 
   // Configure the descriptor table.
   const uintptr_t desc_size = ring_.size * sizeof(ring_.desc[0]);
-  ring_.desc = phys_mem_->as<vring_desc>(desc, desc_size);
+  ring_.desc = phys_mem_->aligned_as<vring_desc>(desc, desc_size);
 
   // Configure the available ring.
   const uintptr_t avail_size = sizeof(*ring_.avail) + (ring_.size * sizeof(ring_.avail->ring[0]));
-  ring_.avail = phys_mem_->as<vring_avail>(avail, avail_size);
+  ring_.avail = phys_mem_->aligned_as<vring_avail>(avail, avail_size);
 
   const uintptr_t used_event_addr = avail + avail_size;
-  ring_.used_event = phys_mem_->as<uint16_t>(used_event_addr);
+  ring_.used_event = phys_mem_->aligned_as<uint16_t>(used_event_addr);
 
   // Configure the used ring.
   const uintptr_t used_size = sizeof(*ring_.used) + (ring_.size * sizeof(ring_.used->ring[0]));
-  ring_.used = phys_mem_->as<vring_used>(used, used_size);
+  ring_.used = phys_mem_->aligned_as<vring_used>(used, used_size);
 
   const uintptr_t avail_event_addr = used + used_size;
-  ring_.avail_event = phys_mem_->as<uint16_t>(avail_event_addr);
+  ring_.avail_event = phys_mem_->aligned_as<uint16_t>(avail_event_addr);
 }
 
 bool VirtioQueue::NextChain(VirtioChain* chain) {
@@ -118,7 +118,7 @@ zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, VirtioDescriptor* out) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  out->addr = phys_mem_->as<void>(desc.addr, desc.len);
+  out->addr = phys_mem_->ptr(desc.addr, desc.len);
   out->len = desc.len;
   out->next = desc.next;
   out->has_next = desc.flags & VRING_DESC_F_NEXT;

@@ -80,7 +80,7 @@ class RxStream : public StreamBase {
         FX_LOGS(ERROR) << "Dropping packet that's too large for the descriptor";
         continue;
       }
-      memcpy(phys_mem_->as<void>(offset, length), reinterpret_cast<void*>(pkt.addr), pkt.length);
+      memcpy(phys_mem_->ptr(offset, length), reinterpret_cast<void*>(pkt.addr), pkt.length);
       *chain_.Used() = pkt.length + sizeof(*header);
       pkt.entry.flags = ETH_FIFO_TX_OK;
       guest_ethernet_->Complete(pkt.entry);
@@ -118,7 +118,7 @@ class TxStream : public StreamBase {
     uintptr_t offset = phys_mem_->offset(header + 1);
     uintptr_t length = desc_.len - sizeof(*header);
 
-    zx_status_t status = guest_ethernet_->Send(phys_mem_->as<void>(offset, length), length);
+    zx_status_t status = guest_ethernet_->Send(phys_mem_->ptr(offset, length), length);
     return status != ZX_ERR_SHOULD_WAIT;
   }
 

@@ -45,17 +45,18 @@ static uintptr_t create_page_table_level(const PhysMem& phys_mem, size_t l1_page
   const size_t l1_pages = (l1_ptes + kPtesPerPage - 1) / kPtesPerPage;
 
   uintptr_t l0_pte_off = l1_pte_off + l1_pages * PAGE_SIZE;
-  auto pt = phys_mem.as<uint64_t>(l1_pte_off);
   for (size_t i = 0; i < l1_ptes; i++) {
+    uint64_t pte;
     if (has_page && (!has_l0_aspace || i < l1_ptes - 1)) {
-      pt[i] = *aspace_off | X86_PTE_P | X86_PTE_RW | map_flags;
+      pte = *aspace_off | X86_PTE_P | X86_PTE_RW | map_flags;
       *aspace_off += l1_page_size;
     } else {
       if (i > 0 && (i % kPtesPerPage == 0)) {
         l0_pte_off += PAGE_SIZE;
       }
-      pt[i] = l0_pte_off | X86_PTE_P | X86_PTE_RW;
+      pte = l0_pte_off | X86_PTE_P | X86_PTE_RW;
     }
+    phys_mem.write<uint64_t>(l1_pte_off + i * sizeof(uint64_t), pte);
   }
 
   return l0_pte_off;
