@@ -18,3 +18,5 @@ toc:
   path: /docs/contribute/docs/code-sample-style-guide.md
 - title: "Adding a glossary term"
   path: /docs/contribute/docs/glossary-entries.md
+- title: "Modifying non-inclusive words in mdlint"
+  path: /docs/contribute/docs/modify-mdlint-inclusive-language.md
