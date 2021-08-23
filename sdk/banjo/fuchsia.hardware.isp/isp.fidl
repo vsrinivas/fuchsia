@@ -102,11 +102,4 @@ protocol Isp {
     }) -> (struct {
         s zx.status;
     });
-
-    /// Sets the ISP driver's idea of default sensor mode.
-    SetDefaultSensorMode(struct {
-        mode uint32;
-    }) -> (struct {
-        status zx.status;
-    });
 };
