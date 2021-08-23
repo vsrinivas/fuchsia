@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon::{self as zx, AsHandleRef, Task as zxTask};
+use fuchsia_zircon_sys as sys;
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashSet;
 use std::ffi::CStr;
@@ -135,7 +136,62 @@ impl ThreadGroup {
         }
     }
 
+    /// Sets the name of process associated with this thread group.
+    ///
+    /// - `name`: The name to set for the process. If the length of `name` is >= `ZX_MAX_NAME_LEN`,
+    /// a truncated version of the name will be used.
     pub fn set_name(&self, name: &CStr) -> Result<(), Errno> {
-        self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
+        if name.to_bytes().len() >= sys::ZX_MAX_NAME_LEN {
+            // TODO: Might want to use [..sys::ZX_MAX_NAME_LEN] of only the last path component.
+            let mut clone = name.clone().to_owned().into_bytes();
+            clone[sys::ZX_MAX_NAME_LEN - 1] = 0;
+            let name = CStr::from_bytes_with_nul(&clone[..sys::ZX_MAX_NAME_LEN])
+                .map_err(|_| errno!(EINVAL))?;
+            self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
+        } else {
+            self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use fuchsia_async as fasync;
+
+    use super::*;
+    use crate::testing::*;
+    use std::ffi::CString;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_long_name() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let bytes = [1; sys::ZX_MAX_NAME_LEN];
+        let name = CString::new(bytes).unwrap();
+
+        let max_bytes = [1; sys::ZX_MAX_NAME_LEN - 1];
+        let expected_name = CString::new(max_bytes).unwrap();
+
+        assert!(task_owner.task.thread_group.set_name(&name).is_ok());
+        assert_eq!(task_owner.task.thread_group.process.get_name(), Ok(expected_name));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_max_length_name() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let bytes = [1; sys::ZX_MAX_NAME_LEN - 1];
+        let name = CString::new(bytes).unwrap();
+
+        assert!(task_owner.task.thread_group.set_name(&name).is_ok());
+        assert_eq!(task_owner.task.thread_group.process.get_name(), Ok(name));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_short_name() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let bytes = [1; sys::ZX_MAX_NAME_LEN - 10];
+        let name = CString::new(bytes).unwrap();
+
+        assert!(task_owner.task.thread_group.set_name(&name).is_ok());
+        assert_eq!(task_owner.task.thread_group.process.get_name(), Ok(name));
     }
 }
