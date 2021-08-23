@@ -25,8 +25,8 @@ void FshostIntegrationTest::SetUp() {
                           std::move(child_decl), fuchsia::sys2::CreateChildArgs(), &create_result));
   ASSERT_TRUE(status.is_ok() && !create_result.is_err());
 
-  fuchsia::sys2::Realm_BindChild_Result bind_result;
-  status = zx::make_status(realm_->BindChild(
+  fuchsia::sys2::Realm_OpenExposedDir_Result bind_result;
+  status = zx::make_status(realm_->OpenExposedDir(
       fuchsia::sys2::ChildRef{.name = "test-fshost", .collection = "fshost-collection"},
       exposed_dir_.NewRequest(), &bind_result));
   ASSERT_TRUE(status.is_ok() && !bind_result.is_err());
