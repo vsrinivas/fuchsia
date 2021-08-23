@@ -23,7 +23,7 @@ zx_status_t zx_vmar_op_range(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_vmo_op_range()` performs operation *op* on VMOs mapped in the range *address* to *address*+*size*.
+`zx_vmar_op_range()` performs operation *op* on VMOs mapped in the range *address* to *address*+*size*.
 
 *address* and *size* must fall entirely within this VMAR, and must meet the alignment requirements specified for *op* by [`zx_vmo_op_range()`].
 
