@@ -197,7 +197,7 @@ impl FsNodeOps for SelfSymlink {
         unreachable!("Symlink nodes cannot be opened.");
     }
 
-    fn readlink(&self, _node: &FsNode, task: &Task) -> Result<FsString, Errno> {
-        Ok(format!("{}", task.id).as_bytes().to_vec())
+    fn readlink(&self, _node: &FsNode, task: &Task) -> Result<SymlinkTarget, Errno> {
+        Ok(SymlinkTarget::Path(format!("{}", task.id).as_bytes().to_vec()))
     }
 }

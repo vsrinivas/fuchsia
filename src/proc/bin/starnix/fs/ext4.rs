@@ -133,12 +133,12 @@ struct ExtSymlink {
 
 impl FsNodeOps for ExtSymlink {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        error!(ENOSYS)
+        unreachable!("Symlink nodes cannot be opened.");
     }
 
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
+    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
         let data = self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
-        Ok(data)
+        Ok(SymlinkTarget::Path(data))
     }
 }
 

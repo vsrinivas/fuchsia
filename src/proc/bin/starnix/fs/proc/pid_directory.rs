@@ -254,9 +254,9 @@ impl FsNodeOps for ExeSymlink {
         unreachable!("Symlink nodes cannot be opened.");
     }
 
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
+    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
         if let Some(node) = &*self.task.executable_node.read() {
-            Ok(node.path())
+            Ok(SymlinkTarget::Node(node.clone()))
         } else {
             error!(ENOENT)
         }
@@ -287,14 +287,8 @@ impl FsNodeOps for FdSymlink {
         unreachable!("Symlink nodes cannot be opened.");
     }
 
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
+    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
         let file = self.task.files.get(self.fd).map_err(|_| errno!(ENOENT))?;
-        let name = file.name.path();
-        if name.is_empty() {
-            // TODO: this should be an error once we set up stdio nodes correctly.
-            Ok(b"<broken fd symlink>".to_vec())
-        } else {
-            Ok(name)
-        }
+        Ok(SymlinkTarget::Node(file.name.clone()))
     }
 }

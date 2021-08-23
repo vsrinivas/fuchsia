@@ -68,6 +68,11 @@ pub enum UnlinkKind {
     NonDirectory,
 }
 
+pub enum SymlinkTarget {
+    Path(FsString),
+    Node(NamespaceNode),
+}
+
 pub trait FsNodeOps: Send + Sync {
     /// Open a FileObject for this node.
     ///
@@ -110,7 +115,7 @@ pub trait FsNodeOps: Send + Sync {
     }
 
     /// Reads the symlink from this node.
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
+    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
         error!(EINVAL)
     }
 
@@ -236,7 +241,7 @@ impl FsNode {
         self.ops().create_symlink(self, name, target)
     }
 
-    pub fn readlink(&self, task: &Task) -> Result<FsString, Errno> {
+    pub fn readlink(&self, task: &Task) -> Result<SymlinkTarget, Errno> {
         let now = fuchsia_runtime::utc_time();
         self.info_write().time_access = now;
         self.ops().readlink(self, task)

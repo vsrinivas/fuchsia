@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/pipe_test",
-        args: [ "--gunit_filter=-*Proc*:*StatFS*:*.Flags/named*" ],
+        args: [ "--gunit_filter=-*.ProcFDInfoReleasesFile/*:*StatFS*:*.Flags/named*" ],
     },
 }

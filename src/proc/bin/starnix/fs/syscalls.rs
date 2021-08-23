@@ -405,12 +405,15 @@ pub fn sys_readlinkat(
         }
         Ok(parent.lookup(ctx.task, basename, SymlinkMode::NoFollow)?.entry)
     })?;
-    let link = entry.node.readlink(ctx.task)?;
+
+    let target = match entry.node.readlink(ctx.task)? {
+        SymlinkTarget::Path(path) => path,
+        SymlinkTarget::Node(node) => node.path(),
+    };
 
     // Cap the returned length at buffer_size.
-    let length = std::cmp::min(buffer_size, link.len());
-    ctx.task.mm.write_memory(buffer, &link[..length])?;
-
+    let length = std::cmp::min(buffer_size, target.len());
+    ctx.task.mm.write_memory(buffer, &target[..length])?;
     Ok(length.into())
 }
 

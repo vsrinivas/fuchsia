@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::Mutex;
 use std::sync::Arc;
 
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
 use crate::error;
-use crate::fs::pipe::Pipe;
+use crate::fs::pipe::FifoNode;
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -83,23 +82,6 @@ impl FsNodeOps for TmpfsDirectory {
         }
         child.info_write().link_count -= 1;
         Ok(())
-    }
-}
-
-struct FifoNode {
-    /// The pipe located at this node.
-    pipe: Arc<Mutex<Pipe>>,
-}
-
-impl FifoNode {
-    fn new() -> FifoNode {
-        FifoNode { pipe: Pipe::new() }
-    }
-}
-
-impl FsNodeOps for FifoNode {
-    fn open(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Pipe::open(&self.pipe, flags))
     }
 }
 

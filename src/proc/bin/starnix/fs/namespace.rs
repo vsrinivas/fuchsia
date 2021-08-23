@@ -232,17 +232,21 @@ impl NamespaceNode {
             while child.entry.node.info().mode.is_lnk() {
                 match symlink_mode {
                     SymlinkMode::Follow(count) if count > 0 => {
-                        let link_target = child.entry.node.readlink(task)?;
-                        let link_directory = if link_target[0] == b'/' {
-                            task.fs.root.clone()
-                        } else {
-                            self.clone()
-                        };
-                        child = task.lookup_node(
-                            link_directory,
-                            &link_target,
-                            SymlinkMode::Follow(count - 1),
-                        )?;
+                        child = match child.entry.node.readlink(task)? {
+                            SymlinkTarget::Path(link_target) => {
+                                let link_directory = if link_target[0] == b'/' {
+                                    task.fs.root.clone()
+                                } else {
+                                    self.clone()
+                                };
+                                task.lookup_node(
+                                    link_directory,
+                                    &link_target,
+                                    SymlinkMode::Follow(count - 1),
+                                )?
+                            }
+                            SymlinkTarget::Node(node) => node,
+                        }
                     }
                     SymlinkMode::Follow(0) => {
                         return error!(ELOOP);

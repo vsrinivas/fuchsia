@@ -249,24 +249,38 @@ impl Pipe {
     }
 }
 
+pub struct FifoNode {
+    /// The pipe located at this node.
+    pipe: Arc<Mutex<Pipe>>,
+}
+
+impl FifoNode {
+    pub fn new() -> FifoNode {
+        FifoNode { pipe: Pipe::new() }
+    }
+}
+
+impl FsNodeOps for FifoNode {
+    fn open(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Pipe::open(&self.pipe, flags))
+    }
+}
+
 /// Creates a new pipe between the two returned FileObjects.
 ///
 /// The first FileObject is the read endpoint of the pipe. The second is the
 /// write endpoint of the pipe. This order matches the order expected by
 /// sys_pipe2().
 pub fn new_pipe(kernel: &Kernel) -> Result<(FileHandle, FileHandle), Errno> {
-    let pipe = Pipe::new();
     let fs = pipe_fs(kernel);
-    let node = fs.create_node(Box::new(Anon), FileMode::from_bits(0o600));
-
+    let node = fs.create_node(Box::new(FifoNode::new()), FileMode::from_bits(0o600));
     node.info_write().blksize = ATOMIC_IO_BYTES;
 
     let open = |flags: OpenFlags| {
-        let ops = Pipe::open(&pipe, flags);
-        FileObject::new_anonymous(ops, Arc::clone(&node), flags)
+        Ok(FileObject::new_anonymous(node.open(flags)?, Arc::clone(&node), flags))
     };
 
-    Ok((open(OpenFlags::RDONLY), open(OpenFlags::WRONLY)))
+    Ok((open(OpenFlags::RDONLY)?, open(OpenFlags::WRONLY)?))
 }
 
 struct PipeFs;

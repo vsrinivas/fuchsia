@@ -479,15 +479,19 @@ impl Task {
                         return error!(ELOOP);
                     }
 
-                    let path = name.entry.node.readlink(self)?;
-                    let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
-                    self.resolve_open_path(
-                        dir,
-                        path,
-                        mode,
-                        flags,
-                        SymlinkMode::Follow(remaining_follows - 1),
-                    )
+                    match name.entry.node.readlink(self)? {
+                        SymlinkTarget::Path(path) => {
+                            let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
+                            self.resolve_open_path(
+                                dir,
+                                path,
+                                mode,
+                                flags,
+                                SymlinkMode::Follow(remaining_follows - 1),
+                            )
+                        }
+                        SymlinkTarget::Node(node) => Ok(node),
+                    }
                 } else {
                     if must_create {
                         return error!(EEXIST);

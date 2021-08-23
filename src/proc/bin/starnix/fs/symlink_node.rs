@@ -23,7 +23,7 @@ impl FsNodeOps for SymlinkNode {
         unreachable!("Symlink nodes cannot be opened.");
     }
 
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
-        Ok(self.target.clone())
+    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
+        Ok(SymlinkTarget::Path(self.target.clone()))
     }
 }
