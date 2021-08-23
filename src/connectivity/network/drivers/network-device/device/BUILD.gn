@@ -54,7 +54,6 @@ ddk_source_split("device") {
 }
 
 test("test_bin") {
-  testonly = true
   output_name = "network-device-lib-test"
   sources = [
     "data_structs-test.cc",
@@ -81,7 +80,6 @@ fuchsia_unittest_package("network-device-lib-test") {
 }
 
 test("microbenchmarks_bin") {
-  testonly = true
   output_name = "network-device-microbenchmarks"
   sources = [
     "network_device-microbenchmarks.cc",

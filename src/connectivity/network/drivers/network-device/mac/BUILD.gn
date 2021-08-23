@@ -30,7 +30,6 @@ group("tests") {
 }
 
 test("test_bin") {
-  testonly = true
   output_name = "network-device-mac-lib-test"
   sources = [
     "network_mac-test.cc",

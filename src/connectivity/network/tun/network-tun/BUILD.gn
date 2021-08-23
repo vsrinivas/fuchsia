@@ -69,7 +69,6 @@ fuchsia_package("network-tun") {
 }
 
 test("network_tun_unittest") {
-  testonly = true
   sources = [
     "buffer_unittest.cc",
     "network_tun_unittest.cc",

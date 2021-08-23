@@ -57,7 +57,6 @@ group("tests") {
 }
 
 test("driver-test") {
-  testonly = true
   output_name = "network-device-test"
   sources = [
     "device/test_session.cc",
