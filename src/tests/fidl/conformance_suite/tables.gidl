@@ -5,7 +5,6 @@
 // Tests tables whose fields are inlined into the envelope in the wire
 // format.
 success("TableFieldInlined") {
-    bindings_allowlist = [go,rust,transformer],
     value = TableFieldInlinedStruct {
         t: TableFieldInlined {
             f: 123,
@@ -33,7 +32,6 @@ success("TableFieldInlined") {
 // Tests a table whose handle field is inlined into the envelope in the wire
 // format.
 success("TableFieldInlinedHandle") {
-    bindings_allowlist = [go,rust,transformer],
     handle_defs = {
         #0 = channel(),
     },
@@ -66,7 +64,6 @@ success("TableFieldInlinedHandle") {
 
 // Tests tables whose fields are stored out of line in the wire format.
 success("TableFieldOutOfLine") {
-    bindings_allowlist = [go,rust,transformer],
     value = TableFieldOutOfLineStruct {
         t: TableFieldOutOfLine {
             f: 123,
@@ -95,7 +92,8 @@ success("TableFieldOutOfLine") {
 
 // Tests a table in which a value is inlined into an unknown field.
 success("TableFieldUnknownInlined") {
-    bindings_allowlist = [go,rust,transformer],
+    // TODO(fxbug.dev/83184) Fix this for HLCPP.
+    bindings_denylist = [hlcpp],
     value = TableFieldUnknownStruct {
         t: TableFieldUnknown {
             1: {
@@ -115,7 +113,8 @@ success("TableFieldUnknownInlined") {
 
 // Tests a table in which a handle value is inlined into an unknown field.
 success("TableFieldUnknownInlinedHandle") {
-    bindings_allowlist = [go,rust,transformer],
+    // TODO(fxbug.dev/83184) Fix this for HLCPP.
+    bindings_denylist = [hlcpp],
     handle_defs = {
         #0 = channel(),
     },
@@ -142,7 +141,6 @@ success("TableFieldUnknownInlinedHandle") {
 
 // Tests a table in which a value is stored out of line in an unknown field.
 success("TableFieldUnknownOutOfLine") {
-    bindings_allowlist = [go,rust,transformer],
     value = TableFieldUnknownStruct {
         t: TableFieldUnknown {
             1: {

@@ -284,9 +284,13 @@ decode_success("ChannelMaxUnknownHandlesDropped") {
             num(1):8, repeat(0xff):8, // Table header
             num(0):4, num(64):4, repeat(0xff):8, // Reserved envelope
         ],
+        v2 = [
+            num(1):8, repeat(0xff):8, // Table header
+            num(0):4, num(64):2, num(0):2, // Reserved envelope
+        ],
     },
     handles = {
-        v1 = [
+        v1, v2 = [
             #0, #1, #2, #3, #4, #5, #6, #7,
             #8, #9, #10, #11, #12, #13, #14, #15,
             #16, #17, #18, #19, #20, #21, #22, #23,

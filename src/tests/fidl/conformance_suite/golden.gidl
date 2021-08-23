@@ -297,7 +297,6 @@ success("GoldenNullableStructNull") {
     },
 }
 encode_success("GoldenHandleBasicRightsStruct") {
-    bindings_allowlist = [llcpp, hlcpp, go, dart],
     handle_defs = {
         #0 = channel(rights: channel_default),
     },
@@ -363,6 +362,7 @@ success("GoldenNullableHandleStructNull") {
     }
 }
 
+// Golden test for an encode_failure case.
 encode_failure("GoldenStringWithMaxSize2") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
     bindings_denylist = [rust, dart],
@@ -372,6 +372,7 @@ encode_failure("GoldenStringWithMaxSize2") {
     err = STRING_TOO_LONG
 }
 
+// Golden test for a decode_failure case.
 decode_failure("GoldenStringStructNullBody") {
     type = GoldenStringStruct,
     bytes = {

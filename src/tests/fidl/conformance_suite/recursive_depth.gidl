@@ -589,6 +589,13 @@ success("RecursiveOptionalAndTableUnderLimit") {
             repeat(0xff):8, // envelope data
             repeat(0xff):240, // 2 - 31
             repeat(0x00):8, // 32
+        ],
+        v2 = [
+            num(1):8, // table max ordinal
+            repeat(0xff):8, // table vector body
+            num(248):4, num(0):4, // num bytes, num handles
+            repeat(0xff):240, // 2 - 31
+            repeat(0x00):8, // 32
         ]
     }
 }

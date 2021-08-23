@@ -575,6 +575,64 @@ fn test_golden_nullable_struct_null_v2_encode() {
 }
 #[cfg(target_os = "fuchsia")]
 #[test]
+fn test_golden_handle_basic_rights_struct_v1_encode() {
+	let handle_defs = create_handles(&[
+// #0
+HandleDef{
+	subtype: HandleSubtype::Channel,
+	rights: Rights::from_bits(61454).unwrap(),
+},
+]);
+	let handle_defs = unsafe { disown_vec(handle_defs) };
+	let handle_defs = handle_defs.as_ref();
+	let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
+0,])) };
+	let expected_handles = expected_handles.as_ref();
+	let value = &mut conformance::GoldenHandleBasicRightsStruct { v: unsafe { copy_handle(&handle_defs[0]) } };
+	let bytes = &mut Vec::new();
+	let handle_dispositions = &mut Vec::new();
+	bytes.resize(65536, 0xcd); // fill with junk data
+	Encoder::encode_with_context(_V1_CONTEXT, bytes, handle_dispositions, value).unwrap();
+	assert_eq!(bytes, &[
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+]);
+	let handles = handle_dispositions.drain(..).map(|h| match h.handle_op {
+		HandleOp::Move(hdl) => hdl,
+		_ => panic!("unknown handle op"),
+	}).collect::<Vec<Handle>>();
+	assert_eq!(&handles, expected_handles);
+}
+#[cfg(target_os = "fuchsia")]
+#[test]
+fn test_golden_handle_basic_rights_struct_v2_encode() {
+	let handle_defs = create_handles(&[
+// #0
+HandleDef{
+	subtype: HandleSubtype::Channel,
+	rights: Rights::from_bits(61454).unwrap(),
+},
+]);
+	let handle_defs = unsafe { disown_vec(handle_defs) };
+	let handle_defs = handle_defs.as_ref();
+	let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
+0,])) };
+	let expected_handles = expected_handles.as_ref();
+	let value = &mut conformance::GoldenHandleBasicRightsStruct { v: unsafe { copy_handle(&handle_defs[0]) } };
+	let bytes = &mut Vec::new();
+	let handle_dispositions = &mut Vec::new();
+	bytes.resize(65536, 0xcd); // fill with junk data
+	Encoder::encode_with_context(_V2_CONTEXT, bytes, handle_dispositions, value).unwrap();
+	assert_eq!(bytes, &[
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+]);
+	let handles = handle_dispositions.drain(..).map(|h| match h.handle_op {
+		HandleOp::Move(hdl) => hdl,
+		_ => panic!("unknown handle op"),
+	}).collect::<Vec<Handle>>();
+	assert_eq!(&handles, expected_handles);
+}
+#[cfg(target_os = "fuchsia")]
+#[test]
 fn test_golden_nullable_handle_struct_non_null_v1_encode() {
 	let handle_defs = create_handles(&[
 // #0
