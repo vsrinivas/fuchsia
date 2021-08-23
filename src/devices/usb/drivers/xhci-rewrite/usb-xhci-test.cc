@@ -670,6 +670,12 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
   ;
 }
 
+zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset& offset,
+                               ddk::MmioView interrupter_regs, UsbXhci* hci) {
+  hci_ = hci;
+  return ZX_OK;
+}
+
 int Interrupter::IrqThread() { return 0; }
 
 // Enumerates a device as specified in xHCI section 4.3 starting from step 4

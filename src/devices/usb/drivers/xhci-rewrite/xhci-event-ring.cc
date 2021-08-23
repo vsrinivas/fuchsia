@@ -6,8 +6,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/async/cpp/irq.h>
-#include <lib/async/cpp/task.h>
 #include <lib/fpromise/promise.h>
 #include <lib/zx/clock.h>
 
@@ -300,69 +298,6 @@ TRBPromise EventRing::WaitForPortStatusChange(uint8_t port_id) {
   context->completer = std::move(bridge.completer);
   hci_->get_port_state()[port_id - 1].wait_for_port_status_change_ = std::move(context);
   return bridge.consumer.promise();
-}
-
-TRBPromise Interrupter::Timeout(zx::time deadline) {
-  fpromise::bridge<TRB*, zx_status_t> bridge;
-  zx_status_t status = async::PostTaskForTime(
-      async_loop_->dispatcher(),
-      [completer = std::move(bridge.completer), this]() mutable {
-        completer.complete_ok(nullptr);
-        hci_->RunUntilIdle();
-      },
-      deadline);
-  if (status != ZX_OK) {
-    return fpromise::make_error_promise(status);
-  }
-  return bridge.consumer.promise().box();
-}
-
-zx_status_t Interrupter::IrqThread() {
-  // TODO(fxbug.dev/30888): See fxbug.dev/30888.  Get rid of this.  For now we need thread
-  // priorities so that realtime transactions use the completer which ends
-  // up getting realtime latency guarantees.
-  async_loop_config_t config = kAsyncLoopConfigNeverAttachToThread;
-  config.irq_support = true;
-  async_loop_.emplace(&config);
-  async_executor_.emplace(async_loop_->dispatcher());
-  if (zx_object_set_profile(zx_thread_self(), hci_->get_profile().get(), 0) != ZX_OK) {
-    zxlogf(WARNING,
-           "No scheduler profile available to apply to the high priority XHCI completer.  "
-           "Service will be best effort.\n");
-  }
-  async::Irq irq;
-  irq.set_object(irq_.get());
-  irq.set_handler([&](async_dispatcher_t* dispatcher, async::Irq* irq, zx_status_t status,
-                      const zx_packet_interrupt_t* interrupt) {
-    if (!irq_.is_valid()) {
-      async_loop_->Quit();
-    }
-    if (status != ZX_OK) {
-      async_loop_->Quit();
-      return;
-    }
-
-    if (event_ring_.HandleIRQ() != ZX_OK) {
-      zxlogf(ERROR, "Error handling IRQ. Exiting async loop.");
-      async_loop_->Quit();
-      return;
-    }
-    hci_->RunUntilIdle();
-    irq_.ack();
-  });
-  irq.Begin(async_loop_->dispatcher());
-  if (!interrupter_) {
-    // Note: We need to run the ring 0 bringup after
-    // initializing interrupts, since Qemu initialization
-    // code assumes that interrupts are active and simulates
-    // a port status changed event.
-    if (event_ring_.Ring0Bringup()) {
-      zxlogf(ERROR, "Failed to bring up ring 0");
-      return ZX_ERR_INTERNAL;
-    }
-  }
-  async_loop_->Run();
-  return ZX_OK;
 }
 
 void EventRing::CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state) {

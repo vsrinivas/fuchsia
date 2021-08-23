@@ -35,6 +35,7 @@ driver_module("xhci-driver") {
     "xhci-device-state.cc",
     "xhci-enumeration.cc",
     "xhci-event-ring.cc",
+    "xhci-interrupter.cc",
     "xhci-transfer-ring.cc",
   ]
   deps = [
@@ -174,6 +175,7 @@ test("xhci-event-ring-unittest-bin") {
   sources = [
     "xhci-event-ring-test.cc",
     "xhci-event-ring.cc",
+    "xhci-interrupter.cc",
   ]
   deps = [
     ":test-libs",

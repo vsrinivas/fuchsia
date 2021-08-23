@@ -262,24 +262,6 @@ usb_speed_t UsbXhci::GetDeviceSpeed(uint8_t slot) {
       .PortSpeed();
 }
 
-zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset& offset,
-                               ddk::MmioView mmio_view, UsbXhci* hci) {
-  hci_ = hci;
-  interrupter_ = interrupter;
-  ERDP erdp = ERDP::Get(offset, interrupter).ReadFrom(&mmio_view);
-  if (!event_ring_.erdp_phys()) {
-    return ZX_ERR_BAD_STATE;
-  }
-  erdp.set_reg_value(event_ring_.erdp_phys());
-  erdp.WriteTo(&mmio_view);
-  ERSTBA ba = ERSTBA::Get(offset, interrupter).ReadFrom(&mmio_view);
-  // This enables the interrupter
-  ba.set_Pointer(event_ring_.erst()).WriteTo(&mmio_view);
-  IMAN::Get(offset, interrupter).FromValue(0).set_IE(1).WriteTo(&mmio_view);
-  thread_ = std::thread([this]() { IrqThread(); });
-  return ZX_OK;
-}
-
 uint8_t UsbXhci::GetPortSpeed(uint8_t port_id) const {
   return static_cast<uint8_t>(
       PORTSC::Get(cap_length_, port_id).ReadFrom(&mmio_.value()).PortSpeed());
