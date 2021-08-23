@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib.h"
+#include "examples/rust/staticlib/rust/crust.h"
+#include <gtest/gtest.h>
 
-int main(int argc, char** argv) {
-  print_msg();
-  return 0;
-}
+TEST(StaticLibTest, GetInt) { EXPECT_EQ(42, crust_get_int()); }

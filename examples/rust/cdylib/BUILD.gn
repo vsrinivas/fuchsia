@@ -4,7 +4,23 @@
 
 import("//build/components.gni")
 
-fuchsia_package_with_single_component("crust-shared") {
-  manifest = "meta/crust-shared.cmx"
-  deps = [ "c:bin" ]
+group("tests") {
+  testonly = true
+  public_deps = [ ":crust-shared" ]
+}
+
+executable("unittests") {
+  testonly = true
+  output_name = "crust_shared_test_bin"
+
+  sources = [ "crust.cc" ]
+
+  deps = [
+    "//examples/rust/cdylib/rust:crust-shared",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("crust-shared") {
+  deps = [ ":unittests" ]
 }

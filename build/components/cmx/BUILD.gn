@@ -54,7 +54,6 @@ group("cmx_allowlist") {
     "//examples/intl/tz_version_parrot/*",
     "//examples/isolated_cache/*",
     "//examples/rolldice/*",
-    "//examples/rust/staticlib/*",
     "//examples/speech/tts/speak/*",
     "//examples/tennis/*",
     "//examples/tests/*",

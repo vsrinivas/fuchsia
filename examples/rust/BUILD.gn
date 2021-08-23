@@ -6,13 +6,7 @@ import("//build/components.gni")
 
 group("rust") {
   testonly = true
-  deps = [
-    ":tests",
-
-    # TODO(fxbug.dev/50421): This target seems broken.
-    # "cdylib",
-    "staticlib",
-  ]
+  deps = [ ":tests" ]
 }
 
 group("tests") {
@@ -21,12 +15,9 @@ group("tests") {
     ":garnet-rust-examples",
     "rust_static_linking:tests",
 
-    # Until such time that these directories have tests, at least check that
-    # they compile properly.
-
     # TODO(fxbug.dev/50421): This target seems broken.
-    # "cdylib",
-    "staticlib",
+    # "cdylib:tests",
+    "staticlib:tests",
   ]
 }
 

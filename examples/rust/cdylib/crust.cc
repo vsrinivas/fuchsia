@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-
 #include "examples/rust/cdylib/rust/crust.h"
+#include <gtest/gtest.h>
 
-void print_msg(void) {
-  // Call the method from the Rust crate.
-  printf("rust says: '%d'\n", crust_get_int());
-}
+TEST(DyLibTest, GetInt) { EXPECT_EQ(42, crust_get_int()); }

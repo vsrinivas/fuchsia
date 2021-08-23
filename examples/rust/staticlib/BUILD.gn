@@ -4,12 +4,23 @@
 
 import("//build/components.gni")
 
-group("staticlib") {
+group("tests") {
   testonly = true
   public_deps = [ ":crust" ]
 }
 
-fuchsia_package_with_single_component("crust") {
-  manifest = "meta/crust.cmx"
-  deps = [ "c:bin" ]
+executable("unittests") {
+  testonly = true
+  output_name = "crust_test_bin"
+
+  sources = [ "crust.cc" ]
+
+  deps = [
+    "//examples/rust/staticlib/rust:crust",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("crust") {
+  deps = [ ":unittests" ]
 }
