@@ -1561,7 +1561,7 @@ static int iwl_trans_pcie_d3_resume(struct iwl_trans* trans, enum iwl_d3_status*
 static zx_status_t iwl_pcie_set_interrupt_capa(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  // MSI-X is not yet supported.
+  // TODO(fxbug.dev/82778): support MSI-X.
 #if 0   // NEEDS_PORTING
     if (!trans->cfg->mq_rx_supported || iwlwifi_mod_params.disable_msix) { goto enable_msi; }
 
@@ -1604,7 +1604,40 @@ static zx_status_t iwl_pcie_set_interrupt_capa(struct iwl_trans* trans) {
     return;
 enable_msi:
 #endif  // NEEDS_PORTING
-  return pci_configure_irq_mode(trans_pcie->pci, 1, NULL);
+
+  struct {
+    pci_irq_mode_t value;
+    char* name;
+  } modes[] = {
+      {
+          PCI_IRQ_MODE_MSI,
+          "MSI",
+      },
+      {
+          PCI_IRQ_MODE_LEGACY,
+          "LEGACY",
+      },
+  };
+
+  const uint32_t request_irq_count = 1;  // Currently we only request 1 interrupt.
+
+  zx_status_t status;
+  size_t i;
+  for (i = 0; i < ARRAY_SIZE(modes); i++) {
+    trans_pcie->irq_mode = modes[i].value;
+    uint32_t max_irqs;
+    if (ZX_OK == (status = pci_query_irq_mode(trans_pcie->pci, trans_pcie->irq_mode, &max_irqs))) {
+      IWL_INFO(trans, "We choose the IRQ mode: %s\n", modes[i].name);
+      ZX_DEBUG_ASSERT(max_irqs >= request_irq_count);
+      break;
+    }
+  }
+  if (i == ARRAY_SIZE(modes)) {
+    IWL_ERR(trans, "cannot find an IRQ mode to use: %s.\n", zx_status_get_string(status));
+    return status;
+  }
+
+  return pci_set_irq_mode(trans_pcie->pci, trans_pcie->irq_mode, request_irq_count);
 }
 
 #if 0   // NEEDS_PORTING
