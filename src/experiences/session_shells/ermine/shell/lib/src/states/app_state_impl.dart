@@ -328,9 +328,12 @@ class AppStateImpl with Disposable implements AppState {
   @override
   late final launch = (String title, String url) async {
     try {
-      await launchService.launch(title, url);
       _clearError(url, 'ProposeElementError');
-      appIsLaunching.value = true;
+      await launchService.launch(title, url);
+      // Hide app launcher unless we had an error presenting the view.
+      if (!_isLaunchError(url)) {
+        appIsLaunching.value = true;
+      }
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       _onLaunchError(url, e.toString());
@@ -548,6 +551,8 @@ class AppStateImpl with Disposable implements AppState {
 
   bool _isPrelistedApp(String url) =>
       appLaunchEntries.any((entry) => entry['url'] == url);
+
+  bool _isLaunchError(String url) => errors[url] != null;
 
   void _clearError(String url, String errorType) {
     runInAction(() {
