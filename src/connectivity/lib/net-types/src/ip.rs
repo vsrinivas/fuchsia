@@ -51,9 +51,10 @@
 use core::convert::TryFrom;
 use core::fmt::{self, Debug, Display, Formatter};
 use core::hash::Hash;
+use core::mem;
 use core::ops::Deref;
 
-#[cfg(std)]
+#[cfg(feature = "std")]
 use std::net;
 
 use zerocopy::{AsBytes, FromBytes, Unaligned};
@@ -135,7 +136,7 @@ impl<A: IpAddress> From<A> for IpAddr {
     }
 }
 
-#[cfg(std)]
+#[cfg(feature = "std")]
 impl From<net::IpAddr> for IpAddr {
     #[inline]
     fn from(addr: net::IpAddr) -> IpAddr {
@@ -146,7 +147,7 @@ impl From<net::IpAddr> for IpAddr {
     }
 }
 
-#[cfg(std)]
+#[cfg(feature = "std")]
 impl From<IpAddr> for net::IpAddr {
     fn from(addr: IpAddr) -> net::IpAddr {
         match addr {
@@ -1186,7 +1187,7 @@ impl From<[u8; 4]> for Ipv4Addr {
     }
 }
 
-#[cfg(std)]
+#[cfg(feature = "std")]
 impl From<net::Ipv4Addr> for Ipv4Addr {
     #[inline]
     fn from(ip: net::Ipv4Addr) -> Ipv4Addr {
@@ -1194,11 +1195,11 @@ impl From<net::Ipv4Addr> for Ipv4Addr {
     }
 }
 
-#[cfg(std)]
+#[cfg(feature = "std")]
 impl From<Ipv4Addr> for net::Ipv4Addr {
     #[inline]
     fn from(ip: Ipv4Addr) -> net::Ipv4Addr {
-        Ipv4Addr::from(ip.0)
+        net::Ipv4Addr::from(ip.0)
     }
 }
 
@@ -1247,6 +1248,14 @@ impl Ipv6Addr {
     #[inline]
     pub const fn ipv6_bytes(&self) -> [u8; 16] {
         self.0
+    }
+
+    /// Gets the 16-bit segments of the IPv6 address.
+    #[inline]
+    pub fn segments(&self) -> [u16; 8] {
+        let [a, b, c, d, e, f, g, h]: [zerocopy::U16<zerocopy::NetworkEndian>; 8] =
+            zerocopy::transmute!(self.ipv6_bytes());
+        [a.into(), b.into(), c.into(), d.into(), e.into(), f.into(), g.into(), h.into()]
     }
 
     /// Converts this `Ipv6Addr` to the IPv6 Solicited-Node Address, used in
@@ -1429,7 +1438,7 @@ impl From<[u8; 16]> for Ipv6Addr {
     }
 }
 
-#[cfg(std)]
+#[cfg(feature = "std")]
 impl From<net::Ipv6Addr> for Ipv6Addr {
     #[inline]
     fn from(ip: net::Ipv6Addr) -> Ipv6Addr {
@@ -1437,7 +1446,7 @@ impl From<net::Ipv6Addr> for Ipv6Addr {
     }
 }
 
-#[cfg(std)]
+#[cfg(feature = "std")]
 impl From<Ipv6Addr> for net::Ipv6Addr {
     #[inline]
     fn from(ip: Ipv6Addr) -> net::Ipv6Addr {
@@ -1446,42 +1455,140 @@ impl From<Ipv6Addr> for net::Ipv6Addr {
 }
 
 impl Display for Ipv6Addr {
+    /// Formats an IPv6 address according to [RFC 5952].
+    ///
+    /// [RFC 5952]: https://datatracker.ietf.org/doc/html/rfc5952
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
-        // TODO(fxbug.dev/68672): Implement canonicalization even when the "std"
-        // feature is not enabled.
+        // `fmt_inner` implements the core of the formatting algorithm, but does
+        // not handle precision or width requirements. Those are handled below
+        // by creating a scratch buffer, calling `fmt_inner` on that scratch
+        // buffer, and then satisfying those requirements.
+        fn fmt_inner<W: fmt::Write>(addr: &Ipv6Addr, w: &mut W) -> Result<(), fmt::Error> {
+            // We special-case the unspecified and localhost addresses because
+            // both addresses are valid IPv4-compatible addresses, and so if we
+            // don't special case them, they'll get printed as IPv4-compatible
+            // addresses ("::0.0.0.0" and "::0.0.0.1") respectively.
+            if !addr.is_specified() {
+                write!(w, "::")
+            } else if addr.is_loopback() {
+                write!(w, "::1")
+            } else if let Some(v4) = addr.to_ipv4_compatible() {
+                write!(w, "::{}", v4)
+            } else if let Some(v4) = addr.to_ipv4_mapped() {
+                write!(w, "::ffff:{}", v4)
+            } else {
+                let segments = addr.segments();
 
-        use core::convert::TryInto;
+                let longest_zero_span = {
+                    let mut longest_zero_span = 0..0;
+                    let mut current_zero_span = 0..0;
+                    for (i, seg) in segments.iter().enumerate() {
+                        if *seg == 0 {
+                            current_zero_span.end = i + 1;
+                            if current_zero_span.len() > longest_zero_span.len() {
+                                longest_zero_span = current_zero_span.clone();
+                            }
+                        } else {
+                            let next_idx = i + 1;
+                            current_zero_span = next_idx..next_idx;
+                        }
+                    }
+                    longest_zero_span
+                };
 
-        let to_u16 = |idx| u16::from_be_bytes(self.0[idx..idx + 2].try_into().unwrap());
-        #[cfg(std)]
-        return Display::fmt(
-            &net::Ipv6Addr::new(
-                to_u16(0),
-                to_u16(2),
-                to_u16(4),
-                to_u16(6),
-                to_u16(8),
-                to_u16(10),
-                to_u16(12),
-                to_u16(14),
-            ),
-            f,
-        );
+                let write_slice = |w: &mut W, slice: &[u16]| {
+                    if let [head, tail @ ..] = slice {
+                        write!(w, "{:x}", head)?;
+                        for seg in tail {
+                            write!(w, ":{:x}", seg)?;
+                        }
+                    }
+                    Ok(())
+                };
 
-        #[cfg(not(std))]
-        return write!(
-            f,
-            "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
-            to_u16(0),
-            to_u16(2),
-            to_u16(4),
-            to_u16(6),
-            to_u16(8),
-            to_u16(10),
-            to_u16(12),
-            to_u16(14),
-        );
+                // Note that RFC 5952 gives us a choice of when to compress a
+                // run of zeroes:
+                //
+                //   It is possible to select whether or not to omit just one
+                //   16-bit 0 field.
+                //
+                // Given this choice, we opt to match the stdlib's behavior.
+                // This makes it easier to write tests (we can simply check to
+                // see whether our behavior matches `std`'s behavior on a range
+                // of inputs), and makes it so that our `Ipv6Addr` type is,
+                // behaviorally, more of a drop-in for `std::net::Ipv6Addr` than
+                // it would be if we were to diverge on formatting. This makes
+                // replacing `std::net::Ipv6Addr` with our `Ipv6Addr` easier for
+                // clients, and also makes it an easier choice since they don't
+                // have to weigh whether the difference in behavior is
+                // acceptable for them.
+                if longest_zero_span.len() > 1 {
+                    write_slice(w, &segments[..longest_zero_span.start])?;
+                    w.write_str("::")?;
+                    write_slice(w, &segments[longest_zero_span.end..])
+                } else {
+                    write_slice(w, &segments)
+                }
+            }
+        }
+
+        if f.precision().is_none() && f.width().is_none() {
+            // Fast path: No precision or width requirements, so write directly
+            // to `f`.
+            fmt_inner(self, f)
+        } else {
+            // Slow path: Precision or width requirement(s), so construct a
+            // scratch buffer, use the `fmt_inner` to fill it, then use `f.pad`
+            // to satisfy precision/width requirement(s).
+
+            // `[u8]` does not implement `core::fmt::Write`, so we provide our
+            // own wrapper which does.
+            struct ByteSlice<'a>(&'a mut [u8]);
+
+            impl<'a> fmt::Write for ByteSlice<'a> {
+                fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+                    let from = s.as_bytes();
+
+                    if from.len() > self.0.len() {
+                        return Err(fmt::Error);
+                    }
+
+                    // Temporarily replace `self.0` with an empty slice and move
+                    // the old value of `self.0` into our scope so that we can
+                    // operate on it by value. This allows us to split it in two
+                    // (`to` and `remaining`) and then overwrite `self.0` with
+                    // `remaining`.
+                    let to = mem::replace(&mut self.0, &mut [][..]);
+                    let (to, remaining) = to.split_at_mut(from.len());
+                    to.copy_from_slice(from);
+
+                    self.0 = remaining;
+                    Ok(())
+                }
+            }
+
+            // The maximum length for an IPv6 address displays all 8 pairs of
+            // bytes in hexadecimal representation (4 characters per two bytes
+            // of IPv6 address), each separated with colons (7 colons total).
+            const MAX_DISPLAY_LEN: usize = (4 * 8) + 7;
+            let mut scratch = [0u8; MAX_DISPLAY_LEN];
+            let mut scratch_slice = ByteSlice(&mut scratch[..]);
+            // `fmt_inner` only returns an error if a method on `w` returns an
+            // error. Since, in this call to `fmt_inner`, `w` is
+            // `scratch_slice`, the only error that could happen would be if we
+            // run out of space, but we know we won't because `scratch_slice`
+            // has `MAX_DISPLAY_LEN` bytes, which is enough to hold any
+            // formatted IPv6 address.
+            fmt_inner(self, &mut scratch_slice)
+                .expect("<Ipv6Addr as Display>::fmt: fmt_inner should have succeeded because the scratch buffer was long enough");
+            let unwritten = scratch_slice.0.len();
+            let len = MAX_DISPLAY_LEN - unwritten;
+            // `fmt_inner` only writes valid UTF-8.
+            let str = core::str::from_utf8(&scratch[..len])
+                .expect("<Ipv6Addr as Display>::fmt: scratch buffer should contain valid UTF-8");
+            f.pad(str)
+        }
     }
 }
 
@@ -2613,5 +2720,96 @@ mod tests {
         let () = compare_with_ip1(ip2, 0);
         let () = compare_with_ip1(ip3, 24);
         let () = compare_with_ip1(ip4, 17);
+    }
+
+    #[test]
+    fn test_ipv6_display() {
+        // Test that `addr` is formatted the same by our `Display` impl as by
+        // the standard library's `Display` impl. Optionally test that it
+        // matches a particular expected string.
+        fn test_one(addr: Ipv6Addr, expect: Option<&str>) {
+            let formatted = format!("{}", addr);
+            if let Some(expect) = expect {
+                assert_eq!(formatted, expect);
+            }
+
+            // NOTE: We use `std` here even though we're not inside of the
+            // `std_tests` module because we're using `std` to test
+            // functionality that is present even when the `std` Cargo feature
+            // is not used.
+            //
+            // Note that we use `std::net::Ipv6Addr::from(addr.segments())`
+            // rather than `std::net::Ipv6Addr::from(addr)` because, when the
+            // `std` Cargo feature is disabled, the `From<Ipv6Addr> for
+            // std::net::Ipv6Addr` impl is not emitted.
+            let formatted_std = format!("{}", std::net::Ipv6Addr::from(addr.segments()));
+            assert_eq!(formatted, formatted_std);
+        }
+
+        test_one(Ipv6::UNSPECIFIED_ADDRESS, Some("::"));
+        test_one(*Ipv6::LOOPBACK_ADDRESS, Some("::1"));
+        test_one(Ipv6::MULTICAST_SUBNET.network, Some("ff00::"));
+        test_one(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network, Some("fe80::"));
+        test_one(*Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, Some("ff02::1"));
+        test_one(*Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, Some("ff02::1"));
+        test_one(*Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS, Some("ff02::2"));
+        test_one(Ipv6::SITE_LOCAL_UNICAST_SUBNET.network, Some("fec0::"));
+        test_one(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0]), Some("1::"));
+        test_one(Ipv6Addr::new([0, 0, 0, 1, 2, 3, 4, 5]), Some("::1:2:3:4:5"));
+
+        // Treating each pair of bytes as a bit (either 0x0000 or 0x0001), cycle
+        // through every possible IPv6 address. Since the formatting algorithm
+        // is only sensitive to zero vs nonzero for any given byte pair, this
+        // gives us effectively complete coverage of the input space.
+        for byte in 0u8..=255 {
+            test_one(
+                Ipv6Addr::new([
+                    u16::from(byte & 0b1),
+                    u16::from((byte & 0b10) >> 1),
+                    u16::from((byte & 0b100) >> 2),
+                    u16::from((byte & 0b1000) >> 3),
+                    u16::from((byte & 0b10000) >> 4),
+                    u16::from((byte & 0b100000) >> 5),
+                    u16::from((byte & 0b1000000) >> 6),
+                    u16::from((byte & 0b10000000) >> 7),
+                ]),
+                None,
+            );
+        }
+    }
+
+    #[cfg(feature = "std")]
+    mod std_tests {
+        use std::net;
+
+        use super::*;
+
+        #[test]
+        fn test_conversions() {
+            let v4 = Ipv4Addr::new([127, 0, 0, 1]);
+            let v6 = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+            let std_v4 = net::Ipv4Addr::new(127, 0, 0, 1);
+            let std_v6 = net::Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1);
+
+            let converted: IpAddr = net::IpAddr::V4(std_v4).into();
+            assert_eq!(converted, IpAddr::V4(v4));
+            let converted: IpAddr = net::IpAddr::V6(std_v6).into();
+            assert_eq!(converted, IpAddr::V6(v6));
+
+            let converted: net::IpAddr = IpAddr::V4(v4).into();
+            assert_eq!(converted, net::IpAddr::V4(std_v4));
+            let converted: net::IpAddr = IpAddr::V6(v6).into();
+            assert_eq!(converted, net::IpAddr::V6(std_v6));
+
+            let converted: Ipv4Addr = std_v4.into();
+            assert_eq!(converted, v4);
+            let converted: Ipv6Addr = std_v6.into();
+            assert_eq!(converted, v6);
+
+            let converted: net::Ipv4Addr = v4.into();
+            assert_eq!(converted, std_v4);
+            let converted: net::Ipv6Addr = v6.into();
+            assert_eq!(converted, std_v6);
+        }
     }
 }

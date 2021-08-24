@@ -9,10 +9,7 @@
 //! while protocol-specific operations are defined in their own modules.
 
 #![deny(missing_docs)]
-#![cfg_attr(not(std), no_std)]
-
-#[cfg(std)]
-extern crate core;
+#![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 
 pub mod ethernet;
 pub mod ip;

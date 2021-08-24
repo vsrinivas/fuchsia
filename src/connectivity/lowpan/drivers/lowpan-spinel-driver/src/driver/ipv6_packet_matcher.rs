@@ -281,7 +281,7 @@ mod tests {
         let packet1 = hex::decode("60000000003011fffe800000000000004052fe034ab90ec9ff0200000000000000000000000000fb14e914e90030f54c0000000000010000000000000b5f676f6f676c6563617374045f746370056c6f63616c00000c0001").expect("bad ipv6 hex");
         assert_eq!(
             &format!("{:?}", Ipv6PacketDebug(&packet1)),
-            "IPv6;UDP;src=[fe80:0:0:0:4052:fe03:4ab9:ec9]:5353;dst=[ff02:0:0:0:0:0:0:fb]:5353"
+            "IPv6;UDP;src=[fe80::4052:fe03:4ab9:ec9]:5353;dst=[ff02::fb]:5353"
         );
 
         let packet2 = hex::decode("6000000000213a40fddead00beef000095d60909a7d2f8d6fddead00beef000095d60909a7d2f8d780001cb5c31800015468697320697320616e206563686f206d6573736167652100").expect("bad ipv6 hex");
