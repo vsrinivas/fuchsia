@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
+        }
+    },
+    "include": [
+        "//src/lib/vulkan/test-application.shard.cmx",
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/virtual-keyboard-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.ui.pointerinjector.Registry"
+        ]
+    }
+}

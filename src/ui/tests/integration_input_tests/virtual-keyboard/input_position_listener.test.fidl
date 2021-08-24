@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.virtualkeyboard;
+
+/// The bounding box for a widget, in the client's coordinate system.
+type BoundingBox = struct {
+    x0 uint32;
+    y0 uint32;
+    x1 uint32;
+    y1 uint32;
+};
+
+/// A test-specific scheme to gather signal from the client-under-test.
+@discoverable
+protocol InputPositionListener {
+    /// Notify the test that client-under-test has computed the position of the input box.
+    Notify(struct {
+        bounding_box BoundingBox;
+    });
+};

@@ -11,5 +11,6 @@ group("integration_input_tests") {
     "media-buttons:tests",
     "pointerinjector_config:tests",
     "touch:tests",
+    "virtual-keyboard:tests",
   ]
 }

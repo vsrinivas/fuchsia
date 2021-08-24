@@ -1,0 +1,16 @@
+{
+    "include": [
+        "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_view.shard.cmx",
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/web-virtual-keyboard-client"
+    },
+    "sandbox": {
+        "services": [
+            "test.virtualkeyboard.InputPositionListener"
+        ]
+    }
+}
