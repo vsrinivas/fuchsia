@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include "astro.h"
+#include "src/devices/board/drivers/astro/astro-tee-bind.h"
 
 namespace astro {
 
@@ -59,19 +60,9 @@ static const pbus_dev_t tee_dev = []() {
   return dev;
 }();
 
-constexpr zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-constexpr device_fragment_t fragments[] = {
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-};
-
 zx_status_t Astro::TeeInit() {
-  zx_status_t status = pbus_.CompositeDeviceAdd(&tee_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&tee_dev, reinterpret_cast<uint64_t>(tee_fragments),
+                                          countof(tee_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

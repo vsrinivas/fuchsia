@@ -27,7 +27,7 @@ driver_bind_rules("astro-bind") {
 }
 
 driver_bind_rules("astro-backlight-bind") {
-  rules = "astro-backlight.bind"
+  rules = "bind/astro-backlight.bind"
   header_output = "astro-backlight-bind.h"
   bind_output = "astro-backlight.bindbc"
   tests = "backlight-bind-tests.json"
@@ -39,13 +39,35 @@ driver_bind_rules("astro-backlight-bind") {
 }
 
 driver_bind_rules("astro-pwm-bind") {
-  rules = "astro-pwm.bind"
+  rules = "bind/astro-pwm.bind"
   header_output = "astro-pwm-bind.h"
   bind_output = "astro-pwm-bind.bc"
   deps = [
     "//src/devices/bind/amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("astro-securemem-bind") {
+  rules = "bind/astro-securemem.bind"
+  header_output = "astro-securemem-bind.h"
+  bind_output = "astro-securemem-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+    "//src/devices/bind/fuchsia.tee",
+  ]
+}
+
+driver_bind_rules("astro-tee-bind") {
+  rules = "bind/astro-tee.bind"
+  header_output = "astro-tee-bind.h"
+  bind_output = "astro-tee-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
   ]
 }
 
@@ -89,6 +111,8 @@ driver_module("astro-driver") {
     ":astro-backlight-bind_header",
     ":astro-bind",
     ":astro-pwm-bind_header",
+    ":astro-securemem-bind_header",
+    ":astro-tee-bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
