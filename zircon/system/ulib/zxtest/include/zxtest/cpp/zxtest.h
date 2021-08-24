@@ -44,6 +44,10 @@
 
 #define _ZXTEST_REGISTER_FN(TestCase, Test) TestCase##_##Test##_register_fn
 
+// Note: We intentionally wrap the assignment in a constructor function, to workaround the issue
+// where in certain builds (both debug and production), the compiler would generated a global
+// initiatialization function for the runtime, which would push a huge amount of memory into the
+// stack. For 2048 tests, it pushed ~270 KB, which caused an overflow.
 #define _ZXTEST_REGISTER(TestCase, Test, Fixture)                                                 \
   _ZXTEST_TEST_CLASS_DECL(Fixture, _ZXTEST_TEST_CLASS(TestCase, Test));                           \
   static zxtest::TestRef _ZXTEST_TEST_REF(TestCase, Test) = {};                                   \

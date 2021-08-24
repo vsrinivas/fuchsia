@@ -4,6 +4,9 @@
 
 #include <zxtest/zxtest.h>
 
+// This test prevents regression of global initialization function overflowing the stack with large
+// number of tests.
+// Bug: fxb/82409
 TEST(S0, T0) {}
 TEST(S1, T1) {}
 TEST(S2, T2) {}
