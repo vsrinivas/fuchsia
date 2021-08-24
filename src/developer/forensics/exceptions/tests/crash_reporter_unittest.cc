@@ -116,6 +116,7 @@ class StubCrashIntrospectV2 : public fuchsia::sys2::CrashIntrospect {
  public:
   struct ComponentInfo {
     std::string url;
+    std::string moniker;
   };
   void FindComponentByThreadKoid(uint64_t thread_koid, FindComponentByThreadKoidCallback callback) {
     using namespace fuchsia::sys2;
@@ -126,7 +127,7 @@ class StubCrashIntrospectV2 : public fuchsia::sys2::CrashIntrospect {
       const auto& info = tids_to_component_infos_[thread_koid];
 
       ComponentCrashInfo crash_info;
-      crash_info.set_url(info.url);
+      crash_info.set_url(info.url).set_moniker(info.moniker);
 
       callback(CrashIntrospect_FindComponentByThreadKoid_Result::WithResponse(
           CrashIntrospect_FindComponentByThreadKoid_Response(std::move(crash_info))));
@@ -332,8 +333,10 @@ TEST_F(HandlerTest, NoCrashReporterConnectionV2) {
   const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
 
   const std::string kComponentUrl = "component_url";
+  const std::string kComponentMoniker = "/realm/path/component_name";
   introspect_v2().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospectV2::ComponentInfo{
                                                                 .url = kComponentUrl,
+                                                                .moniker = kComponentMoniker,
                                                             });
 
   bool called = false;
@@ -347,7 +350,8 @@ TEST_F(HandlerTest, NoCrashReporterConnectionV2) {
                   });
 
   ASSERT_TRUE(called);
-  ASSERT_FALSE(out_moniker.has_value());
+  ASSERT_TRUE(out_moniker.has_value());
+  EXPECT_EQ(out_moniker.value(), "realm/path/component_name");
 
   // The stub shouldn't be called.
   EXPECT_EQ(crash_reporter().reports().size(), 0u);
@@ -434,8 +438,10 @@ TEST_F(HandlerTest, NoExceptionV2) {
   const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
 
   const std::string kComponentUrl = "component_url";
+  const std::string kComponentMoniker = "/realm/path/component_name";
   introspect_v2().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospectV2::ComponentInfo{
                                                                 .url = kComponentUrl,
+                                                                .moniker = kComponentMoniker,
                                                             });
   exception.exception.reset();
 
@@ -450,7 +456,8 @@ TEST_F(HandlerTest, NoExceptionV2) {
                   });
 
   ASSERT_TRUE(called);
-  ASSERT_FALSE(out_moniker.has_value());
+  ASSERT_TRUE(out_moniker.has_value());
+  EXPECT_EQ(out_moniker.value(), "realm/path/component_name");
 
   ASSERT_EQ(crash_reporter().reports().size(), 1u);
   auto& report = crash_reporter().reports().front();

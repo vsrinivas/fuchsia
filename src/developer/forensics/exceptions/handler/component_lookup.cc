@@ -89,10 +89,14 @@ namespace {
 
             if (result.is_response()) {
               const sys::ComponentCrashInfo& info = result.response().info;
+              std::string moniker = (info.has_moniker()) ? info.moniker() : "";
+              if (!moniker.empty() && moniker[0] == '/') {
+                moniker = moniker.substr(1);
+              }
               introspect->CompleteOk(ComponentInfo{
                   .url = (info.has_url()) ? info.url() : "",
                   .realm_path = "",
-                  .moniker = "",
+                  .moniker = moniker,
               });
             } else {
               // RESOURCE_NOT_FOUND most likely means a thread from a process outside a component,
