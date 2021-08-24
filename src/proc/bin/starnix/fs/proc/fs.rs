@@ -22,7 +22,8 @@ impl FileSystemOps for Arc<ProcFs> {}
 impl ProcFs {
     /// Creates a new instance of `ProcFs` for the given `kernel`.
     pub fn new(kernel: Weak<Kernel>) -> FileSystemHandle {
-        let procfs = Arc::new(ProcFs {});
-        FileSystem::new_with_root(procfs, ProcDirectory::new(kernel))
+        let fs = FileSystem::new(Arc::new(ProcFs {}));
+        fs.set_root(ProcDirectory::new(&fs, kernel));
+        fs
     }
 }

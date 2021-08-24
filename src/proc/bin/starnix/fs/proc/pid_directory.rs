@@ -4,8 +4,6 @@
 
 use std::sync::Arc;
 
-use super::inode_numbers::fd_inode_num;
-use super::node_holder::*;
 use crate::errno;
 use crate::error;
 use crate::fd_impl_directory;
@@ -16,22 +14,20 @@ use crate::task::Task;
 use crate::types::*;
 
 use maplit::hashmap;
-use parking_lot::Mutex;
 use std::collections::HashMap;
 
 /// The `PidDirectory` implements the `FsNodeOps` for the `proc/<pid>` directory.
 pub struct PidDirectory {
     /// A map that stores lazy initializers for all the entries in the directory.
-    nodes: Arc<Mutex<HashMap<FsString, NodeHolder>>>,
+    nodes: Arc<HashMap<FsString, FsNodeHandle>>,
 }
 
 impl PidDirectory {
-    pub fn new(task: Arc<Task>) -> PidDirectory {
-        let task_clone = task.clone();
-        let nodes = Arc::new(Mutex::new(hashmap! {
-            b"exe".to_vec() => NodeHolder::new(move || { Ok(ExeSymlink::new(task_clone.clone())) }, ExeSymlink::file_mode()),
-            b"fd".to_vec() => NodeHolder::new(move || { Ok(FdDirectory::new(task.clone())) }, FdDirectory::file_mode()),
-        }));
+    pub fn new(fs: &FileSystemHandle, task: Arc<Task>) -> PidDirectory {
+        let nodes = Arc::new(hashmap! {
+            b"exe".to_vec() => ExeSymlink::new(fs, task.clone()),
+            b"fd".to_vec() => FdDirectory::new(fs, task.clone()),
+        });
 
         PidDirectory { nodes }
     }
@@ -42,22 +38,20 @@ impl FsNodeOps for PidDirectory {
         Ok(Box::new(PidDirectoryFileOps::new(self.nodes.clone())))
     }
 
-    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        match self.nodes.lock().get_mut(name) {
-            Some(node_holder) => node_holder.get_or_create_node(&node.fs()),
-            None => error!(ENOENT),
-        }
+    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        let node = self.nodes.get(name).ok_or(errno!(ENOENT))?;
+        Ok(node.clone())
     }
 }
 
 /// `PidDirectoryFileOps` implements file operations for the `/proc/<pid>` directory.
 struct PidDirectoryFileOps {
     /// The nodes that exist in the associated `PidDirectory`.
-    nodes: Arc<Mutex<HashMap<FsString, NodeHolder>>>,
+    nodes: Arc<HashMap<FsString, FsNodeHandle>>,
 }
 
 impl PidDirectoryFileOps {
-    fn new(nodes: Arc<Mutex<HashMap<FsString, NodeHolder>>>) -> PidDirectoryFileOps {
+    fn new(nodes: Arc<HashMap<FsString, FsNodeHandle>>) -> PidDirectoryFileOps {
         PidDirectoryFileOps { nodes }
     }
 }
@@ -98,22 +92,21 @@ impl FileOps for PidDirectoryFileOps {
 
         // Subtract 2 from the offset, to account for `.` and `..`.
         let node_offset = (*offset - 2) as usize;
-        let num_nodes = self.nodes.lock().len();
+        let num_nodes = self.nodes.len();
         if node_offset < num_nodes {
-            // Get and sort the keys of the nodes, to keep the traversal order consistent.
-            let mut nodes = self.nodes.lock();
-            let mut names: Vec<FsString> = nodes.keys().cloned().collect();
-            names.sort();
-
-            for name in names {
-                // Unwrap is ok here since we are iterating through the keys while holding the
-                // lock.
-                let node = nodes.get_mut(&name).unwrap();
-                let inode_num = node.get_inode_num(&file.fs)?;
-
-                let new_offset = *offset + 1;
-                sink.add(inode_num, *offset, DirectoryEntryType::from_mode(node.file_mode), &name)?;
-                *offset = new_offset;
+            // Sort the keys of the nodes, to keep the traversal order consistent.
+            let mut items: Vec<_> = self.nodes.iter().collect();
+            items.sort_unstable_by(|(name1, _), (name2, _)| name1.cmp(name2));
+            // Iterate through all the named entries (i.e., non "task directories") and add them to
+            // the sink.
+            for (name, node) in items {
+                sink.add(
+                    node.inode_num,
+                    *offset,
+                    DirectoryEntryType::from_mode(node.info().mode),
+                    &name,
+                )?;
+                *offset = *offset + 1;
             }
         }
         Ok(())
@@ -127,13 +120,8 @@ pub struct FdDirectory {
 }
 
 impl FdDirectory {
-    fn new(task: Arc<Task>) -> Box<dyn FsNodeOps> {
-        Box::new(FdDirectory { task })
-    }
-
-    fn file_mode() -> FileMode {
-        // TODO(security): Return a proper file mode.
-        FileMode::IFDIR | FileMode::ALLOW_ALL
+    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        fs.create_node_with_ops(FdDirectory { task }, FileMode::IFDIR | FileMode::ALLOW_ALL)
     }
 }
 
@@ -149,17 +137,7 @@ impl FsNodeOps for FdDirectory {
 
         // Make sure that the file descriptor exists before fetching the node.
         if let Ok(_) = self.task.files.get(fd) {
-            node.fs().get_or_create_node(
-                Some(fd_inode_num(self.task.id) + fd.raw() as u64),
-                |inode_num| {
-                    Ok(FsNode::new(
-                        FdSymlink::new(self.task.clone(), fd),
-                        &node.fs(),
-                        inode_num,
-                        FdSymlink::file_mode(),
-                    ))
-                },
-            )
+            Ok(node.fs().create_node(FdSymlink::new(self.task.clone(), fd), FdSymlink::file_mode()))
         } else {
             error!(ENOENT)
         }
@@ -222,7 +200,7 @@ impl FileOps for FdDirectoryFileOps {
             if (fd.raw() as i64) >= *offset - 2 {
                 let new_offset = *offset + 1;
                 sink.add(
-                    fd_inode_num(self.task.id) + fd.raw() as u64,
+                    file.fs.next_inode_num(),
                     new_offset,
                     DirectoryEntryType::DIR,
                     format!("{}", fd.raw()).as_bytes(),
@@ -241,12 +219,8 @@ pub struct ExeSymlink {
 }
 
 impl ExeSymlink {
-    fn new(task: Arc<Task>) -> Box<dyn FsNodeOps> {
-        Box::new(ExeSymlink { task })
-    }
-
-    fn file_mode() -> FileMode {
-        FileMode::IFLNK | FileMode::ALLOW_ALL
+    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        fs.create_node_with_ops(ExeSymlink { task }, FileMode::IFLNK | FileMode::ALLOW_ALL)
     }
 }
 

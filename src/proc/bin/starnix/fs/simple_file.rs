@@ -39,9 +39,9 @@ where
 
 pub struct ByteVecFile(Arc<Vec<u8>>);
 impl ByteVecFile {
-    pub fn new(data: Vec<u8>) -> Result<impl FsNodeOps, Errno> {
+    pub fn new(data: Vec<u8>) -> impl FsNodeOps {
         let data = Arc::new(data);
-        Ok(SimpleFileNode::new(move || Ok(ByteVecFile(Arc::clone(&data)))))
+        SimpleFileNode::new(move || Ok(ByteVecFile(Arc::clone(&data))))
     }
 }
 impl FileOps for ByteVecFile {

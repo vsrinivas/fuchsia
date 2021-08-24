@@ -157,6 +157,14 @@ impl FileSystem {
         node
     }
 
+    pub fn create_node_with_ops(
+        self: &Arc<Self>,
+        ops: impl FsNodeOps + 'static,
+        mode: FileMode,
+    ) -> FsNodeHandle {
+        self.create_node(Box::new(ops), mode)
+    }
+
     /// Remove the given FsNode from the node cache.
     ///
     /// Called from the Drop trait of FsNode.
@@ -169,7 +177,7 @@ impl FileSystem {
         }
     }
 
-    fn next_inode_num(&self) -> ino_t {
+    pub fn next_inode_num(&self) -> ino_t {
         self.next_inode.fetch_add(1, Ordering::Relaxed)
     }
 
