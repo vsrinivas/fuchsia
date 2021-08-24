@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1172" height="704" version="1.1" viewBox="0 0 1172 704" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <clipPath id="clipPath20">
+   <path d="m0 0h446539v268367h-446539z"/>
+  </clipPath>
+ </defs>
+ <g transform="matrix(1.3333 0 0 -1.3333 0 704)">
+  <g transform="matrix(1,0,0,-1,0,528)">
+   <g transform="scale(.0019685)">
+    <g clip-path="url(#clipPath20)">
+     <path d="m0 0h446539v268367h-446539z" fill="#fff" fill-rule="evenodd"/>
+     <path d="m36719 6882.5h193392v254520h-193392z" fill="#efefef" fill-rule="evenodd"/>
+     <path d="m47623 10896h172224v17244h-172224z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(125 28.597)">
+       <text transform="translate(86.128 29.48)" fill="#000000" font-family="Arial" font-size="21.333px"><tspan x="0 16.576 31.978668 43.84 55.701336 67.562668 73.472 85.333336 96 101.90934 113.77067 119.68 130.34666 142.20801 146.944 151.68001 163.54134 170.64534 177.74934 188.416 193.15201 205.01334 216.87468 222.78401 234.64534 246.50667 251.24268 263.104 273.77066" y="0">Owned by a caller-side object</tspan></text>
+      </g>
+     </g>
+     <path d="m246650 6964.5h193392v254520h-193392z" fill="#efefef" fill-rule="evenodd"/>
+     <path d="m257554 10975h172224v17244h-172224z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(676 28.805)">
+       <text transform="translate(83.748 29.48)" fill="#000000" font-family="Arial" font-size="21.333px"><tspan x="0 16.576 31.978668 43.84 55.701336 67.562668 73.472 85.333336 96 101.90934 113.77067 119.68 130.34666 142.20801 146.944 151.68001 163.54134 175.40268 182.50667 193.17334 197.90933 209.77068 221.632 227.54134 239.40268 251.26401 256 267.86133 278.52802" y="0">Owned by a callee-side object</tspan></text>
+      </g>
+     </g>
+     <path d="m70472 90799h128016v30480h-128016z" fill="#b6d7a8" fill-rule="evenodd"/>
+     <path d="m70472 90799h128016v30480h-128016z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="381"/>
+     <path d="m73520 101665c0-4099.1 3322.9-7422 7422-7422 1968.4 0 3856.3 781.95 5248.2 2173.8 1391.9 1391.9 2173.8 3279.7 2173.8 5248.2 0 4099.1-3322.9 7422-7422 7422-4099.1 0-7422-3322.9-7422-7422z" fill="#fff" fill-rule="evenodd"/>
+     <path d="m73520 101665c0-4099.1 3322.9-7422 7422-7422 1968.4 0 3856.3 781.95 5248.2 2173.8 1391.9 1391.9 2173.8 3279.7 2173.8 5248.2 0 4099.1-3322.9 7422-7422 7422-4099.1 0-7422-3322.9-7422-7422z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="381"/>
+     <g transform="scale(381)">
+      <g transform="translate(198.67 253.06)">
+       <text transform="translate(9 20.695)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0" y="0">1</tspan></text>
+      </g>
+     </g>
+     <path d="m91808 93847h91440v16008h-91440z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(240.97 246.32)">
+       <text transform="translate(9 26.92)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0 14.504 27.981333 38.359997 48.738667 59.117332 64.287994 74.666664 84 89.170662 102.64799 113.02666 117.17066 121.31466 131.69333 137.90933 147.24266 160.72 171.09866" y="0">Owned by CallersRef</tspan></text>
+      </g>
+     </g>
+     <path d="m280160 163951h128016v30480h-128016z" fill="#b6d7a8" fill-rule="evenodd"/>
+     <path d="m280160 163951h128016v30480h-128016z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="381"/>
+     <path d="m283208 174817c0-4099.1 3322.9-7422 7422-7422 1968.4 0 3856.2 781.95 5248.2 2173.8 1391.9 1391.9 2173.8 3279.7 2173.8 5248.2 0 4099-3322.9 7422-7422 7422s-7422-3323-7422-7422z" fill="#fff" fill-rule="evenodd"/>
+     <path d="m283208 174817c0-4099.1 3322.9-7422 7422-7422 1968.4 0 3856.2 781.95 5248.2 2173.8 1391.9 1391.9 2173.8 3279.7 2173.8 5248.2 0 4099-3322.9 7422-7422 7422s-7422-3323-7422-7422z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="381"/>
+     <g transform="scale(381)">
+      <g transform="translate(749.03 445.06)">
+       <text transform="translate(9 20.695)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0" y="0">3</tspan></text>
+      </g>
+     </g>
+     <path d="m301496 166999h91440v16008h-91440z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(791.33 438.32)">
+       <text transform="translate(9 26.92)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0 14.504 27.981333 38.359997 48.738667 59.117332 64.287994 74.666664 84 89.170662 102.64799 113.02666 117.17066 121.31466 131.69333 142.07199 151.40533 164.88266 175.26132" y="0">Owned by CalleesRef</tspan></text>
+      </g>
+     </g>
+     <path d="m280160 90799h128016v30480h-128016z" fill="#ffe599" fill-rule="evenodd"/>
+     <path d="m280160 90799h128016v30480h-128016z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="381"/>
+     <path d="m283208 101665c0-4099.1 3322.9-7422 7422-7422 1968.4 0 3856.2 781.95 5248.2 2173.8 1391.9 1391.9 2173.8 3279.7 2173.8 5248.2 0 4099.1-3322.9 7422-7422 7422s-7422-3322.9-7422-7422z" fill="#fff" fill-rule="evenodd"/>
+     <path d="m283208 101665c0-4099.1 3322.9-7422 7422-7422 1968.4 0 3856.2 781.95 5248.2 2173.8 1391.9 1391.9 2173.8 3279.7 2173.8 5248.2 0 4099.1-3322.9 7422-7422 7422s-7422-3322.9-7422-7422z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="381"/>
+     <g transform="scale(381)">
+      <g transform="translate(749.03 253.06)">
+       <text transform="translate(9 20.695)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0" y="0">2</tspan></text>
+      </g>
+     </g>
+     <path d="m301496 93847h106680v24624h-106680z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(791.33 246.32)">
+       <g fill="#000000" font-family="Arial" font-size="18.667px">
+        <text transform="translate(9 26.92)"><tspan x="0 12.431999 22.810665 33.189331 43.567997 53.946663 64.325333 74.703995 85.082664 90.253326 100.632 109.96533 115.13599 121.352 131.73067 142.10933 152.48799 162.86665 172.2" y="0">Enqueued as request</tspan></text>
+        <text transform="translate(9 49.32)"><tspan x="0 6.2159996 16.594666 30.071999 40.450665 50.82933 61.207996 66.378662 76.757332 86.09066 91.26133 100.59467 110.97333 115.11733 119.26133 129.64 140.01866 143.82666 153.15999 158.33066 173.87999 183.21333 193.592 208.09599 218.47466 228.85333 239.23199 249.61066" y="0">(owned by callee’s MsgQueue)</tspan></text>
+       </g>
+      </g>
+     </g>
+     <path d="m70472 163951h128016v30480h-128016z" fill="#ffe599" fill-rule="evenodd"/>
+     <path d="m70472 163951h128016v30480h-128016z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="381"/>
+     <path d="m73520 174817c0-4099.1 3322.9-7422 7422-7422 1968.4 0 3856.3 781.95 5248.2 2173.8 1391.9 1391.9 2173.8 3279.7 2173.8 5248.2 0 4099-3322.9 7422-7422 7422-4099.1 0-7422-3323-7422-7422z" fill="#fff" fill-rule="evenodd"/>
+     <path d="m73520 174817c0-4099.1 3322.9-7422 7422-7422 1968.4 0 3856.3 781.95 5248.2 2173.8 1391.9 1391.9 2173.8 3279.7 2173.8 5248.2 0 4099-3322.9 7422-7422 7422-4099.1 0-7422-3323-7422-7422z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="381"/>
+     <g transform="scale(381)">
+      <g transform="translate(198.67 445.06)">
+       <text transform="translate(9 20.695)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0" y="0">4</tspan></text>
+      </g>
+     </g>
+     <path d="m91808 166999h106680v24624h-106680z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(240.97 438.32)">
+       <g fill="#000000" font-family="Arial" font-size="18.667px">
+        <text transform="translate(9 26.92)"><tspan x="0 12.431999 22.810665 33.189331 43.567997 53.946663 64.325333 74.703995 85.082664 90.253326 100.632 109.96533 115.13599 121.352 131.73067 142.10933 146.25333" y="0">Enqueued as reply</tspan></text>
+        <text transform="translate(9 49.32)"><tspan x="0 6.2159996 16.594666 30.071999 40.450665 50.82933 61.207996 66.378662 76.757332 86.09066 91.26133 100.59467 110.97333 115.11733 119.26133 129.64 136.54666 140.35466 149.68799 154.85866 170.40799 179.74133 190.12 204.62399 215.00266 225.38133 235.75999 246.13866" y="0">(owned by caller’s MsgQueue)</tspan></text>
+       </g>
+      </g>
+     </g>
+     <path d="m198488 106039c20418 0 30627 6 40836 12s20418 12 40836 12" fill-opacity="0"/>
+     <path d="m198488 106039c20418 0 30627 6 40836 12 5104.5 3 10209 6 16590 8.25 3190.3 1.13 6699.7 2.06 10688 2.72l6700.8 0.51" fill="none" stroke="#45818e" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="1143"/>
+     <path d="m273302 107950 5187.2-1887.5-5186.9-1888.3z" fill="#45818e" fill-rule="evenodd" stroke="#45818e" stroke-miterlimit="10" stroke-width="1143"/>
+     <path d="m134480 163951c0-7223.5 6-9113 12-14447s12-14112 12-28225" fill-opacity="0"/>
+     <path d="m134480 163951c0-7223.5 6-9113 12-14447 3-2667 6-6195.1 8.25-10821 1.13-2312.7 2.06-4899.8 2.72-7790.6l0.29-2755.8" fill="none" stroke="#45818e" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="1143"/>
+     <path d="m136391 128137-1887.4-5187.2-1888.5 5186.8z" fill="#45818e" fill-rule="evenodd" stroke="#45818e" stroke-miterlimit="10" stroke-width="1143"/>
+     <path d="m87372 35389h95880v50484h-95880z" fill="#d9d9d9" fill-rule="evenodd"/>
+     <g transform="scale(381)">
+      <g transform="translate(229.32 92.883)">
+       <g fill="#000000" font-family="Arial" font-size="18.667px">
+        <text transform="translate(9 26.92)"><tspan x="0 14.504 24.882666 34.216 39.386665 49.765331 53.909332 58.053329 68.431999 81.909332 92.287994 102.66666 107.83733 118.216 128.59467 133.76534 147.24266 157.62132 161.76534 165.90933 176.28799 182.504 191.83733 205.31467 215.69333 220.864" y="0">Ops allowed on CallersRef:</tspan></text>
+        <text transform="translate(9 49.32)"><tspan x="0 7.261333 12.431999 27.981333 38.359997 48.738667 59.117332 65.333328 75.711998 86.09066 96.46933 102.68533 108.90133 114.072 120.28799 125.45866 135.83733 142.05333 147.224 153.43999 163.81866 174.19733 178.34132 187.67467" y="0">* mbo_read() (for reply)</tspan></text>
+        <text transform="translate(9 71.72)"><tspan x="0 7.261333 12.431999 27.981333 38.359997 48.738667 59.117332 72.594666 78.810661 82.954666 88.125328 98.503998 104.71999 110.936 116.10666 122.32266 127.49333 137.87199 144.088 149.25867 155.47466 165.85333 176.23199 186.61066 196.98932 206.32266 211.49333" y="0">* mbo_write() (for request)</tspan></text>
+        <text transform="translate(9 94.12)"><tspan x="0 7.261333 12.431999 21.765333 32.143997 42.522667 52.901333 63.279999 73.658661 77.802666 88.181328 97.514664 107.89333 118.272 128.65067 134.86667" y="0">* channel_send()</tspan></text>
+        <text transform="translate(9 116.52)"><tspan x="0 7.261333 12.431999 22.810665 33.189331 43.567997 53.946663 58.090664 68.46933 73.639999 82.973328 87.117332 97.495995 106.82933" y="0">* handle close</tspan></text>
+       </g>
+      </g>
+     </g>
+     <path d="m295088 52621h98160v33252h-98160z" fill="#d9d9d9" fill-rule="evenodd"/>
+     <g transform="scale(381)">
+      <g transform="translate(774.51 138.11)">
+       <g fill="#000000" font-family="Arial" font-size="18.667px">
+        <text transform="translate(9 26.92)"><tspan x="0 14.504 24.882666 34.216 39.386665 49.765331 60.143997 65.314667 80.863998 90.197327 100.576 115.07999 125.45866 135.83733 146.21599 156.59467" y="0">Ops on MsgQueue:</tspan></text>
+        <text transform="translate(9 49.32)"><tspan x="0 7.261333 12.431999 27.981333 37.314667 47.693333 58.071999 68.450661 78.82933 89.208 99.586662 109.96533 123.44267 133.82133 137.96533 143.136 149.35199" y="0">* msgqueue_wait()</tspan></text>
+        <text transform="translate(9 71.72)"><tspan x="0 7.261333 12.431999 22.810665 33.189331 43.567997 53.946663 58.090664 68.46933 73.639999 82.973328 87.117332 97.495995 106.82933 117.20799 122.37866 128.59467 138.97333 149.35199 154.52266 164.90132 171.11732 177.33333 187.71199 198.09065 202.23466 206.37866 216.75732 226.09065" y="0">* handle close (auto-replies)</tspan></text>
+       </g>
+      </g>
+     </g>
+     <path d="m297680 198688h95880v50484h-95880z" fill="#d9d9d9" fill-rule="evenodd"/>
+     <g transform="scale(381)">
+      <g transform="translate(781.31 521.49)">
+       <g fill="#000000" font-family="Arial" font-size="18.667px">
+        <text transform="translate(9 26.92)"><tspan x="0 14.504 24.882666 34.216 39.386665 49.765331 53.909332 58.053329 68.431999 81.909332 92.287994 102.66666 107.83733 118.216 128.59467 133.76534 147.24266 157.62132 161.76534 165.90933 176.28799 186.66666 196 209.47733 219.85599 225.02666" y="0">Ops allowed on CalleesRef:</tspan></text>
+        <text transform="translate(9 49.32)"><tspan x="0 7.261333 12.431999 27.981333 38.359997 48.738667 59.117332 65.333328 75.711998 86.09066 96.46933 102.68533 108.90133 114.072 120.28799 125.45866 135.83733 142.05333 147.224 153.43999 163.81866 174.19733 184.57599 194.95467 204.28799 209.45866" y="0">* mbo_read() (for request)</tspan></text>
+        <text transform="translate(9 71.72)"><tspan x="0 7.261333 12.431999 27.981333 38.359997 48.738667 59.117332 72.594666 78.810661 82.954666 88.125328 98.503998 104.71999 110.936 116.10666 122.32266 127.49333 137.87199 144.088 149.25867 155.47466 165.85333 176.23199 180.37599 189.70932" y="0">* mbo_write() (for reply)</tspan></text>
+        <text transform="translate(9 94.12)"><tspan x="0 7.261333 12.431999 27.981333 38.359997 48.738667 59.117332 68.450661 78.82933 89.208 99.586662 109.96533 116.18133 126.56 136.93866 141.08266 150.416 156.63199" y="0">* mbo_send_reply()</tspan></text>
+        <text transform="translate(9 116.52)"><tspan x="0 7.261333 12.431999 22.810665 33.189331 43.567997 53.946663 58.090664 68.46933 73.639999 82.973328 87.117332 97.495995 106.82933 117.20799 122.37866 128.59467 138.97333 149.35199 154.52266 164.90132 171.11732 177.33333 187.71199 198.09065 202.23466 206.37866 216.75732 226.09065" y="0">* handle close (auto-replies)</tspan></text>
+       </g>
+      </g>
+     </g>
+     <path d="m99936 198688h70752v33252h-70752z" fill="#d9d9d9" fill-rule="evenodd"/>
+     <g transform="scale(381)">
+      <g transform="translate(262.3 521.49)">
+       <g fill="#000000" font-family="Arial" font-size="18.667px">
+        <text transform="translate(9 26.92)"><tspan x="0 14.504 24.882666 34.216 39.386665 49.765331 60.143997 65.314667 80.863998 90.197327 100.576 115.07999 125.45866 135.83733 146.21599 156.59467" y="0">Ops on MsgQueue:</tspan></text>
+        <text transform="translate(9 49.32)"><tspan x="0 7.261333 12.431999 27.981333 37.314667 47.693333 58.071999 68.450661 78.82933 89.208 99.586662 109.96533 123.44267 133.82133 137.96533 143.136 149.35199" y="0">* msgqueue_wait()</tspan></text>
+        <text transform="translate(9 71.72)"><tspan x="0 7.261333 12.431999 22.810665 33.189331 43.567997 53.946663 58.090664 68.46933 73.639999 82.973328 87.117332 97.495995 106.82933" y="0">* handle close</tspan></text>
+       </g>
+      </g>
+     </g>
+     <path d="m280160 179191c-20418 0-30627 30-40836 60s-20418 60-40836 60" fill-opacity="0"/>
+     <path d="m280160 179191c-20418 0-30627 30-40836 60-5104.5 15-10209 30-16590 41.25-3190.3 5.62-6699.7 10.32-10688 13.6-1994 1.64-4107.5 2.93-6360.7 3.81l-340.14 0.1" fill="none" stroke="#45818e" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="1143"/>
+     <path d="m205346 177421-5186.7 1888.9 5187.4 1887z" fill="#45818e" fill-rule="evenodd" stroke="#45818e" stroke-miterlimit="10" stroke-width="1143"/>
+     <path d="m344168 121279c0 10668 6 16002 12 21336s12 10668 12 21336" fill-opacity="0"/>
+     <path d="m344168 121279c0 10668 6 16002 12 21336 3 2667 6 5334 8.25 8667.8 1.13 1666.9 2.06 3500.4 2.73 5584v226.22" fill="none" stroke="#45818e" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="1143"/>
+     <path d="m342303 157093 1888.7 5186.8 1887.2-5187.3z" fill="#45818e" fill-rule="evenodd" stroke="#45818e" stroke-miterlimit="10" stroke-width="1143"/>
+     <path d="m6464.2 106015c16002 0 24003 6 32004 12s16002 12 32004 12" fill-opacity="0"/>
+     <path d="m6464.2 106015c16002 0 24003 6 32004 12 4000.5 3 8001 6 13002 8.25 2500.3 1.13 5250.7 2.06 8376 2.72l3768.3 0.37" fill="none" stroke="#45818e" stroke-linejoin="round" stroke-miterlimit="8" stroke-width="1143"/>
+     <path d="m63614 107926 5187.2-1887.4-5186.9-1888.4z" fill="#45818e" fill-rule="evenodd" stroke="#45818e" stroke-miterlimit="10" stroke-width="1143"/>
+     <path d="m197726 90037h100812v16008h-100812z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(518.97 236.32)">
+       <text transform="translate(9 26.92)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0 9.333333 19.712 30.090666 40.469334 50.848 61.226665 65.370667 75.749329 85.082664 95.461327 105.84 116.21867 122.43466" y="0">channel_send()</tspan></text>
+      </g>
+     </g>
+     <path d="m344168 122692h98160v16008h-98160z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(903.33 322.03)">
+       <text transform="translate(9 26.92)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0 15.549333 24.882666 35.261333 45.639999 56.018665 66.397331 76.776001 87.154663 97.533333 111.01067 121.38933 125.53333 130.70399 136.92" y="0">msgqueue_wait()</tspan></text>
+      </g>
+     </g>
+     <path d="m205727 178474h73812v24624h-73812z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(539.97 468.43)">
+       <g fill="#000000" font-family="Arial" font-size="18.667px">
+        <text transform="translate(34.371 26.92)"><tspan x="0 15.549333 25.927999 36.306664 46.685333 56.018665 66.397331 76.776001 87.154663 97.533333 103.74933 114.128 124.50666 128.65067 137.98399 144.2" y="0">mbo_send_reply()</tspan></text>
+        <text transform="translate(58.201 49.32)"><tspan x="0 10.378666 16.594666 21.765333 32.143997 42.522667 52.901333 63.279999 67.423996 77.802666 82.973328 92.306664 96.450661 106.82933 116.16267" y="0">or handle close</tspan></text>
+       </g>
+      </g>
+     </g>
+     <path d="m-4606.9 145964h138492v16008h-138492z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(-12.092 383.11)">
+       <text transform="translate(211.39 26.92)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0 15.549333 24.882666 35.261333 45.639999 56.018665 66.397331 76.776001 87.154663 97.533333 111.01067 121.38933 125.53333 130.70399 136.92" y="0">msgqueue_wait()</tspan></text>
+      </g>
+     </g>
+     <path d="m368.22 90037h61980v16008h-61980z" fill-opacity="0"/>
+     <g transform="scale(381)">
+      <g transform="translate(.96646 236.32)">
+       <text transform="translate(42.733 26.92)" fill="#000000" font-family="Arial" font-size="18.667px"><tspan x="0 15.549333 25.927999 36.306664 46.685333 56.018665 62.234665 72.613327 82.991997 88.162666 98.541328 104.75733" y="0">mbo_create()</tspan></text>
+      </g>
+     </g>
+    </g>
+   </g>
+  </g>
+ </g>
+</svg>

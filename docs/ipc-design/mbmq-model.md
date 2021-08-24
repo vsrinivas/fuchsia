@@ -196,6 +196,31 @@ files, but an SVG version is included in the repo.]
 
 ---
 
+*Figure 3.* State transition graph.  This shows the main transitions
+between MBO states.  This shows the operations that are possible in
+each state, along with the operations that can cause each transition.
+
+![Diagram: State transition graph](diagrams/mbmq-state-transition-graph.png)
+
+Note that some syscall invocations can involve multiple state
+transitions, which are not shown on this graph.  These include:
+
+*   Fast paths where a thread is already waiting on the MsgQueue:
+    *   State 1 → 3 (skipping 2)
+    *   State 3 → 1 (skipping 4)
+*   Auto-reply cases:
+    *   State 2 → 4 (skipping 3): auto-reply when closing the
+        callee's MsgQueue
+    *   State 2 → 1 (skipping 3 and 4): auto-reply when closing the
+        callee's MsgQueue, when a thread was already waiting on the
+        caller's MsgQueue
+    *   State 1 → 4 (skipping 2 and 3): `zx_channel_send()` was called
+        when the callee's MsgQueue was already closed
+
+The graph also does not show the cases where the MBO is deallocated.
+
+---
+
 ## Core operations
 
 *   `zx_mbo_create() -> callersref`
