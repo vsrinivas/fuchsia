@@ -188,7 +188,9 @@ while (true) {                          | while (true) {
 *Figure 2.* Object reference graph.  This shows the references between
 the kernel objects involved in a single IPC call from a client process
 to a server process.  This shows how the references change as the call
-progresses and the MBO changes between states.
+progresses and the MBO changes between states.  [Note: This diagram is
+included as a PNG file because Gitiles does not support serving SVG
+files, but an SVG version is included in the repo.]
 
 ![Diagram: Object reference graph](diagrams/mbmq-object-reference-graph.png)
 
