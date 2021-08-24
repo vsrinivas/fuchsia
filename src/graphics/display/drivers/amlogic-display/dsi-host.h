@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/zx/status.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 
@@ -30,7 +31,7 @@ class DsiHost {
   // Map all necessary resources. This will not modify hardware state in any
   // way, and is thus safe to use when adopting a device that was initialized by
   // the bootloader.
-  static std::unique_ptr<DsiHost> Create(zx_device_t* parent, uint32_t panel_type);
+  static zx::status<std::unique_ptr<DsiHost>> Create(zx_device_t* parent, uint32_t panel_type);
 
   // This function sets up mipi dsi interface. It includes both DWC and AmLogic blocks
   // The DesignWare setup could technically be moved to the dw_mipi_dsi driver. However,
@@ -69,7 +70,7 @@ class DsiHost {
   // board does not provide enough GPIO pins to distinguish all of the DDICs.
   uint32_t display_id_ = 0;
 
-  bool host_on_ = false;
+  bool enabled_ = false;
 
   std::unique_ptr<Lcd> lcd_;
   std::unique_ptr<MipiPhy> phy_;

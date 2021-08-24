@@ -67,6 +67,7 @@ source_set("common_srcs") {
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/mipi-dsi",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

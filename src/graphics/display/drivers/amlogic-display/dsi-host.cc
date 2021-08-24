@@ -43,32 +43,32 @@ DsiHost::DsiHost(zx_device_t* parent, uint32_t panel_type)
       panel_type_(panel_type) {}
 
 // static
-std::unique_ptr<DsiHost> DsiHost::Create(zx_device_t* parent, uint32_t panel_type) {
+zx::status<std::unique_ptr<DsiHost>> DsiHost::Create(zx_device_t* parent, uint32_t panel_type) {
   fbl::AllocChecker ac;
-  auto self = fbl::make_unique_checked<DsiHost>(&ac, DsiHost(parent, panel_type));
+  std::unique_ptr<DsiHost> self = fbl::make_unique_checked<DsiHost>(&ac, DsiHost(parent, panel_type));
   if (!ac.check()) {
     DISP_ERROR("No memory to allocate a DSI host\n");
-    return nullptr;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   if (!self->pdev_.is_valid()) {
     DISP_ERROR("DsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
-    return nullptr;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Map MIPI DSI and HHI registers
   zx_status_t status = self->pdev_.MapMmio(MMIO_MPI_DSI, &(self->mipi_dsi_mmio_));
   if (status != ZX_OK) {
-    DISP_ERROR("Could not map MIPI DSI mmio (%d)\n", status);
-    return nullptr;
+    DISP_ERROR("Could not map MIPI DSI mmio %s\n", zx_status_get_string(status));
+    return zx::error(status);
   }
 
   status = self->pdev_.MapMmio(MMIO_HHI, &(self->hhi_mmio_));
   if (status != ZX_OK) {
-    DISP_ERROR("Could not map HHI mmio (%d)\n", status);
-    return nullptr;
+    DISP_ERROR("Could not map HHI mmio %s\n", zx_status_get_string(status));
+    return zx::error(status);
   }
 
-  return self;
+  return zx::ok(std::move(self));
 }
 
 zx_status_t DsiHost::HostModeInit(const display_setting_t& disp_setting) {
@@ -118,7 +118,7 @@ void DsiHost::PhyDisable() {
 
 void DsiHost::Disable(const display_setting_t& disp_setting) {
   // turn host off only if it's been fully turned on
-  if (!host_on_) {
+  if (!enabled_) {
     return;
   }
 
@@ -134,11 +134,11 @@ void DsiHost::Disable(const display_setting_t& disp_setting) {
   // finally shutdown host
   phy_->Shutdown();
 
-  host_on_ = false;
+  enabled_ = false;
 }
 
 zx_status_t DsiHost::Enable(const display_setting_t& disp_setting, uint32_t bitrate) {
-  if (host_on_) {
+  if (enabled_) {
     return ZX_OK;
   }
 
@@ -217,7 +217,7 @@ zx_status_t DsiHost::Enable(const display_setting_t& disp_setting, uint32_t bitr
   dsiimpl_.SetMode(DSI_MODE_VIDEO);
 
   // Host is On and Active at this point
-  host_on_ = true;
+  enabled_ = true;
   return ZX_OK;
 }
 

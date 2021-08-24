@@ -80,15 +80,13 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
       return ZX_ERR_NOT_SUPPORTED;
   }
 
-  dsi_.dsi_host = amlogic_display::DsiHost::Create(parent, panel_type);
-  if (!dsi_.dsi_host) {
-    return ZX_ERR_NO_MEMORY;
+  auto dsi_host = amlogic_display::DsiHost::Create(parent, panel_type);
+  if (dsi_host.is_error()) {
+    DISP_ERROR("Could not create DSI host: %s\n", dsi_host.status_string());
+    return dsi_host.status_value();
   }
-  fbl::AllocChecker ac;
-  dsi_.clock = fbl::make_unique_checked<amlogic_display::Clock>(&ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  dsi_.dsi_host = std::move(dsi_host.value());
+  ZX_ASSERT(dsi_.dsi_host);
 
   ddk::PDev pdev;
   auto status = ddk::PDev::FromFragment(parent, &pdev);
@@ -96,11 +94,13 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
-  status = dsi_.clock->Init(pdev);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not initialize Clock object\n");
-    return status;
+  auto clock = amlogic_display::Clock::Create(pdev);
+  if (clock.is_error()) {
+    DISP_ERROR("Could not create Clock: %s\n", clock.status_string());
+    return clock.status_value();
   }
+  dsi_.clock = std::move(clock.value());
+  ZX_ASSERT(dsi_.clock);
 
   return ZX_OK;
 }

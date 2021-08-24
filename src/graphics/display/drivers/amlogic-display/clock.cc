@@ -6,6 +6,8 @@
 
 #include <lib/ddk/debug.h>
 
+#include <fbl/alloc_checker.h>
+
 namespace amlogic_display {
 
 namespace {
@@ -139,7 +141,6 @@ zx_status_t Clock::GenerateHPLL(const display_setting_t& d) {
 }
 
 void Clock::Disable() {
-  ZX_DEBUG_ASSERT(initialized_);
   if (!clock_enabled_) {
     return;
   }
@@ -155,8 +156,6 @@ void Clock::Disable() {
 }
 
 zx_status_t Clock::Enable(const display_setting_t& d) {
-  ZX_DEBUG_ASSERT(initialized_);
-
   if (clock_enabled_) {
     return ZX_OK;
   }
@@ -339,30 +338,32 @@ zx_status_t Clock::Enable(const display_setting_t& d) {
   return ZX_OK;
 }
 
-zx_status_t Clock::Init(ddk::PDev& pdev) {
-  if (initialized_) {
-    return ZX_OK;
+// static
+zx::status<std::unique_ptr<Clock>> Clock::Create(ddk::PDev& pdev) {
+  fbl::AllocChecker ac;
+  auto self = fbl::make_unique_checked<Clock>(&ac);
+  if (!ac.check()) {
+    DISP_ERROR("Clock: could not allocate memory\n");
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   // Map VPU and HHI registers
-  zx_status_t status = pdev.MapMmio(MMIO_VPU, &vpu_mmio_);
+  zx_status_t status = pdev.MapMmio(MMIO_VPU, &(self->vpu_mmio_));
   if (status != ZX_OK) {
     DISP_ERROR("Clock: Could not map VPU mmio\n");
-    return status;
+    return zx::error(status);
   }
 
-  status = pdev.MapMmio(MMIO_HHI, &hhi_mmio_);
+  status = pdev.MapMmio(MMIO_HHI, &(self->hhi_mmio_));
   if (status != ZX_OK) {
     DISP_ERROR("Clock: Could not map HHI mmio\n");
-    return status;
+    return zx::error(status);
   }
 
-  initialized_ = true;
-  return ZX_OK;
+  return zx::ok(std::move(self));
 }
 
 void Clock::Dump() {
-  ZX_DEBUG_ASSERT(initialized_);
   DISP_INFO("#############################\n");
   DISP_INFO("Dumping pll_cfg structure:\n");
   DISP_INFO("#############################\n");

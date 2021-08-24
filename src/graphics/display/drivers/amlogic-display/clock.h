@@ -9,6 +9,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zx/status.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 
@@ -26,11 +27,11 @@ namespace amlogic_display {
 
 class Clock {
  public:
-  Clock() = default;
-
   // Map all necessary resources. This method does not change hardware state,
   // and is therefore safe to use when adopting a bootloader initialized device.
-  zx_status_t Init(ddk::PDev& pdev);
+  // Returns nullptr on failure.
+  static zx::status<std::unique_ptr<Clock>> Create(ddk::PDev& pdev);
+
   zx_status_t Enable(const display_setting_t& d);
   void Disable();
   void Dump();
@@ -58,7 +59,6 @@ class Clock {
   PllConfig pll_cfg_;
   LcdTiming lcd_timing_;
 
-  bool initialized_ = false;
   bool clock_enabled_ = false;
 };
 
