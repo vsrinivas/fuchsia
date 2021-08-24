@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Create an Interrupt object from a Messaged-Signaled Interrupt (MSI) allocation.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -50,7 +50,7 @@ Specification v3.0, section 6.8.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must be of type **ZX_OBJ_TYPE_MSI**.
 

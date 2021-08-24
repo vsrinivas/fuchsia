@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Read a message from the debug serial port.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -40,7 +40,7 @@ the function returns **ZX_ERR_NOT_SUPPORTED**.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
 

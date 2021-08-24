@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Create a new bus transaction initiator.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -33,7 +33,7 @@ Upon success a handle for the new BTI is returned.  This handle will have rights
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 *iommu* must be of type **ZX_OBJ_TYPE_IOMMU** and have **ZX_RIGHT_NONE**.
 

@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Allocate Message-Signaled Interrupts (MSIs).
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -34,7 +34,7 @@ intended for use only by the platform bus and Zircon coretests.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
 

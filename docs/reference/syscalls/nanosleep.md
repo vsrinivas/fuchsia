@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 High resolution sleep.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -36,7 +36,7 @@ zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 None.
 

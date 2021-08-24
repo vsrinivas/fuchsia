@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Read a single log record from the kernel debuglog.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -75,7 +75,7 @@ discarded. Callers should ensure that their input buffer is at least
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must be of type **ZX_OBJ_TYPE_LOG** and have **ZX_RIGHT_READ**.
 
@@ -101,5 +101,12 @@ was an invalid pointer.
 ## SEE ALSO
 
  - [`fuchsia.boot.ReadOnlyLog`](https://fuchsia.dev/reference/fidl/fuchsia.boot#ReadOnlyLog)
+
  - [`zx_debuglog_create()`]
+
  - [`zx_debuglog_write()`]
+
+<!-- References updated by update-docs-from-fidl, do not edit. -->
+
+[`zx_debuglog_create()`]: debuglog_create.md
+[`zx_debuglog_write()`]: debuglog_write.md

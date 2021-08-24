@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Make adjustments to a clock object.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -20,7 +20,7 @@ zx_status_t zx_clock_update(zx_handle_t handle,
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must be of type **ZX_OBJ_TYPE_CLOCK** and have **ZX_RIGHT_WRITE**.
 
@@ -218,15 +218,17 @@ On success, returns **ZX_OK**.
 
 ## SEE ALSO
 
- - [clocks]
  - [RFC-0077](/docs/contribute/governance/rfcs/0077_zx_clock_update_accuracy.md)
- - [clock transformations](/docs/concepts/kernel/clock_transformations.md)
+
+ - [clock transformations]
+ - [clocks]
  - [`zx_clock_create()`]
  - [`zx_clock_get_details()`]
  - [`zx_clock_read()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[clock transformations]: /docs/concepts/kernel/clock_transformations.md
 [clocks]: /docs/reference/kernel_objects/clock.md
 [`zx_clock_create()`]: clock_create.md
 [`zx_clock_get_details()`]: clock_get_details.md

@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Query information about an object.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -990,72 +990,51 @@ typedef struct zx_info_bti {
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-If *topic* is **ZX_INFO_PROCESS**, *handle* must be of type
-**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_PROCESS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_JOB**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and
-have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_JOB**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_PROCESS_THREADS**, *handle* must be of type
-**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_ENUMERATE**.
+If *topic* is **ZX_INFO_PROCESS_THREADS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_ENUMERATE**.
 
-If *topic* is **ZX_INFO_JOB_CHILDREN**, *handle* must be of type
-**ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
+If *topic* is **ZX_INFO_JOB_CHILDREN**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
 
-If *topic* is **ZX_INFO_JOB_PROCESSES**, *handle* must be of type
-**ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
+If *topic* is **ZX_INFO_JOB_PROCESSES**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
 
-If *topic* is **ZX_INFO_THREAD**, *handle* must be of type
-**ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_THREAD**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_THREAD_EXCEPTION_REPORT**, *handle* must be of type
-**ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_THREAD_EXCEPTION_REPORT**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_THREAD_STATS**, *handle* must be of type
-**ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_THREAD_STATS**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_TASK_STATS**, *handle* must be of type
-**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_TASK_STATS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_PROCESS_MAPS**, *handle* must be of type
-**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_PROCESS_MAPS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_PROCESS_VMOS**, *handle* must be of type
-**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_PROCESS_VMOS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
 If *topic* is **ZX_INFO_VMO**, *handle* must be of type **ZX_OBJ_TYPE_VMO**.
 
-If *topic* is **ZX_INFO_VMAR**, *handle* must be of type **ZX_OBJ_TYPE_VMAR**
-and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_VMAR**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_CPU_STATS**, *handle* must have resource kind
-**ZX_RSRC_KIND_ROOT**.
+If *topic* is **ZX_INFO_CPU_STATS**, *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
 
-If *topic* is **ZX_INFO_KMEM_STATS**, *handle* must have resource kind
-**ZX_RSRC_KIND_ROOT**.
+If *topic* is **ZX_INFO_KMEM_STATS**, *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
 
-If *topic* is **ZX_INFO_RESOURCE**, *handle* must be of type
-**ZX_OBJ_TYPE_RESOURCE** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_RESOURCE**, *handle* must be of type **ZX_OBJ_TYPE_RESOURCE** and have **ZX_RIGHT_INSPECT**.
 
 If *topic* is **ZX_INFO_HANDLE_COUNT**, *handle* must have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_BTI**, *handle* must be of type **ZX_OBJ_TYPE_BTI** and
-have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_BTI**, *handle* must be of type **ZX_OBJ_TYPE_BTI** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_PROCESS_HANDLE_STATS**, *handle* must be of type
-**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_PROCESS_HANDLE_STATS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_SOCKET**, *handle* must be of type
-**ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_SOCKET**, *handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_MSI**, *handle* must be of type **ZX_OBJ_TYPE_MSI** and
-have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_MSI**, *handle* must be of type **ZX_OBJ_TYPE_MSI** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_TASK_RUNTIME**, *handle* must be of type
-**ZX_OBJ_TYPE_THREAD**, **ZX_OBJ_TYPE_PROCESS**, or **ZX_OBJ_TYPE_JOB**, and
-have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_TASK_RUNTIME**, *handle* must be of type **ZX_OBJ_TYPE_THREAD**, **ZX_OBJ_TYPE_PROCESS**, or **ZX_OBJ_TYPE_JOB**, and have **ZX_RIGHT_INSPECT**.
 
 ## RETURN VALUE
 
@@ -1120,10 +1099,10 @@ void examine_threads(zx_handle_t proc) {
 
 ## SEE ALSO
 
--   [`zx_handle_close()`]
--   [`zx_handle_duplicate()`]
--   [`zx_handle_replace()`]
--   [`zx_object_get_child()`]
+ - [`zx_handle_close()`]
+ - [`zx_handle_duplicate()`]
+ - [`zx_handle_replace()`]
+ - [`zx_object_get_child()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 

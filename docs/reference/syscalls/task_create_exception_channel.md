@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Create an exception channel for a given job, process, or thread.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -53,7 +53,7 @@ handling will continue on to the next handler in the search order.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-fidl, do not edit. -->
+<!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must have **ZX_RIGHT_INSPECT** and have **ZX_RIGHT_DUPLICATE** and have **ZX_RIGHT_TRANSFER** and have **ZX_RIGHT_MANAGE_THREAD**.
 
