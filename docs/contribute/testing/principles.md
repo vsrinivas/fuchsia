@@ -459,85 +459,99 @@ which as a whole is a net positive.
   under test changes in ways that are benign to the external observer. Change
   detector tests are more costly to maintain.
 
-## Further reading
+### Test against interfaces and contracts
 
-Below you can find recommended reading material that speaks to generally
-accepted principles of software testing that apply on Fuchsia as well.
+<span class="compare-better">Recommended</span>: Test using public APIs and
+other interfaces and contracts offered to the client of the code under test.
+These tests are more resilient to benign changes.
 
-### Test quality and hygiene
+<span class="compare-worse">Not recommended</span>: Don’t test implementation
+details that are not important to the client. Such tests often break when the
+code under test changes in benign ways.
+
+Further reading:
 
 - [Change-Detector Tests Considered Harmful](https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html){:.external}
-  - Tests that closely follow implementation details are lower quality tests.
-  - Change-detector tests are more costly to maintain.
-  - When implementation details change but tests continue to work, it is an
-    indicator for high quality tests.
-- [Prefer Testing Public APIs Over Implementation-Detail Classes](https://testing.googleblog.com/2015/01/testing-on-toilet-prefer-testing-public.html){:.external}:
-  how to identify the right interfaces to test and write quality tests that are
-  not change-detectors.
+- [Prefer Testing Public APIs Over Implementation-Detail Classes](https://testing.googleblog.com/2015/01/testing-on-toilet-prefer-testing-public.html){:.external}
+- [Test Behavior, Not Implementation](https://testing.googleblog.com/2013/08/testing-on-toilet-test-behavior-not.html){:.external}
+
+### Write readable test code
+
+Consider readability as you write tests, the same as you do when you write the
+code under test.
+
+- A test is **complete** if the body of the test contains all the information
+  you need to know in order to understand it.
+- A test is **concise** if the test doesn’t contain any other distracting
+  information.
+
+<span class="compare-better">Recommended</span>: Write test cases that are
+complete and concise. Prefer writing more test individual test cases, each with
+a narrow focus on specific circumstances and concerns.
+
+<span class="compare-worse">Not recommended</span>: Don’t combine multiple
+scenarios into fewer test cases in order to produce shorter tests with fewer
+test cases.
+
+Further reading:
+
 - [What Makes a Good Test?](https://testing.googleblog.com/2014/03/testing-on-toilet-what-makes-good-test.html){:.external}
-  - A test is complete when its body contains all of the information you need to
-    understand it.
-  - A test is concise when it doesn't contain any other distracting information.
-  - A resilient test doesn’t need to change unless the purpose of the code under
-    test changes.
-- [Keep Tests Focused](https://testing.googleblog.com/2018/06/testing-on-toilet-keep-tests-focused.html){:.external}:
-  separate different scenarios to individual test cases.
-- [Design for Testability](https://blog.nelhage.com/2016/03/design-for-testability/){:.external}:
-  practical tips for code authors that produce good tests, and good code.
-- [Test Behavior, Not Implementation](https://testing.googleblog.com/2013/08/testing-on-toilet-test-behavior-not.html){:.external}:
-  tests that are independent of implementation details are easier to maintain.
-- [How I Write Tests](https://blog.nelhage.com/2016/12/how-i-test/){:.external}:
-  practical tips for test authors.
-- [We need to talk about testing](https://dannorth.net/2021/07/26/we-need-to-talk-about-testing/){:.external}
-- Testing is about asking what could go wrong.
-- Tests increase confidence for stakeholders through evidence.
-- The testing mindset affords empathy, scepticism, and ingenuity.
-
-### End-to-end testing
-
-- [Just Say No to More End-to-End Tests](https://testing.googleblog.com/2015/04/just-say-no-to-more-end-to-end-tests.html){:.external}
-  - Key reasons why end-to-end tests seem promising in theory but disappoint in
-    practice.
-  - The value of a test is realized when a bug is introduced, the test fails,
-    and the failure identifies the fault.
-  - Smaller tests provide the best feedback loops. They’re faster, more
-    reliable, and isolate failures better.
-- [Test Flakiness - One of the main challenges of automated testing](https://testing.googleblog.com/2020/12/test-flakiness-one-of-main-challenges.html){:.external}
-  - Test flakiness can come from anywhere in the stack: the tests themselves,
-    the testing framework, the system under test, the OS, the hardware.
-  - A survey of common root causes for flakiness at different layers.
-  - Useful terminology to identify and categorize sources of flakiness.
-- [Test Flakiness - One of the main challenges of automated testing (Part II)](https://testing.googleblog.com/2021/03/test-flakiness-one-of-main-challenges.html){:.external}
-  - Useful patterns in addressing the different sources and types of test
-    flakiness.
-- [Avoiding Flakey Tests](https://testing.googleblog.com/2008/04/tott-avoiding-flakey-tests.html){:.external}:
-  an example demonstrating how poor isolation between test cases causes
-  cross-talk.
-- [Where do our flaky tests come from?](https://testing.googleblog.com/2017/04/where-do-our-flaky-tests-come-from.html){:.external}
-  A broad survey of root causes for test flakiness.
-- [Testing UI Logic? Follow the User!](https://testing.googleblog.com/2020/10/testing-on-toilet-testing-ui-logic.html){:.external}
-  An example demonstrating how testing user interactions with a unit testing
-  approach rather via input injection results in tests that fail to find a
-  critical bug.
+- [Keep Tests Focused](https://testing.googleblog.com/2018/06/testing-on-toilet-keep-tests-focused.html){:.external}
 
 ### Test doubles: stubs, mocks, fakes
 
+Test doubles stand in for a real dependency of the code under test during a
+test.
+
+- A **stub** is a test double that returns a given value and contains no logic.
+- A **mock** is a test double that has expectations about how it should be
+  called. Mocks are useful for testing interactions.
+- A **fake** is a lightweight implementation of the real object.
+
+<span class="compare-better">Recommended</span>: Create fakes for code that you
+own so that your clients can use that as a test double in their own tests. For
+integration testing, consider making it possible to run an instance of your real
+component in a test realm in isolation from the rest of the system, and document
+this behavior.
+
+<span class="compare-worse">Not recommended</span>: Don’t overuse mocks in your
+tests, as you might create lower-quality tests that are less readable and more
+costly to maintain while providing less confidence when they pass. Avoid mocking
+dependencies that you don’t own.
+
+Further reading:
+
 - [Know Your Test Doubles](https://testing.googleblog.com/2013/07/testing-on-toilet-know-your-test-doubles.html){:.external}
-  - A test double stands in for a real object in a test.
-  - A stub is a test double that returns a given value and contains no logic.
-  - A mock is a test double that has expectations about how it should be called.
-    Mocks are useful for testing interactions.
-  - A fake is a lightweight implementation of the real object.
 - [Don’t Overuse Mocks](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html){:.external}
-  - Overusing mocks can make tests less readable.
-  - Overusing mocks can make tests more costly to maintain.
-  - Overusing mocks can lead to tests that provide less confidence when they
-    pass.
 - [Don’t Mock Types You Don’t Own](https://testing.googleblog.com/2020/07/testing-on-toilet-dont-mock-types-you.html){:.external}
-  - Creating mocks for someone else’s unit is a maintenance liability.
-  - Consider using the real implementation when possible.
-  - If the test’s dependency doesn’t have a fake, ask the dependency’s
-    maintainer to create one.
+
+### Use end-to-end tests appropriately
+
+<span class="compare-better">Recommended</span>: Use end-to-end tests to test
+critical user journeys. Such tests should exercise the journey as a user, for
+instance by automating user interactions and examining user interface state
+changes.
+
+<span class="compare-worse">Not recommended</span>: Don’t use end-to-end tests
+to cover for missing tests at other layers or smaller scopes, since when those
+end-to-end tests catch errors they will be very difficult to troubleshoot.
+
+<span class="compare-better">Recommended</span>: Use end-to-end tests sparingly,
+as part of a balanced testing strategy that leans more heavily on smaller-scoped
+tests that run quickly and produce precise and actionable results.
+
+<span class="compare-worse">Not recommended</span>: Don’t rely on end-to-end
+tests in your development feedback cycle, because they typically take a long
+time to run and often produce more flaky results than smaller-scoped tests.
+
+Further reading:
+
+- [Testing UI Logic? Follow the User!](https://testing.googleblog.com/2020/10/testing-on-toilet-testing-ui-logic.html){:.external}
+- [Just Say No to More End-to-End Tests](https://testing.googleblog.com/2015/04/just-say-no-to-more-end-to-end-tests.html){:.external}
+- [Test Flakiness - One of the main challenges of automated testing](https://testing.googleblog.com/2020/12/test-flakiness-one-of-main-challenges.html){:.external}
+- [Test Flakiness - One of the main challenges of automated testing (Part II)](https://testing.googleblog.com/2021/03/test-flakiness-one-of-main-challenges.html){:.external}
+- [Avoiding Flakey Tests](https://testing.googleblog.com/2008/04/tott-avoiding-flakey-tests.html){:.external}
+- [Where do our flaky tests come from?](https://testing.googleblog.com/2017/04/where-do-our-flaky-tests-come-from.html){:.external}
 
 [audio-effects-example-tests]: /src/media/audio/examples/effects/test/audio_effects_example_tests.cc
 [build-bringup]: /docs/concepts/build_system/bringup.md
