@@ -687,7 +687,7 @@
             ],
         },
         {
-            protocol: [ "fuchsia.vboot.fwparam.FirmwareParam" ],
+            protocol: [ "fuchsia.vboot.FirmwareParam" ],
             from: "#vboot-fwparam",
             to: "#console-launcher",
         },
@@ -862,7 +862,7 @@
             from: "#driver_manager",
         },
         {
-            protocol: [ "fuchsia.vboot.fwparam.FirmwareParam" ],
+            protocol: [ "fuchsia.vboot.FirmwareParam" ],
             from: "#vboot-fwparam",
         },
         {

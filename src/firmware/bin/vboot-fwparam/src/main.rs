@@ -11,7 +11,7 @@ use fidl_fuchsia_acpi_chromeos as chrome_acpi;
 use fidl_fuchsia_device::ControllerMarker;
 use fidl_fuchsia_hardware_nvram as fnvram;
 use fidl_fuchsia_nand_flashmap::{FlashmapMarker, FlashmapProxy, ManagerMarker};
-use fidl_fuchsia_vboot_fwparam::FirmwareParamRequestStream;
+use fidl_fuchsia_vboot::FirmwareParamRequestStream;
 use fuchsia_component::{
     client::{connect_to_protocol, connect_to_protocol_at_path},
     server::ServiceFs,

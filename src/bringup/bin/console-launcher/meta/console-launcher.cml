@@ -117,7 +117,7 @@
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.vboot.fwparam.FirmwareParam",
+                "fuchsia.vboot.FirmwareParam",
                 "fuchsia.virtualconsole.SessionManager",
                 "fuchsia.virtualization.Manager",
             ],

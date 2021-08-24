@@ -16,7 +16,7 @@ rustc_binary("cros-nvtool") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.vboot.fwparam:fuchsia.vboot.fwparam-rustc",
+    "//sdk/fidl/fuchsia.vboot:fuchsia.vboot-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
