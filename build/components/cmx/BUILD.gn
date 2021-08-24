@@ -55,7 +55,6 @@ group("cmx_allowlist") {
     "//examples/isolated_cache/*",
     "//examples/rolldice/*",
     "//examples/speech/tts/speak/*",
-    "//examples/tennis/*",
     "//examples/tests/*",
     "//garnet/bin/catapult_converter/*",
     "//garnet/bin/cpuperf/*",

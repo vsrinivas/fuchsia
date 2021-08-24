@@ -21,7 +21,6 @@ group("examples") {
     "rolldice",
     "rust",
     "speech",
-    "tennis",
     "time",
   ]
 }
