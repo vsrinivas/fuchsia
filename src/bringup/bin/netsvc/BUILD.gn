@@ -124,9 +124,6 @@ source_set("netsvc_common") {
     "//zircon/system/ulib/inet6",
   ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
@@ -161,9 +158,6 @@ test("netsvc-test") {
     "//zircon/system/ulib/zircon-internal",
   ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
@@ -187,9 +181,6 @@ test("netsvc-stress-test") {
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zircon-internal",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).

@@ -640,7 +640,6 @@ config("Wno-conversion") {
     "//sdk/lib/syslog/streams/cpp/*",
     "//sdk/lib/vfs/cpp/*",
     "//sdk/lib/virtualization/*",
-    "//src/bringup/bin/netsvc/*",
     "//src/bringup/bin/ptysvc/*",
     "//src/connectivity/network/tools/nc/third_party/openbsd-netcat:nc",
     "//src/developer/debug/third_party/libunwindstack/*",
