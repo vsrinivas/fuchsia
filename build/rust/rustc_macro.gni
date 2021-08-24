@@ -84,10 +84,24 @@ template("rustc_macro") {
 
   proc_macro_target = "${target_name}_proc_macro"
 
-  # The actual host-target build of the proc macro crate.
   assert(!(defined(invoker.output_name) && defined(invoker.name)),
          "Only one of output_name and name may be specified.")
-  if (is_host) {
+
+  # The 'is_host' var is true in situations that we don't want, such as
+  # sanitizers and cross-compiling for _other_ hosts.
+  #
+  # We only want this to be run in _this_ machine's host_toolchain, and then
+  # only in its base variant.
+
+  # This confirms that this is running on _this_ machine's host_toolchain.
+  in_host_compiler_toolchain = current_toolchain == host_toolchain
+
+  # This confirms that it's also running on the base variant of the host_toolchain.
+  in_host_base_variant =
+      in_host_compiler_toolchain && current_toolchain == toolchain_variant.base
+
+  # The actual host-target build of the proc macro crate.
+  if (in_host_base_variant) {
     package_name = target_name
     if (defined(invoker.output_name)) {
       package_name = invoker.output_name
@@ -176,8 +190,31 @@ template("rustc_macro") {
     not_needed(invoker, "*")
   }
 
-  # redirect so that users don't need to be aware of host_toolchain requirement
-  group(target_name) {
-    public_deps = [ ":${proc_macro_target}($host_toolchain)" ]
+  # proc_macros are loadable modules that are used by the rustc compiler itself,
+  # and as such, need to be compiled in the _base_ (non-sanitizer) variant of
+  # host toolchain.
+  #
+  # The following creates a set of dependencies through groups that
+  # link from the current toolchain to the base toolchain of the host_toolchain
+  # variant:
+  #
+  # target_name($current_toolchain)   // omitted if already in host.
+  #  |- target_name($host_toolchain)
+  #      |- proc_macro_target($host_toolchain_base)
+
+  # If not in _this_ machine's host_toolchain, switch to it.
+  if (!in_host_compiler_toolchain) {
+    group(target_name) {
+      public_deps = [ ":${target_name}($host_toolchain)" ]
+    }
+
+    # the proc_macro_target isn't used.
+    not_needed([ "proc_macro_target" ])
+  } else {
+    # now in the proper host_toolchain, have the group depend on the base of the host
+    # toolchain's variant
+    group(target_name) {
+      public_deps = [ ":${proc_macro_target}(${toolchain_variant.base})" ]
+    }
   }
 }
