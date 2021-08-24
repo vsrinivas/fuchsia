@@ -322,8 +322,7 @@ ComponentControllerImpl::ComponentControllerImpl(
   ComputeComponentInstancePath();
   auto realm = this->ns()->realm();
   if (realm && realm->cpu_watcher() && !instance_path_.empty()) {
-    realm->cpu_watcher()->AddTask(instance_path_,
-                                  std::make_unique<JobStatsReader>(std::move(watch_job)));
+    realm->cpu_watcher()->AddTask(instance_path_, std::move(watch_job));
   }
 }
 
