@@ -43,7 +43,7 @@ type Role = strict enum {
     HEADER = 3;
     /// An image or graphic.
     IMAGE = 4;
-    /// A field containing text that is not a header.
+    /// A field that can receive text input.
     TEXT_FIELD = 5;
     /// A slider, e.g. a volume slider or a time slider of a video.
     SLIDER = 6;
@@ -89,6 +89,9 @@ type Role = strict enum {
 
     /// Role used to represent a paragraph of text.
     PARAGRAPH = 21;
+
+    // A special type of input text field that represents a search box.
+    SEARCH_BOX = 22;
 };
 
 /// The possible origins of a label.

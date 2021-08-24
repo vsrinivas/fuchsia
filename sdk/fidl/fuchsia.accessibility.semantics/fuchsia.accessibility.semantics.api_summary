@@ -72,6 +72,7 @@ enum/member fuchsia.accessibility.semantics/Role.LIST_ELEMENT_MARKER 12
 enum/member fuchsia.accessibility.semantics/Role.PARAGRAPH 21
 enum/member fuchsia.accessibility.semantics/Role.RADIO_BUTTON 9
 enum/member fuchsia.accessibility.semantics/Role.ROW_GROUP 20
+enum/member fuchsia.accessibility.semantics/Role.SEARCH_BOX 22
 enum/member fuchsia.accessibility.semantics/Role.SLIDER 6
 enum/member fuchsia.accessibility.semantics/Role.STATIC_TEXT 13
 enum/member fuchsia.accessibility.semantics/Role.TABLE 15
