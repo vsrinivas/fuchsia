@@ -20,7 +20,7 @@ fx-config-read
 
 # Determine if the given package name is in the base package list
 function is-in-base {
-  fx-command-run list-packages --base "^$1$" > /dev/null
+  grep "^$1$" "${FUCHSIA_BUILD_DIR}/base_packages.list" > /dev/null
 }
 
 function main {
