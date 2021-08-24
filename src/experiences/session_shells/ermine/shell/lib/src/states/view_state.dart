@@ -20,12 +20,6 @@ abstract class ViewState with Store {
   ObservableValue<bool> get hitTestable;
   ObservableValue<bool> get focusable;
 
-  /// Returns true when the view has rendered a frame.
-  ObservableValue<bool> get rendered;
-
-  /// Returns true when the view is ready to be focused.
-  Observable<bool> get ready;
-
   /// Returns true if the application fails to render a frame until a timeout.
   ObservableValue<bool> get timeout;
 
@@ -37,4 +31,23 @@ abstract class ViewState with Store {
 
   /// Call to continue waiting on the application to render its first frame.
   Action get wait;
+
+  /// Returns true when the view has rendered a frame.
+  bool get loaded;
+
+  /// Returns true when the view is connected to the view tree but has not
+  /// rendered a frame.
+  bool get loading;
+
+  /// Returns true if the view is visible on the screen (partly or fullscreen).
+  bool get visible;
+
+  /// Set focus on this view.
+  void setFocus({
+    int retry,
+    Duration backOff,
+  });
+
+  /// Cancel any pending set focus operation on this view.
+  void cancelSetFocus();
 }

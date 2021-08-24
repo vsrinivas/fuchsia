@@ -148,6 +148,9 @@ class AppStateImpl with Disposable implements AppState {
   /// A flag that is set to true when the [SideBar] should be peeking.
   final sideBarPeeking = false.asObservable();
 
+  /// A flag that is set to true when an app is launched from the app launcher.
+  final appIsLaunching = false.asObservable();
+
   @override
   late final alertsVisible = (() {
     return alerts.isNotEmpty;
@@ -158,6 +161,7 @@ class AppStateImpl with Disposable implements AppState {
   late final overlaysVisible = (() {
     return !oobeVisible.value &&
         !isIdle.value &&
+        !appIsLaunching.value &&
         shellHasFocus.value &&
         (appBarVisible.value ||
             sideBarVisible.value ||
@@ -174,7 +178,7 @@ class AppStateImpl with Disposable implements AppState {
   late final appBarVisible = (() {
     return shellHasFocus.value &&
         views.isNotEmpty &&
-        topView.value.ready.value &&
+        topView.value.loading &&
         (appBarPeeking.value || overlayVisibility.value);
   }).asComputed();
 
@@ -222,25 +226,12 @@ class AppStateImpl with Disposable implements AppState {
       startupService.appLaunchEntries;
 
   void setFocusToShellView() {
-    FocusState.instance.requestFocus(startupService.hostView.handle);
+    focusService.setFocusOnHostView();
   }
 
   void setFocusToChildView() {
     if (views.isNotEmpty) {
-      FocusState.instance
-          .requestFocus(topView.value.view.handle)
-          .catchError((e) {
-        log.warning('Failed to set focus on top view, retrying. $e');
-        if (topView.value.rendered.value) {
-          // Mark the view as not ready, in order to try to set focus again on
-          // the next viewStateChanged event.
-          topView.value.ready.value = false;
-        } else {
-          // This view has not rendered any frames yet, just retry setting
-          // focus recursively.
-          setFocusToChildView();
-        }
-      });
+      focusService.setFocusOnView(topView.value);
     }
   }
 
@@ -262,11 +253,7 @@ class AppStateImpl with Disposable implements AppState {
   @override
   late final switchView = (ViewState view) {
     topView.value = view;
-    if (topView.value.rendered.value) {
-      view.ready.value = false;
-    } else {
-      setFocusToChildView();
-    }
+    setFocusToChildView();
   }.asAction();
 
   @override
@@ -309,13 +296,8 @@ class AppStateImpl with Disposable implements AppState {
   void _triggerSwitch() {
     if (switchTarget.value != null) {
       runInAction(() {
-        if (switchTarget.value != topView.value &&
-            switchTarget.value!.rendered.value) {
+        if (switchTarget.value != topView.value) {
           topView.value = switchTarget.value!;
-          topView.value.ready.value = false;
-        } else {
-          topView.value = switchTarget.value!;
-          // Set focus to the child view since we did not switch to another view
           setFocusToChildView();
         }
 
@@ -348,6 +330,7 @@ class AppStateImpl with Disposable implements AppState {
     try {
       await launchService.launch(title, url);
       _clearError(url, 'ProposeElementError');
+      appIsLaunching.value = true;
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       _onLaunchError(url, e.toString());
@@ -406,6 +389,7 @@ class AppStateImpl with Disposable implements AppState {
     }
 
     runInAction(() {
+      appIsLaunching.value = false;
       _focusedView.value = viewHandle;
 
       if (viewHandle == startupService.hostView) {
@@ -458,9 +442,9 @@ class AppStateImpl with Disposable implements AppState {
       }
     });
 
-    // Focus on view when it is ready.
-    view.reactions.add(reaction<bool>((_) => view.ready.value, (ready) {
-      if (ready && view == topView.value && view.focusable.value) {
+    // Focus on view when it is loading.
+    view.reactions.add(reaction<bool>((_) => view.loading, (loading) {
+      if (loading && view == topView.value && view.focusable.value) {
         setFocusToChildView();
       }
     }));
@@ -490,11 +474,10 @@ class AppStateImpl with Disposable implements AppState {
             ? views.first
             : views[views.indexOf(topView.value) + 1];
         topView.value = nextView;
-        nextView.ready.value = false;
+        setFocusToChildView();
       }
 
       views.remove(view);
-      focusService.removeView(view.view);
       view.dispose();
     });
   }
@@ -582,7 +565,7 @@ class AppStateImpl with Disposable implements AppState {
             // it.
             if (views.isNotEmpty &&
                 topView.value.url == kScreenSaverUrl &&
-                topView.value.ready.value) {
+                topView.value.loading) {
               closeView();
               isIdle.value = false;
             }
@@ -605,8 +588,8 @@ class AppStateImpl with Disposable implements AppState {
     final stuckViews = views.where((view) => view.id == id);
     if (stuckViews.isNotEmpty) {
       final view = stuckViews.first;
-      //   TODO(https://fxbug.dev/83165): Ignore rendered/loaded views.
-      if (view.rendered.value) {
+      // TODO(https://fxbug.dev/83165): Ignore rendered/loaded views.
+      if (view.loaded) {
         return;
       }
       final description = Strings.applicationFailedToStart(view.title);

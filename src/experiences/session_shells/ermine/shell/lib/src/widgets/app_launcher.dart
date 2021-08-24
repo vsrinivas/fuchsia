@@ -72,7 +72,7 @@ class AppLauncher extends StatelessWidget {
     final reversedViews = app.views.reversed;
     for (final view in reversedViews) {
       if (view.title == item['title']!) {
-        return !view.ready.value;
+        return !view.loading;
       }
     }
     return false;

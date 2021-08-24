@@ -24,7 +24,7 @@ class LoadTimeout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      return view.rendered.value
+      return view.loaded
           ? Offstage()
           : Center(
               child: Container(

@@ -4,11 +4,13 @@
 
 import 'dart:async';
 
+import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart' hide FocusState;
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 
 /// Defines a service to manage routing focus in the system.
@@ -21,8 +23,8 @@ class FocusService extends FocusChainListener {
 
   final _focusChainListenerBinding = FocusChainListenerBinding();
 
-  // Holds a list of all child views mapped to their focused descendant view.
-  final _views = <ViewHandle, ViewHandle>{};
+  // Holds the currently focused child view. Null, if shell has focus.
+  ViewState? focusedChildView;
 
   FocusService(ViewRef viewRef) : hostView = ViewHandle(viewRef) {
     final registryProxy = FocusChainListenerRegistryProxy();
@@ -35,12 +37,23 @@ class FocusService extends FocusChainListener {
     _focusChainListenerBinding.close(0);
   }
 
-  void removeView(ViewHandle view) {
-    _views.remove(view);
+  void setFocusOnHostView() {
+    focusedChildView?.cancelSetFocus();
+    focusedChildView = null;
+
+    FocusState.instance
+        .requestFocus(hostView.handle)
+        .then((_) => focusedChildView = null)
+        .catchError((e) {
+      log.warning('Failed to request focus on host view: $e');
+    });
   }
 
-  void moveFocus(ViewHandle view) {
-    (_views[view] ?? view).focus();
+  void setFocusOnView(ViewState view) {
+    if (focusedChildView != view) {
+      focusedChildView?.cancelSetFocus();
+    }
+    focusedChildView = view..setFocus();
   }
 
   @override
@@ -69,8 +82,6 @@ class FocusService extends FocusChainListener {
     final index = chain.lastIndexOf(hostView);
     final childView = chain[index + 1];
 
-    // The focused view is a descendant of child view or child view itself.
-    _views[childView] = chain.last;
     onFocusMoved(childView);
   }
 }
