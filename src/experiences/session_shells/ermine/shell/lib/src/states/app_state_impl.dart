@@ -332,7 +332,9 @@ class AppStateImpl with Disposable implements AppState {
       await launchService.launch(title, url);
       // Hide app launcher unless we had an error presenting the view.
       if (!_isLaunchError(url)) {
-        appIsLaunching.value = true;
+        runInAction(() {
+          appIsLaunching.value = true;
+        });
       }
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
