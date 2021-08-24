@@ -359,10 +359,13 @@ The graph also does not show the cases where the MBO is deallocated.
 
     We might need to define an equivalent to `zx_port_cancel()`.
 
-Handle-closing: operations when all references or handles to an object
+## Handle-close operations
+
+The following cases apply when all references or handles to an object
 are dropped:
 
-*   MBO: An MBO is freed when all references to it have been dropped.
+*   **MBO:** An MBO is freed when all references to it have been
+    dropped.
 
     Closing the CallersRef handles for an MBO only causes the MBO to
     be freed if there are no other references to the MBO from a
@@ -377,9 +380,9 @@ are dropped:
     MBO: that is, send the MBO as a request message, but close the
     CallersRef handle and ignore any replies.
 
-*   Automatic replies: An MBO receives an automatic reply message if
-    it was sent as a request but there is no way a callee could send a
-    reply.  There are two cases for this:
+*   **Automatic replies:** An MBO receives an automatic reply message
+    if it was sent as a request but there is no way a callee could
+    send a reply.  There are two cases for this:
 
     *   Closed CalleesRef: If a CalleesRef is closed while it holds a
         reference to an MBO, the system will send an automatic reply
@@ -400,7 +403,7 @@ are dropped:
     request, the caller will not be left waiting for a reply message
     indefinitely.
 
-*   MsgQueue: When all the handles to a MsgQueue are closed, any
+*   **MsgQueue:** When all the handles to a MsgQueue are closed, any
     messages on the MsgQueue's queue are removed from the queue.
     There may still be kernel-internal references to the MsgQueue
     (from MBOs' `reply_queue` fields and from channels), but these are
