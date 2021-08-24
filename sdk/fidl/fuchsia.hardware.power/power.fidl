@@ -69,7 +69,7 @@ protocol Source {
     /// state is read via `GetPowerInfo`.
     GetStateChangeEvent() -> (resource struct {
         status zx.status;
-        handle zx.handle:EVENT;
+        handle zx.handle:<EVENT, zx.rights.WAIT>;
     });
 
     /// Get battery info. Only supported if type == PowerType::BATTERY.
