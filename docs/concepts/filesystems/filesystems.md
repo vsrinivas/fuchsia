@@ -16,6 +16,10 @@ filesystems. As a consequence, Fuchsia’s filesystems themselves can be changed
 with ease -- modifications don’t require recompiling the kernel. In fact,
 updating to a new Fuchsia filesystem can be done without rebooting.
 
+![Filesystem block diagram](images/filesystem.svg "filesystem")
+
+Figure 1: Typical filesystem process block diagram.
+
 Like other native servers on Fuchsia, the primary mode of interaction with a
 filesystem server is achieved using the handle primitive rather than system
 calls. The kernel has no knowledge about files, directories, or filesystems. As
