@@ -18,5 +18,10 @@
         "archive_name": "memfs-test-package",
         "component_name": "memfs-component.cmx",
         "package": "memfs-test-package"
+    },
+    {
+        "archive_name": "fuchsia-hwinfo-tests",
+        "component_name": "hwinfo-test.cm",
+        "package": "fuchsia-hwinfo-tests"
     }
 ]
