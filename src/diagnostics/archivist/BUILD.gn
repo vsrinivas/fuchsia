@@ -180,6 +180,7 @@ archivist_optimized_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
+# fxbug.dev/83213 Retain this component while out of tree tests depend on it
 fuchsia_component("archivist-with-klog") {
   manifest = "meta/archivist-with-klog.cmx"
   deps = [
