@@ -11,6 +11,7 @@ use crate::error;
 use crate::fd_impl_directory;
 use crate::fs::FsNodeOps;
 use crate::fs::*;
+use crate::fs_node_impl_symlink;
 use crate::task::Task;
 use crate::types::*;
 
@@ -250,9 +251,7 @@ impl ExeSymlink {
 }
 
 impl FsNodeOps for ExeSymlink {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        unreachable!("Symlink nodes cannot be opened.");
-    }
+    fs_node_impl_symlink!();
 
     fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
         if let Some(node) = &*self.task.executable_node.read() {
@@ -283,9 +282,7 @@ impl FdSymlink {
 }
 
 impl FsNodeOps for FdSymlink {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        unreachable!("Symlink nodes cannot be opened.");
-    }
+    fs_node_impl_symlink!();
 
     fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
         let file = self.task.files.get(self.fd).map_err(|_| errno!(ENOENT))?;

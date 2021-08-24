@@ -9,6 +9,7 @@ use crate::errno;
 use crate::error;
 use crate::fd_impl_directory;
 use crate::fs::*;
+use crate::fs_node_impl_symlink;
 use crate::task::*;
 use crate::types::*;
 
@@ -193,9 +194,7 @@ impl SelfSymlink {
 }
 
 impl FsNodeOps for SelfSymlink {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        unreachable!("Symlink nodes cannot be opened.");
-    }
+    fs_node_impl_symlink!();
 
     fn readlink(&self, _node: &FsNode, task: &Task) -> Result<SymlinkTarget, Errno> {
         Ok(SymlinkTarget::Path(format!("{}", task.id).as_bytes().to_vec()))

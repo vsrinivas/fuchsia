@@ -121,7 +121,7 @@ pub trait FileOps: Send + Sync {
     }
 }
 
-/// Implements FileDesc methods in a way that makes sense for nonseekable files. You must implement
+/// Implements FileOps methods in a way that makes sense for nonseekable files. You must implement
 /// read and write.
 #[macro_export]
 macro_rules! fd_impl_nonseekable {
@@ -156,7 +156,7 @@ macro_rules! fd_impl_nonseekable {
     };
 }
 
-/// Implements FileDesc methods in a way that makes sense for seekable files. You must implement
+/// Implements FileOps methods in a way that makes sense for seekable files. You must implement
 /// read_at and write_at.
 #[macro_export]
 macro_rules! fd_impl_seekable {

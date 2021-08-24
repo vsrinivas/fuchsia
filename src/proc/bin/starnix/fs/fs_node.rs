@@ -152,6 +152,17 @@ pub trait FsNodeOps: Send + Sync {
     }
 }
 
+/// Implements FsNodeOps methods in a way that makes sense for symlinks. You must implement
+/// readlink.
+#[macro_export]
+macro_rules! fs_node_impl_symlink {
+    () => {
+        fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+            unreachable!("Symlink nodes cannot be opened.");
+        }
+    };
+}
+
 impl FsNode {
     pub fn new_root(ops: impl FsNodeOps + 'static) -> FsNode {
         Self::new_internal(Box::new(ops), Weak::new(), 1, FileMode::IFDIR | FileMode::ALLOW_ALL)

@@ -16,6 +16,7 @@ use super::*;
 use crate::errno;
 use crate::error;
 use crate::fd_impl_directory;
+use crate::fs_node_impl_symlink;
 use crate::logging::impossible_error;
 use crate::task::Task;
 use crate::types::*;
@@ -132,9 +133,7 @@ struct ExtSymlink {
 }
 
 impl FsNodeOps for ExtSymlink {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        unreachable!("Symlink nodes cannot be opened.");
-    }
+    fs_node_impl_symlink!();
 
     fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
         let data = self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
