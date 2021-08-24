@@ -410,7 +410,7 @@ are dropped:
 This section gives a summary of the state that is stored by each of
 the object types.
 
-MBO:
+MBO state:
 
 *   Message contents.  This consists of two resizable arrays:
     *   An array of bytes (data).
@@ -432,25 +432,25 @@ MBO:
     `zx_msgqueue_wait()` needs to check for `enqueued_as_request`
     versus `enqueued_as_reply`.
 
-CallersRef:
+CallersRef state:
 
 *   A CallersRef needs no state of its own.  A CallersRef can be
     represented as just a reference to an MBO, or it can be
     implemented as the same heap object as the MBO.
 
-CalleesRef:
+CalleesRef state:
 
 *   Reference to an MBO.  This reference may be null.  If the
     reference is non-null, the MBO is in the `owned_by_callee` state.
 
-MsgQueue:
+MsgQueue state:
 
 *   List of MBOs, all of which will be in the state
     `enqueued_as_request` or `enqueued_as_reply`.  This can use an
     intrusive list implementation so that adding an MBO to the list
     does not require doing a memory allocation.
 
-Channel endpoint:
+Channel endpoint state:
 
 *   Reference to a MsgQueue.  This reference may be null.
 *   `channel_key`: 64-bit integer.  When an MBO is sent through this
