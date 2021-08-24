@@ -35,6 +35,13 @@ fuchsia_component("sh_test") {
   manifest = "meta/sh_test.cml"
 }
 
+fuchsia_component("boringssl_self_test64") {
+  testonly = true
+  check_references = false
+  deps = [ ":android_system_image" ]
+  manifest = "meta/boringssl_self_test64.cml"
+}
+
 resource("starnix_data_tmp_placeholder") {
   sources = [ "placeholder" ]
   outputs = [ "data/tmp/.placeholder" ]
@@ -147,7 +154,10 @@ fuchsia_test_package("test_android_distro") {
     ":starnix_data_tmp_placeholder",
   ]
 
-  test_components = [ ":sh_test" ]
+  test_components = [
+    ":boringssl_self_test64",
+    ":sh_test",
+  ]
   foreach(test_name, gvisor_tests) {
     test_components += [ ":${test_name}" ]
   }
