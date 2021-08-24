@@ -133,3 +133,18 @@ pub async fn create_component_instance(
         .await?
         .map_err(|e| anyhow!("Error creating child: {:?}", e))
 }
+
+/// Destroy a v2 component instance with the given `name` under the given `collection`
+/// using the given `realm_proxy`.
+pub async fn destroy_component_instance(
+    realm_proxy: &fsys::RealmProxy,
+    name: String,
+    collection: String,
+) -> Result<()> {
+    let mut child_ref = fsys::ChildRef { name, collection: Some(collection) };
+
+    realm_proxy
+        .destroy_child(&mut child_ref)
+        .await?
+        .map_err(|e| anyhow!("Error destroying child: {:?}", e))
+}
