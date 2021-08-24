@@ -107,7 +107,7 @@ impl FromStr for SystemVersion {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let result = match SemanticVersion::from_str(s) {
             Ok(version) => SystemVersion::Semantic(version),
-            Err(_) => SystemVersion::Opaque(s.to_owned()),
+            Err(_) => SystemVersion::Opaque(s.trim_end().to_owned()),
         };
 
         Ok(result)
@@ -152,6 +152,15 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn read_version_success_opaque() {
         let p = TestUpdatePackage::new().add_file("version", "2020-09-08T10:17:00+10:00").await;
+        assert_eq!(
+            p.version().await.unwrap(),
+            SystemVersion::Opaque("2020-09-08T10:17:00+10:00".to_owned())
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn read_version_trims_trailing_whitespace() {
+        let p = TestUpdatePackage::new().add_file("version", "2020-09-08T10:17:00+10:00\n").await;
         assert_eq!(
             p.version().await.unwrap(),
             SystemVersion::Opaque("2020-09-08T10:17:00+10:00".to_owned())
