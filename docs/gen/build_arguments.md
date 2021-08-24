@@ -1096,6 +1096,16 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 From //build/images/args.gni:69
 
+### enable_one_codegen_unit_for_rust_bootfs
+Whether to force 1 codegen unit in Rust bootfs binaries.
+Fewer codegen units lead to smaller code, at the expense of slower
+incremental rebuild times. Disable this behavior when you are iterating
+on a bootfs Rust binary for faster builds.
+
+**Current value (from the default):** `true`
+
+From //build/config/rust/BUILD.gn:23
+
 ### enable_rbe
 Set to true to enable distributed compilation using RBE.
 
