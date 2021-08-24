@@ -393,6 +393,10 @@
             protocol: "fuchsia.space.Manager",
             path: "/svc_for_sys/fuchsia.space.Manager",
         },
+        {
+            protocol: "fuchsia.vboot.fwparam.FirmwareParam",
+            path: "/svc_for_sys/fuchsia.vboot.fwparam.FirmwareParam",
+        },
 
         // TODO(fxbug.dev/71830): Remove once the Feedback migration has completed.
         {
