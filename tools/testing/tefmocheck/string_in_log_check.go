@@ -31,9 +31,9 @@ type stringInLogCheck struct {
 	// ExceptBlocks will cause Check() to return false if the string is only
 	// within these blocks.
 	ExceptBlocks []*logBlock
-	// ExceptSuccessfulSwarmingResult will cause Check() to return false if the
+	// SkipPassedTask will cause Check() to return false if the
 	// Swarming task succeeded.
-	ExceptSuccessfulSwarmingResult bool
+	SkipPassedTask bool
 	// Type of log that will be checked.
 	Type logType
 	// Whether to check the per-test Swarming output for this log and emit a
@@ -47,7 +47,7 @@ type stringInLogCheck struct {
 
 func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 	c.swarmingResult = to.SwarmingSummary.Results
-	if c.ExceptSuccessfulSwarmingResult && !c.swarmingResult.Failure && c.swarmingResult.State == "COMPLETED" {
+	if c.SkipPassedTask && !c.swarmingResult.Failure && c.swarmingResult.State == "COMPLETED" {
 		return false
 	}
 	matchedState := false
@@ -172,128 +172,188 @@ func driverHostCrash(hostName, exceptHost string) *stringInLogCheck {
 }
 
 // StringInLogsChecks returns checks to detect bad strings in certain logs.
-func StringInLogsChecks() (ret []FailureModeCheck) {
-	// For fxbug.dev/57548.
-	// Hardware watchdog tripped, should not happen.
-	// This string is specified in u-boot.
-	ret = append(ret, &stringInLogCheck{String: "reboot_mode=watchdog_reboot", Type: serialLogType})
-	// For fxbug.dev/47649.
-	ret = append(ret, &stringInLogCheck{String: "kvm run failed Bad address", Type: swarmingOutputType})
-	// For fxbug.dev/44779.
-	ret = append(ret, &stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Type: swarmingOutputType})
-	// For fxbug.dev/51015.
-	ret = append(ret, &stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Type: swarmingOutputType, ExceptSuccessfulSwarmingResult: true})
-	// For fxbug.dev/43188.
-	ret = append(ret, &stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType})
-	// For fxbug.dev/53854.
-	ret = append(ret, driverHostCrash("composite-device", ""))
-	ret = append(ret, driverHostCrash("pci", ""))
-	// Don't fail if we see PDEV_DID_CRASH_TEST, defined in
-	// zircon/system/ulib/ddk-platform-defs/include/lib/ddk/platform-defs.h.
-	// That's used for a test that intentionally crashes a driver host.
-	ret = append(ret, driverHostCrash("pdev", "pdev:00:00:24"))
-	// Catch-all for driver host crashes.
-	ret = append(ret, driverHostCrash("", "pdev:00:00:24"))
-	// For fxbug.dev/55637
-	ret = append(ret, &stringInLogCheck{String: " in fx_logger::GetSeverity() ", Type: swarmingOutputType})
+func StringInLogsChecks() []FailureModeCheck {
+	ret := []FailureModeCheck{
+		// For fxbug.dev/57548.
+		// Hardware watchdog tripped, should not happen.
+		// This string is specified in u-boot.
+		&stringInLogCheck{String: "reboot_mode=watchdog_reboot", Type: serialLogType},
+		// For fxbug.dev/47649.
+		&stringInLogCheck{String: "kvm run failed Bad address", Type: swarmingOutputType},
+		// For fxbug.dev/44779.
+		&stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Type: swarmingOutputType},
+		// For fxbug.dev/51015.
+		&stringInLogCheck{
+			String:         bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName),
+			Type:           swarmingOutputType,
+			SkipPassedTask: true,
+		},
+		// For fxbug.dev/43188.
+		&stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType},
+		// For fxbug.dev/53854.
+		driverHostCrash("composite-device", ""),
+		driverHostCrash("pci", ""),
+		// Don't fail if we see PDEV_DID_CRASH_TEST, defined in
+		// zircon/system/ulib/ddk-platform-defs/include/lib/ddk/platform-defs.h.
+		// That's used for a test that intentionally crashes a driver host.
+		driverHostCrash("pdev", "pdev:00:00:24"),
+		// Catch-all for driver host crashes.
+		driverHostCrash("", "pdev:00:00:24"),
+		// For fxbug.dev/55637
+		&stringInLogCheck{String: " in fx_logger::GetSeverity() ", Type: swarmingOutputType},
+	}
 
+	oopsExceptBlocks := []*logBlock{
+		{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
+		{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
+		{startString: "RUN   TestKernelLockupDetectorCriticalSection", endString: ": TestKernelLockupDetectorCriticalSection"},
+		{startString: "RUN   TestKernelLockupDetectorHeartbeat", endString: ": TestKernelLockupDetectorHeartbeat"},
+		{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
+		{startString: "RUN   TestKernelLockupDetectorFatalCriticalSection", endString: ": TestKernelLockupDetectorFatalCriticalSection"},
+		{startString: "RUN   TestKernelLockupDetectorFatalHeartbeat", endString: ": TestKernelLockupDetectorFatalHeartbeat"},
+	}
 	// These are rather generic. New checks should probably go above here so that they run before these.
 	allLogTypes := []logType{serialLogType, swarmingOutputType, syslogType}
 	for _, lt := range allLogTypes {
 		// For fxbug.dev/43355.
-		ret = append(ret, &stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: lt})
-		ret = append(ret, &stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt, AttributeToTest: true})
-		ret = append(ret, &stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt, AttributeToTest: true, ExceptBlocks: []*logBlock{
-			// startString and endString should match string in //zircon/system/ulib/c/test/sanitizer/lsan-test.cc.
-			{startString: "[===LSAN EXCEPT BLOCK START===]", endString: "[===LSAN EXCEPT BLOCK END===]"},
-			// Kernel out-of-memory test "OOMHard" may report false positive leaks.
-			{startString: "RUN   TestOOMHard", endString: "PASS: TestOOMHard"},
-		}})
-		ret = append(ret, &stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt, AttributeToTest: true})
-
-		oopsExceptBlocks := []*logBlock{
-			{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
-			{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
-			{startString: "RUN   TestKernelLockupDetectorCriticalSection", endString: ": TestKernelLockupDetectorCriticalSection"},
-			{startString: "RUN   TestKernelLockupDetectorHeartbeat", endString: ": TestKernelLockupDetectorHeartbeat"},
-			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
-			{startString: "RUN   TestKernelLockupDetectorFatalCriticalSection", endString: ": TestKernelLockupDetectorFatalCriticalSection"},
-			{startString: "RUN   TestKernelLockupDetectorFatalHeartbeat", endString: ": TestKernelLockupDetectorFatalHeartbeat"},
-		}
-		// Match specific OOPS types before finally matching the generic type.
-		ret = append(ret, &stringInLogCheck{String: "lockup_detector: no heartbeat from", Type: lt, AttributeToTest: true, ExceptBlocks: oopsExceptBlocks})
-		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL OOPS", Type: lt, AttributeToTest: true, ExceptBlocks: oopsExceptBlocks})
-
-		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL PANIC", AttributeToTest: true, Type: lt, ExceptBlocks: []*logBlock{
-			// These tests intentionally trigger kernel panics.
-			{startString: "RUN   TestBasicCrash", endString: "PASS: TestBasicCrash"},
-			{startString: "RUN   TestSMAPViolation", endString: "PASS: TestSMAPViolation"},
-			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: "PASS: TestPmmCheckerOopsAndPanic"},
-			{startString: "RUN   TestCrashAssert", endString: "PASS: TestCrashAssert"},
-			{startString: "RUN   TestKernelLockupDetectorFatalCriticalSection", endString: ": TestKernelLockupDetectorFatalCriticalSection"},
-			{startString: "RUN   TestKernelLockupDetectorFatalHeartbeat", endString: ": TestKernelLockupDetectorFatalHeartbeat"},
-			{startString: "RUN   TestMissingCmdlineEntropyPanics", endString: "PASS: TestMissingCmdlineEntropyPanics"},
-			{startString: "RUN   TestIncompleteCmdlineEntropyPanics", endString: "PASS: TestIncompleteCmdlineEntropyPanics"},
-		}})
-
-		// For fxbug.dev/71784.
-		ret = append(ret, &stringInLogCheck{String: "intel-i915: No displays detected.", Type: lt})
+		ret = append(ret, []FailureModeCheck{
+			&stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: lt},
+			&stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt, AttributeToTest: true},
+			&stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt, AttributeToTest: true, ExceptBlocks: []*logBlock{
+				// startString and endString should match string in //zircon/system/ulib/c/test/sanitizer/lsan-test.cc.
+				{startString: "[===LSAN EXCEPT BLOCK START===]", endString: "[===LSAN EXCEPT BLOCK END===]"},
+				// Kernel out-of-memory test "OOMHard" may report false positive leaks.
+				{startString: "RUN   TestOOMHard", endString: "PASS: TestOOMHard"},
+			}},
+			&stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt, AttributeToTest: true},
+			// Match specific OOPS types before finally matching the generic type.
+			&stringInLogCheck{String: "lockup_detector: no heartbeat from", Type: lt, AttributeToTest: true, ExceptBlocks: oopsExceptBlocks},
+			&stringInLogCheck{String: "ZIRCON KERNEL OOPS", Type: lt, AttributeToTest: true, ExceptBlocks: oopsExceptBlocks},
+			&stringInLogCheck{String: "ZIRCON KERNEL PANIC", AttributeToTest: true, Type: lt, ExceptBlocks: []*logBlock{
+				// These tests intentionally trigger kernel panics.
+				{startString: "RUN   TestBasicCrash", endString: "PASS: TestBasicCrash"},
+				{startString: "RUN   TestSMAPViolation", endString: "PASS: TestSMAPViolation"},
+				{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: "PASS: TestPmmCheckerOopsAndPanic"},
+				{startString: "RUN   TestCrashAssert", endString: "PASS: TestCrashAssert"},
+				{startString: "RUN   TestKernelLockupDetectorFatalCriticalSection", endString: ": TestKernelLockupDetectorFatalCriticalSection"},
+				{startString: "RUN   TestKernelLockupDetectorFatalHeartbeat", endString: ": TestKernelLockupDetectorFatalHeartbeat"},
+				{startString: "RUN   TestMissingCmdlineEntropyPanics", endString: "PASS: TestMissingCmdlineEntropyPanics"},
+				{startString: "RUN   TestIncompleteCmdlineEntropyPanics", endString: "PASS: TestIncompleteCmdlineEntropyPanics"},
+			}},
+			// For fxbug.dev/71784.
+			&stringInLogCheck{String: "intel-i915: No displays detected.", Type: lt},
+		}...)
 	}
-	// These may be in the output of tests, but the syslogType doesn't contain any test output.
-	ret = append(ret, &stringInLogCheck{String: "ASSERT FAILED", Type: syslogType})
-	ret = append(ret, &stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Type: syslogType})
 
-	// testrunner logs this when the serial socket goes away unexpectedly.
-	ret = append(ret, &stringInLogCheck{String: ".sock: write: broken pipe", Type: swarmingOutputType})
-	// For fxbug.dev/57463.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("%s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/61452.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToResolveIPErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/65073.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.PackageRepoSetupErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/65073.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.SerialReadErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/68743.
-	ret = append(ret, &stringInLogCheck{String: botanistconstants.FailedToCopyImageMsg, Type: swarmingOutputType})
-	// For fxbug.dev/82454.
-	ret = append(ret, &stringInLogCheck{String: botanistconstants.FailedToExtendFVMMsg, Type: swarmingOutputType})
-	// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/559948a1a4cbd995d765e26c32923ed862589a61/src/storage/lib/paver/paver.cc#175
-	ret = append(ret, &stringInLogCheck{String: "Failed to stream partitions to FVM", Type: swarmingOutputType})
-	// Emitted by the GCS Go library from within botanist during image download.
-	// https://github.com/googleapis/google-cloud-go/blob/bc966a3c318d162263ebce3d71bc39b3880c8e90/storage/reader.go#L416
-	ret = append(ret, &stringInLogCheck{String: "storage: bad CRC on read", Type: swarmingOutputType})
-	// For fxbug.dev/53101.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Type: swarmingOutputType})
-	// For fxbug.dev/51441.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/59237.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", sshutilconstants.TimedOutConnectingMsg), Type: swarmingOutputType})
-	// For fxbug.dev/61419.
-	// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/675c6b9cc2452cd7108f075d91e048218b92ae69/garnet/bin/run_test_component/main.cc#431
-	ret = append(ret, &stringInLogCheck{
-		String:       ".cmx canceled due to timeout.",
-		Type:         swarmingOutputType,
-		ExceptBlocks: []*logBlock{{startString: "[ RUN      ] RunFixture.TestTimeout", endString: "RunFixture.TestTimeout ("}},
-		OnlyOnStates: []string{"TIMED_OUT"},
-	})
-	// For fxbug.dev/61420.
-	ret = append(ret, &stringInLogCheck{
-		String:       fmt.Sprintf("syslog: %s", syslogconstants.CtxReconnectError),
-		Type:         swarmingOutputType,
-		OnlyOnStates: []string{"TIMED_OUT"},
-	})
-	// For fxbug.dev/52719.
-	// Kernel panics and other low-level errors often cause crashes that
-	// manifest as SSH failures, so this check must come after all
-	// Zircon-related errors to ensure tefmocheck attributes these crashes to
-	// the actual root cause.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
-	ret = append(ret, &stringInLogCheck{String: "failed to resolve fuchsia-pkg://fuchsia.com/run_test_component#bin/run-test-component", Type: swarmingOutputType})
-	ret = append(ret, &stringInLogCheck{String: "Got no package for fuchsia-pkg://", Type: swarmingOutputType})
-	// For fxbug.dev/77689.
-	ret = append(ret, &stringInLogCheck{String: testrunnerconstants.FailedToStartSerialTestMsg, Type: swarmingOutputType})
-	// For fxbug.dev/56651.
-	// This error ususally happens due to an SSH failure, so that error should take precedence.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg), Type: swarmingOutputType})
+	ret = append(ret, []FailureModeCheck{
+		// These may be in the output of tests, but the syslogType doesn't contain any test output.
+		&stringInLogCheck{String: "ASSERT FAILED", Type: syslogType},
+		&stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Type: syslogType},
+		// testrunner logs this when the serial socket goes away unexpectedly.
+		&stringInLogCheck{String: ".sock: write: broken pipe", Type: swarmingOutputType},
+		// For fxbug.dev/57463.
+		&stringInLogCheck{
+			String: fmt.Sprintf("%s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg),
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/61452.
+		&stringInLogCheck{
+			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToResolveIPErrorMsg),
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/65073.
+		&stringInLogCheck{
+			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.PackageRepoSetupErrorMsg),
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/65073.
+		&stringInLogCheck{
+			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.SerialReadErrorMsg),
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/68743.
+		&stringInLogCheck{
+			String: botanistconstants.FailedToCopyImageMsg,
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/82454.
+		&stringInLogCheck{
+			String: botanistconstants.FailedToExtendFVMMsg,
+			Type:   swarmingOutputType,
+		},
+		// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/559948a1a4cbd995d765e26c32923ed862589a61/src/storage/lib/paver/paver.cc#175
+		&stringInLogCheck{
+			String: "Failed to stream partitions to FVM",
+			Type:   swarmingOutputType,
+		},
+		// Emitted by the GCS Go library from within botanist during image download.
+		// https://github.com/googleapis/google-cloud-go/blob/bc966a3c318d162263ebce3d71bc39b3880c8e90/storage/reader.go#L416
+		&stringInLogCheck{
+			String: "storage: bad CRC on read",
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/53101.
+		&stringInLogCheck{
+			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg),
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/51441.
+		&stringInLogCheck{
+			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg),
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/59237.
+		&stringInLogCheck{
+			String: fmt.Sprintf("botanist ERROR: %s", sshutilconstants.TimedOutConnectingMsg),
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/61419.
+		// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/675c6b9cc2452cd7108f075d91e048218b92ae69/garnet/bin/run_test_component/main.cc#431
+		&stringInLogCheck{
+			String: ".cmx canceled due to timeout.",
+			Type:   swarmingOutputType,
+			ExceptBlocks: []*logBlock{
+				{
+					startString: "[ RUN      ] RunFixture.TestTimeout",
+					endString:   "RunFixture.TestTimeout (",
+				},
+			},
+			OnlyOnStates: []string{"TIMED_OUT"},
+		},
+		// For fxbug.dev/61420.
+		&stringInLogCheck{
+			String:       fmt.Sprintf("syslog: %s", syslogconstants.CtxReconnectError),
+			Type:         swarmingOutputType,
+			OnlyOnStates: []string{"TIMED_OUT"},
+		},
+		// For fxbug.dev/52719.
+		// Kernel panics and other low-level errors often cause crashes that
+		// manifest as SSH failures, so this check must come after all
+		// Zircon-related errors to ensure tefmocheck attributes these crashes to
+		// the actual root cause.
+		&stringInLogCheck{
+			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg),
+			Type:   swarmingOutputType,
+		},
+		&stringInLogCheck{
+			String: "failed to resolve fuchsia-pkg://fuchsia.com/run_test_component#bin/run-test-component",
+			Type:   swarmingOutputType,
+		},
+		&stringInLogCheck{
+			String: "Got no package for fuchsia-pkg://",
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/77689.
+		&stringInLogCheck{
+			String: testrunnerconstants.FailedToStartSerialTestMsg,
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/56651.
+		// This error usually happens due to an SSH failure, so that error should take precedence.
+		&stringInLogCheck{
+			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg),
+			Type:   swarmingOutputType,
+		},
+	}...)
 	return ret
 }

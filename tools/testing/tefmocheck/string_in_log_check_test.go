@@ -22,12 +22,12 @@ func TestStringInLogCheck(t *testing.T) {
 		endString:   "block_end",
 	}
 	c := stringInLogCheck{
-		String:                         killerString,
-		OnlyOnStates:                   []string{},
-		ExceptString:                   exceptString,
-		ExceptBlocks:                   []*logBlock{exceptBlock, exceptBlock2},
-		ExceptSuccessfulSwarmingResult: true,
-		Type:                           swarmingOutputType,
+		String:         killerString,
+		OnlyOnStates:   []string{},
+		ExceptString:   exceptString,
+		ExceptBlocks:   []*logBlock{exceptBlock, exceptBlock2},
+		SkipPassedTask: true,
+		Type:           swarmingOutputType,
 	}
 	gotName := c.Name()
 	wantName := "string_in_log/infra_and_test_std_and_klog.txt/KILLER_STRING"
@@ -143,10 +143,15 @@ func TestStringInLogCheck(t *testing.T) {
 			c := c // Make a copy to avoid modifying shared state.
 			c.AttributeToTest = tc.attributeToTest
 			// It accesses this field for DebugText().
-			tc.testingOutputs.SwarmingSummary = &SwarmingTaskSummary{Results: &SwarmingRpcsTaskResult{TaskId: "abc", State: tc.swarmingResultState}}
+			tc.testingOutputs.SwarmingSummary = &SwarmingTaskSummary{
+				Results: &SwarmingRpcsTaskResult{
+					TaskId: "abc", State: tc.swarmingResultState,
+				},
+			}
 			c.OnlyOnStates = tc.states
 			if c.Check(&tc.testingOutputs) != tc.shouldMatch {
-				t.Errorf("c.Check(%q) returned %v, expected %v", string(tc.testingOutputs.SerialLog), !tc.shouldMatch, tc.shouldMatch)
+				t.Errorf("c.Check(%q) returned %t, expected %t",
+					string(tc.testingOutputs.SerialLog), !tc.shouldMatch, tc.shouldMatch)
 			}
 			gotName := c.Name()
 			if tc.wantName != "" && gotName != tc.wantName {
@@ -156,10 +161,10 @@ func TestStringInLogCheck(t *testing.T) {
 			swarmingOutputPerTest := tc.testingOutputs.SwarmingOutputPerTest
 			gotOutputFiles := c.OutputFiles()
 			if len(swarmingOutputPerTest) == 0 && len(gotOutputFiles) != 0 {
-				t.Errorf("c.OutputFiles() returned %v, want []", gotOutputFiles)
+				t.Errorf("c.OutputFiles() returned %s, want []", gotOutputFiles)
 			}
 			if len(swarmingOutputPerTest) == 1 && (len(gotOutputFiles) != 1 || swarmingOutputPerTest[0].FilePath != gotOutputFiles[0]) {
-				t.Errorf("c.OutputFiles() returned %v, want %q", gotOutputFiles, swarmingOutputPerTest[0].FilePath)
+				t.Errorf("c.OutputFiles() returned %s, want %q", gotOutputFiles, swarmingOutputPerTest[0].FilePath)
 			}
 		})
 	}
