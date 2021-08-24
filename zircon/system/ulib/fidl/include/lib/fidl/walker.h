@@ -518,7 +518,12 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
   if (payload_type != nullptr) {
     bool should_be_inlined =
         TypeSize<WireFormatVersion>(payload_type) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD;
-    if (unlikely(is_inlined != should_be_inlined)) {
+    if (unlikely(is_inlined && !should_be_inlined)) {
+      visitor_->OnError("Invalid inline bit in envelope");
+      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+    }
+    if (unlikely(!is_inlined && should_be_inlined &&
+                 (v2_envelope->num_bytes > 0 || v2_envelope->num_handles > 0))) {
       visitor_->OnError("Invalid inline bit in envelope");
       FIDL_STATUS_GUARD(Status::kConstraintViolationError);
     }

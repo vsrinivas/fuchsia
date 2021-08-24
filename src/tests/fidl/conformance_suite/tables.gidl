@@ -62,6 +62,28 @@ success("TableFieldInlinedHandle") {
     }
 }
 
+// A field that would normally be inlined is empty.
+// This tests logic checking that values are inlined in the correct situations.
+success("TableFieldInlinedReserved") {
+    value = TableFieldInlinedStruct {
+        t: TableFieldInlined {
+            2: {
+                bytes = [num(123):8],
+            }
+        },
+    },
+    bytes = {
+        v2 = [
+            num(2):8,
+            repeat(0xff):8,
+
+            num(0):4, num(0):2, num(0):2,
+            num(8):4, num(0):2, num(0):2,
+            num(123):8,
+        ]
+    }
+}
+
 // Tests tables whose fields are stored out of line in the wire format.
 success("TableFieldOutOfLine") {
     value = TableFieldOutOfLineStruct {
