@@ -232,6 +232,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			{startString: "RUN   TestCrashAssert", endString: "PASS: TestCrashAssert"},
 			{startString: "RUN   TestKernelLockupDetectorFatalCriticalSection", endString: ": TestKernelLockupDetectorFatalCriticalSection"},
 			{startString: "RUN   TestKernelLockupDetectorFatalHeartbeat", endString: ": TestKernelLockupDetectorFatalHeartbeat"},
+			{startString: "RUN   TestMissingCmdlineEntropyPanics", endString: "PASS: TestMissingCmdlineEntropyPanics"},
+			{startString: "RUN   TestIncompleteCmdlineEntropyPanics", endString: "PASS: TestIncompleteCmdlineEntropyPanics"},
 		}})
 
 		// For fxbug.dev/71784.
