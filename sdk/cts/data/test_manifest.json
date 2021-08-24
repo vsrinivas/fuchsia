@@ -13,5 +13,10 @@
         "archive_name": "fuchsia-diagnostics-tests",
         "component_name": "diagnostics-test.cm",
         "package": "fuchsia-diagnostics-tests"
+    },
+    {
+        "archive_name": "memfs-test-package",
+        "component_name": "memfs-component.cmx",
+        "package": "memfs-test-package"
     }
 ]

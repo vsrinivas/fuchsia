@@ -7,10 +7,10 @@ group("prebuilts") {
   testonly = true
   deps = [
     "fidl:prebuilts",
+    "pkg:prebuilts",
     "//sdk/cts/examples:prebuilts",
 
     # TODO(kjharland): Include fidl cpp tests.
-    # TODO(kjharland): Include pkg tests.
     # TODO(kjharland): Include tools tests.
   ]
 }

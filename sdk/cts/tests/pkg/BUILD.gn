@@ -4,6 +4,11 @@
 
 import("//sdk/cts/build/cts.gni")
 
+group("prebuilts") {
+  testonly = true
+  deps = [ "memfs:prebuilts" ]
+}
+
 group("tests") {
   deps = [
     "fdio:tests",
