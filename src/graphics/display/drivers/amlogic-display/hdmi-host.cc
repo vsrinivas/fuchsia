@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-hdmi-host.h"
+#include "hdmi-host.h"
 
 #include <lib/ddk/debug.h>
 
@@ -54,7 +54,7 @@ void TranslateDisplayMode(fidl::AnyArena& allocator, const display_mode_t& in_mo
 
 }  // namespace
 
-zx_status_t AmlHdmiHost::Init() {
+zx_status_t HdmiHost::Init() {
   auto status = pdev_.MapMmio(MMIO_VPU, &vpu_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map VPU mmio %d\n", status);
@@ -81,7 +81,7 @@ zx_status_t AmlHdmiHost::Init() {
   return ZX_OK;
 }
 
-zx_status_t AmlHdmiHost::HostOn() {
+zx_status_t HdmiHost::HostOn() {
   /* Step 1: Initialize various clocks related to the HDMI Interface*/
   SET_BIT32(CBUS, PAD_PULL_UP_EN_REG3, 0, 0, 2);
   SET_BIT32(CBUS, PAD_PULL_UP_REG3, 0, 0, 2);
@@ -110,7 +110,7 @@ zx_status_t AmlHdmiHost::HostOn() {
   return ZX_OK;
 }
 
-void AmlHdmiHost::HostOff() {
+void HdmiHost::HostOff() {
   /* Close HDMITX PHY */
   WRITE32_REG(HHI, HHI_HDMI_PHY_CNTL0, 0);
   WRITE32_REG(HHI, HHI_HDMI_PHY_CNTL3, 0);
@@ -123,7 +123,7 @@ void AmlHdmiHost::HostOff() {
   }
 }
 
-zx_status_t AmlHdmiHost::ModeSet(const display_mode_t& mode) {
+zx_status_t HdmiHost::ModeSet(const display_mode_t& mode) {
   for (size_t i = 0; ENC_LUT_GEN[i].reg != 0xFFFFFFFF; i++) {
     WRITE32_REG(VPU, ENC_LUT_GEN[i].reg, ENC_LUT_GEN[i].val);
   }
@@ -192,8 +192,7 @@ zx_status_t AmlHdmiHost::ModeSet(const display_mode_t& mode) {
   return ZX_OK;
 }
 
-zx_status_t AmlHdmiHost::EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_list,
-                                      size_t op_count) {
+zx_status_t HdmiHost::EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count) {
   auto ops = std::make_unique<EdidOp[]>(op_count);
   auto writes = std::make_unique<fidl::VectorView<uint8_t>[]>(op_count);
   auto reads = std::make_unique<uint8_t[]>(op_count);
@@ -235,16 +234,16 @@ zx_status_t AmlHdmiHost::EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_l
   return ZX_OK;
 }
 
-zx_status_t AmlHdmiHost::GetVic(const display_mode_t* disp_timing) {
+zx_status_t HdmiHost::GetVic(const display_mode_t* disp_timing) {
   display_mode_t mode;
   memcpy(&mode, disp_timing, sizeof(display_mode_t));
   hdmi_param p;
   return GetVic(&mode, &p);
 }
 
-zx_status_t AmlHdmiHost::GetVic(display_mode_t* disp_timing) { return GetVic(disp_timing, &p_); }
+zx_status_t HdmiHost::GetVic(display_mode_t* disp_timing) { return GetVic(disp_timing, &p_); }
 
-zx_status_t AmlHdmiHost::GetVic(display_mode_t* disp_timing, hdmi_param* p) {
+zx_status_t HdmiHost::GetVic(display_mode_t* disp_timing, hdmi_param* p) {
   if (disp_timing->v_addressable == 2160) {
     DISP_INFO("4K Monitor Detected.\n");
 
@@ -342,7 +341,7 @@ zx_status_t AmlHdmiHost::GetVic(display_mode_t* disp_timing, hdmi_param* p) {
   return ZX_OK;
 }
 
-void AmlHdmiHost::ConfigEncoder() {
+void HdmiHost::ConfigEncoder() {
   uint32_t h_begin, h_end;
   uint32_t v_begin, v_end;
   uint32_t hs_begin, hs_end;
@@ -447,7 +446,7 @@ void AmlHdmiHost::ConfigEncoder() {
   DISP_INFO("done\n");
 }
 
-void AmlHdmiHost::ConfigPhy() {
+void HdmiHost::ConfigPhy() {
   auto* p = &p_;
 
   HhiHdmiPhyCntl0Reg::Get().FromValue(0).WriteTo(&(*hhi_mmio_));

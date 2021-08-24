@@ -17,7 +17,7 @@
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 
-#include "aml-mipi-phy.h"
+#include "mipi-phy.h"
 #include "common.h"
 #include "hhi-regs.h"
 #include "lcd.h"
@@ -25,12 +25,12 @@
 
 namespace amlogic_display {
 
-class AmlDsiHost {
+class DsiHost {
  public:
   // Map all necessary resources. This will not modify hardware state in any
   // way, and is thus safe to use when adopting a device that was initialized by
   // the bootloader.
-  static std::unique_ptr<AmlDsiHost> Create(zx_device_t* parent, uint32_t panel_type);
+  static std::unique_ptr<DsiHost> Create(zx_device_t* parent, uint32_t panel_type);
 
   // This function sets up mipi dsi interface. It includes both DWC and AmLogic blocks
   // The DesignWare setup could technically be moved to the dw_mipi_dsi driver. However,
@@ -45,7 +45,7 @@ class AmlDsiHost {
   void Dump();
 
  private:
-  AmlDsiHost(zx_device_t* parent, uint32_t panel_type);
+  DsiHost(zx_device_t* parent, uint32_t panel_type);
 
   void PhyEnable();
   void PhyDisable();
@@ -72,7 +72,7 @@ class AmlDsiHost {
   bool host_on_ = false;
 
   std::unique_ptr<Lcd> lcd_;
-  std::unique_ptr<AmlMipiPhy> phy_;
+  std::unique_ptr<MipiPhy> phy_;
 };
 
 }  // namespace amlogic_display

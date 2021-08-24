@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "amlogic-clock.h"
+#include "clock.h"
 
 #include <lib/ddk/debug.h>
 
@@ -21,7 +21,7 @@ constexpr uint32_t kKHZ = 1000;
 #define READ32_VPU_REG(a) vpu_mmio_->Read32(a)
 #define WRITE32_VPU_REG(a, v) vpu_mmio_->Write32(v, a)
 
-void AmlogicDisplayClock::CalculateLcdTiming(const display_setting_t& d) {
+void Clock::CalculateLcdTiming(const display_setting_t& d) {
   // Calculate and store DataEnable horizontal and vertical start/stop times
   const uint32_t de_hstart = d.h_period - d.h_active - 1;
   const uint32_t de_vstart = d.v_period - d.v_active;
@@ -49,7 +49,7 @@ void AmlogicDisplayClock::CalculateLcdTiming(const display_setting_t& d) {
   lcd_timing_.vs_ve_addr = vend;
 }
 
-zx_status_t AmlogicDisplayClock::PllLockWait() {
+zx_status_t Clock::PllLockWait() {
   uint32_t pll_lock;
 
   for (int lock_attempts = 0; lock_attempts < kMaxPllLockAttempt; lock_attempts++) {
@@ -74,7 +74,7 @@ zx_status_t AmlogicDisplayClock::PllLockWait() {
   return ZX_ERR_UNAVAILABLE;
 }
 
-zx_status_t AmlogicDisplayClock::GenerateHPLL(const display_setting_t& d) {
+zx_status_t Clock::GenerateHPLL(const display_setting_t& d) {
   uint32_t pll_fout;
   // Requested Pixel clock
   pll_cfg_.fout = d.lcd_clock / kKHZ;  // KHz
@@ -138,7 +138,7 @@ zx_status_t AmlogicDisplayClock::GenerateHPLL(const display_setting_t& d) {
   return ZX_ERR_INTERNAL;
 }
 
-void AmlogicDisplayClock::Disable() {
+void Clock::Disable() {
   ZX_DEBUG_ASSERT(initialized_);
   if (!clock_enabled_) {
     return;
@@ -154,7 +154,7 @@ void AmlogicDisplayClock::Disable() {
   clock_enabled_ = false;
 }
 
-zx_status_t AmlogicDisplayClock::Enable(const display_setting_t& d) {
+zx_status_t Clock::Enable(const display_setting_t& d) {
   ZX_DEBUG_ASSERT(initialized_);
 
   if (clock_enabled_) {
@@ -339,7 +339,7 @@ zx_status_t AmlogicDisplayClock::Enable(const display_setting_t& d) {
   return ZX_OK;
 }
 
-zx_status_t AmlogicDisplayClock::Init(ddk::PDev& pdev) {
+zx_status_t Clock::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
@@ -347,13 +347,13 @@ zx_status_t AmlogicDisplayClock::Init(ddk::PDev& pdev) {
   // Map VPU and HHI registers
   zx_status_t status = pdev.MapMmio(MMIO_VPU, &vpu_mmio_);
   if (status != ZX_OK) {
-    DISP_ERROR("AmlogicDisplayClock: Could not map VPU mmio\n");
+    DISP_ERROR("Clock: Could not map VPU mmio\n");
     return status;
   }
 
   status = pdev.MapMmio(MMIO_HHI, &hhi_mmio_);
   if (status != ZX_OK) {
-    DISP_ERROR("AmlogicDisplayClock: Could not map HHI mmio\n");
+    DISP_ERROR("Clock: Could not map HHI mmio\n");
     return status;
   }
 
@@ -361,7 +361,7 @@ zx_status_t AmlogicDisplayClock::Init(ddk::PDev& pdev) {
   return ZX_OK;
 }
 
-void AmlogicDisplayClock::Dump() {
+void Clock::Dump() {
   ZX_DEBUG_ASSERT(initialized_);
   DISP_INFO("#############################\n");
   DISP_INFO("Dumping pll_cfg structure:\n");

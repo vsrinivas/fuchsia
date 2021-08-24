@@ -15,14 +15,14 @@
 
 #include <ddktl/device.h>
 
-#include "aml-dsi.h"
 #include "common.h"
+#include "dsi.h"
 
 namespace amlogic_display {
 
-class AmlMipiPhy {
+class MipiPhy {
  public:
-  AmlMipiPhy() {}
+  MipiPhy() = default;
   // This function initializes internal state of the object
   zx_status_t Init(ddk::PDev& pdev, ddk::DsiImplProtocolClient dsi, uint32_t lane_num);
   // This function enables and starts up the Mipi Phy

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-mipi-phy.h"
+#include "mipi-phy.h"
 
 #include <lib/ddk/debug.h>
 
@@ -20,7 +20,7 @@ constexpr inline uint8_t NsToLaneByte(T x, uint32_t lanebytetime) {
 
 constexpr uint32_t kUnit = (1 * 1000 * 1000 * 100);
 
-zx_status_t AmlMipiPhy::PhyCfgLoad(uint32_t bitrate) {
+zx_status_t MipiPhy::PhyCfgLoad(uint32_t bitrate) {
   ZX_DEBUG_ASSERT(initialized_);
 
   // According to MIPI -PHY Spec, we need to define Unit Interval (UI).
@@ -114,7 +114,7 @@ zx_status_t AmlMipiPhy::PhyCfgLoad(uint32_t bitrate) {
   return ZX_OK;
 }
 
-void AmlMipiPhy::PhyInit() {
+void MipiPhy::PhyInit() {
   // Enable phy clock.
   WRITE32_REG(DSI_PHY, MIPI_DSI_PHY_CTRL,
               PHY_CTRL_TXDDRCLK_EN | PHY_CTRL_DDRCLKPATH_EN | PHY_CTRL_CLK_DIV_COUNTER |
@@ -149,7 +149,7 @@ void AmlMipiPhy::PhyInit() {
   WRITE32_REG(DSI_PHY, MIPI_DSI_CHAN_CTRL, 0);
 }
 
-void AmlMipiPhy::Shutdown() {
+void MipiPhy::Shutdown() {
   ZX_DEBUG_ASSERT(initialized_);
 
   if (!phy_enabled_) {
@@ -163,7 +163,7 @@ void AmlMipiPhy::Shutdown() {
   phy_enabled_ = false;
 }
 
-zx_status_t AmlMipiPhy::Startup() {
+zx_status_t MipiPhy::Startup() {
   ZX_DEBUG_ASSERT(initialized_);
 
   if (phy_enabled_) {
@@ -199,7 +199,7 @@ zx_status_t AmlMipiPhy::Startup() {
   return ZX_OK;
 }
 
-zx_status_t AmlMipiPhy::Init(ddk::PDev& pdev, ddk::DsiImplProtocolClient dsi, uint32_t lane_num) {
+zx_status_t MipiPhy::Init(ddk::PDev& pdev, ddk::DsiImplProtocolClient dsi, uint32_t lane_num) {
   if (initialized_) {
     return ZX_OK;
   }
@@ -211,7 +211,7 @@ zx_status_t AmlMipiPhy::Init(ddk::PDev& pdev, ddk::DsiImplProtocolClient dsi, ui
   // Map Mipi Dsi and Dsi Phy registers
   zx_status_t status = pdev.MapMmio(MMIO_DSI_PHY, &dsi_phy_mmio_);
   if (status != ZX_OK) {
-    DISP_ERROR("AmlMipiPhy: Could not map DSI PHY mmio\n");
+    DISP_ERROR("MipiPhy: Could not map DSI PHY mmio\n");
     return status;
   }
 
@@ -219,7 +219,7 @@ zx_status_t AmlMipiPhy::Init(ddk::PDev& pdev, ddk::DsiImplProtocolClient dsi, ui
   return ZX_OK;
 }
 
-void AmlMipiPhy::Dump() {
+void MipiPhy::Dump() {
   ZX_DEBUG_ASSERT(initialized_);
   DISP_INFO("%s: DUMPING PHY REGS\n", __func__);
   DISP_INFO("MIPI_DSI_PHY_CTRL = 0x%x\n", READ32_REG(DSI_PHY, MIPI_DSI_PHY_CTRL));

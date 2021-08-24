@@ -17,16 +17,16 @@
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 
-#include "aml-dsi.h"
+#include "dsi.h"
 #include "common.h"
 #include "hhi-regs.h"
 #include "vpu-regs.h"
 
 namespace amlogic_display {
 
-class AmlogicDisplayClock {
+class Clock {
  public:
-  AmlogicDisplayClock() = default;
+  Clock() = default;
 
   // Map all necessary resources. This method does not change hardware state,
   // and is therefore safe to use when adopting a bootloader initialized device.

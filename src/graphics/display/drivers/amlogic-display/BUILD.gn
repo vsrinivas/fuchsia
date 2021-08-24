@@ -23,13 +23,13 @@ source_set("common_srcs") {
   ]
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
-    "aml-dsi-host.cc",
-    "aml-hdmi-host.cc",
-    "aml-hdmitx-clk.cc",
-    "aml-mipi-phy.cc",
-    "amlogic-clock.cc",
     "amlogic-display.cc",
+    "clock.cc",
+    "dsi-host.cc",
+    "hdmi-host.cc",
+    "hdmitx-clk.cc",
     "lcd.cc",
+    "mipi-phy.cc",
     "osd.cc",
     "vout.cc",
     "vpu.cc",

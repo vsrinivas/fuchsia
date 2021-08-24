@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-hdmi-host.h"
 #include "amlogic-display.h"
+#include "hdmi-host.h"
 #include "hhi-regs.h"
 #include "vpu-regs.h"
 
@@ -33,7 +33,7 @@ const uint32_t kFracMax = 131072;
 
 }  // namespace
 
-void AmlHdmiHost::WaitForPllLocked() {
+void HdmiHost::WaitForPllLocked() {
   bool err = false;
   do {
     unsigned int st = 0;
@@ -62,7 +62,7 @@ void AmlHdmiHost::WaitForPllLocked() {
   } while (err);
 }
 
-zx_status_t AmlHdmiHost::ConfigurePll() {
+zx_status_t HdmiHost::ConfigurePll() {
   const struct pll_param* pll = &p_.pll_p_24b;
 
   // Set VIU Mux Ctrl
@@ -134,7 +134,7 @@ zx_status_t AmlHdmiHost::ConfigurePll() {
   return ZX_OK;
 }
 
-void AmlHdmiHost::ConfigureHpllClkOut(uint32_t hpll) {
+void HdmiHost::ConfigureHpllClkOut(uint32_t hpll) {
   float desired_pll = (float)hpll / (float)24000;
   uint8_t whole;
   uint16_t frac;
@@ -179,7 +179,7 @@ void AmlHdmiHost::ConfigureHpllClkOut(uint32_t hpll) {
   WaitForPllLocked();
 }
 
-void AmlHdmiHost::ConfigureOd3Div(uint32_t div_sel) {
+void HdmiHost::ConfigureOd3Div(uint32_t div_sel) {
   int shift_val = 0;
   int shift_sel = 0;
 

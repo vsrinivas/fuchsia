@@ -93,13 +93,14 @@ struct hdmi_param {
   struct cea_timing timings;
 };
 
-// AmlHdmiHost has access to the amlogic/designware HDMI block and controls its operation. It also
-// handles functions and keeps track of data that the amlogic/designware block does not need to know
-// about, including clock calculations (which may move out of the host after fxb/69072 is resolved),
+// HdmiHost has access to the amlogic/designware HDMI block and controls its
+// operation. It also handles functions and keeps track of data that the
+// amlogic/designware block does not need to know about, including clock
+// calculations (which may move out of the host after fxb/69072 is resolved),
 // VPU and HHI register handling, HDMI parameters, etc.
-class AmlHdmiHost {
+class HdmiHost {
  public:
-  explicit AmlHdmiHost(zx_device_t* parent, zx::channel&& chan)
+  explicit HdmiHost(zx_device_t* parent, zx::channel&& chan)
       : pdev_(ddk::PDev::FromFragment(parent)), hdmi_(std::move(chan)) {}
 
   zx_status_t Init();

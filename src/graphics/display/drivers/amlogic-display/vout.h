@@ -11,9 +11,9 @@
 #include <lib/device-protocol/display-panel.h>
 #include <zircon/pixelformat.h>
 
-#include "aml-dsi-host.h"
-#include "aml-hdmi-host.h"
-#include "amlogic-clock.h"
+#include "clock.h"
+#include "dsi-host.h"
+#include "hdmi-host.h"
 
 namespace amlogic_display {
 
@@ -94,8 +94,8 @@ class Vout {
   bool supports_hpd_ = false;
 
   struct dsi_t {
-    std::unique_ptr<amlogic_display::AmlDsiHost> dsi_host;
-    std::unique_ptr<amlogic_display::AmlogicDisplayClock> clock;
+    std::unique_ptr<amlogic_display::DsiHost> dsi_host;
+    std::unique_ptr<amlogic_display::Clock> clock;
 
     // display dimensions and format
     uint32_t width = 0;
@@ -106,7 +106,7 @@ class Vout {
   } dsi_;
 
   struct hdmi_t {
-    std::unique_ptr<amlogic_display::AmlHdmiHost> hdmi_host;
+    std::unique_ptr<amlogic_display::HdmiHost> hdmi_host;
 
     display_mode_t cur_display_mode_;
   } hdmi_;

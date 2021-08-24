@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-dsi-host.h"
+#include "dsi-host.h"
 
 #include <lib/ddk/debug.h>
 #include <lib/device-protocol/display-panel.h>
@@ -19,7 +19,7 @@ namespace amlogic_display {
 
 constexpr uint32_t kFitiDisplayId = 0x00936504;
 
-void AmlDsiHost::FixupPanelType() {
+void DsiHost::FixupPanelType() {
   if (panel_type_ != PANEL_TV070WSM_FT_9365 || display_id_ != 0) {
     // This fixup is either unnecessary or has been done before.
     return;
@@ -36,23 +36,22 @@ void AmlDsiHost::FixupPanelType() {
   }
 }
 
-AmlDsiHost::AmlDsiHost(zx_device_t* parent, uint32_t panel_type)
+DsiHost::DsiHost(zx_device_t* parent, uint32_t panel_type)
     : pdev_(ddk::PDev::FromFragment(parent)),
       dsiimpl_(parent, "dsi"),
       lcd_gpio_(parent, "gpio"),
-      panel_type_(panel_type) {
-}
+      panel_type_(panel_type) {}
 
 // static
-std::unique_ptr<AmlDsiHost> AmlDsiHost::Create(zx_device_t* parent, uint32_t panel_type) {
+std::unique_ptr<DsiHost> DsiHost::Create(zx_device_t* parent, uint32_t panel_type) {
   fbl::AllocChecker ac;
-  auto self = fbl::make_unique_checked<AmlDsiHost>(&ac, AmlDsiHost(parent, panel_type));
+  auto self = fbl::make_unique_checked<DsiHost>(&ac, DsiHost(parent, panel_type));
   if (!ac.check()) {
     DISP_ERROR("No memory to allocate a DSI host\n");
     return nullptr;
   }
   if (!self->pdev_.is_valid()) {
-    DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
+    DISP_ERROR("DsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
     return nullptr;
   }
 
@@ -72,7 +71,7 @@ std::unique_ptr<AmlDsiHost> AmlDsiHost::Create(zx_device_t* parent, uint32_t pan
   return self;
 }
 
-zx_status_t AmlDsiHost::HostModeInit(const display_setting_t& disp_setting) {
+zx_status_t DsiHost::HostModeInit(const display_setting_t& disp_setting) {
   // Setup relevant TOP_CNTL register -- Undocumented --
   SET_BIT32(MIPI_DSI, MIPI_DSI_TOP_CNTL, SUPPORTED_DPI_FORMAT, TOP_CNTL_DPI_CLR_MODE_START,
             TOP_CNTL_DPI_CLR_MODE_BITS);
@@ -102,7 +101,7 @@ zx_status_t AmlDsiHost::HostModeInit(const display_setting_t& disp_setting) {
   return ZX_OK;
 }
 
-void AmlDsiHost::PhyEnable() {
+void DsiHost::PhyEnable() {
   WRITE32_REG(HHI, HHI_MIPI_CNTL0,
               MIPI_CNTL0_CMN_REF_GEN_CTRL(0x29) | MIPI_CNTL0_VREF_SEL(VREF_SEL_VR) |
                   MIPI_CNTL0_LREF_SEL(LREF_SEL_L_ROUT) | MIPI_CNTL0_LBG_EN |
@@ -111,13 +110,13 @@ void AmlDsiHost::PhyEnable() {
   WRITE32_REG(HHI, HHI_MIPI_CNTL2, MIPI_CNTL2_DEFAULT_VAL);  // 4 lane
 }
 
-void AmlDsiHost::PhyDisable() {
+void DsiHost::PhyDisable() {
   WRITE32_REG(HHI, HHI_MIPI_CNTL0, 0);
   WRITE32_REG(HHI, HHI_MIPI_CNTL1, 0);
   WRITE32_REG(HHI, HHI_MIPI_CNTL2, 0);
 }
 
-void AmlDsiHost::Disable(const display_setting_t& disp_setting) {
+void DsiHost::Disable(const display_setting_t& disp_setting) {
   // turn host off only if it's been fully turned on
   if (!host_on_) {
     return;
@@ -138,7 +137,7 @@ void AmlDsiHost::Disable(const display_setting_t& disp_setting) {
   host_on_ = false;
 }
 
-zx_status_t AmlDsiHost::Enable(const display_setting_t& disp_setting, uint32_t bitrate) {
+zx_status_t DsiHost::Enable(const display_setting_t& disp_setting, uint32_t bitrate) {
   if (host_on_) {
     return ZX_OK;
   }
@@ -148,9 +147,9 @@ zx_status_t AmlDsiHost::Enable(const display_setting_t& disp_setting, uint32_t b
 
   // Create MIPI PHY object
   fbl::AllocChecker ac;
-  phy_ = fbl::make_unique_checked<amlogic_display::AmlMipiPhy>(&ac);
+  phy_ = fbl::make_unique_checked<amlogic_display::MipiPhy>(&ac);
   if (!ac.check()) {
-    DISP_ERROR("Could not create AmlMipiPhy object\n");
+    DISP_ERROR("Could not create MipiPhy object\n");
     return ZX_ERR_NO_MEMORY;
   }
   zx_status_t status = phy_->Init(pdev_, dsiimpl_, disp_setting.lane_num);
@@ -222,7 +221,7 @@ zx_status_t AmlDsiHost::Enable(const display_setting_t& disp_setting, uint32_t b
   return ZX_OK;
 }
 
-void AmlDsiHost::Dump() {
+void DsiHost::Dump() {
   DISP_INFO("MIPI_DSI_TOP_SW_RESET = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_SW_RESET));
   DISP_INFO("MIPI_DSI_TOP_CLK_CNTL = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_CLK_CNTL));
   DISP_INFO("MIPI_DSI_TOP_CNTL = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_CNTL));

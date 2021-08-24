@@ -80,12 +80,12 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
       return ZX_ERR_NOT_SUPPORTED;
   }
 
-  dsi_.dsi_host = amlogic_display::AmlDsiHost::Create(parent, panel_type);
+  dsi_.dsi_host = amlogic_display::DsiHost::Create(parent, panel_type);
   if (!dsi_.dsi_host) {
     return ZX_ERR_NO_MEMORY;
   }
   fbl::AllocChecker ac;
-  dsi_.clock = fbl::make_unique_checked<amlogic_display::AmlogicDisplayClock>(&ac);
+  dsi_.clock = fbl::make_unique_checked<amlogic_display::Clock>(&ac);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -127,7 +127,7 @@ zx_status_t Vout::InitHdmi(zx_device_t* parent) {
 
   fbl::AllocChecker ac;
   hdmi_.hdmi_host =
-      fbl::make_unique_checked<amlogic_display::AmlHdmiHost>(&ac, parent, std::move(client_end));
+      fbl::make_unique_checked<amlogic_display::HdmiHost>(&ac, parent, std::move(client_end));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
