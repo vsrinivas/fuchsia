@@ -258,7 +258,6 @@ template("rustc_binary") {
     configs = []
     configs = invoker.configs
     if (current_os == "fuchsia") {
-      configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
       _deps += [ "//sdk/lib/syslog/cpp:backend_fuchsia_lib_rust" ]
     }
     deps = _deps

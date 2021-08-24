@@ -4,6 +4,7 @@
 
 import("//build/config/build_id.gni")
 import("//build/config/clang/clang.gni")
+import("//build/config/current_target_tuple.gni")
 import("//build/config/sanitizers/sanitizer_default_options.gni")
 import("//build/config/sysroot.gni")
 import("//build/rust/config.gni")
@@ -58,7 +59,12 @@ config("compiler") {
     rebase_path(rust_sysroot_dir, root_build_dir) + "/lib",
     "-Clinker=$rebased_clang_prefix/lld",
     "-Clink-arg=--sysroot=" + rebase_path(rust_sysroot_dir, root_build_dir),
-    "-Clink-arg=-L" + clang_resource_dir + "/" + rust_target + "/lib",
+
+    # These could alternatively come from clang's '--print-search-dirs', but that would require an
+    # exec_script and post-processing of the output or a JSON file generated during the toolchain
+    # build.
+    "-Clink-arg=-L" + rebased_clang_prefix + "/../lib/" + current_target_tuple,
+    "-Clink-arg=-L" + clang_resource_dir + "/lib/" + current_target_tuple,
     "-Clink-arg=--pack-dyn-relocs=relr",
     "-Clink-arg=-dynamic-linker=ld.so.1",
     "-Clink-arg=--icf=all",
@@ -176,6 +182,11 @@ config("no_cpp_standard_library") {
 
 config("static_cpp_standard_library") {
   ldflags = [ "-static-libstdc++" ]
+
+  # -static-libstdc++ is only supported by the compiler drivers (clang/clang++), whereas these
+  # link-args get passed straight to lld by rustc
+  rustflags =
+      [ "-Clink-args=--push-state -Bstatic -lc++ -Bdynamic -lm --pop-state" ]
 }
 
 config("dynamic_rust_standard_library") {
