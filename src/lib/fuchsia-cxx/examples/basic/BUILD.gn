@@ -1,0 +1,118 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
+import("//src/lib/fuchsia-cxx/rust_cxx_ffi_library.gni")
+
+# The 'rust_cxx_ffi_library' template is the core of using cxx on Fuchsia. It generates C++ sources
+# as needed from the specified `bridge_sources`, defines a Rust library target, and produces a final
+# `source_set` target that includes this Rust library and any additional `cpp_sources` provided.
+#
+# As demonstrated below, other Rust or C++ targets can depend directly on a `rust_cxx_ffi_library`
+# target to make use of it.
+#
+# See rust_cxx_ffi_library.gni for more information.
+rust_cxx_ffi_library("example_blobstore") {
+  rust_source_root = "src/lib.rs"
+  rust_sources = [ "src/lib.rs" ]
+
+  # This should include the subset of rust_sources that include a #[cxx::bridge] module.
+  bridge_sources = [ "src/lib.rs" ]
+
+  cpp_sources = [
+    "blobstore.h",
+    "src/blobstore.cc",
+  ]
+}
+
+cpp_binary = "cxx_basic_example_cpp_binary"
+executable("cpp_binary") {
+  output_name = cpp_binary
+  sources = [ "main.cc" ]
+  deps = [ ":example_blobstore" ]
+}
+
+rust_binary = "cxx_basic_example_rust_binary"
+rustc_binary("rust_binary") {
+  output_name = rust_binary
+  source_root = "main.rs"
+  sources = [ "main.rs" ]
+  deps = [ ":example_blobstore" ]
+}
+
+# Unit tests that accompany the Rust sources used in the rust_cxx_ffi_library() target above can be
+# built simply using a rustc_test() target.
+rustc_test("example_blobstore_test_bin") {
+  name = "example_blobstore_test"
+  sources = [ "src/lib.rs" ]
+  deps = [
+    ":example_blobstore",
+    "//third_party/rust_crates:cxx",
+  ]
+}
+
+fuchsia_unittest_package("example_blobstore_test") {
+  deps = [ ":example_blobstore_test_bin" ]
+}
+
+# The rest of this is to test the example and prevent bitrot, not part of general cxx usage.
+#
+# The test below runs on both host and target, which also serves to test cxx usage on both since the
+# toolchains and build configs differ significantly.
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":cxx_basic_example_test",
+    ":cxx_basic_example_test($host_toolchain)",
+    ":example_blobstore_test",
+  ]
+}
+
+rustc_binary("run_and_compare_output") {
+  source_root = "run_and_compare_output.rs"
+  sources = [ source_root ]
+}
+
+if (current_toolchain == host_toolchain) {
+  cpp_binary_target = ":cpp_binary($host_toolchain)"
+  rust_binary_target = ":rust_binary($host_toolchain)"
+  test_data_dir = "$root_out_dir/test_data/cxx_basic_example_test_data"
+
+  host_test_data("cxx_basic_example_test_data") {
+    sources = [
+      get_label_info(cpp_binary_target, "root_out_dir") + "/" + cpp_binary,
+      get_label_info(rust_binary_target, "root_out_dir") + "/" + rust_binary,
+    ]
+    outputs = [ "$test_data_dir/{{source_file_part}}" ]
+    deps = [
+      cpp_binary_target,
+      rust_binary_target,
+    ]
+  }
+
+  host_test("cxx_basic_example_test") {
+    binary_path = "$root_out_dir/run_and_compare_output"
+    args = [
+      rebase_path("$test_data_dir/" + cpp_binary, root_build_dir),
+      rebase_path("$test_data_dir/" + rust_binary, root_build_dir),
+    ]
+    deps = [
+      ":cxx_basic_example_test_data",
+      ":run_and_compare_output",
+    ]
+  }
+} else {
+  fuchsia_unittest_package("cxx_basic_example_test") {
+    manifest = "meta/cxx_basic_example_test.cml"
+    deps = [
+      ":cpp_binary",
+      ":run_and_compare_output",
+      ":rust_binary",
+    ]
+  }
+}

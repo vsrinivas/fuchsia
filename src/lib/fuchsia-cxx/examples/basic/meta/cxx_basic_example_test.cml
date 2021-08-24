@@ -1,0 +1,18 @@
+{
+    include: [
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/run_and_compare_output",
+        args: [
+            "/pkg/bin/cxx_basic_example_cpp_binary",
+            "/pkg/bin/cxx_basic_example_rust_binary",
+        ],
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+}

@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("tests") {
+  testonly = true
+  deps = [ "examples/basic:tests" ]
+}
+
 # Included automatically by rust_cxx_ffi_library.gni targets
 source_set("cxx_lib") {
   # This visibility list exists so that we can review new usages of cxx to build Rust/C++ FFIs as
@@ -14,7 +19,7 @@ source_set("cxx_lib") {
   # It is recommended that you read https://docs.rs/cxx first to understand how cxx works, and to
   # understand what cxx does (and does not) do. All C++ code is still "unsafe" from the Rust
   # perspective; cxx just helps with building the Rust side of the FFI layer safely.
-  visibility = []
+  visibility = [ "examples/*" ]
 
   cxx_crate = "//third_party/rust_crates/vendor/cxx"
   sources = [
@@ -22,4 +27,9 @@ source_set("cxx_lib") {
     "$cxx_crate/src/cxx.cc",
   ]
   defines = [ "RUST_CXX_NO_EXCEPTIONS" ]
+
+  # Ensure that we static link the C++ stdlib even in Rust targets that include this (hence public_)
+  if (current_os == "fuchsia") {
+    public_configs = [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  }
 }
