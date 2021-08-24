@@ -11,6 +11,7 @@ use {
     fuchsia_zircon as zx,
     futures::{lock::Mutex, TryStreamExt},
     lazy_static::lazy_static,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::Arc,
 };
 
@@ -25,11 +26,16 @@ lazy_static! {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ComponentCrashInfo {
     pub url: String,
+    pub moniker: AbsoluteMoniker,
 }
 
 impl Into<fsys::ComponentCrashInfo> for ComponentCrashInfo {
     fn into(self) -> fsys::ComponentCrashInfo {
-        fsys::ComponentCrashInfo { url: Some(self.url), ..fsys::ComponentCrashInfo::EMPTY }
+        fsys::ComponentCrashInfo {
+            url: Some(self.url),
+            moniker: Some(self.moniker.to_string_without_instances()),
+            ..fsys::ComponentCrashInfo::EMPTY
+        }
     }
 }
 
@@ -160,7 +166,8 @@ mod tests {
         let koid_raw = 123;
         let koid = zx::Koid::from_raw(koid_raw);
         let url = "456".to_string();
-        let crash_report = ComponentCrashInfo { url: url.clone() };
+        let moniker = AbsoluteMoniker::from(vec!["a:0"]);
+        let crash_report = ComponentCrashInfo { url: url.clone(), moniker: moniker.clone() };
 
         assert_eq!(
             Err(fcomponent::Error::ResourceNotFound),
@@ -173,6 +180,7 @@ mod tests {
         assert_eq!(
             Ok(fsys::ComponentCrashInfo {
                 url: Some(url.clone()),
+                moniker: Some(moniker.to_string_without_instances()),
                 ..fsys::ComponentCrashInfo::EMPTY
             }),
             crash_records_proxy.find_component_by_thread_koid(koid_raw).await?,

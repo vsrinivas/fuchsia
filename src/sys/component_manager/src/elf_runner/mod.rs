@@ -42,6 +42,7 @@ use {
     },
     futures::channel::oneshot,
     log::warn,
+    moniker::AbsoluteMoniker,
     runner::component::ChannelEpitaph,
     std::convert::TryFrom,
     std::{convert::TryInto, path::Path, sync::Arc},
@@ -283,8 +284,14 @@ impl ElfRunner {
 
         let url = resolved_url.clone();
         let main_process_critical = program_config.has_critical_main_process();
-        let res: Result<Option<ElfComponent>, ElfRunnerError> =
-            self.start_component_helper(start_info, resolved_url, program_config).await;
+        let res: Result<Option<ElfComponent>, ElfRunnerError> = self
+            .start_component_helper(
+                start_info,
+                checker.get_scope().clone(),
+                resolved_url,
+                program_config,
+            )
+            .await;
         match res {
             Err(e) if main_process_critical => {
                 panic!("failed to launch component with a critical process ({:?}): {:?}", url, e)
@@ -296,6 +303,7 @@ impl ElfRunner {
     async fn start_component_helper(
         &self,
         start_info: fcrunner::ComponentStartInfo,
+        moniker: AbsoluteMoniker,
         resolved_url: String,
         program_config: ElfProgramConfig,
     ) -> Result<Option<ElfComponent>, ElfRunnerError> {
@@ -311,6 +319,7 @@ impl ElfRunner {
 
         crash_handler::run_exceptions_server(
             &component_job,
+            moniker,
             resolved_url.clone(),
             self.crash_records.clone(),
         )

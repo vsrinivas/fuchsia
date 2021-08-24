@@ -72,6 +72,7 @@ async fn crashed_component_generates_a_record() -> Result<(), Error> {
             "fuchsia-pkg://fuchsia.com/crash-introspect-test#meta/report_then_panic_on_start.cm"
                 .to_string(),
         ),
+        moniker: Some("/report_then_panic_on_start".to_string()),
         ..fsys::ComponentCrashInfo::EMPTY
     };
     let (success_sender, mut success_receiver) = mpsc::channel(1);

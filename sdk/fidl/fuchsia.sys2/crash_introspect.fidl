@@ -11,6 +11,7 @@ using zx;
 /// Information stored when a thread crashes.
 type ComponentCrashInfo = table {
     1: url string:fuchsia.component.types.MAX_URL_LENGTH;
+    2: moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
 };
 
 /// When a thread from a component using the ELF runner crashes, the thread

@@ -344,6 +344,10 @@ impl ScopedPolicyChecker {
         ScopedPolicyChecker { config, moniker }
     }
 
+    pub fn get_scope(&self) -> &AbsoluteMoniker {
+        &self.moniker
+    }
+
     // This interface is super simple for now since there's only three allowlists. In the future
     // we'll probably want a different interface than an individual function per policy item.
 

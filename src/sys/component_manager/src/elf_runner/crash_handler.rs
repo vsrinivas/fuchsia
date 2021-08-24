@@ -9,6 +9,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::TryStreamExt,
     log::error,
+    moniker::AbsoluteMoniker,
     task_exceptions,
 };
 
@@ -17,6 +18,7 @@ use {
 // handler. No actual handling of the crash occurs here, we merely save some data on it.
 pub fn run_exceptions_server(
     component_job: &zx::Job,
+    moniker: AbsoluteMoniker,
     resolved_url: String,
     crash_records: CrashRecords,
 ) -> Result<(), Error> {
@@ -26,8 +28,13 @@ pub fn run_exceptions_server(
         loop {
             match task_exceptions_stream.try_next().await {
                 Ok(Some(exception_info)) => {
-                    if let Err(e) =
-                        record_exception(resolved_url.clone(), exception_info, &crash_records).await
+                    if let Err(e) = record_exception(
+                        resolved_url.clone(),
+                        moniker.clone(),
+                        exception_info,
+                        &crash_records,
+                    )
+                    .await
                     {
                         error!("failed to handle exception ({}): {:?}", resolved_url, e);
                     }
@@ -49,13 +56,14 @@ pub fn run_exceptions_server(
 
 async fn record_exception(
     resolved_url: String,
+    moniker: AbsoluteMoniker,
     exception_info: task_exceptions::ExceptionInfo,
     crash_records: &CrashRecords,
 ) -> Result<(), Error> {
     // An exception has occurred, record information about the crash so that it may be retrieved
     // later.
     let thread_koid = exception_info.thread.get_koid()?;
-    crash_records.add_report(thread_koid, ComponentCrashInfo { url: resolved_url }).await;
+    crash_records.add_report(thread_koid, ComponentCrashInfo { url: resolved_url, moniker }).await;
 
     // We've stored all the information we need, so mark the exception handle such that the next
     // exception handler should be attempted.
@@ -86,11 +94,12 @@ mod tests {
     async fn crash_test() -> Result<(), Error> {
         let crash_records = CrashRecords::new();
         let url = "example://component#url".to_string();
+        let moniker = AbsoluteMoniker::from(vec!["a:0"]);
 
         let child_job =
             fruntime::job_default().create_child_job().context("failed to create child job")?;
 
-        run_exceptions_server(&child_job, url.clone(), crash_records.clone())?;
+        run_exceptions_server(&child_job, moniker.clone(), url.clone(), crash_records.clone())?;
 
         // Connect to the process launcher
         let launcher_proxy = fclient::connect_to_protocol::<fprocess::LauncherMarker>()?;
@@ -156,7 +165,7 @@ mod tests {
             .take_report(&thread_koid)
             .await
             .expect("crash_records is missing crash information");
-        assert_eq!(ComponentCrashInfo { url: url.clone() }, crash_info);
+        assert_eq!(ComponentCrashInfo { url, moniker }, crash_info);
         Ok(())
     }
 }
