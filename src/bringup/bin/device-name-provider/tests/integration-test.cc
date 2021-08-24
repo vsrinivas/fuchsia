@@ -4,14 +4,13 @@
 
 // These tests should run without any network interface (except loopback).
 
-#include <arpa/inet.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <lib/sys/cpp/service_directory.h>
-#include <limits.h>
+#include <lib/service/llcpp/service.h>
 #include <sys/utsname.h>
-#include <zircon/status.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/predicates/status.h"
 
 namespace {
 
@@ -28,26 +27,22 @@ TEST(NameProviderTest, UnameDefault) {
 }
 
 TEST(NameProviderTest, GetDeviceName) {
-  zx::channel c0, c1;
-  zx_status_t status;
+  zx::status client_end = service::Connect<fuchsia_device::NameProvider>();
+  ASSERT_OK(client_end.status_value());
 
-  ASSERT_EQ(status = zx::channel::create(0, &c0, &c1), ZX_OK) << zx_status_get_string(status);
-  ASSERT_EQ(status = sys::ServiceDirectory::CreateFromNamespace()->Connect(
-                fidl::DiscoverableProtocolName<fuchsia_device::NameProvider>, std::move(c1)),
-            ZX_OK)
-      << zx_status_get_string(status);
-
-  fidl::WireSyncClient<fuchsia_device::NameProvider> name_provider(std::move(c0));
-  auto response = name_provider.GetDeviceName();
-  ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
-  auto result = std::move(response.Unwrap()->result);
-
-  ASSERT_TRUE(!result.is_err()) << zx_status_get_string(result.err());
-  auto& name = result.response().name;
-
-  // regression test: ensure that no additional data is present past the last null byte
-  EXPECT_EQ(name.size(), strlen(fuchsia_device::wire::kDefaultDeviceName));
-  EXPECT_EQ(memcmp(name.data(), fuchsia_device::wire::kDefaultDeviceName, name.size()), 0);
+  fidl::WireResult response = fidl::WireCall(client_end.value()).GetDeviceName();
+  ASSERT_OK(response.status());
+  fuchsia_device::wire::NameProviderGetDeviceNameResult& result = response.value().result;
+  switch (result.which()) {
+    case fuchsia_device::wire::NameProviderGetDeviceNameResult::Tag::kErr:
+      FAIL() << zx_status_get_string(result.err());
+    case fuchsia_device::wire::NameProviderGetDeviceNameResult::Tag::kResponse: {
+      const fidl::StringView& name = result.response().name;
+      // regression test: ensure that no additional data is present past the last null byte
+      EXPECT_EQ(name.size(), strlen(fuchsia_device::wire::kDefaultDeviceName));
+      EXPECT_EQ(memcmp(name.data(), fuchsia_device::wire::kDefaultDeviceName, name.size()), 0);
+    }
+  }
 }
 
 }  // namespace

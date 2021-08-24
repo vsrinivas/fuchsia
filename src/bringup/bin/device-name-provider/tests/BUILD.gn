@@ -9,23 +9,14 @@ test("device-name-provider-test") {
   sources = [ "args-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/lib/fdio",
     "//src/bringup/bin/device-name-provider:args",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_component("device-name-provider-test-component") {
@@ -47,14 +38,10 @@ test("integration-test") {
 
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_component("integration-test-component") {

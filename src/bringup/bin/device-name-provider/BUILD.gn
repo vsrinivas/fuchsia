@@ -26,14 +26,9 @@ source_set("args") {
   sources = [ "args.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/lib/fdio",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("device-name-provider") {
@@ -59,11 +54,6 @@ executable("device-name-provider") {
     "//zircon/system/ulib/inet6:netifc-discover",
     "//zircon/system/ulib/svc",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 # This component only exists to be included in the integration tests.

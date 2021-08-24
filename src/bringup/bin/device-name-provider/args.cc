@@ -5,7 +5,7 @@
 #include "args.h"
 
 #include <fuchsia/boot/llcpp/fidl.h>
-#include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <stdlib.h>
 
 #include <cstring>
@@ -37,35 +37,26 @@ uint32_t NamegenParse(const std::string& str) {
 
 }  // namespace
 
-int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** error,
-              DeviceNameProviderArgs* out) {
+int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
+              const char** error, DeviceNameProviderArgs* out) {
   // Reset the args.
   *out = DeviceNameProviderArgs();
 
   // First parse from kernel args, then use use cmdline args as overrides.
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    *error = "netsvc: unable to create channel";
-    return -1;
-  }
-
-  status = fdio_service_connect_at(
-      svc_root.get(), fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>, remote.release());
-  if (status != ZX_OK) {
+  zx::status client_end = service::ConnectAt<fuchsia_boot::Arguments>(svc_root);
+  if (client_end.is_error()) {
     *error = "netsvc: unable to connect to fuchsia.boot.Arguments";
     return -1;
   }
 
-  fidl::WireSyncClient<fuchsia_boot::Arguments> client(std::move(local));
   fidl::StringView string_keys[]{
       fidl::StringView{"netsvc.interface"},
       fidl::StringView{"zircon.nodename"},
       fidl::StringView{"zircon.namegen"},
   };
   std::string namegen_str("");
-  auto string_resp =
-      client.GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
+  auto string_resp = fidl::WireCall(client_end.value())
+                         .GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
   if (string_resp.ok()) {
     auto& values = string_resp->values;
     out->interface = std::string{values[0].data(), values[0].size()};

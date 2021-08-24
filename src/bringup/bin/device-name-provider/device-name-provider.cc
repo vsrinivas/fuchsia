@@ -6,21 +6,15 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/svc/outgoing.h>
 #include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <threads.h>
-#include <zircon/process.h>
 #include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/time.h>
 
 #include <cerrno>
 
@@ -28,9 +22,7 @@
 
 #include "args.h"
 #include "name_tokens.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 // Copies a word from the wordlist starting at |dest| and then adds |sep| at the end.
 // Returns a pointer to the character after the separator.
@@ -109,7 +101,7 @@ int main(int argc, char** argv) {
 
   DeviceNameProviderArgs args;
   const char* errmsg = nullptr;
-  int err = ParseArgs(argc, argv, *caller.channel(), &errmsg, &args);
+  int err = ParseArgs(argc, argv, caller.borrow_as<fuchsia_io::Directory>(), &errmsg, &args);
   if (err) {
     printf("device-name-provider: FATAL: ParseArgs(_) = %d; %s\n", err, errmsg);
     return err;
@@ -153,15 +145,16 @@ int main(int argc, char** argv) {
 
   outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<fuchsia_device::NameProvider>,
-      fbl::MakeRefCounted<fs::Service>([dispatcher, server](zx::channel svc_request) mutable {
-        zx_status_t status =
-            fidl::BindSingleInFlightOnly(dispatcher, std::move(svc_request), &server);
-        if (status != ZX_OK) {
-          printf("device-name-provider: fidl::BindSingleInFlightOnly(_) = %s\n",
-                 zx_status_get_string(status));
-        }
-        return status;
-      }));
+      fbl::MakeRefCounted<fs::Service>(
+          [dispatcher, server](fidl::ServerEnd<fuchsia_device::NameProvider> server_end) mutable {
+            zx_status_t status =
+                fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), &server);
+            if (status != ZX_OK) {
+              printf("device-name-provider: fidl::BindSingleInFlightOnly(_) = %s\n",
+                     zx_status_get_string(status));
+            }
+            return status;
+          }));
 
   status = loop.Run();
   printf("device-name-provider: loop.Run() = %s\n", zx_status_get_string(status));
