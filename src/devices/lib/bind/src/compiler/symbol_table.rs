@@ -283,6 +283,12 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     // PWM binding variables at 0x0A5X
     keys.push(("BIND_PWM_ID".to_string(), 0x0A50));
 
+    // PWM binding variables at 0x0A6X
+    keys.push(("BIND_INIT_STEP".to_string(), 0x0A60));
+
+    // PWM binding variables at 0x0A7X
+    keys.push(("BIND_CODEC_INSTANCE".to_string(), 0x0A70));
+
     // Registers binding variables at 0x0A8X
     keys.push(("BIND_REGISTER_ID".to_string(), 0x0A80));
 

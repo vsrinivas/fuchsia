@@ -30,11 +30,46 @@ driver_bind_rules("astro-backlight-bind") {
   rules = "bind/astro-backlight.bind"
   header_output = "astro-backlight-bind.h"
   bind_output = "astro-backlight.bindbc"
-  tests = "backlight-bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.ti.platform",
+  ]
+}
+
+driver_bind_rules("astro-bluetooth-bind") {
+  rules = "bind/astro-bluetooth.bind"
+  header_output = "astro-bluetooth-bind.h"
+  bind_output = "astro-bluetooth.bindbc"
+  tests = "bluetooth-bind-tests.json"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("astro-buttons-bind") {
+  rules = "bind/astro-buttons.bind"
+  header_output = "astro-buttons-bind.h"
+  bind_output = "astro-buttons-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
+driver_bind_rules("astro-display-bind") {
+  rules = "bind/astro-display.bind"
+  header_output = "astro-display-bind.h"
+  bind_output = "astro-display-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.dsi",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
   ]
 }
 
@@ -110,6 +145,9 @@ driver_module("astro-driver") {
   deps = [
     ":astro-backlight-bind_header",
     ":astro-bind",
+    ":astro-bluetooth-bind_header",
+    ":astro-buttons-bind_header",
+    ":astro-display-bind_header",
     ":astro-pwm-bind_header",
     ":astro-securemem-bind_header",
     ":astro-tee-bind_header",

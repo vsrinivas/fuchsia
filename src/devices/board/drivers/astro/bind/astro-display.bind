@@ -1,0 +1,37 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite display;
+
+using fuchsia.dsi;
+using fuchsia.gpio;
+using fuchsia.platform;
+using fuchsia.sysmem;
+using amlogic.platform;
+using amlogic.platform.s905d2;
+
+primary node "dsi" {
+  fuchsia.BIND_PROTOCOL == fuchsia.dsi.BIND_PROTOCOL.IMPL;
+}
+
+node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+    fuchsia.BIND_PLATFORM_DEV_PID == amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2;
+    fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.DISPLAY;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "gpio" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == amlogic.platform.s905d2.GPIOH_PIN_ID.PIN_6; //GPIO_LCD_RESET;
+}
+
+node "sysmem" {
+  fuchsia.BIND_PROTOCOL == fuchsia.sysmem.BIND_PROTOCOL.DEVICE;
+}
+
+node "canvas" {
+  fuchsia.BIND_PROTOCOL == amlogic.platform.BIND_PROTOCOL.CANVAS;
+}

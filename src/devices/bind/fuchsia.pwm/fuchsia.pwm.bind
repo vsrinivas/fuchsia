@@ -8,3 +8,7 @@ extend uint fuchsia.BIND_PROTOCOL {
   PWM = 127,
   PWM_IMPL = 128,
 };
+
+extend uint fuchsia.BIND_INIT_STEP {
+  PWM = 0x004D5750,
+};
