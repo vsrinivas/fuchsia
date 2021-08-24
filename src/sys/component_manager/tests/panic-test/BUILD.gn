@@ -11,6 +11,7 @@ rustc_test("component_manager_panic_test_bin") {
   edition = "2018"
   source_root = "component_manager_panic.rs"
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",

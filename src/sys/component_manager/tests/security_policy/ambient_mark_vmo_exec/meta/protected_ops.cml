@@ -13,5 +13,9 @@
             protocol: "test.policy.ProtectedOperations",
             from: "self",
         },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
     ],
 }

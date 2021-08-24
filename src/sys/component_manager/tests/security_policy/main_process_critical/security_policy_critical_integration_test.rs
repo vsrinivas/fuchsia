@@ -6,11 +6,11 @@ use {
     anyhow::{Context, Error},
     component_events::{events::*, matcher::*},
     fidl::endpoints::Proxy,
-    fidl_test_policy as ftest, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_test_policy as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
     futures::future::{select, Either},
-    security_policy_test_util::{bind_child, start_policy_test},
+    security_policy_test_util::{open_exposed_dir, start_policy_test},
 };
 
 const COMPONENT_MANAGER_URL: &str = "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/component_manager.cmx";
@@ -26,7 +26,7 @@ async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_not_requested";
-    let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
+    let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let exit_controller =
         client::connect_to_protocol_at_dir_root::<ftest::ExitControllerMarker>(&exposed_dir)
             .context("failed to connect to test service after bind")?;
@@ -63,7 +63,7 @@ async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_allowed";
-    let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
+    let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let exit_controller =
         client::connect_to_protocol_at_dir_root::<ftest::ExitControllerMarker>(&exposed_dir)
             .context("failed to connect to test service after bind")?;
@@ -102,7 +102,7 @@ async fn verify_main_process_critical_allowed() -> Result<(), Error> {
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_allowed";
-    let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
+    let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let exit_controller =
         client::connect_to_protocol_at_dir_root::<ftest::ExitControllerMarker>(&exposed_dir)
             .context("failed to connect to test service after bind")?;
@@ -128,7 +128,10 @@ async fn verify_main_process_critical_denied() -> Result<(), Error> {
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_denied";
-    let _ = bind_child(&realm, child_name).await.expect("bind should succeed");
+    let exposed_dir =
+        open_exposed_dir(&realm, child_name).await.expect("open exposed dir should succeed");
+    client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
+        .context("failed to connect to fuchsia.component.Binder of child")?;
 
     let mut matcher = EventMatcher::ok().moniker(format!("./{}:0", child_name));
     matcher.expect_match::<Started>(&mut event_stream).await;

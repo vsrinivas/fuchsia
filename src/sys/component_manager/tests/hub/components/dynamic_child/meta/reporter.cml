@@ -23,6 +23,11 @@
             path: "/hub",
         },
         {
+            event: [ "started" ],
+            from: "framework",
+            modes: [ "async" ],
+        },
+        {
             event: [
                 "destroyed",
                 "purged",
@@ -45,6 +50,10 @@
                 {
                     event: "stopped",
                     mode: "sync",
+                },
+                {
+                    event: "started",
+                    mode: "async",
                 },
             ],
         },

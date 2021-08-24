@@ -90,6 +90,7 @@ rustc_binary("resolved_error_reporter_bin") {
   testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -187,6 +188,7 @@ rustc_binary("realm_offered_nested") {
   testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",

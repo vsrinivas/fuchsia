@@ -4,4 +4,10 @@
         runner: "elf",
         binary: "bin/only_exits",
     },
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

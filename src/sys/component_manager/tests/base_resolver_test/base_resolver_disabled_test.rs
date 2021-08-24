@@ -25,7 +25,10 @@ async fn base_resolver_disabled_test() {
 
     // Subscribe to events and begin execution of component manager
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(
+            vec![Started::NAME, Resolved::NAME],
+            EventMode::Async,
+        )])
         .await
         .unwrap();
 
@@ -33,8 +36,11 @@ async fn base_resolver_disabled_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
+    let _ = EventMatcher::ok().moniker(".").wait::<Started>(&mut event_stream).await.unwrap();
 
     // // Expect start failure for echo_server because we shouldn't resolve the component
-    EventMatcher::err().moniker("./echo_server:0").expect_match::<Started>(&mut event_stream).await;
+    EventMatcher::err()
+        .moniker("./echo_server:0")
+        .expect_match::<Resolved>(&mut event_stream)
+        .await;
 }

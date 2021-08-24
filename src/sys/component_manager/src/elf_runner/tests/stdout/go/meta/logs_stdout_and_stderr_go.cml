@@ -6,4 +6,10 @@
         forward_stderr_to: "log",
         forward_stdout_to: "log",
     },
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

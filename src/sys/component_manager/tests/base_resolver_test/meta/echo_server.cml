@@ -14,5 +14,9 @@
             protocol: "fidl.examples.routing.echo.Echo",
             from: "self",
         },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
     ],
 }

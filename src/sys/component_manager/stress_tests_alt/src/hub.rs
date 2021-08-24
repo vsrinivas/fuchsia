@@ -5,7 +5,7 @@
 use {
     anyhow::{bail, Context, Result},
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker},
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
@@ -104,15 +104,22 @@ impl Hub {
         let mut child_ref =
             fsys::ChildRef { name: name.clone(), collection: Some(COLLECTION_NAME.to_string()) };
 
-        let (_proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+        let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
         let result = parent_realm_svc
-            .bind_child(&mut child_ref, server_end)
+            .open_exposed_dir(&mut child_ref, server_end)
             .await
-            .context("Could not send FIDL request to bind to child component")?;
+            .context("Could not send FIDL request to open exposed dir of child component")?;
 
         if let Err(e) = result {
-            bail!("Could not bind to child component: {:?}", e);
+            bail!("Could not open exposed dir of child component: {:?}", e);
+        }
+
+        if let Err(e) = fuchsia_component::client::connect_to_protocol_at_dir_root::<
+            fcomponent::BinderMarker,
+        >(&exposed_dir)
+        {
+            bail!("Could not connect to fuchsia.component.Binder: {:?}", e);
         }
 
         Ok(())

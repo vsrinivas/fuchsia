@@ -6,7 +6,8 @@ use {
     component_events::{events::*, matcher::*},
     diagnostics_data::{Data, Logs, Severity},
     diagnostics_reader::{ArchiveReader, SubscriptionResultsStream},
-    fidl::endpoints::create_endpoints,
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::Task,
@@ -168,12 +169,15 @@ async fn start_child_component(realm: &fsys::RealmProxy, component: &Component) 
         collection: Some(COLLECTION_NAME.to_owned()),
     };
 
-    let (_, server_end) = create_endpoints::<DirectoryMarker>().unwrap();
+    let (exposed_dir, server_end) = create_proxy::<DirectoryMarker>().unwrap();
     realm
-        .bind_child(&mut child_ref, server_end)
+        .open_exposed_dir(&mut child_ref, server_end)
         .await
         .expect("failed to make FIDL call")
         .expect("failed to bind child");
+
+    let _ =
+        client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).unwrap();
 }
 
 async fn wait_for_stop(event_stream: &mut EventStream, component: &Component) {

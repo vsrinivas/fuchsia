@@ -5,7 +5,8 @@
 use {
     component_events::{events::*, matcher::*},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
 };
 
@@ -37,9 +38,13 @@ async fn main() {
         name: "storage_user".to_string(),
         collection: Some("coll_bad_route".to_string()),
     };
-    let (_, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+    let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
-    realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
+    realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
+    let _ = fuchsia_component::client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(
+        &exposed_dir,
+    )
+    .expect("failed to connect to fuchsia.component.Binder");
 
     let source = EventSource::new().unwrap();
     let mut event_stream = source.take_static_event_stream("TestEventStream").await.unwrap();

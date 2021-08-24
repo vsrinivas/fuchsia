@@ -10,4 +10,10 @@
             url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
         },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

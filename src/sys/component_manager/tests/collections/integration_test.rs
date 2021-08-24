@@ -50,10 +50,10 @@ async fn collections() {
         let mut child_ref = new_child_ref(name, "coll");
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         realm
-            .bind_child(&mut child_ref, server_end)
+            .open_exposed_dir(&mut child_ref, server_end)
             .await
-            .expect(&format!("bind_child {} failed", name))
-            .expect(&format!("failed to bind to child {}", name));
+            .expect(&format!("open_exposed_dir {} failed", name))
+            .expect(&format!("failed to open exposed dir of child {}", name));
         let trigger = open_trigger_svc(&dir).expect("failed to open trigger service");
         let out = trigger.run().await.expect(&format!("trigger {} failed", name));
         assert_eq!(out, format!("Triggered {}", name));
@@ -73,9 +73,11 @@ async fn collections() {
     {
         let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let mut child_ref = new_child_ref("a", "coll");
-        let res =
-            realm.bind_child(&mut child_ref, server_end).await.expect("second bind_child a failed");
-        let err = res.expect_err("expected bind_child a to fail");
+        let res = realm
+            .open_exposed_dir(&mut child_ref, server_end)
+            .await
+            .expect("second open_exposed_dir a failed");
+        let err = res.expect_err("expected open_exposed_dir a to fail");
         assert_eq!(err, fcomponent::Error::InstanceNotFound);
     }
 
@@ -107,10 +109,10 @@ async fn collections() {
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let mut child_ref = new_child_ref("a", "coll");
         realm
-            .bind_child(&mut child_ref, server_end)
+            .open_exposed_dir(&mut child_ref, server_end)
             .await
-            .expect("bind_child a failed")
-            .expect("failed to bind to child a");
+            .expect("open_exposed_dir a failed")
+            .expect("failed to open exposed dir of child a");
         let trigger = open_trigger_svc(&dir).expect("failed to open trigger service");
         let out = trigger.run().await.expect("second trigger a failed");
         assert_eq!(&out, "Triggered a");
@@ -150,7 +152,7 @@ async fn child_args() {
             .create_child(&mut collection_ref, child_decl, child_args)
             .await
             .expect(&format!("create_child {} failed", name));
-        let err = res.expect_err("expected bind_child a to fail");
+        let err = res.expect_err("expected create_child a to fail");
         assert_eq!(err, fcomponent::Error::Unsupported);
     }
     // Providing numbered handles to a component that is in a single run collection should succeed.

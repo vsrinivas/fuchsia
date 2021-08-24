@@ -22,4 +22,10 @@
     use: [
         { protocol: "fuchsia.sys.Loader" },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

@@ -7,8 +7,9 @@ use {
         events::{Event, EventMode, EventSource, EventSubscription, Resolved, Started},
         matcher::EventMatcher,
     },
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
+    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
     fuchsia_syslog as syslog,
 };
 
@@ -32,12 +33,15 @@ async fn main() {
     let realm = connect_to_protocol::<fsys::RealmMarker>().unwrap();
     let mut child_ref = fsys::ChildRef { name: "child_a".to_string(), collection: None };
 
-    let (_, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-    let _ = realm.bind_child(&mut child_ref, server_end).await;
+    let (exposed_dir, server_end) =
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    let _ = realm
+        .open_exposed_dir(&mut child_ref, server_end)
+        .await
+        .expect("failed to open exposed dir");
+
+    // Attempt to start the child component should fail.
+    assert!(connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).is_err());
 
     let _resolved_event = EventMatcher::err().expect_match::<Resolved>(&mut event_stream).await;
-
-    // A started event should still be dispatched indicating failure due to a resolution
-    // error.
-    let _started_event = EventMatcher::err().expect_match::<Started>(&mut event_stream).await;
 }

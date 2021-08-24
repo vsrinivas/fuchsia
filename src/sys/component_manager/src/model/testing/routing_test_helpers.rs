@@ -31,8 +31,8 @@ use {
     fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
-        DirectoryProxy, FileEvent, FileMarker, FileProxy, NodeInfo, NodeMarker, Vmofile,
-        CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
+        DirectoryMarker, DirectoryProxy, FileEvent, FileMarker, FileProxy, NodeInfo, NodeMarker,
+        Vmofile, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_inspect as inspect, fuchsia_zircon as zx,
@@ -1361,12 +1361,11 @@ pub mod capability_util {
         .expect("failed to open realm service");
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
         let mut child_ref = fsys::ChildRef { name: "my_child".to_string(), collection: None };
-        let (_client_chan, server_chan) = zx::Channel::create().unwrap();
-        let exposed_capabilities = ServerEnd::new(server_chan);
-        let res = realm_proxy.bind_child(&mut child_ref, exposed_capabilities).await;
-
-        // Check for side effects: realm service should have received the `bind_child` call.
+        let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let res = realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
+        // Check for side effects: realm service should have received the `open_exposed_dir` call.
         let _ = res.expect("failed to use realm service");
+
         let bind_url =
             format!("test:///{}_resolved", bind_calls.lock().await.last().expect("no bind call"));
         assert_eq!(bind_url, resolved_url);

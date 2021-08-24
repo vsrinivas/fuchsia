@@ -52,10 +52,10 @@ async fn main() {
             fsys::ChildRef { name: "trigger".to_string(), collection: Some("coll".to_string()) };
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         realm
-            .bind_child(&mut child_ref, server_end)
+            .open_exposed_dir(&mut child_ref, server_end)
             .await
-            .expect(&format!("bind_child failed"))
-            .expect(&format!("failed to bind to child"));
+            .expect(&format!("open_exposed_dir failed"))
+            .expect(&format!("failed to open child exposed dir"));
         let trigger = open_trigger_svc(&dir).expect("failed to open trigger service");
         trigger.run().await.expect("trigger failed");
     }
@@ -105,10 +105,10 @@ async fn main() {
             fsys::ChildRef { name: "trigger".to_string(), collection: Some("coll".to_string()) };
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         realm
-            .bind_child(&mut child_ref, server_end)
+            .open_exposed_dir(&mut child_ref, server_end)
             .await
-            .expect(&format!("bind_child failed"))
-            .expect(&format!("failed to bind to child"));
+            .expect(&format!("open_exposed_dir failed"))
+            .expect(&format!("failed to open child exposed dir"));
         let trigger = open_trigger_svc(&dir).expect("failed to open trigger service");
         trigger.run().await.expect("trigger failed");
     }

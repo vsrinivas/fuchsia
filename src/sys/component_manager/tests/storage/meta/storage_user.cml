@@ -15,4 +15,10 @@
             path: "/memfs",
         },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

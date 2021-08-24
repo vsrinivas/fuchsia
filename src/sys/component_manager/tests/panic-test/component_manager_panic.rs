@@ -3,26 +3,31 @@
 // found in the LICENSE file.
 
 use {
-    component_events::events::*, component_events::matcher::*, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_component as fcomponent,
+    component_events::events::*, component_events::matcher::*,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync, fuchsia_component::client,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn test() {
     // Bind to the component manager component, causing it to start
-    let realm_svc = fcomponent::client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm_svc = client::connect_to_protocol::<fsys::RealmMarker>()
         .expect("Could not connect to Realm service");
     let mut child = fsys::ChildRef { name: "component_manager".to_string(), collection: None };
 
     // Create endpoints for the fuchsia.io.Directory protocol.
     // Component manager will connect us to the exposed directory of the component we bound to.
     // This isn't needed for this test, but we must do it anyway.
-    let (_, exposed_dir) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
+    let (exposed_dir, exposed_dir_server) =
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     realm_svc
-        .bind_child(&mut child, exposed_dir)
+        .open_exposed_dir(&mut child, exposed_dir_server)
         .await
-        .expect("Could not send bind_child command")
-        .expect("bind_child command did not succeed");
+        .expect("Could not send open_exposed_dir command")
+        .expect("open_exposed_dir command did not succeed");
+
+    let _ = client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
+        .expect("failed to connect to fuchsia.component.Binder");
 
     // Wait for the component manager to stop because of a panic
     let source = EventSource::new().expect("Could not connect to fuchsia.sys2.EventSource");

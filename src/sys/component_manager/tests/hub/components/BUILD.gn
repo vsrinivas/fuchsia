@@ -41,6 +41,7 @@ rustc_binary("dynamic_child_reporter_bin") {
   testonly = true
   deps = [
     ":hub_report_lib",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",

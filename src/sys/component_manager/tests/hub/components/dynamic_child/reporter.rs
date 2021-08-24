@@ -5,6 +5,7 @@
 use {
     component_events::{events::*, matcher::EventMatcher},
     fidl::endpoints,
+    fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -50,8 +51,18 @@ async fn main() {
         name: "simple_instance".to_string(),
         collection: Some("coll".to_string()),
     };
-    let (_dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-    realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
+    let (exposed_dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
+    let _ = fuchsia_component::client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(
+        &exposed_dir,
+    )
+    .expect("failed to connect to fuchsia.component.Binder");
+
+    let _ = EventMatcher::ok()
+        .moniker("./coll:simple_instance:1")
+        .wait::<Started>(&mut event_stream)
+        .await
+        .expect("failed to wait for simple_instance to start");
 
     expect_dir_listing(
         "/hub/children/coll:simple_instance",

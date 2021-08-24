@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     fidl::endpoints::*,
+    fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryRequest, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::*,
@@ -24,11 +25,14 @@ async fn main() -> Result<(), Error> {
     let startup_handle = ServerEnd::new(zx::Channel::from(startup_handle));
     FakePkgfs::new(startup_handle).expect("failed to serve fake pkgfs");
 
-    // Bind to the echo_server.
+    // Bind to the echo_server. Note, we deliberately ignore errors below because
+    // we don't want panic the component_manager under test before all events
+    // of interest are observed.
     let mut child_ref = fsys::ChildRef { name: "echo_server".to_string(), collection: None };
-    let (_dir_proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+    let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
     let realm_proxy = connect_to_protocol::<fsys::RealmMarker>()?;
-    realm_proxy.bind_child(&mut child_ref, server_end).await?.expect("could not bind to child");
+    let _ = realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
+    let _ = connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir);
 
     // Wait indefinitely
     fasync::futures::future::pending::<()>().await;

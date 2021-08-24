@@ -5,11 +5,11 @@
 use {
     anyhow::{Context, Error},
     component_events::{events::*, matcher::*},
-    fidl_test_policy as ftest, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_test_policy as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon::{self as zx, AsHandleRef},
     matches::assert_matches,
-    security_policy_test_util::{bind_child, start_policy_test},
+    security_policy_test_util::{open_exposed_dir, start_policy_test},
 };
 
 const CM_URL: &str =
@@ -24,7 +24,7 @@ async fn verify_ambient_vmex_default_denied() -> Result<(), Error> {
         start_policy_test(CM_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_not_requested";
-    let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
+    let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let ops =
         client::connect_to_protocol_at_dir_root::<ftest::ProtectedOperationsMarker>(&exposed_dir)
             .context("failed to connect to test service after bind")?;
@@ -42,7 +42,7 @@ async fn verify_ambient_vmex_allowed() -> Result<(), Error> {
         start_policy_test(CM_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_allowed";
-    let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
+    let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let ops =
         client::connect_to_protocol_at_dir_root::<ftest::ProtectedOperationsMarker>(&exposed_dir)
             .context("failed to connect to test service after bind")?;
@@ -74,7 +74,10 @@ async fn verify_ambient_vmex_denied() -> Result<(), Error> {
     // N.B. We could alternatively look for a Started and then a Stopped event to verify that the
     // component failed to launch, but fxbug.dev/53414 prevented that at the time this was written.
     let child_name = "policy_denied";
-    let _ = bind_child(&realm, child_name).await.expect("bind should succeed");
+    let exposed_dir =
+        open_exposed_dir(&realm, child_name).await.expect("open_exposed_dir should succeed");
+    client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
+        .context("failed to connect to fuchsia.component.Binder of child")?;
 
     let mut matcher = EventMatcher::ok().moniker(format!("./{}:0", child_name));
     matcher.expect_match::<Started>(&mut event_stream).await;

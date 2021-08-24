@@ -48,15 +48,15 @@ pub async fn start_policy_test(
     Ok((test, realm, event_stream))
 }
 
-pub async fn bind_child(
+pub async fn open_exposed_dir(
     realm: &fsys::RealmProxy,
     name: &str,
 ) -> Result<DirectoryProxy, fcomp::Error> {
     let mut child_ref = fsys::ChildRef { name: name.to_string(), collection: None };
     let (exposed_dir, server_end) = create_proxy().unwrap();
     realm
-        .bind_child(&mut child_ref, server_end)
+        .open_exposed_dir(&mut child_ref, server_end)
         .await
-        .expect("binding child failed")
+        .expect("open_exposed_dir failed")
         .map(|_| exposed_dir)
 }

@@ -127,17 +127,17 @@ async fn use_framework_service() {
 
     #[derive(Clone)]
     pub struct MockRealmCapabilityHost {
-        /// List of calls to `BindChild` with component's relative moniker.
-        bind_calls: Arc<Mutex<Vec<String>>>,
+        /// List of calls to `OpenExposedDir` with component's relative moniker.
+        open_calls: Arc<Mutex<Vec<String>>>,
     }
 
     impl MockRealmCapabilityHost {
         pub fn new() -> Self {
-            Self { bind_calls: Arc::new(Mutex::new(vec![])) }
+            Self { open_calls: Arc::new(Mutex::new(vec![])) }
         }
 
-        pub fn bind_calls(&self) -> Arc<Mutex<Vec<String>>> {
-            self.bind_calls.clone()
+        pub fn open_calls(&self) -> Arc<Mutex<Vec<String>>> {
+            self.open_calls.clone()
         }
 
         async fn serve(
@@ -147,8 +147,8 @@ async fn use_framework_service() {
         ) -> Result<(), Error> {
             while let Some(request) = stream.try_next().await? {
                 match request {
-                    fsys::RealmRequest::BindChild { responder, .. } => {
-                        self.bind_calls.lock().await.push(
+                    fsys::RealmRequest::OpenExposedDir { responder, .. } => {
+                        self.open_calls.lock().await.push(
                             scope_moniker
                                 .path()
                                 .last()
@@ -210,7 +210,7 @@ async fn use_framework_service() {
             Arc::downgrade(&realm_service_host) as Weak<dyn Hook>,
         )])
         .await;
-    test.check_use_realm(vec!["b:0"].into(), realm_service_host.bind_calls()).await;
+    test.check_use_realm(vec!["b:0"].into(), realm_service_host.open_calls()).await;
 }
 
 ///   a

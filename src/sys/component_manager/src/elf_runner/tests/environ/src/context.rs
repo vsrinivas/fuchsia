@@ -28,7 +28,6 @@ async fn run_context_service(stream: fet::ContextRequestStream) {
             match request {
                 fet::ContextRequest::GetEnviron { responder } => {
                     let mut environ: Vec<String> = vec![];
-                    println!("Env Vars: {:?}", env::vars());
                     for (key, value) in env::vars() {
                         environ.push(format!("{}={}", key, value));
                     }

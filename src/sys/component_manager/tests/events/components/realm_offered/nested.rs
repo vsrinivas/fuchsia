@@ -4,9 +4,12 @@
 
 use {
     anyhow::Error,
-    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
+    fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component::{
+        client::{connect_to_protocol, connect_to_protocol_at_dir_root},
+        server::ServiceFs,
+    },
     futures::{StreamExt, TryStreamExt},
 };
 
@@ -24,12 +27,16 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
         for id in &["a", "b", "c"] {
             let mut child_ref = fsys::ChildRef { name: format!("child_{}", id), collection: None };
 
-            let (_, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+            let (exposed_dir, server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             realm
-                .bind_child(&mut child_ref, server_end)
+                .open_exposed_dir(&mut child_ref, server_end)
                 .await
-                .expect("failed to bind child")
+                .expect("failed to open exposed dir")
                 .unwrap();
+
+            let _ = connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
+                .expect("failed to connect fuchsia.component.Binder");
         }
     }
 }
