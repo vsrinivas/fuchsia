@@ -248,24 +248,19 @@ void FsManager::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback) {
     return;
   }
 
-  auto callback_ptr = std::make_shared<fit::callback<void(zx_status_t)>>(std::move(callback));
-  auto res = driver_admin_->UnregisterSystemStorageForShutdown(
-      [callback_ptr](
-          fidl::WireResponse<
-              fuchsia_device_manager::Administrator::UnregisterSystemStorageForShutdown>* res) {
-        if (res->status != ZX_OK) {
+  using Unregister = fuchsia_device_manager::Administrator::UnregisterSystemStorageForShutdown;
+  driver_admin_->UnregisterSystemStorageForShutdown(
+      [callback = std::move(callback)](fidl::WireUnownedResult<Unregister>&& result) mutable {
+        if (!result.ok()) {
+          callback(result.status());
+          return;
+        }
+        if (result->status != ZX_OK) {
           FX_LOGS(ERROR) << "RemoveSystemDevices returned error: "
-                         << zx_status_get_string(res->status);
+                         << zx_status_get_string(result->status);
         }
-        if (*callback_ptr) {
-          (*callback_ptr)(res->status);
-        }
+        callback(result->status);
       });
-  if (res.status() != ZX_OK) {
-    if (*callback_ptr) {
-      (*callback_ptr)(res.status());
-    }
-  }
 }
 
 void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
