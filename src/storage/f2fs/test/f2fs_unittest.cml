@@ -1,0 +1,15 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/f2fs_unit",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+}

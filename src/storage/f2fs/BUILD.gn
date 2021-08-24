@@ -1,0 +1,130 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Please do not add more entries to this list. We plan to remove
+# abseil-cpp from the Fuchsia platform source tree once cobalt
+# moves out-of-tree.
+
+declare_args() {
+  # F2FS debug message
+  f2fs_bu_debug = false
+
+  # Enforce every allocation in a ssr manner [for test]
+  f2fs_force_ssr = true
+
+  # Enable f2fs_roll_forward
+  f2fs_roll_fwd = false
+}
+
+static_library("f2fs") {
+  friend = [ "test:*" ]
+  sources = [
+    "admin.cc",
+    "bcache.cc",
+    "checkpoint.cc",
+    "data.cc",
+    "dir.cc",
+    "dir_hash.cc",
+    "f2fs.cc",
+    "file.cc",
+    "fsck.cc",
+    "gc.cc",
+    "inline.cc",
+    "mkfs.cc",
+    "mount.cc",
+    "namei.cc",
+    "node.cc",
+    "query.cc",
+    "recovery.cc",
+    "segment.cc",
+    "super.cc",
+    "third_party/ext2_hash/hash.cc",
+    "third_party/ext2_hash/hash.h",
+    "vnode.cc",
+    "vnode_cache.cc",
+  ]
+
+  public = [
+    "admin.h",
+    "bcache.h",
+    "dir.h",
+    "f2fs.h",
+    "f2fs_internal.h",
+    "f2fs_layout.h",
+    "f2fs_lib.h",
+    "f2fs_types.h",
+    "file.h",
+    "fsck.h",
+    "mkfs.h",
+    "mount.h",
+    "node.h",
+    "node.h",
+    "query.h",
+    "segment.h",
+    "vnode.h",
+    "vnode_cache.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/fbl",
+
+    # bcache.h includes fs/transaction/device_transaction_handler.h & storage/buffer/...
+    "//src/lib/storage/vfs/cpp/transaction",
+    "//zircon/system/ulib/storage/buffer",
+
+    # bcache.h includes fuchsia/hardware/block/c/fidl.h.
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+
+    # fsck.h includes block-client/cpp/block-device.h
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/block-client",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/storage-metrics",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+  ]
+
+  defines = []
+
+  if (f2fs_bu_debug) {
+    defines += [ "F2FS_BU_DEBUG" ]
+  }
+
+  if (f2fs_force_ssr) {
+    defines += [ "F2FS_FORCE_SSR" ]
+  }
+
+  if (f2fs_roll_fwd) {
+    defines += [ "F2FS_ROLL_FORWARD" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "test:f2fs-fs-tests",
+    "test:f2fs-slow-fs-tests",
+    "test:f2fs-unittest",
+  ]
+}

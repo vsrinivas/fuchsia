@@ -1,0 +1,134 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
+import("//src/storage/fs_test/suite.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":f2fs-fs-tests",
+    ":f2fs-slow-fs-tests",
+    ":f2fs-unittest",
+  ]
+}
+
+test("f2fs_unit") {
+  sources = [
+    "unit/bcache.cc",
+    "unit/checkpoint.cc",
+    "unit/dir.cc",
+    "unit/file.cc",
+    "unit/inline.cc",
+    "unit/mkfs.cc",
+    "unit/mount.cc",
+    "unit/node.cc",
+    "unit/orphan.cc",
+    "unit/segment.cc",
+    "unit/unit_lib.cc",
+    "unit/vnode_cache.cc",
+  ]
+  public = [ "unit/unit_lib.h" ]
+  deps = [
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/chunked-compression",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//third_party/f2fs",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/safemath",
+    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/storage/operation",
+  ]
+}
+
+fuchsia_unittest_component("f2fs-unit") {
+  manifest = "f2fs_unittest.cml"
+  deps = [ ":f2fs_unit" ]
+}
+
+test("f2fs_query_service") {
+  output_name = "f2fs_query_service_test"
+
+  # We need some extra system flags that the _ALL_SOURCE define exposes.
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "unit/query_service_test.cc" ]
+  deps = [
+    ":f2fs_fs_test_config",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/fs_test:fs_test",
+    "//src/storage/lib/utils:topological_path",
+    "//third_party/f2fs",
+    "//third_party/f2fs/tools:f2fs",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("f2fs-query-service") {
+  deps = [ ":f2fs_query_service" ]
+}
+
+fuchsia_test_package("f2fs-unittest") {
+  deps = [
+    ":f2fs_query_service",
+    ":f2fs_unit",
+  ]
+  test_components = [
+    ":f2fs-unit",
+    ":f2fs-query-service",
+  ]
+}
+
+fs_test_config("f2fs") {
+  timestamp_granularity = 1
+  supports_hard_links = true
+  supports_resize = false
+  max_file_size = 4329690886144
+  is_journaled = false
+  supports_fsck_after_every_transaction = false
+
+  options = [
+    {
+      description = "F2fsWithoutFvm"
+      use_fvm = false
+      device_block_count = 2097152
+      device_block_size = 512
+    },
+  ]
+}
+
+fs_test_suite("f2fs") {
+  deps = [
+    ":f2fs_fs_test_config",
+    "//third_party/f2fs/tools:f2fs",
+  ]
+}
+
+slow_fs_test_suite("f2fs") {
+  deps = [
+    ":f2fs_fs_test_config",
+    "//third_party/f2fs/tools:f2fs",
+  ]
+}
