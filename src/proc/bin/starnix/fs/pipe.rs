@@ -249,23 +249,6 @@ impl Pipe {
     }
 }
 
-pub struct FifoNode {
-    /// The pipe located at this node.
-    pipe: Arc<Mutex<Pipe>>,
-}
-
-impl FifoNode {
-    pub fn new() -> FifoNode {
-        FifoNode { pipe: Pipe::new() }
-    }
-}
-
-impl FsNodeOps for FifoNode {
-    fn open(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Pipe::open(&self.pipe, flags))
-    }
-}
-
 /// Creates a new pipe between the two returned FileObjects.
 ///
 /// The first FileObject is the read endpoint of the pipe. The second is the
@@ -273,7 +256,8 @@ impl FsNodeOps for FifoNode {
 /// sys_pipe2().
 pub fn new_pipe(kernel: &Kernel) -> Result<(FileHandle, FileHandle), Errno> {
     let fs = pipe_fs(kernel);
-    let node = fs.create_node(Box::new(FifoNode::new()), FileMode::from_bits(0o600));
+    let mode = FileMode::IFIFO | FileMode::from_bits(0o600);
+    let node = fs.create_node(Box::new(SpecialNode), mode);
     node.info_write().blksize = ATOMIC_IO_BYTES;
 
     let open = |flags: OpenFlags| {

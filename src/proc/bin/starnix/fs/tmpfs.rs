@@ -7,7 +7,6 @@ use std::sync::Arc;
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
 use crate::error;
-use crate::fs::pipe::FifoNode;
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -54,9 +53,9 @@ impl FsNodeOps for TmpfsDirectory {
     fn mknod(&self, node: &FsNode, _name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
         let ops: Box<dyn FsNodeOps> = match mode.fmt() {
             FileMode::IFREG => Box::new(VmoFileNode::new()?),
-            FileMode::IFIFO => Box::new(FifoNode::new()),
-            FileMode::IFBLK => Box::new(DeviceNode),
-            FileMode::IFCHR => Box::new(DeviceNode),
+            FileMode::IFIFO => Box::new(SpecialNode),
+            FileMode::IFBLK => Box::new(SpecialNode),
+            FileMode::IFCHR => Box::new(SpecialNode),
             _ => return error!(EACCES),
         };
         Ok(node.fs().create_node(ops, mode))
@@ -82,14 +81,6 @@ impl FsNodeOps for TmpfsDirectory {
         }
         child.info_write().link_count -= 1;
         Ok(())
-    }
-}
-
-pub struct DeviceNode;
-
-impl FsNodeOps for DeviceNode {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        error!(ENOSYS)
     }
 }
 

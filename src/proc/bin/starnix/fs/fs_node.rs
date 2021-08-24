@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::{Arc, Weak};
 
 use crate::device::*;
 use crate::error;
+use crate::fs::pipe::Pipe;
 use crate::fs::*;
 use crate::task::Task;
 use crate::types::*;
@@ -27,6 +28,11 @@ pub struct FsNode {
 
     /// The inode number for this FsNode.
     pub inode_num: ino_t,
+
+    /// The pipe located at this node, if any.
+    ///
+    /// Used if, and only if, the node has a mode of FileMode::IFIFO.
+    fifo: Option<Arc<Mutex<Pipe>>>,
 
     /// Mutable informationa about this node.
     ///
@@ -163,6 +169,14 @@ macro_rules! fs_node_impl_symlink {
     };
 }
 
+pub struct SpecialNode;
+
+impl FsNodeOps for SpecialNode {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        unreachable!("Special nodes cannot be opened.");
+    }
+}
+
 impl FsNode {
     pub fn new_root(ops: impl FsNodeOps + 'static) -> FsNode {
         Self::new_internal(Box::new(ops), Weak::new(), 1, FileMode::IFDIR | FileMode::ALLOW_ALL)
@@ -197,6 +211,7 @@ impl FsNode {
             observers: ObserverList::default(),
             fs,
             inode_num,
+            fifo: if mode.is_fifo() { Some(Pipe::new()) } else { None },
             info: RwLock::new(info),
             append_lock: RwLock::new(()),
         }
@@ -227,12 +242,12 @@ impl FsNode {
             let info = self.info();
             (info.mode, info.rdev)
         };
-        if mode.is_chr() {
-            open_character_device(rdev)
-        } else if mode.is_blk() {
-            open_block_device(rdev)
-        } else {
-            self.ops().open(&self, flags)
+
+        match mode & FileMode::IFMT {
+            FileMode::IFCHR => open_character_device(rdev),
+            FileMode::IFBLK => open_block_device(rdev),
+            FileMode::IFIFO => Ok(Pipe::open(self.fifo.as_ref().unwrap(), flags)),
+            _ => self.ops().open(&self, flags),
         }
     }
 
