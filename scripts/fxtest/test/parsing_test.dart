@@ -430,6 +430,27 @@ void main() {
       expect(
           parsedManifest.testBundles[0].testDefinition.path, 'host_x64/path');
     });
+
+    test('when no supplied arguments match', () {
+      ParsedManifest parsedManifest = parseFromArgs(args: ['no-match']);
+      expect(parsedManifest.testBundles, hasLength(0));
+      expect(parsedManifest.unusedConfigs, hasLength(1));
+    });
+
+    test('when some supplied arguments match', () {
+      ParsedManifest parsedManifest =
+          parseFromArgs(args: ['fancy', 'no-match']);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.unusedConfigs, hasLength(1));
+      expect(parsedManifest.unusedConfigs[0].testNameGroup,
+          equals([MatchableArgument.unrestricted('no-match')]));
+    });
+
+    test('when multiple arguments match the same test', () {
+      ParsedManifest parsedManifest = parseFromArgs(args: ['fancy', 'test1']);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.unusedConfigs, hasLength(0));
+    });
   });
 
   group('test hints are generated correctly', () {

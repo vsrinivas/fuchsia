@@ -148,6 +148,13 @@ class FuchsiaTestCommand {
         testDefinitions: parsedManifest.testDefinitions,
         testsConfig: testsConfig,
       );
+    } else if (parsedManifest.unusedConfigs.isNotEmpty) {
+      _exitCodeSetter(noTestFoundExitCode);
+      return unusedConfigsHelp(
+        manifestReader: manifestReader,
+        testDefinitions: parsedManifest.testDefinitions,
+        unusedConfigs: parsedManifest.unusedConfigs,
+      );
     }
 
     if (testsConfig.flags.shouldRandomizeTestOrder) {
@@ -243,6 +250,26 @@ class FuchsiaTestCommand {
         requiresPadding: false,
       ));
     }
+  }
+
+  void unusedConfigsHelp({
+    @required TestsManifestReader manifestReader,
+    @required List<TestDefinition> testDefinitions,
+    @required List<PermutatedTestsConfig> unusedConfigs,
+  }) {
+    emitEvent(GeneratingHintsEvent());
+    String unusedConfigsString = unusedConfigs
+        .map((config) => config.testNameGroup.map((name) => name.arg).join(','))
+        .join(';');
+    emitEvent(TestInfo(
+      testsConfig.wrapWith(
+          'Could not find any tests that matched these arguments: $unusedConfigsString.',
+          [lightYellow]),
+    ));
+    emitEvent(TestInfo(
+      'Make sure this test is transitively in your \'fx set\' arguments. See https://fuchsia.dev/fuchsia-src/development/testing/faq for more information.',
+      requiresPadding: false,
+    ));
   }
 
   TestBundle testBundleBuilder(

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
 
@@ -15,6 +16,9 @@ import 'package:path/path.dart' as p;
 class ParsedManifest {
   /// Tests not matched by supplied arguments.
   final List<TestDefinition> skippedTests;
+
+  /// Test configs that did not match any tests.
+  final List<PermutatedTestsConfig> unusedConfigs;
 
   /// The raw JSON of a test plopped into a class for structured analysis.
   final List<TestDefinition> testDefinitions;
@@ -35,6 +39,7 @@ class ParsedManifest {
     this.skippedTests = const [],
     this.numDuplicateTests,
     this.numUnparsedTests,
+    this.unusedConfigs,
   });
 
   @override
@@ -128,6 +133,11 @@ class TestsManifestReader {
     bool hasRaisedE2E = false;
     int numDuplicateTests = 0;
     int numUnparsedTests = 0;
+    HashMap<PermutatedTestsConfig, bool> permutations = HashMap.fromIterable(
+      testsConfig.permutations,
+      value: (permutation) => false,
+    );
+    Set<TestDefinition> usedTestDefinitions = {};
 
     // This triple-loop may seem scary, but we:
     //  1. Always short-circuit once a test has been claimed, and
@@ -174,7 +184,7 @@ class TestsManifestReader {
       }
 
       testIsClaimed = false;
-      for (var permutatedTestConfig in testsConfig.permutations) {
+      for (var permutatedTestConfig in permutations.keys) {
         // If a previous TestFlag configuration claimed this test, we definitely
         // don't care whether another would, as well. We don't want to run tests
         // more than once.
@@ -188,6 +198,7 @@ class TestsManifestReader {
         );
 
         if (comparisonResult.isMatch) {
+          permutations[permutatedTestConfig] = true;
           // Certain test definitions result in multiple entries in `tests.json`,
           // but invoking the test runner on their shared package name already
           // captures all tests. Therefore, any such sibling entry further down
@@ -212,6 +223,7 @@ class TestsManifestReader {
               comparisonResult.confidence,
             ),
           );
+          usedTestDefinitions.add(testDefinition);
 
           // Setting this flag breaks out of the Tier 2 (PermutatedTestFlags)
           // loop
@@ -221,6 +233,23 @@ class TestsManifestReader {
         }
       }
       skippedTests.add(testDefinition);
+    }
+
+    // For test configs that appear unused, check if they match something anyway.
+    // They may match test names that were captured by some other config.
+    for (var entry in permutations.entries) {
+      if (!entry.value) {
+        if (usedTestDefinitions.any((definition) => matcher
+            .evaluateTestAgainstArguments(
+              definition,
+              entry.key,
+              matchLength: matchLength,
+              comparer: comparer,
+            )
+            .isMatch)) {
+          permutations[entry.key] = true;
+        }
+      }
     }
 
     if (testsConfig.flags.shouldRandomizeTestOrder) {
@@ -233,6 +262,10 @@ class TestsManifestReader {
       skippedTests: skippedTests,
       testDefinitions: testDefinitions,
       testBundles: testBundles,
+      unusedConfigs: permutations.entries
+          .where((entry) => !entry.value)
+          .map((entry) => entry.key)
+          .toList(),
     );
   }
 
