@@ -18,6 +18,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.hardware.display.Provider",
             "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.stash.Store",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService"

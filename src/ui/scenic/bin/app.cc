@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/bin/app.h"
 
+#include <fuchsia/stash/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -21,60 +22,117 @@
 
 namespace {
 
-// App installs the loader manifest FS at this path so it can use fsl::DeviceWatcher on
-// it.
+// App installs the loader manifest FS at this path so it can use
+// fsl::DeviceWatcher on it.
 static const char* kDependencyPath = "/gpu-manifest-fs";
 
-// Reads the config file and returns a struct with all found values.
-scenic_impl::ConfigValues ReadConfig() {
+// Populates a ConfigValues struct by reading a config file and retrieving
+// overrides from the stash.
+scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
   scenic_impl::ConfigValues values;
+
+  using GetValueCallback = std::function<void(const std::string&, fuchsia::stash::Value&)>;
+  std::unordered_map<std::string, GetValueCallback> config{
+      {
+          "frame_scheduler_min_predicted_frame_duration_in_us",
+          [&values](auto& key, auto& value) {
+            FX_CHECK(value.is_intval()) << key << " must be an integer";
+            FX_CHECK(value.intval() >= 0) << key << " must be greater than 0";
+            values.min_predicted_frame_duration = zx::usec(value.intval());
+          },
+      },
+      {
+          "enable_allocator_for_flatland",
+          [&values](auto& key, auto& value) {
+            FX_CHECK(value.is_boolval()) << key << " must be a boolean";
+            values.enable_allocator_for_flatland = value.boolval();
+          },
+      },
+      {
+          "pointer_auto_focus",
+          [&values](auto& key, auto& value) {
+            FX_CHECK(value.is_boolval()) << key << " must be a boolean";
+            values.pointer_auto_focus_on = value.boolval();
+          },
+      },
+      {
+          "flatland_buffer_collection_import_mode",
+          [&values](auto& key, auto& value) {
+            FX_CHECK(value.is_stringval()) << key << " must be a string";
+            values.flatland_buffer_collection_import_mode =
+                flatland::StringToBufferCollectionImportMode(value.stringval());
+          },
+      },
+      {
+          "i_can_haz_display_id",
+          [&values](auto& key, auto& value) {
+            FX_CHECK(value.is_intval()) << key << " must be an integer";
+            values.i_can_haz_display_id = value.intval();
+          },
+      },
+  };
+
+  async::Loop stash_loop(&kAsyncLoopConfigNeverAttachToThread);
+  fuchsia::stash::StorePtr store;
+  fuchsia::stash::StoreAccessorPtr accessor;
+  zx_status_t status = app_context->svc()->Connect(store.NewRequest(stash_loop.dispatcher()));
+  if (status == ZX_OK) {
+    store->Identify("stash_ctl");
+    store->CreateAccessor(true, accessor.NewRequest(stash_loop.dispatcher()));
+  } else {
+    FX_LOGS(INFO) << "Unable to access /svc/" << fuchsia::stash::Store::Name_
+                  << "; using only config file";
+  }
+
+  // Request all stash values asynchronously. We do this before reading the
+  // config file so we hide the cost of the asynchronous requests behind the
+  // synchronous filesystem server request.
+  for (auto& [key, callback] : config) {
+    accessor->GetValue(key, [&key = key, &callback = callback](auto value) {
+      if (value) {
+        callback(key, *value);
+      };
+    });
+  }
 
   std::string config_string;
   std::string flatland_buffer_collection_import_mode_str;
   if (files::ReadFileToString("/config/data/scenic_config", &config_string)) {
     FX_LOGS(INFO) << "Found config file at /config/data/scenic_config";
-
     rapidjson::Document document;
     document.Parse(config_string);
+    for (auto& [key, callback] : config) {
+      if (document.HasMember(key)) {
+        auto& json_value = document[key];
 
-    int frame_scheduler_min_predicted_frame_duration_in_us = 0;
-    if (document.HasMember("frame_scheduler_min_predicted_frame_duration_in_us")) {
-      auto& val = document["frame_scheduler_min_predicted_frame_duration_in_us"];
-      FX_CHECK(val.IsInt()) << "min_preducted_frame_duration must be an integer";
-      frame_scheduler_min_predicted_frame_duration_in_us = val.GetInt();
-      FX_CHECK(frame_scheduler_min_predicted_frame_duration_in_us >= 0);
-
-      values.min_predicted_frame_duration =
-          zx::usec(frame_scheduler_min_predicted_frame_duration_in_us);
-    }
-
-    if (document.HasMember("enable_allocator_for_flatland")) {
-      auto& val = document["enable_allocator_for_flatland"];
-      FX_CHECK(val.IsBool()) << "enable_allocator_for_flatland must be a boolean";
-      values.enable_allocator_for_flatland = val.GetBool();
-    }
-
-    if (document.HasMember("pointer_auto_focus")) {
-      auto& val = document["pointer_auto_focus"];
-      FX_CHECK(val.IsBool()) << "pointer_auto_focus must be a boolean";
-      values.pointer_auto_focus_on = val.GetBool();
-    }
-
-    if (document.HasMember("flatland_buffer_collection_import_mode")) {
-      auto& val = document["flatland_buffer_collection_import_mode"];
-      FX_CHECK(val.IsString()) << "flatland_buffer_collection_import_mode must be a string";
-      flatland_buffer_collection_import_mode_str = val.GetString();
-      values.flatland_buffer_collection_import_mode =
-          flatland::StringToBufferCollectionImportMode(flatland_buffer_collection_import_mode_str);
-    }
-
-    if (document.HasMember("i_can_haz_display_id")) {
-      auto& val = document["i_can_haz_display_id"];
-      FX_CHECK(val.IsUint()) << "i_can_haz_display_id must be an integer";
-      values.i_can_haz_display_id = val.GetUint();
+        fuchsia::stash::Value value;
+        if (json_value.IsInt()) {
+          value = fuchsia::stash::Value::WithIntval(json_value.GetInt());
+        } else if (json_value.IsBool()) {
+          value = fuchsia::stash::Value::WithBoolval(json_value.GetBool());
+        } else if (json_value.IsString()) {
+          value = fuchsia::stash::Value::WithStringval(json_value.GetString());
+        } else {
+          FX_CHECK(false) << "Unsupported type for '" << key << "'";
+        }
+        callback(key, value);
+      }
     }
   } else {
     FX_LOGS(INFO) << "No config file found at /config/data/scenic_config; using default values";
+  }
+
+  // Wait for each stash value to be returned. These should have arrived while
+  // reading the config file.
+  //
+  // Note: The order of these operations means that the stash will override any
+  // values set by the config file.
+  for (auto& _ : config) {
+    // Only run the loop if the accessor is still bound.
+    if (!accessor) {
+      break;
+    }
+    stash_loop.Run(zx::time::infinite(), /*once*/ true);
   }
 
   FX_LOGS(INFO) << "Scenic min_predicted_frame_duration(us): "
@@ -132,7 +190,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
       app_context_(std::move(app_context)),
-      config_values_(ReadConfig()),
+      config_values_(GetConfig(app_context_.get())),
       // TODO(fxbug.dev/40997): subsystems requiring graceful shutdown *on a loop* should register
       // themselves. It is preferable to cleanly shutdown using destructors only, if possible.
       shutdown_manager_(
