@@ -17,6 +17,7 @@
 #include <zxtest/base/event-broadcaster.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/base/observer.h>
+#include <zxtest/base/parameterized-value.h>
 #include <zxtest/base/reporter.h>
 #include <zxtest/base/test-case.h>
 #include <zxtest/base/test-driver.h>
@@ -186,6 +187,47 @@ class Runner {
                         &TestBase::SetUpTestCase, &TestBase::TearDownTestCase);
   }
 
+  template <typename SuiteClass>
+  bool AddParameterizedTest(std::unique_ptr<internal::AddTestDelegate> delegate,
+                            const fbl::String& suite_name, const fbl::String& test_name,
+                            const SourceLocation& location) {
+    std::unique_ptr<internal::ParameterizedTestCaseInfo> new_suite =
+        delegate->CreateSuite(suite_name);
+    auto target_suite = new_suite.get();
+
+    auto fixture_id = internal::TypeIdProvider<SuiteClass>::Get();
+    for (auto& test_info : parameterized_test_info_) {
+      if (test_info->GetFixtureId() == fixture_id) {
+        // found existing entry
+        target_suite = test_info.get();
+      }
+    }
+    ZX_ASSERT_MSG(delegate->AddTest(target_suite, test_name, location), "Failed to add a test");
+    if (target_suite == new_suite.get()) {
+      parameterized_test_info_.push_back(std::move(new_suite));
+    }
+    return true;
+  }
+
+  template <typename SuiteClass, typename ParamType>
+  bool AddInstantiation(std::unique_ptr<internal::AddInstantiationDelegate<ParamType>> delegate,
+                        const fbl::String& instantiation_name, const SourceLocation& location,
+                        zxtest::testing::internal::ValueProvider<ParamType>& provider) {
+    auto fixture_id = internal::TypeIdProvider<SuiteClass>::Get();
+    bool found_match = false;
+    for (auto& test_info : parameterized_test_info_) {
+      if (test_info->GetFixtureId() == fixture_id) {
+        // found existing entry
+        auto* suite = test_info.get();
+        found_match = true;
+        ZX_ASSERT_MSG(delegate->AddInstantiation(suite, instantiation_name, location, provider),
+                      "Failed to add instantiation.");
+      }
+    }
+    ZX_ASSERT_MSG(found_match, "Failed to find a test suite to add an instantiation.");
+    return true;
+  }
+
   // Runs the registered tests with the specified |options|.
   int Run(const Options& options);
 
@@ -239,9 +281,20 @@ class Runner {
   void DisableAsserts() { return test_driver_.DisableAsserts(); }
 
  private:
+  friend class RunnerTestPeer;
+
   TestRef RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,
                        const SourceLocation& location, internal::TestFactory factory,
                        internal::SetUpTestCaseFn set_up, internal::TearDownTestCaseFn tear_down);
+
+  virtual void RegisterParameterizedTests() final {
+    if (should_register_parameterized_tests) {
+      for (auto& test : parameterized_test_info_) {
+        test->RegisterTest(this);
+      }
+      should_register_parameterized_tests = false;
+    }
+  }
 
   void EnforceOptions(const Runner::Options& options);
 
@@ -270,6 +323,10 @@ class Runner {
   const Options* options_ = nullptr;
 
   bool fatal_error_ = false;
+
+  fbl::Vector<std::unique_ptr<zxtest::internal::ParameterizedTestCaseInfo>>
+      parameterized_test_info_;
+  bool should_register_parameterized_tests = true;
 };
 
 // Entry point for C++

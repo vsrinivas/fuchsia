@@ -11,8 +11,10 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <zxtest/base/assertion.h>
+#include <zxtest/base/parameterized-value-impl.h>
 #include <zxtest/base/runner.h>
 #include <zxtest/base/test.h>
+#include <zxtest/base/values.h>
 #include <zxtest/cpp/internal.h>
 
 #ifdef __Fuchsia__
@@ -22,11 +24,17 @@
 #endif
 
 // Macro definitions for usage within CPP.
+#define _ZXTEST_EXPAND_(arg) arg
+#define _ZXTEST_GET_FIRST_(first, ...) first
+#define _ZXTEST_GET_SECOND_(first, second, ...) second
+
 #define RUN_ALL_TESTS(argc, argv) zxtest::RunAllTests(argc, argv)
 
-#define _ZXTEST_TEST_REF(TestCase, Test) TestCase##_##Test##_Ref
+#define _ZXTEST_TEST_REF_N(TestCase, Test, Tag) TestCase##_##Test##_##Tag##_Ref
+#define _ZXTEST_TEST_REF(TestCase, Test) _ZXTEST_TEST_REF_N(TestCase, Test, 0)
 
 #define _ZXTEST_DEFAULT_FIXTURE ::zxtest::Test
+#define _ZXTEST_PARAM_FIXTURE ::zxtest::TestWithParam
 
 #define _ZXTEST_TEST_CLASS(TestCase, Test) TestCase##_##Test##_Class
 
@@ -59,9 +67,22 @@
   }                                                                                               \
   _ZXTEST_BEGIN_TEST_BODY(_ZXTEST_TEST_CLASS(TestCase, Test))
 
+#define _ZXTEST_REGISTER_PARAMETERIZED(TestSuite, Test)                               \
+  _ZXTEST_TEST_CLASS_DECL(TestSuite, _ZXTEST_TEST_CLASS(TestSuite, Test));            \
+  static void _ZXTEST_REGISTER_FN(TestCase, Test)(void) __attribute__((constructor)); \
+  void _ZXTEST_REGISTER_FN(TestCase, Test)(void) {                                    \
+    zxtest::Runner::GetInstance()->AddParameterizedTest<TestSuite>(                   \
+        std::make_unique<zxtest::internal::AddTestDelegateImpl<                       \
+            TestSuite, TestSuite::ParamType, _ZXTEST_TEST_CLASS(TestSuite, Test)>>(), \
+        #TestSuite, #Test, {.filename = __FILE__, .line_number = __LINE__});          \
+  }                                                                                   \
+  _ZXTEST_BEGIN_TEST_BODY(_ZXTEST_TEST_CLASS(TestSuite, Test))
+
 #define TEST(TestCase, Test) _ZXTEST_REGISTER(TestCase, Test, _ZXTEST_DEFAULT_FIXTURE)
 
 #define TEST_F(TestCase, Test) _ZXTEST_REGISTER(TestCase, Test, TestCase)
+
+#define TEST_P(TestSuite, Test) _ZXTEST_REGISTER_PARAMETERIZED(TestSuite, Test)
 
 #define _ZXTEST_NULLPTR nullptr
 
@@ -72,6 +93,16 @@
 #define _ZXTEST_AUTO_VAR_TYPE(var) decltype(var)
 
 #define _ZXTEST_TEST_HAS_ERRORS zxtest::Runner::GetInstance()->CurrentTestHasFailures()
+
+#define INSTANTIATE_TEST_SUITE_P(Prefix, TestSuite, ...)                                        \
+  static void _ZXTEST_REGISTER_FN(Prefix, TestSuite)(void) __attribute__((constructor));        \
+  void _ZXTEST_REGISTER_FN(Prefix, TestSuite)(void) {                                           \
+    static auto provider = _ZXTEST_EXPAND_(_ZXTEST_GET_FIRST_(__VA_ARGS__));                    \
+    zxtest::Runner::GetInstance()->AddInstantiation<TestSuite, TestSuite::ParamType>(           \
+        std::make_unique<                                                                       \
+            zxtest::internal::AddInstantiationDelegateImpl<TestSuite, TestSuite::ParamType>>(), \
+        #Prefix, {.filename = __FILE__, .line_number = __LINE__}, provider);                    \
+  }
 
 // Pre-processor magic to allow EXPECT_ macros not enforce a return type on helper functions.
 #define _RETURN_IF_FATAL_true     \

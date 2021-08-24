@@ -142,6 +142,17 @@ void FilterOpFilterFullNegativeMatch();
 void FilterOpFilterMultiMatch();
 void FilterOpFilterCombined();
 
+// Verify that parameterized value tests run correctly.
+void TestAddParameterizedSuites();
+void TestAddParameterizedTests();
+void TestAddParameterizedInstaniations();
+void TestValuesIn();
+void TestValuesBool();
+void TestValuesSimilarTypes();
+void TestValuesCombine();
+void TestTuplesCombine();
+void TestRange();
+
 // Fuchsia only tests.
 #ifdef __Fuchsia__
 void DeathStatementCrash();
@@ -221,6 +232,15 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(FilterOpFilterPartialMatch),
     RUN_TEST(FilterOpFilterMultiMatch),
     RUN_TEST(FilterOpFilterCombined),
+    RUN_TEST(TestAddParameterizedSuites),
+    RUN_TEST(TestAddParameterizedTests),
+    RUN_TEST(TestAddParameterizedInstaniations),
+    RUN_TEST(TestValuesIn),
+    RUN_TEST(TestValuesBool),
+    RUN_TEST(TestValuesCombine),
+    RUN_TEST(TestValuesSimilarTypes),
+    RUN_TEST(TestTuplesCombine),
+    RUN_TEST(TestRange),
 #ifdef __Fuchsia__
     RUN_TEST(DeathStatementCrash),
     RUN_TEST(DeathStatementNoCrash),

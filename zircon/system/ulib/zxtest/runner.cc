@@ -96,6 +96,8 @@ TestRef Runner::RegisterTest(const fbl::String& test_case_name, const fbl::Strin
 }
 
 int Runner::Run(const Runner::Options& options) {
+  RegisterParameterizedTests();
+
   options_ = &options;
   auto reset_options = fit::defer([this]() { options_ = nullptr; });
   summary_.total_iterations = options.repeat;
@@ -144,6 +146,8 @@ int Runner::Run(const Runner::Options& options) {
 }
 
 void Runner::List(const Runner::Options& options) {
+  RegisterParameterizedTests();
+
   options_ = &options;
   auto reset_options = fit::defer([this]() { options_ = nullptr; });
   summary_.total_iterations = options.repeat;

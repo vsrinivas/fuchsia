@@ -29,12 +29,14 @@ test("zxtest") {
     "assertion_test.cc",
     "event-broadcaster_test.cc",
     "main.cc",
+    "parameterized-value_test.cc",
     "prod_test.cc",
     "reporter_test.cc",
     "runner_test.cc",
     "test-case_test.cc",
     "test-info_test.cc",
     "test_test.cc",
+    "values_test.cc",
   ]
   deps = [
     "//src/zircon/lib/zircon:zircon-headers",
