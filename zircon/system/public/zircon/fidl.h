@@ -273,35 +273,34 @@ static_assert(sizeof(fidl_envelope_v2_t) == 8, "");
 // Objects <= 4 bytes in size are inlined in envelopes.
 #define FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD 4
 
-// See |fidl_envelope_v2_unknown_data| for more details.
-typedef struct {
-  // Bit-0 of flags will be 1 to indicate that the envelope is stored inline.
-  uint16_t flags;
-
-  // The number of handles in the envelope. Either 0 or 1 since the envelope is inline.
-  uint16_t num_handles;
-
-  // The bytes of the value of the envelope, zero-padded up to 4 bytes.
-  uint8_t inline_value[4];
-} fidl_inline_envelope_v2_unknown_data_t;
-
-// |fidl_envelope_v2_unknown_data| is the decoded, representation of an unknown envelope for
+// |fidl_envelope_v2_unknown_data_t| is the decoded, representation of an unknown envelope for
 // the v2 wire format for C-family bindings.
-// This is similar to fidl_envelope_v2_t, but with fields in reversed order. The motivation
-// for reversing field order is so that the lowest bits of |flags| match up with the lowest
-// bits of |data|. This allows bit-0 to be used as an inline flag without colliding with the
-// bits of |data|.
+// In addition to what is in |fidl_envelope_v2_t|, |fidl_envelope_v2_unknown_data_t| also provides
+// an |offset| field which makes it possible to locate the inner object using data stored only
+// within the confines of the 8-byte |fidl_envelope_v2_unknown_data_t|.
 typedef struct {
   union {
-    // Pointer to out-of-line value. The lowest bit of this pointer will be 0 to indicate
-    // that the data is stored out-of-line.
-    void* data;
-    // Inline representation.
-    fidl_inline_envelope_v2_unknown_data_t inline_envelope;
+    // When flags == 1, inline_value contains the inlined envelope value.
+    uint8_t inline_value[4];
+    // Out of line case.
+    struct {
+      // The number of bytes in the envelope, including any additional
+      // out-of-line objects that the envelope contains. Must be zero if envelope is null.
+      uint16_t num_bytes;
+      // Offset of the out of line contents, relative to the start of the message bytes.
+      uint16_t offset;
+    } out_of_line;
   };
+
+  // The number of handles in the envelope, including any additional
+  // out-of-line objects that the envelope contains. Must be zero if envelope is null.
+  uint16_t num_handles;
+
+  // Flags describing the state of the envelope.
+  // A value of 1 indicates that the value of the envelope is inlined.
+  uint16_t flags;
 } fidl_envelope_v2_unknown_data_t;
 
-static_assert(sizeof(fidl_inline_envelope_v2_unknown_data_t) == 8, "");
 static_assert(sizeof(fidl_envelope_v2_unknown_data_t) == 8, "");
 
 // Handle types.

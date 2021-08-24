@@ -44,9 +44,9 @@ zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** e
 
 zx_status_t HLCPPIncomingMessage::DecodeWithExternalHeader_InternalMayBreak(
     const fidl_message_header_t& header, const fidl_type_t* type, const char** error_msg_out) {
-  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
-    zx_status_t status = internal__fidl_validate__v2__may_break(
-        type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
+  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0) {
+    zx_status_t status =
+        fidl_validate(type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
     if (status != ZX_OK) {
       return status;
     }
@@ -55,7 +55,7 @@ zx_status_t HLCPPIncomingMessage::DecodeWithExternalHeader_InternalMayBreak(
 
     uint32_t num_bytes = 0;
     status = internal__fidl_transform__may_break(
-        FIDL_TRANSFORMATION_V2_TO_V1, type, bytes_.data(), bytes_.actual(), transformer_bytes.get(),
+        FIDL_TRANSFORMATION_V1_TO_V2, type, bytes_.data(), bytes_.actual(), transformer_bytes.get(),
         ZX_CHANNEL_MAX_MSG_BYTES, &num_bytes, error_msg_out);
     if (status != ZX_OK) {
       return status;
@@ -71,7 +71,7 @@ zx_status_t HLCPPIncomingMessage::DecodeWithExternalHeader_InternalMayBreak(
   }
 
   fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
-  zx_status_t status = fidl_decode_etc_skip_unknown_handles(
+  zx_status_t status = internal__fidl_decode_etc_skip_unknown_handles__v2__may_break(
       type, bytes_.data(), bytes_.actual(), handles_.data(), handles_.actual(), error_msg_out);
   fidl_trace(DidHLCPPDecode);
 

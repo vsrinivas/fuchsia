@@ -216,13 +216,12 @@ void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
@@ -230,13 +229,12 @@ void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
     goto done_1;
   }
   if (count >= 5) {
-    size_t envelope_base = base + (5 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (5 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_y(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_y();
     }
@@ -248,17 +246,18 @@ void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
     for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
       if (IsOrdinalKnown(ordinal)) continue;
 
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
-      fidl_envelope_t* envelope =
-          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
-      if (envelope->presence != 0) {
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
         auto result = _value->_unknown_data.emplace(
             std::piecewise_construct, std::forward_as_tuple(ordinal),
             std::forward_as_tuple());
         auto iter = result.first;
-        iter->second.resize(envelope->num_bytes);
+        iter->second.resize(unknown_info.num_bytes);
         ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           _decoder->GetOffset(envelope->data));
+                                           unknown_info.value_offset);
       }
     }
   }
@@ -574,13 +573,12 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder,
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_z(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_z();
     }
@@ -588,13 +586,12 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_1;
   }
   if (count >= 2) {
-    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_y(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_y();
     }
@@ -602,13 +599,12 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_2;
   }
   if (count >= 3) {
-    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
@@ -620,17 +616,18 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder,
     for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
       if (IsOrdinalKnown(ordinal)) continue;
 
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
-      fidl_envelope_t* envelope =
-          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
-      if (envelope->presence != 0) {
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
         auto result = _value->_unknown_data.emplace(
             std::piecewise_construct, std::forward_as_tuple(ordinal),
             std::forward_as_tuple());
         auto iter = result.first;
-        iter->second.resize(envelope->num_bytes);
+        iter->second.resize(unknown_info.num_bytes);
         ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           _decoder->GetOffset(envelope->data));
+                                           unknown_info.value_offset);
       }
     }
   }
@@ -801,13 +798,12 @@ void OlderSimpleTable::Decode(::fidl::Decoder* _decoder,
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
@@ -819,17 +815,18 @@ void OlderSimpleTable::Decode(::fidl::Decoder* _decoder,
     for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
       if (IsOrdinalKnown(ordinal)) continue;
 
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
-      fidl_envelope_t* envelope =
-          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
-      if (envelope->presence != 0) {
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
         auto result = _value->_unknown_data.emplace(
             std::piecewise_construct, std::forward_as_tuple(ordinal),
             std::forward_as_tuple());
         auto iter = result.first;
-        iter->second.resize(envelope->num_bytes);
+        iter->second.resize(unknown_info.num_bytes);
         ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           _decoder->GetOffset(envelope->data));
+                                           unknown_info.value_offset);
       }
     }
   }
@@ -1136,13 +1133,12 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder,
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
@@ -1150,13 +1146,12 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder,
     goto done_1;
   }
   if (count >= 5) {
-    size_t envelope_base = base + (5 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (5 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_y(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_y();
     }
@@ -1164,13 +1159,12 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder,
     goto done_5;
   }
   if (count >= 6) {
-    size_t envelope_base = base + (6 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (6 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_z(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_z();
     }
@@ -1182,17 +1176,18 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder,
     for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
       if (IsOrdinalKnown(ordinal)) continue;
 
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
-      fidl_envelope_t* envelope =
-          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
-      if (envelope->presence != 0) {
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
         auto result = _value->_unknown_data.emplace(
             std::piecewise_construct, std::forward_as_tuple(ordinal),
             std::forward_as_tuple());
         auto iter = result.first;
-        iter->second.resize(envelope->num_bytes);
+        iter->second.resize(unknown_info.num_bytes);
         ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           _decoder->GetOffset(envelope->data));
+                                           unknown_info.value_offset);
       }
     }
   }
@@ -6306,13 +6301,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v1(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v1();
     }
@@ -6320,13 +6314,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_1;
   }
   if (count >= 2) {
-    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v2(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v2();
     }
@@ -6334,13 +6327,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_2;
   }
   if (count >= 3) {
-    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v3(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v3();
     }
@@ -6348,13 +6340,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_3;
   }
   if (count >= 4) {
-    size_t envelope_base = base + (4 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (4 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v4(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v4();
     }
@@ -6362,13 +6353,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_4;
   }
   if (count >= 5) {
-    size_t envelope_base = base + (5 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (5 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v5(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v5();
     }
@@ -6376,13 +6366,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_5;
   }
   if (count >= 6) {
-    size_t envelope_base = base + (6 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (6 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v6(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v6();
     }
@@ -6390,13 +6379,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_6;
   }
   if (count >= 7) {
-    size_t envelope_base = base + (7 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (7 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v7(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v7();
     }
@@ -6404,13 +6392,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_7;
   }
   if (count >= 8) {
-    size_t envelope_base = base + (8 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (8 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v8(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v8();
     }
@@ -6418,13 +6405,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_8;
   }
   if (count >= 9) {
-    size_t envelope_base = base + (9 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (9 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v9(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v9();
     }
@@ -6432,13 +6418,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_9;
   }
   if (count >= 10) {
-    size_t envelope_base = base + (10 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (10 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v10(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v10();
     }
@@ -6446,13 +6431,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_10;
   }
   if (count >= 11) {
-    size_t envelope_base = base + (11 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (11 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v11(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v11();
     }
@@ -6460,13 +6444,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_11;
   }
   if (count >= 12) {
-    size_t envelope_base = base + (12 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (12 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v12(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v12();
     }
@@ -6474,13 +6457,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_12;
   }
   if (count >= 13) {
-    size_t envelope_base = base + (13 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (13 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v13(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v13();
     }
@@ -6488,13 +6470,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_13;
   }
   if (count >= 14) {
-    size_t envelope_base = base + (14 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (14 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v14(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v14();
     }
@@ -6502,13 +6483,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_14;
   }
   if (count >= 15) {
-    size_t envelope_base = base + (15 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (15 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v15(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v15();
     }
@@ -6516,13 +6496,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_15;
   }
   if (count >= 16) {
-    size_t envelope_base = base + (16 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (16 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v16(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v16();
     }
@@ -6530,13 +6509,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_16;
   }
   if (count >= 17) {
-    size_t envelope_base = base + (17 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (17 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v17(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v17();
     }
@@ -6544,13 +6522,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_17;
   }
   if (count >= 18) {
-    size_t envelope_base = base + (18 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (18 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v18(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v18();
     }
@@ -6558,13 +6535,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_18;
   }
   if (count >= 19) {
-    size_t envelope_base = base + (19 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (19 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v19(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v19();
     }
@@ -6572,13 +6548,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_19;
   }
   if (count >= 20) {
-    size_t envelope_base = base + (20 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (20 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v20(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v20();
     }
@@ -6586,13 +6561,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_20;
   }
   if (count >= 21) {
-    size_t envelope_base = base + (21 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (21 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v21(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v21();
     }
@@ -6600,13 +6574,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_21;
   }
   if (count >= 22) {
-    size_t envelope_base = base + (22 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (22 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v22(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v22();
     }
@@ -6614,13 +6587,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_22;
   }
   if (count >= 23) {
-    size_t envelope_base = base + (23 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (23 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v23(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v23();
     }
@@ -6628,13 +6600,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_23;
   }
   if (count >= 24) {
-    size_t envelope_base = base + (24 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (24 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v24(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v24();
     }
@@ -6642,13 +6613,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_24;
   }
   if (count >= 25) {
-    size_t envelope_base = base + (25 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (25 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v25(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v25();
     }
@@ -6656,13 +6626,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_25;
   }
   if (count >= 26) {
-    size_t envelope_base = base + (26 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (26 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v26(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v26();
     }
@@ -6670,13 +6639,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_26;
   }
   if (count >= 27) {
-    size_t envelope_base = base + (27 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (27 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v27(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v27();
     }
@@ -6684,13 +6652,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_27;
   }
   if (count >= 28) {
-    size_t envelope_base = base + (28 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (28 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v28(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v28();
     }
@@ -6698,13 +6665,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_28;
   }
   if (count >= 29) {
-    size_t envelope_base = base + (29 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (29 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v29(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v29();
     }
@@ -6712,13 +6678,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_29;
   }
   if (count >= 30) {
-    size_t envelope_base = base + (30 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (30 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v30(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v30();
     }
@@ -6726,13 +6691,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_30;
   }
   if (count >= 31) {
-    size_t envelope_base = base + (31 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (31 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v31(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v31();
     }
@@ -6740,13 +6704,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_31;
   }
   if (count >= 32) {
-    size_t envelope_base = base + (32 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (32 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v32(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v32();
     }
@@ -6754,13 +6717,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_32;
   }
   if (count >= 33) {
-    size_t envelope_base = base + (33 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (33 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v33(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v33();
     }
@@ -6768,13 +6730,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_33;
   }
   if (count >= 34) {
-    size_t envelope_base = base + (34 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (34 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v34(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v34();
     }
@@ -6782,13 +6743,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_34;
   }
   if (count >= 35) {
-    size_t envelope_base = base + (35 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (35 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v35(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v35();
     }
@@ -6796,13 +6756,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_35;
   }
   if (count >= 36) {
-    size_t envelope_base = base + (36 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (36 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v36(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v36();
     }
@@ -6810,13 +6769,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_36;
   }
   if (count >= 37) {
-    size_t envelope_base = base + (37 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (37 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v37(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v37();
     }
@@ -6824,13 +6782,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_37;
   }
   if (count >= 38) {
-    size_t envelope_base = base + (38 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (38 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v38(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v38();
     }
@@ -6838,13 +6795,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_38;
   }
   if (count >= 39) {
-    size_t envelope_base = base + (39 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (39 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v39(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v39();
     }
@@ -6852,13 +6808,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_39;
   }
   if (count >= 40) {
-    size_t envelope_base = base + (40 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (40 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v40(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v40();
     }
@@ -6866,13 +6821,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_40;
   }
   if (count >= 41) {
-    size_t envelope_base = base + (41 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (41 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v41(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v41();
     }
@@ -6880,13 +6834,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_41;
   }
   if (count >= 42) {
-    size_t envelope_base = base + (42 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (42 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v42(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v42();
     }
@@ -6894,13 +6847,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_42;
   }
   if (count >= 43) {
-    size_t envelope_base = base + (43 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (43 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v43(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v43();
     }
@@ -6908,13 +6860,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_43;
   }
   if (count >= 44) {
-    size_t envelope_base = base + (44 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (44 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v44(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v44();
     }
@@ -6922,13 +6873,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_44;
   }
   if (count >= 45) {
-    size_t envelope_base = base + (45 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (45 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v45(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v45();
     }
@@ -6936,13 +6886,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_45;
   }
   if (count >= 46) {
-    size_t envelope_base = base + (46 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (46 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v46(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v46();
     }
@@ -6950,13 +6899,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_46;
   }
   if (count >= 47) {
-    size_t envelope_base = base + (47 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (47 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v47(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v47();
     }
@@ -6964,13 +6912,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_47;
   }
   if (count >= 48) {
-    size_t envelope_base = base + (48 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (48 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v48(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v48();
     }
@@ -6978,13 +6925,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_48;
   }
   if (count >= 49) {
-    size_t envelope_base = base + (49 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (49 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v49(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v49();
     }
@@ -6992,13 +6938,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_49;
   }
   if (count >= 50) {
-    size_t envelope_base = base + (50 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (50 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v50(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v50();
     }
@@ -7006,13 +6951,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_50;
   }
   if (count >= 51) {
-    size_t envelope_base = base + (51 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (51 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v51(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v51();
     }
@@ -7020,13 +6964,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_51;
   }
   if (count >= 52) {
-    size_t envelope_base = base + (52 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (52 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v52(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v52();
     }
@@ -7034,13 +6977,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_52;
   }
   if (count >= 53) {
-    size_t envelope_base = base + (53 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (53 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v53(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v53();
     }
@@ -7048,13 +6990,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_53;
   }
   if (count >= 54) {
-    size_t envelope_base = base + (54 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (54 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v54(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v54();
     }
@@ -7062,13 +7003,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_54;
   }
   if (count >= 55) {
-    size_t envelope_base = base + (55 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (55 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v55(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v55();
     }
@@ -7076,13 +7016,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_55;
   }
   if (count >= 56) {
-    size_t envelope_base = base + (56 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (56 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v56(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v56();
     }
@@ -7090,13 +7029,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_56;
   }
   if (count >= 57) {
-    size_t envelope_base = base + (57 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (57 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v57(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v57();
     }
@@ -7104,13 +7042,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_57;
   }
   if (count >= 58) {
-    size_t envelope_base = base + (58 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (58 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v58(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v58();
     }
@@ -7118,13 +7055,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_58;
   }
   if (count >= 59) {
-    size_t envelope_base = base + (59 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (59 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v59(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v59();
     }
@@ -7132,13 +7068,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_59;
   }
   if (count >= 60) {
-    size_t envelope_base = base + (60 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (60 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v60(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v60();
     }
@@ -7146,13 +7081,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_60;
   }
   if (count >= 61) {
-    size_t envelope_base = base + (61 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (61 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v61(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v61();
     }
@@ -7160,13 +7094,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_61;
   }
   if (count >= 62) {
-    size_t envelope_base = base + (62 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (62 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v62(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v62();
     }
@@ -7174,13 +7107,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_62;
   }
   if (count >= 63) {
-    size_t envelope_base = base + (63 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (63 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v63(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v63();
     }
@@ -7188,13 +7120,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_63;
   }
   if (count >= 64) {
-    size_t envelope_base = base + (64 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (64 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v64(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v64();
     }
@@ -7202,13 +7133,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_64;
   }
   if (count >= 65) {
-    size_t envelope_base = base + (65 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (65 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v65(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v65();
     }
@@ -7216,13 +7146,12 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_65;
   }
   if (count >= 66) {
-    size_t envelope_base = base + (66 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (66 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v66(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v66();
     }
@@ -7234,17 +7163,18 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
     for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
       if (IsOrdinalKnown(ordinal)) continue;
 
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
-      fidl_envelope_t* envelope =
-          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
-      if (envelope->presence != 0) {
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
         auto result = _value->_unknown_data.emplace(
             std::piecewise_construct, std::forward_as_tuple(ordinal),
             std::forward_as_tuple());
         auto iter = result.first;
-        iter->second.resize(envelope->num_bytes);
+        iter->second.resize(unknown_info.num_bytes);
         ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           _decoder->GetOffset(envelope->data));
+                                           unknown_info.value_offset);
       }
     }
   }
@@ -7903,17 +7833,18 @@ void EmptyTable::Decode(::fidl::Decoder* _decoder, EmptyTable* _value,
     for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
       if (IsOrdinalKnown(ordinal)) continue;
 
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
-      fidl_envelope_t* envelope =
-          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
-      if (envelope->presence != 0) {
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
         auto result = _value->_unknown_data.emplace(
             std::piecewise_construct, std::forward_as_tuple(ordinal),
             std::forward_as_tuple());
         auto iter = result.first;
-        iter->second.resize(envelope->num_bytes);
+        iter->second.resize(unknown_info.num_bytes);
         ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           _decoder->GetOffset(envelope->data));
+                                           unknown_info.value_offset);
       }
     }
   }

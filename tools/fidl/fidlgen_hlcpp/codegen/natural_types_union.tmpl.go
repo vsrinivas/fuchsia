@@ -362,9 +362,11 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>({{ .TagInvalid }}));
     return;
   }
@@ -372,29 +374,32 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t o
   value->EnsureStorageInitialized(xunion->tag);
 
 {{ if len .Members }}
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
   {{- range .Members }}
-    case {{ .TagName }}:
+    case {{ .TagName }}: {
       {{- if .Type.NeedsDtor }}
       new (&value->{{ .StorageName }}) {{ .Type }}();
       {{- end }}
-      ::fidl::Decode(_decoder, &value->{{ .StorageName }}, envelope_offset);
+      ::fidl::Decode(_decoder, &value->{{ .StorageName }}, value_offset);
       break;
+    }
   {{- end }}
-    default:
+    default: {
   {{ if .IsFlexible -}}
+    auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
     {{- if .IsResourceType }}
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      value->unknown_data_.handles.resize(xunion->envelope.num_handles);
-      ::fidl::DecodeUnknownDataContents(_decoder, &value->unknown_data_, envelope_offset);
+      value->unknown_data_.bytes.resize(unknown_info.num_bytes);
+      value->unknown_data_.handles.resize(unknown_info.num_handles);
+      ::fidl::DecodeUnknownDataContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
     {{- else }}
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, envelope_offset);
+      value->unknown_data_.resize(unknown_info.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
     {{- end }}
   {{ end -}}
       break;
+    }
   }
 {{ end }}
 }

@@ -1726,7 +1726,31 @@ TEST(UnknownEnvelope, V2DecodeUnknownInlineEnvelope) {
 
   // Compare the bytes of the last envelope after they are transformed.
   uint8_t expected_decoded_envelope[] = {
-      1, 0, 0, 0, 123, 0, 0, 0,  // envelope 2: inlined / num_handles / num_bytes
+      123, 0, 0, 0, 0, 0, 1, 0,  // envelope 2: num bytes / num handles / inlined
+  };
+  EXPECT_BYTES_EQ(expected_decoded_envelope, bytes + 24, 8);
+}
+
+TEST(UnknownEnvelope, V2DecodeUnknownOutOfLineEnvelope) {
+  uint8_t bytes[] = {
+      2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+
+      0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: zero envelope
+      8,   0,   0,   0,   0,   0,   0,   0,  // envelope 2: num bytes / num handles / inlined
+      1,   2,   3,   4,   5,   6,   7,   8,  // out of line data for envelope 2
+  };
+
+  const char* error = nullptr;
+  auto status = internal__fidl_decode__v2__may_break(
+      &fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes, ArrayCount(bytes), 0, 0,
+      &error);
+
+  EXPECT_EQ(status, ZX_OK);
+
+  // Compare the bytes of the last envelope after they are transformed.
+  uint8_t expected_decoded_envelope[] = {
+      8, 0, 32, 0, 0, 0, 0, 0,  // envelope 2: num bytes / offset
   };
   EXPECT_BYTES_EQ(expected_decoded_envelope, bytes + 24, 8);
 }

@@ -40,7 +40,7 @@ size_t EncodingInlineSize(EncoderImpl* encoder) {
 
 template <typename T, class DecoderImpl = Decoder>
 size_t DecodingInlineSize(DecoderImpl* decoder) {
-  return CodingTraits<T>::inline_size_v1_no_ee;
+  return CodingTraits<T>::inline_size_v2;
 }
 
 template <typename T>
@@ -204,7 +204,7 @@ template <typename T, typename DecoderImpl>
 void DecodeVectorBody(UseStdCopy<false>, DecoderImpl* decoder, size_t in_begin_offset,
                       size_t in_end_offset, std::vector<T>* out, size_t count) {
   out->resize(count);
-  size_t stride = CodingTraits<T>::inline_size_v1_no_ee;
+  size_t stride = DecodingInlineSize<T>(decoder);
   size_t in_offset = in_begin_offset;
   typename std::vector<T>::iterator out_it = out->begin();
   for (; in_offset < in_end_offset; in_offset += stride, out_it++) {
@@ -231,7 +231,7 @@ struct CodingTraits<::std::vector<T>> {
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::std::vector<T>* value, size_t offset) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
-    constexpr size_t stride = CodingTraits<T>::inline_size_v1_no_ee;
+    size_t stride = DecodingInlineSize<T>(decoder);
     size_t base = decoder->GetOffset(encoded->data);
     size_t count = encoded->count;
     internal::DecodeVectorBody<T>(internal::UseStdCopy<IsMemcpyCompatible<T>::value>(), decoder,
@@ -258,7 +258,7 @@ struct CodingTraits<::std::array<T, N>> {
   }
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, std::array<T, N>* value, size_t offset) {
-    size_t stride = CodingTraits<T>::inline_size_v1_no_ee;
+    size_t stride = DecodingInlineSize<T>(decoder);
     if (IsMemcpyCompatible<T>::value) {
       memcpy(&value[0], decoder->template GetPtr<void>(offset), N * stride);
       return;

@@ -294,7 +294,7 @@ zx_status_t {{ .Proxy.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
         {{- end }}
       {{ .Name }}(
         {{- range $index, $param := .ResponseArgs -}}
-          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV1 }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV2 }})
         {{- end -}}
       );
       break;
@@ -328,7 +328,7 @@ namespace {
       {{- end }}
         callback_(
       {{- range $index, $param := .ResponseArgs -}}
-        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV1 }})
+        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV2 }})
       {{- end -}}
         );
         return ZX_OK;
@@ -421,7 +421,7 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
         {{- end }}
       impl_->{{ .Name }}(
         {{- range $index, $param := .RequestArgs -}}
-          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV1 }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV2 }})
         {{- end -}}
         {{- if .HasResponse -}}
           {{- if .RequestArgs }}, {{ end -}}{{ .ResponderType }}(std::move(response))
@@ -477,7 +477,7 @@ zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }
       {{- if .ResponseArgs }}
   ::fidl::Decoder decoder_(std::move(response_));
         {{- range $index, $param := .ResponseArgs }}
-  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type }}>(&decoder_, {{ .OffsetV1 }});
+  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type }}>(&decoder_, {{ .OffsetV2 }});
         {{- end }}
       {{- end }}
   return ZX_OK;

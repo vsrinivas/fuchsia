@@ -118,9 +118,10 @@ void UnionSize8Alignment4::Encode(
 
 void UnionSize8Alignment4::Decode(::fidl::Decoder* _decoder,
                                   UnionSize8Alignment4* value, size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::Invalid));
     return;
@@ -128,14 +129,16 @@ void UnionSize8Alignment4::Decode(::fidl::Decoder* _decoder,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant:
-      ::fidl::Decode(_decoder, &value->variant_, envelope_offset);
+    case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant: {
+      ::fidl::Decode(_decoder, &value->variant_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -223,7 +226,7 @@ void SandwichUnionSize8Alignment4::Decode(::fidl::Decoder* _decoder,
   } else {
     ::fidl::Decode(_decoder, &_value->before, _offset + 0);
     ::fidl::Decode(_decoder, &_value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &_value->after, _offset + 32);
+    ::fidl::Decode(_decoder, &_value->after, _offset + 24);
   }
 }
 
@@ -350,9 +353,10 @@ void UnionSize36Alignment4::Encode(
 void UnionSize36Alignment4::Decode(::fidl::Decoder* _decoder,
                                    UnionSize36Alignment4* value,
                                    size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid));
     return;
@@ -360,15 +364,17 @@ void UnionSize36Alignment4::Decode(::fidl::Decoder* _decoder,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant: {
       new (&value->variant_)::std::array<uint8_t, 32>();
-      ::fidl::Decode(_decoder, &value->variant_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->variant_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -459,7 +465,7 @@ void SandwichUnionSize36Alignment4::Decode(
   } else {
     ::fidl::Decode(_decoder, &_value->before, _offset + 0);
     ::fidl::Decode(_decoder, &_value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &_value->after, _offset + 32);
+    ::fidl::Decode(_decoder, &_value->after, _offset + 24);
   }
 }
 
@@ -586,9 +592,10 @@ void UnionSize12Alignment4::Encode(
 void UnionSize12Alignment4::Decode(::fidl::Decoder* _decoder,
                                    UnionSize12Alignment4* value,
                                    size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::Invalid));
     return;
@@ -596,15 +603,17 @@ void UnionSize12Alignment4::Decode(::fidl::Decoder* _decoder,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant: {
       new (&value->variant_)::std::array<uint8_t, 6>();
-      ::fidl::Decode(_decoder, &value->variant_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->variant_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -695,7 +704,7 @@ void SandwichUnionSize12Alignment4::Decode(
   } else {
     ::fidl::Decode(_decoder, &_value->before, _offset + 0);
     ::fidl::Decode(_decoder, &_value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &_value->after, _offset + 32);
+    ::fidl::Decode(_decoder, &_value->after, _offset + 24);
   }
 }
 
@@ -869,9 +878,10 @@ void UnionSize24Alignment8::Encode(
 void UnionSize24Alignment8::Decode(::fidl::Decoder* _decoder,
                                    UnionSize24Alignment8* value,
                                    size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::Invalid));
     return;
@@ -879,17 +889,19 @@ void UnionSize24Alignment8::Decode(::fidl::Decoder* _decoder,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant:
+    case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant: {
       new (
           &value
                ->variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
-      ::fidl::Decode(_decoder, &value->variant_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->variant_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -982,7 +994,7 @@ void SandwichUnionSize24Alignment8::Decode(
   } else {
     ::fidl::Decode(_decoder, &_value->before, _offset + 0);
     ::fidl::Decode(_decoder, &_value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &_value->after, _offset + 32);
+    ::fidl::Decode(_decoder, &_value->after, _offset + 24);
   }
 }
 

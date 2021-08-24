@@ -476,9 +476,10 @@ void SimpleUnion::Encode(
 
 void SimpleUnion::Decode(::fidl::Decoder* _decoder, SimpleUnion* value,
                          size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::nullable::SimpleUnion::Tag::Invalid));
     return;
@@ -486,17 +487,20 @@ void SimpleUnion::Decode(::fidl::Decoder* _decoder, SimpleUnion* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::nullable::SimpleUnion::Tag::kA:
-      ::fidl::Decode(_decoder, &value->a_, envelope_offset);
+    case ::fidl::test::nullable::SimpleUnion::Tag::kA: {
+      ::fidl::Decode(_decoder, &value->a_, value_offset);
       break;
-    case ::fidl::test::nullable::SimpleUnion::Tag::kB:
-      ::fidl::Decode(_decoder, &value->b_, envelope_offset);
+    }
+    case ::fidl::test::nullable::SimpleUnion::Tag::kB: {
+      ::fidl::Decode(_decoder, &value->b_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 

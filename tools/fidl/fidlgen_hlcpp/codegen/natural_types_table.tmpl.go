@@ -300,11 +300,11 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t 
 
   {{- range .Members }}
   if (count >= {{ .Ordinal }}) {
-    size_t envelope_base = base + ({{ .Ordinal }} - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence, envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_{{ .Name }}(), _decoder->GetOffset(presence));
+    size_t envelope_base = base + ({{ .Ordinal }} - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_{{ .Name }}(),
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->{{ .MethodClearName }}();
     }
@@ -319,18 +319,19 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t 
       if (IsOrdinalKnown(ordinal))
         continue;
 
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
-      fidl_envelope_t* envelope = _decoder->GetPtr<fidl_envelope_t>(envelope_base);
-      if (envelope->presence != 0) {
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
         auto result = _value->_unknown_data.emplace(std::piecewise_construct, std::forward_as_tuple(ordinal), std::forward_as_tuple());
         auto iter = result.first;
     {{- if .IsResourceType }}
-        iter->second.bytes.resize(envelope->num_bytes);
-        iter->second.handles.resize(envelope->num_handles);
-        ::fidl::DecodeUnknownDataContents(_decoder, &iter->second, _decoder->GetOffset(envelope->data));
+        iter->second.bytes.resize(unknown_info.num_bytes);
+        iter->second.handles.resize(unknown_info.num_handles);
+        ::fidl::DecodeUnknownDataContents(_decoder, &iter->second, unknown_info.value_offset);
     {{- else }}
-        iter->second.resize(envelope->num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second, _decoder->GetOffset(envelope->data));
+        iter->second.resize(unknown_info.num_bytes);
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second, unknown_info.value_offset);
     {{- end }}
       }
     }

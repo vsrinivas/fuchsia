@@ -25,8 +25,8 @@ class Decoder final {
     return reinterpret_cast<T*>(message_.bytes().data() + offset);
   }
 
-  size_t GetOffset(void* ptr) { return GetOffset(reinterpret_cast<uintptr_t>(ptr)); }
-  size_t GetOffset(uintptr_t ptr) {
+  size_t GetOffset(const void* ptr) const { return GetOffset(reinterpret_cast<uintptr_t>(ptr)); }
+  size_t GetOffset(uintptr_t ptr) const {
     // The |ptr| value comes from the message buffer, which we've already
     // validated. That means it should correspond to a valid offset within the
     // message.
@@ -47,6 +47,38 @@ class Decoder final {
     return zx::handle(message_.handles().data()[handle_index_++].handle);
   }
 #endif
+
+  size_t EnvelopeValueOffset(const fidl_envelope_v2_t* envelope) const {
+    if ((envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) != 0) {
+      return GetOffset(&envelope->inline_value);
+    }
+    return GetOffset(*reinterpret_cast<const void* const*>(envelope));
+  }
+
+  struct EnvelopeUnknownDataInfoResult {
+    size_t value_offset;
+    uint32_t num_bytes;
+    uint16_t num_handles;
+    uint16_t flags;
+  };
+
+  EnvelopeUnknownDataInfoResult EnvelopeUnknownDataInfo(const fidl_envelope_v2_t* envelope) const {
+    const auto* unknown_data_envelope =
+        reinterpret_cast<const fidl_envelope_v2_unknown_data_t*>(envelope);
+
+    EnvelopeUnknownDataInfoResult result;
+    if ((unknown_data_envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) != 0) {
+      result.value_offset = GetOffset(&envelope->inline_value);
+      result.num_bytes = 4;
+    } else {
+      result.value_offset = unknown_data_envelope->out_of_line.offset;
+      result.num_bytes = unknown_data_envelope->out_of_line.num_bytes;
+    }
+    result.num_handles = unknown_data_envelope->num_handles;
+    result.flags = unknown_data_envelope->flags;
+
+    return result;
+  }
 
  private:
   HLCPPIncomingMessage message_;

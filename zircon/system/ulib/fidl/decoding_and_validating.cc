@@ -61,34 +61,49 @@ void AssignInDecode(const T* ptr, U value) {
   // nothing in validate mode
 }
 
-void ConvertEnvelopeToDecodedRepresentation(fidl_envelope_t envelope_copy,
+void ConvertEnvelopeToDecodedRepresentation(const void* bytes_base_ptr,
+                                            fidl_envelope_t envelope_copy,
                                             const fidl_envelope_t* envelope_ptr) {
   // No conversion is needed for v1.
 }
-void ConvertEnvelopeToDecodedRepresentation(fidl_envelope_t envelope_copy,
+void ConvertEnvelopeToDecodedRepresentation(const void* bytes_base_ptr,
+                                            fidl_envelope_t envelope_copy,
                                             fidl_envelope_t* envelope_ptr) {
   // No conversion is needed for v1.
 }
-void ConvertEnvelopeToDecodedRepresentation(fidl_envelope_v2_t envelope_copy,
+void ConvertEnvelopeToDecodedRepresentation(const void* bytes_base_ptr,
+                                            fidl_envelope_v2_t envelope_copy,
                                             const fidl_envelope_v2_t* envelope_ptr) {
   // No conversion is needed for v2 validate.
 }
-void ConvertEnvelopeToDecodedRepresentation(fidl_envelope_v2_t envelope_copy,
+void ConvertEnvelopeToDecodedRepresentation(const void* bytes_base_ptr,
+                                            fidl_envelope_v2_t envelope_copy,
                                             fidl_envelope_v2_t* envelope_ptr) {
-  if ((envelope_copy.flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) == 0) {
-    // Out of line, no conversion needed.
+  if ((envelope_copy.flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) != 0) {
+    fidl_envelope_v2_unknown_data_t unknown_data_envelope = {
+        .num_handles = envelope_copy.num_handles,
+        .flags = envelope_copy.flags,
+    };
+    memcpy(unknown_data_envelope.inline_value, envelope_ptr->inline_value,
+           sizeof(envelope_ptr->inline_value));
+    memcpy(envelope_ptr, &unknown_data_envelope, sizeof(unknown_data_envelope));
     return;
   }
 
+  uintptr_t data_ptr = *reinterpret_cast<uintptr_t*>(envelope_ptr);
+  uintptr_t base_ptr = reinterpret_cast<uintptr_t>(bytes_base_ptr);
+  uintptr_t offset = data_ptr - base_ptr;
+  ZX_ASSERT(offset <= std::numeric_limits<uint16_t>::max());
+  ZX_ASSERT(envelope_copy.num_bytes <= std::numeric_limits<uint16_t>::max());
   fidl_envelope_v2_unknown_data_t unknown_data_envelope = {
-      .inline_envelope =
+      .out_of_line =
           {
-              .flags = envelope_copy.flags,
-              .num_handles = envelope_ptr->num_handles,
+              .num_bytes = static_cast<uint16_t>(envelope_copy.num_bytes),
+              .offset = static_cast<uint16_t>(offset),
           },
+      .num_handles = envelope_copy.num_handles,
+      .flags = envelope_copy.flags,
   };
-  memcpy(unknown_data_envelope.inline_envelope.inline_value, envelope_ptr->inline_value,
-         sizeof(envelope_ptr->inline_value));
   memcpy(envelope_ptr, &unknown_data_envelope, sizeof(unknown_data_envelope));
 }
 
@@ -310,6 +325,8 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
       return Status::kSuccess;
     }
 
+    ConvertEnvelopeToDecodedRepresentation(bytes_, envelope_copy, envelope_ptr);
+
     // If we do not have the coding table for this payload,
     // treat it as unknown and close its contained handles
     if (unlikely(envelope_copy.num_handles > 0)) {
@@ -356,9 +373,6 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
         }
       }
     }
-
-    ConvertEnvelopeToDecodedRepresentation(envelope_copy, envelope_ptr);
-
     return Status::kSuccess;
   }
 

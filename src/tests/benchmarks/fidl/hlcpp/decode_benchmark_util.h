@@ -45,7 +45,9 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
           fidl::HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size()),
                                static_cast<uint32_t>(handle_infos.size())));
       const char* error_msg;
-      ZX_ASSERT_MSG(ZX_OK == decode_msg.Decode(FidlType::FidlType, &error_msg), "%s", error_msg);
+      ZX_ASSERT_MSG(ZX_OK == decode_msg.DecodeWithExternalHeader_InternalMayBreak(
+                                 {}, FidlType::FidlType, &error_msg),
+                    "%s", error_msg);
       fidl::Decoder decoder(std::move(decode_msg));
       FidlType output;
       FidlType::Decode(&decoder, &output, 0);

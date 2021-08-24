@@ -139,13 +139,12 @@ void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
-    uint64_t presence;
-    ::fidl::Decode(_decoder, &presence,
-                   envelope_base + offsetof(fidl_envelope_t, presence));
-    if (presence != 0) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_Field(),
-                     _decoder->GetOffset(presence));
+                     _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_Field();
     }
@@ -157,17 +156,18 @@ void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
     for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
       if (IsOrdinalKnown(ordinal)) continue;
 
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
-      fidl_envelope_t* envelope =
-          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
-      if (envelope->presence != 0) {
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
         auto result = _value->_unknown_data.emplace(
             std::piecewise_construct, std::forward_as_tuple(ordinal),
             std::forward_as_tuple());
         auto iter = result.first;
-        iter->second.resize(envelope->num_bytes);
+        iter->second.resize(unknown_info.num_bytes);
         ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           _decoder->GetOffset(envelope->data));
+                                           unknown_info.value_offset);
       }
     }
   }
@@ -330,9 +330,10 @@ void StrictUnion::Encode(
 
 void StrictUnion::Decode(::fidl::Decoder* _decoder, StrictUnion* value,
                          size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::doccomments::StrictUnion::Tag::Invalid));
     return;
@@ -340,14 +341,16 @@ void StrictUnion::Decode(::fidl::Decoder* _decoder, StrictUnion* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::doccomments::StrictUnion::Tag::kField:
-      ::fidl::Decode(_decoder, &value->Field_, envelope_offset);
+    case ::fidl::test::doccomments::StrictUnion::Tag::kField: {
+      ::fidl::Decode(_decoder, &value->Field_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -538,9 +541,10 @@ void FlexibleUnion::Encode(
 
 void FlexibleUnion::Decode(::fidl::Decoder* _decoder, FlexibleUnion* value,
                            size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::doccomments::FlexibleUnion::Tag::Invalid));
     return;
@@ -548,18 +552,20 @@ void FlexibleUnion::Decode(::fidl::Decoder* _decoder, FlexibleUnion* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::doccomments::FlexibleUnion::Tag::kField:
-      ::fidl::Decode(_decoder, &value->Field_, envelope_offset);
+    case ::fidl::test::doccomments::FlexibleUnion::Tag::kField: {
+      ::fidl::Decode(_decoder, &value->Field_, value_offset);
       break;
-    default:
-
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
       ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         envelope_offset);
+                                         unknown_info.value_offset);
       break;
+    }
   }
 }
 

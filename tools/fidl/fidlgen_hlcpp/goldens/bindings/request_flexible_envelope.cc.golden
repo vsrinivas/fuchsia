@@ -180,9 +180,10 @@ void StrictFoo::Encode(
 
 void StrictFoo::Decode(::fidl::Decoder* _decoder, StrictFoo* value,
                        size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::Invalid));
     return;
@@ -190,18 +191,21 @@ void StrictFoo::Decode(::fidl::Decoder* _decoder, StrictFoo* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kS:
+    case ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kS: {
       new (&value->s_)::std::string();
-      ::fidl::Decode(_decoder, &value->s_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->s_, value_offset);
       break;
-    case ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kI:
-      ::fidl::Decode(_decoder, &value->i_, envelope_offset);
+    }
+    case ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kI: {
+      ::fidl::Decode(_decoder, &value->i_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -454,9 +458,10 @@ void FlexibleFoo::Encode(
 
 void FlexibleFoo::Decode(::fidl::Decoder* _decoder, FlexibleFoo* value,
                          size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid));
     return;
@@ -464,22 +469,25 @@ void FlexibleFoo::Decode(::fidl::Decoder* _decoder, FlexibleFoo* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kS:
+    case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kS: {
       new (&value->s_)::std::string();
-      ::fidl::Decode(_decoder, &value->s_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->s_, value_offset);
       break;
-    case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kI:
-      ::fidl::Decode(_decoder, &value->i_, envelope_offset);
+    }
+    case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kI: {
+      ::fidl::Decode(_decoder, &value->i_, value_offset);
       break;
-    default:
-
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
       ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         envelope_offset);
+                                         unknown_info.value_offset);
       break;
+    }
   }
 }
 

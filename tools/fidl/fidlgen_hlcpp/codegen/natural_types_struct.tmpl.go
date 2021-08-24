@@ -120,7 +120,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t 
     memcpy(_value, _decoder->template GetPtr<{{ .Name }}>(_offset), sizeof({{ .Name }}));
   } else {
     {{- range .Members }}
-    ::fidl::Decode(_decoder, &_value->{{ .Name }}, _offset + {{ .OffsetV1 }});
+    ::fidl::Decode(_decoder, &_value->{{ .Name }}, _offset + {{ .OffsetV2 }});
     {{- end }}
   }
 }

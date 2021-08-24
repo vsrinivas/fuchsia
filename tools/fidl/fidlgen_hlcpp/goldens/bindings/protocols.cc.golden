@@ -265,9 +265,10 @@ void WithErrorSyntax_HandleInResult_Result::Encode(
 void WithErrorSyntax_HandleInResult_Result::Decode(
     ::fidl::Decoder* _decoder, WithErrorSyntax_HandleInResult_Result* value,
     size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
             Invalid));
@@ -276,21 +277,24 @@ void WithErrorSyntax_HandleInResult_Result::Decode(
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
     case ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-        kResponse:
+        kResponse: {
       new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_HandleInResult_Response();
-      ::fidl::Decode(_decoder, &value->response_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
       break;
+    }
     case ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-        kErr:
-      ::fidl::Decode(_decoder, &value->err_, envelope_offset);
+        kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -630,9 +634,10 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(
 void WithErrorSyntax_ResponseAsStruct_Result::Decode(
     ::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Result* value,
     size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
             Invalid));
@@ -641,21 +646,24 @@ void WithErrorSyntax_ResponseAsStruct_Result::Decode(
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
     case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
-        kResponse:
+        kResponse: {
       new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_ResponseAsStruct_Response();
-      ::fidl::Decode(_decoder, &value->response_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
       break;
+    }
     case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
-        kErr:
-      ::fidl::Decode(_decoder, &value->err_, envelope_offset);
+        kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -984,9 +992,10 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
 void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
     ::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Result* value,
     size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
             Invalid));
@@ -995,21 +1004,24 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
     case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
-        kResponse:
+        kResponse: {
       new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsPrimitive_Response();
-      ::fidl::Decode(_decoder, &value->response_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
       break;
+    }
     case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
-        kErr:
-      ::fidl::Decode(_decoder, &value->err_, envelope_offset);
+        kErr: {
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
@@ -1257,9 +1269,10 @@ void TheUnion::Encode(
 
 void TheUnion::Decode(::fidl::Decoder* _decoder, TheUnion* value,
                       size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::protocols::TheUnion::Tag::Invalid));
     return;
@@ -1267,18 +1280,20 @@ void TheUnion::Decode(::fidl::Decoder* _decoder, TheUnion* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::fidl::test::protocols::TheUnion::Tag::kV:
-      ::fidl::Decode(_decoder, &value->v_, envelope_offset);
+    case ::fidl::test::protocols::TheUnion::Tag::kV: {
+      ::fidl::Decode(_decoder, &value->v_, value_offset);
       break;
-    default:
-
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
       ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         envelope_offset);
+                                         unknown_info.value_offset);
       break;
+    }
   }
 }
 
@@ -1631,9 +1646,10 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(
 void WithErrorSyntax_ErrorAsEnum_Result::Decode(
     ::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Result* value,
     size_t offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (!xunion->envelope.data) {
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
         ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
             Invalid));
@@ -1642,21 +1658,25 @@ void WithErrorSyntax_ErrorAsEnum_Result::Decode(
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
     case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
-        kResponse:
+        kResponse: {
       new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsEnum_Response();
-      ::fidl::Decode(_decoder, &value->response_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->response_, value_offset);
       break;
-    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr:
+    }
+    case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+        kErr: {
       new (&value->err_)::fidl::test::protocols::ErrorEnum();
-      ::fidl::Decode(_decoder, &value->err_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->err_, value_offset);
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
 }
 
