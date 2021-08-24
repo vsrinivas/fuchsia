@@ -737,7 +737,7 @@ bool get_backtrace_test() {
   int non_null_pcs = 0;
 
   for (size_t i = 0; i < Thread::kBacktraceDepth; i++) {
-    if (bt.pc[i] != nullptr) {
+    if (bt.pc[i] != 0) {
       non_null_pcs++;
     }
   }

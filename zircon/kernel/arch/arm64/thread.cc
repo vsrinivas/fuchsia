@@ -173,13 +173,13 @@ void arch_dump_thread(Thread* t) {
   }
 }
 
-void* arch_thread_get_blocked_fp(Thread* t) {
+vaddr_t arch_thread_get_blocked_fp(Thread* t) {
   if (!WITH_FRAME_POINTERS) {
-    return nullptr;
+    return 0;
   }
 
   struct arm64_context_switch_frame* frame = arm64_get_context_switch_frame(t);
-  return (void*)frame->r29;
+  return frame->r29;
 }
 
 arm64_context_switch_frame* arm64_get_context_switch_frame(Thread* thread) {

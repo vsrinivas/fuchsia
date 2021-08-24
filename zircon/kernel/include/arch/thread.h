@@ -21,7 +21,7 @@ void arch_context_switch(Thread* oldthread, Thread* newthread) TA_REQ(thread_loc
 void arch_save_user_state(Thread* thread);
 void arch_restore_user_state(Thread* thread);
 void arch_thread_construct_first(Thread*);
-void* arch_thread_get_blocked_fp(Thread*);
+vaddr_t arch_thread_get_blocked_fp(Thread*);
 
 void arch_set_suspended_general_regs(Thread* thread, GeneralRegsSource source, void* gregs);
 void arch_reset_suspended_general_regs(Thread* thread);

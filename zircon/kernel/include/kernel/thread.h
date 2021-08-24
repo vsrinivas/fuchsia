@@ -597,7 +597,7 @@ class MemoryAllocationState {
 struct Thread {
   static constexpr size_t kBacktraceDepth = 16;
   struct Backtrace {
-    void* pc[kBacktraceDepth]{};
+    vaddr_t pc[kBacktraceDepth]{};
   };
 
   // TODO(kulakowski) Are these needed?

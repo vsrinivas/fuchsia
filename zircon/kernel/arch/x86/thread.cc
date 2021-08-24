@@ -89,13 +89,13 @@ void arch_dump_thread(Thread* t) {
   }
 }
 
-void* arch_thread_get_blocked_fp(Thread* t) {
+vaddr_t arch_thread_get_blocked_fp(Thread* t) {
   if (!WITH_FRAME_POINTERS)
-    return nullptr;
+    return 0;
 
   struct x86_64_context_switch_frame* frame = (struct x86_64_context_switch_frame*)t->arch().sp;
 
-  return (void*)frame->rbp;
+  return frame->rbp;
 }
 
 static void x86_context_switch_spec_mitigations(Thread* oldthread, Thread* newthread) {
