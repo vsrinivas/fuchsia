@@ -38,7 +38,7 @@ Options:
       [default: this is inferred from --emit=dep-info=FILE]
 
 If the rust-command contains --remote-inputs=..., those will be interpreted
-as extra --inputs to upload, and removed prior local and remote execution.
+as extra --inputs to upload, and removed prior to local and remote execution.
 The option argument is a comma-separated list of files, relative to
 \$project_root.
 
@@ -85,6 +85,9 @@ do
   shift
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
+
+# For debugging, trace the files accessed.
+fsatrace="$project_root"/prebuilt/fsatrace/fsatrace
 
 # Modify original command to extract dep-info only (fast).
 # Start with `env` in case command starts with environment variables.
@@ -350,9 +353,21 @@ top_source="$(realpath --relative-to="$project_root" "$top_source")"
 # Locally generate a depfile only and read it as list of files to upload.
 # These inputs appear relative to the build/output directory, but need to be
 # relative to the $project_root for rewrapper.
+depfile_trace="$depfile.nolink.trace"
+trace_depfile_scanning_prefix=(
+  env FSAT_BUF_SIZE=5000000
+  "$fsatrace" erwmdtq "$depfile_trace" --
+)
 "${dep_only_command[@]}" || {
   status=$?
   echo "Depfile generation failed.  Aborting."
+
+  # If depfile generation fails, re-run it with tracing to examine
+  # the files it accessed.
+  "${trace_depfile_scanning_prefix[@]}" "${dep_only_command[@]}" > /dev/null 2>&1
+  echo "File access trace [$depfile_trace]:"
+  cat "$depfile_trace"
+
   exit "$status"
 }
 mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
