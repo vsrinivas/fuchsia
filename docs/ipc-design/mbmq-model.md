@@ -3,6 +3,8 @@
 This is an outline of a set of primitives for IPC (interprocess
 communication) proposed for use in Fuchsia.
 
+[TOC]
+
 ## Overview of object types
 
 The MBMQ model is based around five types of object:
