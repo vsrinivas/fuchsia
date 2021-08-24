@@ -117,8 +117,8 @@ class SetUi {
   }
 
   Future<bool> isMicMuted() async {
-    final result = await _sl4f.request('setui_facade.IsMicMuted');
-    return result == 'true';
+    final muted = await _sl4f.request('setui_facade.IsMicMuted');
+    return muted;
   }
 
   Future<void> setMicMute(MicState state) async {

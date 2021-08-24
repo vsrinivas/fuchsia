@@ -118,7 +118,7 @@ impl SetUiFacade {
         return Ok(to_value(&intl_info)?);
     }
 
-    /// Reports the AudioInput (mic muted) state.
+    /// Reports the microphone DeviceState.
     ///
     /// Returns true if mic is muted or false if mic is unmuted.
     pub async fn is_mic_muted(&self) -> Result<Value, Error> {
@@ -126,19 +126,19 @@ impl SetUiFacade {
             Some(proxy) => proxy.clone(),
             None => match connect_to_protocol::<InputMarker>() {
                 Ok(proxy) => proxy,
-                Err(e) => bail!("isMicMuted - failed to connect to Setup Input service {:?}.", e),
+                Err(e) => bail!("isMicMuted - failed to connect to Input service {:?}.", e),
             },
         };
 
         match input_proxy.watch2().await?.devices {
             Some(input_device) => {
                 let mut muted = false;
-                match &input_device[0].state {
-                    Some(state) => match state.toggle_flags {
-                        Some(fsettings::ToggleStateFlags::Muted) => {
-                            muted = true;
-                        }
-                        _ => (),
+                let device = input_device.into_iter().find(|device| {
+                    device.device_type == Some(fsettings::DeviceType::Microphone)
+                  }).unwrap();
+                match device.state {
+                    Some(state) => {
+                        muted = state.toggle_flags == Some(fsettings::ToggleStateFlags::Muted);
                     },
                     _ => (),
                 }
@@ -247,8 +247,9 @@ impl SetUiFacade {
         };
 
         // Initialize the InputState struct.
+        let mic_device_name = "microphone";
         let mut input_states = InputState {
-            name: Some("MICROPHONE".to_string()),
+            name: Some(mic_device_name.to_string()),
             device_type: Some(fsettings::DeviceType::Microphone),
             state: Some(DeviceState {
                 toggle_flags: Some(fsettings::ToggleStateFlags::Available),
@@ -414,7 +415,7 @@ mod tests {
                 Ok(Some(fsettings::InputRequest::Watch2 { responder })) => {
                     let device = InputDevice {
                         device_name: None,
-                        device_type: None,
+                        device_type: Some(fsettings::DeviceType::Microphone),
                         source_states: None,
                         mutable_toggle_state: None,
                         state: Some(DeviceState {
@@ -438,7 +439,7 @@ mod tests {
                     assert_eq!(
                         input_states[0],
                         InputState {
-                            name: Some("MICROPHONE".to_string()),
+                            name: Some("microphone".to_string()),
                             device_type: Some(fsettings::DeviceType::Microphone),
                             state: Some(DeviceState {
                                 toggle_flags: Some(fsettings::ToggleStateFlags::Muted),
@@ -478,7 +479,7 @@ mod tests {
                 Ok(Some(fsettings::InputRequest::Watch2 { responder })) => {
                     let device = InputDevice {
                         device_name: None,
-                        device_type: None,
+                        device_type: Some(fsettings::DeviceType::Microphone),
                         source_states: None,
                         mutable_toggle_state: None,
                         state: Some(DeviceState {
@@ -530,7 +531,7 @@ mod tests {
                 Ok(Some(fsettings::InputRequest::Watch2 { responder })) => {
                     let device = InputDevice {
                         device_name: None,
-                        device_type: None,
+                        device_type: Some(fsettings::DeviceType::Microphone),
                         source_states: None,
                         mutable_toggle_state: None,
                         state: Some(DeviceState {
