@@ -140,6 +140,9 @@ foreach(file, l10n_files) {
 
 fuchsia_package_with_single_component("a11y-manager") {
   component_name = "a11y-manager"
+
+  # fxbug.dev/83213 retain the v1 component while out of tree components still
+  # need it
   manifest = "meta/a11y_manager.cmx"
   deps = [
     ":bin",
