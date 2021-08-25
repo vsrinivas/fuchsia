@@ -42,8 +42,7 @@ arch::ArmMemoryAttrIndirectionRegister GetArmMemoryAttrIndirectionRegister() {
   return arch::ArmMemoryAttrIndirectionRegister::Get()
       .FromValue(0)
       .SetAttribute(ToMairIndex(CacheAttributes::kNormal), arch::ArmMemoryAttribute::kNormalCached)
-      .SetAttribute(ToMairIndex(CacheAttributes::kDevice),
-                    arch::ArmMemoryAttribute::kDevice_nGnRnE);
+      .SetAttribute(ToMairIndex(CacheAttributes::kDevice), arch::ArmMemoryAttribute::kDevice_nGnRE);
 }
 
 std::optional<LookupPageResult> LookupPage(MemoryManager& allocator, const PageTableLayout& layout,

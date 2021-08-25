@@ -162,7 +162,7 @@ TEST(Builder, CacheAttributes) {
   arch::ArmMemoryAttrIndirectionRegister mair =
       AddressSpaceBuilder::GetArmMemoryAttrIndirectionRegister();
   EXPECT_EQ(mair.GetAttribute(device_pte.as_page().lower_attrs().attr_indx()),
-            arch::ArmMemoryAttribute::kDevice_nGnRnE);
+            arch::ArmMemoryAttribute::kDevice_nGnRE);
   EXPECT_EQ(mair.GetAttribute(normal_pte.as_page().lower_attrs().attr_indx()),
             arch::ArmMemoryAttribute::kNormalCached);
 }
