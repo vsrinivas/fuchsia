@@ -322,7 +322,7 @@ void Osd::SetColorCorrection(uint32_t rdma_table_idx, const display_config_t* co
                   : 0);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_PRE_OFFSET2, offset2);
   // TODO(b/182481217): remove when this bug is closed.
-  DISP_SPEW("pre offset0_1=%u offset2=%u\n", offset0_1, offset2);
+  DISP_TRACE("pre offset0_1=%u offset2=%u\n", offset0_1, offset2);
 
   // Load PostOffset values (or 0 if none entered)
   offset0_1 = (config->cc_flags & COLOR_CONVERSION_POSTOFFSET
@@ -335,7 +335,7 @@ void Osd::SetColorCorrection(uint32_t rdma_table_idx, const display_config_t* co
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_OFFSET0_1, offset0_1);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_OFFSET2, offset2);
   // TODO(b/182481217): remove when this bug is closed.
-  DISP_SPEW("post offset0_1=%u offset2=%u\n", offset0_1, offset2);
+  DISP_TRACE("post offset0_1=%u offset2=%u\n", offset0_1, offset2);
 
   const float identity[3][3] = {
     {1, 0, 0,},
@@ -359,8 +359,8 @@ void Osd::SetColorCorrection(uint32_t rdma_table_idx, const display_config_t* co
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF20_21, coef20_21);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF22, coef22);
   // TODO(b/182481217): remove when this bug is closed.
-  DISP_SPEW("color correction regs 00_01=%xu 02_12=%xu 11_12=%xu 20_21=%u 22=%xu\n", coef00_01,
-            coef02_10, coef11_12, coef20_21, coef22);
+  DISP_TRACE("color correction regs 00_01=%xu 02_12=%xu 11_12=%xu 20_21=%u 22=%xu\n", coef00_01,
+             coef02_10, coef11_12, coef20_21, coef22);
 }
 
 void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
@@ -372,7 +372,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
     return;
   }
 
-  DISP_SPEW("Table index %d used", next_table_idx);
+  DISP_TRACE("Table index %d used", next_table_idx);
 
   if ((config[0].mode.h_addressable != display_width_) ||
       (config[0].mode.v_addressable != display_height_)) {

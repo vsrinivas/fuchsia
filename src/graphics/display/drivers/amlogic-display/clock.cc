@@ -55,7 +55,7 @@ zx_status_t Clock::PllLockWait() {
   uint32_t pll_lock;
 
   for (int lock_attempts = 0; lock_attempts < kMaxPllLockAttempt; lock_attempts++) {
-    DISP_SPEW("Waiting for PLL Lock: (%d/3).\n", lock_attempts + 1);
+    DISP_TRACE("Waiting for PLL Lock: (%d/3).\n", lock_attempts + 1);
     if (lock_attempts == 1) {
       SET_BIT32(HHI, HHI_HDMI_PLL_CNTL3, 1, 31, 1);
     } else if (lock_attempts == 2) {
@@ -112,8 +112,8 @@ zx_status_t Clock::GenerateHPLL(const display_setting_t& d) {
           pll_cfg_.pll_od2_sel = od2 >> 1;
           pll_cfg_.pll_od3_sel = od3 >> 1;
           pll_cfg_.pll_fout = pll_fout;
-          DISP_SPEW("od1=%d, od2=%d, od3=%d\n", (od1 >> 1), (od2 >> 1), (od3 >> 1));
-          DISP_SPEW("pll_fvco=%d\n", fod1);
+          DISP_TRACE("od1=%d, od2=%d, od3=%d\n", (od1 >> 1), (od2 >> 1), (od3 >> 1));
+          DISP_TRACE("pll_fvco=%d\n", fod1);
           pll_cfg_.pll_fvco = fod1;
           // for simplicity, assume n = 1
           // calculate m such that fin x m = fod1
@@ -125,7 +125,7 @@ zx_status_t Clock::GenerateHPLL(const display_setting_t& d) {
           pll_cfg_.pll_m = m;
           pll_cfg_.pll_n = 1;
           pll_cfg_.pll_frac = pll_frac;
-          DISP_SPEW("m=%d, n=%d, frac=0x%x\n", m, 1, pll_frac);
+          DISP_TRACE("m=%d, n=%d, frac=0x%x\n", m, 1, pll_frac);
           pll_cfg_.bitrate = pll_fout * kKHZ;  // Hz
           return ZX_OK;
         }

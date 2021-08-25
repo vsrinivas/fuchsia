@@ -90,7 +90,7 @@ zx_status_t MipiPhy::PhyCfgLoad(uint32_t bitrate) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  DISP_SPEW(
+  DISP_TRACE(
       "lp_tesc     = 0x%02x\n"
       "lp_lpx      = 0x%02x\n"
       "lp_ta_sure  = 0x%02x\n"

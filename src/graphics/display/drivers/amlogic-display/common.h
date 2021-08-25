@@ -26,8 +26,7 @@
 
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_SPEW(fmt, ...) zxlogf(TRACE, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_TRACE zxlogf(INFO, "[%s %d] ", __func__, __LINE__)
+#define DISP_TRACE(fmt, ...) zxlogf(TRACE, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 // Should match display_mmios table in board driver
 enum {
