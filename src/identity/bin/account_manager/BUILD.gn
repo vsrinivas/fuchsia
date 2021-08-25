@@ -73,6 +73,8 @@ fuchsia_package_with_single_component("account_manager") {
   if (prototype_account_transfer) {
     manifest = "meta/account_manager_prototype.cmx"
   } else {
+    # fxbug.dev/83213 retain the v1 component while out of tree components still
+    # need it
     manifest = "meta/account_manager.cmx"
   }
 }
