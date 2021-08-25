@@ -70,9 +70,18 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
     handle_checker.AddEvent(handle);
   }
 
+  std::vector<zx_handle_info_t> handle_infos;
+  for (zx_handle_t handle : handles) {
+    handle_infos.push_back({
+        .handle = handle,
+        .type = ZX_OBJ_TYPE_NONE,
+        .rights = ZX_RIGHT_SAME_RIGHTS,
+    });
+  }
+
   const char* decode_error;
-  auto status = fidl_decode(FidlType::Type, bytes.data(), bytes.size(), handles.data(),
-                            handles.size(), &decode_error);
+  auto status = fidl_decode_etc(FidlType::Type, bytes.data(), bytes.size(), handle_infos.data(),
+                                handle_infos.size(), &decode_error);
   ASSERT_EQ(status, ZX_OK) << decode_error;
 
   auto result = reinterpret_cast<FidlType*>(&bytes[0]);

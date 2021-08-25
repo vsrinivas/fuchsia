@@ -152,9 +152,20 @@ TEST(OnErrorCloseHandle, DecodeErrorTest) {
   ASSERT_TRUE(IsPeerValid(zx::unowned_eventpair(eventpair_a)));
 
   const char* out_error = nullptr;
-  zx_handle_t handles[] = {eventpair_b.release(), eventpair_y.release()};
-  auto status = fidl_decode(&fidl_test_coding_fuchsia_SmallerTableOfStructWithHandleTable, buffer,
-                            buf_size, handles, std::size(handles), &out_error);
+  zx_handle_info_t handles[] = {
+      {
+          .handle = eventpair_b.release(),
+          .type = ZX_OBJ_TYPE_NONE,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+      },
+      {
+          .handle = eventpair_y.release(),
+          .type = ZX_OBJ_TYPE_NONE,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+      },
+  };
+  auto status = fidl_decode_etc(&fidl_test_coding_fuchsia_SmallerTableOfStructWithHandleTable,
+                                buffer, buf_size, handles, std::size(handles), &out_error);
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NOT_NULL(out_error);
 

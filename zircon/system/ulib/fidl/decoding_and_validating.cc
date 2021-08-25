@@ -536,20 +536,6 @@ zx_status_t internal__fidl_decode_skip_unknown_handles__v2__may_break(
       type, bytes, num_bytes, handles, num_handles, out_error_msg, close_handles_op, true);
 }
 
-zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                        const zx_handle_t* handles, uint32_t num_handles,
-                        const char** out_error_msg) {
-  return fidl_decode_impl<zx_handle_t, Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V1>(
-      type, bytes, num_bytes, handles, num_handles, out_error_msg, close_handles_op, false);
-}
-
-zx_status_t internal__fidl_decode__v2__may_break(const fidl_type_t* type, void* bytes,
-                                                 uint32_t num_bytes, const zx_handle_t* handles,
-                                                 uint32_t num_handles, const char** out_error_msg) {
-  return fidl_decode_impl<zx_handle_t, Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V2>(
-      type, bytes, num_bytes, handles, num_handles, out_error_msg, close_handles_op, false);
-}
-
 zx_status_t fidl_decode_etc_skip_unknown_handles(const fidl_type_t* type, void* bytes,
                                                  uint32_t num_bytes,
                                                  const zx_handle_info_t* handle_infos,

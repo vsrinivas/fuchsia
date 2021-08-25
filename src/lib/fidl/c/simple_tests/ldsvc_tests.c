@@ -191,8 +191,8 @@ static void check_string_round_trip(uint64_t ordinal_value, const fidl_type_t* t
   ldmsg_req_encode(&req, &req_len_out, data, strlen(data));
   EXPECT_EQ((uintptr_t)req.common.string.data, FIDL_ALLOC_PRESENT, "");
   const char* err_msg = NULL;
-  zx_status_t res = fidl_decode(table, (void*)&req, (uint32_t)req_len_out, NULL, 0, &err_msg);
-  EXPECT_EQ(ZX_OK, res, "result of fidl_decode incorrect");
+  zx_status_t res = fidl_decode_etc(table, (void*)&req, (uint32_t)req_len_out, NULL, 0, &err_msg);
+  EXPECT_EQ(ZX_OK, res, "result of fidl_decode_etc incorrect");
   EXPECT_EQ(0, strcmp(req.common.string.data, data), "data not decoded correctly");
   EXPECT_EQ(err_msg, NULL, "%s", err_msg);
   uint32_t out_actual_handles;
@@ -218,9 +218,9 @@ TEST(LdsvcTests, ldmsg_functions_are_consistent) {
     done_req.header.ordinal = fuchsia_ldsvc_LoaderDoneOrdinal;
     ldmsg_req_encode(&done_req, &req_len_out, NULL, 0);
     const char* err_msg = NULL;
-    zx_status_t res = fidl_decode(&fuchsia_ldsvc_LoaderDoneRequestTable, (void*)&done_req,
-                                  (uint32_t)req_len_out, NULL, 0, &err_msg);
-    EXPECT_EQ(ZX_OK, res, "fidl_decode return value not ZX_OK");
+    zx_status_t res = fidl_decode_etc(&fuchsia_ldsvc_LoaderDoneRequestTable, (void*)&done_req,
+                                      (uint32_t)req_len_out, NULL, 0, &err_msg);
+    EXPECT_EQ(ZX_OK, res, "fidl_decode_etc return value not ZX_OK");
     EXPECT_EQ(err_msg, NULL, "%s", err_msg);
     // Don't bother with the round-trip here because there is no data to
     // encode.

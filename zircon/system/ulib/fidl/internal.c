@@ -38,7 +38,6 @@ zx_rights_t subtract_rights(zx_rights_t minuend, zx_rights_t subtrahend) {
   return minuend & ~subtrahend;
 }
 
-#ifdef __Fuchsia__
 zx_status_t FidlEnsureHandleRights(zx_handle_t* handle_ptr, zx_obj_type_t actual_type,
                                    zx_obj_type_t actual_rights, zx_obj_type_t required_object_type,
                                    zx_rights_t required_rights, const char** error) {
@@ -47,7 +46,9 @@ zx_status_t FidlEnsureHandleRights(zx_handle_t* handle_ptr, zx_obj_type_t actual
   // some places.
   if (unlikely(required_object_type != actual_type && required_object_type != ZX_OBJ_TYPE_NONE &&
                actual_type != ZX_OBJ_TYPE_NONE)) {
+#ifdef __Fuchsia__
     zx_handle_close(*handle_ptr);
+#endif
     *handle_ptr = ZX_HANDLE_INVALID;
     if (error) {
       *error = "object type does not match expected type";
@@ -65,7 +66,9 @@ zx_status_t FidlEnsureHandleRights(zx_handle_t* handle_ptr, zx_obj_type_t actual
 
   // Check that |actual_rights| contain all of the |required_rights|.
   if (unlikely(subtract_rights(required_rights, actual_rights) != 0)) {
+#ifdef __Fuchsia__
     zx_handle_close(*handle_ptr);
+#endif
     *handle_ptr = ZX_HANDLE_INVALID;
     if (error) {
       *error = "missing required rights";
@@ -76,22 +79,19 @@ zx_status_t FidlEnsureHandleRights(zx_handle_t* handle_ptr, zx_obj_type_t actual
   // Check if |actual_rights| has more rights than |required_rights|.
   // If so, the rights need to be reduced.
   if (unlikely(subtract_rights(actual_rights, required_rights))) {
+#ifdef __Fuchsia__
     zx_status_t status = zx_handle_replace(*handle_ptr, required_rights, handle_ptr);
     if (unlikely(status != ZX_OK)) {
       if (error)
         *error = "zx_handle_replace failed";
       return status;
     }
+#else
+    ZX_PANIC("zx_handle_replace only supported on Fuchsia");
+#endif
   }
   return ZX_OK;
 }
-#else
-zx_status_t FidlEnsureHandleRights(zx_handle_t* handle_ptr, zx_obj_type_t actual_type,
-                                   zx_obj_type_t actual_rights, zx_obj_type_t required_object_type,
-                                   zx_rights_t required_rights, const char** error) {
-  ZX_PANIC("handles only supported on fuchsia");
-}
-#endif
 
 zx_status_t FidlHandleDispositionsToHandleInfos(zx_handle_disposition_t* handle_dispositions,
                                                 zx_handle_info_t* handle_infos,

@@ -39,12 +39,12 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 {{- end }}
 TEST(C_Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
+	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
 	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	std::vector<uint8_t> bytes = {{ .Bytes }};
-	std::vector<zx_handle_t> handles = {{ .Handles }};
+	std::vector<zx_handle_info_t> handles = {{ .Handles }};
 	auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(c_conformance_utils::DecodeSuccess({{ .WireFormatVersion }}, decltype(obj)::Type, std::move(bytes), std::move(handles)));
 }
@@ -59,14 +59,14 @@ TEST(C_Conformance, {{ .Name }}_Decode) {
 {{- end }}
 TEST(C_Conformance, {{ .Name }}_Decode_Failure) {
 	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
+	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
 	std::vector<uint8_t> bytes = {{ .Bytes }};
-	std::vector<zx_handle_t> handles = {{ .Handles }};
+	std::vector<zx_handle_info_t> handles = {{ .Handles }};
 	EXPECT_TRUE(c_conformance_utils::DecodeFailure({{ .WireFormatVersion }}, {{ .ValueType }}::Type, std::move(bytes), std::move(handles), {{ .ErrorCode }}));
 	{{- if .HandleDefs }}
-	for (const zx_handle_t handle : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	for (const zx_handle_info_t handle_info : handle_defs) {
+		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle_info.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 	}
 	{{- end }}
 }
@@ -120,8 +120,8 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		handleDefs := libhlcpp.BuildHandleDefs(decodeSuccess.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", decodeSuccess.Value, decl, libllcpp.HandleReprRaw)
+		handleDefs := libhlcpp.BuildHandleInfoDefs(decodeSuccess.HandleDefs)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", decodeSuccess.Value, decl, libllcpp.HandleReprInfo)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -133,7 +133,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				ValueBuild:        valueBuild,
 				ValueVar:          valueVar,
 				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:           libhlcpp.BuildRawHandles(encoding.Handles),
+				Handles:           libhlcpp.BuildRawHandleInfos(encoding.Handles),
 				FuchsiaOnly:       fuchsiaOnly,
 				WireFormatVersion: wireFormatName(encoding.WireFormat),
 			})
@@ -149,7 +149,7 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
-		handleDefs := libhlcpp.BuildHandleDefs(decodeFailure.HandleDefs)
+		handleDefs := libhlcpp.BuildHandleInfoDefs(decodeFailure.HandleDefs)
 		valueType := libllcpp.ConformanceType(decodeFailure.Type)
 		errorCode := libllcpp.LlcppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
@@ -162,7 +162,7 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 				HandleDefs:        handleDefs,
 				ValueType:         valueType,
 				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:           libhlcpp.BuildRawHandles(encoding.Handles),
+				Handles:           libhlcpp.BuildRawHandleInfos(encoding.Handles),
 				ErrorCode:         errorCode,
 				FuchsiaOnly:       fuchsiaOnly,
 				WireFormatVersion: wireFormatName(encoding.WireFormat),

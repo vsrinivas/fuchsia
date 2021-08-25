@@ -47,18 +47,18 @@ bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size
 // Verifies that |bytes| and |handles| successfully decodes.
 // TODO(fxbug.dev/67276) Check deep equality of decoded value.
 inline bool DecodeSuccess(FidlWireFormatVersion wire_format_version, const fidl_type* type,
-                          std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles) {
+                          std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handles) {
   const char* error_msg = nullptr;
   zx_status_t status;
   switch (wire_format_version) {
     case FIDL_WIRE_FORMAT_VERSION_V1: {
-      status =
-          fidl_decode(type, bytes.data(), bytes.size(), handles.data(), handles.size(), &error_msg);
+      status = fidl_decode_etc(type, bytes.data(), bytes.size(), handles.data(), handles.size(),
+                               &error_msg);
       break;
     }
     case FIDL_WIRE_FORMAT_VERSION_V2: {
-      status = internal__fidl_decode__v2__may_break(type, bytes.data(), bytes.size(),
-                                                    handles.data(), handles.size(), &error_msg);
+      status = internal_fidl_decode_etc__v2__may_break(type, bytes.data(), bytes.size(),
+                                                       handles.data(), handles.size(), &error_msg);
       break;
     }
     default:
@@ -79,19 +79,19 @@ inline bool DecodeSuccess(FidlWireFormatVersion wire_format_version, const fidl_
 
 // Verifies that |bytes| and |handles| fails to decode.
 inline bool DecodeFailure(FidlWireFormatVersion wire_format_version, const fidl_type* type,
-                          std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles,
+                          std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handles,
                           zx_status_t expected_error_code) {
   const char* error_msg = nullptr;
   zx_status_t status;
   switch (wire_format_version) {
     case FIDL_WIRE_FORMAT_VERSION_V1: {
-      status =
-          fidl_decode(type, bytes.data(), bytes.size(), handles.data(), handles.size(), &error_msg);
+      status = fidl_decode_etc(type, bytes.data(), bytes.size(), handles.data(), handles.size(),
+                               &error_msg);
       break;
     }
     case FIDL_WIRE_FORMAT_VERSION_V2: {
-      status = internal__fidl_decode__v2__may_break(type, bytes.data(), bytes.size(),
-                                                    handles.data(), handles.size(), &error_msg);
+      status = internal_fidl_decode_etc__v2__may_break(type, bytes.data(), bytes.size(),
+                                                       handles.data(), handles.size(), &error_msg);
       break;
     }
     default:

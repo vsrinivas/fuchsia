@@ -64,6 +64,24 @@ constexpr zx_handle_t dummy_handle_28 = static_cast<zx_handle_t>(51);
 constexpr zx_handle_t dummy_handle_29 = static_cast<zx_handle_t>(52);
 #endif
 
+zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                        const zx_handle_t* handles, uint32_t num_handles,
+                        const char** error_msg_out) {
+  if (handles == nullptr) {
+    return fidl_decode_etc(type, bytes, num_bytes, nullptr, num_handles, error_msg_out);
+  }
+  std::vector<zx_handle_info_t> handle_infos;
+  for (uint32_t i = 0; i < num_handles; i++) {
+    handle_infos.push_back({
+        .handle = handles[i],
+        .type = ZX_OBJ_TYPE_NONE,
+        .rights = ZX_RIGHT_SAME_RIGHTS,
+    });
+  }
+  return fidl_decode_etc(type, bytes, num_bytes, handle_infos.data(), handle_infos.size(),
+                         error_msg_out);
+}
+
 // All sizes in fidl encoding tables are 32 bits. The fidl compiler
 // normally enforces this. Check manually in manual tests.
 template <typename T, size_t N>
@@ -1718,9 +1736,9 @@ TEST(UnknownEnvelope, V2DecodeUnknownInlineEnvelope) {
   };
 
   const char* error = nullptr;
-  auto status = internal__fidl_decode__v2__may_break(
-      &fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes, ArrayCount(bytes), 0, 0,
-      &error);
+  auto status = internal_fidl_decode_etc__v2__may_break(
+      &fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes, ArrayCount(bytes), nullptr,
+      0, &error);
 
   EXPECT_EQ(status, ZX_OK);
 
@@ -1742,9 +1760,9 @@ TEST(UnknownEnvelope, V2DecodeUnknownOutOfLineEnvelope) {
   };
 
   const char* error = nullptr;
-  auto status = internal__fidl_decode__v2__may_break(
-      &fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes, ArrayCount(bytes), 0, 0,
-      &error);
+  auto status = internal_fidl_decode_etc__v2__may_break(
+      &fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes, ArrayCount(bytes), nullptr,
+      0, &error);
 
   EXPECT_EQ(status, ZX_OK);
 

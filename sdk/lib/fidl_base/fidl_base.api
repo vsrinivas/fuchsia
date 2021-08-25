@@ -1,5 +1,5 @@
 {
-  "pkg/fidl_base/include/lib/fidl/coding.h": "1a968b237ef2bfb2b30a3aa774ac9cc3",
+  "pkg/fidl_base/include/lib/fidl/coding.h": "59010cac2e527fecc1728d15ab9f1cd4",
   "pkg/fidl_base/include/lib/fidl/internal.h": "ae362df4d94af58ef94e1a2dec40126c",
   "pkg/fidl_base/include/lib/fidl/internal_callable_traits.h": "a18e97bafa2f7e388422a7e721d6421d",
   "pkg/fidl_base/include/lib/fidl/trace.h": "85da85ca3d983353d8acd8b02dd12506",
