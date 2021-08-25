@@ -2,9 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("rust_cxx_ffi_library.gni")
+
 group("tests") {
   testonly = true
   deps = [ "examples/basic:tests" ]
+}
+
+# A library of useful types for working with CXX within Fuchsia.
+rust_cxx_ffi_library("fuchsia-cxx") {
+  rust_sources = [
+    "src/lib.rs",
+    "src/result.rs",
+  ]
+  bridge_sources = [ "src/result.rs" ]
+  rust_deps = [
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:cxx",
+  ]
+
+  cpp_sources = [
+    "result.cc",
+    "result.h",
+  ]
+  public_deps = [
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+  ]
 }
 
 # Included automatically by rust_cxx_ffi_library.gni targets
@@ -19,7 +43,10 @@ source_set("cxx_lib") {
   # It is recommended that you read https://docs.rs/cxx first to understand how cxx works, and to
   # understand what cxx does (and does not) do. All C++ code is still "unsafe" from the Rust
   # perspective; cxx just helps with building the Rust side of the FFI layer safely.
-  visibility = [ "examples/*" ]
+  visibility = [
+    ":*",
+    "examples/*",
+  ]
 
   cxx_crate = "//third_party/rust_crates/vendor/cxx"
   sources = [
