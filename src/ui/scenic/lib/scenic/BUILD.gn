@@ -38,7 +38,6 @@ source_set("scenic") {
     "//src/ui/lib/escher",
     "//src/ui/scenic/lib/focus",
     "//src/ui/scenic/lib/gfx:gfx",
-    "//src/ui/scenic/lib/gfx:view_focuser_registry",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/trace",

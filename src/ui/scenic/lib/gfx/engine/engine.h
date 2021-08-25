@@ -31,8 +31,7 @@
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 
-namespace scenic_impl {
-namespace gfx {
+namespace scenic_impl::gfx {
 
 class Compositor;
 class Engine;
@@ -92,7 +91,7 @@ class Engine : public scheduling::FrameRenderer {
  public:
   Engine(escher::EscherWeakPtr escher,
          std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer,
-         inspect::Node inspect_node, RequestFocusFunc request_focus);
+         inspect::Node inspect_node);
 
   // Only used for testing.
   explicit Engine(escher::EscherWeakPtr escher);
@@ -202,7 +201,6 @@ class Engine : public scheduling::FrameRenderer {
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Engine);
 };
 
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx
 
 #endif  // SRC_UI_SCENIC_LIB_GFX_ENGINE_ENGINE_H_

@@ -255,7 +255,6 @@ source_set("gfx") {
   deps = [
     ":ids",
     ":object_linker",
-    ":view_focuser_registry",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/ui/scenic/cpp",
     "//src/graphics/display/drivers/display:preferred-scanout-image-type",
@@ -288,15 +287,6 @@ source_set("object_linker") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-}
-
-source_set("view_focuser_registry") {
-  sources = [ "engine/view_focuser_registry.h" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.ui.views",
-    "//src/ui/scenic/lib/gfx:ids",
-  ]
 }
 
 source_set("ids") {

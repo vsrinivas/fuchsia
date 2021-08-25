@@ -29,7 +29,6 @@ void GfxSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
       scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                         /* sysmem */ nullptr,
                                         /* display_manager */ nullptr, image_pipe_updater);
-  scenic->SetViewFocuserRegistry(engine_->scene_graph());
   scenic->SetFrameScheduler(frame_scheduler_);
   frame_scheduler_->Initialize(/*frame_renderer*/ engine_,
                                /*session_updaters*/ {image_pipe_updater, scenic});

@@ -27,6 +27,9 @@ zx_koid_t FocusKoidOf(const std::vector<zx_koid_t>& chain) {
 
 FocusManager::FocusManager(inspect::Node inspect_node, LegacyFocusListener legacy_focus_listener)
     : legacy_focus_listener_(std::move(legacy_focus_listener)),
+      view_focuser_registry_(/*request_focus*/ [this](zx_koid_t requestor, zx_koid_t request) {
+        return RequestFocus(requestor, request) == FocusChangeStatus::kAccept;
+      }),
       inspect_node_(std::move(inspect_node)) {
   // Track the focus chain in inspect.
   lazy_ = inspect_node_.CreateLazyValues("values", [this] {
@@ -85,7 +88,7 @@ void FocusManager::OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapsh
   snapshot_ = std::move(snapshot);
   RepairFocus();
   // TODO(fxbug.dev/76138): This has linear cost. Look at making it cheaper.
-  view_ref_focused_registry_.Unregister(*snapshot_.get());
+  view_ref_focused_registry_.Unregister(*snapshot_);
 }
 
 void FocusManager::Register(
@@ -104,6 +107,11 @@ void FocusManager::Register(
 void FocusManager::RegisterViewRefFocused(
     zx_koid_t koid, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> vrf) {
   view_ref_focused_registry_.Register(koid, std::move(vrf));
+}
+
+void FocusManager::RegisterViewFocuser(
+    zx_koid_t koid, fidl::InterfaceRequest<fuchsia::ui::views::Focuser> focuser) {
+  view_focuser_registry_.Register(koid, std::move(focuser));
 }
 
 void FocusManager::DispatchFocusChainTo(
