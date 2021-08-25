@@ -27,6 +27,7 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
+#include <pretty/hexdump.h>
 
 #include "client.h"
 #include "eld.h"
@@ -382,7 +383,11 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       } while (!success && edid_attempt < kEdidRetries);
 
       if (!success) {
-        zxlogf(INFO, "Failed to parse edid \"%s\"", edid_err);
+        zxlogf(INFO, "Failed to parse edid (%d bytes) \"%s\"", info->edid.edid_length(), edid_err);
+        if (zxlog_level_enabled(INFO) &&
+            info->edid.edid_bytes()) {
+          hexdump(info->edid.edid_bytes(), info->edid.edid_length());
+        }
         continue;
       }
 
