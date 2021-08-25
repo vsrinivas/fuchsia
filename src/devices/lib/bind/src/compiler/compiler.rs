@@ -258,7 +258,7 @@ pub fn compile_bind_composite<'a>(
         .into_iter()
         .map(|node| {
             let name = node.name;
-            compile_statements(node.statements, &symbol_table, true)
+            compile_statements(node.statements, &symbol_table, use_new_bytecode)
                 .map(|inst| CompositeNode { name: name, instructions: inst })
         })
         .collect::<Result<Vec<CompositeNode<'_>>, CompilerError>>()?;

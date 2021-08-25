@@ -161,6 +161,52 @@ A string literal matches the regex `”[^”]*”`, and a numeric literal matche
 The bind compiler will ignore (treat as whitespace) any line prefixed by `//`, and any multiple
 lines delimited by `/*` and `*/`.
 
+
+### Composite Bind
+
+In addition to binding drivers to devices, drivers in Fuchsia can use bind rules
+to create a composite device from nodes. The bind rules follow the same language
+specification as non-composite bind, but separated into nodes that contain a
+name and set of statements.
+
+There must be exactly one primary node in the bind rules. The composite driver will
+be started in the same driver host as the primary node.
+
+An example composite bind rule file can be found at
+[//tools/bindc/examples/composite-gizmo.bind](/tools/bindc/examples/composite-gizmo.bind).
+
+```
+using fuchsia.usb;
+
+composite gizmo_example;
+
+primary node "gizmo_usb" {
+  fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.INTERFACE;
+}
+
+node "audio" {
+  if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL {
+    fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.AUDIO;
+  } else if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.REALTEK {
+    accept fuchsia.BIND_USB_CLASS {
+      fuchsia.usb.BIND_USB_CLASS.COMM,
+      fuchsia.usb.BIND_USB_CLASS.VIDEO,
+    }
+  }
+}
+
+```
+
+The grammar for composite bind is:
+
+```
+composite-bind-rules = [composite-device], using-list , ( node )+ ;
+
+composite-device = “composite” , IDENTIFIER;
+
+node = [ "primary" ], "node" , STRING-LITERAL , "{" , ( statement )+ , "}"
+```
+
 ### Build targets
 
 To declare bind rules within the Fuchsia build system, use the following build target:
@@ -190,6 +236,14 @@ The JSON specification must be a list of test case objects, where each object co
  - `device` A list of string key value pairs describing the properties of a device. This is
    similar to the debugger's [device specifications](/docs/development/drivers/diagnostics/bind-debugger.md#device-specification).
 
+If the test is for a composite device, then each node in the device can have a
+list of test case objects. The JSON specification for the unit tests will be a
+list of node objects instead. Each node object contains:
+
+-   `node` A string for the node name. It must match a node in the bind rules
+    tests.
+-   `tests` A list of test case objects.
+
 ### Example
 
 This is an example test case, the full set of tests is at `//tools/bindc/examples/test.json`. This
@@ -207,6 +261,34 @@ device.
       "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.AUDIO"
     }
   }
+]
+```
+
+Here is an example of a composite bind node with test cases. The full set of tests is located in
+``//tools/bindc/examples/composite-tests.json`. Each test case checks if the node’s
+bind rules match a device with the listed properties.
+
+```
+[
+    {
+        "node": "sysmem",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sysmem.BIND_PROTOCOL.DEVICE"
+                }
+            },
+            {
+                "name": "Abort sysmem",
+                "expected": "abort",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.tee.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    }
 ]
 ```
 
