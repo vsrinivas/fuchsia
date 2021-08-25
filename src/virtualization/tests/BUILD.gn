@@ -25,6 +25,7 @@ resource("debian_tests_img") {
   sources = [ get_label_info(linux_tests_label, "target_out_dir") +
               "/debian/tests.img" ]
   outputs = [ "data/linux_tests.img" ]
+  deps = [ linux_tests_label ]
 }
 
 group("tests") {
@@ -224,7 +225,6 @@ fuchsia_test_component("virtualization_core_tests_cmp") {
   component_name = "virtualization_core_tests"
   deps = [
            ":debian_tests_img",
-           ":extras",
            ":linux_extras_img",
            ":virtualization_core_tests",
            linux_tests_label,
@@ -528,15 +528,16 @@ group("termina") {
 }
 
 resource("linux_extras_img") {
+  testonly = true
   sources = [ "$target_out_dir/linux/extras.img" ]
   outputs = [ "data/extras.img" ]
+  deps = [ ":extras" ]
 }
 
 fuchsia_test_component("termina_integration_tests_cmp") {
   component_name = "termina_integration_tests"
   deps = [
     ":debian_tests_img",
-    ":extras",
     ":linux_extras_img",
     ":termina_integration_tests_bin",
     linux_tests_label,

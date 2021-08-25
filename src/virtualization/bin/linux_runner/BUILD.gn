@@ -8,12 +8,6 @@ import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 import("//third_party/Vulkan-Loader/arg.gni")
 
-extras_image = "$target_out_dir/linux/extras.img"
-resource("extras_img") {
-  sources = [ extras_image ]
-  outputs = [ "data/{{source_file_part}}" ]
-}
-
 declare_args() {
   # Default values for the guest network configuration.
   #
@@ -39,6 +33,16 @@ declare_args() {
 
   # Point this to the location of a prebuilt stateful image
   linux_runner_stateful_image_path = ""
+}
+
+extras_image = "$target_out_dir/linux/extras.img"
+resource("extras_img") {
+  sources = [ extras_image ]
+  outputs = [ "data/{{source_file_part}}" ]
+  deps = [ ":extras" ]
+  if (linux_runner_extras_tests) {
+    testonly = true
+  }
 }
 
 if (linux_runner_stateful_image_path != "") {
@@ -117,7 +121,6 @@ action("icd_manifest") {
 
 romfs_image("extras") {
   deps = [
-    ":extras_img",
     ":icd_manifest",
     "//src/lib/vulkan:vulkan_headers_and_loader(${linux_lib_toolchain})",
   ]
@@ -197,7 +200,7 @@ fuchsia_package_with_single_component("linux_runner") {
 
   deps = [
     ":bin",
-    ":extras",
+    ":extras_img",
   ]
 
   manifest = "meta/linux_runner.cmx"
