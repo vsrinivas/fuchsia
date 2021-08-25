@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # A Fuchsia package that can be used in CTS.
@@ -16,7 +17,7 @@ template("cts_fuchsia_package") {
     invoker.deps = []
   }
 
-  if (invoker.deps != []) {
+  if (invoker.deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
   write_file_target = target_name + "_cts_file"

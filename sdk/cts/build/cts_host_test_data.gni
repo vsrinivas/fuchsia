@@ -4,6 +4,7 @@
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 template("cts_host_test_data") {
@@ -11,7 +12,7 @@ template("cts_host_test_data") {
     invoker.deps = []
   }
 
-  if (invoker.deps != []) {
+  if (invoker.deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
   write_file_target = target_name + "_cts_file"

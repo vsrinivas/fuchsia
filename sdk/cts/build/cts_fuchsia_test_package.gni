@@ -34,7 +34,7 @@ template("cts_fuchsia_test_package") {
     invoker_deps += invoker.test_components
   }
 
-  if (invoker_deps != []) {
+  if (invoker_deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
   write_file_target = target_name + "_cts_file"

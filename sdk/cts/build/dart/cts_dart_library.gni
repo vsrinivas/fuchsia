@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 import("//build/dart/dart_library.gni")
 import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # A Dart library that can be used in CTS.
@@ -17,7 +18,7 @@ template("cts_dart_library") {
     invoker_deps += invoker.non_dart_deps
   }
 
-  if (invoker_deps != []) {
+  if (invoker_deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
   write_file_target = target_name + "_cts_file"

@@ -4,7 +4,6 @@
 
 import("//build/dist/resource.gni")
 import("//sdk/cts/build/cts_copy_to_sdk.gni")
-import("//sdk/cts/build/cts_element.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # A resource that can be used in CTS.

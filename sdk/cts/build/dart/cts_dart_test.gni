@@ -4,6 +4,7 @@
 
 import("//build/dart/test.gni")
 import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 template("cts_dart_test") {
@@ -15,7 +16,7 @@ template("cts_dart_test") {
     invoker_deps += invoker.non_dart_deps
   }
 
-  if (invoker_deps != []) {
+  if (invoker_deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
   write_file_target = target_name + "_cts_file"

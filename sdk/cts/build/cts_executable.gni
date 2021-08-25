@@ -4,6 +4,7 @@
 
 import("//sdk/cts/build/cts_element.gni")
 import("//sdk/cts/build/cts_source_library.gni")
+import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # An executable that can be used in CTS.
@@ -36,7 +37,7 @@ template("cts_executable") {
     invoker_deps += invoker.public_deps
   }
 
-  if (invoker_deps != []) {
+  if (invoker_deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
   write_file_target = target_name + "_cts_file"
