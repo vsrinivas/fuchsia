@@ -50,7 +50,10 @@ class QcowTest : public testing::Test {
     ASSERT_TRUE(fd_);
   }
 
-  void TearDown() override { VerifyPaddingClustersAreEmpty(); }
+  void TearDown() override {
+    VerifyPaddingClustersAreEmpty();
+    ASSERT_EQ(0, unlink(path_.data()));
+  }
 
   void VerifyPaddingClustersAreEmpty() {
     uint8_t cluster[kClusterSize];

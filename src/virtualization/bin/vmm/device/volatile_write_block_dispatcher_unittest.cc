@@ -59,7 +59,7 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlock) {
   disp->WriteAt(write_buf->data(), write_buf->size(), 0, [&status](zx_status_t s) { status = s; });
   ASSERT_EQ(ZX_OK, status);
 
-  disp->ReadAt(buf->data(), buf->size(), 0, [&status](zx_status_t s) { s = status; });
+  disp->ReadAt(buf->data(), buf->size(), 0, [&status](zx_status_t s) { status = s; });
   ASSERT_EQ(ZX_OK, status);
   ASSERT_BLOCK_VALUE(buf->data(), buf->size(), 0xbe);
 }
@@ -77,7 +77,7 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlockComplex) {
   ASSERT_EQ(ZX_OK, status);
 
   fidl::VectorPtr<uint8_t> buf(kBlockSectorSize * 4);
-  disp->ReadAt(buf->data(), buf->size(), 0, [&status](zx_status_t s) { s = status; });
+  disp->ReadAt(buf->data(), buf->size(), 0, [&status](zx_status_t s) { status = s; });
   ASSERT_EQ(ZX_OK, status);
   ASSERT_BLOCK_VALUE(buf->data(), kBlockSectorSize, 0xbe);
   ASSERT_BLOCK_VALUE(buf->data() + kBlockSectorSize, kBlockSectorSize, 0xab);

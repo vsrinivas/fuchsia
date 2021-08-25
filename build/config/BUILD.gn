@@ -797,7 +797,6 @@ config("Wno-conversion-generated") {
 config("Wno-unused-but-set-parameter") {
   cflags = [ "-Wno-unused-but-set-parameter" ]
   visibility = [
-    "//src/virtualization/bin/vmm/device:*",
     "//third_party/*",
     "//vendor/*",
     "//zircon/third_party/uapp/dash",
