@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 #include <fcntl.h>
 #include <inttypes.h>
@@ -15,16 +15,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <memory>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/trace.h"
-#include "src/lib/uuid/uuid.h"
-#include "zircon/errors.h"
 
 namespace f2fs {
 

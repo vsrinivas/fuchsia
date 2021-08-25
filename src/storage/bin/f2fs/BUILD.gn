@@ -10,7 +10,7 @@ executable("f2fs") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/uuid",
-    "//third_party/f2fs",
+    "//src/storage/f2fs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-default",

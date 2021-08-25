@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_TEST_UNIT_UNIT_LIB_H_
-#define THIRD_PARTY_F2FS_TEST_UNIT_UNIT_LIB_H_
+#ifndef SRC_STORAGE_F2FS_TEST_UNIT_UNIT_LIB_H_
+#define SRC_STORAGE_F2FS_TEST_UNIT_UNIT_LIB_H_
 
 #include <unordered_set>
 
-#include "third_party/f2fs/f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 namespace unittest_lib {
@@ -57,4 +57,4 @@ bool IsCachedNat(NmInfo *nm_i, nid_t n);
 }  // namespace unittest_lib
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_TEST_UNIT_UNIT_LIB_H_
+#endif  // SRC_STORAGE_F2FS_TEST_UNIT_UNIT_LIB_H_

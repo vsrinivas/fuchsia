@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_VNODE_H_
-#define THIRD_PARTY_F2FS_VNODE_H_
+#ifndef SRC_STORAGE_F2FS_VNODE_H_
+#define SRC_STORAGE_F2FS_VNODE_H_
 
 namespace f2fs {
 
 constexpr uint32_t kNullIno = std::numeric_limits<uint32_t>::max();
 
-// Used by fsck
 class F2fs;
 
 class VnodeF2fs : public fs::Vnode,
@@ -27,7 +26,6 @@ class VnodeF2fs : public fs::Vnode,
 
   ino_t GetKey() const { return ino_; }
 
-  static size_t GetHash(ino_t key) { return fnv1a_tiny(key, kHashBits); }
   void Sync(SyncCallback closure) final;
   zx_status_t SyncFile(loff_t start, loff_t end, int datasync);
   int NeedToSyncDir();
@@ -127,16 +125,16 @@ class VnodeF2fs : public fs::Vnode,
     return nlink_;
   }
 
-  inline void SetMode(const umode_t &mode) { mode_ = mode; }
-  inline umode_t GetMode() const { return mode_; }
-  inline bool IsDir() const { return S_ISDIR(mode_); }
-  inline bool IsReg() const { return S_ISREG(mode_); }
-  inline bool IsLink() const { return S_ISLNK(mode_); }
-  inline bool IsChr() const { return S_ISCHR(mode_); }
-  inline bool IsBlk() const { return S_ISBLK(mode_); }
-  inline bool IsSock() const { return S_ISSOCK(mode_); }
-  inline bool IsFifo() const { return S_ISFIFO(mode_); }
-  inline bool HasGid() const { return mode_ & S_ISGID; }
+  void SetMode(const umode_t &mode);
+  umode_t GetMode() const;
+  bool IsDir() const;
+  bool IsReg() const;
+  bool IsLink() const;
+  bool IsChr() const;
+  bool IsBlk() const;
+  bool IsSock() const;
+  bool IsFifo() const;
+  bool HasGid() const;
 
   inline void SetName(const std::string_view &name) { name_ = name; }
   inline bool IsSameName(const std::string_view &name) const {
@@ -320,4 +318,4 @@ class VnodeF2fs : public fs::Vnode,
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_VNODE_H_
+#endif  // SRC_STORAGE_F2FS_VNODE_H_

@@ -23,7 +23,7 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
 
-#include "third_party/f2fs/f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 int main(int argc, char** argv) {
   f2fs::MountOptions options;

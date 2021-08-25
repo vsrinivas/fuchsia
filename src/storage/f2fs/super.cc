@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include <string.h>
-#include <sys/stat.h>
 
-#include "f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 

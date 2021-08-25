@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_F2FS_LAYOUT_H_
-#define THIRD_PARTY_F2FS_F2FS_LAYOUT_H_
-
-#include "f2fs_types.h"
+#ifndef SRC_STORAGE_F2FS_F2FS_LAYOUT_H_
+#define SRC_STORAGE_F2FS_F2FS_LAYOUT_H_
 
 namespace f2fs {
 
@@ -456,4 +454,4 @@ constexpr uint32_t kHashBits = 8;
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_F2FS_LAYOUT_H_
+#endif  // SRC_STORAGE_F2FS_F2FS_LAYOUT_H_

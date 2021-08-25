@@ -5,8 +5,9 @@
 #include <dirent.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/stat.h>
 
-#include "f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 
@@ -21,6 +22,26 @@ fs::VnodeProtocolSet VnodeF2fs::GetProtocols() const {
     return fs::VnodeProtocol::kFile;
   }
 }
+
+void VnodeF2fs::SetMode(const umode_t &mode) { mode_ = mode; }
+
+umode_t VnodeF2fs::GetMode() const { return mode_; }
+
+inline bool VnodeF2fs::IsDir() const { return S_ISDIR(mode_); }
+
+bool VnodeF2fs::IsReg() const { return S_ISREG(mode_); }
+
+bool VnodeF2fs::IsLink() const { return S_ISLNK(mode_); }
+
+bool VnodeF2fs::IsChr() const { return S_ISCHR(mode_); }
+
+bool VnodeF2fs::IsBlk() const { return S_ISBLK(mode_); }
+
+bool VnodeF2fs::IsSock() const { return S_ISSOCK(mode_); }
+
+bool VnodeF2fs::IsFifo() const { return S_ISFIFO(mode_); }
+
+bool VnodeF2fs::HasGid() const { return mode_ & S_ISGID; }
 
 zx_status_t VnodeF2fs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                               [[maybe_unused]] fs::Rights rights,

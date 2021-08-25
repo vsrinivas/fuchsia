@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 using fuchsia_fs::wire::FilesystemInfoQuery;
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_MOUNT_H_
-#define THIRD_PARTY_F2FS_MOUNT_H_
+#ifndef SRC_STORAGE_F2FS_MOUNT_H_
+#define SRC_STORAGE_F2FS_MOUNT_H_
 
 namespace f2fs {
 
@@ -61,4 +61,4 @@ zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc)
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_MOUNT_H_
+#endif  // SRC_STORAGE_F2FS_MOUNT_H_

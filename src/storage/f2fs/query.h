@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_QUERY_H_
-#define THIRD_PARTY_F2FS_QUERY_H_
+#ifndef SRC_STORAGE_F2FS_QUERY_H_
+#define SRC_STORAGE_F2FS_QUERY_H_
 
 namespace f2fs {
-
-class F2fs;
 
 class QueryService final : public fidl::WireServer<fuchsia_fs::Query>, public fs::Service {
  public:
@@ -24,4 +22,4 @@ class QueryService final : public fidl::WireServer<fuchsia_fs::Query>, public fs
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_QUERY_H_
+#endif  // SRC_STORAGE_F2FS_QUERY_H_

@@ -22,7 +22,7 @@
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
 
-#include "f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 

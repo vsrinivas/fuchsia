@@ -1,7 +1,7 @@
 f2fs test file
 ==============
 Decompress gzip files.  
-$ gunzip -k third_party/f2fs/test_files/blk1g.bin..gz  
+$ gunzip -k src/storage/f2fs/test_files/blk1g.bin..gz  
 
 blk1g.bin
 =============
@@ -45,18 +45,22 @@ the remaining is filled with the '0xf2f5' pattern.
 
 fs-tests and unit tests
 ======================================
-* Step #1: set up the build configuration with f2fs after applying all patches in //third_party/f2fs/patches/
-$ fx set core.x64 --with-base //bundles:tools --with-base //bundles:tests  --with-base third_party/f2fs  
-* Step #2: fx test -o f2fs-fs-tests f2fs-slow-fs-tests
-* Step #3: fx test -o f2fs-unittest  
+* Step #1: set up a build configuration  
+$ fx set core.x64 --with //bundles:tests  
+  
+* Step #2: run 'fx emu'  
+$ fx emu -N --headless -hda src/storage/f2fs/test_files/blk1g.bin  
+  
+* Step #3: run 'fx test'
+$ fx test -o f2fs-fs-tests f2fs-slow-fs-tests f2fs-unittest  
 
 Simple compatibility test
 ==================================
-* Step #1: set up a build configuration for f2fs  
-$ fx set core.x64 --with-base //bundles:tools --with-base //bundles:tests  --with-base third_party/f2fs  
+* Step #1: set up a build configuration  
+$ fx set core.x64 --with //bundles:tests  
   
-* Step #2: run 'fx emu'  
-$ fx emu -N --headless -hda third_party/f2fs/test_files/blk1g.bin  
+* Step #2: run 'fx emu' with an f2fs image  
+$ fx emu -N --headless -hda src/storage/f2fs/test_files/blk1g.bin  
   
 * Step #3: copy a file in Fuchsia  
 $ mkdir tmp/mnt  
@@ -68,7 +72,7 @@ $ dm shutdown
 
 * Step #4: verify the copied file in Linux  
 $ mkdir ~/mnt  
-$ mount -o noinline_data third_party/f2fs/test_files/blk1g.bin ~/mnt  
+$ mount -o noinline_data src/storage/f2fs/test_files/blk1g.bin ~/mnt  
 $ diff ~/mnt/10mb.bin ~/mnt/10mb_dst.bin  
   
 Caution

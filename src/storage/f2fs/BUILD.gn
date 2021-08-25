@@ -78,6 +78,7 @@ static_library("f2fs") {
 
     # fsck.h includes block-client/cpp/block-device.h
     "//src/lib/storage/vfs/cpp",
+    "//src/lib/uuid",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/block-client",
   ]

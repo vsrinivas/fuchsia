@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "f2fs_layout.h"
-#include "third_party/ext2_hash/hash.h"
+#include "src/storage/f2fs/f2fs.h"
+#include "src/storage/f2fs/third_party/ext2_hash/hash.h"
 
 namespace f2fs {
 

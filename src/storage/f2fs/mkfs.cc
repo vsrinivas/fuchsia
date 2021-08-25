@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <getopt.h>
-#include <lib/syslog/cpp/macros.h>
 
 #include <cmath>
 #include <codecvt>
+#include <iostream>
 
-#include "f2fs.h"
 #include "src/lib/uuid/uuid.h"
+#include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 

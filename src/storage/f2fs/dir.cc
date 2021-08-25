@@ -2,9 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "f2fs.h"
+#include <dirent.h>
+#include <sys/stat.h>
+
+#include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
+
+const unsigned char kFiletypeTable[static_cast<uint8_t>(FileType::kFtMax)] = {
+    [static_cast<uint8_t>(FileType::kFtUnknown)] = DT_UNKNOWN,
+    [static_cast<uint8_t>(FileType::kFtRegFile)] = DT_REG,
+    [static_cast<uint8_t>(FileType::kFtDir)] = DT_DIR,
+    [static_cast<uint8_t>(FileType::kFtChrdev)] = DT_CHR,
+    [static_cast<uint8_t>(FileType::kFtBlkdev)] = DT_BLK,
+    [static_cast<uint8_t>(FileType::kFtFifo)] = DT_FIFO,
+    [static_cast<uint8_t>(FileType::kFtSock)] = DT_SOCK,
+    [static_cast<uint8_t>(FileType::kFtSymlink)] = DT_LNK,
+};
+
+constexpr unsigned int kStatShift = 12;
+
+const unsigned char kTypeByMode[S_IFMT >> kStatShift] = {
+    [S_IFREG >> kStatShift] = static_cast<uint8_t>(FileType::kFtRegFile),
+    [S_IFDIR >> kStatShift] = static_cast<uint8_t>(FileType::kFtDir),
+    [S_IFCHR >> kStatShift] = static_cast<uint8_t>(FileType::kFtChrdev),
+    [S_IFBLK >> kStatShift] = static_cast<uint8_t>(FileType::kFtBlkdev),
+    [S_IFIFO >> kStatShift] = static_cast<uint8_t>(FileType::kFtFifo),
+    [S_IFSOCK >> kStatShift] = static_cast<uint8_t>(FileType::kFtSock),
+    [S_IFLNK >> kStatShift] = static_cast<uint8_t>(FileType::kFtSymlink),
+};
 
 Dir::Dir(F2fs *fs) : VnodeF2fs(fs) {}
 

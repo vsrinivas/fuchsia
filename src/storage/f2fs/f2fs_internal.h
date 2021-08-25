@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_F2FS_INTERNAL_H_
-#define THIRD_PARTY_F2FS_F2FS_INTERNAL_H_
+#ifndef SRC_STORAGE_F2FS_F2FS_INTERNAL_H_
+#define SRC_STORAGE_F2FS_F2FS_INTERNAL_H_
 
 namespace f2fs {
 
@@ -528,4 +528,4 @@ inline uint32_t MetaIno(SbInfo *sbi) { return sbi->meta_ino_num; }
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_F2FS_INTERNAL_H_
+#endif  // SRC_STORAGE_F2FS_F2FS_INTERNAL_H_

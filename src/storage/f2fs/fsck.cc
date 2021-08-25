@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <bitset>
+#include <iostream>
 
-#include "f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs::fsck {
 

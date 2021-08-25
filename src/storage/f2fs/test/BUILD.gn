@@ -44,7 +44,7 @@ test("f2fs_unit") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
-    "//third_party/f2fs",
+    "//src/storage/f2fs",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/cksum",
@@ -75,10 +75,10 @@ test("f2fs_query_service") {
   deps = [
     ":f2fs_fs_test_config",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/bin/f2fs",
+    "//src/storage/f2fs",
     "//src/storage/fs_test:fs_test",
     "//src/storage/lib/utils:topological_path",
-    "//third_party/f2fs",
-    "//third_party/f2fs/tools:f2fs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
@@ -122,13 +122,13 @@ fs_test_config("f2fs") {
 fs_test_suite("f2fs") {
   deps = [
     ":f2fs_fs_test_config",
-    "//third_party/f2fs/tools:f2fs",
+    "//src/storage/bin/f2fs",
   ]
 }
 
 slow_fs_test_suite("f2fs") {
   deps = [
     ":f2fs_fs_test_config",
-    "//third_party/f2fs/tools:f2fs",
+    "//src/storage/bin/f2fs",
   ]
 }

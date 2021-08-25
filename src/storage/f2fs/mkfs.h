@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_MKFS_H_
-#define THIRD_PARTY_F2FS_MKFS_H_
+#ifndef SRC_STORAGE_F2FS_MKFS_H_
+#define SRC_STORAGE_F2FS_MKFS_H_
 
 namespace f2fs {
 
@@ -70,4 +70,4 @@ void AsciiToUnicode(const std::string& in_string, std::u16string* out_string);
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_MKFS_H_
+#endif  // SRC_STORAGE_F2FS_MKFS_H_

@@ -61,7 +61,6 @@ Major Release
 * stress test coverage
 * performance test
 
-How to build
+How to test
 ============
-$ fx set core.x64 --with-base //bundles:tools --with-base //bundles:tests  --with-base third_party/f2fs  
-(see third_party/f2fs/test_files/README.md for test)
+See src/storage/f2fs/test_files/README.md.

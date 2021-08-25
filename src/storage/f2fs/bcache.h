@@ -5,8 +5,8 @@
 // This file describes the in-memory structures which construct
 // a F2FS filesystem.
 
-#ifndef THIRD_PARTY_F2FS_BCACHE_H_
-#define THIRD_PARTY_F2FS_BCACHE_H_
+#ifndef SRC_STORAGE_F2FS_BCACHE_H_
+#define SRC_STORAGE_F2FS_BCACHE_H_
 
 #include <errno.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -121,4 +121,4 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_BCACHE_H_
+#endif  // SRC_STORAGE_F2FS_BCACHE_H_

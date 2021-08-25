@@ -8,7 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
-#include "f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 

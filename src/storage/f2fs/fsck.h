@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_FSCK_H_
-#define THIRD_PARTY_F2FS_FSCK_H_
+#ifndef SRC_STORAGE_F2FS_FSCK_H_
+#define SRC_STORAGE_F2FS_FSCK_H_
 
 namespace f2fs::fsck {
 
@@ -229,4 +229,4 @@ zx_status_t Fsck(Bcache *bc);
 
 }  // namespace f2fs::fsck
 
-#endif  // THIRD_PARTY_F2FS_FSCK_H_
+#endif  // SRC_STORAGE_F2FS_FSCK_H_

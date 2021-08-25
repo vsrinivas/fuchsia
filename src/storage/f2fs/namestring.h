@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_F2FS_NAMESTRING_H_
-#define THIRD_PARTY_F2FS_NAMESTRING_H_
-
-#include "f2fs_layout.h"
+#ifndef SRC_STORAGE_F2FS_NAMESTRING_H_
+#define SRC_STORAGE_F2FS_NAMESTRING_H_
 
 namespace f2fs {
 class NameString final {
@@ -38,4 +36,4 @@ class NameString final {
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_NAMESTRING_H_
+#endif  // SRC_STORAGE_F2FS_NAMESTRING_H_

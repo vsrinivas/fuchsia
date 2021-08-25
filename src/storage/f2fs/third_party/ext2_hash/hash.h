@@ -27,8 +27,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef THIRD_PARTY_F2FS_THIRD_PARTY_EXT2_HASH_HASH_H_
-#define THIRD_PARTY_F2FS_THIRD_PARTY_EXT2_HASH_HASH_H_
+#ifndef SRC_STORAGE_F2FS_THIRD_PARTY_EXT2_HASH_HASH_H_
+#define SRC_STORAGE_F2FS_THIRD_PARTY_EXT2_HASH_HASH_H_
 
 namespace f2fs {
 
@@ -37,4 +37,4 @@ void Str2HashBuf(const char *msg, int len, unsigned int *buf, int num);
 
 }  // namespace f2fs
 
-#endif  // THIRD_PARTY_F2FS_THIRD_PARTY_EXT2_HASH_HASH_H_
+#endif  // SRC_STORAGE_F2FS_THIRD_PARTY_EXT2_HASH_HASH_H_

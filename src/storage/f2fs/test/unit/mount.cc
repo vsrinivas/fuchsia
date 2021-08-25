@@ -8,7 +8,7 @@
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
-#include "third_party/f2fs/f2fs.h"
+#include "src/storage/f2fs/f2fs.h"
 #include "unit_lib.h"
 
 namespace f2fs {

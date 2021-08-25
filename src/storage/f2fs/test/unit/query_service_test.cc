@@ -16,11 +16,9 @@
 
 #include <gtest/gtest.h>
 
+#include "src/storage/f2fs/f2fs.h"
 #include "src/storage/fs_test/fs_test_fixture.h"
 #include "src/storage/lib/utils/topological_path.h"
-#include "third_party/f2fs/f2fs.h"
-#include "third_party/f2fs/f2fs_layout.h"
-#include "third_party/f2fs/f2fs_types.h"
 
 namespace f2fs {
 namespace {
