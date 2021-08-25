@@ -25,4 +25,21 @@ protocol DataFileReaderWriter {
     }) -> (struct {
         status zx.status;
     });
+
+    // Write the provided contents to a file at /tmp/<path> in the util's namespace, overwriting
+    // any existing files.
+    WriteTmpFile(struct {
+        path string;
+        contents string;
+    }) -> (struct {
+        status zx.status;
+    });
+
+    // Read the file at /tmp/<path> in the util's namespace and return its contents. If the file
+    // does not exist, returns null.
+    ReadTmpFile(struct {
+        path string;
+    }) -> (struct {
+        contents string:optional;
+    });
 };

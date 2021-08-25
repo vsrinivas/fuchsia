@@ -598,6 +598,7 @@ class EnvironmentOptionsTest : public virtual RealmTest,
 TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   constexpr char kTestFileName[] = "some-test-file";
   constexpr char kTestFileContent[] = "the-best-file-content";
+  constexpr char kTestTmpFileContent[] = "the-tmp-file-content";
 
   // Create an environment with 'delete_storage_on_death' option enabled.
   zx::channel request;
@@ -615,6 +616,11 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   ASSERT_EQ(WriteFileSync(util, kTestFileName, kTestFileContent), ZX_OK);
   ASSERT_EQ(ReadFileSync(util, kTestFileName).value_or(""), kTestFileContent);
 
+  // Write some arbitrary file content into the test util's "/tmp" dir, and
+  // verify that we can read it back.
+  ASSERT_EQ(WriteTmpFileSync(util, kTestFileName, kTestTmpFileContent), ZX_OK);
+  ASSERT_EQ(ReadTmpFileSync(util, kTestFileName).value_or(""), kTestTmpFileContent);
+
   // Kill the environment, which should automatically delete any persistent
   // storage it owns.
   bool killed = false;
@@ -631,6 +637,7 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
 
   // Verify that the file no longer exists.
   EXPECT_FALSE(ReadFileSync(util, kTestFileName).has_value());
+  EXPECT_FALSE(ReadTmpFileSync(util, kTestFileName).has_value());
 }
 
 using LabelAndValidity = std::tuple<std::string, bool>;

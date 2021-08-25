@@ -449,6 +449,10 @@ Realm::~Realm() {
       FX_LOGS(ERROR) << "Failed to delete cache storage for environment '" << label()
                      << "' on death";
     }
+    if (!files::DeletePath(temp_path(), true)) {
+      FX_LOGS(ERROR) << "Failed to delete temp storage for environment '" << label()
+                     << "' on death";
+    }
   }
 }
 

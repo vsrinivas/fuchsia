@@ -40,6 +40,23 @@ class IsolatedStorageTestUtil : public test::appmgr::integration::DataFileReader
     callback(ZX_OK);
   }
 
+  void ReadTmpFile(std::string path, ReadFileCallback callback) override {
+    std::string contents;
+    if (!files::ReadFileToString(files::JoinPath("/tmp", path), &contents)) {
+      callback(cpp17::nullopt);
+      return;
+    }
+    callback(contents);
+  }
+
+  void WriteTmpFile(std::string path, std::string contents, WriteFileCallback callback) override {
+    if (!files::WriteFile(files::JoinPath("/tmp", path), contents.c_str(), contents.length())) {
+      callback(ZX_ERR_IO);
+      return;
+    }
+    callback(ZX_OK);
+  }
+
  private:
   fidl::BindingSet<DataFileReaderWriter> bindings_;
 };

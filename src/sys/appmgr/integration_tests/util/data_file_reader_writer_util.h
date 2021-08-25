@@ -21,6 +21,12 @@ class DataFileReaderWriterUtil : virtual public gtest::TestWithEnvironmentFixtur
 
   zx_status_t WriteFileSync(const test::appmgr::integration::DataFileReaderWriterPtr& util,
                             std::string path, std::string contents);
+
+  fidl::StringPtr ReadTmpFileSync(const test::appmgr::integration::DataFileReaderWriterPtr& util,
+                                  std::string path);
+
+  zx_status_t WriteTmpFileSync(const test::appmgr::integration::DataFileReaderWriterPtr& util,
+                               std::string path, std::string contents);
 };
 
 }  // namespace testing

@@ -33,5 +33,29 @@ zx_status_t DataFileReaderWriterUtil::WriteFileSync(const DataFileReaderWriterPt
   return result;
 }
 
+fidl::StringPtr DataFileReaderWriterUtil::ReadTmpFileSync(const DataFileReaderWriterPtr& util,
+                                                          std::string path) {
+  bool done = false;
+  fidl::StringPtr result;
+  util->ReadTmpFile(path, [&](fidl::StringPtr contents) {
+    done = true;
+    result = contents;
+  });
+  RunLoopUntil([&] { return done; });
+  return result;
+}
+
+zx_status_t DataFileReaderWriterUtil::WriteTmpFileSync(const DataFileReaderWriterPtr& util,
+                                                       std::string path, std::string contents) {
+  bool done = false;
+  zx_status_t result;
+  util->WriteTmpFile(path, contents, [&](zx_status_t write_result) {
+    done = true;
+    result = write_result;
+  });
+  RunLoopUntil([&] { return done; });
+  return result;
+}
+
 }  // namespace testing
 }  // namespace component
