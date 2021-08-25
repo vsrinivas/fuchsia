@@ -253,7 +253,6 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
       break;
     case kFidlTypePrimitive:
       ZX_PANIC("unrecognized tag");
-      break;
   }
 }
 
