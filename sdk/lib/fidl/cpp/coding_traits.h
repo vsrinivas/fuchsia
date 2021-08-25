@@ -288,26 +288,27 @@ void EncodeUnknownBytes(EncoderImpl* encoder, std::vector<uint8_t>* value, size_
       envelope->num_bytes = static_cast<uint32_t>(value->size());
       envelope->num_handles = 0;
       envelope->presence = FIDL_ALLOC_PRESENT;
+      EncodeUnknownBytesContents(encoder, value, encoder->Alloc(value->size()));
       break;
     }
     case ::fidl::internal::WireFormatVersion::kV2: {
       fidl_envelope_v2_t* envelope = encoder->template GetPtr<fidl_envelope_v2_t>(envelope_offset);
 
-      if (value->size() <= 4) {
+      if (value->size() <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         std::copy(value->begin(), value->end(), envelope->inline_value);
         envelope->num_handles = 0;
-        envelope->flags = 1;
+        envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        EncodeUnknownBytesContents(encoder, value, envelope_offset);
+        break;
       }
 
       envelope->num_bytes = static_cast<uint32_t>(value->size());
       envelope->num_handles = 0;
       envelope->flags = 0;
+      EncodeUnknownBytesContents(encoder, value, encoder->Alloc(value->size()));
       break;
     }
   }
-
-  // encode the envelope contents
-  EncodeUnknownBytesContents(encoder, value, encoder->Alloc(value->size()));
 }
 
 #ifdef __Fuchsia__
@@ -336,6 +337,7 @@ void EncodeUnknownData(EncoderImpl* encoder, UnknownData* value, size_t envelope
       envelope->num_bytes = static_cast<uint32_t>(value->bytes.size());
       envelope->num_handles = static_cast<uint16_t>(value->handles.size());
       envelope->presence = FIDL_ALLOC_PRESENT;
+      EncodeUnknownDataContents(encoder, value, encoder->Alloc(value->bytes.size()));
       break;
     }
     case ::fidl::internal::WireFormatVersion::kV2: {
@@ -345,17 +347,17 @@ void EncodeUnknownData(EncoderImpl* encoder, UnknownData* value, size_t envelope
         memcpy(envelope->inline_value, value->bytes.data(), value->bytes.size());
         envelope->num_handles = static_cast<uint16_t>(value->handles.size());
         envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        EncodeUnknownDataContents(encoder, value, envelope_offset);
+        break;
       }
 
       envelope->num_bytes = static_cast<uint32_t>(value->bytes.size());
       envelope->num_handles = static_cast<uint16_t>(value->handles.size());
       envelope->flags = 0;
+      EncodeUnknownDataContents(encoder, value, encoder->Alloc(value->bytes.size()));
       break;
     }
   }
-
-  // encode the envelope contents
-  EncodeUnknownDataContents(encoder, value, encoder->Alloc(value->bytes.size()));
 }
 #endif
 

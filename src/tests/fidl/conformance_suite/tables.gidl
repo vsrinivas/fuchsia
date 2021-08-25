@@ -114,8 +114,6 @@ success("TableFieldOutOfLine") {
 
 // Tests a table in which a value is inlined into an unknown field.
 success("TableFieldUnknownInlined") {
-    // TODO(fxbug.dev/83184) Fix this for HLCPP.
-    bindings_denylist = [hlcpp],
     value = TableFieldUnknownStruct {
         t: TableFieldUnknown {
             1: {
@@ -135,13 +133,11 @@ success("TableFieldUnknownInlined") {
 
 // Tests a table in which a handle value is inlined into an unknown field.
 success("TableFieldUnknownInlinedHandle") {
-    // TODO(fxbug.dev/83184) Fix this for HLCPP.
-    bindings_denylist = [hlcpp],
     handle_defs = {
         #0 = channel(),
     },
-    value = TableFieldUnknownStruct {
-        t: TableFieldUnknown {
+    value = TableFieldUnknownResourceStruct {
+        t: TableFieldUnknownResource {
             1: {
                 bytes = [repeat(0xff):4],
                 handles = [#0],

@@ -94,8 +94,14 @@ type TableFieldOutOfLineStruct = struct {
     t TableFieldOutOfLine;
 };
 
-type TableFieldUnknown = resource table {};
+type TableFieldUnknown = table {};
 
-type TableFieldUnknownStruct = resource struct {
+type TableFieldUnknownStruct = struct {
     t TableFieldUnknown;
+};
+
+type TableFieldUnknownResource = resource table {};
+
+type TableFieldUnknownResourceStruct = resource struct {
+    t TableFieldUnknownResource;
 };
