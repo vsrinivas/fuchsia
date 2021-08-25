@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/81444218cadddcb9924cdacaff46d8c7203ea337/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/4c88eb20e7142eb564a77e45119fa01876dab8c0/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/81444218cadddcb9924cdacaff46d8c7203ea337/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/4c88eb20e7142eb564a77e45119fa01876dab8c0/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -189,7 +189,7 @@ reserve few blocks required for its operations.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:99
+From //build/images/fvm.gni:76
 
 ### blobfs_board_minimum_data_bytes
 Number of bytes to reserve for data in the fs. This is in addition
@@ -200,7 +200,7 @@ required for the filesystem.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:86
+From //build/images/fvm.gni:63
 
 ### blobfs_board_minimum_inodes
 minimum_inodes is the number of inodes to reserve for the fs
@@ -209,7 +209,7 @@ required for the filesystem.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:76
+From //build/images/fvm.gni:53
 
 ### blobfs_capacity
 Maximum allowable contents for the /blob in a release mode build for
@@ -254,19 +254,19 @@ From //src/storage/blobfs/BUILD.gn:13
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:100
+From //build/images/fvm.gni:77
 
 ### blobfs_product_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:87
+From //build/images/fvm.gni:64
 
 ### blobfs_product_minimum_inodes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:77
+From //build/images/fvm.gni:54
 
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
@@ -1446,7 +1446,7 @@ suitable for flashing through fastboot for eMMC devices.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:34
+From //build/images/fvm.gni:11
 
 ### fvm_fastboot_compression
 How to compress the FVM image used for fastboot flashing.
@@ -1457,19 +1457,19 @@ Possible values:
 
 **Current value (from the default):** `"default"`
 
-From //build/images/fvm.gni:121
+From //build/images/fvm.gni:98
 
 ### fvm_ftl_nand_block_count
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:114
+From //build/images/fvm.gni:91
 
 ### fvm_ftl_nand_oob_size
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:112
+From //build/images/fvm.gni:89
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
@@ -1480,23 +1480,13 @@ room to initialize on boot.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:111
+From //build/images/fvm.gni:88
 
 ### fvm_ftl_nand_pages_per_block
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:113
-
-### fvm_image_size
-The size in bytes of the FVM partition image to create. Normally this is
-computed to be just large enough to fit the blob and data images. The
-default value is false, which means to size based on inputs. Specifying a size
-that is too small will result in build failure.
-
-**Current value (from the default):** `false`
-
-From //build/images/fvm.gni:29
+From //build/images/fvm.gni:90
 
 ### fvm_max_disk_size
 The max size of the disk where the FVM is written. This is used for
@@ -1513,7 +1503,7 @@ at pave/format time.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:47
+From //build/images/fvm.gni:24
 
 ### fvm_partition
 
@@ -1528,7 +1518,7 @@ If set to 0, then no reservation partition will be added.
 
 **Current value (from the default):** `0`
 
-From //build/images/fvm.gni:59
+From //build/images/fvm.gni:36
 
 ### fvm_slice_size
 The size of the FVM partition images "slice size". The FVM slice size is a
@@ -1539,7 +1529,7 @@ selected for conservation of space, rather than performance.
 
 **Current value (from the default):** `8388608`
 
-From //build/images/fvm.gni:54
+From //build/images/fvm.gni:31
 
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are found.
@@ -2325,19 +2315,19 @@ From //zircon/kernel/lib/crashlog/params.gni:14
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:101
+From //build/images/fvm.gni:78
 
 ### minfs_board_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:88
+From //build/images/fvm.gni:65
 
 ### minfs_board_minimum_inodes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:78
+From //build/images/fvm.gni:55
 
 ### minfs_enable_dirty_cache
 Set this to true when configuring gn args to enable minfs dirty cache.
@@ -2366,19 +2356,19 @@ From //src/storage/fshost/BUILD.gn:24
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:102
+From //build/images/fvm.gni:79
 
 ### minfs_product_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:89
+From //build/images/fvm.gni:66
 
 ### minfs_product_minimum_inodes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:79
+From //build/images/fvm.gni:56
 
 ### mini_chromium_is_chromeos_ash
 
@@ -4218,7 +4208,7 @@ From //build/images/args.gni:89
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:164
+From //build/config/fuchsia/BUILD.gn:170
 
 ### zircon_b_partition
 
