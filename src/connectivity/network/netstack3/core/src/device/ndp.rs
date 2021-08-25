@@ -35,6 +35,7 @@ use net_types::{
     LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, SpecifiedAddr,
     SpecifiedAddress, UnicastAddr, Witness,
 };
+use nonzero_ext::nonzero;
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use packet_formats::icmp::ndp::options::{
     NdpOption, NdpOptionBuilder, PrefixInformation, INFINITE_LIFETIME,
@@ -86,10 +87,7 @@ const ADVERTISED_LINK_MTU: Option<NonZeroU32> = None;
 const ADVERTISED_REACHABLE_TIME: u32 = 0;
 const ADVERTISED_RETRANSMIT_TIMER: u32 = 0;
 const ADVERTISED_CURRENT_HOP_LIMIT: u8 = 64;
-// This call to `new_unchecked` is okay because 1800 is non-zero, so we will not
-// be violating `NonZeroU16`'s contract.
-const ADVERTISED_DEFAULT_LIFETIME: Option<NonZeroU16> =
-    unsafe { Some(NonZeroU16::new_unchecked(1800)) };
+const ADVERTISED_DEFAULT_LIFETIME: Option<NonZeroU16> = Some(nonzero!(1800u16));
 
 /// The number of NS messages to be sent to perform DAD [RFC 4862 section 5.1].
 ///
@@ -111,8 +109,7 @@ const REQUIRED_PREFIX_BITS: u8 = 64;
 
 /// The default value for the default hop limit to be used when sending IP
 /// packets.
-// We know the call to `new_unchecked` is safe because 64 is non-zero.
-pub(crate) const HOP_LIMIT_DEFAULT: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(64) };
+pub(crate) const HOP_LIMIT_DEFAULT: NonZeroU8 = nonzero!(64u8);
 
 /// The default value for *BaseReachableTime* as defined in [RFC 4861 section
 /// 10].
@@ -194,10 +191,7 @@ const MAX_INITIAL_RTR_ADVERT_INTERVAL: Duration = Duration::from_secs(16);
 ///
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
 /// [RFC 4861 section 6.3.5]: https://tools.ietf.org/html/rfc4861#section-6.2.5
-// This call to `new_unchecked` is okay because 3 is non-zero, so we will not be
-// violating `NonZeroU8`'s contract.
-const MAX_FINAL_RTR_ADVERTISEMENTS: Option<NonZeroU8> =
-    unsafe { Some(NonZeroU8::new_unchecked(3)) };
+const MAX_FINAL_RTR_ADVERTISEMENTS: Option<NonZeroU8> = Some(nonzero!(3u8));
 
 /// The minimum delay for sending a Router Advertisement message in response to
 /// a Router Solicitation.

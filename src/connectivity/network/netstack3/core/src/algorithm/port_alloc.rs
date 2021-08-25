@@ -252,6 +252,8 @@ fn hmac_with_secret<I: Hash>(id: &I, secret: &[u8]) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use nonzero_ext::nonzero;
+
     use super::*;
     use crate::testutil::{with_fake_rngs, FakeCryptoRng};
 
@@ -284,7 +286,7 @@ mod tests {
     }
 
     impl PortAllocImpl for MockImpl {
-        const TABLE_SIZE: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(2) };
+        const TABLE_SIZE: NonZeroUsize = nonzero!(2usize);
         const EPHEMERAL_RANGE: RangeInclusive<u16> = 100..=200;
         type Id = MockId;
 

@@ -31,6 +31,7 @@ rustc_library("netstack3-core") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:nonzero_ext",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rand_xorshift",
     "//third_party/rust_crates:thiserror",

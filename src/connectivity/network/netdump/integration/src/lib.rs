@@ -38,9 +38,9 @@ const SRC_IP_V4: std::net::Ipv4Addr = net_declare::std_ip_v4!("192.168.0.1");
 /// Default destination IPv4 address used in tests.
 const DST_IP_V4: std::net::Ipv4Addr = net_declare::std_ip_v4!("192.168.0.2");
 /// Default UDP source port used in tests.
-const SRC_PORT: std::num::NonZeroU16 = unsafe { std::num::NonZeroU16::new_unchecked(1010) };
+const SRC_PORT: std::num::NonZeroU16 = nonzero_ext::nonzero!(1010u16);
 /// Default UDP destination port used in tests.
-const DST_PORT: std::num::NonZeroU16 = unsafe { std::num::NonZeroU16::new_unchecked(8080) };
+const DST_PORT: std::num::NonZeroU16 = nonzero_ext::nonzero!(8080u16);
 
 /// The capture line produced by netdump when using the default IPv4 packet
 /// parameters above and a 100 byte UDP payload.
@@ -850,7 +850,7 @@ async fn positive_filter_test() -> Result {
 // Should expect only the packets accepted by the filter are captured.
 #[fasync::run_singlethreaded(test)]
 async fn negative_filter_test() -> Result {
-    const ALT_PORT: std::num::NonZeroU16 = unsafe { std::num::NonZeroU16::new_unchecked(3333) };
+    const ALT_PORT: std::num::NonZeroU16 = nonzero_ext::nonzero!(3333u16);
     const PAYLOAD_SIZE: usize = 100;
     let filter = format!("not port {}", ALT_PORT);
     let default_ports_packet =
@@ -883,7 +883,7 @@ async fn negative_filter_test() -> Result {
 #[fasync::run_singlethreaded(test)]
 async fn long_filter_string_test() -> Result {
     const PAYLOAD_SIZE: usize = 100;
-    const ALT_PORT: std::num::NonZeroU16 = unsafe { std::num::NonZeroU16::new_unchecked(2345) };
+    const ALT_PORT: std::num::NonZeroU16 = nonzero_ext::nonzero!(2345u16);
     let filter = format!(
         "not ( port 65026,65268,ssh or dst port 8083 or ip6 dst port 33330-33341 or proto udp dst port {} or ip4 udp dst port 1900 )",
         ALT_PORT

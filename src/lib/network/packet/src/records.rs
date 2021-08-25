@@ -1411,6 +1411,7 @@ pub mod options {
     use core::mem;
     use core::num::{NonZeroUsize, TryFromIntError};
 
+    use nonzero_ext::nonzero;
     use zerocopy::{byteorder::ByteOrder, AsBytes, FromBytes, Unaligned};
 
     use super::*;
@@ -1728,9 +1729,8 @@ pub mod options {
         /// `option_len_multiplier` field, and it defaults to 1.
         ///
         /// [`TypeLengthValue`]: LengthEncoding::TypeLengthValue
-        const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue {
-            option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(1) },
-        };
+        const LENGTH_ENCODING: LengthEncoding =
+            LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(1usize) };
     }
 
     /// An implementation of an options parser.
@@ -1874,6 +1874,8 @@ pub mod options {
     mod tests {
         use core::convert::TryInto;
 
+        use nonzero_ext::nonzero;
+
         use super::*;
         use crate::Serializer;
 
@@ -1966,9 +1968,8 @@ pub mod options {
             type Error = ();
             type KindLenField = u8;
 
-            const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue {
-                option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(8) },
-            };
+            const LENGTH_ENCODING: LengthEncoding =
+                LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(8usize) };
 
             const END_OF_OPTIONS: Option<u8> = None;
 
@@ -2042,12 +2043,10 @@ pub mod options {
 
         #[test]
         fn test_length_encoding() {
-            const TLV_1: LengthEncoding = LengthEncoding::TypeLengthValue {
-                option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(1) },
-            };
-            const TLV_2: LengthEncoding = LengthEncoding::TypeLengthValue {
-                option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(2) },
-            };
+            const TLV_1: LengthEncoding =
+                LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(1usize) };
+            const TLV_2: LengthEncoding =
+                LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(2usize) };
 
             // Test LengthEncoding::record_length
 

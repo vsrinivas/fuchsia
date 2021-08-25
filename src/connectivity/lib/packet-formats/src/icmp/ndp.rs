@@ -369,11 +369,11 @@ impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 /// Parsing and serialization of NDP options.
 pub mod options {
     use core::convert::TryFrom;
-    use core::num::NonZeroUsize;
     use core::time::Duration;
 
     use net_types::ip::{AddrSubnet, AddrSubnetError, IpAddress as _, Ipv6Addr, Subnet};
     use net_types::{UnicastAddr, UnicastAddress};
+    use nonzero_ext::nonzero;
     use packet::records::options::{
         LengthEncoding, OptionsImpl, OptionsImplLayout, OptionsSerializerImpl,
     };
@@ -383,10 +383,10 @@ pub mod options {
     use crate::utils::NonZeroDuration;
     use crate::U32;
 
-    /// A value representing an infinite lifetime for various NDP options' lifetime
-    /// fields.
+    /// A value representing an infinite lifetime for various NDP options'
+    /// lifetime fields.
     pub const INFINITE_LIFETIME: NonZeroDuration =
-        unsafe { NonZeroDuration::new_unchecked(Duration::from_secs(core::u32::MAX as u64)) };
+        NonZeroDuration::from_nonzero_secs(nonzero!(core::u32::MAX as u64));
 
     /// The number of reserved bytes immediately following the kind and length
     /// bytes in a Redirected Header option.
@@ -748,9 +748,8 @@ pub mod options {
         type KindLenField = u8;
 
         // For NDP options the length should be multiplied by 8.
-        const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue {
-            option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(8) },
-        };
+        const LENGTH_ENCODING: LengthEncoding =
+            LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(8usize) };
 
         // NDP options don't have END_OF_OPTIONS or NOP.
         const END_OF_OPTIONS: Option<u8> = None;

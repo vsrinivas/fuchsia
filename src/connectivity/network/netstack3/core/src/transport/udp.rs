@@ -11,6 +11,7 @@ use core::ops::RangeInclusive;
 use log::trace;
 use net_types::ip::{Ip, IpAddress, IpVersionMarker};
 use net_types::{SpecifiedAddr, Witness};
+use nonzero_ext::nonzero;
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
 use packet_formats::ip::IpProto;
 use packet_formats::udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs};
@@ -225,7 +226,7 @@ fn try_alloc_listen_port<I: IcmpIpExt, C: UdpContext<I>>(
 }
 
 impl<I: Ip> PortAllocImpl for UdpConnectionState<I> {
-    const TABLE_SIZE: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(20) };
+    const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
     type Id = ProtocolFlowId<I::Addr>;
 

@@ -19,6 +19,7 @@ use netstack_testing_common::{
     Result,
 };
 use netstack_testing_macros::variants_test;
+use nonzero_ext::nonzero;
 use packet::{ParsablePacket as _, Serializer as _};
 use packet_formats::{
     ethernet::{EtherType, EthernetFrameBuilder},
@@ -416,9 +417,8 @@ struct PacketAttributes {
     port: NonZeroU16,
 }
 
-const INVALID_PORT: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1234) };
-const DHCP_CLIENT_PORT: NonZeroU16 =
-    unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) };
+const INVALID_PORT: NonZeroU16 = nonzero!(1234u16);
+const DHCP_CLIENT_PORT: NonZeroU16 = nonzero!(dhcp::protocol::CLIENT_PORT);
 
 #[variants_test]
 #[test_case(

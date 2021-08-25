@@ -30,6 +30,7 @@ rustc_test("inspect") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:nonzero_ext",
     "//third_party/rust_crates:test-case",
   ]
   sources = [ "src/lib.rs" ]

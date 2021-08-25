@@ -33,9 +33,9 @@ pub(crate) mod ndp_neighbor {
 
 pub(crate) mod ndp_router {
     use core::num::NonZeroU8;
-    use core::time::Duration;
 
     use net_types::ip::{Ipv6Addr, Subnet};
+    use nonzero_ext::nonzero;
 
     use crate::utils::NonZeroDuration;
 
@@ -51,10 +51,9 @@ pub(crate) mod ndp_router {
 
     /// Options in the Advertisement packet.
     // We know this is safe because we provide a non-zero `u8` value.
-    pub(crate) const HOP_LIMIT: Option<NonZeroU8> = Some(unsafe { NonZeroU8::new_unchecked(64) });
-    // We know this is safe because we provide a non-zero `Duration` value.
+    pub(crate) const HOP_LIMIT: Option<NonZeroU8> = Some(nonzero!(64u8));
     pub(crate) const LIFETIME: Option<NonZeroDuration> =
-        Some(unsafe { NonZeroDuration::new_unchecked(Duration::from_secs(3600)) });
+        Some(NonZeroDuration::from_nonzero_secs(nonzero!(3600u64)));
     pub(crate) const REACHABLE_TIME: Option<NonZeroDuration> = None;
     pub(crate) const RETRANS_TIMER: Option<NonZeroDuration> = None;
 

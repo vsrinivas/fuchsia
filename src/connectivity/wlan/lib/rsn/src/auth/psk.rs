@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::Error,
-    anyhow::ensure,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
-    ieee80211::Ssid,
-    std::{num::NonZeroU32, str},
+    crate::Error, anyhow::ensure, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, ieee80211::Ssid,
+    std::str,
 };
 
 // PBKDF2-HMAC-SHA1 is considered insecure but required for PSK computation.
 #[allow(deprecated)]
 use mundane::insecure::insecure_pbkdf2_hmac_sha1;
+use nonzero_ext::nonzero;
 
 /// Keys derived from a passphrase provide comparably low levels of security.
 /// Passphrases should have a minimum length of 20 characters since shorter passphrases
@@ -56,8 +54,7 @@ pub fn compute(passphrase: &[u8], ssid: &Ssid) -> Result<Psk, anyhow::Error> {
     // Compute PSK: IEEE Std 802.11-2016, J.4.1
     let size = 256 / 8;
     let mut psk = vec![0_u8; size];
-    // Safe: Using constant non-zero value.
-    let iters = unsafe { NonZeroU32::new_unchecked(4096) };
+    let iters = nonzero!(4096u32);
     insecure_pbkdf2_hmac_sha1(&passphrase[..], &ssid[..], iters, &mut psk[..]);
     Ok(psk.into_boxed_slice())
 }

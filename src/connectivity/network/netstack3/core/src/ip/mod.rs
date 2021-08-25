@@ -30,6 +30,7 @@ use net_types::ip::{
     AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet,
 };
 use net_types::{MulticastAddr, SpecifiedAddr, Witness};
+use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, Either, ParseMetadata, Serializer};
 use packet_formats::error::IpParseError;
 use packet_formats::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
@@ -59,8 +60,7 @@ use crate::ip::socket::{IpSock, IpSockUpdate};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 /// Default IPv4 TTL.
-// TODO(joshlf): Use `new` instead of `new_unchecked` once `new` is a const fn.
-const DEFAULT_TTL: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(64) };
+const DEFAULT_TTL: NonZeroU8 = nonzero!(64u8);
 
 /// The metadata for sending an IP packet from a particular source address.
 ///

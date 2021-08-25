@@ -4,6 +4,7 @@
 
 //! Utilities useful when parsing and serializing wire formats.
 
+use core::num::NonZeroU64;
 use core::time::Duration;
 
 /// A zero-valued `Duration`.
@@ -23,6 +24,12 @@ impl NonZeroDuration {
     /// `NonZeroDuration` values are always zero may cause undefined behavior.
     pub const unsafe fn new_unchecked(d: Duration) -> NonZeroDuration {
         NonZeroDuration(d)
+    }
+
+    /// Creates a new `NonZeroDuration` from the specified non-zero number of
+    /// whole seconds.
+    pub const fn from_nonzero_secs(secs: NonZeroU64) -> NonZeroDuration {
+        NonZeroDuration(Duration::from_secs(secs.get()))
     }
 
     /// Creates a non-zero if the given value is not zero.
