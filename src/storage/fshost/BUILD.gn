@@ -255,9 +255,9 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_c",
     "//src/lib/storage/fs_management",
+    "//third_party/zstd",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
-    "//zircon/system/ulib/zbi-bootfs",
   ]
 
   if (unstable_feature_use_fxfs) {

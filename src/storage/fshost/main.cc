@@ -32,7 +32,7 @@
 
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zbi-bootfs/zbi-bootfs.h>
+#include <zstd/zstd.h>
 
 #include "block-watcher.h"
 #include "fs-manager.h"
@@ -47,6 +47,24 @@ namespace fshost {
 namespace {
 
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
+
+zx_status_t DecompressZstd(zx::vmo& input, uint64_t input_offset, size_t input_size,
+                           zx::vmo& output, uint64_t output_offset, size_t output_size) {
+  auto input_buffer = std::make_unique<uint8_t[]>(input_size);
+  zx_status_t status = input.read(input_buffer.get(), input_offset, input_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto output_buffer = std::make_unique<uint8_t[]>(output_size);
+
+  auto rc = ZSTD_decompress(output_buffer.get(), output_size, input_buffer.get(), input_size);
+  if (ZSTD_isError(rc) || rc != output_size) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  return output.write(output_buffer.get(), output_offset, output_size);
+}
 
 // Get ramdisk from the boot items service.
 zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
@@ -94,8 +112,7 @@ int RamctlWatcher(void* arg) {
                      << zx_status_get_string(status);
       return -1;
     }
-    status = zbi_bootfs::Decompress(ramdisk_vmo, sizeof(zbi_header_t), header.length, vmo, 0,
-                                    header.extra);
+    status = DecompressZstd(ramdisk_vmo, sizeof(zbi_header_t), header.length, vmo, 0, header.extra);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to decompress RAMDISK: " << zx_status_get_string(status);
       return -1;
