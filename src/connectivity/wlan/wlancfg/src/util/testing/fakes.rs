@@ -15,13 +15,15 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    std::collections::HashMap,
+    std::{collections::HashMap, sync::Arc},
 };
 
 pub struct FakeSavedNetworksManager {
     saved_networks: Mutex<HashMap<NetworkIdentifier, Vec<NetworkConfig>>>,
     disconnects_recorded: Mutex<Vec<DisconnectRecord>>,
     pub fail_all_stores: bool,
+    pub active_scan_result_recorded: Arc<Mutex<bool>>,
+    pub passive_scan_result_recorded: Arc<Mutex<bool>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,6 +41,8 @@ impl FakeSavedNetworksManager {
             saved_networks: Mutex::new(HashMap::new()),
             disconnects_recorded: Mutex::new(vec![]),
             fail_all_stores: false,
+            active_scan_result_recorded: Arc::new(Mutex::new(false)),
+            passive_scan_result_recorded: Arc::new(Mutex::new(false)),
         }
     }
     /// Create FakeSavedNetworksManager, saving some network configs at init.
@@ -53,6 +57,8 @@ impl FakeSavedNetworksManager {
             saved_networks: Mutex::new(saved_networks),
             disconnects_recorded: Mutex::new(vec![]),
             fail_all_stores: false,
+            active_scan_result_recorded: Arc::new(Mutex::new(false)),
+            passive_scan_result_recorded: Arc::new(Mutex::new(false)),
         }
     }
 
@@ -152,9 +158,19 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
 
     async fn record_scan_result(
         &self,
-        _scan_type: ScanResultType,
+        scan_type: ScanResultType,
         _results: Vec<client_types::NetworkIdentifierDetailed>,
     ) {
+        match scan_type {
+            ScanResultType::Undirected => {
+                let mut v = self.passive_scan_result_recorded.lock().await;
+                *v = true;
+            }
+            ScanResultType::Directed(_) => {
+                let mut v = self.active_scan_result_recorded.lock().await;
+                *v = true
+            }
+        }
     }
 
     async fn get_networks(&self) -> Vec<NetworkConfig> {

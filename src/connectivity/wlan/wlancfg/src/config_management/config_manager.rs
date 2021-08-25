@@ -644,7 +644,7 @@ pub fn select_subset_potentially_hidden_networks(
 /// Returns a list of security types that could be optionally upgraded to match with this detailed
 /// security type. For example, a WPA2/WPA3 could be connected to using a WPA2 config or a WPA3
 /// config.
-fn compatible_policy_securities(
+pub fn compatible_policy_securities(
     detailed_security: &types::SecurityTypeDetailed,
 ) -> Vec<SecurityType> {
     use fidl_sme::Protection::*;
@@ -664,7 +664,7 @@ fn compatible_policy_securities(
     }
 }
 
-fn security_is_compatible(
+pub fn security_is_compatible(
     scan_security: &types::SecurityTypeDetailed,
     credential: &Credential,
 ) -> bool {

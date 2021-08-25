@@ -521,13 +521,10 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            config_management::{
-                network_config::{Credential, PROB_HIDDEN_DEFAULT},
-                SavedNetworksManager,
-            },
+            config_management::network_config::{Credential, PROB_HIDDEN_DEFAULT},
             util::testing::{
-                generate_random_bss_description, generate_random_sme_scan_result,
-                validate_sme_scan_request_and_send_results,
+                fakes::FakeSavedNetworksManager, generate_random_bss_description,
+                generate_random_sme_scan_result, validate_sme_scan_request_and_send_results,
             },
         },
         anyhow::Error,
@@ -1345,7 +1342,7 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
-        let saved_networks_manager = create_saved_networks_manager(&mut exec);
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Issue request to scan.
         let (iter, iter_server) =
@@ -1425,7 +1422,7 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
-        let saved_networks_manager = create_saved_networks_manager(&mut exec);
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Create the passive and active scan info
         let MockScanData {
@@ -1448,6 +1445,7 @@ mod tests {
             )
             .expect("failed to store network")
             .is_none());
+
         let config = exec
             .run_singlethreaded(saved_networks_manager.lookup(unseen_active_id.clone().into()))
             .pop()
@@ -1544,13 +1542,8 @@ mod tests {
             Some(combined_internal_aps.clone())
         );
 
-        // Verify that the network we actively scanned for but didn't see had its hidden
-        // probability updated.
-        let config = exec
-            .run_singlethreaded(saved_networks_manager.lookup(unseen_active_id.clone().into()))
-            .pop()
-            .expect("Failed to get network config");
-        assert!(config.hidden_probability < PROB_HIDDEN_DEFAULT);
+        // Verify that the active scan results were recorded.
+        assert!(*exec.run_singlethreaded(saved_networks_manager.active_scan_result_recorded.lock()));
     }
 
     #[fuchsia::test]
@@ -1691,7 +1684,7 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
-        let saved_networks_manager = create_saved_networks_manager(&mut exec);
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Create the passive and active scan info
         let MockScanData {
@@ -1796,7 +1789,7 @@ mod tests {
         let (location_sensor1, location_sensor_results1) = MockScanResultConsumer::new();
         let (network_selector2, network_selector_results2) = MockScanResultConsumer::new();
         let (location_sensor2, location_sensor_results2) = MockScanResultConsumer::new();
-        let saved_networks_manager = create_saved_networks_manager(&mut exec);
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Issue request to scan.
         let (_iter, iter_server) =
@@ -1897,7 +1890,7 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
-        let saved_networks_manager = create_saved_networks_manager(&mut exec);
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Issue request to scan.
         let (iter, iter_server) =
@@ -1956,7 +1949,7 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
-        let saved_networks_manager = create_saved_networks_manager(&mut exec);
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Issue request to scan.
         let (iter, iter_server) =
@@ -2018,7 +2011,7 @@ mod tests {
         let (location_sensor1, location_sensor_results1) = MockScanResultConsumer::new();
         let (network_selector2, network_selector_results2) = MockScanResultConsumer::new();
         let (location_sensor2, location_sensor_results2) = MockScanResultConsumer::new();
-        let saved_networks_manager = create_saved_networks_manager(&mut exec);
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         let MockScanData {
             passive_input_aps,
@@ -2161,7 +2154,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
-        let saved_networks_manager = create_saved_networks_manager(&mut exec);
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Create a FakeIfaceManager that returns has_wpa3_iface() based on test value
         let (sme_proxy, remote) =
@@ -2440,15 +2433,6 @@ mod tests {
         let fut = location_sensor_updater.update_scan_results(&internal_aps);
         exec.run_singlethreaded(fut);
         panic!("Need to reach into location sensor and check it got data")
-    }
-
-    fn create_saved_networks_manager(
-        exec: &mut fasync::TestExecutor,
-    ) -> Arc<dyn SavedNetworksManagerApi> {
-        let saved_networks_manager = exec
-            .run_singlethreaded(SavedNetworksManager::new_for_test())
-            .expect("failed to create saved networks manager");
-        Arc::new(saved_networks_manager)
     }
 
     #[fuchsia::test]
