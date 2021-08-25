@@ -38,7 +38,7 @@ pub async fn show_cmd(
     device_proxy: DeviceProxy,
     product_proxy: ProductProxy,
     build_info_proxy: ProviderProxy,
-    device_id_proxy: DeviceIdProviderProxy,
+    device_id_proxy: Option<DeviceIdProviderProxy>,
     last_reboot_info_proxy: LastRebootInfoProviderProxy,
     remote_proxy: RemoteControlProxy,
     daemon_proxy: DaemonProxy,
@@ -67,7 +67,7 @@ async fn show_cmd_impl<W: Write>(
     device_proxy: DeviceProxy,
     product_proxy: ProductProxy,
     build_info_proxy: ProviderProxy,
-    device_id_proxy: DeviceIdProviderProxy,
+    device_id_proxy: Option<DeviceIdProviderProxy>,
     last_reboot_info_proxy: LastRebootInfoProviderProxy,
     remote_proxy: RemoteControlProxy,
     daemon_proxy: DaemonProxy,
@@ -90,8 +90,11 @@ async fn show_cmd_impl<W: Write>(
         gather_device_id_show(device_id_proxy),
         gather_last_reboot_info_show(last_reboot_info_proxy),
     ) {
-        Ok((target, board, build, device, device_id, product, update, reboot_info)) => {
-            vec![target, board, build, device, device_id, product, update, reboot_info]
+        Ok((target, board, device, product, update, build, Some(device_id), reboot_info)) => {
+            vec![target, board, device, product, update, build, device_id, reboot_info]
+        }
+        Ok((target, board, device, product, update, build, None, reboot_info)) => {
+            vec![target, board, device, product, update, build, reboot_info]
         }
         Err(e) => bail!(e),
     };
@@ -143,19 +146,26 @@ async fn gather_target_show(
 }
 
 /// Determine the device id for the target.
-async fn gather_device_id_show(device_id: DeviceIdProviderProxy) -> Result<ShowEntry> {
-    let info = device_id.get_id().await?;
-    Ok(ShowEntry::group(
-        "Feedback",
-        "feedback",
-        "",
-        vec![ShowEntry::str_value(
-            "Device ID",
-            "device_id",
-            "Feedback Device ID for target.",
-            &Some(info),
-        )],
-    ))
+async fn gather_device_id_show(
+    device_id: Option<DeviceIdProviderProxy>,
+) -> Result<Option<ShowEntry>> {
+    match device_id {
+        None => Ok(None),
+        Some(dev_id) => {
+            let info = dev_id.get_id().await?;
+            Ok(Some(ShowEntry::group(
+                "Feedback",
+                "feedback",
+                "",
+                vec![ShowEntry::str_value(
+                    "Device ID",
+                    "device_id",
+                    "Feedback Device ID for target.",
+                    &Some(info),
+                )],
+            )))
+        }
+    }
 }
 
 /// Determine the build info for the target.
@@ -531,7 +541,7 @@ mod tests {
             setup_fake_device_server(),
             setup_fake_product_server(),
             setup_fake_build_info_server(),
-            setup_fake_device_id_server(),
+            Some(setup_fake_device_id_server()),
             setup_fake_last_reboot_info_server(),
             setup_fake_remote_control_server(),
             setup_fake_daemon_server(),
@@ -555,7 +565,7 @@ mod tests {
             setup_fake_device_server(),
             setup_fake_product_server(),
             setup_fake_build_info_server(),
-            setup_fake_device_id_server(),
+            Some(setup_fake_device_id_server()),
             setup_fake_last_reboot_info_server(),
             setup_fake_remote_control_server(),
             setup_fake_daemon_server(),
