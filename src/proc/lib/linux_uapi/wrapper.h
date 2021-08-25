@@ -33,6 +33,7 @@
 #include <linux/signal.h>
 #include <linux/stat.h>
 #include <linux/time.h>
+#include <linux/timerfd.h>
 #include <linux/uio.h>
 #include <linux/wait.h>
 
