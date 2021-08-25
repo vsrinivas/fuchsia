@@ -6,6 +6,8 @@ source_set("focus") {
   sources = [
     "focus_manager.cc",
     "focus_manager.h",
+    "view_focuser_registry.cc",
+    "view_focuser_registry.h",
     "view_ref_focused_registry.cc",
     "view_ref_focused_registry.h",
   ]

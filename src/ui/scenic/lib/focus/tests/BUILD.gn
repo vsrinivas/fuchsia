@@ -14,6 +14,7 @@ executable("focus_test_bin") {
   testonly = true
   sources = [
     "focus_manager_unittest.cc",
+    "view_focuser_registry_unittest.cc",
     "view_ref_focused_unittest.cc",
   ]
   deps = [
