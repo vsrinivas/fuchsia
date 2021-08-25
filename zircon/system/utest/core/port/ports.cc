@@ -558,37 +558,61 @@ TEST(PortTest, EdgeTriggerTimeout) {
 // closing thread and the queuing thread to enter the code under test at the same time.
 TEST(PortTest, CloseQueueRace) {
   zx::port port;
+  std::atomic<uint64_t> count = 0;
   ASSERT_OK(zx::port::create(0, &port));
-  const uint64_t kBatchSize = 200;
 
-  auto queue_loop = [](zx_handle_t handle, std::atomic<uint64_t>* count, zx_status_t* result) {
+  auto queue_loop = [port = port.borrow(), &count]() {
     constexpr zx_port_packet_t kPacket = {1ull, ZX_PKT_TYPE_USER, 0, {{}}};
-    zx_status_t status = ZX_OK;
-    while (status == ZX_OK) {
-      status = zx_port_queue(handle, &kPacket);
-      auto prev_count = count->fetch_add(1);
-      if (prev_count == kBatchSize) {
-        // Read the queued packets, as to not hit the port depth limit. While reading
-        // we keep the visible counter equal to zero.
-        count->store(0u);
-        uint64_t unload_count = 0u;
-        zx_port_packet read_packet;
-        while ((status == ZX_OK) && (unload_count <= kBatchSize)) {
-          status = zx_port_wait(handle, ZX_TIME_INFINITE, &read_packet);
-          ++unload_count;
+    constexpr uint64_t kMaxMessages = 1024;
+    uint64_t enqueued_messages = 0;
+
+    while (true) {
+      // Enqueue a message.
+      {
+        zx_status_t status = port->queue(&kPacket);
+        if (status != ZX_OK) {
+          ZX_ASSERT_MSG(status == ZX_ERR_BAD_HANDLE, "Unexpected status: %d", status);
+          break;
         }
+        enqueued_messages++;
       }
+
+      // If too many messages are enqueued, dequeue one to avoid hitting the
+      // port depth limit.
+      while (enqueued_messages >= kMaxMessages) {
+        zx_port_packet read_packet;
+        zx_status_t status = port->wait(zx::time::infinite_past(), &read_packet);
+        if (status == ZX_ERR_TIMED_OUT) {
+          // We may race with the port being closed in the following manner:
+          //
+          //  1. This thread enters the kernel, converts its handle into
+          //     a reference to the port object, but doesn't yet read
+          //     the messages on the queue.
+          //
+          //  2. The other thread deletes the handle to the port,
+          //     deleting all pending messages in the process.
+          //
+          //  3. Because no message is waiting, the port operation times
+          //     out with ZX_ERR_TIMED_OUT.
+          //
+          // In this case, we just try again.
+          continue;
+        } else if (status == ZX_ERR_BAD_HANDLE) {
+          // Port was closed.
+          break;
+        }
+        ZX_ASSERT_MSG(status == ZX_OK, "Unexpected status: %d", status);
+        enqueued_messages--;
+      }
+
+      count.fetch_add(1);
     }
-    *result = status;
   };
 
-  std::atomic<uint64_t> count = 0;
-  zx_status_t status = ZX_ERR_INTERNAL;
-  std::thread queue_thread(queue_loop, port.get(), &count, &status);
+  std::thread queue_thread(queue_loop);
 
-  // Wait for |queue_thread| to complete at least one loop iteration.
+  // Spin until |queue_thread| completes at least one loop iteration.
   while (count.load() == 0) {
-    zx::nanosleep(zx::time(0));
   }
 
   // Close the port out from under it.
@@ -596,7 +620,6 @@ TEST(PortTest, CloseQueueRace) {
 
   // See that it gets ZX_ERR_BAD_HANDLE.
   queue_thread.join();
-  ASSERT_STATUS(ZX_ERR_BAD_HANDLE, status);
 }
 
 TEST(PortStressTest, WaitSignalCancel) {
