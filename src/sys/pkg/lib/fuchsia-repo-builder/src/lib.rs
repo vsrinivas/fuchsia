@@ -28,10 +28,10 @@ where
     T: PathTranslator + Clone,
 {
     repo: Arc<R>,
-    client: Client<D, EphemeralRepository<D>, Arc<R>, T>,
+    client: Option<Client<D, EphemeralRepository<D>, Arc<R>, T>>,
     config: Config<T>,
-    trusted_root: &'a RawSignedMetadata<D, RootMetadata>,
     hash_algorithms: Vec<HashAlgorithm>,
+    root_keys: Vec<&'a dyn PrivateKey>,
     snapshot_keys: Vec<&'a dyn PrivateKey>,
     timestamp_keys: Vec<&'a dyn PrivateKey>,
 }
@@ -43,7 +43,6 @@ where
     T: PathTranslator + Clone,
 {
     state: RepoBuilderState<'a, D, R, T>,
-    root_keys: Vec<&'a dyn PrivateKey>,
     target_keys: Vec<&'a dyn PrivateKey>,
 }
 
@@ -55,7 +54,6 @@ where
 {
     state: RepoBuilderState<'a, D, R, T>,
     root: RootMetadata,
-    root_keys: Vec<&'a dyn PrivateKey>,
     target_keys: Vec<&'a dyn PrivateKey>,
 }
 
@@ -66,7 +64,7 @@ where
     T: PathTranslator + Clone,
 {
     state: RepoBuilderState<'a, D, R, T>,
-    staging_repo: EphemeralRepository<D>,
+    store_root: bool,
     root: RootMetadata,
     targets: TargetsMetadata,
     target_keys: Vec<&'a dyn PrivateKey>,
@@ -79,7 +77,7 @@ where
     T: PathTranslator + Clone,
 {
     state: RepoBuilderState<'a, D, R, T>,
-    staging_repo: EphemeralRepository<D>,
+    store_root: bool,
     root: RootMetadata,
     targets_version: u32,
     raw_targets: RawSignedMetadata<D, TargetsMetadata>,
@@ -92,19 +90,62 @@ where
     R: RepositoryProvider<D> + RepositoryStorage<D>,
     T: PathTranslator + Clone,
 {
+    /// Create a builder on top of an uninitialized repository that, when committed, will populate
+    /// it with new initial metadata.
+    pub fn create<K, L, M, N, P: 'a>(
+        config: Config<T>,
+        repo: R,
+        root_keys: K,
+        target_keys: L,
+        snapshot_keys: M,
+        timestamp_keys: N,
+    ) -> RepoBuilder<'a, D, R, T>
+    where
+        K: IntoIterator<Item = &'a P>,
+        K::IntoIter: 'a,
+        L: IntoIterator<Item = &'a P>,
+        L::IntoIter: 'a,
+        M: IntoIterator<Item = &'a P>,
+        M::IntoIter: 'a,
+        N: IntoIterator<Item = &'a P>,
+        N::IntoIter: 'a,
+        P: PrivateKey,
+        D: 'a,
+    {
+        let repo = Arc::new(repo);
+        RepoBuilder {
+            state: RepoBuilderState {
+                repo,
+                client: None,
+                config,
+                hash_algorithms: vec![HashAlgorithm::Sha256],
+                root_keys: root_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
+                snapshot_keys: snapshot_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
+                timestamp_keys: timestamp_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
+            },
+            target_keys: target_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
+        }
+    }
+
     /// Create a new RepoBuilder, which will commit changes to this repository.
-    pub async fn with_trusted_root<K, P: 'a>(
+    pub async fn with_trusted_root<K, L, M, N, P: 'a>(
         config: Config<T>,
         trusted_root: &'a RawSignedMetadata<D, RootMetadata>,
         repo: R,
         root_keys: K,
-        target_keys: K,
-        snapshot_keys: K,
-        timestamp_keys: K,
+        target_keys: L,
+        snapshot_keys: M,
+        timestamp_keys: N,
     ) -> Result<RepoBuilder<'a, D, R, T>>
     where
         K: IntoIterator<Item = &'a P>,
         K::IntoIter: 'a,
+        L: IntoIterator<Item = &'a P>,
+        L::IntoIter: 'a,
+        M: IntoIterator<Item = &'a P>,
+        M::IntoIter: 'a,
+        N: IntoIterator<Item = &'a P>,
+        N::IntoIter: 'a,
         P: PrivateKey,
     {
         let repo = Arc::new(repo);
@@ -119,14 +160,13 @@ where
         Ok(RepoBuilder {
             state: RepoBuilderState {
                 repo,
-                client,
+                client: Some(client),
                 config,
-                trusted_root,
                 hash_algorithms: vec![HashAlgorithm::Sha256],
+                root_keys: root_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
                 snapshot_keys: snapshot_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
                 timestamp_keys: timestamp_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
             },
-            root_keys: root_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
             target_keys: target_keys.into_iter().map(|x| x as &dyn PrivateKey).collect(),
         })
     }
@@ -141,63 +181,43 @@ where
     }
 
     fn make_with_root(self, root: RootMetadata) -> RepoBuilderWithRoot<'a, D, R, T> {
-        RepoBuilderWithRoot {
-            root,
-            root_keys: self.root_keys,
-            target_keys: self.target_keys,
-            state: self.state,
-        }
+        RepoBuilderWithRoot { root, target_keys: self.target_keys, state: self.state }
     }
 
     /// Check whether we have new keys and thus need to rebuild the root
     async fn need_key_refresh(&self) -> Result<bool> {
-        let root_keys_count = self.state.client.trusted_root().root_keys().count();
+        let client = if let Some(client) = self.state.client.as_ref() {
+            client
+        } else {
+            return Ok(true);
+        };
 
-        if root_keys_count != self.root_keys.len() {
+        let root_keys_count = client.trusted_root().root_keys().count();
+
+        if root_keys_count != self.state.root_keys.len() {
             return Ok(true);
         }
 
-        for &key in &self.root_keys {
-            if self.state.client.trusted_root().root_keys().find(|&x| x == key.public()).is_none() {
+        for &key in &self.state.root_keys {
+            if client.trusted_root().root_keys().find(|&x| x == key.public()).is_none() {
                 return Ok(true);
             }
         }
 
         for &key in &self.target_keys {
-            if self
-                .state
-                .client
-                .trusted_root()
-                .targets_keys()
-                .find(|&x| x == key.public())
-                .is_none()
-            {
+            if client.trusted_root().targets_keys().find(|&x| x == key.public()).is_none() {
                 return Ok(true);
             }
         }
 
         for &key in &self.state.snapshot_keys {
-            if self
-                .state
-                .client
-                .trusted_root()
-                .snapshot_keys()
-                .find(|&x| x == key.public())
-                .is_none()
-            {
+            if client.trusted_root().snapshot_keys().find(|&x| x == key.public()).is_none() {
                 return Ok(true);
             }
         }
 
         for &key in &self.state.timestamp_keys {
-            if self
-                .state
-                .client
-                .trusted_root()
-                .timestamp_keys()
-                .find(|&x| x == key.public())
-                .is_none()
-            {
+            if client.trusted_root().timestamp_keys().find(|&x| x == key.public()).is_none() {
                 return Ok(true);
             }
         }
@@ -212,11 +232,17 @@ where
     where
         F: FnOnce(RootMetadataBuilder) -> RootMetadataBuilder,
     {
-        let mut builder = RootMetadataBuilder::new()
-            .version(self.state.client.root_version() + 1)
-            .consistent_snapshot(self.state.client.trusted_root().consistent_snapshot());
+        let mut builder = RootMetadataBuilder::new().version(
+            self.state.client.as_ref().map(|client| client.root_version()).unwrap_or(0) + 1,
+        );
 
-        for key in &self.root_keys {
+        if let Some(consistent_snapshot) =
+            self.state.client.as_ref().map(|client| client.trusted_root().consistent_snapshot())
+        {
+            builder = builder.consistent_snapshot(consistent_snapshot);
+        }
+
+        for key in &self.state.root_keys {
             builder = builder.root_key(key.public().clone());
         }
 
@@ -245,7 +271,9 @@ where
         if self.need_key_refresh().await? {
             self.with_root_builder(|x| x).await?.with_targets_builder(f).await
         } else {
-            let root = (**self.state.client.trusted_root()).clone();
+            // need_key_refresh should always be true when we're creating a repo from scratch,
+            // which means there's always a client here.
+            let root = (**self.state.client.as_ref().unwrap().trusted_root()).clone();
             self.make_with_root(root).with_targets_builder_store_root(f, false).await
         }
     }
@@ -284,41 +312,14 @@ where
     where
         F: FnOnce(TargetsMetadataBuilder) -> TargetsMetadataBuilder,
     {
-        let staging_repo = EphemeralRepository::<D>::new();
-
-        let mut client = Client::with_trusted_root(
-            self.state.config.clone(),
-            self.state.trusted_root,
-            &staging_repo,
-            &self.state.repo,
-        )
-        .await?;
-
-        client.update().await?;
-
-        if store_root {
-            let mut signed_builder = SignedMetadataBuilder::<D, _>::from_metadata(&self.root)?;
-            for key in self.root_keys {
-                signed_builder = signed_builder.sign(key)?;
-            }
-            let raw_root = signed_builder.build().to_raw()?;
-
-            staging_repo
-                .store_metadata(
-                    &MetadataPath::from_role(&Role::Root),
-                    &MetadataVersion::Number(self.root.version()),
-                    &mut raw_root.as_bytes(),
-                )
-                .await?;
-        }
-
-        let targets = f(TargetsMetadataBuilder::new()
-            .version(self.state.client.targets_version().unwrap_or(0) + 1))
+        let targets = f(TargetsMetadataBuilder::new().version(
+            self.state.client.as_ref().and_then(|client| client.targets_version()).unwrap_or(0) + 1,
+        ))
         .build()?;
         Ok(RepoBuilderWithTargets {
             state: self.state,
             root: self.root,
-            staging_repo,
+            store_root,
             targets,
             target_keys: self.target_keys,
         })
@@ -355,13 +356,20 @@ where
         let signed_targets = signed_builder.build();
         let raw_targets = signed_targets.to_raw()?;
         let snapshot = f(SnapshotMetadataBuilder::new()
-            .version(self.state.client.snapshot_version().unwrap_or(0) + 1)
+            .version(
+                self.state
+                    .client
+                    .as_ref()
+                    .and_then(|client| client.snapshot_version())
+                    .unwrap_or(0)
+                    + 1,
+            )
             .insert_metadata(&signed_targets, &self.state.hash_algorithms)?)
         .build()?;
         Ok(RepoBuilderWithSnapshot {
             state: self.state,
             root: self.root,
-            staging_repo: self.staging_repo,
+            store_root: self.store_root,
             targets_version: self.targets.version(),
             raw_targets,
             snapshot,
@@ -396,8 +404,68 @@ where
     where
         F: FnOnce(TimestampMetadataBuilder) -> TimestampMetadataBuilder,
     {
-        let staging_repo = self.staging_repo;
+        let repo = Arc::clone(&self.state.repo);
+
+        if self.state.client.is_some() {
+            let staging_repo = EphemeralRepository::<D>::new();
+            let snapshot_version = self.snapshot.version();
+            let raw_targets = self.raw_targets.clone();
+            let targets_version = self.targets_version;
+            let config = self.state.config.clone();
+            let (root, raw_snapshot) = self.write_repo(f, &staging_repo).await?;
+
+            Client::with_trusted_local(config, &repo, staging_repo).await?.update().await?;
+
+            // The update won't pull the consistent metadata from the staging repo to the final
+            // repo, so we have to write it manually.
+            if root.consistent_snapshot() {
+                repo.store_metadata(
+                    &MetadataPath::from_role(&Role::Targets),
+                    &MetadataVersion::Number(targets_version),
+                    &mut raw_targets.as_bytes(),
+                )
+                .await?;
+
+                repo.store_metadata(
+                    &MetadataPath::from_role(&Role::Snapshot),
+                    &MetadataVersion::Number(snapshot_version),
+                    &mut raw_snapshot.as_bytes(),
+                )
+                .await?;
+            }
+        } else {
+            let repo = Arc::clone(&self.state.repo);
+            self.write_repo(f, repo).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn write_repo<F, S>(
+        self,
+        f: F,
+        repo: S,
+    ) -> Result<(RootMetadata, RawSignedMetadata<D, SnapshotMetadata>)>
+    where
+        F: FnOnce(TimestampMetadataBuilder) -> TimestampMetadataBuilder,
+        S: RepositoryProvider<D> + RepositoryStorage<D>,
+    {
         let root = self.root;
+
+        if self.store_root {
+            let mut signed_builder = SignedMetadataBuilder::<D, _>::from_metadata(&root)?;
+            for key in self.state.root_keys {
+                signed_builder = signed_builder.sign(key)?;
+            }
+            let raw_root = signed_builder.build().to_raw()?;
+
+            repo.store_metadata(
+                &MetadataPath::from_role(&Role::Root),
+                &MetadataVersion::Number(root.version()),
+                &mut raw_root.as_bytes(),
+            )
+            .await?;
+        }
 
         let mut signed_builder = SignedMetadataBuilder::<D, _>::from_metadata(&self.snapshot)?;
         for key in self.state.snapshot_keys {
@@ -410,7 +478,10 @@ where
             &signed_snapshot,
             &self.state.hash_algorithms,
         )?
-        .version(self.state.client.timestamp_version().unwrap_or(0) + 1))
+        .version(
+            self.state.client.as_ref().and_then(|client| client.timestamp_version()).unwrap_or(0)
+                + 1,
+        ))
         .build()?;
 
         let mut signed_builder = SignedMetadataBuilder::<D, _>::from_metadata(&timestamp)?;
@@ -421,73 +492,43 @@ where
         let raw_timestamp = signed_timestamp.to_raw()?;
 
         if root.consistent_snapshot() {
-            staging_repo
-                .store_metadata(
-                    &MetadataPath::from_role(&Role::Targets),
-                    &MetadataVersion::Number(self.targets_version),
-                    &mut self.raw_targets.as_bytes(),
-                )
-                .await?;
-
-            staging_repo
-                .store_metadata(
-                    &MetadataPath::from_role(&Role::Snapshot),
-                    &MetadataVersion::Number(self.snapshot.version()),
-                    &mut raw_snapshot.as_bytes(),
-                )
-                .await?;
-        }
-
-        staging_repo
-            .store_metadata(
+            repo.store_metadata(
                 &MetadataPath::from_role(&Role::Targets),
-                &MetadataVersion::None,
+                &MetadataVersion::Number(self.targets_version),
                 &mut self.raw_targets.as_bytes(),
             )
             .await?;
 
-        staging_repo
-            .store_metadata(
+            repo.store_metadata(
                 &MetadataPath::from_role(&Role::Snapshot),
-                &MetadataVersion::None,
+                &MetadataVersion::Number(self.snapshot.version()),
                 &mut raw_snapshot.as_bytes(),
             )
             .await?;
-
-        staging_repo
-            .store_metadata(
-                &MetadataPath::from_role(&Role::Timestamp),
-                &MetadataVersion::None,
-                &mut raw_timestamp.as_bytes(),
-            )
-            .await?;
-
-        Client::with_trusted_local(self.state.config.clone(), &self.state.repo, staging_repo)
-            .await?
-            .update()
-            .await?;
-
-        if root.consistent_snapshot() {
-            self.state
-                .repo
-                .store_metadata(
-                    &MetadataPath::from_role(&Role::Targets),
-                    &MetadataVersion::Number(self.targets_version),
-                    &mut self.raw_targets.as_bytes(),
-                )
-                .await?;
-
-            self.state
-                .repo
-                .store_metadata(
-                    &MetadataPath::from_role(&Role::Snapshot),
-                    &MetadataVersion::Number(self.snapshot.version()),
-                    &mut raw_snapshot.as_bytes(),
-                )
-                .await?;
         }
 
-        Ok(())
+        repo.store_metadata(
+            &MetadataPath::from_role(&Role::Targets),
+            &MetadataVersion::None,
+            &mut self.raw_targets.as_bytes(),
+        )
+        .await?;
+
+        repo.store_metadata(
+            &MetadataPath::from_role(&Role::Snapshot),
+            &MetadataVersion::None,
+            &mut raw_snapshot.as_bytes(),
+        )
+        .await?;
+
+        repo.store_metadata(
+            &MetadataPath::from_role(&Role::Timestamp),
+            &MetadataVersion::None,
+            &mut raw_timestamp.as_bytes(),
+        )
+        .await?;
+
+        Ok((root, raw_snapshot))
     }
 }
 
@@ -497,7 +538,7 @@ mod tests {
 
     use {
         chrono::offset::{TimeZone as _, Utc},
-        fuchsia_async as fasync,
+        fuchsia_async::{self as fasync, futures::AsyncReadExt as _},
         lazy_static::lazy_static,
         matches::assert_matches,
         std::iter::once,
@@ -532,100 +573,22 @@ mod tests {
         let repo = EphemeralRepository::<Json>::new();
 
         // First, create the initial metadata.
-
-        let root = RootMetadataBuilder::new()
-            .version(1)
-            .consistent_snapshot(consistent_snapshot)
-            .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-            .root_key(KEYS[0].public().clone())
-            .snapshot_key(KEYS[0].public().clone())
-            .targets_key(KEYS[0].public().clone())
-            .timestamp_key(KEYS[0].public().clone())
-            .build()
-            .unwrap();
-
-        let raw_root = SignedMetadataBuilder::<Json, _>::from_metadata(&root)
-            .unwrap()
-            .sign(&KEYS[0])
-            .unwrap()
-            .build()
-            .to_raw()
-            .unwrap();
-
-        repo.store_metadata(
-            &MetadataPath::from_role(&Role::Root),
-            &MetadataVersion::Number(1),
-            &mut raw_root.as_bytes(),
+        RepoBuilder::create(
+            Config::default(),
+            &repo,
+            [&KEYS[0]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
         )
+        .with_root_builder(|root_builder| {
+            root_builder
+                .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
+                .consistent_snapshot(consistent_snapshot)
+        })
         .await
-        .unwrap();
-
-        let targets = SignedMetadataBuilder::<Json, _>::from_metadata(
-            &TargetsMetadataBuilder::new().version(1).build().unwrap(),
-        )
         .unwrap()
-        .sign(&KEYS[0])
-        .unwrap()
-        .sign(&KEYS[1])
-        .unwrap()
-        .sign(&KEYS[2])
-        .unwrap()
-        .build();
-
-        repo.store_metadata(
-            &MetadataPath::from_role(&Role::Targets),
-            if consistent_snapshot { &MetadataVersion::Number(1) } else { &MetadataVersion::None },
-            &mut targets.to_raw().unwrap().as_bytes(),
-        )
-        .await
-        .unwrap();
-
-        let snapshot = SnapshotMetadataBuilder::new()
-            .version(1)
-            .insert_metadata(&targets, &[HashAlgorithm::Sha256])
-            .unwrap()
-            .build()
-            .unwrap();
-        let snapshot = SignedMetadataBuilder::<Json, _>::from_metadata(&snapshot)
-            .unwrap()
-            .sign(&KEYS[0])
-            .unwrap()
-            .sign(&KEYS[1])
-            .unwrap()
-            .sign(&KEYS[2])
-            .unwrap()
-            .build();
-        let timestamp =
-            TimestampMetadataBuilder::from_snapshot(&snapshot, &[HashAlgorithm::Sha256])
-                .unwrap()
-                .version(1)
-                .build()
-                .unwrap();
-
-        repo.store_metadata(
-            &MetadataPath::from_role(&Role::Snapshot),
-            if consistent_snapshot { &MetadataVersion::Number(1) } else { &MetadataVersion::None },
-            &mut snapshot.to_raw().unwrap().as_bytes(),
-        )
-        .await
-        .unwrap();
-
-        repo.store_metadata(
-            &MetadataPath::from_role(&Role::Timestamp),
-            &MetadataVersion::None,
-            &mut SignedMetadataBuilder::<Json, _>::from_metadata(&timestamp)
-                .unwrap()
-                .sign(&KEYS[0])
-                .unwrap()
-                .sign(&KEYS[1])
-                .unwrap()
-                .sign(&KEYS[2])
-                .unwrap()
-                .build()
-                .to_raw()
-                .unwrap()
-                .as_bytes(),
-        )
+        .commit()
         .await
         .unwrap();
 
@@ -640,6 +603,21 @@ mod tests {
         )
         .await
         .unwrap();
+
+        let raw_root = {
+            let mut reader = repo
+                .fetch_metadata(
+                    &MetadataPath::from_role(&Role::Root),
+                    &MetadataVersion::Number(1),
+                    None,
+                    None,
+                )
+                .await
+                .unwrap();
+            let mut buf = Vec::new();
+            reader.read_to_end(&mut buf).await.unwrap();
+            RawSignedMetadata::new(buf)
+        };
 
         assert_matches!(client.update().await, Ok(true));
         assert_eq!(client.trusted_root().version(), 1);
@@ -656,10 +634,10 @@ mod tests {
             Config::default(),
             &raw_root,
             &repo,
-            vec![&KEYS[0], &KEYS[1]],
-            vec![&KEYS[0], &KEYS[1], &KEYS[2]],
-            vec![&KEYS[0], &KEYS[1], &KEYS[2]],
-            vec![&KEYS[0], &KEYS[1], &KEYS[2]],
+            [&KEYS[0], &KEYS[1]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
         )
         .await
         .unwrap()
@@ -671,10 +649,10 @@ mod tests {
             Config::default(),
             &raw_root,
             &repo,
-            vec![&KEYS[1], &KEYS[2]],
-            vec![&KEYS[0], &KEYS[1], &KEYS[2]],
-            vec![&KEYS[0], &KEYS[1], &KEYS[2]],
-            vec![&KEYS[0], &KEYS[1], &KEYS[2]],
+            [&KEYS[1], &KEYS[2]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
+            [&KEYS[0], &KEYS[1], &KEYS[2]],
         )
         .await
         .unwrap()
