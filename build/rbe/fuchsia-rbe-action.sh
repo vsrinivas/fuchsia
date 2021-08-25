@@ -5,7 +5,7 @@
 #
 # See usage().
 
-set -e
+set -uo pipefail
 
 script="$0"
 script_dir="$(dirname "$script")"
@@ -41,6 +41,7 @@ EOF
 
 rewrapper_options=()
 want_auto_reproxy=0
+prev_opt=
 # Extract script options before --
 for opt
 do
@@ -71,7 +72,7 @@ do
   esac
   shift
 done
-test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
+test -z "$prev_opt" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
 reproxy_cfg="$config"
 rewrapper_cfg="$config"
