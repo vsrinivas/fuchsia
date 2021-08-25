@@ -23,8 +23,9 @@ use {
     std::{
         ops::{Deref, DerefMut},
         path::PathBuf,
+        sync::Arc,
     },
-    test_harness::TestHarness,
+    test_harness::{SharedState, TestHarness},
 };
 
 use crate::timeout_duration;
@@ -102,7 +103,9 @@ impl TestHarness for InspectHarness {
     type Env = (PathBuf, Emulator);
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let (harness, emulator, host_path) = new_inspect_harness().await?;
             let run_inspect = handle_inspect_updates(harness.clone()).boxed();

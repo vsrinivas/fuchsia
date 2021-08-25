@@ -7,8 +7,11 @@ use {
     fidl_fuchsia_bluetooth_sys::{BootstrapMarker, BootstrapProxy},
     fuchsia_bluetooth::expectation::asynchronous::{expectable, Expectable},
     futures::future::{self, BoxFuture, FutureExt},
-    std::ops::{Deref, DerefMut},
-    test_harness::TestHarness,
+    std::{
+        ops::{Deref, DerefMut},
+        sync::Arc,
+    },
+    test_harness::{SharedState, TestHarness},
 };
 
 use crate::host_watcher::ActivatedFakeHost;
@@ -34,7 +37,9 @@ impl TestHarness for BootstrapHarness {
     type Env = ActivatedFakeHost;
     type Runner = future::Pending<Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let fake_host = ActivatedFakeHost::new("bt-hci-integration-bootstrap-0").await?;
             match fuchsia_component::client::connect_to_protocol::<BootstrapMarker>() {

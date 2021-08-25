@@ -14,8 +14,9 @@ use {
         collections::HashMap,
         convert::TryInto,
         ops::{Deref, DerefMut},
+        sync::Arc,
     },
-    test_harness::TestHarness,
+    test_harness::{SharedState, TestHarness},
 };
 
 #[derive(Clone, Default)]
@@ -61,7 +62,9 @@ impl TestHarness for AccessHarness {
     type Env = ();
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let access = fuchsia_component::client::connect_to_protocol::<AccessMarker>()
                 .context("Failed to connect to access service")?;

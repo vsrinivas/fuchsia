@@ -15,8 +15,9 @@ use {
     std::{
         convert::TryInto,
         ops::{Deref, DerefMut},
+        sync::Arc,
     },
-    test_harness::TestHarness,
+    test_harness::{SharedState, TestHarness},
 };
 
 use crate::host_watcher::ActivatedFakeHost;
@@ -70,7 +71,9 @@ impl TestHarness for CentralHarness {
     type Env = ActivatedFakeHost;
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let fake_host = ActivatedFakeHost::new("bt-hci-integration-le-0").await?;
             let central = fuchsia_component::client::connect_to_protocol::<CentralMarker>()

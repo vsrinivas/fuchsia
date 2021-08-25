@@ -11,7 +11,12 @@ rustc_test("tests_bin") {
 
   deps = [
     "//src/connectivity/bluetooth/testing/test-harness",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:parking_lot",
   ]
 
   sources = [ "src/lib.rs" ]

@@ -29,8 +29,9 @@ use {
         convert::{AsMut, AsRef, TryInto},
         ops::{Deref, DerefMut},
         path::PathBuf,
+        sync::Arc,
     },
-    test_harness::TestHarness,
+    test_harness::{SharedState, TestHarness},
 };
 
 use crate::{
@@ -106,7 +107,9 @@ impl TestHarness for HostDriverHarness {
     type Env = (PathBuf, Emulator);
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let (harness, emulator) = new_host_harness().await?;
             let watch_info = watch_host_info(harness.clone())

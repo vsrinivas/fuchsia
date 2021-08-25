@@ -3,13 +3,84 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Context as _, Error},
     fuchsia_async as fasync,
     futures::future::BoxFuture,
     futures::{future, select, stream::TryStreamExt, Future, FutureExt},
     log::{error, info},
+    parking_lot::Mutex,
     pin_utils::pin_mut,
+    std::any::{Any, TypeId},
+    std::collections::{hash_map::Entry, HashMap},
+    std::sync::Arc,
 };
+
+/// SharedState is a string-indexed map used to share state across multiple TestHarnesses that are
+/// tupled together. For example, the state could be a Bluetooth emulator instance and core
+/// component/driver hierarchy manipulated by two distinct Harnesses during a test. The map's value
+/// types use runtime polymorphism (`Box<dyn Any>`) so that any type of state may be shared. Once
+/// added, entries cannot be removed from the SharedState, although they may be modified.
+type InnerSharedState = HashMap<String, Arc<dyn Any + Send + Sync + 'static>>;
+
+#[derive(Default)]
+pub struct SharedState(Mutex<InnerSharedState>);
+
+impl SharedState {
+    /// Returns None if no entry exists for `key`. Returns Some(Err) if an entry exists for `key`,
+    /// but is not of type T. Returns Some(Ok(Arc<T>)) if the existing entry is successfully
+    /// downcasted to T.
+    pub fn get<T: Send + Sync + 'static>(&self, key: &str) -> Option<Result<Arc<T>, Error>> {
+        self.0.lock().get(key).cloned().map(Self::downcast_with_err)
+    }
+
+    /// Insert `val` at `key` if `key` is not yet occupied. If SharedState did not have an entry
+    /// for `key`, returns Ok(Arc<the inserted `val`>). Otherwise, does not insert `val` and returns
+    /// Err(Arc<existing value>)
+    pub fn try_insert<T: Send + Sync + 'static>(
+        &self,
+        key: &str,
+        val: T,
+    ) -> Result<Arc<T>, Arc<dyn Any + Send + Sync + 'static>> {
+        match self.0.lock().entry(key.to_string()) {
+            Entry::Occupied(existing) => Err(existing.get().clone()),
+            Entry::Vacant(empty) => {
+                let entry = Arc::new(val);
+                empty.insert(entry.clone());
+                Ok(entry)
+            }
+        }
+    }
+
+    /// This takes two type parameters, F and T. The inserter F is used in case `key` is not yet
+    /// associated with an existing state value to create the value associated with `key`. T is the
+    /// type of state expected to be associated with `key`. After possibly inserting the state
+    /// associated with `key` in the map, we dynamically cast `key`s state into type T. Errors can
+    /// stem from `inserter` failures, or existing types in the map not matching T.
+    pub async fn get_or_insert_with<F, Fut, T>(
+        &self,
+        key: &str,
+        inserter: F,
+    ) -> Result<Arc<T>, Error>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<T, Error>>,
+        T: Send + Sync + 'static,
+    {
+        if let Some(res) = self.get(key) {
+            return res;
+        }
+        let state = inserter().await?;
+        // It's possible and OK for us to be preempted while running inserter.
+        self.try_insert(key, state).or_else(Self::downcast_with_err)
+    }
+
+    fn downcast_with_err<T: Send + Sync + 'static>(
+        any: Arc<dyn Any + Send + Sync + 'static>,
+    ) -> Result<Arc<T>, Error> {
+        any.downcast()
+            .map_err(|_| format_err!("failed to downcast to type {:?}", TypeId::of::<T>()))
+    }
+}
 
 /// A `TestHarness` is a type that provides an interface to test cases for interacting with
 /// functionality under test. For example, a WidgetHarness might provide controls for interacting
@@ -31,8 +102,15 @@ pub trait TestHarness: Sized {
     type Runner: Future<Output = Result<(), Error>> + Unpin + Send + 'static;
 
     /// Initialize a TestHarness, creating the harness itself, any hidden environment, and a runner
-    /// task to execute background behavior
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>>;
+    /// task to execute background behavior. May index into shared_state to access state that needs
+    /// to be shared across Harnesses. If `init` needs to access `shared_state` inside the returned
+    /// future, it should clone the state outside of the future and move it into the future.
+    ///
+    /// `shared_state` will be dropped before the test code executes, so if a shared state entry
+    /// must exist for the duration of the test, Harnesses should add it to their `Env`.
+    fn init(
+        shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>>;
 
     /// Terminate the TestHarness. This should clear up any and all resources that were created by
     /// init()
@@ -46,7 +124,11 @@ where
     F: FnOnce(H) -> Fut + Send + 'static,
     Fut: Future<Output = Result<(), Error>> + Send + 'static,
 {
-    let (harness, env, runner) = H::init().await.context("Error initializing harness")?;
+    let state = Default::default();
+    let (harness, env, runner) = H::init(&state).await.context("Error initializing harness")?;
+    // Drop `state` so that SharedState entries may be dropped if not needed during test execution.
+    // See Harness::init doc comment for further explanation.
+    drop(state);
 
     let run_test = test_func(harness);
     pin_mut!(run_test);
@@ -92,7 +174,9 @@ impl TestHarness for () {
     type Env = ();
     type Runner = future::Pending<Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async { Ok(((), (), future::pending())) }.boxed()
     }
     fn terminate(_env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
@@ -154,10 +238,11 @@ macro_rules! generate_tuples {
                 type Env = ($($Harness::Env),*);
                 type Runner = BoxFuture<'static, Result<(), Error>>;
 
-                fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-                    async {
+                fn init(shared_state: &Arc<SharedState>) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+                    let shared_state = shared_state.clone();
+                    async move {
                         $(
-                            let $Harness = $Harness::init().await?;
+                            let $Harness = $Harness::init(&shared_state).await?;
                         )*
 
                         // Create a stream of the result of each future

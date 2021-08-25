@@ -9,8 +9,11 @@ use {
     fuchsia_bluetooth::expectation::asynchronous::{expectable, Expectable, ExpectableExt},
     futures::future::BoxFuture,
     futures::{FutureExt, StreamExt},
-    std::ops::{Deref, DerefMut},
-    test_harness::TestHarness,
+    std::{
+        ops::{Deref, DerefMut},
+        sync::Arc,
+    },
+    test_harness::{SharedState, TestHarness},
 };
 
 use crate::{emulator::EmulatorState, host_watcher::ActivatedFakeHost};
@@ -59,7 +62,9 @@ impl TestHarness for ProfileHarness {
     type Env = ActivatedFakeHost;
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let host = ActivatedFakeHost::new("bt-hci-integration-profile-0").await?;
             let profile = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()

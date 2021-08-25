@@ -21,8 +21,9 @@ use {
         collections::HashMap,
         convert::TryFrom,
         ops::{Deref, DerefMut},
+        sync::Arc,
     },
-    test_harness::TestHarness,
+    test_harness::{SharedState, TestHarness},
 };
 
 use crate::timeout_duration;
@@ -82,7 +83,9 @@ impl TestHarness for HostWatcherHarness {
     type Env = ();
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let harness = new_host_watcher_harness().await?;
             let run_host_watcher = watch_hosts(harness.clone())

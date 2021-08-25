@@ -17,8 +17,9 @@ use {
     std::{
         convert::TryInto,
         ops::{Deref, DerefMut},
+        sync::Arc,
     },
-    test_harness::TestHarness,
+    test_harness::{SharedState, TestHarness},
 };
 
 use crate::{
@@ -88,7 +89,9 @@ impl TestHarness for PeripheralHarness {
     type Env = ActivatedFakeHost;
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
-    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+    fn init(
+        _shared_state: &Arc<SharedState>,
+    ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let host = ActivatedFakeHost::new("bt-integration-le-peripheral").await?;
             let peripheral = fuchsia_component::client::connect_to_protocol::<PeripheralMarker>()
