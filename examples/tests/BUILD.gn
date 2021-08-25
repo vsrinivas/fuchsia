@@ -117,12 +117,12 @@ fuchsia_component("failing-test-example") {
 
 fuchsia_component("get-tests-closes-channel-example") {
   deps = [ ":get-tests-closes-channel-example-bin" ]
-  manifest = "meta/get-tests-closes-channel-example.cmx"
+  manifest = "meta/get-tests-closes-channel-example.cml"
 }
 
 fuchsia_component("get-tests-hangs-example") {
   deps = [ ":get-tests-hangs-example-bin" ]
-  manifest = "meta/get-tests-hangs-example.cmx"
+  manifest = "meta/get-tests-hangs-example.cml"
 }
 
 fuchsia_component("huge-test-example") {
@@ -160,19 +160,14 @@ fuchsia_component("test-with-stderr") {
   manifest = "meta/test-with-stderr.cml"
 }
 
-fuchsia_component("passing-test-example-v1") {
-  deps = [ ":passing-test-example-bin" ]
-  manifest = "meta/passing-test-example.cmx"
-}
-
 fuchsia_component("run-closes-channel-example") {
   deps = [ ":run-closes-channel-example-bin" ]
-  manifest = "meta/run-closes-channel-example.cmx"
+  manifest = "meta/run-closes-channel-example.cml"
 }
 
 fuchsia_component("run-hangs-example") {
   deps = [ ":run-hangs-example-bin" ]
-  manifest = "meta/run-hangs-example.cmx"
+  manifest = "meta/run-hangs-example.cml"
 }
 
 fuchsia_component("echo_test_client") {
@@ -198,7 +193,6 @@ fuchsia_test_package("example-tests") {
     ":no-onfinished-after-test-example",
     ":no-test-example",
     ":passing-test-example",
-    ":passing-test-example-v1",
     ":run-closes-channel-example",
     ":run-hangs-example",
     ":test-with-stderr",

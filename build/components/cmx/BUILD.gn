@@ -54,7 +54,6 @@ group("cmx_allowlist") {
     "//examples/intl/tz_version_parrot/*",
     "//examples/isolated_cache/*",
     "//examples/speech/tts/speak/*",
-    "//examples/tests/*",
     "//garnet/bin/catapult_converter/*",
     "//garnet/bin/cpuperf/*",
     "//garnet/bin/cpuperf_provider/*",
