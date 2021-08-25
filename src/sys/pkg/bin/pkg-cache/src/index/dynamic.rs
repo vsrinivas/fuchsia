@@ -319,7 +319,7 @@ mod tests {
         fidl_fuchsia_io::DirectoryProxy,
         fuchsia_async as fasync,
         fuchsia_pkg::MetaContents,
-        maplit::{btreemap, hashmap, hashset},
+        maplit::{hashmap, hashset},
         matches::assert_matches,
         std::{
             collections::HashMap,
@@ -621,14 +621,14 @@ mod tests {
         let versions_contents = hashmap! {
             fake_package_hash =>
                 MetaContents::from_map(
-                    btreemap! {
+                    hashmap! {
                         "some-blob".to_string() => some_blob_hash,
                         "other-blob".to_string() => other_blob_hash
                     }
                 ).unwrap(),
             share_blob_package_hash =>
                 MetaContents::from_map(
-                    btreemap! {
+                    hashmap! {
                         "some-blob".to_string() => some_blob_hash,
                         "yet-another-blob".to_string() => yet_another_blob_hash
                     }

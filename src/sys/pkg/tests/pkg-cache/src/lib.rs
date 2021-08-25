@@ -29,11 +29,10 @@ use {
     fuchsia_merkle::Hash,
     fuchsia_pkg::{MetaContents, PackagePath},
     fuchsia_pkg_testing::{get_inspect_hierarchy, BlobContents, Package, SystemImageBuilder},
-    fuchsia_zircon as zx,
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{self as zx, Status},
     futures::{future::BoxFuture, prelude::*},
     io_util::file::*,
-    maplit::{btreemap, hashmap},
+    maplit::hashmap,
     matches::assert_matches,
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
     mock_verifier::MockVerifierService,
@@ -662,13 +661,13 @@ impl TempDirPkgFs {
         )]);
         let versions_contents = hashmap! {
             system_image_hash.clone() => MetaContents::from_map(
-                btreemap! {
+                hashmap! {
                     "some-blob".to_string() =>
                         "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
                 }
             ).unwrap(),
             fake_package_hash.clone() => MetaContents::from_map(
-                btreemap! {
+                hashmap! {
                     "other-blob".to_string() =>
                         "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap()
                 }

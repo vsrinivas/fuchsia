@@ -53,7 +53,10 @@ async fn enumerate_package_blobs(
     let meta_package = MetaPackage::deserialize(&meta_far.read_file("meta/package").await?[..])?;
     let meta_contents = MetaContents::deserialize(&meta_far.read_file("meta/contents").await?[..])?;
 
-    Ok(Some((meta_package.into_path(), meta_contents.into_hashes().collect::<HashSet<_>>())))
+    Ok(Some((
+        meta_package.into_path(),
+        meta_contents.into_hashes_undeduplicated().collect::<HashSet<_>>(),
+    )))
 }
 
 #[cfg(test)]

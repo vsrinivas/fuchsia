@@ -5,7 +5,7 @@
 use crate::{MetaContents, MetaContentsError, MetaPackage, MetaPackageError};
 use anyhow::Result;
 use fuchsia_merkle::Hash;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Seek};
 use std::path::PathBuf;
 
@@ -55,7 +55,7 @@ impl Package {
 }
 
 pub struct PackageBuilder {
-    contents: BTreeMap<String, Hash>,
+    contents: HashMap<String, Hash>,
     meta_package: MetaPackage,
     blobs: BTreeMap<Hash, BlobEntry>,
 }
@@ -66,14 +66,14 @@ impl PackageBuilder {
         variant: impl Into<String>,
     ) -> Result<Self, MetaPackageError> {
         Ok(Self {
-            contents: BTreeMap::new(),
+            contents: HashMap::new(),
             meta_package: MetaPackage::from_name_and_variant(name, variant)?,
             blobs: BTreeMap::new(),
         })
     }
 
     pub fn from_meta_package(meta_package: MetaPackage) -> Self {
-        Self { contents: BTreeMap::new(), meta_package, blobs: BTreeMap::new() }
+        Self { contents: HashMap::new(), meta_package, blobs: BTreeMap::new() }
     }
 
     pub fn add_entry(&mut self, blob_path: String, hash: Hash, source_path: PathBuf, size: u64) {
@@ -132,7 +132,7 @@ mod test_package {
         let meta_package =
             MetaPackage::from_name_and_variant("package-name", "package-variant").unwrap();
 
-        let map = btreemap! {
+        let map = hashmap! {
         "bin/my_prog".to_string() =>
             Hash::from_str(
              "0000000000000000000000000000000000000000000000000000000000000000")

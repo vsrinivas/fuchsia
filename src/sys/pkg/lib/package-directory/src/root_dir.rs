@@ -74,11 +74,9 @@ impl RootDir {
         let meta_contents_bytes =
             async_reader.read_file("meta/contents").await.map_err(Error::ReadMetaContents)?;
 
-        let non_meta_files: HashMap<_, _> = MetaContents::deserialize(&meta_contents_bytes[..])
+        let non_meta_files = MetaContents::deserialize(&meta_contents_bytes[..])
             .map_err(Error::DeserializeMetaContents)?
-            .into_contents()
-            .into_iter()
-            .collect();
+            .into_contents();
 
         let meta_far_vmo = OnceCell::new();
 

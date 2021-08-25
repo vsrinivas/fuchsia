@@ -132,7 +132,7 @@ impl Package {
         let meta_contents = self.meta_contents()?;
 
         let mut res = btreeset![self.meta_far_merkle];
-        res.extend(meta_contents.into_hashes());
+        let () = res.extend(meta_contents.into_hashes_undeduplicated());
         Ok(res)
     }
 
@@ -441,6 +441,10 @@ impl PackageBuilder {
         mut contents: impl io::Read,
     ) -> Self {
         let path = path.into();
+        let _ = fuchsia_pkg::check_resource_path(
+            path.to_str().expect(&format!("path must be utf8: {:?}", path)),
+        )
+        .expect(&format!("path must be an object relative path expression: {:?}", path));
         let mut data = vec![];
         contents.read_to_end(&mut data).unwrap();
 

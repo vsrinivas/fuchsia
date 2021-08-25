@@ -315,7 +315,7 @@ impl TestResult {
 
 async fn build_test_package() -> Result<Package, Error> {
     PackageBuilder::new("test-package")
-        .add_resource_at("/data/test", "hello, world!".as_bytes())
+        .add_resource_at("data/test", "hello, world!".as_bytes())
         .build()
         .await
         .context("Building test package")
@@ -424,10 +424,10 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
         let name = format!("test-package{}", i);
         let package = PackageBuilder::new(name)
             .add_resource_at(
-                format!("/data/my-package-data-{}", i),
+                format!("data/my-package-data-{}", i),
                 format!("This is some test data for test package {}", i).as_bytes(),
             )
-            .add_resource_at("/bin/binary", "#!/boot/bin/sh\necho Hello".as_bytes())
+            .add_resource_at("bin/binary", "#!/boot/bin/sh\necho Hello".as_bytes())
             .build()
             .await
             .context("Building test package")?;
@@ -678,10 +678,10 @@ pub async fn test_omaha_works() -> Result<(), Error> {
         let name = format!("test-package{}", i);
         let package = PackageBuilder::new(name)
             .add_resource_at(
-                format!("/data/my-package-data-{}", i),
+                format!("data/my-package-data-{}", i),
                 format!("This is some test data for test package {}", i).as_bytes(),
             )
-            .add_resource_at("/bin/binary", "#!/boot/bin/sh\necho Hello".as_bytes())
+            .add_resource_at("bin/binary", "#!/boot/bin/sh\necho Hello".as_bytes())
             .build()
             .await
             .context("Building test package")?;

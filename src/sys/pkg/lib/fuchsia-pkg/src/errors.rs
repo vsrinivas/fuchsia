@@ -106,27 +106,30 @@ pub enum PackageManifestError {
 
 #[derive(Debug, Error)]
 pub enum MetaContentsError {
-    #[error("invalid resource path '{}'", path)]
-    ResourcePath {
+    #[error("invalid resource path: '{:?}'", path)]
+    InvalidResourcePath {
         #[source]
         cause: ResourcePathError,
         path: String,
     },
 
-    #[error("package external content cannot be in 'meta/' directory: '{}'", path)]
+    #[error("package external content cannot be in 'meta/' directory: '{:?}'", path)]
     ExternalContentInMetaDirectory { path: String },
 
-    #[error("entry has no '=': '{}'", entry)]
+    #[error("entry has no '=': '{:?}'", entry)]
     EntryHasNoEqualsSign { entry: String },
 
-    #[error("duplicate resource path: '{}'", path)]
+    #[error("duplicate resource path: '{:?}'", path)]
     DuplicateResourcePath { path: String },
 
-    #[error("io error: '{}'", _0)]
+    #[error("io error")]
     IoError(#[from] io::Error),
 
-    #[error("invalid hash: '{}'", _0)]
+    #[error("invalid hash")]
     ParseHash(#[from] fuchsia_hash::ParseHashError),
+
+    #[error("collision between a file and a directory at path: '{:?}'", path)]
+    FileDirectoryCollision { path: String },
 }
 
 #[derive(Debug, Error)]

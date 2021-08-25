@@ -128,7 +128,7 @@ impl PackageDirectory {
     /// Returns an iterator of blobs needed by this package, does not include meta.far blob itself.
     /// Hashes may appear more than once.
     pub async fn blobs(&self) -> Result<impl Iterator<Item = Hash>, LoadMetaContentsError> {
-        Ok(self.meta_contents().await?.into_hashes())
+        Ok(self.meta_contents().await?.into_hashes_undeduplicated())
     }
 }
 

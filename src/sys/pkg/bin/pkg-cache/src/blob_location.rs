@@ -114,7 +114,7 @@ mod tests {
         super::*,
         fuchsia_inspect::assert_data_tree,
         fuchsia_pkg::{MetaContents, PackagePath},
-        maplit::{btreemap, hashmap},
+        maplit::hashmap,
         std::{
             collections::HashMap,
             fs::{create_dir, create_dir_all, File},
@@ -189,13 +189,13 @@ mod tests {
         )]);
         let versions_contents = hashmap! {
             system_image_hash.clone() => MetaContents::from_map(
-                btreemap! {
+                hashmap! {
                     "some-blob".to_string() =>
                         "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
                 }
             ).unwrap(),
             fake_package_hash.clone() => MetaContents::from_map(
-                btreemap! {
+                hashmap! {
                     "other-blob".to_string() =>
                         "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap()
                 }
@@ -232,13 +232,13 @@ mod tests {
         )]);
         let versions_contents = hashmap! {
             system_image_hash.clone() => MetaContents::from_map(
-                btreemap! {
+                hashmap! {
                     "shared-blob".to_string() =>
                         "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
                 }
             ).unwrap(),
             fake_package_hash.clone() => MetaContents::from_map(
-                btreemap! {
+                hashmap! {
                     "secretly-the-same-blob".to_string() =>
                         "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
                 }
@@ -301,12 +301,12 @@ mod tests {
             "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap();
         let versions_contents = hashmap! {
             system_image_hash.clone() => MetaContents::from_map(
-                btreemap! {
+                hashmap! {
                     "some-blob".to_string() => some_blob_hash
                 }
             ).unwrap(),
             fake_package_hash.clone() => MetaContents::from_map(
-                btreemap! {
+                hashmap! {
                     "other-blob".to_string() => other_blob_hash
                 }
             ).unwrap()
