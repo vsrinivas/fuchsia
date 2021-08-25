@@ -11,13 +11,15 @@
 
 #include <future>
 
-typedef struct zx_vcpu_state zx_vcpu_state_t;
+using zx_vcpu_state_t = struct zx_vcpu_state;
 
 class Guest;
 class IoMapping;
 
 class Vcpu {
  public:
+  Vcpu(const Vcpu&) = delete;
+  Vcpu& operator=(const Vcpu&) = delete;
   Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop);
 
   // Begins VCPU execution.
@@ -27,7 +29,7 @@ class Vcpu {
   zx_status_t Interrupt(uint32_t vector);
 
   uint64_t id() const { return id_; }
-  const zx::vcpu& object() { return vcpu_; }
+  const zx::vcpu& object() const { return vcpu_; }
 
   static Vcpu* GetCurrent();
 

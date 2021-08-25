@@ -151,17 +151,17 @@ zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_pt
   }
 
   std::lock_guard<std::shared_mutex> lock(mutex_);
-  if (vcpus_[0] == nullptr && id != 0) {
+  if (!vcpus_[0].has_value() && id != 0) {
     FX_LOGS(ERROR) << "VCPU-0 must be started before other VCPUs";
     return ZX_ERR_BAD_STATE;
   }
-  if (vcpus_[id] != nullptr) {
+  if (vcpus_[id].has_value()) {
     // The guest might make multiple requests to start a particular VCPU. On
     // x86, the guest should send two START_UP IPIs but we initialize the VCPU
     // on the first. So, we ignore subsequent requests.
     return ZX_OK;
   }
-  vcpus_[id] = std::make_unique<Vcpu>(id, this, entry, boot_ptr, loop);
+  vcpus_[id].emplace(id, this, entry, boot_ptr, loop);
   return vcpus_[id]->Start();
 }
 

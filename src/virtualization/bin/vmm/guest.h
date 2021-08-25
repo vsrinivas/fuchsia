@@ -33,7 +33,7 @@ class Guest {
   // hypervisor::IdAllocator<uint16_t, 64>
   static constexpr size_t kMaxVcpus = 64u;
 #endif
-  using VcpuArray = std::array<std::unique_ptr<Vcpu>, kMaxVcpus>;
+  using VcpuArray = std::array<std::optional<Vcpu>, kMaxVcpus>;
   using IoMappingList = std::forward_list<IoMapping>;
 
   zx_status_t Init(const std::vector<fuchsia::virtualization::MemorySpec>& memory);
