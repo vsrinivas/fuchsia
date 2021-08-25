@@ -13,7 +13,10 @@ group("fuzzers") {
 # toolchain variant is active. Typically, you should include fuzzers in your package's tests.
 group("tests") {
   testonly = true
-  deps = [ ":fuzzing-examples" ]
+  deps = [
+    ":fuzzing-examples",
+    "rust:toy-example",
+  ]
 }
 
 fuzzers_package("fuzzing-examples") {

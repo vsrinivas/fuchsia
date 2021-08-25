@@ -4,10 +4,7 @@
 
 // This is the "library code" tested in this example.
 // Compare with https://llvm.org/docs/LibFuzzer.html#toy-example
-use {
-    fuzz::fuzz,
-    helper::{add_bang, toy_example},
-};
+use {fuzz::fuzz, helper::toy_example};
 
 // Imports that are only used by `main` needs to be conditional included.
 #[cfg(not(fuzz))]
@@ -24,6 +21,9 @@ fn main() -> io::Result<()> {
 
 // This is the "fuzzer code" for the binary code above.
 // It can typically be placed alongside that code and will only be compiled when fuzzing.
+#[cfg(fuzz)]
+use helper::add_bang;
+
 #[fuzz]
 fn toy_example_with_main(input: String) {
     let _ = toy_example(add_bang(input));

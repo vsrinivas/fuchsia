@@ -54,5 +54,8 @@ rustc_binary("toy_example_bin") {
 
   sources = [ "src/main.rs" ]
 }
-# TODO(fxbug.dev/69449): create a `fuchsia_package` label that demonstrates
-# how to wrap toy_example_bin in a fuchsia_package.
+
+fuchsia_package_with_single_component("toy-example") {
+  manifest = "meta/toy_example.cml"
+  deps = [ ":toy_example_bin" ]
+}
