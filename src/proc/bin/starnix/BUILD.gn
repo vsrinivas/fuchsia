@@ -133,6 +133,7 @@ if (target_cpu == "x64") {
       "task/thread_group.rs",
       "task/waiter.rs",
       "testing.rs",
+      "types/as_any.rs",
       "types/device_type.rs",
       "types/errno.rs",
       "types/file_mode.rs",

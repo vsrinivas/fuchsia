@@ -13,6 +13,7 @@ use crate::fs::*;
 use crate::not_implemented;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
+use crate::types::as_any::*;
 use crate::types::*;
 
 pub const MAX_LFS_FILESIZE: usize = 0x7fffffffffffffff;
@@ -35,7 +36,7 @@ impl SeekOrigin {
 }
 
 /// Corresponds to struct file_operations in Linux, plus any filesystem-specific data.
-pub trait FileOps: Send + Sync {
+pub trait FileOps: Send + Sync + AsAny {
     /// Called when the FileObject is closed.
     fn close(&self, _file: &FileObject) {}
 
@@ -421,6 +422,17 @@ impl FileObject {
 
     fn ops(&self) -> &dyn FileOps {
         &*self.ops
+    }
+
+    /// Returns the `FileObject`'s `FileOps` as a `&T`, or `None` if the downcast fails.
+    ///
+    /// This is useful for syscalls that only operate on a certain type of file.
+    #[allow(dead_code)]
+    pub fn downcast_file<T>(&self) -> Option<&T>
+    where
+        T: 'static,
+    {
+        self.ops().as_any().downcast_ref::<T>()
     }
 
     pub fn blocking_op<T, Op>(&self, task: &Task, mut op: Op, events: FdEvents) -> Result<T, Errno>
