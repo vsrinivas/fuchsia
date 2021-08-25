@@ -1,10 +1,6 @@
 {
     "tests": [
         {
-            "max_severity": "FATAL",
-            "url": "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_unittests.cmx"
-        },
-        {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers_test.cmx"
         }

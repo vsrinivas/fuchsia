@@ -43,8 +43,13 @@ fuchsia_test_package("escher_tests") {
     "//src/lib/vulkan:vulkan_validation_layers",
     "//src/ui/examples/escher/common/assets:escher_examples_assets",
   ]
+
+  # TODO(fxbug.dev/83327): Only use "FATAL" max severity for escher_unittests.
   test_specs = {
     environments = basic_envs + magma_libvulkan_hardware_envs
+    log_settings = {
+      max_severity = "FATAL"
+    }
   }
 }
 
