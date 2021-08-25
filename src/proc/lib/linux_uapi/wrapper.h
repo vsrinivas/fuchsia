@@ -19,6 +19,7 @@
 #include <asm-x86/asm/unistd_64.h>
 #include <linux/auxvec.h>
 #include <linux/capability.h>
+#include <linux/eventpoll.h>
 #include <linux/fcntl.h>
 #include <linux/fs.h>
 #include <linux/futex.h>

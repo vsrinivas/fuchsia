@@ -1011,6 +1011,10 @@ pub const AT_STATX_SYNC_AS_STAT: u32 = 0;
 pub const AT_STATX_FORCE_SYNC: u32 = 8192;
 pub const AT_STATX_DONT_SYNC: u32 = 16384;
 pub const AT_RECURSIVE: u32 = 32768;
+pub const EPOLL_CLOEXEC: u32 = 524288;
+pub const EPOLL_CTL_ADD: u32 = 1;
+pub const EPOLL_CTL_DEL: u32 = 2;
+pub const EPOLL_CTL_MOD: u32 = 3;
 pub const NR_OPEN: u32 = 1024;
 pub const NGROUPS_MAX: u32 = 65536;
 pub const ARG_MAX: u32 = 131072;
@@ -1816,6 +1820,13 @@ pub struct vfs_ns_cap_data {
 pub struct vfs_ns_cap_data__bindgen_ty_1 {
     pub permitted: __le32,
     pub inheritable: __le32,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct epoll_event {
+    pub events: __u32,
+    pub _not_used: __u32,
+    pub data: __u64,
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
