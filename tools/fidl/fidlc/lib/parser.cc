@@ -1922,8 +1922,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(enum_declaration_list), std::move(protocol_declaration_list),
       std::move(resource_declaration_list), std::move(service_declaration_list),
       std::move(struct_declaration_list), std::move(table_declaration_list),
-      std::move(union_declaration_list), std::move(type_decls), std::move(comment_tokens_),
-      fidl::utils::Syntax::kOld);
+      std::move(union_declaration_list), std::move(type_decls), std::move(tokens_),
+      std::move(comment_tokens_), fidl::utils::Syntax::kOld);
 }
 
 std::unique_ptr<raw::LayoutParameter> Parser::ParseLayoutParameter() {
@@ -2568,8 +2568,8 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
       std::move(enum_declaration_list), std::move(protocol_declaration_list),
       std::move(resource_declaration_list), std::move(service_declaration_list),
       std::move(struct_declaration_list), std::move(table_declaration_list),
-      std::move(union_declaration_list), std::move(type_decls), std::move(comment_tokens_),
-      fidl::utils::Syntax::kNew);
+      std::move(union_declaration_list), std::move(type_decls), std::move(tokens_),
+      std::move(comment_tokens_), fidl::utils::Syntax::kNew);
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {

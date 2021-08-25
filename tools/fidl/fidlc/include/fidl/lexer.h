@@ -58,7 +58,6 @@ class Lexer {
   Token LexEndOfStream();
   Token LexNumericLiteral();
   Token LexIdentifier();
-  Token LexEscapedIdentifier();
   Token LexStringLiteral();
   Token LexCommentOrDocComment();
 

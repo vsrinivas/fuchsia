@@ -24,7 +24,7 @@ class NewFormatter final {
                                     const fidl::ExperimentalFlags& experimental_flags) const;
 
  private:
-  std::string Print(std::unique_ptr<raw::File> const& ast, size_t original_file_size) const;
+  std::string Print(std::unique_ptr<raw::File> ast, size_t original_file_size) const;
 
   const size_t cols_;
   reporter::Reporter* reporter_;

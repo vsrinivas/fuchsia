@@ -46,6 +46,8 @@ class Parser {
   Token Lex() {
     for (;;) {
       auto token = lexer_->Lex();
+      tokens_.emplace_back(std::make_unique<Token>(token));
+
       switch (token.kind()) {
         case Token::Kind::kComment:
           if (state_ == State::kDocCommentLast)
@@ -465,6 +467,9 @@ class Parser {
 
   Token last_token_;
   State state_;
+
+  // An ordered list of all tokens (including comments) in the source file.
+  std::vector<std::unique_ptr<Token>> tokens_;
 
   // TODO(fxbug.dev/70247): this member has been created solely for the benefit
   //   of fidlconv.  Once the conversion using that tool has been completed and

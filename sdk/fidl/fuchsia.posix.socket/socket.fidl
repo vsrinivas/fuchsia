@@ -321,7 +321,6 @@ protocol BaseNetworkSocket {
 
     // TODO(https://fxbug.dev/82723): Remove once out-of-tree users no longer
     // depend on the below methods.
-
     @deprecated("Use Bind instead")
     @selector("fuchsia.posix.socket/BaseSocket.Bind")
     BaseSocketBind(struct {

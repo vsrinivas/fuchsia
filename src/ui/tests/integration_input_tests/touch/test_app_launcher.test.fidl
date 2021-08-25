@@ -9,7 +9,7 @@ using fuchsia.sys;
 @discoverable
 protocol TestAppLauncher {
     // Takes a component url, launches it and returns once the child app has presented content.
-    Launch(struct{
+    Launch(struct {
         url fuchsia.sys.component_url;
     }) -> ();
 };

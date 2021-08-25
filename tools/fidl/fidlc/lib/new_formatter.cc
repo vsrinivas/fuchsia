@@ -17,15 +17,14 @@ std::optional<std::string> NewFormatter::Format(
   fidl::Parser parser(&lexer, reporter_, experimental_flags);
   std::unique_ptr<raw::File> ast = parser.Parse();
   if (parser.Success()) {
-    return Print(ast, source_file.data().size());
+    return Print(std::move(ast), source_file.data().size());
   }
   return std::nullopt;
 }
 
-std::string NewFormatter::Print(const std::unique_ptr<raw::File>& ast,
-                                size_t original_file_size) const {
+std::string NewFormatter::Print(std::unique_ptr<raw::File> ast, size_t original_file_size) const {
   std::string out;
-  auto visitor = SpanSequenceTreeVisitor(ast->span().source_file().data());
+  auto visitor = SpanSequenceTreeVisitor(ast->span().source_file().data(), std::move(ast->tokens));
   visitor.OnFile(ast);
   MultilineSpanSequence result = visitor.Result();
 

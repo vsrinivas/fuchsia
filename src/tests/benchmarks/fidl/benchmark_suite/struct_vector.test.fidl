@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library benchmarkfidl;
 
-type StructVectorElement = struct{
+type StructVectorElement = struct {
     a uint8;
     // 8 byte padding.
     b uint16;

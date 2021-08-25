@@ -18,9 +18,9 @@ namespace fidl::fmt {
 // from which that raw AST was generated.
 class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
  public:
-  explicit SpanSequenceTreeVisitor(std::string_view file)
-      : file_(file), preceding_newlines_(0), uningested_(file) {}
-
+  explicit SpanSequenceTreeVisitor(std::string_view file,
+                                   std::vector<std::unique_ptr<Token>> tokens)
+      : file_(file), tokens_(std::move(tokens)) {}
   // These "On*" methods may be called on files written in the new syntax.
   void OnAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> const& element) override;
   void OnAttributeArg(raw::AttributeArg const& element) override;
@@ -185,7 +185,11 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     Builder(SpanSequenceTreeVisitor* ftv, const Token& start, const Token& end, bool new_list);
     Builder(SpanSequenceTreeVisitor* ftv, const Token& start, bool new_list)
         : Builder(ftv, start, start, new_list){};
-    ~Builder();
+
+    // Empty builder method ensures that all Builders live until the end of their scope, enabling
+    // RAII usage.  Using ` = default` as clang suggests seems to cause the compiler to throw unused
+    // variable warnings when the Builder is used as part of the RAII pattern.
+    ~Builder(){};
 
    protected:
     SpanSequenceTreeVisitor* GetFormattingTreeVisitor() { return ftv_; }
@@ -298,30 +302,38 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     const SpanSequence::Position position_;
   };
 
-  // Given a pointer to character in our source file, ingest up to and including that character.  If
-  // the stop_at_semicolon flag is set, only ingest until we reach the end of a line containing a
-  // semicolon, rather than going all the way up to the limit character.
-  //
-  // Generally, the best way to get the limit pointer is to call .data() on whatever the next Token
-  // in the raw AST is.  All of the usual caveats when working with raw char arrays apply: make sure
-  // that the limit character is actually in the range of the uningested_ string_view before
-  // calling this function, make sure the limit pointer is not null, etc.
-  std::optional<std::unique_ptr<SpanSequence>> IngestUntil(
-      const char* limit, std::optional<char> stop_at = std::nullopt,
+ public:
+  // Given an optional Token from our source file, ingest up to but NOT including that Token.  The
+  // token passed in must be greater than or equal to the token identified by the next_token_index_
+  // member variable.  If the first argument is nullopt, this function will ingest to the end of the
+  // token list.
+  std::optional<std::unique_ptr<SpanSequence>> IngestUpTo(
+      std::optional<Token> until,
       SpanSequence::Position position = SpanSequence::Position::kDefault);
 
-  // This call is just sugar around IngestUntil(LAST_CHAR_OF_FILE, stop_char);
-  std::optional<std::unique_ptr<SpanSequence>> IngestUntilChar(char stop_char);
-  std::optional<std::unique_ptr<SpanSequence>> IngestUntilEndOfFile();
+  // Given an optional Token from our source file, ingest up to and including that Token.  The token
+  // passed in must be greater than or equal to the token identified by the next_token_index_ member
+  // variable.  If the first argument is nullopt, this function will ingest to the end of the
+  // token list.
+  std::optional<std::unique_ptr<SpanSequence>> IngestUpToAndIncluding(
+      std::optional<Token> until,
+      SpanSequence::Position position = SpanSequence::Position::kDefault);
 
-  // Ingest until the first semicolon we encounter, taking care to include any inline comments that
-  // may be trailing after that semicolon.  In other words, if we call this method on a string_view
-  // that looks like `foo;\n` or `foo; bar`, we should expect to ingest the `foo;` portion.  But if
-  // we call it on `foo; // bar\n`, we should expect to ingest the entire thing, trailing comment
-  // included.
-  //
-  // This call is just sugar around IngestUntilChar(, ';');
-  std::optional<std::unique_ptr<SpanSequence>> IngestUntilSemicolon();
+  // Given an optional token kind, ingest up to and including the first instance of that token kind,
+  // taking care to include any inline comments that may be trailing after that instance.  In other
+  // words, if we call this method on a string_view that looks like `foo;\n` or `foo; bar`, we
+  // should expect to ingest the `foo;` portion.  But if we call it on `foo; // bar\n`, we should
+  // expect to ingest the entire thing, trailing comment included. If the first argument is nullopt,
+  // this function will ingest to the end of the token list.
+  std::optional<std::unique_ptr<SpanSequence>> IngestUpToAndIncludingTokenKind(
+      std::optional<Token::Kind> until_kind,
+      SpanSequence::Position position = SpanSequence::Position::kDefault);
+
+  // Ingest all remaining tokens until the end of the file.
+  std::optional<std::unique_ptr<SpanSequence>> IngestRestOfFile();
+
+  // Sugar for IngestUpToAndIncludingTokenKind(Token::kSemicolon)`.
+  std::optional<std::unique_ptr<SpanSequence>> IngestUpToAndIncludingSemicolon();
 
   // Stores that path in the raw AST of the node currently being visited.  See the comment on the
   // `Visiting` class for more on why this is useful.
@@ -359,18 +371,14 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // exhausting this class.
   std::stack<std::vector<std::unique_ptr<SpanSequence>>> building_;
 
-  // A view into the entire source file being formatted.  Unlike uningested_ below, this serves only
-  // as a static reference.
+  // A view into the entire source file being formatted.
   const std::string_view file_;
 
-  // Keeps track of the number of newlines in the whitespace immediately preceding the current
-  // position of the uningested string_view pointer.  This allows us to calculate the number of
-  // leading_blank_lines needed for the next span.
-  size_t preceding_newlines_;
+  // An ordered list of all tokens (including comments) in the source file.
+  std::vector<std::unique_ptr<Token>> tokens_;
 
-  // A view tracking the remaining portion of the file source string that has yet to be ingested by
-  // the formatter.
-  std::string_view uningested_;
+  // The index of the next token to be visited.
+  size_t next_token_index_ = 0;
 
   void static NotYetImplemented() {
     assert(false && "support for this AST node type is not yet implemented");

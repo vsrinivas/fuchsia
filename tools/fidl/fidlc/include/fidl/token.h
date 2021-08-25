@@ -82,6 +82,10 @@ class Token {
   Subkind subkind() const { return kind_and_subkind_.subkind(); }
   KindAndSubkind kind_and_subkind() const { return kind_and_subkind_; }
 
+  constexpr bool operator==(const Token& rhs) const { return span_ == rhs.span_; }
+  constexpr bool operator!=(const Token& rhs) const { return !(*this == rhs); }
+  constexpr bool operator<(const Token& rhs) const { return span_ < rhs.span_; }
+
  private:
   // The end of the previous token.  Everything between this and span_ is
   // somehow uninteresting to the parser (whitespace, comments, discarded

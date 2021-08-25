@@ -1158,6 +1158,7 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
        std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
        std::vector<std::unique_ptr<TypeDecl>> type_decls,
+       std::vector<std::unique_ptr<Token>> tokens,
        std::vector<std::unique_ptr<Token>> comment_tokens_list, fidl::utils::Syntax syntax)
       : SourceElement(element),
         library_decl(std::move(library_decl)),
@@ -1173,6 +1174,7 @@ class File final : public SourceElement {
         table_declaration_list(std::move(table_declaration_list)),
         union_declaration_list(std::move(union_declaration_list)),
         type_decls(std::move(type_decls)),
+        tokens(std::move(tokens)),
         comment_tokens_list(std::move(comment_tokens_list)),
         end_(end),
         syntax(syntax) {}
@@ -1192,6 +1194,9 @@ class File final : public SourceElement {
   std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
   std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
   std::vector<std::unique_ptr<TypeDecl>> type_decls;
+
+  // An ordered list of all tokens (including comments) in the source file.
+  std::vector<std::unique_ptr<Token>> tokens;
 
   // TODO(fxbug.dev/70247): this member has been created solely for the benefit
   //   of fidlconv.  Once the conversion using that tool has been completed and

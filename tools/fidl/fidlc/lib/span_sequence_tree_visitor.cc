@@ -12,198 +12,6 @@ namespace fidl::fmt {
 
 namespace {
 
-enum struct CommentStyle {
-  kInline,
-  kStandalone,
-};
-
-// An entire line (if comment_style == kStandalone) or at least the trailing portion of it (if
-// comment_style == kInline) is a comment.  This function ingests up to the end of that line.  The
-// text passed to this function must include and start with the `//` character pair that triggered
-// this function call (ie, comment lines are ingested with their leading double slashes).
-size_t IngestCommentLine(std::string_view text, size_t leading_blank_lines,
-                         CommentStyle comment_style, AtomicSpanSequence* out) {
-  size_t chars_seen = 0;
-  for (char const& c : text) {
-    chars_seen++;
-
-    // Ignore any character besides a newline, as its part of the comment text.
-    if (c != '\n') {
-      continue;
-    }
-
-    // Ok, we've reached the end of the comment line.  Figure out where if fits into the bigger
-    // picture: its either an inline comment, the first line of a standalone comment, or a
-    // continuing line of a standalone comment.
-    auto line = std::string_view(text.data(), chars_seen - 1);
-    if (comment_style == CommentStyle::kInline) {
-      // The first part of this line was source code, so the last SpanSequence must be an
-      // AtomicSpanSequence.  Add the inline comment to that node, then close it.
-      std::unique_ptr<InlineCommentSpanSequence> inline_comment =
-          std::make_unique<InlineCommentSpanSequence>(line);
-      inline_comment->Close();
-      out->AddChild(std::move(inline_comment));
-      return chars_seen;
-    }
-
-    auto last_child = out->GetLastChild();
-    if (last_child != nullptr && last_child->GetKind() == SpanSequence::Kind::kStandaloneComment) {
-      // There was only a comment on this line, but it is part of a larger, still open comment
-      // block.
-      auto open_standalone_comment = static_cast<StandaloneCommentSpanSequence*>(last_child);
-      open_standalone_comment->AddLine(line, leading_blank_lines);
-      return chars_seen;
-    }
-
-    // This line commences a new standalone comment block of one or more lines. That means that the
-    // currently open SpanSequence, if one exists, needs to be closed.
-    auto standalone_comment = std::make_unique<StandaloneCommentSpanSequence>(leading_blank_lines);
-    standalone_comment->AddLine(line);
-    out->AddChild(std::move(standalone_comment));
-    return chars_seen;
-  }
-
-  return chars_seen;
-}
-
-// Converts some contiguous non-whitespace span of source text into a TokenSpanSequence.  All source
-// code (ie, all text not preceded on its line by `//`) will pass through this function to be broken
-// into tokens.
-void AppendToken(std::string_view word, size_t leading_blank_lines, AtomicSpanSequence* out) {
-  if (!word.empty() && word[0] != '\0') {
-    // TODO(fxbug.dev/77861): remove this once proper parser support is added.
-    static std::regex needs_trailing_space_regex("[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?|=|\\||,|->");
-    auto token_span_sequence = std::make_unique<TokenSpanSequence>(word, leading_blank_lines);
-    if (std::regex_match(std::string(word), needs_trailing_space_regex) && word != "reserved") {
-      token_span_sequence->SetTrailingSpace(true);
-    }
-
-    token_span_sequence->Close();
-    out->AddChild(std::move(token_span_sequence));
-  }
-}
-
-// For each line we ingest, we want to know there things: how many characters were on that line,
-// whether we encountered a semicolon, and whether or not it was a whitespace-only line.  That last
-// boolean helps us decide how many leading newlines to put before the SpanSequence being
-// constructed.
-struct IngestLineResult {
-  size_t chars_seen;
-  bool stop_char_seen = false;
-  bool is_all_whitespace = false;
-};
-
-// Ingests source file text until the end of a line or the end of the file, whichever comes first,
-// with one exception: ingestion stops immediately if a semicolon followed by a non-comment span is
-// encountered, and only the portion up to the semicolon is ingested.
-IngestLineResult IngestLine(std::string_view text, size_t leading_newlines, char stop_char,
-                            AtomicSpanSequence* out) {
-  const size_t leading_blank_lines = leading_newlines == 0 ? 0 : leading_newlines - 1;
-  size_t chars_seen = 0;
-  bool prev_is_slash = false;
-  bool source_seen = false;
-  bool stop_char_seen = false;
-  std::optional<const char*> source;
-  for (char const& c : text) {
-    chars_seen++;
-
-    if (prev_is_slash && c != '/') {
-      prev_is_slash = false;
-      if (!source) {
-        source = &c - 1;
-      }
-    }
-
-    switch (c) {
-      case '\n': {
-        // The line has ended.  Stuff whatever we have so far into a TokenSpanSequence and return.
-        if (source.has_value()) {
-          AppendToken(std::string_view(source.value(), &c - source.value()),
-                      source_seen ? 0 : leading_blank_lines, out);
-          source = std::nullopt;
-          source_seen = true;
-        }
-        return IngestLineResult{chars_seen, stop_char_seen, !source_seen};
-      }
-      case ' ':
-      case '\t': {
-        // A token not in the raw AST such as "resource" or "using" has ended. Append it to the
-        // working set, and start the next atomic.
-        if (source.has_value()) {
-          AppendToken(std::string_view(source.value(), &c - source.value()),
-                      source_seen ? 0 : leading_blank_lines, out);
-          source = std::nullopt;
-          source_seen = true;
-        }
-        break;
-      }
-      case '/': {
-        // This MAY be the start of a comment...
-        if (prev_is_slash) {
-          // ... it is!
-          chars_seen -= 2;
-          auto comment_start = &c - 1;
-          if (source.has_value()) {
-            AppendToken(std::string_view(source.value(), comment_start - source.value()),
-                        source_seen ? 0 : leading_blank_lines, out);
-            source = std::nullopt;
-            source_seen = true;
-          }
-
-          auto comment_text = std::string_view(comment_start, text.size() - chars_seen);
-          if (source_seen || leading_newlines == 0) {
-            chars_seen +=
-                IngestCommentLine(comment_text, leading_blank_lines, CommentStyle::kInline, out);
-            return IngestLineResult{chars_seen, stop_char_seen};
-          }
-
-          chars_seen +=
-              IngestCommentLine(comment_text, leading_blank_lines, CommentStyle::kStandalone, out);
-          return IngestLineResult{chars_seen, stop_char_seen};
-        }
-
-        // We'll need the next char to be a slash to officially start the comment.
-        prev_is_slash = true;
-        break;
-      }
-      default: {
-        if (stop_char_seen) {
-          return IngestLineResult{chars_seen - 1, stop_char_seen};
-        }
-
-        if (c == stop_char) {
-          // Always close out the currently building TokenSpanSequence when we encounter the stop
-          // character.  If no such sequence is being built, create a new one for just the lone
-          // char.
-          stop_char_seen = true;
-          if (source.has_value()) {
-            AppendToken(std::string_view(source.value(), (&c + 1) - source.value()),
-                        source_seen ? 0 : leading_blank_lines, out);
-          } else {
-            AppendToken(std::string_view(&c, 1), source_seen ? 0 : leading_blank_lines, out);
-          }
-          source = std::nullopt;
-          source_seen = true;
-          break;
-        }
-
-        if (!source) {
-          source = &c;
-        }
-        break;
-      }
-    }
-  }
-
-  if (source.has_value()) {
-    AppendToken(std::string_view(source.value(), (text.data() + text.size()) - source.value()),
-                source_seen ? 0 : leading_blank_lines, out);
-    source = std::nullopt;
-    source_seen = true;
-  }
-  return IngestLineResult{chars_seen, stop_char_seen, !source_seen};
-}
-
 // Take the leftmost non-comment leaf (ie, the first printable TokenSpanSequence) of the
 // SpanSequence tree with its root at the provided SpanSequence and outdent it the specified amount.
 bool OutdentFirstChildToken(std::unique_ptr<SpanSequence>& span_sequence, size_t size) {
@@ -237,9 +45,9 @@ bool EndsWithComment(const std::unique_ptr<SpanSequence>& span_sequence) {
   return span_sequence->IsComment();
 }
 
-// Adds in spaces between all of the non-comment children of a list of SpanSequences.  This means
+// Alters all spaces between all of the non-comment children of a list of SpanSequences.  This means
 // that a trailing space is added to every non-comment child SpanSequence, except the last one.
-void AddSpacesBetweenChildren(const std::vector<std::unique_ptr<SpanSequence>>& list) {
+void SetSpacesBetweenChildren(const std::vector<std::unique_ptr<SpanSequence>>& list, bool spaces) {
   std::optional<size_t> last_non_comment_index;
   const auto last_non_comment_it =
       std::find_if(list.crbegin(), list.crend(),
@@ -251,7 +59,7 @@ void AddSpacesBetweenChildren(const std::vector<std::unique_ptr<SpanSequence>>& 
   for (size_t i = 0; i < list.size(); i++) {
     const auto& child = list[i];
     if (!EndsWithComment(child) && i < last_non_comment_index.value_or(0)) {
-      child->SetTrailingSpace(true);
+      child->SetTrailingSpace(spaces);
     }
   }
 }
@@ -292,40 +100,124 @@ void ClearBlankLinesAfterAttributeList(const std::unique_ptr<raw::AttributeListN
   }
 }
 
+// Count the newlines between two adjacent tokens.  The `start` argument is optional because it is
+// possible that the `end` argument is the first token in the file.
+size_t CountNewlinesBetweenAdjacentTokens(const std::string_view source,
+                                          const std::optional<Token> start, const Token end) {
+  const char* source_start_char = source.data();
+  const char* from_char = !start.has_value()
+                              ? source_start_char
+                              : start->span().data().data() + start->span().data().size();
+  const char* until_char = end.span().data().data();
+  assert(until_char >= from_char);
+  const std::string_view whitespace =
+      source.substr(from_char - source_start_char, until_char - from_char);
+
+  size_t count = 0;
+  size_t newline = whitespace.find('\n');
+  while (newline != std::string::npos) {
+    ++count;
+    newline = whitespace.find('\n', newline + 1);
+  }
+  return count;
+}
+
+// This function is called on a token that represents an entire line (if comment_style ==
+// kStandalone), or at least the trailing portion of it (if comment_style == kInline), that is a
+// comment.  This function ingests up to the end of that line.  The text passed to this function
+// must include and start with the `//` character pair that triggered this function call (ie,
+// comment lines are ingested with their leading double slashes).
+void IngestCommentToken(Token comment_token, const std::optional<Token> prev_token,
+                        size_t leading_newlines, AtomicSpanSequence* out) {
+  // Figure out where this comment_token line fits into the bigger picture: its either an inline
+  // comment, the first line of a standalone comment, or a continuing line of a standalone
+  // comment.
+  auto line = comment_token.span().data();
+  if (leading_newlines == 0 && prev_token->kind() != Token::kComment &&
+      prev_token->kind() != Token::kDocComment) {
+    // The first part of this line was source code, so the last SpanSequence must be an
+    // AtomicSpanSequence.  Add the inline comment to that node.
+    std::unique_ptr<InlineCommentSpanSequence> inline_comment =
+        std::make_unique<InlineCommentSpanSequence>(comment_token.span().data());
+    inline_comment->Close();
+    out->AddChild(std::move(inline_comment));
+    return;
+  }
+
+  auto last_child = out->GetLastChild();
+  size_t leading_blank_lines = leading_newlines > 0 ? leading_newlines - 1 : 0;
+  if (last_child != nullptr && last_child->GetKind() == SpanSequence::Kind::kStandaloneComment) {
+    // There was only a comment on this line, but it is part of a larger, still open comment
+    // block.
+    auto open_standalone_comment = static_cast<StandaloneCommentSpanSequence*>(last_child);
+    open_standalone_comment->AddLine(line, leading_blank_lines);
+    return;
+  }
+
+  // This line commences a new standalone comment block of one or more lines. That means that the
+  // currently open SpanSequence, if one exists, needs to be closed.
+  auto standalone_comment = std::make_unique<StandaloneCommentSpanSequence>(leading_blank_lines);
+  standalone_comment->AddLine(line);
+  out->AddChild(std::move(standalone_comment));
+}
+
+void IngestToken(const Token token, const std::optional<Token> prev_token, size_t leading_newlines,
+                 AtomicSpanSequence* out) {
+  const Token::Kind kind = token.kind();
+  if (kind == Token::kComment || kind == Token::kDocComment) {
+    IngestCommentToken(token, prev_token, leading_newlines, out);
+    return;
+  }
+
+  auto token_span_sequence = std::make_unique<TokenSpanSequence>(
+      token.span().data(), leading_newlines > 0 ? leading_newlines - 1 : 0);
+  switch (kind) {
+    case Token::kEndOfFile:
+      return;
+    case Token::kArrow:
+    case Token::kComma:
+    case Token::kEqual:
+    case Token::kPipe: {
+      token_span_sequence->SetTrailingSpace(true);
+      break;
+    }
+    case Token::kIdentifier: {
+      // If we encounter the `reserved` token in this context, it must refer to the keyword and
+      // not an identifier named `reserved` (ex: `protocol reserved { ... };`), because the latter
+      // will always be built by a `TokenBuilder` instead of being ingested.  Because the
+      // `reserved` keyword is always followed by a semicolon (ex: `10: reserved;`) with no space,
+      // make sure to exclude it on this code path.
+      if (token.subkind() != Token::kReserved) {
+        token_span_sequence->SetTrailingSpace(true);
+      }
+      break;
+    }
+    default:
+      break;
+  }
+
+  token_span_sequence->Close();
+  out->AddChild(std::move(token_span_sequence));
+}
+
 }  // namespace
 
-std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUntil(
-    const char* limit, const std::optional<char> stop_at, SpanSequence::Position position) {
-  const auto ingesting = std::string_view(uningested_.data(), (limit - uningested_.data()) + 1);
+std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUpTo(
+    const std::optional<Token> until, SpanSequence::Position position) {
   auto atomic = std::make_unique<AtomicSpanSequence>(position);
-  size_t chars_seen = 0;
-
-  while (ingesting.data() + chars_seen <= limit) {
-    // If this is the very first character in the file, set "preceding_newlines" to 1, so that the
-    // first comment (which is likely, since most files start with a copyright notice) is not
-    // taken to be an inline comment.
-    auto preceding_newlines =
-        uningested_.data() == file_.data() && chars_seen == 0 ? 1 : preceding_newlines_;
-    auto result = IngestLine(ingesting.substr(chars_seen), preceding_newlines,
-                             stop_at.value_or(';'), atomic.get());
-
-    chars_seen += result.chars_seen;
-    bool reached_newline = result.chars_seen && *(uningested_.data() + (chars_seen - 1)) == '\n';
-    if (stop_at.has_value() && result.stop_char_seen) {
-      // If we saw a semicolon, this line could not have been empty, so reset the counter.
-      preceding_newlines_ = reached_newline ? 1 : 0;
+  while (next_token_index_ < tokens_.size()) {
+    const std::unique_ptr<Token>& token = tokens_[next_token_index_];
+    if (until.has_value() && (*token == until.value() || until.value() < *token)) {
       break;
     }
 
-    if (result.is_all_whitespace) {
-      // If the line was just blank space, increment the counter.
-      preceding_newlines_ += reached_newline ? 1 : 0;
-    } else {
-      // If the line was not empty, make sure to reset the counter.
-      preceding_newlines_ = reached_newline ? 1 : 0;
-    }
+    const std::optional<Token> prev_token =
+        next_token_index_ > 0 ? std::make_optional<Token>(*tokens_[next_token_index_ - 1])
+                              : std::nullopt;
+    const size_t leading_newlines = CountNewlinesBetweenAdjacentTokens(file_, prev_token, *token);
+    IngestToken(*token, prev_token, leading_newlines, atomic.get());
+    next_token_index_ += 1;
   }
-  uningested_ = uningested_.substr(std::min(chars_seen, uningested_.size()));
 
   if (atomic->IsEmpty()) {
     return std::nullopt;
@@ -333,17 +225,72 @@ std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUnti
   return std::move(atomic);
 }
 
-std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUntilChar(
-    char stop_char) {
-  return IngestUntil(file_.data() + (file_.size() - 1), stop_char);
+std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUpToAndIncluding(
+    const std::optional<Token> until, SpanSequence::Position position) {
+  auto atomic = std::make_unique<AtomicSpanSequence>(position);
+  while (next_token_index_ < tokens_.size()) {
+    const std::unique_ptr<Token>& token = tokens_[next_token_index_];
+    if (until.has_value() && until.value() < *token) {
+      break;
+    }
+
+    const std::optional<Token> prev_token =
+        next_token_index_ > 0 ? std::make_optional<Token>(*tokens_[next_token_index_ - 1])
+                              : std::nullopt;
+    const size_t leading_newlines = CountNewlinesBetweenAdjacentTokens(file_, prev_token, *token);
+    IngestToken(*token, prev_token, leading_newlines, atomic.get());
+    next_token_index_ += 1;
+
+    if (until.has_value() && *token == until.value()) {
+      break;
+    }
+  }
+
+  if (atomic->IsEmpty()) {
+    return std::nullopt;
+  }
+  return std::move(atomic);
 }
 
-std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUntilEndOfFile() {
-  return IngestUntil(file_.data() + (file_.size() - 1));
+std::optional<std::unique_ptr<SpanSequence>>
+SpanSequenceTreeVisitor::IngestUpToAndIncludingTokenKind(
+    const std::optional<Token::Kind> until_kind, SpanSequence::Position position) {
+  auto atomic = std::make_unique<AtomicSpanSequence>(position);
+  bool found = false;
+  while (next_token_index_ < tokens_.size()) {
+    const std::unique_ptr<Token>& token = tokens_[next_token_index_];
+    const std::optional<Token> prev_token =
+        next_token_index_ > 0 ? std::make_optional<Token>(*tokens_[next_token_index_ - 1])
+                              : std::nullopt;
+    const size_t leading_newlines = CountNewlinesBetweenAdjacentTokens(file_, prev_token, *token);
+
+    // If we have found the token kind we're looking for, make sure to capture any trailing inline
+    // comments!
+    if (found && (leading_newlines > 0 ||
+                  (token->kind() != Token::kComment || token->kind() != Token::kComment))) {
+      break;
+    }
+    IngestToken(*token, prev_token, leading_newlines, atomic.get());
+
+    next_token_index_ += 1;
+    if (token->kind() == until_kind) {
+      found = true;
+    }
+  }
+
+  if (atomic->IsEmpty()) {
+    return std::nullopt;
+  }
+  return std::move(atomic);
 }
 
-std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUntilSemicolon() {
-  return IngestUntilChar(';');
+std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestRestOfFile() {
+  return IngestUpToAndIncluding(std::nullopt);
+}
+
+std::optional<std::unique_ptr<SpanSequence>>
+SpanSequenceTreeVisitor::IngestUpToAndIncludingSemicolon() {
+  return IngestUpToAndIncludingTokenKind(Token::kSemicolon);
 }
 
 bool SpanSequenceTreeVisitor::IsInsideOf(VisitorKind visitor_kind) {
@@ -364,41 +311,38 @@ SpanSequenceTreeVisitor::Builder<T>::Builder(SpanSequenceTreeVisitor* ftv, const
   if (new_list)
     this->GetFormattingTreeVisitor()->building_.push(std::vector<std::unique_ptr<SpanSequence>>());
 
-  auto prelude = ftv_->IngestUntil(start_.data().data() - 1);
+  auto prelude = ftv_->IngestUpTo(start_);
   if (prelude.has_value())
     ftv_->building_.top().push_back(std::move(prelude.value()));
-}
-
-template <typename T>
-SpanSequenceTreeVisitor::Builder<T>::~Builder<T>() {
-  const auto tracking = end_.data().data() + end_.data().size();
-  if (tracking >= ftv_->uningested_.data()) {
-    ftv_->uningested_ = tracking;
-  }
 }
 
 SpanSequenceTreeVisitor::TokenBuilder::TokenBuilder(SpanSequenceTreeVisitor* ftv,
                                                     const Token& token, bool has_trailing_space)
     : Builder<TokenSpanSequence>(ftv, token, token, false) {
-  const auto leading_newlines = this->GetFormattingTreeVisitor()->preceding_newlines_;
+  const size_t token_index = this->GetFormattingTreeVisitor()->next_token_index_;
+  const std::optional<Token> prev_token =
+      token_index > 0
+          ? std::make_optional<Token>(*this->GetFormattingTreeVisitor()->tokens_[token_index - 1])
+          : std::nullopt;
+  const size_t leading_newlines = CountNewlinesBetweenAdjacentTokens(
+      this->GetFormattingTreeVisitor()->file_, prev_token, token);
   const size_t leading_blank_lines = leading_newlines == 0 ? 0 : leading_newlines - 1;
-
   auto token_span_sequence =
       std::make_unique<TokenSpanSequence>(token.span().data(), leading_blank_lines);
   token_span_sequence->SetTrailingSpace(has_trailing_space);
   token_span_sequence->Close();
-  this->GetFormattingTreeVisitor()->building_.top().push_back(std::move(token_span_sequence));
 
-  ftv->preceding_newlines_ = 0;
+  this->GetFormattingTreeVisitor()->building_.top().push_back(std::move(token_span_sequence));
+  this->GetFormattingTreeVisitor()->next_token_index_ += 1;
 }
 
 template <typename T>
 SpanSequenceTreeVisitor::SpanBuilder<T>::~SpanBuilder<T>() {
   // Ingest any remaining text between the last processed child and the end token of the span.  This
   // text may not retain any leading blank lines or trailing spaces.
-  auto end_view = this->GetEndToken().data();
-  auto postscript = this->GetFormattingTreeVisitor()->IngestUntil(
-      end_view.data() + (end_view.size() - 1), false, SpanSequence::Position::kNewlineUnindented);
+  const Token end = this->GetEndToken();
+  auto postscript = this->GetFormattingTreeVisitor()->IngestUpToAndIncluding(
+      end, SpanSequence::Position::kNewlineUnindented);
   if (postscript.has_value()) {
     const auto& top = this->GetFormattingTreeVisitor()->building_.top();
     if (top.empty() || (!top.empty() && !EndsWithComment(top.back()))) {
@@ -421,7 +365,8 @@ template <typename T>
 SpanSequenceTreeVisitor::StatementBuilder<T>::~StatementBuilder<T>() {
   auto parts = std::move(this->GetFormattingTreeVisitor()->building_.top());
   auto composite_span_sequence = std::make_unique<T>(std::move(parts), this->position_);
-  auto semicolon_span_sequence = this->GetFormattingTreeVisitor()->IngestUntilSemicolon().value();
+  auto semicolon_span_sequence =
+      this->GetFormattingTreeVisitor()->IngestUpToAndIncludingSemicolon().value();
 
   // Append the semicolon_span_sequence to the last child in the composite_span_sequence, if it
   // exists.
@@ -448,7 +393,7 @@ void SpanSequenceTreeVisitor::OnAliasDeclaration(
   const auto builder = StatementBuilder<DivisibleSpanSequence>(
       this, *element, SpanSequence::Position::kNewlineUnindented);
   TreeVisitor::OnAliasDeclaration(element);
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
 
@@ -467,8 +412,7 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
   // Special case: this attribute is actually a doc comment.  Treat it like any other comment type,
   // and ingest until the last newline in the doc comment.
   if (element.provenance == raw::AttributeNew::Provenance::kDocComment) {
-    const char* last_char = element.end_.data().data() + element.end_.data().size();
-    auto doc_comment = IngestUntil(last_char);
+    auto doc_comment = IngestUpToAndIncluding(element.end_);
     if (doc_comment.has_value())
       building_.top().push_back(std::move(doc_comment.value()));
     return;
@@ -492,9 +436,12 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
   //           , "my very very ... very long arg 2")
   const auto builder = SpanBuilder<DivisibleSpanSequence>(
       this, element.args[0].start_, SpanSequence::Position::kNewlineUnindented);
+  auto as_atomic = static_cast<AtomicSpanSequence*>(building_.top().front().get());
+  SetSpacesBetweenChildren(as_atomic->EditChildren(), false);
+
   std::optional<SpanBuilder<AtomicSpanSequence>> arg_builder;
   for (const auto& arg : element.args) {
-    auto postscript = IngestUntil(arg.start_.data().data() - 1);
+    auto postscript = IngestUpTo(arg.start_);
     if (postscript.has_value())
       building_.top().push_back(std::move(postscript.value()));
 
@@ -506,8 +453,8 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
   // added to the "building_" stack.
   arg_builder.reset();
 
-  // Ingest the closing ")" character, and append it to the final argument.
-  auto postscript = IngestUntil(element.end_.data().data() + (element.end_.data().size() - 1));
+  // Ingest the closing ")" token, and append it to the final argument.
+  auto postscript = IngestUpToAndIncluding(element.end_);
   if (postscript.has_value()) {
     auto last_argument_span_sequence =
         static_cast<AtomicSpanSequence*>(building_.top().back().get());
@@ -525,7 +472,7 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
   //
   // To accomplish this, we simply add the trailing spaces to every non-comment element except the
   // last, then remove the trailing space from the first element.
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   building_.top()[0]->SetTrailingSpace(false);
 }
 
@@ -570,7 +517,7 @@ void SpanSequenceTreeVisitor::OnBinaryOperatorConstant(
     const auto operand_builder = SpanBuilder<AtomicSpanSequence>(this, *element->right_operand);
     TreeVisitor::OnConstant(element->right_operand);
   }
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
 }
 
 void SpanSequenceTreeVisitor::OnCompoundIdentifier(
@@ -615,11 +562,11 @@ void SpanSequenceTreeVisitor::OnConstDeclaration(
       const auto type_ctor_new_builder = SpanBuilder<AtomicSpanSequence>(this, *type_ctor_new);
       OnTypeConstructor(element->type_ctor);
     }
-    AddSpacesBetweenChildren(building_.top());
+    SetSpacesBetweenChildren(building_.top(), true);
   }
 
   OnConstant(element->constant);
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
 
@@ -629,11 +576,9 @@ void SpanSequenceTreeVisitor::OnFile(const std::unique_ptr<raw::File>& element) 
 
   DeclarationOrderTreeVisitor::OnFile(element);
 
-  if (!uningested_.empty()) {
-    auto footer = IngestUntilEndOfFile();
-    if (footer.has_value())
-      building_.top().push_back(std::move(footer.value()));
-  }
+  auto footer = IngestRestOfFile();
+  if (footer.has_value())
+    building_.top().push_back(std::move(footer.value()));
 }
 
 void SpanSequenceTreeVisitor::OnIdentifier(const std::unique_ptr<raw::Identifier>& element,
@@ -700,7 +645,7 @@ void SpanSequenceTreeVisitor::OnLayout(const std::unique_ptr<raw::Layout>& eleme
   // adding spaces between every child of the first element of the MultilineSpanSequence currently
   // being built.
   auto as_composite = static_cast<CompositeSpanSequence*>(building_.top().front().get());
-  AddSpacesBetweenChildren(as_composite->EditChildren());
+  SetSpacesBetweenChildren(as_composite->EditChildren(), true);
 
   TreeVisitor::OnLayout(element);
 }
@@ -767,7 +712,7 @@ void SpanSequenceTreeVisitor::OnOrdinaledLayoutMember(
 
     if (!element->reserved)
       OnTypeConstructorNew(element->type_ctor);
-    AddSpacesBetweenChildren(building_.top());
+    SetSpacesBetweenChildren(building_.top(), true);
     ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
   }
 
@@ -788,7 +733,7 @@ void SpanSequenceTreeVisitor::OnParameterListNew(
 
   const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
   if (element->type_ctor) {
-    auto opening_paren = IngestUntil(element->type_ctor->start_.data().data() - 1);
+    auto opening_paren = IngestUpTo(element->type_ctor->start_);
     if (opening_paren.has_value())
       building_.top().push_back(std::move(opening_paren.value()));
   }
@@ -907,7 +852,7 @@ void SpanSequenceTreeVisitor::OnProtocolMethod(
     building_.top().back()->SetTrailingSpace(true);
     OnTypeConstructor(element->maybe_error_ctor);
   }
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
 
@@ -931,7 +876,7 @@ void SpanSequenceTreeVisitor::OnResourceDeclaration(
       const auto& subtype_ctor =
           std::get<std::unique_ptr<raw::TypeConstructorNew>>(element->maybe_type_ctor);
       const auto subtype_builder = SpanBuilder<AtomicSpanSequence>(this, subtype_ctor->start_);
-      auto postscript = IngestUntilChar('{');
+      auto postscript = IngestUpToAndIncludingTokenKind(Token::Kind::kLeftCurly);
       if (postscript.has_value())
         building_.top().push_back(std::move(postscript.value()));
 
@@ -939,13 +884,13 @@ void SpanSequenceTreeVisitor::OnResourceDeclaration(
       // sub-typed resource definitions like `handle : uint32 {...`, we need to add this space in.
       // We can do this by adding spaces between every child of the first element of the
       // SpanSequence currently being built.
-      AddSpacesBetweenChildren(building_.top());
+      SetSpacesBetweenChildren(building_.top(), true);
     } else {
-      auto postscript = IngestUntilChar('{');
+      auto postscript = IngestUpToAndIncludingTokenKind(Token::kLeftCurly);
       if (postscript.has_value())
         building_.top().push_back(std::move(postscript.value()));
     }
-    AddSpacesBetweenChildren(building_.top());
+    SetSpacesBetweenChildren(building_.top(), true);
   }
 
   // Build the indented "property { ... }" portion.
@@ -956,7 +901,7 @@ void SpanSequenceTreeVisitor::OnResourceDeclaration(
 
     const auto closing_bracket_builder = SpanBuilder<AtomicSpanSequence>(
         this, element->properties.back()->end_, SpanSequence::Position::kNewlineUnindented);
-    auto closing_bracket = IngestUntilSemicolon();
+    auto closing_bracket = IngestUpToAndIncludingSemicolon();
     if (closing_bracket.has_value())
       building_.top().push_back(std::move(closing_bracket.value()));
   }
@@ -982,7 +927,7 @@ void SpanSequenceTreeVisitor::OnResourceProperty(
   //  visitation manually instead.
   OnIdentifier(element->identifier);
   OnTypeConstructor(element->type_ctor);
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
 
@@ -1033,7 +978,7 @@ void SpanSequenceTreeVisitor::OnServiceMember(const std::unique_ptr<raw::Service
   //  manually instead.
   OnIdentifier(element->identifier);
   OnTypeConstructor(element->type_ctor);
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
 
@@ -1047,7 +992,7 @@ void SpanSequenceTreeVisitor::OnStructLayoutMember(
   const auto builder = StatementBuilder<DivisibleSpanSequence>(
       this, *element, SpanSequence::Position::kNewlineIndented);
   TreeVisitor::OnStructLayoutMember(element);
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
 }
 
@@ -1078,7 +1023,7 @@ void SpanSequenceTreeVisitor::OnTypeDecl(const std::unique_ptr<raw::TypeDecl>& e
   const auto builder = StatementBuilder<DivisibleSpanSequence>(
       this, *element, SpanSequence::Position::kNewlineUnindented);
   TreeVisitor::OnTypeDecl(element);
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
 }
 
@@ -1092,7 +1037,7 @@ void SpanSequenceTreeVisitor::OnUsing(const std::unique_ptr<raw::Using>& element
   const auto builder = StatementBuilder<DivisibleSpanSequence>(
       this, *element, SpanSequence::Position::kNewlineUnindented);
   TreeVisitor::OnUsing(element);
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
 
@@ -1106,7 +1051,7 @@ void SpanSequenceTreeVisitor::OnValueLayoutMember(
   const auto builder = StatementBuilder<DivisibleSpanSequence>(
       this, *element, SpanSequence::Position::kNewlineIndented);
   TreeVisitor::OnValueLayoutMember(element);
-  AddSpacesBetweenChildren(building_.top());
+  SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
 }
 
