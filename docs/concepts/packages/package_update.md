@@ -60,20 +60,19 @@ when the target is rebooted.
 Packages in Fuchsia are not "installed", they are cached on an as needed
 basis. There are two collections of packages on a Fuchsia system:
 
-* **base** The base package set is a group of software critical to proper
-  system function that must remain congruent. This set of software can only be
-  updated by performing a whole system update, typically referred to as OTA,
-  described below. This is updated using `fx ota`.
+* **base** The `base` package set is a group of software critical to proper
+  system function that must remain congruent. The Fuchsia build system
+  assigns packages to `base` when they are provided to `fx set` using the
+  `--with-base` flag.
+  This set of software can only be updated by performing a whole system update,
+  typically referred to as OTA, described below. This is updated using `fx ota`.
 
-* **ephemeral software** The ephemeral software is provided to the system in
-  one of two ways, either as a member of the "cache" build group, or entirely
-  ephemerally. Typically users configure software in the Fuchsia build as
-  ephemerally available by adding that package to the `fx set` line such as
-  `--with //examples/rolldice`. Ephemeral software, whether in "cache" or
-  entirely ephemeral, is always updated whenever a component is launched with a
-  package URL. For example, if a user executes `fx run
-  fuchsia-pkg://fuchsia.com/rolldice#meta/rolldice.cmx`, the rolldice latest
-  rolldice package will be cached before execution.
+* **ephemeral software** Packages included in the `cache` or `universe` package
+  set are ephemeral software, with updates delivered on demand. The Fuchsia
+  build system assigns packages to `universe` when they are provided to `fx set`
+  using the `--with` flag.
+  Ephemeral software updates to the latest available version whenever the
+  package URL is resolved.
 
 ## Triggering an OTA
 
@@ -91,7 +90,6 @@ update source. The `-v` option will show more information about the files the
 target is requesting from the host. If the `-v` flag was used there should
 be a flurry of output as the target retrieves all the new files. Following
 completion of the OTA the device will reboot.
-
 
 ## Just the commands
 

@@ -25,9 +25,9 @@
 ## TARGET is any form that 'run' on the target device accepts, as such it may
 ## be a package url, or a non-ambiguous short-form.
 ## Example:
-##   $ fx set core.x64 --with //examples/rolldice
-##   $ fx serve
-##   $ fx run fuchsia-pkg://fuchsia.com/rolldice#meta/rolldice.cmx
+##   $ fx set core.x64 --with //examples
+##   $ fx serve-updates
+##   $ fx run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-dart.cmx
 ## ARG is passed to target without interpretation. All arguments after TARGET
 ## are passed to TARGET.
 

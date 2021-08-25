@@ -18,7 +18,6 @@ group("examples") {
     "hello_world",
     "intl",
     "isolated_cache",
-    "rolldice",
     "rust",
     "speech",
     "time",
@@ -37,7 +36,6 @@ group("tests") {
     "hello_world:tests",
     "intl:tests",
     "isolated_cache:tests",
-    "rolldice:rolldice-tests",
     "rust:tests",
   ]
 }

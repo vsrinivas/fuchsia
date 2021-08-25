@@ -361,10 +361,10 @@ build, push and execute tests whenever they save their source code. This can
 be achieved with `fx` very easily, for example:
 
 ```shell
-$ fx -i test rolldice-tests
+$ fx -i test hello-world-rust-tests
 ```
 
-The above command will execute the rolldice tests every time a change is made
+The above command will execute the tests every time a change is made
 to the source code in the tree. The `-i` flag to `fx` causes `fx` to repeat
 the rest of its command every time the source code in the tree is changed.
 As the `fx test` command first performs a build, then executes a test on
