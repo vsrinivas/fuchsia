@@ -14,9 +14,7 @@
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
-#include <string.h>
 #include <sys/mount.h>
-#include <unistd.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -290,7 +288,10 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady(zx::time deadline) {
     constexpr zx::duration kPsWaitTime = zx::sec(5);
     zx_status_t status =
         Execute({"ps"}, {}, std::min(zx::deadline_after(kPsWaitTime), deadline), &ps);
-    if (status == ZX_OK && EnsureValidZirconPsOutput(ps).is_ok()) {
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (EnsureValidZirconPsOutput(ps).is_ok()) {
       return ZX_OK;
     }
 
