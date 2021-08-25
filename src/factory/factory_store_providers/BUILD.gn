@@ -205,6 +205,12 @@ fuchsia_test_package("factory_store_providers_tests") {
            ":items_zbi",
            ":fake_factory_items_json",
          ] + test_file_resources
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 config_data("factory_store_providers_ext4_tests_config") {
