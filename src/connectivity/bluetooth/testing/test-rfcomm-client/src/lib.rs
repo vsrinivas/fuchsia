@@ -12,7 +12,7 @@ use fuchsia_bluetooth::types::{Channel, PeerId, Uuid};
 use futures::{channel::mpsc, select, FutureExt, StreamExt};
 use parking_lot::Mutex;
 use profile_client::{ProfileClient, ProfileEvent};
-use std::{collections::HashMap, convert::TryFrom, sync::Arc};
+use std::{cell::Cell, collections::HashMap, convert::TryFrom, sync::Arc};
 use tracing::{info, warn};
 
 /// The default buffer size for the mpsc channels used to relay user data packets to be sent to the
@@ -138,7 +138,7 @@ impl RfcommSession {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, Default)]
 #[derivative(Debug)]
 pub struct RfcommState {
     /// A task representing the RFCOMM service advertisement and search.
@@ -180,27 +180,63 @@ impl RfcommState {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Derivative, Default)]
+#[derivative(Debug)]
 pub struct RfcommManager {
-    profile: bredr::ProfileProxy,
-    rfcomm: rfcomm::RfcommTestProxy,
+    #[derivative(Debug = "ignore")]
+    profile: Cell<Option<bredr::ProfileProxy>>,
+    #[derivative(Debug = "ignore")]
+    rfcomm: Cell<Option<rfcomm::RfcommTestProxy>>,
     inner: Arc<Mutex<RfcommState>>,
+}
+
+impl Clone for RfcommManager {
+    fn clone(&self) -> Self {
+        let profile = self.profile.take();
+        if let Some(p) = profile.as_ref() {
+            self.profile.set(Some(p.clone()));
+        }
+        let rfcomm = self.rfcomm.take();
+        if let Some(rf) = rfcomm.as_ref() {
+            self.rfcomm.set(Some(rf.clone()));
+        }
+        Self { profile: Cell::new(profile), rfcomm: Cell::new(rfcomm), inner: self.inner.clone() }
+    }
 }
 
 impl RfcommManager {
     pub fn new() -> Result<Self, Error> {
-        let profile = fuchsia_component::client::connect_to_protocol::<bredr::ProfileMarker>()?;
-        let rfcomm_test =
-            fuchsia_component::client::connect_to_protocol::<rfcomm::RfcommTestMarker>()?;
-        Ok(Self::from_proxy(profile, rfcomm_test))
+        Ok(Self::default())
     }
 
     pub fn from_proxy(profile: bredr::ProfileProxy, rfcomm: rfcomm::RfcommTestProxy) -> Self {
-        Self { profile, rfcomm, inner: Arc::new(Mutex::new(RfcommState::new())) }
+        Self {
+            profile: Cell::new(Some(profile)),
+            rfcomm: Cell::new(Some(rfcomm)),
+            inner: Arc::new(Mutex::new(RfcommState::new())),
+        }
     }
 
     pub fn clear_services(&self) {
         self.inner.lock().clear_services();
+    }
+
+    fn get_profile_proxy(&self) -> Result<bredr::ProfileProxy, Error> {
+        let proxy = match self.profile.take() {
+            Some(proxy) => proxy,
+            None => fuchsia_component::client::connect_to_protocol::<bredr::ProfileMarker>()?,
+        };
+        self.profile.set(Some(proxy.clone()));
+        Ok(proxy)
+    }
+
+    fn get_rfcomm_test_proxy(&self) -> Result<rfcomm::RfcommTestProxy, Error> {
+        let proxy = match self.rfcomm.take() {
+            Some(proxy) => proxy,
+            None => fuchsia_component::client::connect_to_protocol::<rfcomm::RfcommTestMarker>()?,
+        };
+        self.rfcomm.set(Some(proxy.clone()));
+        Ok(proxy)
     }
 
     /// Advertises an SPP service and searches for other compatible SPP clients. Overwrites any
@@ -210,16 +246,14 @@ impl RfcommManager {
         // clashes in `bredr.Profile` server.
         self.clear_services();
 
+        let profile_proxy = self.get_profile_proxy()?;
         let inner_clone = self.inner.clone();
         let mut inner = self.inner.lock();
 
         // Add an SPP advertisement & search.
         let spp_service = vec![spp_service_definition()];
-        let mut client = ProfileClient::advertise(
-            self.profile.clone(),
-            &spp_service,
-            bredr::ChannelParameters::EMPTY,
-        )?;
+        let mut client =
+            ProfileClient::advertise(profile_proxy, &spp_service, bredr::ChannelParameters::EMPTY)?;
         let _ = client.add_search(bredr::ServiceClassProfileIdentifier::SerialPort, &[])?;
         let service_task = fasync::Task::spawn(async move {
             let result = Self::handle_profile_events(client, inner_clone).await;
@@ -264,7 +298,10 @@ impl RfcommManager {
     /// Terminates the RFCOMM session with the remote peer `id`.
     pub fn close_session(&self, id: PeerId) -> Result<(), Error> {
         // Send the disconnect request via the `RfcommTest` API and clean up local state.
-        let _ = self.rfcomm.disconnect(&mut id.into()).map_err::<fidl::Error, _>(Into::into)?;
+        let _ = self
+            .get_rfcomm_test_proxy()?
+            .disconnect(&mut id.into())
+            .map_err::<fidl::Error, _>(Into::into)?;
 
         let mut inner = self.inner.lock();
         if let Some(session) = inner.active_sessions.remove(&id) {
@@ -295,7 +332,7 @@ impl RfcommManager {
         server_channel: ServerChannel,
     ) -> Result<(), Error> {
         let channel = self
-            .profile
+            .get_profile_proxy()?
             .connect(
                 &mut id.into(),
                 &mut bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
@@ -314,12 +351,12 @@ impl RfcommManager {
     /// Send a Remote Line Status update for the RFCOMM `server_channel` with peer `id`. Returns
     /// Error if there is no such established RFCOMM channel with the peer.
     pub fn send_rls(&self, id: PeerId, server_channel: ServerChannel) -> Result<(), Error> {
+        let rfcomm_test_proxy = self.get_rfcomm_test_proxy()?;
         let mut inner = self.inner.lock();
         if inner.get_active_session(&id).is_some() {
             // Send a fixed Framing error status.
             let status = rfcomm::Status::FramingError;
-            let _ = self
-                .rfcomm
+            let _ = rfcomm_test_proxy
                 .remote_line_status(&mut id.into(), server_channel.into(), status)
                 .map_err::<fidl::Error, _>(Into::into)?;
             Ok(())
