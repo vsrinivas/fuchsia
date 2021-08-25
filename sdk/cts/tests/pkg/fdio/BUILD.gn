@@ -4,6 +4,11 @@
 
 import("//sdk/cts/build/cts.gni")
 
+shebang = "#!resolve fuchsia-pkg://fuchsia.com/fdio-spawn-tests"
+if (defined(cts_version) && cts_version != "") {
+  shebang += "_${cts_version}"
+}
+
 cts_executable("fdio-spawn-tests-bin") {
   output_name = "fdio-spawn-tests-bin"
   testonly = true
@@ -91,11 +96,17 @@ cts_fuchsia_component("echo-arguments-bin-component") {
   deps = [ ":echo-arguments-bin" ]
 }
 
+generated_file("resolve-once-file") {
+  outputs = [ "${target_gen_dir}/test_bins/resolve_once" ]
+  contents = "${shebang}#bin/return_arg_test_util"
+}
+
 # The 'binaries' in the components below are really just text files with either
 # a "#!resolve" or "#!" directive.
 cts_resource("resolve-once-bin") {
-  sources = [ "test_bins/resolve_once" ]
+  sources = get_target_outputs(":resolve-once-file")
   outputs = [ "bin/resolve_once" ]
+  deps = [ ":resolve-once-file" ]
 }
 
 cts_fuchsia_component("resolve-once-component") {
@@ -104,9 +115,15 @@ cts_fuchsia_component("resolve-once-component") {
   deps = [ ":resolve-once-bin" ]
 }
 
+generated_file("resolve-twice-file") {
+  outputs = [ "${target_gen_dir}/test_bins/resolve_twice" ]
+  contents = "${shebang}#bin/resolve_once"
+}
+
 cts_resource("resolve-twice-bin") {
-  sources = [ "test_bins/resolve_twice" ]
+  sources = get_target_outputs(":resolve-twice-file")
   outputs = [ "bin/resolve_twice" ]
+  deps = [ ":resolve-twice-file" ]
 }
 
 cts_fuchsia_component("resolve-twice-component") {
@@ -115,9 +132,15 @@ cts_fuchsia_component("resolve-twice-component") {
   deps = [ ":resolve-twice-bin" ]
 }
 
+generated_file("resolve-infinite-loop-file") {
+  outputs = [ "${target_gen_dir}/test_bins/resolve_infinite_loop" ]
+  contents = "${shebang}#bin/resolve_infinite_loop"
+}
+
 cts_resource("resolve-infinite-loop-bin") {
-  sources = [ "test_bins/resolve_infinite_loop" ]
+  sources = get_target_outputs(":resolve-infinite-loop-file")
   outputs = [ "bin/resolve_infinite_loop" ]
+  deps = [ ":resolve-infinite-loop-file" ]
 }
 
 cts_fuchsia_component("resolve-infinite-loop-component") {
@@ -203,9 +226,15 @@ cts_fuchsia_component("use-resolve-from-shebang-component") {
   deps = [ ":use-resolve-from-shebang-bin" ]
 }
 
+generated_file("use-shebang-from-resolve-file") {
+  outputs = [ "${target_gen_dir}/test_bins/use-shebang-from-resolve" ]
+  contents = "${shebang}#bin/shebang_echo_arguments"
+}
+
 cts_resource("use-shebang-from-resolve-bin") {
-  sources = [ "test_bins/use_shebang_from_resolve" ]
+  sources = get_target_outputs(":use-shebang-from-resolve-file")
   outputs = [ "bin/use_shebang_from_resolve" ]
+  deps = [ ":use-shebang-from-resolve-file" ]
 }
 
 cts_fuchsia_component("use-shebang-from-resolve-component") {
@@ -235,6 +264,16 @@ cts_fuchsia_test_package("fdio-spawn-tests") {
     ":use-script-as-interpreter-component",
     ":use-shebang-from-resolve-component",
   ]
+}
+
+fuchsia_package_archive("fdio-spawn-tests_archive") {
+  testonly = true
+  package = ":fdio-spawn-tests"
+}
+
+cts_artifacts("prebuilts") {
+  testonly = true
+  package_archives = [ ":fdio-spawn-tests_archive" ]
 }
 
 group("tests") {

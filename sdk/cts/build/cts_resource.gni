@@ -64,11 +64,15 @@ template("cts_resource") {
     cts_copy_to_sdk(target_name) {
       forward_variables_from(invoker,
                              [
-                               "deps",
                                "sources",
                                "dest",
                                "testonly",
                              ])
+
+      # This should only be used for generated_file().
+      if (defined(invoker.deps)) {
+        non_sdk_deps = invoker.deps
+      }
     }
   }
 }

@@ -23,5 +23,10 @@
         "archive_name": "fuchsia-hwinfo-tests",
         "component_name": "hwinfo-test.cm",
         "package": "fuchsia-hwinfo-tests"
+    },
+    {
+        "archive_name": "fdio-spawn-tests",
+        "component_name": "fdio-spawn-tests-component.cmx",
+        "package": "fdio-spawn-tests"
     }
 ]

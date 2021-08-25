@@ -102,6 +102,12 @@ template("cts_copy_to_sdk") {
 
   sdk_atom(sdk_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
+
+    non_sdk_deps = []
+    if (defined(invoker.non_sdk_deps)) {
+      non_sdk_deps = invoker.non_sdk_deps
+    }
+
     category = "cts"
     if (file_base != "") {
       id = "sdk://${file_base}/${main_target_name}"
@@ -128,7 +134,7 @@ template("cts_copy_to_sdk") {
     }
 
     if (defined(transform_build_gn_target)) {
-      non_sdk_deps = [ ":${transform_build_gn_target}" ]
+      non_sdk_deps += [ ":${transform_build_gn_target}" ]
     }
   }
 }
