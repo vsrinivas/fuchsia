@@ -42,5 +42,7 @@ toc:
   section:
   - title: "Overview"
     path: /docs/contribute/open_projects/graduated/README.md
+  - title: "Dismantle the global log severity file"
+    path: /docs/contribute/open_projects/graduated/global_severity.md
   - title: "package() migration"
     path: /docs/contribute/open_projects/graduated/package_migration.md

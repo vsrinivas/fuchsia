@@ -1,5 +1,7 @@
 # `package()` migration
 
+This project is complete! This page is left as a historical artifact.
+
 ## Goal & motivation
 
 In 2020 we introduced [new build templates][building-components] for defining
