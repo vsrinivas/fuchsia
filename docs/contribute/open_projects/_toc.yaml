@@ -34,10 +34,6 @@ toc:
     path: /docs/contribute/open_projects/cpp/ubsan.md
   - title: "Low-level C++ typed channel migration"
     path: /docs/contribute/open_projects/cpp/typed_channels.md
-- title: "Logging"
-  section:
-  - title: "Dismantle the global log severity file"
-    path: /docs/contribute/open_projects/logging/global_severity.md
 - title: "Testing"
   section:
   - title: "Migrate driver unit tests to mock-ddk"

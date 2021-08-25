@@ -13,8 +13,6 @@ source_set("lib") {
     "component.h",
     "log_collector.cc",
     "log_collector.h",
-    "max_severity_config.cc",
-    "max_severity_config.h",
     "output_collector.cc",
     "output_collector.h",
     "run_test_component.cc",
@@ -117,7 +115,6 @@ executable("test_bin") {
 
   sources = [
     "log_collector_unittests.cc",
-    "max_severity_config_unittests.cc",
     "output_collector_unittests.cc",
     "run_test_component_unittest.cc",
     "sys_tests_unittests.cc",
@@ -133,50 +130,14 @@ executable("test_bin") {
   ]
 }
 
-resource("valid_max_severity") {
-  testonly = true
-  sources = [
-    "test_configs/max_severity/valid1.json",
-    "test_configs/max_severity/valid2.json",
-    "test_configs/max_severity/valid3.json",
-  ]
-  outputs = [ "data/max_severity/valid/{{source_file_part}}" ]
-}
-
-resource("invalid_max_severity") {
-  testonly = true
-  sources = [
-    "test_configs/max_severity/invalid_severity.json",
-    "test_configs/max_severity/invalid_url.json",
-    "test_configs/max_severity/no_severity.json",
-    "test_configs/max_severity/no_url.json",
-    "test_configs/max_severity/url_conflict.json",
-  ]
-  outputs =
-      [ "data/max_severity/{{source_name_part}}/{{source_name_part}}.json" ]
-}
-
 fuchsia_unittest_package("run_test_component_unittests") {
   manifest = "meta/run_test_component_unittests.cmx"
-  deps = [
-    ":invalid_max_severity",
-    ":test_bin",
-    ":valid_max_severity",
-  ]
-}
-
-config_data("max_severity") {
-  testonly = true
-  for_pkg = "run_test_component"
-  sources = [ "max_severity_fuchsia.json" ]
+  deps = [ ":test_bin" ]
 }
 
 group("run_test_component") {
   testonly = true
-  public_deps = [
-    ":max_severity",
-    ":run-test-component",
-  ]
+  public_deps = [ ":run-test-component" ]
 }
 
 group("tests") {

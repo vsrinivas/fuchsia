@@ -1,8 +1,0 @@
-{
-   "tests": [
-      {
-         "url": "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component_with_config.cmx",
-         "max_severity": "INFO"
-      }
-   ]
-}

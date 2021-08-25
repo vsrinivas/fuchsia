@@ -36,7 +36,6 @@
 
 #include "garnet/bin/run_test_component/component.h"
 #include "garnet/bin/run_test_component/log_collector.h"
-#include "garnet/bin/run_test_component/max_severity_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/sys_tests.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
@@ -194,16 +193,6 @@ void print_dropped_log_count(const std::shared_ptr<fuchsia::logger::LogMessage>&
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto max_severity_config = run::MaxSeverityConfig::ParseFromDirectory(max_severity_config_path);
-
-  if (max_severity_config.HasError()) {
-    fprintf(stderr,
-            "WARN: max_severity config file(s) are broken: %s. Updatiing your device might fix "
-            "the issue.",
-            max_severity_config.Error().c_str());
-    return 1;
-  }
-
   // Services which we get from /svc. They might be different depending on in which shell this
   // binary is launched from, so can't use it to create underlying environment.
   auto namespace_services = sys::ServiceDirectory::CreateFromNamespace();
@@ -282,23 +271,6 @@ int main(int argc, const char** argv) {
   std::vector<std::shared_ptr<fuchsia::logger::LogMessage>> restricted_logs;
   auto max_severity_allowed = parse_result.max_log_severity;
   bool restrict_logs = max_severity_allowed != syslog::LOG_FATAL;
-  if (restrict_logs) {
-    std::string simplified_url = run::GetSimplifiedUrl(program_name);
-    auto it = max_severity_config.config().find(simplified_url);
-    if (it != max_severity_config.config().end()) {
-      // Default in BUILD.gn is WARNING. If the user overrides it give a warning that config is
-      // preferred over BUILD.gn configuration.
-      if (max_severity_allowed != syslog::LOG_WARNING) {
-        printf(
-            "\nWARNING: Test '%s' overrides max log severity in BUILD.gn as well as config file. "
-            "Using the value from config file. If you want the test to pickup value from BUILD.gn, "
-            "please remove the test url from the config file.\n"
-            "See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity\n",
-            program_name.c_str());
-      }
-      max_severity_allowed = it->second;
-    }
-  }
 
   auto log_collector = std::make_unique<run::LogCollector>(
       [dispather = loop.dispatcher(), restrict_logs, max_severity_allowed,

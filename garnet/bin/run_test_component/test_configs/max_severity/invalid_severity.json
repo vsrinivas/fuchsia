@@ -1,8 +1,0 @@
-{
-   "tests":[
-      {
-         "url":"some_url",
-         "max_severity":"INVALID"
-      }
-   ]
-}

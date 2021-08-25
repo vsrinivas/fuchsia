@@ -10,10 +10,7 @@ import("//src/sys/component_index/component_index.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":max_severity",
-    ":run_test_component_test-package",
-  ]
+  deps = [ ":run_test_component_test-package" ]
 }
 
 test("bin") {
@@ -106,12 +103,6 @@ fuchsia_component("error_logging_component-component") {
   manifest = "meta/error_logging_component.cmx"
 }
 
-fuchsia_component("logging_component_with_config-component") {
-  component_name = "logging_component_with_config"
-  manifest = "//src/diagnostics/archivist/tests/logging-component/logging_component.cmx"
-  deps = [ "//src/diagnostics/archivist/tests/logging-component:bin" ]
-}
-
 fuchsia_component("logging_component-component") {
   component_name = "logging_component"
   manifest = "//src/diagnostics/archivist/tests/logging-component/logging_component.cmx"
@@ -128,12 +119,5 @@ fuchsia_test_package("run_test_component_test-package") {
     ":coverage_component-component",
     ":error_logging_component-component",
     ":logging_component-component",
-    ":logging_component_with_config-component",
   ]
-}
-
-config_data("max_severity") {
-  testonly = true
-  for_pkg = "run_test_component"
-  sources = [ "max_severity_run_test_component_test.json" ]
 }
