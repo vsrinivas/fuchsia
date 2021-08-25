@@ -69,14 +69,14 @@ pub enum PackageVariantError {
 
 #[derive(Debug, Error)]
 pub enum CreationManifestError {
-    #[error("manifest contains an invalid resource path '{}'. {}", path, cause)]
+    #[error("manifest contains an invalid resource path '{}'.", path)]
     ResourcePath {
         #[source]
         cause: ResourcePathError,
         path: String,
     },
 
-    #[error("attempted to deserialize creation manifest from malformed json: {}", _0)]
+    #[error("attempted to deserialize creation manifest from malformed json")]
     Json(#[from] serde_json::Error),
 
     #[error("package external content cannot be in 'meta/' directory: {}", path)]
@@ -91,8 +91,11 @@ pub enum CreationManifestError {
     #[error("duplicate resource path: '{}'", path)]
     DuplicateResourcePath { path: String },
 
-    #[error("io error: '{}'", _0)]
+    #[error("io error")]
     IoError(#[from] io::Error),
+
+    #[error("file directory collision at: {:?}", path)]
+    FileDirectoryCollision { path: String },
 }
 
 #[derive(Debug, Error, Eq, PartialEq)]

@@ -153,17 +153,29 @@ prop_compose! {
 
 #[cfg(test)]
 prop_compose! {
-    pub(crate) fn random_creation_manifest()
+    fn random_creation_manifest_result()
         (external_content in prop::collection::btree_map(
             random_external_resource_path(), random_host_path(1, 2), 1..4),
          mut far_content in prop::collection::btree_map(
              random_far_resource_path(), random_host_path(1, 2), 1..4),)
-         -> CreationManifest
+         -> Result<CreationManifest, crate::errors::CreationManifestError>
     {
         far_content.insert("meta/package".to_string(), "meta/package".to_string());
         CreationManifest::from_external_and_far_contents(
             external_content, far_content)
-            .unwrap()
+    }
+}
+
+#[cfg(test)]
+prop_compose! {
+    pub(crate) fn random_creation_manifest()
+        (manifest_result in random_creation_manifest_result().prop_filter(
+            "path combinations cannot have file/directory collisions, like ['foo', 'foo/bar']",
+            |r| r.is_ok()
+        ))
+         -> CreationManifest
+    {
+        manifest_result.unwrap()
     }
 }
 

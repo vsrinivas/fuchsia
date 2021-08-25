@@ -6,7 +6,7 @@ use {
     crate::errors::CreationManifestError,
     serde::{Deserialize, Serialize},
     std::{
-        collections::{btree_map, BTreeMap},
+        collections::{btree_map, BTreeMap, HashSet},
         fs,
         io::{self, Read},
         path::Path,
@@ -29,7 +29,8 @@ impl CreationManifest {
     /// `external_contents` is a map from package resource paths to their locations
     /// on the host filesystem. These are the files that will be listed in
     /// `meta/contents`. Resource paths in `external_contents` must *not* start with
-    /// `meta/`.
+    /// `meta/` or be exactly `meta`. Resource paths must not have file/directory collisions,
+    /// e.g. ["foo", "foo/bar"] have a file/directory collision at "foo", or they will be rejected.
     /// `far_contents` is a map from package resource paths to their locations
     /// on the host filesystem. These are the files that will be included bodily in the
     /// package `meta.far` archive. Resource paths in `far_contents` must start with
@@ -60,11 +61,20 @@ impl CreationManifest {
                 CreationManifestError::ResourcePath { cause: e, path: resource_path.to_string() }
             })?;
         }
-        for (resource_path, _) in external_contents.iter() {
-            if resource_path.starts_with("meta/") {
+        let external_paths =
+            external_contents.iter().map(|(path, _)| path.as_str()).collect::<HashSet<_>>();
+        for resource_path in &external_paths {
+            if resource_path.starts_with("meta/") || resource_path.eq(&"meta") {
                 return Err(CreationManifestError::ExternalContentInMetaDirectory {
                     path: resource_path.to_string(),
                 });
+            }
+            for (i, _) in resource_path.match_indices("/") {
+                if external_paths.contains(&resource_path[..i]) {
+                    return Err(CreationManifestError::FileDirectoryCollision {
+                        path: resource_path[..i].to_string(),
+                    });
+                }
             }
         }
         for (resource_path, _) in far_contents.iter() {
@@ -184,7 +194,7 @@ impl CreationManifest {
             buf.clear();
         }
 
-        Ok(Self { external_contents, far_contents })
+        Self::from_external_and_far_contents(external_contents, far_contents)
     }
 
     /// `external_contents` lists the blobs that make up the meta/contents file
@@ -346,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn test_meta_in_external() {
+    fn test_meta_dir_in_external() {
         assert_matches!(
             from_json_value(
                 json!(
@@ -361,6 +371,43 @@ mod tests {
             ),
             Err(CreationManifestError::ExternalContentInMetaDirectory{path: s}) if s == "meta/foo"
         );
+    }
+
+    #[test]
+    fn test_meta_file_in_external() {
+        assert_matches!(
+            from_json_value(
+                json!({
+                    "version": "1",
+                    "content": {
+                        "/meta/" : {},
+                        "/": {
+                            "meta": "host-path"
+                        }
+                    }
+                })
+            ),
+            Err(CreationManifestError::ExternalContentInMetaDirectory{path: s}) if s == "meta"
+        );
+    }
+
+    #[test]
+    fn test_file_dir_collision() {
+        for (path0, path1, expected_conflict) in [
+            ("foo", "foo/bar", "foo"),
+            ("foo/bar", "foo/bar/baz", "foo/bar"),
+            ("foo", "foo/bar/baz", "foo"),
+        ] {
+            let external = btreemap! {
+                path0.to_string() => String::new(),
+                path1.to_string() => String::new(),
+            };
+            assert_matches!(
+                CreationManifest::from_external_and_far_contents(external, BTreeMap::new()),
+                Err(CreationManifestError::FileDirectoryCollision { path })
+                    if path == expected_conflict
+            );
+        }
     }
 
     #[test]
