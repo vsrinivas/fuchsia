@@ -136,3 +136,7 @@ product_bootfs_labels += [
 # "eng" allowlist.
 product_system_image_deps +=
     [ "//src/security/policy:pkgfs_non_static_pkgs_allowlist_eng" ]
+
+# Set the SWD policy for core.gni, details can be found in
+# //build/security/policies_swd.gni.
+policy_labels.swd = "unrestricted"
