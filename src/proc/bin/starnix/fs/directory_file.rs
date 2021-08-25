@@ -53,6 +53,31 @@ impl MemoryDirectoryFile {
     }
 }
 
+/// If the offset is less than 2, emits . and .. entries for the specified file.
+///
+/// The offset will always be at least 2 after this function returns successfully. It's often
+/// necessary to subtract 2 from the offset in subsequent logic.
+pub fn emit_dotdot(
+    file: &FileObject,
+    sink: &mut dyn DirentSink,
+    offset: &mut i64,
+) -> Result<(), Errno> {
+    if *offset == 0 {
+        sink.add(file.node().inode_num, 1, DirectoryEntryType::DIR, b".")?;
+        *offset += 1;
+    }
+    if *offset == 1 {
+        sink.add(
+            file.name.entry.parent_or_self().node.inode_num,
+            2,
+            DirectoryEntryType::DIR,
+            b"..",
+        )?;
+        *offset += 1;
+    }
+    Ok(())
+}
+
 impl FileOps for MemoryDirectoryFile {
     fd_impl_directory!();
 
@@ -107,20 +132,9 @@ impl FileOps for MemoryDirectoryFile {
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();
+        emit_dotdot(file, sink, &mut offset)?;
+
         let mut readdir_position = self.readdir_position.lock();
-        if *offset == 0 {
-            sink.add(file.node().inode_num, 1, DirectoryEntryType::DIR, b".")?;
-            *offset += 1;
-        }
-        if *offset == 1 {
-            sink.add(
-                file.name.entry.parent_or_self().node.inode_num,
-                2,
-                DirectoryEntryType::DIR,
-                b"..",
-            )?;
-            *offset += 1;
-        }
         file.name.entry.get_children(|children| {
             for (name, maybe_entry) in children.range((readdir_position.clone(), Bound::Unbounded))
             {

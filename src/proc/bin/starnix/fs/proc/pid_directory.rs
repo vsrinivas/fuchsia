@@ -179,19 +179,7 @@ impl FileOps for FdDirectoryFileOps {
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();
-        if *offset == 0 {
-            sink.add(file.node().inode_num, 1, DirectoryEntryType::DIR, b".")?;
-            *offset += 1;
-        }
-        if *offset == 1 {
-            sink.add(
-                file.name.entry.parent_or_self().node.inode_num,
-                2,
-                DirectoryEntryType::DIR,
-                b"..",
-            )?;
-            *offset += 1;
-        }
+        emit_dotdot(file, sink, &mut offset)?;
 
         let mut fds = self.task.files.get_all_fds();
         fds.sort();
