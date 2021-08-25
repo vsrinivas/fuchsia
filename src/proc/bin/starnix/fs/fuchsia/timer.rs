@@ -139,7 +139,7 @@ impl FileOps for TimerFile {
             return error!(EAGAIN);
         }
 
-        let count = if interval > zx::Duration::default() {
+        let count: i64 = if interval > zx::Duration::default() {
             let elapsed_nanos = (now - deadline).into_nanos();
             // The number of times the timer has triggered is written to `data`.
             let num_intervals = elapsed_nanos / interval.into_nanos() + 1;
