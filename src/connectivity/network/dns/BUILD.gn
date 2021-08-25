@@ -96,6 +96,9 @@ fuchsia_test_package("dns-tests") {
   deps = [ "//src/connectivity/network/netstack:component-debug" ]
 }
 
+# NOTE(https://fxbug.dev/83213): This component is load bearing out of tree in
+# surprising ways. We can't remove its definition until that's no longer true.
+# See the bug for details.
 fuchsia_component("component") {
   component_name = "dns-resolver"
   manifest = "meta/dns-resolver.cmx"
