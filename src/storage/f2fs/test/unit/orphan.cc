@@ -26,7 +26,8 @@ TEST(OrphanInode, RecoverOrphanInode) {
 
   std::unique_ptr<F2fs> fs;
   MountOptions options{};
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   SbInfo &sbi = fs->GetSbInfo();
 
@@ -80,7 +81,7 @@ TEST(OrphanInode, RecoverOrphanInode) {
   unittest_lib::SuddenPowerOff(std::move(fs), &bc);
 
   // 4. Remount and recover orphan inodes
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   ASSERT_EQ(fs->GetSbInfo().n_orphans, static_cast<uint64_t>(0));
 

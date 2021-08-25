@@ -903,7 +903,8 @@ void CheckpointTestMain(uint32_t test) {
   std::unique_ptr<F2fs> fs;
 
   unittest_lib::MkfsOnFakeDev(&bc, kBlockCount);
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
   unittest_lib::CreateRoot(fs.get(), &root);

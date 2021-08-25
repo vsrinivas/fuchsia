@@ -16,6 +16,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <fuchsia/fs/llcpp/fidl.h>
+#include <lib/async-loop/default.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -85,16 +86,17 @@ class F2fs : public fs::ManagedVfs {
   F2fs(F2fs &&) = delete;
   F2fs &operator=(F2fs &&) = delete;
 
-  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, SuperBlock *sb,
+  explicit F2fs(async_dispatcher_t *dispatcher, std::unique_ptr<f2fs::Bcache> bc, SuperBlock *sb,
                 const MountOptions &mount_options);
 
   ~F2fs() override;
 
-  [[nodiscard]] static zx_status_t Create(std::unique_ptr<f2fs::Bcache> bc,
+  [[nodiscard]] static zx_status_t Create(async_dispatcher_t *dispatcher,
+                                          std::unique_ptr<f2fs::Bcache> bc,
                                           const MountOptions &options, std::unique_ptr<F2fs> *out);
 
   void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
-  void Shutdown(fs::Vfs::ShutdownCallback cb) final;
+  void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
 
   void SetQueryService(fbl::RefPtr<QueryService> svc) { query_svc_ = std::move(svc); }
   void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }

@@ -26,8 +26,9 @@
 
 namespace f2fs {
 
-F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, SuperBlock* sb, const MountOptions& mount_options)
-    : bc_(std::move(bc)), mount_options_(mount_options) {
+F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc, SuperBlock* sb,
+           const MountOptions& mount_options)
+    : fs::ManagedVfs(dispatcher), bc_(std::move(bc)), mount_options_(mount_options) {
   raw_sb_ = std::unique_ptr<SuperBlock>(sb);
 
   zx::event event;
@@ -43,8 +44,8 @@ F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, SuperBlock* sb, const MountOptions&
 
 F2fs::~F2fs() {}
 
-zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& options,
-                         std::unique_ptr<F2fs>* out) {
+zx_status_t F2fs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
+                         const MountOptions& options, std::unique_ptr<F2fs>* out) {
   SuperBlock* info;
 
   info = new SuperBlock();
@@ -52,7 +53,7 @@ zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& o
     return status;
   }
 
-  *out = std::unique_ptr<F2fs>(new F2fs(std::move(bc), info, options));
+  *out = std::unique_ptr<F2fs>(new F2fs(dispatcher, std::move(bc), info, options));
 
   if (zx_status_t status = (*out)->FillSuper(); status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to initialize fs." << status;
@@ -97,7 +98,8 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
   TRACE_DURATION("f2fs", "CreateFsAndRoot");
 
   std::unique_ptr<F2fs> fs;
-  if (zx_status_t status = F2fs::Create(std::move(bcache), mount_options, &fs); status != ZX_OK) {
+  if (zx_status_t status = F2fs::Create(dispatcher, std::move(bcache), mount_options, &fs);
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to create filesystem object " << status;
     return zx::error(status);
   }
@@ -110,7 +112,6 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
   }
 
   fs->SetUnmountCallback(std::move(on_unmount));
-  fs->SetDispatcher(dispatcher);
 
   fbl::RefPtr<fs::Vnode> export_root;
   switch (serve_layout) {
@@ -152,7 +153,7 @@ void Sync(SyncCallback closure) {
     closure(ZX_OK);
 }
 
-void F2fs::Shutdown(fs::Vfs::ShutdownCallback cb) {
+void F2fs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
     Sync([this, cb = std::move(cb)](zx_status_t) mutable {
       async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {

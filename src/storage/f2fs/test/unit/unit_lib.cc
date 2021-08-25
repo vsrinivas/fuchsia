@@ -25,9 +25,9 @@ void MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t blockCount, uint32_t bl
   ASSERT_EQ(mkfs.DoMkfs(), ZX_OK);
 }
 
-void MountWithOptions(MountOptions &options, std::unique_ptr<Bcache> *bc,
-                      std::unique_ptr<F2fs> *fs) {
-  ASSERT_EQ(F2fs::Create(std::move(*bc), options, fs), ZX_OK);
+void MountWithOptions(async_dispatcher_t *dispatcher, MountOptions &options,
+                      std::unique_ptr<Bcache> *bc, std::unique_ptr<F2fs> *fs) {
+  ASSERT_EQ(F2fs::Create(dispatcher, std::move(*bc), options, fs), ZX_OK);
 }
 
 void Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {

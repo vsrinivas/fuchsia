@@ -578,7 +578,7 @@ zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io::wire::FilesystemInfo *info) {
 
 zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   SbInfo &sbi = Vfs()->GetSbInfo();
-  uint64_t cur_version;
+  __UNUSED uint64_t cur_version;
   zx_status_t ret = 0;
   bool need_cp = false;
 #if 0  // porting needed

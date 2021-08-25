@@ -8,7 +8,8 @@
 namespace f2fs {
 
 f2fs_hash_t DentryHash(const char *name, int len) {
-  uint32_t hash, minor_hash;
+  uint32_t hash;
+  __UNUSED uint32_t minor_hash;
   f2fs_hash_t f2fs_hash;
   const char *p;
   uint32_t in[8], buf[4];

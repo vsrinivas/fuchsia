@@ -166,7 +166,8 @@ void MountTestMain(MountOptions &options, uint32_t test, uint32_t priv) {
   unittest_lib::MkfsOnFakeDev(&bc);
 
   std::unique_ptr<F2fs> fs;
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   switch (test) {
     case kMountVerifyTest:

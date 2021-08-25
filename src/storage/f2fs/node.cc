@@ -1417,7 +1417,7 @@ int NodeMgr::SyncNodePages(nid_t ino, WritebackControl *wbc) {
 zx_status_t NodeMgr::F2fsWriteNodePage(Page *page, WritebackControl *wbc) {
   SbInfo &sbi = fs_->GetSbInfo();
   nid_t nid;
-  uint32_t nofs;
+  __UNUSED uint32_t nofs;
   block_t new_addr;
   NodeInfo ni;
 
@@ -1900,7 +1900,7 @@ void NodeMgr::FlushNatEntries() {
     nid_t nid;
     RawNatEntry raw_ne;
     int offset = -1;
-    block_t old_blkaddr, new_blkaddr;
+    __UNUSED block_t old_blkaddr, new_blkaddr;
 
     ne = containerof(cur, NatEntry, list);
     nid = NatGetNid(ne);

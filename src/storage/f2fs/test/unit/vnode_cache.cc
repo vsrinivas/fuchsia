@@ -20,7 +20,8 @@ TEST(VnodeCache, Basic) {
   std::unique_ptr<F2fs> fs;
   MountOptions options{};
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
   unittest_lib::CreateRoot(fs.get(), &root);

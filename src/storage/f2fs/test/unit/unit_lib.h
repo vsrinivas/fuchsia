@@ -14,8 +14,8 @@ namespace unittest_lib {
 
 void MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t blockCount = 819200,
                    uint32_t blockSize = kDefaultSectorSize, bool btrim = true);
-void MountWithOptions(MountOptions &options, std::unique_ptr<Bcache> *bc,
-                      std::unique_ptr<F2fs> *fs);
+void MountWithOptions(async_dispatcher_t *dispatcher, MountOptions &options,
+                      std::unique_ptr<Bcache> *bc, std::unique_ptr<F2fs> *fs);
 void Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc);
 void SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc);
 

@@ -202,7 +202,7 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   Page *node_page = nullptr;
   block_t bidx;
   int i;
-  zx_status_t err = 0;
+  __UNUSED zx_status_t err = 0;
 
   sentry = Segmgr().GetSegEntry(segno);
   if (!TestValidBitmap(blkoff, reinterpret_cast<char *>(sentry->cur_valid_map)))

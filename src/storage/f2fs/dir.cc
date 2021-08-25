@@ -539,7 +539,7 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   }
 
   if (bit_pos == kNrDentryInBlock) {
-    loff_t page_offset;
+    __UNUSED loff_t page_offset;
     TruncateHole(page->index, page->index + 1);
     ClearPageDirtyForIo(page);
 #if 0  // porting needed

@@ -21,7 +21,8 @@ TEST(InlineDirTest, InlineDirCreation) {
   MountOptions options{};
   // Enable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 1), ZX_OK);
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
   unittest_lib::CreateRoot(fs.get(), &root);
@@ -47,7 +48,7 @@ TEST(InlineDirTest, InlineDirCreation) {
 
   // Disable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   unittest_lib::CreateRoot(fs.get(), &root);
   root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
@@ -84,7 +85,8 @@ TEST(InlineDirTest, InlineDirConvert) {
   MountOptions options{};
   // Enable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 1), ZX_OK);
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
   unittest_lib::CreateRoot(fs.get(), &root);
@@ -121,7 +123,7 @@ TEST(InlineDirTest, InlineDirConvert) {
 
   // Disable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   unittest_lib::CreateRoot(fs.get(), &root);
   root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
@@ -154,7 +156,8 @@ TEST(InlineDirTest, InlineDentryOps) {
   MountOptions options{};
   // Enable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 1), ZX_OK);
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
   unittest_lib::CreateRoot(fs.get(), &root);
@@ -224,7 +227,7 @@ TEST(InlineDirTest, InlineDentryOps) {
   unittest_lib::Unmount(std::move(fs), &bc);
 
   // Check dentry after remount
-  unittest_lib::MountWithOptions(options, &bc, &fs);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   unittest_lib::CreateRoot(fs.get(), &root);
   root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
