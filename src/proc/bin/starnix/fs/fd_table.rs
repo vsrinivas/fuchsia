@@ -61,6 +61,7 @@ impl FdTable {
         table.insert(fd, FdTableEntry::new(file, flags));
     }
 
+    #[cfg(test)]
     pub fn add(&self, file: FileHandle) -> Result<FdNumber, Errno> {
         self.add_with_flags(file, FdFlags::empty())
     }

@@ -253,7 +253,8 @@ pub fn sys_openat(
     mode: FileMode,
 ) -> Result<SyscallResult, Errno> {
     let file = open_file_at(&ctx.task, dir_fd, user_path, flags, mode)?;
-    Ok(ctx.task.files.add(file)?.into())
+    let fd_flags = if flags & O_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
+    Ok(ctx.task.files.add_with_flags(file, fd_flags)?.into())
 }
 
 pub fn sys_faccessat(
@@ -835,6 +836,7 @@ mod tests {
     use fuchsia_async as fasync;
     use std::sync::Arc;
 
+    use crate::mm::PAGE_SIZE;
     use crate::testing::*;
 
     #[fasync::run_singlethreaded(test)]
@@ -924,6 +926,31 @@ mod tests {
         sys_dup3(&ctx, oldfd, different_file_fd, FdFlags::CLOEXEC.bits())?;
         assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(different_file_fd).unwrap()));
 
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sys_open_cloexec() -> Result<(), Errno> {
+        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let path_addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        let path = b"data/testfile.txt\0";
+        ctx.task.mm.write_memory(path_addr, path)?;
+        match sys_openat(
+            &ctx,
+            FdNumber::AT_FDCWD,
+            UserCString::new(path_addr),
+            O_RDONLY | O_CLOEXEC,
+            FileMode::default(),
+        )? {
+            SyscallResult::Success(raw_fd) => {
+                let fd = FdNumber::from_raw(raw_fd as i32);
+                assert!(ctx.task.files.get_fd_flags(fd)?.contains(FdFlags::CLOEXEC));
+            }
+            _ => {
+                assert!(false);
+            }
+        }
         Ok(())
     }
 }
