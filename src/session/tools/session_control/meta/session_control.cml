@@ -4,14 +4,4 @@
         runner: "elf",
         binary: "bin/session_control",
     },
-    use: [
-        {
-            protocol: [
-                "fuchsia.session.ElementManager",
-                "fuchsia.session.Launcher",
-                "fuchsia.session.Restarter",
-            ],
-            from: "parent",
-        },
-    ],
 }
