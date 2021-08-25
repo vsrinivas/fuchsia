@@ -251,6 +251,7 @@ TEST_P(DirectoryTest, TestDirectoryReaddir) {
 
 TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
   const size_t kNumEntries = fs().GetTraits().is_slow ? 100 : 1000;
+  std::set<std::string> str;
 
   // Create a directory named GetPath("dir").c_str() with entries "00000", "00001" ... up to
   // kNumEntries.
@@ -262,6 +263,8 @@ TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
     char dirname[100];
     snprintf(dirname, 100, GetPath("dir/%05lu").c_str(), i);
     ASSERT_EQ(mkdir(dirname, 0755), 0);
+    snprintf(dirname, 100, "%05lu", i);
+    str.insert(dirname);
   }
 
   DIR* dir = opendir(GetPath("dir").c_str());
@@ -270,19 +273,18 @@ TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
   // Unlink all the entries as we read them.
   struct dirent* de;
   size_t num_seen = 0;
-  size_t i = 0;
   while ((de = readdir(dir)) != NULL) {
     if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
       // Ignore these entries
       continue;
     }
-    char dirname[100];
-    snprintf(dirname, 100, "%05lu", i++);
-    ASSERT_EQ(strcmp(de->d_name, dirname), 0) << "Unexpected dirent";
-    ASSERT_EQ(unlinkat(dirfd(dir), dirname, AT_REMOVEDIR), 0);
+    ASSERT_NE(str.find(de->d_name), str.end());
+    ASSERT_EQ(unlinkat(dirfd(dir), de->d_name, AT_REMOVEDIR), 0);
+    str.erase(de->d_name);
     num_seen++;
   }
 
+  ASSERT_EQ(str.empty(), true);
   ASSERT_EQ(num_seen, kNumEntries) << "Did not see all expected entries";
   ASSERT_EQ(closedir(dir), 0);
   ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0);
