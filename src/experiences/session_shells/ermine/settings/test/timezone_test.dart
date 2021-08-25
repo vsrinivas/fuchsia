@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:fidl_fuchsia_intl/fidl_async.dart' as fintl;
 import 'package:fidl_fuchsia_settings/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -24,7 +24,7 @@ void main() {
     when(intlSettingsProxy.ctrl).thenReturn(intlSettingsProxyController);
     when(intlSettingsProxy.watch())
         .thenAnswer((_) => Future<IntlSettings>.value(IntlSettings(
-              timeZoneId: TimeZoneId(id: response),
+              timeZoneId: fintl.TimeZoneId(id: response),
             )));
 
     TimeZone timeZone = TimeZone(
