@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 #include <align.h>
 #include <assert.h>
+#include <lib/console.h>
 #include <lib/root_resource_filter.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -449,3 +450,12 @@ void apic_io_debug(void) {
   Guard<SpinLock, IrqSave> guard{io_apic_lock::Get()};
   apic_io_debug_nolock();
 }
+
+static int cmd_ioapic(int argc, const cmd_args* argv, uint32_t flags) {
+  apic_io_debug();
+  return true;
+}
+
+STATIC_COMMAND_START
+STATIC_COMMAND("ioapic", "Print IO APIC descriptor information", &cmd_ioapic)
+STATIC_COMMAND_END(ioapic)
