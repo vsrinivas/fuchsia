@@ -1,0 +1,25 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite gt92xx_touch;
+
+using amlogic.platform.s905d2;
+using fuchsia.gpio;
+using fuchsia.i2c;
+
+primary node "i2c" {
+  fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_I2C_BUS_ID == fuchsia.i2c.BIND_I2C_BUS_ID.ASTRO_2;
+  fuchsia.BIND_I2C_ADDRESS == fuchsia.i2c.BIND_I2C_ADDRESS.GOODIX_TOUCH;
+}
+
+node "gpio-int" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == amlogic.platform.s905d2.GPIOZ_PIN_ID.PIN_4;  // GPIO_TOUCH_INTERRUPT
+}
+
+node "gpio-reset" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == amlogic.platform.s905d2.GPIOZ_PIN_ID.PIN_9;  // GPIO_TOUCH_RESET
+}

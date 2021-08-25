@@ -168,7 +168,10 @@ fn write_bind_template<'a>(bind_rules: BindRules<'a>) -> Result<String, Error> {
     Ok(output)
 }
 
-fn write_fragment_template<'a>(node: CompositeNode<'a>) -> Result<String, Error> {
+fn write_fragment_template<'a>(
+    device_name: &String,
+    node: CompositeNode<'a>,
+) -> Result<String, Error> {
     let mut output = String::new();
     let mut instructions_str = encode_to_string_v1(node.instructions)?;
     instructions_str.push_str(&encode_to_string_v1(vec![SymbolicInstructionInfo {
@@ -181,6 +184,7 @@ fn write_fragment_template<'a>(node: CompositeNode<'a>) -> Result<String, Error>
             include_str!("templates/fragment.template"),
             var_name = convert_to_var_name(&node.name),
             name = node.name,
+            device_name = device_name,
             instructions = instructions_str,
         ))
         .context("Failed to format output")?;
@@ -188,13 +192,22 @@ fn write_fragment_template<'a>(node: CompositeNode<'a>) -> Result<String, Error>
 }
 
 fn write_composite_bind_template<'a>(bind_rules: CompositeBindRules<'a>) -> Result<String, Error> {
-    let mut fragment_list =
-        format!("{}_fragment", convert_to_var_name(&bind_rules.primary_node.name));
-    let mut fragment_definition = write_fragment_template(bind_rules.primary_node)?;
+    let mut fragment_list = format!(
+        "{}_{}_fragment",
+        &bind_rules.device_name,
+        convert_to_var_name(&bind_rules.primary_node.name)
+    );
+    let mut fragment_definition =
+        write_fragment_template(&bind_rules.device_name, bind_rules.primary_node)?;
 
     for node in bind_rules.additional_nodes {
-        fragment_list.push_str(&format!(", {}_fragment", convert_to_var_name(&node.name)));
-        fragment_definition.push_str(&format!("\n{}", write_fragment_template(node)?));
+        fragment_list.push_str(&format!(
+            ", {}_{}_fragment",
+            &bind_rules.device_name,
+            convert_to_var_name(&node.name)
+        ));
+        fragment_definition
+            .push_str(&format!("\n{}", write_fragment_template(&bind_rules.device_name, node)?));
     }
 
     let mut output = String::new();

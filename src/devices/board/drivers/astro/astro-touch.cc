@@ -18,6 +18,8 @@
 
 #include "astro-gpios.h"
 #include "astro.h"
+#include "src/devices/board/drivers/astro/ft3x27-touch-bind.h"
+#include "src/devices/board/drivers/astro/gt92xx-touch-bind.h"
 
 namespace astro {
 
@@ -27,48 +29,6 @@ static const FocaltechMetadata device_info = {
 };
 static const device_metadata_t ft3x27_touch_metadata[] = {
     {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
-};
-
-// Composite binding rules for focaltech touch driver.
-const zx_bind_inst_t ft_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, ASTRO_I2C_2),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_FOCALTECH_TOUCH_ADDR),
-};
-const zx_bind_inst_t goodix_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, ASTRO_I2C_2),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_GOODIX_TOUCH_ADDR),
-};
-static const zx_bind_inst_t gpio_int_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_INTERRUPT),
-};
-static const zx_bind_inst_t gpio_reset_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_RESET),
-};
-static const device_fragment_part_t ft_i2c_fragment[] = {
-    {countof(ft_i2c_match), ft_i2c_match},
-};
-static const device_fragment_part_t goodix_i2c_fragment[] = {
-    {countof(goodix_i2c_match), goodix_i2c_match},
-};
-static const device_fragment_part_t gpio_int_fragment[] = {
-    {countof(gpio_int_match), gpio_int_match},
-};
-static const device_fragment_part_t gpio_reset_fragment[] = {
-    {countof(gpio_reset_match), gpio_reset_match},
-};
-static const device_fragment_t ft_fragments[] = {
-    {"i2c", countof(ft_i2c_fragment), ft_i2c_fragment},
-    {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
-    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
-};
-static const device_fragment_t goodix_fragments[] = {
-    {"i2c", countof(goodix_i2c_fragment), goodix_i2c_fragment},
-    {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
-    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
 };
 
 zx_status_t Astro::TouchInit() {
@@ -94,8 +54,8 @@ zx_status_t Astro::TouchInit() {
     const composite_device_desc_t comp_desc = {
         .props = props,
         .props_count = countof(props),
-        .fragments = goodix_fragments,
-        .fragments_count = countof(goodix_fragments),
+        .fragments = gt92xx_touch_fragments,
+        .fragments_count = countof(gt92xx_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = nullptr,
@@ -117,8 +77,8 @@ zx_status_t Astro::TouchInit() {
     const composite_device_desc_t comp_desc = {
         .props = props,
         .props_count = countof(props),
-        .fragments = ft_fragments,
-        .fragments_count = countof(ft_fragments),
+        .fragments = ft3x27_touch_fragments,
+        .fragments_count = countof(ft3x27_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = ft3x27_touch_metadata,

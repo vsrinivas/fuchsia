@@ -106,6 +106,28 @@ driver_bind_rules("astro-tee-bind") {
   ]
 }
 
+driver_bind_rules("ft3x27-touch-bind") {
+  rules = "bind/ft3x27-touch.bind"
+  header_output = "ft3x27-touch-bind.h"
+  bind_output = "ft3x27-touch-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
+driver_bind_rules("gt92xx-touch-bind") {
+  rules = "bind/gt92xx-touch.bind"
+  header_output = "gt92xx-touch-bind.h"
+  bind_output = "gt92xx-touch-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
 driver_module("astro-driver") {
   output_name = "astro"
   configs += [
@@ -151,6 +173,8 @@ driver_module("astro-driver") {
     ":astro-pwm-bind_header",
     ":astro-securemem-bind_header",
     ":astro-tee-bind_header",
+    ":ft3x27-touch-bind_header",
+    ":gt92xx-touch-bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
