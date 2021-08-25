@@ -1,6 +1,6 @@
 {
   "project_id": 2322225253,
-  "poll_rate_sec": 60,
+  "poll_rate_sec": 1800,
   "metrics": [
     {
       "selector": "bootstrap/driver_manager:root/bt-host/adapter/metrics/le:outgoing_connection_requests",

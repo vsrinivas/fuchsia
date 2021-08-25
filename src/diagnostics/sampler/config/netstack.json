@@ -123,6 +123,6 @@
             "selector": "netstack.cmx:Networking Stat Counters/IPv6AddressConfig:GlobalSLAACAndDHCPv6ManagedAddress"
         }
     ],
-    "poll_rate_sec": 60,
+    "poll_rate_sec": 600,
     "project_id": 1
 }

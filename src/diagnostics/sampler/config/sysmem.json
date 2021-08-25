@@ -1,6 +1,6 @@
 {
   "project_id": 3509424520,
-  "poll_rate_sec": 300,
+  "poll_rate_sec": 600,
   "metrics": [
     {
       "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:free_at_high_water_mark",

@@ -9,7 +9,7 @@
         args: [
             "detect",
             "--check-every",
-            "Minutes(2)",
+            "Minutes(8)",
         ],
     },
     use: [

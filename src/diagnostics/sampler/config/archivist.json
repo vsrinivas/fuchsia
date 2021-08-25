@@ -1,6 +1,6 @@
 {
   "project_id": 5,
-  "poll_rate_sec": 60,
+  "poll_rate_sec": 1800,
   "metrics": [
         {
       "selector": "bootstrap/archivist:root/archive_accessor_stats/all/inspect/batch_iterator/get_next:requests",

@@ -1,6 +1,6 @@
  {
    "project_id": 3676913920,
-   "poll_rate_sec": 60,
+   "poll_rate_sec": 600,
    "metrics": [
      {
       "selector": "bootstrap/driver_manager:root/ftl:block.read.count",
