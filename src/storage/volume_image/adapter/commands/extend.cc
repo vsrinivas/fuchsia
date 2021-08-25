@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/result.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -91,6 +92,7 @@ fit::result<void, std::string> Extend(const ExtendParams& params) {
     return fpromise::error("Failed to create temporary file at " + base +
                            ". More specifically: " + strerror(errno));
   }
+  auto cleanup = fit::defer([&]() { unlink(base.c_str()); });
 
   {
     // So writer is flushed.

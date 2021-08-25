@@ -454,14 +454,14 @@ int main(int argc, char** argv) {
       auto reader_or = storage::volume_image::FdReader::Create(input_path);
       std::string tmp_path = std::filesystem::temp_directory_path().generic_string() +
                              "/decompressed_sparse_fvm_XXXXXX";
-
       fbl::unique_fd created_file(mkstemp(tmp_path.data()));
-
       if (!created_file.is_valid()) {
         fprintf(stderr, "Failed to create temporary file for decompressing image. %s\n",
                 strerror(errno));
         return -1;
       }
+      auto cleanup = fit::defer([&]() { unlink(tmp_path.c_str()); });
+
       auto writer = storage::volume_image::FdWriter(std::move(created_file));
       auto decompress_or =
           storage::volume_image::FvmSparseDecompressImage(0, reader_or.value(), writer);
