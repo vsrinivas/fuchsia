@@ -1019,6 +1019,11 @@ void PreemptionState::FlushPending(Flush flush) {
     // flushing all pending reschedules.
     const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
     if ((pending_mask & current_cpu_mask) != 0 && (flush & FlushLocal) != 0) {
+      // Clear the local preempt pending flag before calling preempt.  Failure
+      // to do this can cause recursion during Scheduler::Preempt if any code
+      // (such as debug tracing code) attempts to disable and re-enable
+      // preemption during the scheduling operation.
+      preempts_pending_ &= ~current_cpu_mask;
       Scheduler::Preempt();
     } else if ((flush & FlushRemote) != 0) {
       // The current cpu is ignored by mp_reschedule if present in the mask.

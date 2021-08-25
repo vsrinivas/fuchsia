@@ -428,20 +428,53 @@ class PreemptionState {
     disable_counts_ += 1;
   }
 
-  // PreemptReenable() decrements the preempt disable counter and flushes a
-  // pending local preemption if enabled.
-  //
-  // It is the responsibility of the caller to correctly handle flushing when
-  // passing flush_pending=false. Disabling automatic flushing is strongly
-  // discouraged outside of top-level interrupt glue and early threading setup.
-  void PreemptReenable(bool flush_pending = true) {
+  // PreemptReenable() decrements the preempt disable counter and flushes any
+  // pending local preemption operation.  Callers must ensure that they are
+  // calling from a context where blocking is allowed, as the call may result in
+  // the immediate preemption of the calling thread.
+  void PreemptReenable() {
     ASSERT(PreemptDisableCount() > 0);
-    const uint32_t new_count = disable_counts_ -= 1;
 
-    if (new_count == 0 && flush_pending) {
+    const uint32_t new_count = disable_counts_ -= 1;
+    if (new_count == 0) {
       DEBUG_ASSERT(!arch_blocking_disallowed());
       FlushPending(FlushLocal);
     }
+  }
+
+  // PreemptReenableDelayFlush() decrements the preempt disable counter, but
+  // deliberately does _not_ flush any pending local preemption operation.
+  // Instead, if local preemption has become enabled again after the count
+  // drops, and the local pending bit is set, the method will clear the bit and
+  // return true.  Otherwise, it will return false.
+  //
+  // This method may only be called when interrupts are disabled and blocking is
+  // not allowed.
+  //
+  // Callers of this method are "taking" ownership of the responsibility to
+  // ensure that preemption on the local CPU takes place in the near future
+  // after the call if the method returns true.
+  //
+  // Use of this method is strongly discouraged outside of top-level interrupt
+  // glue and early threading setup.
+  //
+  // TODO(johngro): Consider replacing the bool return type with a move-only
+  // RAII type which wraps the bool, and ensures that preemption event _must_
+  // happen, either by having the user call a method on the object to manually
+  // force the preemption event, or when the object destructs.
+  [[nodiscard]] bool PreemptReenableDelayFlush() {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(arch_blocking_disallowed());
+    ASSERT(PreemptDisableCount() > 0);
+
+    const uint32_t new_count = disable_counts_ -= 1;
+    if (new_count == 0) {
+      const cpu_mask_t local_mask = cpu_num_to_mask(arch_curr_cpu_num());
+      const cpu_mask_t prev_mask = preempts_pending_.fetch_and(~local_mask);
+      return (local_mask & prev_mask) != 0;
+    }
+
+    return false;
   }
 
   // EagerReschedDisable() increments the eager resched disable counter for the

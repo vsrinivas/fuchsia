@@ -514,8 +514,9 @@ void x86_exception_handler(iframe_t* frame) {
     arch_iframe_process_pending_signals(frame);
   }
 
-  if (do_preempt)
+  if (do_preempt) {
     Thread::Current::Preempt();
+  }
 
   DEBUG_ASSERT_MSG(arch_ints_disabled(),
                    "ints disabled on way out of exception, vector %" PRIu64 " IP %#" PRIx64 "\n",
