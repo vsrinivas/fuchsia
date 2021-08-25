@@ -35,6 +35,7 @@ fn make_zbi_args(zbi_path: &str, outdir_path: &str) -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::path::PathBuf;
 
     #[test]
@@ -43,7 +44,12 @@ mod tests {
         assert_eq!(args, ["--extract", "--output-dir", "output/here/bootfs", "i/am/the/zbi",]);
     }
 
+    // These tests must be ran serially, because otherwise they will affect each
+    // other through process spawming. If a test spawns a process while the
+    // other test has an open file, then the spawned process will get a copy of
+    // the open file descriptor, preventing the other test from executing it.
     #[test]
+    #[serial]
     fn test_extract_no_args() {
         let result =
             extract(ExtractArgs { outdir: PathBuf::from("."), zbi: PathBuf::from("invalid_path") });

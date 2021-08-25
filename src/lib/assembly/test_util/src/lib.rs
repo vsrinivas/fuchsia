@@ -29,10 +29,16 @@ pub fn generate_fake_tool(path: impl AsRef<Path>, contents: impl AsRef<str>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::process::Command;
     use tempfile::TempDir;
 
+    // These tests must be ran serially, because otherwise they will affect each
+    // other through process spawming. If a test spawns a process while the
+    // other test has an open file, then the spawned process will get a copy of
+    // the open file descriptor, preventing the other test from executing it.
     #[test]
+    #[serial]
     fn tool_nop() {
         let dir = TempDir::new().unwrap();
         let tool_path = dir.path().join("mytool.sh");
@@ -42,6 +48,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tool_with_error() {
         let dir = TempDir::new().unwrap();
         let tool_path = dir.path().join("mytool.sh");

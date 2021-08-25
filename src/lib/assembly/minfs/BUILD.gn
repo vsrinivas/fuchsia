@@ -24,6 +24,7 @@ if (is_host) {
 
     test_deps = [
       "//src/lib/assembly/test_util",
+      "//third_party/rust_crates:serial_test",
       "//third_party/rust_crates:tempfile",
     ]
   }

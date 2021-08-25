@@ -47,11 +47,17 @@ mod tests {
     use crate::config::{BlobFSConfig, ProductConfig};
     use assembly_test_util::generate_fake_tool_nop;
     use fuchsia_hash::Hash;
+    use serial_test::serial;
     use std::collections::BTreeMap;
     use std::str::FromStr;
     use tempfile::tempdir;
 
+    // These tests must be ran serially, because otherwise they will affect each
+    // other through process spawming. If a test spawns a process while the
+    // other test has an open file, then the spawned process will get a copy of
+    // the open file descriptor, preventing the other test from executing it.
     #[test]
+    #[serial]
     fn construct() {
         let dir = tempdir().unwrap();
         let product_config = ProductConfig::default();

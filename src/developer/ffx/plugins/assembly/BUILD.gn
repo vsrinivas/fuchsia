@@ -53,5 +53,6 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/test_keys",
     "//src/lib/assembly/test_util",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:serial_test",
   ]
 }

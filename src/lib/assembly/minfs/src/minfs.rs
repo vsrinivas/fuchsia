@@ -40,9 +40,15 @@ impl MinFSBuilder {
 mod tests {
     use super::*;
     use assembly_test_util::generate_fake_tool_nop;
+    use serial_test::serial;
     use tempfile::TempDir;
 
+    // These tests must be ran serially, because otherwise they will affect each
+    // other through process spawming. If a test spawns a process while the
+    // other test has an open file, then the spawned process will get a copy of
+    // the open file descriptor, preventing the other test from executing it.
     #[test]
+    #[serial]
     fn build_args() {
         let dir = TempDir::new().unwrap();
         let tool_path = dir.path().join("minfs.sh");
@@ -58,6 +64,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn build() {
         let dir = TempDir::new().unwrap();
         let tool_path = dir.path().join("minfs.sh");

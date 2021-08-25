@@ -133,6 +133,7 @@ fn build_blobfs_args(
 mod tests {
     use super::*;
     use assembly_test_util::generate_fake_tool_nop;
+    use serial_test::serial;
     use std::io::Write;
     use tempfile::{NamedTempFile, TempDir};
 
@@ -184,7 +185,12 @@ mod tests {
         );
     }
 
+    // These tests must be ran serially, because otherwise they will affect each
+    // other through process spawming. If a test spawns a process while the
+    // other test has an open file, then the spawned process will get a copy of
+    // the open file descriptor, preventing the other test from executing it.
     #[test]
+    #[serial]
     fn blobfs_builder() {
         // Prepare a temporary directory where the intermediate files as well
         // as the input and output files will go.
