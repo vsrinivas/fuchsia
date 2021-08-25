@@ -21,10 +21,14 @@ protocol/member fuchsia.ui.input3/Keyboard.AddListener(fuchsia.ui.views/ViewRef 
 protocol fuchsia.ui.input3/Keyboard
 protocol/member fuchsia.ui.input3/KeyboardListener.OnKeyEvent(fuchsia.ui.input3/KeyEvent event) -> (fuchsia.ui.input3/KeyEventStatus status)
 protocol fuchsia.ui.input3/KeyboardListener
+bits/member fuchsia.ui.input3/LockState.CAPS_LOCK 1
+bits/member fuchsia.ui.input3/LockState.NUM_LOCK 2
+bits/member fuchsia.ui.input3/LockState.SCROLL_LOCK 4
+flexible bits fuchsia.ui.input3/LockState uint64
 bits/member fuchsia.ui.input3/Modifiers.CAPS_LOCK 1
 bits/member fuchsia.ui.input3/Modifiers.NUM_LOCK 2
 bits/member fuchsia.ui.input3/Modifiers.SCROLL_LOCK 4
-strict bits fuchsia.ui.input3/Modifiers uint64
+flexible bits fuchsia.ui.input3/Modifiers uint64
 enum/member fuchsia.ui.input3/NonPrintableKey.BACKSPACE 65
 enum/member fuchsia.ui.input3/NonPrintableKey.ENTER 49
 enum/member fuchsia.ui.input3/NonPrintableKey.TAB 50

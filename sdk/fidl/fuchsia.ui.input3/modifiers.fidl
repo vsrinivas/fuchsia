@@ -4,16 +4,41 @@
 library fuchsia.ui.input3;
 
 /// Modifiers are special keys that modify the purpose or the function
-/// of other keys when used in combination with them.
-type Modifiers = strict bits : uint64 {
-    /// Applies when the `CAPS_LOCK` modifier is locked.
+/// of other keys when used in combination with them.  In the Modifiers type,
+/// a bit is set if the specific modifier key is actuated (held down),
+/// irrespective of whether the modifier is has an associated lock state or not.
+type Modifiers = flexible bits : uint64 {
+    /// Applies when the `CAPS_LOCK` modifier is actuated.
     CAPS_LOCK = 0x00000001;
-    /// Applies when the `NUM_LOCK` modifier is locked.
+    /// Applies when the `NUM_LOCK` modifier is actuated.
     NUM_LOCK = 0x00000002;
-    /// Applies when the `SCROLL_LOCK` modifier is locked.
+    /// Applies when the `SCROLL_LOCK` modifier is actuated.
     SCROLL_LOCK = 0x00000004;
 
 // TODO: Define additional modifiers as needed.
 // SHIFT, CONTROL, ALT, META
 // ALT_GRAPH, FUNCTION, FUNCTION_LOCK, SYMBOL, SYMBOL_LOCK
+};
+
+/// Lock state reports whether the lock is active for the keys which have a lock
+/// state (need to be pressed once to activate, and one more time to deactivate).
+/// A set bit denotes active lock state.
+type LockState = flexible bits : uint64 {
+    /// Applies when the `CAPS_LOCK` modifier is locked.
+    ///
+    /// Users should bear in mind that the effect of `CAPS_LOCK` is limited to
+    /// alphabetic keys (not even *alphanumerics*) mainly.
+    ///
+    /// For example, pressing `a` on a US QWERTY keyboard while `CAPS_LOCK`
+    /// state is locked results in the key meaning `A`, just as if the Shift modifier
+    /// was used.  However, pressing `[` when `CAPS_LOCK` is locked gives `[`,
+    /// even though Shift+`[` gives `{`.
+    ///
+    /// The position of alphabetic keys may vary depending on the keymap in
+    /// current use too.
+    CAPS_LOCK = 0x00000001;
+    /// Applies when the `NUM_LOCK` modifier is locked.
+    NUM_LOCK = 0x00000002;
+    /// Applies when the `SCROLL_LOCK` modifier is locked.
+    SCROLL_LOCK = 0x00000004;
 };
