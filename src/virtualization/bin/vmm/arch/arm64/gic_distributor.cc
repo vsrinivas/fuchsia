@@ -11,6 +11,7 @@
 #include <lib/zbitl/image.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/status.h>
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
@@ -186,7 +187,7 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& 
   fuchsia::sysinfo::InterruptControllerInfoPtr info;
   zx_status_t status = get_interrupt_controller_info(&info);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get GIC version " << status;
+    FX_LOGS(ERROR) << "Failed to get GIC version " << zx_status_get_string(status);
     return status;
   }
   if (info->type != fuchsia::sysinfo::InterruptControllerType::GIC_V2 &&
@@ -204,7 +205,7 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& 
     zx::resource resource;
     zx_status_t status = get_irq_resource(&resource);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to get root resource " << status;
+      FX_LOGS(ERROR) << "Failed to get root resource " << zx_status_get_string(status);
       return status;
     }
     for (const uint32_t& vector : interrupts) {
@@ -215,7 +216,8 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& 
       zx::interrupt interrupt;
       status = zx::interrupt::create(resource, vector, ZX_INTERRUPT_MODE_DEFAULT, &interrupt);
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to create interrupt " << vector << " " << status;
+        FX_LOGS(ERROR) << "Failed to create interrupt " << vector << " "
+                       << zx_status_get_string(status);
         return status;
       }
       interrupts_.try_emplace(vector, std::move(interrupt));
@@ -298,7 +300,7 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
     }
     zx_status_t status = it->second.bind_vcpu(vcpus[i]->object(), 0);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to bind VCPU " << status;
+      FX_LOGS(ERROR) << "Failed to bind VCPU " << zx_status_get_string(status);
       return status;
     }
     // Only bind the interrupt to the first valid VCPU.

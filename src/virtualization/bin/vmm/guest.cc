@@ -5,18 +5,9 @@
 #include "src/virtualization/bin/vmm/guest.h"
 
 #include <fcntl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/channel.h>
-#include <limits.h>
-#include <string.h>
-#include <unistd.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
+#include <zircon/status.h>
 #include <zircon/syscalls/hypervisor.h>
-#include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -53,12 +44,12 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
   zx::resource hypervisor_resource;
   zx_status_t status = get_hypervisor_resource(&hypervisor_resource);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get hypervisor resource " << status;
+    FX_LOGS(ERROR) << "Failed to get hypervisor resource " << zx_status_get_string(status);
     return status;
   }
   status = zx::guest::create(hypervisor_resource, 0, &guest_, &vmar_);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create guest " << status;
+    FX_LOGS(ERROR) << "Failed to create guest " << zx_status_get_string(status);
     return status;
   }
 
@@ -70,7 +61,7 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
       case fuchsia::virtualization::MemoryPolicy::GUEST_CACHED:
         status = zx::vmo::create(spec.size, 0, &vmo);
         if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to create VMO " << status;
+          FX_LOGS(ERROR) << "Failed to create VMO " << zx_status_get_string(status);
           return status;
         }
         break;
@@ -79,18 +70,18 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
         if (!mmio_resource) {
           status = get_mmio_resource(&mmio_resource);
           if (status != ZX_OK) {
-            FX_LOGS(ERROR) << "Failed to get mmio resource " << status;
+            FX_LOGS(ERROR) << "Failed to get mmio resource " << zx_status_get_string(status);
             return status;
           }
         }
         status = zx::vmo::create_physical(mmio_resource, spec.base, spec.size, &vmo);
         if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to create physical VMO " << status;
+          FX_LOGS(ERROR) << "Failed to create physical VMO " << zx_status_get_string(status);
           return status;
         }
         status = vmo.set_cache_policy(cache_policy(spec.policy));
         if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to set cache policy on VMO " << status;
+          FX_LOGS(ERROR) << "Failed to set cache policy on VMO " << zx_status_get_string(status);
           return status;
         }
         break;
@@ -102,13 +93,13 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
     if (!vmex_resource) {
       status = get_vmex_resource(&vmex_resource);
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to get VMEX resource " << status;
+        FX_LOGS(ERROR) << "Failed to get VMEX resource " << zx_status_get_string(status);
         return status;
       }
     }
     status = vmo.replace_as_executable(vmex_resource, &vmo);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to make VMO executable " << status;
+      FX_LOGS(ERROR) << "Failed to make VMO executable " << zx_status_get_string(status);
       return status;
     }
 
@@ -117,13 +108,14 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
                            ZX_VM_REQUIRE_NON_RESIZABLE,
                        spec.base, vmo, 0, spec.size, &addr);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to map guest physical memory " << status;
+      FX_LOGS(ERROR) << "Failed to map guest physical memory " << zx_status_get_string(status);
       return status;
     }
     if (!phys_mem_.vmo() && spec.policy == fuchsia::virtualization::MemoryPolicy::GUEST_CACHED) {
       status = phys_mem_.Init(std::move(vmo));
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to initialize guest physical memory " << status;
+        FX_LOGS(ERROR) << "Failed to initialize guest physical memory "
+                       << zx_status_get_string(status);
         return status;
       }
     }
@@ -146,8 +138,8 @@ zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size, uint
 
 zx_status_t Guest::CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar) {
   uintptr_t guest_addr;
-  return vmar_.allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC, addr, size,
-                        vmar, &guest_addr);
+  return vmar_.allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC, addr, size, vmar,
+                        &guest_addr);
 }
 
 zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr,
