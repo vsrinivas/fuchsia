@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"debug/elf"
+	"encoding/binary"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -51,7 +53,7 @@ var (
 	skipFunctions     bool
 	outputDir         string
 	llvmCov           string
-	llvmProfdata      string
+	llvmProfdata      flagmisc.StringsValue
 	outputFormat      string
 	jsonOutput        string
 	reportDir         string
@@ -61,6 +63,7 @@ var (
 	compilationDir    string
 	pathRemapping     flagmisc.StringsValue
 	srcFiles          flagmisc.StringsValue
+	numThreads        int
 	jobs              int
 )
 
@@ -78,7 +81,7 @@ func init() {
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
 	flag.BoolVar(&skipFunctions, "skip-functions", true, "if set, the coverage report enabled by the `report-dir` flag will not include function coverage")
 	flag.StringVar(&outputDir, "output-dir", "", "the directory to output results to")
-	flag.StringVar(&llvmProfdata, "llvm-profdata", "llvm-profdata", "the location of llvm-profdata")
+	flag.Var(&llvmProfdata, "llvm-profdata", "the location of llvm-profdata")
 	flag.StringVar(&llvmCov, "llvm-cov", "llvm-cov", "the location of llvm-cov")
 	flag.StringVar(&outputFormat, "format", "html", "the output format used for llvm-cov")
 	flag.StringVar(&jsonOutput, "json-output", "", "outputs profile information to the specified file")
@@ -90,6 +93,7 @@ func init() {
 	flag.Var(&pathRemapping, "path-equivalence", "<from>,<to> remapping of source file paths passed through to llvm-cov")
 	flag.Var(&srcFiles, "src-file", "path to a source file to generate coverage for. If provided, only coverage for these files will be generated.\n"+
 		"Multiple files can be specified with multiple instances of this flag.")
+	flag.IntVar(&numThreads, "num-threads", 0, "number of processing threads")
 	flag.IntVar(&jobs, "jobs", runtime.NumCPU(), "number of parallel jobs")
 }
 
@@ -205,6 +209,32 @@ func (a Action) String() string {
 	return buf.String()
 }
 
+const instrProfRawMagic = uint64(255)<<56 | uint64('l')<<48 |
+	uint64('p')<<40 | uint64('r')<<32 | uint64('o')<<24 |
+	uint64('f')<<16 | uint64('r')<<8 | uint64(129)
+
+func getVersion(filepath string) (uint64, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+	var magic uint64
+	err = binary.Read(file, binary.LittleEndian, &magic)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read magic: %w", err)
+	}
+	if magic != instrProfRawMagic {
+		return 0, fmt.Errorf("invalid magic: %x", magic)
+	}
+	var version uint64
+	err = binary.Read(file, binary.LittleEndian, &version)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read version: %w", err)
+	}
+	return version, nil
+}
+
 func isInstrumented(filepath string) bool {
 	sections := []string{"__llvm_covmap", "__llvm_prf_names"}
 	file, err := os.Open(filepath)
@@ -257,27 +287,91 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		defer os.RemoveAll(tempDir)
 	}
 
-	// Make the llvm-profdata response file
-	profdataFile, err := os.Create(filepath.Join(tempDir, "llvm-profdata.rsp"))
-	if err != nil {
-		return fmt.Errorf("creating llvm-profdata.rsp file: %w", err)
+	// Partition raw profiles by version
+	type partition struct {
+		tool     string
+		profiles []string
 	}
-	for _, entry := range entries {
-		fmt.Fprintf(profdataFile, "%s\n", entry.Profile)
+	partitions := make(map[uint64]*partition)
+	for _, profdata := range llvmProfdata {
+		var version uint64
+		s := strings.SplitN(profdata, "=", 2)
+		if len(s) > 1 {
+			version, err = strconv.ParseUint(s[1], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid version number %q: %w", s[1], err)
+			}
+		}
+		partitions[version] = &partition{tool: s[0]}
 	}
-	profdataFile.Close()
+	if _, ok := partitions[0]; !ok {
+		return fmt.Errorf("missing default llvm-profdata tool path")
+	}
 
-	// Merge all raw profiles
+	for _, entry := range entries {
+		version, err := getVersion(entry.Profile)
+		if err != nil {
+			return fmt.Errorf("cannot get version from profile %q: %w", entry.Profile, err)
+		}
+		partition, ok := partitions[version]
+		if !ok {
+			partition = partitions[0]
+		}
+		partition.profiles = append(partition.profiles, entry.Profile)
+	}
+
+	profdataFiles := []string{}
+	for version, partition := range partitions {
+		if len(partition.profiles) == 0 {
+			continue
+		}
+
+		// Make the llvm-profdata response file
+		profdataFile, err := os.Create(filepath.Join(tempDir, "llvm-profdata.rsp"))
+		if err != nil {
+			return fmt.Errorf("creating llvm-profdata.rsp file: %w", err)
+		}
+
+		for _, profile := range partition.profiles {
+			fmt.Fprintf(profdataFile, "%s\n", profile)
+		}
+		profdataFile.Close()
+
+		// Merge all raw profiles
+		mergedFile := filepath.Join(tempDir, fmt.Sprintf("merged%d.profdata", version))
+		args := []string{
+			"merge",
+			"--failure-mode=all",
+			"--sparse",
+			"--output", mergedFile,
+		}
+		if numThreads != 0 {
+			args = append(args, "--num-threads", strconv.Itoa(numThreads))
+		}
+		args = append(args, "@"+profdataFile.Name())
+		mergeCmd := Action{Path: partition.tool, Args: args}
+		data, err := mergeCmd.Run(ctx)
+		if err != nil {
+			return fmt.Errorf("%s failed with %v:\n%s", mergeCmd.String(), err, string(data))
+		}
+		profdataFiles = append(profdataFiles, mergedFile)
+	}
+
 	mergedFile := filepath.Join(tempDir, "merged.profdata")
-	mergeCmd := Action{Path: llvmProfdata, Args: []string{
+	args := []string{
 		"merge",
-		"-failure-mode=all",
-		"-output", mergedFile,
-		"@" + profdataFile.Name(),
-	}}
+		"--failure-mode=all",
+		"--sparse",
+		"--output", mergedFile,
+	}
+	if numThreads != 0 {
+		args = append(args, "--num-threads", strconv.Itoa(numThreads))
+	}
+	args = append(args, profdataFiles...)
+	mergeCmd := Action{Path: partitions[0].tool, Args: args}
 	data, err := mergeCmd.Run(ctx)
 	if err != nil {
-		return fmt.Errorf("%v:\n%s", err, string(data))
+		return fmt.Errorf("%s failed with %v:\n%s", mergeCmd.String(), err, string(data))
 	}
 
 	// Gather the set of modules and coverage files
