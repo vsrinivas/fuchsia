@@ -543,6 +543,21 @@ if (is_kernel) {
     ]
   }
 
+  toolchain_utils_action("validate-kernel-symbols") {
+    visibility = [ ":*" ]
+    inputs = [ "$root_out_dir/zircon.elf" ]
+    outputs = [ "$target_gen_dir/$target_name.stamp" ]
+    script = "//zircon/kernel/scripts/validate-kernel-symbols.py"
+    utils = [ "nm" ]
+    deps = [
+      ":zircon",
+      ":zircon.elf.rsp",
+    ]
+    sources = [ zircon_elf_rspfile ]
+    depfile = "$target_gen_dir/$target_name.d"
+    args = rebase_path(sources + outputs + [ depfile ], root_build_dir)
+  }
+
   # Link the final kernel image layout including the extracted raw binary
   # and the generated fixups.
   executable("image") {
@@ -560,6 +575,16 @@ if (is_kernel) {
       ":zircon.elf.rsp",
       "//zircon/kernel/lib/version:headers",
     ]
+
+    # TODO(fxbug.dev/27083): This dependency is conditional because when built
+    # with GCC BootCpuidIo uses a function scoped static requiring dynamic
+    # initialization, which won't pass symbol validation. Once fxbug.dev/27083
+    # is fixed, the dynamic initialization can be removed and this dependency
+    # can be made unconditional.
+    if (!is_gcc) {
+      deps += [ ":validate-kernel-symbols" ]
+    }
+
     sources = [ "arch/$zircon_cpu/image.S" ]
 
     # kernel-image.inc includes this via .incbin, which doesn't get automatic
