@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, format_err, Error};
-use fidl::endpoints::{create_endpoints, create_request_stream};
-use fidl_fuchsia_auth::{
-    AuthenticationContextProviderMarker, AuthenticationContextProviderRequest,
-};
+use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_identity_account::{
     AccountManagerMarker, AccountManagerProxy, AccountProxy, Error as ApiError, Lifetime, Scenario,
     ThreatScenario,
@@ -17,7 +14,6 @@ use fuchsia_component::client::{launch, App};
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_component::server::{NestedEnvironment, ServiceFs};
 use fuchsia_zircon as zx;
-use futures::future::join;
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use std::ops::Deref;
@@ -64,45 +60,6 @@ async fn provision_new_account(
         .provision_new_account(lifetime, auth_mechanism_id)
         .await?
         .map_err(|error| format_err!("ProvisionNewAccount returned error: {:?}", error))
-}
-
-/// Calls provision_from_auth_provider on the supplied account_manager using "dev_auth_provider",
-/// mocks out the UI context, returning an error on any non-OK responses, or the account ID on
-/// success. This requires the account manager to run the dev_auth_provider. See the
-/// `account_manager` package for more information on how that is configured.
-async fn provision_account_from_dev_auth_provider(
-    account_manager: &AccountManagerProxy,
-) -> Result<LocalAccountId, Error> {
-    let (acp_client_end, mut acp_request_stream) =
-        create_request_stream::<AuthenticationContextProviderMarker>()
-            .expect("failed opening channel");
-
-    // This async function mocks out the auth context provider channel, although it supplies no data
-    // for the test.
-    let serve_fn = async move {
-        let request = acp_request_stream
-            .try_next()
-            .await
-            .expect("AuthenticationContextProvider failed receiving message");
-        match request {
-            Some(AuthenticationContextProviderRequest::GetAuthenticationUiContext { .. }) => Ok(()),
-            None => Err(format_err!("AuthenticationContextProvider channel closed unexpectedly")),
-        }
-    };
-
-    let (serve_result, provision_result) = join(
-        serve_fn,
-        account_manager.provision_from_auth_provider(
-            acp_client_end,
-            "dev_auth_provider",
-            Lifetime::Persistent,
-            None,
-        ),
-    )
-    .await;
-    serve_result?;
-    provision_result?
-        .map_err(|error| format_err!("ProvisionFromAuthProvider returned error: {:?}", error))
 }
 
 /// A proxy to an account manager running in a nested environment.
@@ -238,7 +195,7 @@ async fn test_provision_then_lock_then_unlock_account() -> Result<(), Error> {
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
-    assert!(account_proxy.get_account_name().await.is_ok());
+    assert_eq!(account_proxy.get_lifetime().await.unwrap(), Lifetime::Persistent);
     Ok(())
 }
 
@@ -268,7 +225,7 @@ async fn test_unlock_account() -> Result<(), Error> {
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
-    assert!(account_proxy.get_account_name().await.is_ok());
+    assert_eq!(account_proxy.get_lifetime().await.unwrap(), Lifetime::Persistent);
     Ok(())
 }
 
@@ -327,35 +284,6 @@ async fn test_unlock_account_fail_authentication() -> Result<(), Error> {
         account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
         Err(ApiError::FailedAuthentication)
     );
-    Ok(())
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_provision_new_account_from_auth_provider() -> Result<(), Error> {
-    let account_manager = create_account_manager(None)?;
-
-    // Verify we initially have no accounts.
-    assert_eq!(account_manager.get_account_ids().await?, vec![]);
-
-    // Provision a new account.
-    let account_1 = provision_account_from_dev_auth_provider(&account_manager).await?;
-    assert_eq!(account_manager.get_account_ids().await?, vec![account_1]);
-
-    // Provision a second new account and verify it has a different ID.
-    let account_2 = provision_account_from_dev_auth_provider(&account_manager).await?;
-    assert_ne!(account_1, account_2);
-
-    let account_ids = account_manager.get_account_ids().await?;
-    assert_eq!(account_ids.len(), 2);
-    assert!(account_ids.contains(&account_1));
-    assert!(account_ids.contains(&account_2));
-
-    // Auth state is not yet supported
-    assert_eq!(
-        account_manager.get_account_auth_states(&mut TEST_SCENARIO.clone()).await?,
-        Err(ApiError::UnsupportedOperation)
-    );
-
     Ok(())
 }
 

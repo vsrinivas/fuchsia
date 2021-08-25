@@ -64,11 +64,6 @@ impl AccountManager {
                 let mut resp = Err(Error::UnsupportedOperation);
                 responder.send(&mut resp)
             }
-            _ => {
-                // Avoid compile-breaking when we update the FIDL protocol
-                // definition for now.
-                unimplemented!();
-            }
         }
     }
 }

@@ -78,36 +78,6 @@ protocol AccountManager {
         force bool;
     }) -> (struct {}) error Error;
 
-    /// Adds a Fuchsia account to the current device based on authenticating
-    /// to a service provider (such as Google). If the service provider account
-    /// is not already a recovery account for any Fuchsia account, a new Fuchsia
-    /// account will be created with its recovery account set to the service
-    /// provider account. If a storage unlock-capable authentication mechanism
-    /// is provided, a single enrollment will be created of that mecahnism.
-    ///
-    /// `auth_context_provider` An `AuthenticationContextProvider` capable of
-    ///                         supplying UI contexts used for interactive
-    ///                         authentication
-    /// `auth_provider_type` A unique identifier for an installed `AuthProvider`
-    ///                      that should be used to authenticate with the
-    ///                      service provider
-    /// `lifetime` The lifetime of the account
-    /// `auth_mechanism_id` An `AuthMechanismId` for a storage
-    ///                     unlock-capable authentication mechanism. If
-    ///                     provided, a single enrollment of that
-    ///                     mechanism will be created for storage
-    ///                     unlock.
-    ///
-    /// Returns: `account_id` The identifier of the newly added account
-    ProvisionFromAuthProvider(resource struct {
-        auth_context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
-        auth_provider_type string:MAX_AUTH_PROVIDER_TYPE_SIZE;
-        lifetime Lifetime;
-        auth_mechanism_id AuthMechanismId:optional;
-    }) -> (struct {
-        account_id LocalAccountId;
-    }) error Error;
-
     /// Adds a new, initially empty, Fuchsia account to the current device. If a
     /// storage unlock-capable authentication mechanism is provided, a single
     /// enrollment will be created of that mecahnism.

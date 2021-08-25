@@ -80,13 +80,6 @@ protocol Account {
     // Note: a LocalAccountID accessor method may be added if and when the
     // first valid use case arrives.
 
-    /// Returns a human readable name for the account. Account names are set by
-    /// a human and are not guaranteed to be meaningful or unique, even among
-    /// the accounts on a single device.
-    GetAccountName() -> (struct {
-        name string:MAX_NAME_SIZE;
-    });
-
     /// Returns the account's lifetime.
     GetLifetime() -> (struct {
         lifetime Lifetime;
@@ -121,25 +114,6 @@ protocol Account {
     }) -> (struct {}) error Error;
 
     // TODO(fxbug.dev/563): Add methods to create, delete, and manage personae.
-
-    /// Returns the service provider account that can be used to access the
-    /// Fuchsia account if more direct methods of authentication are not
-    /// available, provided such an account exists.
-    ///
-    /// Returns: The `ServiceProviderAccount` used for recovery if one exists
-    GetRecoveryAccount() -> (struct {
-        account box<fuchsia.auth.ServiceProviderAccount>;
-    }) error Error;
-
-    /// Sets the service provider account that can be used to access the Fuchsia
-    /// account if more direct methods of authentication are not available.
-    ///
-    /// `account` The `ServiceProviderAccount` to use as the recovery account.
-    ///           This must be an existing account that has already been
-    ///           provisioned on the current device using TokenManager.
-    SetRecoveryAccount(struct {
-        account fuchsia.auth.ServiceProviderAccount;
-    }) -> (struct {}) error Error;
 
     /// Returns all authentication mechanism enrollments.
     GetAuthMechanismEnrollments() -> (struct {

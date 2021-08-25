@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId, ResultExt};
-use anyhow::{format_err, Error};
-use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AppConfig, AuthenticationContextProviderMarker, Status as AuthStatus};
-use fidl_fuchsia_auth::{AuthProviderConfig, UserProfileInfo};
+use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId};
+use anyhow::Error;
+use fidl::endpoints::{ClientEnd, ServerEnd};
+use fidl_fuchsia_auth::{AuthProviderConfig, AuthenticationContextProviderMarker};
 use fidl_fuchsia_identity_account::{
     AccountAuthState, AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
     AccountManagerRequestStream, AccountMarker, Error as ApiError, Lifetime, Scenario,
 };
-use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_inspect::{Inspector, Property};
 use futures::lock::Mutex;
 use futures::prelude::*;
@@ -26,10 +24,7 @@ use crate::account_handler_context::AccountHandlerContext;
 use crate::account_map::AccountMap;
 use crate::inspect;
 
-const SELF_URL: &str = fuchsia_single_component_package_url!("account_manager");
-
 lazy_static! {
-
     /// The Auth scopes used for authorization during service provider-based account provisioning.
     /// An empty vector means that the auth provider should use its default scopes.
     static ref APP_SCOPES: Vec<String> = Vec::default();
@@ -115,23 +110,6 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             }
             AccountManagerRequest::RemoveAccount { id, force, responder } => {
                 let mut response = self.remove_account(id.into(), force).await;
-                responder.send(&mut response)?;
-            }
-            AccountManagerRequest::ProvisionFromAuthProvider {
-                auth_context_provider,
-                auth_provider_type,
-                lifetime,
-                auth_mechanism_id,
-                responder,
-            } => {
-                let mut response = self
-                    .provision_from_auth_provider(
-                        auth_context_provider,
-                        auth_provider_type,
-                        lifetime,
-                        auth_mechanism_id,
-                    )
-                    .await;
                 responder.send(&mut response)?;
             }
             AccountManagerRequest::ProvisionNewAccount {
@@ -280,92 +258,6 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         } else {
             info!("Adding new local account {:?}", account_id);
             Ok(account_id.clone().into())
-        }
-    }
-
-    async fn provision_from_auth_provider(
-        &self,
-        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
-        auth_provider_type: String,
-        lifetime: Lifetime,
-        auth_mechanism_id: Option<String>,
-    ) -> Result<FidlLocalAccountId, ApiError> {
-        let account_handler = self.create_account_internal(lifetime, auth_mechanism_id).await?;
-        let account_id = account_handler.get_account_id();
-
-        // Add a service provider to the account
-        let _user_profile = match Self::add_service_provider_account(
-            auth_context_provider,
-            auth_provider_type,
-            Arc::clone(&account_handler),
-        )
-        .await
-        {
-            Ok(user_profile) => user_profile,
-            Err(err) => {
-                // TODO(dnordstrom): Remove the newly created account handler as a cleanup.
-                warn!("Failure adding service provider account: {:?}", err);
-                account_handler.terminate().await;
-                return Err(err.api_error);
-            }
-        };
-
-        // Persist the account both in memory and on disk
-        if let Err(err) = self.add_account(Arc::clone(&account_handler)).await {
-            warn!("Failure adding service provider account: {:?}", err);
-            account_handler.terminate().await;
-            Err(err.api_error)
-        } else {
-            info!("Adding new account {:?}", &account_id);
-            Ok(account_id.clone().into())
-        }
-    }
-
-    // Attach a service provider account to this Fuchsia account
-    async fn add_service_provider_account(
-        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
-        auth_provider_type: String,
-        account_handler: Arc<AHC>,
-    ) -> Result<UserProfileInfo, AccountManagerError> {
-        // Use account handler to get a channel to the account
-        let (account_client_end, account_server_end) =
-            create_endpoints().account_manager_error(ApiError::Resource)?;
-        account_handler.proxy().get_account(auth_context_provider, account_server_end).await??;
-        let account_proxy =
-            account_client_end.into_proxy().account_manager_error(ApiError::Resource)?;
-
-        // Use the account to get the persona
-        let (persona_client_end, persona_server_end) =
-            create_endpoints().account_manager_error(ApiError::Resource)?;
-        account_proxy.get_default_persona(persona_server_end).await??;
-        let persona_proxy =
-            persona_client_end.into_proxy().account_manager_error(ApiError::Resource)?;
-
-        // Use the persona to get the token manager
-        let (tm_client_end, tm_server_end) =
-            create_endpoints().account_manager_error(ApiError::Resource)?;
-        persona_proxy.get_token_manager(SELF_URL, tm_server_end).await??;
-        let tm_proxy = tm_client_end.into_proxy().account_manager_error(ApiError::Resource)?;
-
-        // Use the token manager to authorize
-        let mut app_config = AppConfig {
-            auth_provider_type,
-            client_id: None,
-            client_secret: None,
-            redirect_uri: None,
-        };
-        let fut = tm_proxy.authorize(
-            &mut app_config,
-            None, /* auth_ui_context */
-            &mut APP_SCOPES.iter().map(|x| &**x),
-            None, /* user_profile_id */
-            None, /* auth_code */
-        );
-        match fut.await? {
-            (AuthStatus::Ok, None) => Err(AccountManagerError::new(ApiError::Internal)
-                .with_cause(format_err!("Invalid response from token manager"))),
-            (AuthStatus::Ok, Some(user_profile)) => Ok(*user_profile),
-            (auth_status, _) => Err(AccountManagerError::from(auth_status)),
         }
     }
 

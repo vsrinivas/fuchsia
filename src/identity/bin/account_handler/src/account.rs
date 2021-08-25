@@ -14,7 +14,7 @@ use account_common::{
 };
 use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AuthenticationContextProviderProxy, ServiceProviderAccount};
+use fidl_fuchsia_auth::AuthenticationContextProviderProxy;
 use fidl_fuchsia_identity_account::{
     AccountRequest, AccountRequestStream, AuthChangeGranularity, AuthListenerMarker, AuthState,
     Error as ApiError, Lifetime, PersonaMarker, Scenario, MAX_ID_SIZE,
@@ -73,10 +73,6 @@ pub struct Account {
 }
 
 impl Account {
-    /// A fixed string returned as the name of all accounts until account names are fully
-    /// implemented.
-    const DEFAULT_ACCOUNT_NAME: &'static str = "Unnamed account";
-
     /// Manually construct an account object, shouldn't normally be called directly.
     async fn new(
         persona_id: LocalPersonaId,
@@ -253,10 +249,6 @@ impl Account {
         req: AccountRequest,
     ) -> Result<(), fidl::Error> {
         match req {
-            AccountRequest::GetAccountName { responder } => {
-                let response = self.get_account_name();
-                responder.send(&response)?;
-            }
             AccountRequest::GetLifetime { responder } => {
                 let response = self.get_lifetime();
                 responder.send(response)?;
@@ -288,15 +280,6 @@ impl Account {
                 let mut response = self.get_persona(context, id.into(), persona).await;
                 responder.send(&mut response)?;
             }
-            AccountRequest::GetRecoveryAccount { responder } => {
-                let mut response =
-                    self.get_recovery_account().map(|option| option.map(|value| Box::new(value)));
-                responder.send(&mut response)?;
-            }
-            AccountRequest::SetRecoveryAccount { account, responder } => {
-                let mut response = self.set_recovery_account(account);
-                responder.send(&mut response)?;
-            }
             AccountRequest::GetAuthMechanismEnrollments { responder, .. } => {
                 responder.send(&mut Err(ApiError::UnsupportedOperation))?;
             }
@@ -326,12 +309,6 @@ impl Account {
 
     fn get_lifetime(&self) -> Lifetime {
         Lifetime::from(self.lifetime.as_ref())
-    }
-
-    fn get_account_name(&self) -> String {
-        // TODO(dnordstrom, jsankey): Implement this method, initially by populating the name from
-        // an associated service provider account profile name or a randomly assigned string.
-        Self::DEFAULT_ACCOUNT_NAME.to_string()
     }
 
     fn get_auth_state(&self, _scenario: Scenario) -> Result<AuthState, ApiError> {
@@ -392,18 +369,6 @@ impl Account {
             warn!("Requested persona does not exist {:?}", id);
             Err(ApiError::NotFound)
         }
-    }
-
-    fn get_recovery_account(&self) -> Result<Option<ServiceProviderAccount>, ApiError> {
-        // TODO(jsankey): Implement this method.
-        warn!("GetRecoveryAccount not yet implemented");
-        Err(ApiError::Internal)
-    }
-
-    fn set_recovery_account(&self, _account: ServiceProviderAccount) -> Result<(), ApiError> {
-        // TODO(jsankey): Implement this method.
-        warn!("SetRecoveryAccount not yet implemented");
-        Err(ApiError::Internal)
     }
 
     async fn lock(&self) -> Result<(), ApiError> {
@@ -555,16 +520,6 @@ mod tests {
         let account_2 = test.create_persistent_account().await.unwrap();
         assert_ne!(account_1.default_persona.id(), account_2.default_persona.id());
         assert_ne!(account_1.global_id(), account_2.global_id());
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn test_get_account_name() {
-        let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_account_name().await?, Account::DEFAULT_ACCOUNT_NAME);
-            Ok(())
-        })
-        .await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -769,35 +724,6 @@ mod tests {
                 Err(ApiError::NotFound)
             );
 
-            Ok(())
-        })
-        .await;
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn test_set_recovery_account() {
-        let mut test = Test::new();
-        let mut service_provider_account = ServiceProviderAccount {
-            identity_provider_domain: "google.com".to_string(),
-            user_profile_id: "test_obfuscated_gaia_id".to_string(),
-        };
-
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(
-                proxy.set_recovery_account(&mut service_provider_account).await?,
-                Err(ApiError::Internal)
-            );
-            Ok(())
-        })
-        .await;
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn test_get_recovery_account() {
-        let mut test = Test::new();
-        let expectation = Err(ApiError::Internal);
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_recovery_account().await?, expectation);
             Ok(())
         })
         .await;
