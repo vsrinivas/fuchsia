@@ -483,7 +483,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -501,7 +503,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
         var size = _expectedDirentSize([_createDirentForDot()]);
@@ -528,7 +532,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
         var expectedDirents = [
@@ -552,7 +558,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -577,7 +585,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -603,7 +613,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -627,7 +639,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -653,7 +667,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -676,7 +692,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -700,7 +718,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -725,7 +745,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
 
@@ -771,7 +793,9 @@ void main() {
           ..addNode('file1', file1)
           ..addNode('subDir', subDir)
           ..addNode('file3', file3);
-        subDir..addNode('file2', file2)..addNode('file4', file4);
+        subDir
+          ..addNode('file2', file2)
+          ..addNode('file4', file4);
         return dir;
       }
 
@@ -881,7 +905,9 @@ void main() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
         var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        dir..addNode('file1', file1)..addNode('subDir', subDir);
+        dir
+          ..addNode('file1', file1)
+          ..addNode('subDir', subDir);
 
         var proxy = _getProxyForDir(dir);
         DirectoryProxy subDirProxy = DirectoryProxy();
@@ -1113,7 +1139,7 @@ class _Dirent {
     var offset = _fixedSize;
     List<int> charBytes = [];
     direntSizeInBytes = offset + size!;
-    expect(data.lengthInBytes, greaterThanOrEqualTo(direntSizeInBytes));
+    expect(data.lengthInBytes, greaterThanOrEqualTo(direntSizeInBytes!));
     for (int i = 0; i < size!; i++) {
       charBytes.add(data.getUint8(offset++));
     }
