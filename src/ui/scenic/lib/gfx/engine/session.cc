@@ -71,8 +71,8 @@ Session::Session(SessionId id, SessionContext session_context,
 }
 
 Session::~Session() {
-  if (root_view_ && session_context_.scene_graph) {
-    session_context_.scene_graph->InvalidateAnnotationViewHolder(root_view_->view_ref_koid());
+  if (view_koid_ != ZX_KOID_INVALID && session_context_.scene_graph) {
+    session_context_.scene_graph->InvalidateAnnotationViewHolder(view_koid_);
   }
 
   resources_.Clear();
@@ -133,19 +133,30 @@ void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
   event_reporter_->EnqueueEvent(std::move(event));
 }
 
-bool Session::SetRootView(fxl::WeakPtr<View> view) {
-  // Check that the root view ID is being set or being cleared. If there is
-  // already a root view, another cannot be set.
-  if (root_view_) {
-    return false;
+void Session::SetViewRefKoid(zx_koid_t koid) {
+  FX_DCHECK(koid != ZX_KOID_INVALID);
+  // If there is already a view, another cannot be set.
+  if (view_koid_ != ZX_KOID_INVALID) {
+    return;
   }
 
-  root_view_ = view;
+  view_koid_ = koid;
   if (on_view_created_) {
-    on_view_created_(root_view_->view_ref_koid());
+    on_view_created_(view_koid_);
   }
+}
 
-  return true;
+bool Session::SetViewKoid(zx_koid_t koid) {
+  SetViewRefKoid(koid);
+  const bool not_already_set = !view_koid_set_;
+  view_koid_set_ = true;
+  return not_already_set;
+}
+bool Session::SetSceneKoid(zx_koid_t koid) {
+  SetViewRefKoid(koid);
+  const bool not_already_set = !scene_koid_set_ && !view_koid_set_;
+  scene_koid_set_ = true;
+  return not_already_set;
 }
 
 bool Session::ApplyUpdate(CommandContext* command_context,

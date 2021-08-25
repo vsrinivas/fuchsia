@@ -1111,8 +1111,16 @@ bool GfxCommandApplier::ApplyCreateBuffer(Session* session, ResourceId id,
 bool GfxCommandApplier::ApplyCreateScene(Session* session, ResourceId id,
                                          fuchsia::ui::gfx::SceneArgs args,
                                          ViewTreeUpdater& view_tree_updater) {
-  auto scene = CreateScene(session, id, std::move(args), view_tree_updater);
-  return scene ? session->resources()->AddResource(id, std::move(scene)) : false;
+  if (auto scene = CreateScene(session, id, std::move(args), view_tree_updater)) {
+    if (!session->SetSceneKoid(scene->As<Scene>()->view_ref_koid())) {
+      FX_LOGS(ERROR) << "Setting the scene after the View will cause input and focus to misbehave.";
+      // TODO(fxbug.dev/24450) Return false and report the error in this case, and
+      // shut down any sessions that violate the contract.
+    }
+    return session->resources()->AddResource(id, std::move(scene));
+  }
+
+  return false;
 }
 
 bool GfxCommandApplier::ApplyCreateCamera(Session* session, ResourceId id,
@@ -1281,7 +1289,7 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
   FX_DCHECK(args.token.value)
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args), view_tree_updater)) {
-    if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
+    if (!(session->SetViewKoid(view->As<View>()->view_ref_koid()))) {
       FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
                         "become a session-terminating error. For more info, see [fxbug.dev/24450].";
       // TODO(fxbug.dev/24450) Return false and report the error in this case, and
@@ -1302,7 +1310,7 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
   FX_DCHECK(args.token.value)
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args), view_tree_updater)) {
-    if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
+    if (!(session->SetViewKoid(view->As<View>()->view_ref_koid()))) {
       FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
                         "become a session-terminating error. For more info, see [fxbug.dev/24450].";
       // TODO(fxbug.dev/24450) Return false and report the error in this case, and

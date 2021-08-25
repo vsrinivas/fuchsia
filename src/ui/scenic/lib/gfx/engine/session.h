@@ -116,13 +116,22 @@ class Session : public CommandDispatcher {
 
   const fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() { return sysmem_allocator_; }
 
+  // Used to set the cached view ref koid for the view for this session.
+  // Returns true if no view has been set previously, to help identify the "one view per session"
+  // rule.
+  bool SetViewKoid(zx_koid_t koid);
+  // Used to set the cached view ref koid for the view for this session.
+  // Returns true if no view and no scene has been set previously. This is to help enforce the rule
+  // that the scene should not be created after the root view.
+  bool SetSceneKoid(zx_koid_t koid);
+
  private:
   friend class Resource;
   void IncrementResourceCount() { ++resource_count_; }
   void DecrementResourceCount() { --resource_count_; }
 
-  friend class GfxCommandApplier;
-  bool SetRootView(fxl::WeakPtr<View> view);
+  // Used to set the cached view ref koid for the view for this session. Can only be set once.
+  void SetViewRefKoid(zx_koid_t koid);
 
   struct Update {
     scheduling::PresentId present_id = scheduling::kInvalidPresentId;
@@ -154,10 +163,11 @@ class Session : public CommandDispatcher {
   // alive that are not part of |resources_|, such as a Node that is referenced
   // by a parent Node in the scene graph.
   size_t resource_count_ = 0;
-  // A weak reference to the first View added to the ResourceMap. Cached while
-  // transitioning to a one-root-view-per-session model. See fxbug.dev/24450 for more
-  // details.
-  fxl::WeakPtr<View> root_view_;
+
+  // The ViewRef koid of the view for this session (or of the scene, whichever is set first).
+  zx_koid_t view_koid_ = ZX_KOID_INVALID;
+  bool view_koid_set_ = false;
+  bool scene_koid_set_ = false;
 
   scheduling::PresentId last_traced_present_id_ = 0;
 
