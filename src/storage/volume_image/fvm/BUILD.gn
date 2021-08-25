@@ -157,7 +157,20 @@ generate_fvm("test_fvm.sparse.blk") {
     ":test_blob.blk",
     ":test_data.blk",
   ]
-  args = fvm_sparse_args
+  args = [
+    "sparse",
+    "--compress",
+    "lz4",
+    "--slice",
+    "$fvm_slice_size",
+  ]
+  if (fvm_max_disk_size != false) {
+    args += [
+      "--max-disk-size",
+      "$fvm_max_disk_size",
+    ]
+  }
+
   partitions = [
     # Place blobfs first, since it is A/B enabled (thus allocates extra slices for B-copies of some
     # metadata) and bugs are likely to be detected in partitions added after this partition.

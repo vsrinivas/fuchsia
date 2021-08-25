@@ -5,29 +5,6 @@
 import("//build/compiled_action.gni")
 
 declare_args() {
-  # NOTE: These variables are in the process of transitioning from strings to
-  # integers. Some product and board definitions are still providing values as
-  # strings, therefore we have a pattern of converting the integer value to a
-  # string before using it. This is the current pattern used throughout this
-  # file and build/images/BUILD.gn.
-  #
-  # Declaration:
-  #   fvm_image_size = false
-  # Board1:
-  #   fvm_image_size = "100"
-  # Board2:
-  #   fvm_image_size = 100
-  # Check for valid value:
-  #   if (fvm_image_size != false)
-  # Usage:
-  #   "$fvm_image_size"
-
-  # The size in bytes of the FVM partition image to create. Normally this is
-  # computed to be just large enough to fit the blob and data images. The
-  # default value is false, which means to size based on inputs. Specifying a size
-  # that is too small will result in build failure.
-  fvm_image_size = false
-
   # The size in bytes of the FVM partition on the target eMMC devices.
   # Specifying this parameter will lead build to generate a fvm.fastboot.blk
   # suitable for flashing through fastboot for eMMC devices.
@@ -119,24 +96,4 @@ declare_args() {
   #   * "default": no compression on NAND, lz4 compression on eMMC.
   #   * any other value is passed as the FVM "--compress" arg
   fvm_fastboot_compression = "default"
-}
-
-fvm_slice_args = [
-  "--slice",
-  "$fvm_slice_size",
-]
-
-fvm_create_args = [ "create" ] + fvm_slice_args
-
-fvm_sparse_args = [
-                    "sparse",
-                    "--compress",
-                    "lz4",
-                  ] + fvm_slice_args
-
-if (fvm_max_disk_size != false) {
-  fvm_sparse_args += [
-    "--max-disk-size",
-    "$fvm_max_disk_size",
-  ]
 }
