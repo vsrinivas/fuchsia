@@ -28,7 +28,6 @@ See [go/fuchsia-non-inclusive-list][non-inclusive-list].
 
 1. Open [`/tools/mdlint/rules/respectful_code_words.json`][json-url].
 1. Delete the entire line containing the non-inclusive word and suggestions.
-1. Add your word with its respective inclusive suggestions. For example:
 
     Note: If you delete the last word in the list, remove the comma from the new final word line.
 
