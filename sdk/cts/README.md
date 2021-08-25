@@ -318,6 +318,10 @@ Where will CTS tests run? Emulator? Devices?
 
   * Initially, CTS tests will be automatically run on Emulators in CQ.  Developers will also be able to run the tests locally as part of their traditional workflows.  Over time, tests are likely to be run on all devices as part of qualification.
 
+I added a CTS test. How long until it is running in CQ?
+
+  * CTS tests will begin running in CQ the day after they are rolled into GI.
+
 ### Additional questions
 
 For questions and clarification on this document, please reach out to this
