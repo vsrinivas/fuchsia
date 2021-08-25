@@ -21,6 +21,10 @@ kernel_cmdline("devmgr.log-to-debuglog--true") {
   args = [ "devmgr.log-to-debuglog=true" ]
 }
 
+kernel_cmdline("kernel.bypass-debuglog--true") {
+  args = [ "kernel.bypass-debuglog=true" ]
+}
+
 kernel_cmdline("kernel.enable-debugging-syscalls--true") {
   args = [ "kernel.enable-debugging-syscalls=true" ]
   deps = [ "//build/validate:non_production_tag" ]
