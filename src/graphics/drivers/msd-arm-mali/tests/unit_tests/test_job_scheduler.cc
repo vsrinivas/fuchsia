@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fake_connection_owner_base.h"
 #include "job_scheduler.h"
 #include "mock/mock_bus_mapper.h"
 #include "msd_arm_connection.h"
@@ -74,7 +75,7 @@ class TestAddressSpaceObserver : public AddressSpaceObserver {
   void ReleaseSpaceMappings(const AddressSpace* address_space) override {}
 };
 
-class TestConnectionOwner : public MsdArmConnection::Owner {
+class TestConnectionOwner : public FakeConnectionOwnerBase {
  public:
   void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override {}
   void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override {}

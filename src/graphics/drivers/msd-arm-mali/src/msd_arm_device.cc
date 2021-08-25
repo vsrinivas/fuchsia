@@ -4,6 +4,7 @@
 
 #include "msd_arm_device.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
 
 #include <bitset>
@@ -20,6 +21,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
+#include "msd_defs.h"
 #include "platform_barriers.h"
 #include "platform_logger.h"
 #include "platform_port.h"
@@ -150,6 +152,8 @@ void MsdArmDevice::Destroy() {
   DLOG("Destroy");
   CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
+  loop_.Shutdown();
+
   DisableInterrupts();
 
   interrupt_thread_quit_flag_ = true;
@@ -202,6 +206,9 @@ bool MsdArmDevice::Init(void* device_handle) {
 bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
                         std::unique_ptr<magma::PlatformBusMapper> bus_mapper) {
   DLOG("Init platform_device");
+  zx_status_t status = loop_.StartThread("device-loop-thread");
+  if (status != ZX_OK)
+    return DRETF(false, "FAiled to create device loop thread");
   platform_device_ = std::move(platform_device);
   bus_mapper_ = std::move(bus_mapper);
   InitInspect();
@@ -272,6 +279,7 @@ void MsdArmDevice::InitInspect() {
   last_semaphore_hang_timeout_ns_ = inspect_.CreateUint("last_semaphore_hang_timeout_ns", 0);
   events_ = inspect_.CreateChild("events");
   protected_mode_supported_property_ = inspect_.CreateBool("protected_mode_supported", false);
+  memory_pressure_level_property_ = inspect_.CreateUint("memory_pressure_level", 0);
 }
 
 void MsdArmDevice::UpdateProtectedModeSupported() {
@@ -311,6 +319,61 @@ void MsdArmDevice::DeregisterConnection() {
   connection_list_.erase(std::remove_if(connection_list_.begin(), connection_list_.end(),
                                         [](auto& connection) { return connection.expired(); }),
                          connection_list_.end());
+}
+
+void MsdArmDevice::SetMemoryPressureLevel(MagmaMemoryPressureLevel level) {
+  {
+    std::lock_guard<std::mutex> lock(connection_list_mutex_);
+    current_memory_pressure_level_ = level;
+    memory_pressure_level_property_.Set(level);
+  }
+
+  if (level == MAGMA_MEMORY_PRESSURE_LEVEL_CRITICAL) {
+    // Run instantly to free up memory as quickly as possible, even if another callback is already
+    // scheduled.
+    PeriodicCriticalMemoryPressureCallback(true);
+  }
+}
+
+void MsdArmDevice::PeriodicCriticalMemoryPressureCallback(bool force_instant) {
+  std::vector<std::weak_ptr<MsdArmConnection>> connection_list_copy;
+  MagmaMemoryPressureLevel level;
+  {
+    std::lock_guard<std::mutex> lock(connection_list_mutex_);
+    DASSERT(scheduled_memory_pressure_task_count_ >= 0);
+    if (!force_instant) {
+      DASSERT(scheduled_memory_pressure_task_count_ > 0);
+      scheduled_memory_pressure_task_count_--;
+    }
+    connection_list_copy = connection_list_;
+    level = current_memory_pressure_level_;
+  }
+  // connection_list_mutex_ must be unlocked here because PeriodicMemoryPressureCallback might acquire
+  // it again.
+  size_t released_size = 0;
+  for (auto& connection : connection_list_copy) {
+    auto locked = connection.lock();
+    if (!locked)
+      continue;
+    released_size += locked->PeriodicMemoryPressureCallback();
+  }
+
+  if ((released_size > 0) && (level == MAGMA_MEMORY_PRESSURE_LEVEL_CRITICAL) && force_instant) {
+    MAGMA_LOG(INFO, "Transitioned to critical, released %ld bytes", released_size);
+  }
+  {
+    std::lock_guard<std::mutex> lock(connection_list_mutex_);
+    if (current_memory_pressure_level_ == MAGMA_MEMORY_PRESSURE_LEVEL_CRITICAL &&
+        !scheduled_memory_pressure_task_count_) {
+      scheduled_memory_pressure_task_count_++;
+      // 5 seconds is somewhat arbitrary. It's chosen to help clear out stale memory in a reasonable
+      // time period, while not causing too much time to be wasted re-allocating hot JIT memory.
+      constexpr uint32_t kPressureCallbackPeriodSeconds = 5;
+      async::PostDelayedTask(
+          loop_.dispatcher(), [this]() { PeriodicCriticalMemoryPressureCallback(false); },
+          zx::sec(kPressureCallbackPeriodSeconds));
+    }
+  }
 }
 
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
@@ -1579,6 +1642,10 @@ magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {
   MsdArmDevice::cast(device)->DumpStatusToLog();
+}
+
+void msd_device_set_memory_pressure_level(msd_device_t* device, MagmaMemoryPressureLevel level) {
+  MsdArmDevice::cast(device)->SetMemoryPressureLevel(level);
 }
 
 magma_status_t msd_device_get_icd_list(struct msd_device_t* abi_device, uint64_t count,

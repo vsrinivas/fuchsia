@@ -6,6 +6,7 @@
 #define MSD_ARM_DEVICE_H
 
 #include <fuchsia/hardware/gpu/mali/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <zircon/compiler.h>
 
@@ -24,6 +25,7 @@
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_arm_connection.h"
+#include "msd_defs.h"
 #include "performance_counters.h"
 #include "platform_device.h"
 #include "platform_interrupt.h"
@@ -130,6 +132,8 @@ class MsdArmDevice : public msd_device_t,
 
   magma::Status QueryTimestamp(std::unique_ptr<magma::PlatformBuffer> buffer);
 
+  void SetMemoryPressureLevel(MagmaMemoryPressureLevel level);
+
   // MsdArmConnection::Owner implementation.
   void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override;
   void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override;
@@ -142,6 +146,10 @@ class MsdArmDevice : public msd_device_t,
   PerformanceCounters* performance_counters() override { return perf_counters_.get(); }
   std::shared_ptr<DeviceRequest::Reply> RunTaskOnDeviceThread(FitCallbackTask task) override;
   std::thread::id GetDeviceThreadId() override { return device_thread_.get_id(); }
+  MagmaMemoryPressureLevel GetCurrentMemoryPressureLevel() override {
+    std::lock_guard lock(connection_list_mutex_);
+    return current_memory_pressure_level_;
+  }
 
   magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
   magma_status_t QueryReturnsBuffer(uint64_t id, uint32_t* buffer_out);
@@ -219,6 +227,10 @@ class MsdArmDevice : public msd_device_t,
   magma::Status ProcessMmuInterrupt();
   magma::Status ProcessScheduleAtoms();
   magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
+  // Called periodically when in a critical memory state to force all contexts to clear JIT memory.
+  // If |force_instant| is true, this callback was called directly from a change in the critical
+  // memory pressure state.
+  void PeriodicCriticalMemoryPressureCallback(bool force_instant);
 
   void ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* registers);
 
@@ -245,6 +257,7 @@ class MsdArmDevice : public msd_device_t,
   inspect::UintProperty semaphore_hang_timeout_count_;
   inspect::UintProperty last_semaphore_hang_timeout_ns_;
   inspect::BoolProperty protected_mode_supported_property_;
+  inspect::UintProperty memory_pressure_level_property_;
 
   std::mutex inspect_events_mutex_;
   MAGMA_GUARDED(inspect_events_mutex_) std::deque<InspectEvent> inspect_events_;
@@ -272,6 +285,8 @@ class MsdArmDevice : public msd_device_t,
   std::atomic<uint64_t> gpu_interrupt_time_{};
   std::atomic<uint64_t> mmu_interrupt_time_{};
   uint64_t job_interrupt_time_processed_ = {};
+
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 
   std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
   std::unique_ptr<magma::PlatformPort> device_port_;
@@ -308,6 +323,12 @@ class MsdArmDevice : public msd_device_t,
   std::mutex connection_list_mutex_;
   MAGMA_GUARDED(connection_list_mutex_)
   std::vector<std::weak_ptr<MsdArmConnection>> connection_list_;
+  MAGMA_GUARDED(connection_list_mutex_)
+  MagmaMemoryPressureLevel current_memory_pressure_level_ = MAGMA_MEMORY_PRESSURE_LEVEL_NORMAL;
+  MAGMA_GUARDED(connection_list_mutex_)
+  uint32_t scheduled_memory_pressure_task_count_ = 0;
+  MAGMA_GUARDED(connection_list_mutex_)
+  zx::time next_scheduled_memory_pressure_task_time_{};
 };
 
 #endif  // MSD_ARM_DEVICE_H

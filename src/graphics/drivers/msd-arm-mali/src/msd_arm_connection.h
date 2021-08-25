@@ -10,6 +10,7 @@
 #include <zircon/compiler.h>
 
 #include <deque>
+#include <list>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -26,6 +27,7 @@
 #include "msd_arm_atom.h"
 #include "msd_arm_buffer.h"
 #include "msd_arm_semaphore.h"
+#include "msd_defs.h"
 #include "performance_counters_manager.h"
 
 struct magma_arm_mali_atom;
@@ -43,27 +45,17 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
     virtual void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) = 0;
     virtual void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) = 0;
     virtual AddressSpaceObserver* GetAddressSpaceObserver() = 0;
-    virtual ArmMaliCacheCoherencyStatus cache_coherency_status() {
-      return kArmMaliCacheCoherencyNone;
-    }
+    virtual ArmMaliCacheCoherencyStatus cache_coherency_status() = 0;
     virtual magma::PlatformBusMapper* GetBusMapper() = 0;
-    virtual bool IsProtectedModeSupported() { return false; }
+    virtual bool IsProtectedModeSupported() = 0;
     // Called after the connection's destructor has been called, so the
     // refcount should be 0.
-    virtual void DeregisterConnection() {}
-    virtual void SetCurrentThreadToDefaultPriority() {}
-    virtual PerformanceCounters* performance_counters() { return nullptr; }
-    virtual std::shared_ptr<DeviceRequest::Reply> RunTaskOnDeviceThread(FitCallbackTask task) {
-      // This implementation runs the callback immediately and is used only in tests.
-      auto real_task = std::make_unique<DeviceRequest>();
-      auto reply = real_task->GetReply();
-      reply->Signal(task(nullptr));
-      return reply;
-    }
-    virtual std::thread::id GetDeviceThreadId() {
-      // Only for testing.
-      return std::this_thread::get_id();
-    }
+    virtual void DeregisterConnection() = 0;
+    virtual void SetCurrentThreadToDefaultPriority() = 0;
+    virtual PerformanceCounters* performance_counters() = 0;
+    virtual std::shared_ptr<DeviceRequest::Reply> RunTaskOnDeviceThread(FitCallbackTask task) = 0;
+    virtual std::thread::id GetDeviceThreadId() = 0;
+    virtual MagmaMemoryPressureLevel GetCurrentMemoryPressureLevel() = 0;
   };
 
   static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
@@ -94,6 +86,9 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token);
   void SendNotificationData(MsdArmAtom* atom);
   void MarkDestroyed();
+
+  // Returns the number of bytes freed due to the change.
+  size_t PeriodicMemoryPressureCallback();
 
   // Tries to allocate JIT memory for an atom.  Returns a status if allocation
   // finished (successfully or not) or no status if the allocation needs to be
@@ -194,6 +189,11 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   std::optional<ArmMaliResultCode> AllocateOneJitMemoryRegion(
       const magma_arm_jit_memory_allocate_info& info);
   void ReleaseOneJitMemory(const magma_arm_jit_memory_free_info& info);
+
+  // Release all unused JIT regions to save memory. Returns the number of bytes freed.
+  size_t FreeUnusedJitRegionsIfNeeded() MAGMA_REQUIRES(address_lock_);
+  bool RemoveMappingLocked(uint64_t gpu_va) MAGMA_REQUIRES(address_lock_);
+
   PerformanceCounters* performance_counters() { return owner_->performance_counters(); }
 
   magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
@@ -210,7 +210,7 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   // Map GPU va to a mapping.
   MAGMA_GUARDED(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
   MAGMA_GUARDED(address_lock_) JitProperties jit_properties_;
-  MAGMA_GUARDED(address_lock_) std::vector<JitMemoryRegion> jit_memory_regions_;
+  MAGMA_GUARDED(address_lock_) std::list<JitMemoryRegion> jit_memory_regions_;
   MAGMA_GUARDED(address_lock_) std::unique_ptr<magma::AddressSpaceAllocator> jit_allocator_;
 
   // Store a list of a small number of mappings to help debug issues when references to freed

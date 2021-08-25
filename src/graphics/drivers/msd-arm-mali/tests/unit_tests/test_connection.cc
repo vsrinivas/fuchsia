@@ -7,12 +7,14 @@
 #include <gtest/gtest.h>
 
 #include "address_manager.h"
+#include "fake_connection_owner_base.h"
 #include "gpu_mapping.h"
 #include "magma_arm_mali_types.h"
 #include "mock/mock_bus_mapper.h"
 #include "msd_arm_buffer.h"
 #include "msd_arm_connection.h"
 #include "msd_arm_context.h"
+#include "msd_defs.h"
 
 namespace {
 
@@ -45,7 +47,7 @@ class TestAddressSpaceObserver : public AddressSpaceObserver {
   std::vector<AddressSpace*> unlocked_address_spaces_;
 };
 
-class FakeConnectionOwner : public MsdArmConnection::Owner {
+class FakeConnectionOwner : public FakeConnectionOwnerBase {
  public:
   FakeConnectionOwner() {}
 
@@ -60,10 +62,14 @@ class FakeConnectionOwner : public MsdArmConnection::Owner {
     return kArmMaliCacheCoherencyAce;
   }
   void SetCurrentThreadToDefaultPriority() override { got_set_to_default_priority_ = true; }
+  virtual MagmaMemoryPressureLevel GetCurrentMemoryPressureLevel() override {
+    return memory_pressure_level_;
+  }
 
   const std::vector<MsdArmConnection*>& cancel_atoms_list() { return cancel_atoms_list_; }
   const std::vector<std::shared_ptr<MsdArmAtom>>& atoms_list() { return atoms_list_; }
   bool got_set_to_default_priority() const { return got_set_to_default_priority_; }
+  void set_memory_pressure_level(MagmaMemoryPressureLevel level) { memory_pressure_level_ = level; }
 
  private:
   TestAddressSpaceObserver observer_;
@@ -71,6 +77,7 @@ class FakeConnectionOwner : public MsdArmConnection::Owner {
   std::vector<MsdArmConnection*> cancel_atoms_list_;
   std::vector<std::shared_ptr<MsdArmAtom>> atoms_list_;
   bool got_set_to_default_priority_ = false;
+  MagmaMemoryPressureLevel memory_pressure_level_ = MAGMA_MEMORY_PRESSURE_LEVEL_NORMAL;
 };
 
 class DeregisterConnectionOwner : public FakeConnectionOwner {
@@ -1164,6 +1171,78 @@ class TestConnection {
         magma_arm_mali_user_data{}, std::move(infos));
     EXPECT_NE(kArmMaliResultSuccess, *connection->AllocateJitMemory(msd_atom));
   }
+
+  void MemoryPressure() {
+    FakeConnectionOwner owner;
+    auto connection = MsdArmConnection::Create(0, &owner);
+    EXPECT_TRUE(connection);
+    uint64_t jit_region_start;
+    InitializeJitAddressSpace(connection, &jit_region_start);
+
+    constexpr uint32_t kBufferSize = ZX_PAGE_SIZE;
+    constexpr uint32_t kAddressPageAddress = ZX_PAGE_SIZE * 100;
+    auto buffer = CreateBufferAtAddress(connection, kAddressPageAddress, kBufferSize);
+
+    // Allocate two atoms that together take up the space.
+    {
+      std::vector<magma_arm_jit_memory_allocate_info> infos(2);
+      for (uint32_t i = 0; i < std::size(infos); i++) {
+        auto& info = infos[i];
+        // ID 0 isn't valid, so use 1 and 2.
+        info.id = i + 1;
+        info.extend_page_count = 1;
+        info.committed_page_count = 1;
+        info.address = kAddressPageAddress + (i * 8);
+        info.va_page_count = 5;
+        info.version_number = 0;
+      }
+      auto msd_atom = std::make_shared<MsdArmSoftAtom>(
+          connection, static_cast<AtomFlags>(kAtomFlagJitMemoryAllocate), 1,
+          magma_arm_mali_user_data{}, std::move(infos));
+      EXPECT_EQ(kArmMaliResultSuccess, *connection->AllocateJitMemory(msd_atom));
+      // Assume that the first region is allocated before the second region.
+      EXPECT_EQ(jit_region_start, ReadValueFromBuffer<uint64_t>(buffer.get(), 0));
+      EXPECT_EQ(jit_region_start + 5ul * magma::page_size(),
+                ReadValueFromBuffer<uint64_t>(buffer.get(), 8));
+    }
+
+    {
+      std::vector<magma_arm_jit_memory_free_info> infos(1);
+      infos[0].id = 1;
+      auto msd_atom = std::make_shared<MsdArmSoftAtom>(
+          connection, static_cast<AtomFlags>(kAtomFlagJitMemoryFree), 1, magma_arm_mali_user_data{},
+          std::move(infos));
+      connection->ReleaseJitMemory(std::move(msd_atom));
+    }
+    EXPECT_EQ(0u, connection->PeriodicMemoryPressureCallback());
+    {
+      std::lock_guard lock(connection->address_lock_);
+      EXPECT_EQ(2u, connection->jit_memory_regions_.size());
+    }
+
+    owner.set_memory_pressure_level(MAGMA_MEMORY_PRESSURE_LEVEL_CRITICAL);
+
+    // ID 1 has 1 committed page.
+    EXPECT_EQ(ZX_PAGE_SIZE, connection->PeriodicMemoryPressureCallback());
+    {
+      std::lock_guard lock(connection->address_lock_);
+      EXPECT_EQ(1u, connection->jit_memory_regions_.size());
+    }
+    {
+      std::vector<magma_arm_jit_memory_free_info> infos{{.id = 2}};
+      auto msd_atom = std::make_shared<MsdArmSoftAtom>(
+          connection, static_cast<AtomFlags>(kAtomFlagJitMemoryFree), 1, magma_arm_mali_user_data{},
+          std::move(infos));
+      connection->ReleaseJitMemory(std::move(msd_atom));
+      std::lock_guard lock(connection->address_lock_);
+      EXPECT_EQ(1u, connection->jit_memory_regions_.size());
+    }
+    EXPECT_EQ(ZX_PAGE_SIZE, connection->PeriodicMemoryPressureCallback());
+    {
+      std::lock_guard lock(connection->address_lock_);
+      EXPECT_EQ(0u, connection->jit_memory_regions_.size());
+    }
+  }
 };
 
 TEST(TestConnection, MapUnmap) {
@@ -1269,4 +1348,9 @@ TEST(TestConnection, JitAllocateInvalidCommitSize) {
 TEST(TestConnection, JitAllocateInvalidWriteAddress) {
   TestConnection test;
   test.JitAllocateInvalidWriteAddress();
+}
+
+TEST(TestConnection, MemoryPressure) {
+  TestConnection test;
+  test.MemoryPressure();
 }

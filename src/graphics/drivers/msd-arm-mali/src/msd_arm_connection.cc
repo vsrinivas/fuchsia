@@ -23,6 +23,7 @@
 #include "msd_arm_device.h"
 #include "msd_arm_perf_count_pool.h"
 #include "msd_arm_semaphore.h"
+#include "msd_defs.h"
 #include "platform_barriers.h"
 #include "platform_logger.h"
 #include "platform_semaphore.h"
@@ -432,6 +433,10 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping) {
 
 bool MsdArmConnection::RemoveMapping(uint64_t gpu_va) {
   std::lock_guard<std::mutex> lock(address_lock_);
+  return RemoveMappingLocked(gpu_va);
+}
+
+bool MsdArmConnection::RemoveMappingLocked(uint64_t gpu_va) {
   auto it = gpu_mappings_.find(gpu_va);
   if (it == gpu_mappings_.end())
     return DRETF(false, "Mapping not found");
@@ -609,8 +614,7 @@ MsdArmConnection::JitMemoryRegion* MsdArmConnection::FindBestJitRegionAddressWit
     const magma_arm_jit_memory_allocate_info& info, bool check_usage) {
   JitMemoryRegion* best_region = nullptr;
   uint64_t committed_page_difference = 0;
-  for (size_t i = 0; i < jit_memory_regions_.size(); ++i) {
-    auto& region = jit_memory_regions_[i];
+  for (auto& region : jit_memory_regions_) {
     bool usage_ok = !check_usage || region.usage_id == info.usage_id;
     if (region.id == 0 && usage_ok && region.bin_id == info.bin_id &&
         region.buffer->platform_buffer()->size() >= info.va_page_count * PAGE_SIZE) {
@@ -855,11 +859,10 @@ std::optional<ArmMaliResultCode> MsdArmConnection::AllocateJitMemory(
 void MsdArmConnection::ReleaseOneJitMemory(const magma_arm_jit_memory_free_info& info) {
   std::lock_guard<std::mutex> lock(address_lock_);
   uint32_t free_id = info.id;
-  for (size_t i = 0; i < jit_memory_regions_.size(); ++i) {
-    auto& region = jit_memory_regions_[i];
-    if (jit_memory_regions_[i].id == free_id) {
-      jit_memory_regions_[i].id_property.Set(0);
-      jit_memory_regions_[i].id = 0;
+  for (auto& region : jit_memory_regions_) {
+    if (region.id == free_id) {
+      region.id_property.Set(0);
+      region.id = 0;
 
       uint64_t current_committed_page_count = region.buffer->committed_page_count();
 
@@ -885,6 +888,31 @@ void MsdArmConnection::ReleaseJitMemory(const std::shared_ptr<MsdArmSoftAtom>& a
   for (auto& info : atom->jit_free_info()) {
     ReleaseOneJitMemory(info);
   }
+}
+
+size_t MsdArmConnection::FreeUnusedJitRegionsIfNeeded() {
+  auto memory_pressure_level = owner_->GetCurrentMemoryPressureLevel();
+  if (memory_pressure_level != MAGMA_MEMORY_PRESSURE_LEVEL_CRITICAL) {
+    return 0;
+  }
+  size_t removed_size = 0;
+  for (auto it = jit_memory_regions_.begin(); it != jit_memory_regions_.end();) {
+    auto& region = *it;
+    ++it;
+    if (region.id != 0) {
+      continue;
+    }
+    uint64_t address = region.gpu_address;
+    if (!RemoveMappingLocked(address)) {
+      MAGMA_LOG(ERROR, "Error removing JIT region %ld", address);
+      continue;
+    }
+    jit_allocator_->Free(address);
+    removed_size += region.buffer->committed_page_count() * ZX_PAGE_SIZE;
+    --it;
+    it = jit_memory_regions_.erase(it);
+  }
+  return removed_size;
 }
 
 bool MsdArmConnection::CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset,
@@ -953,6 +981,11 @@ void MsdArmConnection::MarkDestroyed() {
 
   // Don't send any completion messages after termination.
   token_ = 0;
+}
+
+size_t MsdArmConnection::PeriodicMemoryPressureCallback() {
+  std::lock_guard lock(address_lock_);
+  return FreeUnusedJitRegionsIfNeeded();
 }
 
 void MsdArmConnection::SendPerfCounterNotification(msd_notification_t* notification) {
