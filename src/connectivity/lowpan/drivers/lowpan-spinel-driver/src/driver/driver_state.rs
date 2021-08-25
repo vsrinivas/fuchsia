@@ -292,7 +292,7 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Attaching => true,
             ConnectivityState::Attached => true,
             ConnectivityState::Isolated => true,
-            ConnectivityState::Commissioning => true,
+            ConnectivityState::Commissioning => false,
         }
     }
 
@@ -322,7 +322,7 @@ impl ConnectivityStateExt for ConnectivityState {
 
             ConnectivityState::Attached => true,
             ConnectivityState::Isolated => true,
-            ConnectivityState::Commissioning => true,
+            ConnectivityState::Commissioning => false,
         }
     }
 
