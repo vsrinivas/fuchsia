@@ -22,6 +22,7 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.sysinfo.SysInfo",
+            "fuchsia.ui.accessibility.view.Registry",
             "fuchsia.ui.activity.Provider",
             "fuchsia.ui.annotation.Registry",
             "fuchsia.ui.focus.FocusChainListenerRegistry",
