@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Temporarily allow deprecated functions while rust-tuf is updated
-#![allow(deprecated)]
-
 use {
     crate::{
         cache::MerkleForError, clock, error, inspect_util,
@@ -31,7 +28,7 @@ use {
         interchange::Json,
         metadata::{MetadataVersion, TargetPath},
         repository::{
-            EphemeralRepository, FileSystemRepository, HttpRepositoryBuilder, RepositoryProvider,
+            EphemeralRepository, HttpRepositoryBuilder, RepositoryProvider,
             RepositoryStorageProvider,
         },
     },
@@ -44,6 +41,7 @@ mod local_provider;
 use local_provider::LocalMirrorRepositoryProvider;
 
 mod filesystem_repository;
+use filesystem_repository::{FuchsiaFileSystemRepository, RWRepository};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CustomTargetMetadata {
@@ -92,7 +90,9 @@ impl Repository {
         tuf_metadata_timeout: Duration,
     ) -> Result<Self, anyhow::Error> {
         let mirror_config = config.mirrors().get(0);
-        let local = get_local_repo(persisted_repos_dir, config)?;
+        let local = get_local_repo(persisted_repos_dir, config).await?;
+        let local = Arc::new(RWRepository::new(local));
+        let local_clone = Arc::clone(&local);
         let remote = get_remote_repo(config, mirror_config, local_mirror)?;
         let root_keys = get_root_keys(config)?;
 
@@ -129,6 +129,8 @@ impl Repository {
             0,
             1,
         );
+
+        local_clone.switch_to_write_only_mode();
 
         Ok(Self {
             log_ctx: LogContext { repo_url: config.repo_url().to_string() },
@@ -196,10 +198,10 @@ impl Repository {
     }
 }
 
-fn get_local_repo(
+async fn get_local_repo(
     persisted_repos_dir: Option<&Path>,
     config: &RepositoryConfig,
-) -> Result<Box<dyn RepositoryStorageProvider<Json> + Send>, anyhow::Error> {
+) -> Result<Box<dyn RepositoryStorageProvider<Json> + Sync + Send>, anyhow::Error> {
     match config.repo_storage_type() {
         RepositoryStorageType::Ephemeral => {
             let local = EphemeralRepository::new();
@@ -218,8 +220,23 @@ fn get_local_repo(
                 ));
             };
 
-            let path = persisted_repos_dir.join(config.repo_url().host());
-            let local = FileSystemRepository::new(path.into())?;
+            let proxy = io_util::directory::open_in_namespace(
+                persisted_repos_dir
+                    .to_str()
+                    .ok_or(anyhow!("path is not valid UTF-8: '{:?}'", persisted_repos_dir))?,
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE
+                    | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
+                    | fidl_fuchsia_io::OPEN_FLAG_CREATE,
+            )?;
+            let proxy = io_util::directory::open_directory(
+                &proxy,
+                config.repo_url().host(),
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE
+                    | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
+                    | fidl_fuchsia_io::OPEN_FLAG_CREATE,
+            )
+            .await?;
+            let local = FuchsiaFileSystemRepository::new(proxy);
             Ok(Box::new(local))
         }
     }

@@ -5,7 +5,7 @@
 use {
     crate::{
         clock, error, inspect_util, metrics_util::tuf_error_as_update_tuf_client_event_code,
-        TCP_KEEPALIVE_TIMEOUT,
+        repository::filesystem_repository::RWRepository, TCP_KEEPALIVE_TIMEOUT,
     },
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
@@ -37,7 +37,7 @@ use {
 pub struct UpdatingTufClient {
     client: tuf::client::Client<
         Json,
-        Box<dyn RepositoryStorageProvider<Json> + Send>,
+        Arc<RWRepository<Json, Box<dyn RepositoryStorageProvider<Json> + Sync + Send>>>,
         Box<dyn RepositoryProvider<Json> + Send>,
         tuf::client::DefaultTranslator,
     >,
@@ -121,7 +121,7 @@ impl UpdatingTufClient {
     pub fn from_tuf_client_and_mirror_config(
         client: tuf::client::Client<
             Json,
-            Box<dyn RepositoryStorageProvider<Json> + Send>,
+            Arc<RWRepository<Json, Box<dyn RepositoryStorageProvider<Json> + Sync + Send>>>,
             Box<dyn RepositoryProvider<Json> + Send>,
             tuf::client::DefaultTranslator,
         >,

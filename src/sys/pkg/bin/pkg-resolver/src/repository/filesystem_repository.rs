@@ -9,6 +9,7 @@ use {
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
     io_util::file::AsyncReader,
+    parking_lot::Mutex,
     std::{convert::TryInto as _, marker::PhantomData, path::Path},
     tuf::{
         crypto::{HashAlgorithm, HashValue},
@@ -20,7 +21,8 @@ use {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
-    ReadOnly,
+    // TODO(fxbug.dev/83257): change this to ReadOnly.
+    ReadWrite,
     WriteOnly,
 }
 
@@ -29,7 +31,6 @@ where
     D: DataInterchange,
 {
     repo_proxy: DirectoryProxy,
-    mode: Mode,
     _interchange: PhantomData<D>,
 }
 
@@ -37,9 +38,8 @@ impl<D> FuchsiaFileSystemRepository<D>
 where
     D: DataInterchange,
 {
-    #[cfg(test)]
     pub fn new(repo_proxy: DirectoryProxy) -> Self {
-        Self { repo_proxy, mode: Mode::ReadOnly, _interchange: PhantomData }
+        Self { repo_proxy, _interchange: PhantomData }
     }
 
     #[cfg(test)]
@@ -53,17 +53,7 @@ where
         )
     }
 
-    // Switches the repo to write only mode, there's no way back.
-    #[cfg(test)]
-    pub fn switch_to_write_only_mode(&mut self) {
-        self.mode = Mode::WriteOnly;
-    }
-
     async fn fetch_path(&self, path: String) -> tuf::Result<Box<dyn AsyncRead + Send + Unpin>> {
-        if self.mode == Mode::WriteOnly {
-            return Err(make_opaque_error(anyhow!("attempt to read in write only mode")));
-        }
-
         let file_proxy =
             io_util::directory::open_file(&self.repo_proxy, &path, OPEN_RIGHT_READABLE)
                 .await
@@ -88,10 +78,6 @@ where
         path: String,
         reader: &mut (dyn AsyncRead + Send + Unpin),
     ) -> tuf::Result<()> {
-        if self.mode == Mode::ReadOnly {
-            return Err(make_opaque_error(anyhow!("attempt to write in read only mode")));
-        }
-
         if let Some(parent) = Path::new(&path).parent() {
             // This is needed because if there's no "/" in `path`, .parent() will return Some("")
             // instead of None.
@@ -213,6 +199,81 @@ where
     }
 }
 
+pub struct RWRepository<D, R> {
+    inner: R,
+    mode: Mutex<Mode>,
+    _phantom: PhantomData<D>,
+}
+
+impl<D, R> RWRepository<D, R> {
+    pub fn new(repo: R) -> Self {
+        Self { inner: repo, mode: Mutex::new(Mode::ReadWrite), _phantom: PhantomData }
+    }
+
+    pub fn switch_to_write_only_mode(&self) {
+        *self.mode.lock() = Mode::WriteOnly;
+    }
+}
+
+impl<D, R> RepositoryStorage<D> for RWRepository<D, R>
+where
+    D: DataInterchange + Sync + Send,
+    R: RepositoryStorage<D>,
+{
+    fn store_metadata<'a>(
+        &'a self,
+        meta_path: &'a MetadataPath,
+        version: &'a MetadataVersion,
+        metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+    ) -> BoxFuture<'a, tuf::Result<()>> {
+        self.inner.store_metadata(meta_path, version, metadata)
+    }
+
+    fn store_target<'a>(
+        &'a self,
+        target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+        target_path: &'a TargetPath,
+    ) -> BoxFuture<'a, tuf::Result<()>> {
+        self.inner.store_target(target, target_path)
+    }
+}
+
+impl<D, R> RepositoryProvider<D> for RWRepository<D, R>
+where
+    D: DataInterchange + Sync + Send,
+    R: RepositoryProvider<D>,
+{
+    fn fetch_metadata<'a>(
+        &'a self,
+        meta_path: &'a MetadataPath,
+        version: &'a MetadataVersion,
+        max_length: Option<usize>,
+        hash_data: Option<(&'static HashAlgorithm, HashValue)>,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin>>> {
+        if *self.mode.lock() == Mode::WriteOnly {
+            return future::ready(Err(make_opaque_error(anyhow!(
+                "attempt to read in write only mode"
+            ))))
+            .boxed();
+        }
+        self.inner.fetch_metadata(meta_path, version, max_length, hash_data)
+    }
+
+    fn fetch_target<'a>(
+        &'a self,
+        target_path: &'a TargetPath,
+        target_description: &'a TargetDescription,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin>>> {
+        if *self.mode.lock() == Mode::WriteOnly {
+            return future::ready(Err(make_opaque_error(anyhow!(
+                "attempt to read in write only mode"
+            ))))
+            .boxed();
+        }
+        self.inner.fetch_target(target_path, target_description)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -236,28 +297,24 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_store_and_fetch_path() {
         let temp = tempdir().unwrap();
-        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
         // Intentionally duplicate test cases to make sure we can overwrite existing file.
         for path in ["file", "a/b", "1/2/3", "a/b"] {
             let expected_data = get_random_buffer();
 
-            repo.mode = Mode::WriteOnly;
             let mut cursor = Cursor::new(&expected_data);
             repo.store_path(path.to_string(), &mut cursor).await.unwrap();
 
-            repo.mode = Mode::ReadOnly;
             let mut data = Vec::new();
             repo.fetch_path(path.to_string()).await.unwrap().read_to_end(&mut data).await.unwrap();
             assert_eq!(data, expected_data);
         }
 
         for path in ["", ".", "/", "./a", "../a", "a/", "a//b", "a/./b", "a/../b"] {
-            repo.mode = Mode::WriteOnly;
             let mut cursor = Cursor::new(&path);
             let store_result = repo.store_path(path.to_string(), &mut cursor).await;
             assert!(store_result.is_err(), "path = {}", path);
 
-            repo.mode = Mode::ReadOnly;
             assert!(repo.fetch_path(path.to_string()).await.is_err(), "path = {}", path);
         }
     }
@@ -302,8 +359,7 @@ mod tests {
     async fn test_store_metadata() {
         let temp = tempdir().unwrap();
         let expected_data = get_random_buffer();
-        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
-        repo.switch_to_write_only_mode();
+        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
         let mut cursor = Cursor::new(&expected_data);
         repo.store_metadata(
             &MetadataPath::new("root").unwrap(),
@@ -321,8 +377,7 @@ mod tests {
     async fn test_store_target() {
         let temp = tempdir().unwrap();
         let expected_data = get_random_buffer();
-        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
-        repo.switch_to_write_only_mode();
+        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
         let mut cursor = Cursor::new(&expected_data);
         repo.store_target(&mut cursor, &TargetPath::new("foo/bar".into()).unwrap()).await.unwrap();
 
@@ -333,28 +388,24 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_fetch_fail_when_write_only() {
         let temp = tempdir().unwrap();
-        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
-        std::fs::write(temp.path().join("foo"), get_random_buffer()).unwrap();
+        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let repo = RWRepository::new(repo);
+        std::fs::create_dir(temp.path().join("metadata")).unwrap();
+        std::fs::write(temp.path().join("metadata/foo.json"), get_random_buffer()).unwrap();
 
         let mut data = Vec::new();
-        repo.fetch_path("foo".to_string()).await.unwrap().read_to_end(&mut data).await.unwrap();
+        repo.fetch_metadata(&MetadataPath::new("foo").unwrap(), &MetadataVersion::None, None, None)
+            .await
+            .unwrap()
+            .read_to_end(&mut data)
+            .await
+            .unwrap();
 
         repo.switch_to_write_only_mode();
 
-        assert!(repo.fetch_path("foo".to_string()).await.is_err());
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_store_fail_when_read_only() {
-        let temp = tempdir().unwrap();
-        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
-
-        let mut cursor = Cursor::new(get_random_buffer());
-        let result = repo.store_path("foo".to_string(), &mut cursor).await;
-        assert!(result.is_err());
-
-        repo.switch_to_write_only_mode();
-
-        repo.store_path("foo".to_string(), &mut cursor).await.unwrap();
+        assert!(repo
+            .fetch_metadata(&MetadataPath::new("foo").unwrap(), &MetadataVersion::None, None, None)
+            .await
+            .is_err());
     }
 }
