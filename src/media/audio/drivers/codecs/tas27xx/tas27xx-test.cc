@@ -291,6 +291,10 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
                                          inspect::StringPropertyValue("Texas Instruments")));
   ASSERT_NO_FATAL_FAILURES(
       CheckProperty(simple_codec->node(), "product", inspect::StringPropertyValue("TAS2770")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "status_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "codec_status", inspect::UintPropertyValue(0)));
 
   // Check setting DAI formats.
   {
