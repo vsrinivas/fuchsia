@@ -261,7 +261,7 @@ impl RamdiskBuilder {
         } else {
             ramdevice_client::wait_for_device(
                 "/dev/sys/platform/00:00:2d/ramctl",
-                std::time::Duration::from_secs(10),
+                std::time::Duration::from_secs(30),
             )
             .context("/dev/sys/platform/00:00:2d/ramctl did not appear")?;
         }
