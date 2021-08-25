@@ -20,58 +20,56 @@ class GuestTest : public ::testing::Test {
  public:
   static void SetUpTestSuite() {
     FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
-    enclosed_guest_ = new T();
-    ASSERT_EQ(enclosed_guest_->Start(zx::time::infinite()), ZX_OK);
+    enclosed_guest_.emplace();
+    ASSERT_EQ(GetEnclosedGuest().Start(zx::time::infinite()), ZX_OK);
   }
 
   static void TearDownTestSuite() {
-    EXPECT_EQ(enclosed_guest_->Stop(zx::time::infinite()), ZX_OK);
-    delete enclosed_guest_;
+    EXPECT_EQ(GetEnclosedGuest().Stop(zx::time::infinite()), ZX_OK);
+    enclosed_guest_.reset();
   }
 
  protected:
   void SetUp() override {
     // An assertion failure in SetUpTestSuite doesn't prevent tests from running,
     // so we need to check that it succeeded here.
-    ASSERT_TRUE(enclosed_guest_->Ready()) << "Guest setup failed";
+    ASSERT_TRUE(GetEnclosedGuest().Ready()) << "Guest setup failed";
   }
 
   zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr,
                       int32_t* return_code = nullptr) {
-    return enclosed_guest_->Execute(argv, {}, zx::time::infinite(), result, return_code);
+    return GetEnclosedGuest().Execute(argv, {}, zx::time::infinite(), result, return_code);
   }
 
   zx_status_t Execute(const std::vector<std::string>& argv,
                       const std::unordered_map<std::string, std::string>& env,
                       std::string* result = nullptr, int32_t* return_code = nullptr) {
-    return enclosed_guest_->Execute(argv, env, zx::time::infinite(), result, return_code);
+    return GetEnclosedGuest().Execute(argv, env, zx::time::infinite(), result, return_code);
   }
 
   zx_status_t RunUtil(const std::string& util, const std::vector<std::string>& argv,
                       std::string* result = nullptr) {
-    return enclosed_guest_->RunUtil(util, argv, zx::time::infinite(), result);
+    return GetEnclosedGuest().RunUtil(util, argv, zx::time::infinite(), result);
   }
 
-  GuestKernel GetGuestKernel() { return enclosed_guest_->GetGuestKernel(); }
+  GuestKernel GetGuestKernel() { return GetEnclosedGuest().GetGuestKernel(); }
 
-  uint32_t GetGuestCid() { return enclosed_guest_->GetGuestCid(); }
+  uint32_t GetGuestCid() { return GetEnclosedGuest().GetGuestCid(); }
 
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-    enclosed_guest_->GetHostVsockEndpoint(std::move(endpoint));
+    GetEnclosedGuest().GetHostVsockEndpoint(std::move(endpoint));
   }
 
   void ConnectToBalloon(
       fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> balloon_controller) {
-    enclosed_guest_->ConnectToBalloon(std::move(balloon_controller));
+    GetEnclosedGuest().ConnectToBalloon(std::move(balloon_controller));
   }
 
-  T* GetEnclosedGuest() { return enclosed_guest_; }
-
-  const T* GetEnclosedGuest() const { return enclosed_guest_; }
+  static T& GetEnclosedGuest() { return enclosed_guest_.value(); }
 
  private:
-  static inline T* enclosed_guest_ = nullptr;
+  static inline std::optional<T> enclosed_guest_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_

@@ -131,7 +131,7 @@ bool ScreenshotsSame(const Screenshot& a, const Screenshot& b) {
 TYPED_TEST(VirtioGpuTest, ScreenNotBlack) {
   // Take a screenshot.
   Screenshot screenshot;
-  zx_status_t status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot);
+  zx_status_t status = this->GetEnclosedGuest().GetScenic()->CaptureScreenshot(&screenshot);
   ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
   SaveScreenshot("screen-not-black", screenshot);
 
@@ -142,7 +142,7 @@ TYPED_TEST(VirtioGpuTest, ScreenNotBlack) {
 TYPED_TEST(VirtioGpuTest, ScreenDataLooksValid) {
   // Take a screenshot.
   Screenshot screenshot;
-  zx_status_t status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot);
+  zx_status_t status = this->GetEnclosedGuest().GetScenic()->CaptureScreenshot(&screenshot);
   ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
   SaveScreenshot("unique-colors", screenshot);
 
@@ -164,12 +164,12 @@ TYPED_TEST(VirtioGpuTest, ScreenDataLooksValid) {
 TYPED_TEST(VirtioGpuTest, TextInputChangesConsole) {
   // Take a screenshot.
   Screenshot screenshot1;
-  zx_status_t status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot1);
+  zx_status_t status = this->GetEnclosedGuest().GetScenic()->CaptureScreenshot(&screenshot1);
   ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
   SaveScreenshot("input-state1", screenshot1);
 
   // Type a key, which should update the display.
-  this->GetEnclosedGuest()->GetScenic()->SendKeyPress(KeyboardEventHidUsage::KEY_A);
+  this->GetEnclosedGuest().GetScenic()->SendKeyPress(KeyboardEventHidUsage::KEY_A);
 
   // Take another screenshot.
   //

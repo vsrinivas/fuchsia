@@ -17,7 +17,7 @@ using VirtioInputDebianGuestTest = GuestTest<DebianEnclosedGuest>;
 
 TEST_F(VirtioInputDebianGuestTest, Input) {
   // Start the test.
-  auto* guest_console = this->GetEnclosedGuest()->GetConsole();
+  auto* guest_console = this->GetEnclosedGuest().GetConsole();
   EXPECT_EQ(guest_console->SendBlocking(
                 "/test_utils/virtio_input_test_util keyboard /dev/input/event*\n"),
             ZX_OK);
@@ -31,7 +31,7 @@ TEST_F(VirtioInputDebianGuestTest, Input) {
            KeyboardEventHidUsage::KEY_C,
            KeyboardEventHidUsage::KEY_LSHIFT,
        }) {
-    this->GetEnclosedGuest()->GetScenic()->SendKeyPress(key);
+    this->GetEnclosedGuest().GetScenic()->SendKeyPress(key);
   }
 
   // Ensure we passed.

@@ -101,7 +101,7 @@ using VirtioNetMultipleInterfacesZirconGuestTest =
 TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
   // Loop back some data over the default network interface to verify that it is functional.
   auto handle = std::async(std::launch::async, [this] {
-    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
+    FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
     TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, true /* use_raw_packets */);
   });
 
@@ -117,7 +117,7 @@ TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
 
   // Ensure that the guest's second NIC works as well.
   handle = std::async(std::launch::async, [this] {
-    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
+    FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
     TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, true /* use_raw_packets */);
   });
 
@@ -147,7 +147,7 @@ using VirtioNetMultipleInterfacesDebianGuestTest =
 
 TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {
-    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
+    FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
     TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, false /* use_raw_packets */);
   });
 
@@ -203,7 +203,7 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
 
   // Start a new handler thread to validate the data sent over the second NIC.
   handle = std::async(std::launch::async, [this] {
-    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
+    FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
     TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, false /* use_raw_packets */);
   });
 

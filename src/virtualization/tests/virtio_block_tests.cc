@@ -262,7 +262,7 @@ template <class T>
 class VirtioBlockGuestTest : public GuestTest<T> {
  public:
   const std::vector<TestDevice>& TestDevices() const {
-    return this->GetEnclosedGuest()->TestDevices();
+    return this->GetEnclosedGuest().TestDevices();
   }
 };
 
