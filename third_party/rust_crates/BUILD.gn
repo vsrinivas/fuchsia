@@ -390,6 +390,10 @@ group("nom_locate") {
   deps = [ ":nom_locate-v2_1_0" ]
 }
 
+group("nonzero_ext") {
+  deps = [ ":nonzero_ext-v0_3_0" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("notify") {
     deps = [ ":notify-v5_0_0-pre_10" ]
@@ -5443,6 +5447,29 @@ rust_library("nom_locate-v2_1_0") {
     "-Cmetadata=7e01b57d7a23ba7a",
     "-Cextra-filename=-7e01b57d7a23ba7a",
     "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("nonzero_ext-v0_3_0") {
+  crate_name = "nonzero_ext"
+  crate_root = "//third_party/rust_crates/vendor/nonzero_ext/src/lib.rs"
+  output_name = "nonzero_ext-634a13011a18db16"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=634a13011a18db16",
+    "-Cextra-filename=-634a13011a18db16",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]

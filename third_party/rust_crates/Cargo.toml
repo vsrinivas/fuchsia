@@ -92,6 +92,7 @@ memchr = "2.0"
 mockall = "0.9"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 nom_locate = "2.0.0"
+nonzero_ext = "0.3.0"
 num-derive = "0.2.4"
 num-traits= "0.2.14"
 numtoa = "0.1.0"
