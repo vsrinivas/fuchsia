@@ -427,7 +427,6 @@ impl FileObject {
     /// Returns the `FileObject`'s `FileOps` as a `&T`, or `None` if the downcast fails.
     ///
     /// This is useful for syscalls that only operate on a certain type of file.
-    #[allow(dead_code)]
     pub fn downcast_file<T>(&self) -> Option<&T>
     where
         T: 'static,

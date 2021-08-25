@@ -33,14 +33,12 @@ pub fn duration_from_timespec(ts: timespec) -> Result<zx::Duration, Errno> {
 
 /// Returns a `zx::Time` for the given `timespec`, treating the `timespec` as an absolute point in
 /// time (i.e., not relative to "now").
-#[cfg(test)]
 pub fn time_from_timespec(ts: timespec) -> Result<zx::Time, Errno> {
     let duration = duration_from_timespec(ts)?;
     Ok(zx::Time::ZERO + duration)
 }
 
 /// Returns an `itimerspec` with `it_value` set to `deadline` and `it_interval` set to `interval`.
-#[cfg(test)]
 pub fn itimerspec_from_deadline_interval(deadline: zx::Time, interval: zx::Duration) -> itimerspec {
     itimerspec {
         it_interval: timespec_from_duration(interval),

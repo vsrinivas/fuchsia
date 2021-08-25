@@ -117,6 +117,7 @@ gvisor_tests = [
   "sigaltstack_test",
   "stat_test",
   "symlink_test",
+  "timerfd_test",
   "uidgid_test",
   "wait_test",
 ]

@@ -7,6 +7,7 @@ use std::usize;
 
 use crate::errno;
 use crate::error;
+use crate::fs::fuchsia::*;
 use crate::fs::memfd::*;
 use crate::fs::pipe::*;
 use crate::fs::*;
@@ -755,6 +756,75 @@ pub fn sys_mount(
 
     let fs = create_filesystem(ctx.kernel(), source, fs_type, b"")?;
     ctx.task.lookup_node(ctx.task.fs.root.clone(), target, SymlinkMode::max_follow())?.mount(fs)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_timerfd_create(
+    ctx: &SyscallContext<'_>,
+    clock_id: u32,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    match clock_id {
+        CLOCK_MONOTONIC | CLOCK_BOOTTIME => {}
+        CLOCK_REALTIME => return error!(ENOSYS),
+        _ => return error!(EINVAL),
+    };
+    if flags & !(TFD_NONBLOCK | TFD_CLOEXEC) != 0 {
+        not_implemented!("timerfd_create: flags 0x{:x}", flags);
+        return error!(EINVAL);
+    }
+
+    let mut open_flags = OpenFlags::RDWR;
+    if flags & TFD_NONBLOCK != 0 {
+        open_flags |= OpenFlags::NONBLOCK;
+    }
+
+    let mut fd_flags = FdFlags::empty();
+    if flags & TFD_CLOEXEC != 0 {
+        fd_flags |= FdFlags::CLOEXEC;
+    };
+
+    let timer = TimerFile::new(ctx.kernel(), open_flags)?;
+    let fd = ctx.task.files.add_with_flags(timer, fd_flags)?;
+    Ok(fd.into())
+}
+
+pub fn sys_timerfd_gettime<'a>(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_current_value: UserRef<itimerspec>,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    let timer_file = file.downcast_file::<TimerFile>().ok_or_else(|| errno!(EBADF))?;
+    let timer_info = timer_file.current_timer_spec();
+    ctx.task.mm.write_object(user_current_value, &timer_info)?;
+
+    Ok(SUCCESS)
+}
+
+pub fn sys_timerfd_settime(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    flags: u32,
+    user_new_value: UserRef<itimerspec>,
+    user_old_value: UserRef<itimerspec>,
+) -> Result<SyscallResult, Errno> {
+    if flags & !(TFD_TIMER_ABSTIME) != 0 {
+        not_implemented!("timerfd_settime: flags 0x{:x}", flags);
+        return error!(EINVAL);
+    }
+
+    let file = ctx.task.files.get(fd)?;
+    let timer_file = file.downcast_file::<TimerFile>().ok_or_else(|| errno!(EBADF))?;
+
+    let mut new_timer_spec = itimerspec::default();
+    ctx.task.mm.read_object(user_new_value, &mut new_timer_spec)?;
+
+    let old_timer_spec = timer_file.set_timer_spec(new_timer_spec, flags)?;
+    if !user_old_value.is_null() {
+        ctx.task.mm.write_object(user_old_value, &old_timer_spec)?;
+    }
+
     Ok(SUCCESS)
 }
 

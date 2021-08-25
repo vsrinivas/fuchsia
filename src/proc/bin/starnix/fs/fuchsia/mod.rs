@@ -10,10 +10,12 @@ use crate::task::Kernel;
 mod pipe;
 mod remote;
 mod syslog;
+mod timer;
 
 pub use pipe::*;
 pub use remote::*;
 pub use syslog::*;
+pub use timer::*;
 
 /// Create a FileHandle from a zx::Handle.
 pub fn create_file_from_handle(
