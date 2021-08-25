@@ -6,17 +6,11 @@
 
 #include <endian.h>
 #include <fcntl.h>
-#include <fuchsia/sysinfo/cpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zbitl/error_string.h>
 #include <lib/zbitl/image.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/driver-config.h>
-
-#include <fbl/unique_fd.h>
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
@@ -186,24 +180,11 @@ static uint32_t typer(uint32_t num_interrupts, uint8_t num_cpus,
 
 static uint32_t pidr2_arch_rev(uint32_t revision) { return set_bits(revision, 7, 4); }
 
-static zx_status_t get_interrupt_controller_info(
-    const fuchsia::sysinfo::SysInfoSyncPtr& sysinfo,
-    fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
-  zx_status_t fidl_status;
-  zx_status_t status = sysinfo->GetInterruptControllerInfo(&fidl_status, info);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return fidl_status;
-}
-
 GicDistributor::GicDistributor(Guest* guest) : guest_(guest) {}
 
 zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& interrupts) {
-  // Fetch the interrupt controller type.
-  fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
   fuchsia::sysinfo::InterruptControllerInfoPtr info;
-  zx_status_t status = get_interrupt_controller_info(sysinfo, &info);
+  zx_status_t status = get_interrupt_controller_info(&info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to get GIC version " << status;
     return status;

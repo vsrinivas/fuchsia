@@ -7,40 +7,61 @@
 
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 
-static constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
-
-static inline fuchsia::sysinfo::SysInfoSyncPtr get_sysinfo() {
-  fuchsia::sysinfo::SysInfoSyncPtr device;
-  fdio_service_connect(kSysInfoPath, device.NewRequest().TakeChannel().release());
-  return device;
+static inline zx_status_t get_interrupt_controller_info(
+    fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
+  fuchsia::sysinfo::SysInfoSyncPtr svc;
+  zx_status_t status = fdio_service_connect_by_name(fuchsia::sysinfo::SysInfo::Name_,
+                                                    svc.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  zx_status_t fidl_status;
+  status = svc->GetInterruptControllerInfo(&fidl_status, info);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return fidl_status;
 }
 
 static inline zx_status_t get_hypervisor_resource(zx::resource* resource) {
   fuchsia::kernel::HypervisorResourceSyncPtr svc;
-  fdio_service_connect((std::string("/svc/") + fuchsia::kernel::HypervisorResource::Name_).c_str(),
-                       svc.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_service_connect_by_name(fuchsia::kernel::HypervisorResource::Name_,
+                                                    svc.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
   return svc->Get(resource);
 }
 
 static inline zx_status_t get_irq_resource(zx::resource* resource) {
   fuchsia::kernel::IrqResourceSyncPtr svc;
-  fdio_service_connect((std::string("/svc/") + fuchsia::kernel::IrqResource::Name_).c_str(),
-                       svc.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_service_connect_by_name(fuchsia::kernel::IrqResource::Name_,
+                                                    svc.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
   return svc->Get(resource);
 }
 
 static inline zx_status_t get_mmio_resource(zx::resource* resource) {
   fuchsia::kernel::MmioResourceSyncPtr svc;
-  fdio_service_connect((std::string("/svc/") + fuchsia::kernel::MmioResource::Name_).c_str(),
-                       svc.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_service_connect_by_name(fuchsia::kernel::MmioResource::Name_,
+                                                    svc.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
   return svc->Get(resource);
 }
 
 static inline zx_status_t get_vmex_resource(zx::resource* resource) {
   fuchsia::kernel::VmexResourceSyncPtr svc;
-  fdio_service_connect((std::string("/svc/") + fuchsia::kernel::VmexResource::Name_).c_str(),
-                       svc.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_service_connect_by_name(fuchsia::kernel::VmexResource::Name_,
+                                                    svc.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
   return svc->Get(resource);
 }
 
