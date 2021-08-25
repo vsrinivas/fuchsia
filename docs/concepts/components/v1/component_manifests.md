@@ -289,6 +289,9 @@ The set of currently known features are as follows:
   partition is for storing persistent data that will survive a factory reset,
   and is only to be used for specific, approved use cases.
 
+- `deprecated-global-dev`, which requests access to all of `/dev` rather than a
+  given list of items.
+
 See [sandboxing](/docs/concepts/process/sandboxing.md) for more information about sandboxing.
 
 [hub]: /docs/concepts/components/v1/hub.md

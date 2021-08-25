@@ -117,6 +117,7 @@
                         "enum": [
                             "build-info",
                             "config-data",
+                            "deprecated-global-dev",
                             "deprecated-misc-storage",
                             "deprecated-shell",
                             "durable-data",

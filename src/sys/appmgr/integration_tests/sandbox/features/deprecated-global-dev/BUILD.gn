@@ -1,0 +1,31 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
+
+group("deprecated-global-dev") {
+  testonly = true
+  deps = [
+    ":has_deprecated_global_dev",
+    ":no_deprecated_global_dev",
+  ]
+}
+
+sandbox_test_package("has_deprecated_global_dev") {
+  sources = [ "has_deprecated_global_dev.cc" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
+  ]
+}
+
+sandbox_test_package("no_deprecated_global_dev") {
+  sources = [ "no_deprecated_global_dev.cc" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
+  ]
+}

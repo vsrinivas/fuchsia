@@ -29,6 +29,7 @@ constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";
 
 constexpr char kBuildInfoAllowList[] = "allowlist/build_info.txt";
+constexpr char kDeprecatedGlobalDevAllowList[] = "allowlist/deprecated_global_dev.txt";
 constexpr char kMiscStorageAllowList[] = "allowlist/deprecated_misc_storage.txt";
 
 NamespaceBuilder::~NamespaceBuilder() = default;
@@ -192,6 +193,17 @@ zx_status_t NamespaceBuilder::AddSandbox(
       } else {
         FX_LOGS(ERROR) << "Component " << ns_id
                        << " is not allowed to use deprecated-misc-storage. Blocked by allowlist.";
+      }
+    } else if (feature == "deprecated-global-dev") {
+      // TODO(fxbug.dev/83185): delete this.
+      AllowList deprecated_global_dev_allowlist(appmgr_config_dir_, kDeprecatedGlobalDevAllowList);
+      FuchsiaPkgUrl pkg_url;
+      if (pkg_url.Parse(ns_id) && deprecated_global_dev_allowlist.IsAllowed(pkg_url)) {
+        PushDirectoryFromPath("/dev");
+      } else {
+        FX_LOGS(WARNING)
+            << "Component " << ns_id
+            << " is not allowlisted to use deprecated-global-dev. See fxbug.dev/83185.";
       }
     }
   }

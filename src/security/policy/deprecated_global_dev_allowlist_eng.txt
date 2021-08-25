@@ -1,0 +1,2 @@
+fuchsia-pkg://fuchsia.com/guest-runner#meta/guest_runner.cmx
+fuchsia-pkg://fuchsia.com/has_deprecated_global_dev#meta/has_deprecated_global_dev.cmx

@@ -1,0 +1,8 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/no_deprecated_global_dev"
+    }
+}
