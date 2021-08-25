@@ -559,7 +559,7 @@ useful for debugging issues that prevent boot of the device.
 | c runtime test, coding tables      | `fx test fidl_c_tests`    | //zircon/system/ulib/fidl                                                 |
 | walker, misc             | `fx test fidl-walker-tests`         |  //zircon/system/ulib/fidl
 | walker tests w/ handle closing checks | `fx test fidl-handle-closing-tests` | //zircon/system/ulib/fidl
-| hlcpp bindings tests including conformance tests     | `fx test fidl_hlcpp_tests`                | //sdk/lib/fidl                                                             |
+| hlcpp bindings tests including conformance tests     | `fx test fidl_hlcpp_unit_test_package fidl_hlcpp_conformance_test_package`                | //sdk/lib/fidl                                                             |
 | llcpp bindings tests     | `fx test //src/lib/fidl/llcpp`      | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
 | go bindings tests        | `fx test go-fidl-tests`             | //third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
 | dart bindings tests      | `fx test dart-bindings-test`<br>(_see note below_) | //sdk/dart/fidl                                                  |

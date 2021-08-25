@@ -147,11 +147,31 @@ cts_fuchsia_component("fidl_hlcpp_unit_tests") {
   deps = [ ":fidl_hlcpp_unit_tests_bin" ]
 }
 
-cts_fuchsia_test_package("fidl_hlcpp_tests") {
-  package_name = "fidl_hlcpp_tests"
-  test_components = [
-    ":fidl_hlcpp_conformance_tests",
-    ":fidl_hlcpp_unit_tests",
+cts_fuchsia_test_package("fidl_hlcpp_unit_test_package") {
+  package_name = "fidl_hlcpp_unit_test_package"
+  test_components = [ ":fidl_hlcpp_unit_tests" ]
+}
+
+cts_fuchsia_test_package("fidl_hlcpp_conformance_test_package") {
+  package_name = "fidl_hlcpp_conformance_test_package"
+  test_components = [ ":fidl_hlcpp_conformance_tests" ]
+}
+
+fuchsia_package_archive("fidl_hlcpp_unit_test_archive") {
+  testonly = true
+  package = ":fidl_hlcpp_unit_test_package"
+}
+
+fuchsia_package_archive("fidl_hlcpp_conformance_test_archive") {
+  testonly = true
+  package = ":fidl_hlcpp_conformance_test_package"
+}
+
+cts_artifacts("prebuilts") {
+  testonly = true
+  package_archives = [
+    ":fidl_hlcpp_unit_test_archive",
+    ":fidl_hlcpp_conformance_test_archive",
   ]
 }
 
@@ -216,7 +236,10 @@ cts_copy_to_sdk("build") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fidl_hlcpp_tests" ]
+  deps = [
+    ":fidl_hlcpp_conformance_test_package",
+    ":fidl_hlcpp_unit_test_package",
+  ]
 
   current_dir = get_label_info(":${target_name}", "dir")
   is_prebuilt_cts =

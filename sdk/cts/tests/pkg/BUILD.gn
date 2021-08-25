@@ -8,6 +8,7 @@ group("prebuilts") {
   testonly = true
   deps = [
     "fdio:prebuilts",
+    "fidl/cpp:prebuilts",
     "memfs:prebuilts",
   ]
 }

@@ -28,5 +28,15 @@
         "archive_name": "fdio-spawn-tests",
         "component_name": "fdio-spawn-tests-component.cmx",
         "package": "fdio-spawn-tests"
+    },
+    {
+        "archive_name": "fidl_hlcpp_conformance_test_package",
+        "component_name": "fidl_hlcpp_conformance_tests.cm",
+        "package": "fidl_hlcpp_conformance_test_package"
+    },
+    {
+        "archive_name": "fidl_hlcpp_unit_test_package",
+        "component_name": "fidl_hlcpp_unit_tests.cm",
+        "package": "fidl_hlcpp_unit_test_package"
     }
 ]
