@@ -54,6 +54,10 @@ class TpmTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_tp
   }
 
   void TearDown() override {
+    auto device = fake_root_->GetLatestChild();
+    device_async_remove(device);
+    mock_ddk::ReleaseFlaggedDevices(fake_root_.get());
+
     {
       std::scoped_lock lock(state_mutex_);
       state_ = kTeardownTest;
@@ -211,9 +215,9 @@ TEST_F(TpmTest, TestDdkSuspendToRam) {
     TpmShutdownCmd* shutdown = reinterpret_cast<TpmShutdownCmd*>(c);
     shutdown_type = be16toh(shutdown->shutdown_type);
 
-    TpmShutdownResponse r{
+    TpmResponseHeader r{
         .tag = htobe16(TPM_ST_NO_SESSIONS),
-        .response_size = htobe32(sizeof(TpmShutdownResponse)),
+        .response_size = htobe32(sizeof(TpmResponseHeader)),
         .response_code = 0,
     };
     out.resize(sizeof(r), 0);
@@ -237,9 +241,9 @@ TEST_F(TpmTest, TestDdkSuspendShutdown) {
     TpmShutdownCmd* shutdown = reinterpret_cast<TpmShutdownCmd*>(c);
     shutdown_type = be16toh(shutdown->shutdown_type);
 
-    TpmShutdownResponse r{
+    TpmResponseHeader r{
         .tag = htobe16(TPM_ST_NO_SESSIONS),
-        .response_size = htobe32(sizeof(TpmShutdownResponse)),
+        .response_size = htobe32(sizeof(TpmResponseHeader)),
         .response_code = 0,
     };
     out.resize(sizeof(r), 0);

@@ -11,11 +11,30 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <mutex>
+
 #include "src/devices/tpm/drivers/tpm/commands.h"
 #include "src/devices/tpm/drivers/tpm/registers.h"
 #include "src/devices/tpm/drivers/tpm/tpm_bind.h"
 
 namespace tpm {
+namespace {
+
+template <typename CmdType>
+std::unique_ptr<TpmCmdHeader> make_cmd_header(
+    std::unique_ptr<CmdType, std::default_delete<CmdType>> &&p) {
+  // To safely cast into a TpmCmdHeader, we need the cmdtype to start with a TpmCmdHeader.
+  static_assert(offsetof(CmdType, hdr) == 0 && std::is_same<decltype(p->hdr), TpmCmdHeader>::value,
+                "CmdType must start with a TpmCmdHeader");
+  // CmdType must be trivially destructible. If it isn't the below cast to TpmCmdHeader will mean
+  // that the destructor of the actual class is never called.
+  static_assert(std::is_trivially_destructible<CmdType>::value,
+                "CmdType must be trivially destructible");
+  std::unique_ptr<TpmCmdHeader> header(reinterpret_cast<TpmCmdHeader *>(p.release()));
+  return header;
+}
+}  // namespace
+
 using fuchsia_hardware_tpmimpl::wire::RegisterAddress;
 
 zx_status_t TpmDevice::Create(void *ctx, zx_device_t *parent) {
@@ -43,32 +62,21 @@ zx_status_t TpmDevice::Create(void *ctx, zx_device_t *parent) {
 }
 
 void TpmDevice::DdkInit(ddk::InitTxn txn) {
-  zx_status_t status = ZX_OK;
-  auto replier = fit::defer([&status, &txn]() { txn.Reply(status); });
-  StsReg sts;
-  if ((status = sts.ReadFrom(tpm_)) != ZX_OK) {
-    return;
-  }
-  if (sts.tpm_family() != TpmFamily::kTpmFamily20) {
-    zxlogf(ERROR, "unsupported TPM family, expected 2.0");
-
-    status = ZX_ERR_NOT_SUPPORTED;
-    return;
-  }
+  command_thread_ = std::thread(&TpmDevice::CommandThread, this, std::move(txn));
 }
 
 void TpmDevice::DdkSuspend(ddk::SuspendTxn txn) {
-  std::optional<TpmShutdownCmd> cmd;
+  std::unique_ptr<TpmShutdownCmd> cmd;
 
   switch (txn.suspend_reason()) {
     case DEVICE_SUSPEND_REASON_REBOOT:
     case DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER:
     case DEVICE_SUSPEND_REASON_REBOOT_RECOVERY:
     case DEVICE_SUSPEND_REASON_POWEROFF:
-      cmd = TpmShutdownCmd(TPM_SU_CLEAR);
+      cmd = std::make_unique<TpmShutdownCmd>(TPM_SU_CLEAR);
       break;
     case DEVICE_SUSPEND_REASON_SUSPEND_RAM:
-      cmd = TpmShutdownCmd(TPM_SU_STATE);
+      cmd = std::make_unique<TpmShutdownCmd>(TPM_SU_STATE);
       break;
     default:
       zxlogf(WARNING, "Unknown suspend state %d", txn.requested_state());
@@ -76,19 +84,108 @@ void TpmDevice::DdkSuspend(ddk::SuspendTxn txn) {
       return;
   }
 
-  if (cmd.has_value()) {
-    // TODO(fxbug.dev/81433): move this onto a command-processing thread.
-    zx_status_t result = DoCommand(&cmd.value().hdr);
-    if (result != ZX_OK) {
-      zxlogf(ERROR, "Error sending TPM shutdown command: %s", zx_status_get_string(result));
-      txn.Reply(result, DEV_POWER_STATE_D0);
-      return;
-    }
-  }
-  txn.Reply(ZX_OK, txn.requested_state());
+  ZX_DEBUG_ASSERT(cmd);
+
+  QueueCommand(
+      std::move(cmd), [txn = std::move(txn)](zx_status_t status, TpmResponseHeader *hdr) mutable {
+        if (status != ZX_OK) {
+          zxlogf(ERROR, "Error sending TPM shutdown command: %s", zx_status_get_string(status));
+          txn.Reply(status, DEV_POWER_STATE_D0);
+        } else {
+          txn.Reply(ZX_OK, txn.requested_state());
+        }
+      });
 }
 
-zx_status_t TpmDevice::DoCommand(TpmCmdHeader *cmd) {
+void TpmDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  std::scoped_lock lock(command_mutex_);
+  ZX_DEBUG_ASSERT(unbind_txn_ == std::nullopt);
+  unbind_txn_ = std::move(txn);
+  shutdown_ = true;
+  command_ready_.notify_all();
+  if (!command_thread_.joinable()) {
+    unbind_txn_->Reply();
+    unbind_txn_ = std::nullopt;
+  }
+}
+
+void TpmDevice::CommandThread(ddk::InitTxn txn) {
+  zx_status_t status = DoInit();
+  txn.Reply(status);
+  if (status != ZX_OK) {
+    return;
+  }
+
+  while (true) {
+    std::vector<TpmCommand> queue;
+    {
+      std::scoped_lock lock(command_mutex_);
+      command_ready_.wait(command_mutex_, [&]() __TA_REQUIRES(command_mutex_) {
+        return !command_queue_.empty() || shutdown_;
+      });
+
+      if (shutdown_) {
+        break;
+      }
+
+      std::swap(command_queue_, queue);
+    }
+
+    for (auto &op : queue) {
+      // If the call succeeds DoCommand calls the handler with the response content.
+      zx_status_t status = DoCommand(op);
+      if (status != ZX_OK) {
+        op.handler(status, nullptr);
+      }
+    }
+  }
+
+  {
+    std::scoped_lock lock(command_mutex_);
+
+    // Drain the command queue and cancel all pending commands.
+    for (auto &op : command_queue_) {
+      op.handler(ZX_ERR_CANCELED, nullptr);
+    }
+    command_queue_.clear();
+
+    if (unbind_txn_.has_value()) {
+      unbind_txn_->Reply();
+      unbind_txn_ = std::nullopt;
+    }
+  }
+}
+
+zx_status_t TpmDevice::DoInit() {
+  StsReg sts;
+  zx_status_t status = sts.ReadFrom(tpm_);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (sts.tpm_family() != TpmFamily::kTpmFamily20) {
+    zxlogf(ERROR, "unsupported TPM family, expected 2.0");
+
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
+}
+
+template <typename CmdType>
+void TpmDevice::QueueCommand(std::unique_ptr<CmdType> cmd, TpmCommandCallback &&callback) {
+  auto header(make_cmd_header(std::move(cmd)));
+  std::scoped_lock lock(command_mutex_);
+  if (shutdown_) {
+    callback(ZX_ERR_CANCELED, nullptr);
+  } else {
+    command_queue_.emplace_back(TpmCommand{
+        .cmd = std::move(header),
+        .handler = std::move(callback),
+    });
+    command_ready_.notify_all();
+  }
+}
+
+zx_status_t TpmDevice::DoCommand(TpmCommand &cmd) {
   // See section 5.5.2.2 of the client platform spec.
   zx_status_t status = StsReg().set_command_ready(1).WriteTo(tpm_);
   if (status != ZX_OK) {
@@ -111,8 +208,8 @@ zx_status_t TpmDevice::DoCommand(TpmCmdHeader *cmd) {
     }
   });
 
-  size_t command_size = betoh32(cmd->command_size);
-  uint8_t *buf = reinterpret_cast<uint8_t *>(cmd);
+  size_t command_size = betoh32(cmd.cmd->command_size);
+  uint8_t *buf = reinterpret_cast<uint8_t *>(cmd.cmd.get());
   while (command_size > 1) {
     status = sts.ReadFrom(tpm_);
     if (status != ZX_OK) {
@@ -196,9 +293,43 @@ zx_status_t TpmDevice::DoCommand(TpmCmdHeader *cmd) {
     zx::nanosleep(zx::deadline_after(zx::usec(500)));
   }
 
-  while (sts.data_avail()) {
-    // TODO(fxbug.dev/76095): actually return the result of the command.
-    size_t burst_count = sts.burst_count();
+  // Read the response header.
+  TpmResponseHeader response;
+  status =
+      ReadFromFifo(cpp20::span<uint8_t>(reinterpret_cast<uint8_t *>(&response), sizeof(response)));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // If the response is just the response header, avoid an extra allocation.
+  if (response.ResponseSize() == sizeof(response)) {
+    cmd.handler(ZX_OK, &response);
+    return ZX_OK;
+  }
+
+  // Otherwise, allocate a buffer that's large enough to fit the whole response.
+  std::vector<uint8_t> data(response.ResponseSize());
+  memcpy(data.data(), &response, sizeof(response));
+  uint8_t *next = &data[sizeof(response)];
+  size_t bytes = data.size() - sizeof(response);
+  status = ReadFromFifo(cpp20::span<uint8_t>(next, bytes));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  cmd.handler(ZX_OK, reinterpret_cast<TpmResponseHeader *>(data.data()));
+  return ZX_OK;
+}
+
+zx_status_t TpmDevice::ReadFromFifo(cpp20::span<uint8_t> data) {
+  StsReg sts;
+  zx_status_t status = sts.ReadFrom(tpm_);
+  if (status != ZX_OK) {
+    return status;
+  }
+  size_t read = 0;
+  while (read < data.size_bytes() && sts.data_avail()) {
+    size_t burst_count = std::min(static_cast<size_t>(sts.burst_count()), data.size_bytes() - read);
     if (burst_count != 0) {
       auto result = tpm_.Read(0, RegisterAddress::kTpmDataFifo, burst_count);
       if (!result.ok()) {
@@ -209,6 +340,10 @@ zx_status_t TpmDevice::DoCommand(TpmCmdHeader *cmd) {
         zxlogf(ERROR, "Failed to read: %d", result->result.err());
         return result->result.err();
       }
+      auto &received = result->result.response().data;
+
+      memcpy(&data.data()[read], received.data(), received.count());
+      read += received.count();
     }
 
     status = sts.ReadFrom(tpm_);
@@ -217,7 +352,11 @@ zx_status_t TpmDevice::DoCommand(TpmCmdHeader *cmd) {
     }
   }
 
-  return ZX_OK;
+  if (read < data.size_bytes()) {
+    return ZX_ERR_IO;
+  }
+
+  return status;
 }
 
 static const zx_driver_ops_t driver_ops = []() {

@@ -39,10 +39,14 @@ struct TpmShutdownCmd {
   }
 } __PACKED;
 
-struct TpmShutdownResponse {
+struct TpmResponseHeader {
   uint16_t tag;
   uint32_t response_size;
   uint32_t response_code;
-};
+
+ public:
+  uint32_t ResponseSize() const { return betoh32(response_size); }
+  uint32_t ResponseCode() const { return betoh32(response_code); }
+} __PACKED;
 
 #endif  // SRC_DEVICES_TPM_DRIVERS_TPM_COMMANDS_H_

@@ -8,14 +8,22 @@
 #include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 
+#include <condition_variable>
+
 #include <ddktl/device.h>
 
 #include "src/devices/tpm/drivers/tpm/commands.h"
 
 namespace tpm {
 
+using TpmCommandCallback = fit::function<void(zx_status_t, TpmResponseHeader*)>;
+struct TpmCommand {
+  std::unique_ptr<TpmCmdHeader> cmd;
+  TpmCommandCallback handler;
+};
+
 class TpmDevice;
-using DeviceType = ddk::Device<TpmDevice, ddk::Initializable, ddk::Suspendable>;
+using DeviceType = ddk::Device<TpmDevice, ddk::Initializable, ddk::Suspendable, ddk::Unbindable>;
 
 class TpmDevice : public DeviceType {
  public:
@@ -26,13 +34,31 @@ class TpmDevice : public DeviceType {
 
   // DDK mixins
   void DdkInit(ddk::InitTxn txn);
-  void DdkRelease() { delete this; }
+  void DdkRelease() {
+    if (command_thread_.joinable()) {
+      command_thread_.join();
+    }
+    delete this;
+  }
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
 
  private:
-  zx_status_t DoCommand(TpmCmdHeader* cmd);
+  template <typename CmdType>
+  void QueueCommand(std::unique_ptr<CmdType> cmd, TpmCommandCallback&& callback)
+      __TA_EXCLUDES(command_mutex_);
+  zx_status_t DoCommand(TpmCommand& cmd);
+  void CommandThread(ddk::InitTxn txn);
+  zx_status_t ReadFromFifo(cpp20::span<uint8_t> data);
+  zx_status_t DoInit();
 
   fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl> tpm_;
+  std::vector<TpmCommand> command_queue_ __TA_GUARDED(command_mutex_);
+  std::mutex command_mutex_;
+  std::condition_variable_any command_ready_;
+  std::thread command_thread_;
+  std::optional<ddk::UnbindTxn> unbind_txn_ __TA_GUARDED(command_mutex_);
+  bool shutdown_ __TA_GUARDED(command_mutex_) = false;
 };
 
 }  // namespace tpm
