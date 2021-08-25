@@ -176,7 +176,6 @@ mod tests {
     // the open file descriptor, preventing the other test from executing it.
     #[test]
     #[serial]
-    #[ignore = "TODO(https://fxbug.dev/82867): Re-enable this test when it no longer flakes"]
     fn construct() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
@@ -208,7 +207,6 @@ mod tests {
 
     #[test]
     #[serial]
-    #[ignore = "TODO(https://fxbug.dev/82867): Re-enable this test when it no longer flakes"]
     fn construct_with_emmc() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
@@ -245,7 +243,6 @@ mod tests {
 
     #[test]
     #[serial]
-    #[ignore = "TODO(https://fxbug.dev/82867): Re-enable this test when it no longer flakes"]
     fn construct_with_nand() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
