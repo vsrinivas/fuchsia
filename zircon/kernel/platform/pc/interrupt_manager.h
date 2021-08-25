@@ -46,28 +46,28 @@ class InterruptManager {
     return handler_allocated_.Reset(X86_INT_COUNT);
   }
 
-  zx_status_t MaskInterrupt(unsigned int vector) {
-    IoApic::MaskIrq(vector, IO_APIC_IRQ_MASK);
+  zx_status_t MaskInterrupt(unsigned int global_irq) {
+    IoApic::MaskIrq(global_irq, IO_APIC_IRQ_MASK);
     return ZX_OK;
   }
 
-  zx_status_t UnmaskInterrupt(unsigned int vector) {
-    IoApic::MaskIrq(vector, IO_APIC_IRQ_UNMASK);
+  zx_status_t UnmaskInterrupt(unsigned int global_irq) {
+    IoApic::MaskIrq(global_irq, IO_APIC_IRQ_UNMASK);
     return ZX_OK;
   }
 
-  zx_status_t ConfigureInterrupt(unsigned int vector, enum interrupt_trigger_mode tm,
+  zx_status_t ConfigureInterrupt(unsigned int global_irq, enum interrupt_trigger_mode tm,
                                  enum interrupt_polarity pol) {
     Guard<SpinLock, IrqSave> guard{&lock_};
-    IoApic::ConfigureIrq(vector, tm, pol, DELIVERY_MODE_FIXED, IO_APIC_IRQ_MASK, DST_MODE_PHYSICAL,
-                         apic_bsp_id(), 0);
+    IoApic::ConfigureIrq(global_irq, tm, pol, DELIVERY_MODE_FIXED, IO_APIC_IRQ_MASK,
+                         DST_MODE_PHYSICAL, apic_bsp_id(), 0);
     return ZX_OK;
   }
 
-  zx_status_t GetInterruptConfig(unsigned int vector, enum interrupt_trigger_mode* tm,
+  zx_status_t GetInterruptConfig(unsigned int global_irq, enum interrupt_trigger_mode* tm,
                                  enum interrupt_polarity* pol) {
     Guard<SpinLock, IrqSave> guard{&lock_};
-    return IoApic::FetchIrqConfig(vector, tm, pol);
+    return IoApic::FetchIrqConfig(global_irq, tm, pol);
   }
 
   void GetEntryByX86Vector(uint8_t x86_vector, int_handler* handler, void** arg) {
@@ -79,7 +79,7 @@ class InterruptManager {
   bool InvokeX86Vector(uint8_t x86_vector) { return handler_table_[x86_vector].InvokeIfPresent(); }
 
   // Register a handler for an external interrupt.
-  // |vector| is a "global IRQ" number used by the IOAPIC module.
+  // |global_irq| is a "global IRQ" number used by the IOAPIC module.
   //
   // If |handler| is nullptr, |arg| is ignored and the specified |vector| has
   // its current handler removed.
@@ -93,9 +93,9 @@ class InterruptManager {
   //
   // If no more CPU interrupt vectors are available, returns
   // ZX_ERR_NO_RESOURCES.
-  zx_status_t RegisterInterruptHandler(unsigned int vector, int_handler handler, void* arg,
+  zx_status_t RegisterInterruptHandler(unsigned int global_irq, int_handler handler, void* arg,
                                        bool permanent = false) {
-    if (!IoApic::IsValidInterrupt(vector, 0 /* flags */)) {
+    if (!IoApic::IsValidInterrupt(global_irq, 0 /* flags */)) {
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -104,7 +104,7 @@ class InterruptManager {
 
     /* Fetch the x86 vector currently configured for this global irq.  Force
      * its value to zero if it is currently invalid */
-    uint8_t x86_vector = IoApic::FetchIrqVector(vector);
+    uint8_t x86_vector = IoApic::FetchIrqVector(global_irq);
     if (x86_vector < X86_INT_PLATFORM_BASE || x86_vector > X86_INT_PLATFORM_MAX) {
       x86_vector = 0;
     }
@@ -138,7 +138,7 @@ class InterruptManager {
         TRACEF(
             "Failed to allocate x86 IRQ vector for global IRQ (%u) when "
             "registering new handler (%p, %p)\n",
-            vector, handler, arg);
+            global_irq, handler, arg);
         return result;
       }
 
@@ -157,7 +157,7 @@ class InterruptManager {
       return ZX_ERR_ALREADY_BOUND;
     }
 
-    IoApic::ConfigureIrqVector(vector, handler != nullptr ? x86_vector : 0);
+    IoApic::ConfigureIrqVector(global_irq, handler != nullptr ? x86_vector : 0);
 
     return ZX_OK;
   }
