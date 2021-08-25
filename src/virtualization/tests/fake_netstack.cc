@@ -10,7 +10,7 @@
 #include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
-#include <netinet/ip6.h>
+#include <netinet/udp.h>
 #include <zircon/device/ethernet.h>
 
 static constexpr size_t kMtu = 1500;
@@ -331,61 +331,52 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   return static_cast<uint16_t>(~sum);
 }
 
-static size_t make_ip_header(const uint8_t guest_mac[ETH_ALEN], uint8_t packet_type, size_t length,
-                             uint8_t* data) {
-  // First construct the ethernet header.
-  ethhdr* eth = reinterpret_cast<ethhdr*>(data);
-  memcpy(eth->h_dest, guest_mac, ETH_ALEN);
-  memcpy(eth->h_source, kHostMacAddress, ETH_ALEN);
-  eth->h_proto = htons(kProtocolIpv4);
-
-  // Now construct the IPv4 header.
-  auto ip = reinterpret_cast<iphdr*>(data + sizeof(ethhdr));
-  ip->version = 4;
-  ip->ihl = sizeof(iphdr) >> 2;  // Header length in 32-bit words.
-  ip->tos = 0;
-  ip->tot_len = htons(static_cast<uint16_t>(sizeof(iphdr) + length));
-  ip->id = 0;
-  ip->frag_off = 0;
-  ip->ttl = UINT8_MAX;
-  ip->protocol = packet_type;
-  memcpy(&ip->saddr, kHostIpv4Address, sizeof(kHostIpv4Address));
-  memcpy(&ip->daddr, kGuestIpv4Address, sizeof(kGuestIpv4Address));
-  ip->check = 0;
-  ip->check = checksum(ip, sizeof(iphdr), 0);
-
-  return sizeof(ethhdr) + sizeof(iphdr);
-}
-
 fpromise::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
     const fuchsia::hardware::ethernet::MacAddress& mac_addr, std::vector<uint8_t> packet) {
-  struct udp_hdr_t {
-    uint16_t src_port;
-    uint16_t dst_port;
-    uint16_t length;
-    uint16_t checksum;
-  } __PACKED;
-
-  size_t packet_length = sizeof(udp_hdr_t) + packet.size();
-  size_t total_length = sizeof(ethhdr) + sizeof(iphdr) + packet_length;
+  size_t total_length = sizeof(ethhdr) + sizeof(iphdr) + sizeof(udphdr) + packet.size();
   if (total_length > kMtu) {
     return fpromise::make_error_promise(ZX_ERR_BUFFER_TOO_SMALL);
   }
 
-  std::vector<uint8_t> udp_packet(total_length);
-  size_t header_len =
-      make_ip_header(mac_addr.octets.data(), kPacketTypeUdp, packet_length, udp_packet.data());
+  std::vector<uint8_t> udp_packet;
+  udp_packet.reserve(total_length);
 
-  uintptr_t off = header_len;
-  auto udp = reinterpret_cast<udp_hdr_t*>(udp_packet.data() + off);
-  udp->src_port = htons(kTestPort);
-  udp->dst_port = htons(kTestPort);
-  udp->length = htons(static_cast<uint16_t>(sizeof(udp_hdr_t) + packet.size()));
-  // The checksum is optional for IPv4.
-  udp->checksum = 0;
+  {
+    ethhdr eth;
+    static_assert(sizeof(eth.h_dest) == sizeof(mac_addr.octets));
+    memcpy(eth.h_dest, mac_addr.octets.data(), sizeof(eth.h_dest));
+    static_assert(sizeof(eth.h_source) == sizeof(kHostMacAddress));
+    memcpy(eth.h_source, kHostMacAddress, sizeof(eth.h_source));
+    eth.h_proto = htons(kProtocolIpv4);
+    std::copy_n(reinterpret_cast<uint8_t*>(&eth), sizeof(eth), std::back_inserter(udp_packet));
+  }
 
-  off += sizeof(udp_hdr_t);
-  memcpy(udp_packet.data() + off, packet.data(), packet.size());
+  {
+    iphdr ip = {
+        .version = 4,
+        .tot_len = htons(static_cast<uint16_t>(sizeof(iphdr) + sizeof(udphdr) + packet.size())),
+        .ttl = UINT8_MAX,
+        .protocol = kPacketTypeUdp,
+    };
+    ip.ihl = sizeof(iphdr) >> 2;  // Header length in 32-bit words.
+    static_assert(sizeof(ip.saddr) == sizeof(kHostIpv4Address));
+    memcpy(&ip.saddr, kHostIpv4Address, sizeof(ip.saddr));
+    static_assert(sizeof(ip.daddr) == sizeof(kGuestIpv4Address));
+    memcpy(&ip.daddr, kGuestIpv4Address, sizeof(ip.daddr));
+    ip.check = checksum(&ip, sizeof(iphdr), 0);
+    std::copy_n(reinterpret_cast<uint8_t*>(&ip), sizeof(ip), std::back_inserter(udp_packet));
+  }
+
+  {
+    udphdr udp = {
+        .source = htons(kTestPort),
+        .dest = htons(kTestPort),
+        .len = htons(static_cast<uint16_t>(sizeof(udphdr) + packet.size())),
+    };
+    std::copy_n(reinterpret_cast<uint8_t*>(&udp), sizeof(udp), std::back_inserter(udp_packet));
+  }
+
+  std::copy(packet.begin(), packet.end(), std::back_inserter(udp_packet));
 
   return SendPacket(mac_addr, std::move(udp_packet));
 }
