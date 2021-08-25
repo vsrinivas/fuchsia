@@ -17,3 +17,11 @@ Unit tests can be run with:
 ```
 $ fx test gcs_lib_test
 ```
+
+There is an interactive test executable in the "test" sub-directory. It can be
+run with:
+
+```
+$ out/default/host_x64/gcs_test_client
+```
+(Replace "out/default" with your local build directory).

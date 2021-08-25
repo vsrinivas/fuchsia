@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (is_host) {
+  import("//build/rust/rustc_binary.gni")
+
+  rustc_binary("gcs_test_client_bin") {
+    testonly = true
+    name = "gcs_test_client"
+    with_unit_tests = true
+    sources = [ "src/main.rs" ]
+
+    deps = [
+      "//src/developer/ffx/lib/gcs",
+      "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia-hyper:fuchsia-hyper",
+      "//third_party/rust_crates:anyhow",
+    ]
+  }
+}

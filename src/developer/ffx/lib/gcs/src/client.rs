@@ -5,26 +5,31 @@
 //! Download blob data from Google Cloud Storage (GCS).
 
 use {
-    crate::token_store::{read_boto_refresh_token, TokenStore},
+    crate::token_store::TokenStore,
     anyhow::Result,
     fuchsia_hyper::{new_https_client, HttpsClient},
     hyper::{Body, Response},
-    std::path::Path,
     std::sync::Arc,
 };
 
 /// Create clients with credentials for use with GCS.
 ///
-/// It's advisable to only have one GCS ClientFactory at a time. One way to
-/// accomplish this is with a static once cell.
+/// Avoid more than one GCS ClientFactory with the *same auth* at a time. One way
+/// to accomplish this is with a static once cell.
 /// ```
 /// use once_cell::sync::OnceCell;
 /// static GCS_CLIENT_FACTORY: OnceCell<ClientFactory> = OnceCell::new();
-/// let client_factory = GCS_CLIENT_FACTORY.get_or_init(|| ClientFactory::new());
+/// let client_factory = GCS_CLIENT_FACTORY.get_or_init(|| {
+///     let auth = [...];
+///     ClientFactory::new_with_auth(auth)
+/// });
 /// ```
-/// If more than one GCS ClientFactory is active at the same time, the creation
-/// of access tokens may create unnecessary network traffic (spamming) or
-/// contention.
+/// If more than one GCS ClientFactory with auth is active at the same time, the
+/// creation of access tokens may create unnecessary network traffic (spamming)
+/// or contention.
+///
+/// Note: A ClientFactory using `TokenStore::new_without_auth()` doesn't have
+/// issues with more than one instance since there are no tokens to update.
 ///
 /// The ClientFactory is thread/async safe to encourage creating a single,
 /// shared instance.
@@ -34,17 +39,15 @@ pub struct ClientFactory {
 
 impl ClientFactory {
     /// Create a ClientFactory. Avoid creating more than one (see above).
-    pub fn new() -> Self {
-        /// TODO(fxbug.dev/82014): Don't use gsutil data.
-        use home::home_dir;
-        let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
-        let refresh = read_boto_refresh_token(&boto_path).expect("boto token");
-        let token_store = Arc::new(TokenStore::new(refresh));
+    pub fn new(token_store: TokenStore) -> Self {
+        let token_store = Arc::new(token_store);
         Self { token_store }
     }
 
     /// Create a new https client with shared access to the GCS credentials.
-    pub fn new_client(&self) -> Client {
+    ///
+    /// Multiple clients may be created to perform downloads in parallel.
+    pub fn create_client(&self) -> Client {
         Client::from_token_store(self.token_store.clone())
     }
 }
@@ -80,13 +83,32 @@ impl Client {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, crate::token_store::read_boto_refresh_token, std::path::Path};
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_client_factory_no_auth() {
+        let client_factory = ClientFactory::new(TokenStore::new_without_auth());
+        let client = client_factory.create_client();
+        let res = client
+            .download("for_testing_does_not_exist", "face_test_object")
+            .await
+            .expect("download");
+        assert_eq!(res.status(), 404);
+    }
+
+    /// This test relies on a local file which is not present on test bots, so
+    /// it is marked "ignore".
+    /// This can be run with `fx test gcs_lib_test -- --ignored`.
     #[ignore]
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_client_factory() {
-        let client_factory = ClientFactory::new();
-        let client = client_factory.new_client();
+    async fn test_client_factory_with_auth() {
+        use home::home_dir;
+        let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
+        let refresh =
+            read_boto_refresh_token(&boto_path).expect("boto file").expect("refresh token");
+        let auth = TokenStore::new_with_auth(refresh, /*access_token=*/ None);
+        let client_factory = ClientFactory::new(auth);
+        let client = client_factory.create_client();
         let res = client
             .download("for_testing_does_not_exist", "face_test_object")
             .await

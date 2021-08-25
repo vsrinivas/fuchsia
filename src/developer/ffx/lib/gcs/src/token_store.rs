@@ -5,7 +5,7 @@
 //! Provide Google Cloud Storage (GCS) access.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{bail, Result},
     async_lock::Mutex,
     fuchsia_hyper::HttpsClient,
     http::{request, StatusCode},
@@ -15,7 +15,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json,
     std::{fs, path::Path},
-    url::Url,
+    url::{form_urlencoded, Url},
 };
 
 /// For a web site, a client secret is kept locked away in a secure server. This
@@ -33,11 +33,21 @@ use {
 const GSUTIL_CLIENT_ID: &str = "909320924072.apps.googleusercontent.com";
 const GSUTIL_CLIENT_SECRET: &str = "p3RlpR10xMFh9ZXBS/ZNLYUu";
 
+const APPROVE_AUTH_CODE_URL: &str = "\
+        https://accounts.google.com/o/oauth2/auth?\
+scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
+&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob\
+&response_type=code\
+&client_id=909320924072.apps.googleusercontent.com&access_type=offline";
+
 /// Base URL for JSON API access.
 const API_BASE: &str = "https://www.googleapis.com/storage/v1";
 
 /// Base URL for reading (blob) objects.
 const STORAGE_BASE: &str = "https://storage.googleapis.com";
+
+/// URL used to exchange an auth_code for a refresh_token.
+const EXCHANGE_AUTH_CODE_URL: &str = "https://oauth2.googleapis.com/token";
 
 /// URL used for gaining a new access token.
 ///
@@ -68,20 +78,50 @@ struct OauthTokenResponse {
     access_token: String,
 }
 
+/// POST body to [`EXCHANGE_AUTH_CODE_URL`].
+#[derive(Serialize)]
+struct ExchangeAuthCodeRequest<'a> {
+    /// A value provided by GCS for fetching tokens.
+    client_id: &'a str,
+
+    /// A (normally secret) value provided by GCS for fetching tokens.
+    client_secret: &'a str,
+
+    /// A short lived authorization code used to attain an initial
+    /// `refresh_token` and `access_token`.
+    code: &'a str,
+
+    /// Will be "authorization_code" for a authorization code.
+    grant_type: &'a str,
+
+    /// For our use (a non-web program), always "urn:ietf:wg:oauth:2.0:oob"
+    redirect_uri: &'a str,
+}
+
+/// Response body from [`EXCHANGE_AUTH_CODE_URL`].
+/// 'expires_in' is intentionally omitted.
+#[derive(Deserialize)]
+struct ExchangeAuthCodeResponse {
+    /// A limited time (see `expires_in`) token used in an Authorization header.
+    access_token: Option<String>,
+
+    /// A long lasting secret token. This value is a user secret and must not be
+    /// misused (such as by logging). Suitable for storing in a local file and
+    /// reusing later.
+    refresh_token: String,
+}
+
 /// User credentials for use with GCS.
+///
+/// Specifically to:
+/// - api_base: https://www.googleapis.com/storage/v1
+/// - storage_base: https://storage.googleapis.com
 pub struct TokenStore {
     /// Base URL for JSON API access.
     _api_base: Url,
 
     /// Base URL for reading (blob) objects.
     storage_base: Url,
-
-    /// A value provided by GCS for fetching tokens.
-    client_id: &'static str,
-
-    /// A value provided by GCS for fetching tokens. Not really a "secret" in
-    /// this use. This requires that the `refresh_token` be kept secret.
-    client_secret: &'static str,
 
     /// A long lasting secret token used to attain a new `access_token`. This
     /// value is a user secret and must not be misused (such as by logging).
@@ -95,20 +135,65 @@ pub struct TokenStore {
 }
 
 impl TokenStore {
-    /// Using a refresh_token of None will only allow access to public GCS data,
-    /// unless it's set later with `refresh_access_token()`.
-    ///
-    /// The new client will default to using:
-    /// - api_base: https://www.googleapis.com/storage/v1
-    /// - storage_base: https://storage.googleapis.com
-    pub fn new(refresh_token: Option<String>) -> Self {
+    /// Only allow access to public GCS data.
+    pub fn new_without_auth() -> Self {
         Self {
             _api_base: Url::parse(API_BASE).expect("parse API_BASE"),
             storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
-            client_id: GSUTIL_CLIENT_ID,
-            client_secret: GSUTIL_CLIENT_SECRET,
-            refresh_token,
+            refresh_token: None,
             access_token: Mutex::new("".to_string()),
+        }
+    }
+
+    /// Allow access to public and private (auth-required) GCS data.
+    ///
+    /// The `access_token` is not required, but if it happens to be available,
+    /// i.e. if a code exchange was just done, it avoids an extra round-trip to
+    /// provide it here.
+    pub fn new_with_auth<T>(refresh_token: String, access_token: T) -> Self
+    where
+        T: Into<Option<String>>,
+    {
+        let access_token = Mutex::new(access_token.into().unwrap_or("".to_string()));
+        Self {
+            _api_base: Url::parse(API_BASE).expect("parse API_BASE"),
+            storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
+            refresh_token: Some(refresh_token),
+            access_token,
+        }
+    }
+
+    pub async fn new_with_code(https_client: &HttpsClient, auth_code: &str) -> Result<Self> {
+        // Add POST parameters to exchange the auth_code for a refresh_token
+        // and possibly an access_token.
+        let body = form_urlencoded::Serializer::new(String::new())
+            .append_pair("code", auth_code)
+            .append_pair("redirect_uri", "urn:ietf:wg:oauth:2.0:oob")
+            .append_pair("client_id", GSUTIL_CLIENT_ID)
+            .append_pair("client_secret", GSUTIL_CLIENT_SECRET)
+            .append_pair("grant_type", "authorization_code")
+            .finish();
+        // Build the request and send it.
+        let req = Request::builder()
+            .method(Method::POST)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .uri(EXCHANGE_AUTH_CODE_URL)
+            .body(Body::from(body))?;
+        let res = https_client.request(req).await?;
+
+        // If the response was successful, extract the new tokens.
+        if res.status().is_success() {
+            let bytes = hyper::body::to_bytes(res.into_body()).await?;
+            let info: ExchangeAuthCodeResponse = serde_json::from_slice(&bytes)?;
+            let access_token = Mutex::new(info.access_token.unwrap_or("".to_string()));
+            Ok(Self {
+                _api_base: Url::parse(API_BASE).expect("parse API_BASE"),
+                storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
+                refresh_token: Some(info.refresh_token),
+                access_token,
+            })
+        } else {
+            bail!("Unable to gain new access token.");
         }
     }
 
@@ -120,8 +205,6 @@ impl TokenStore {
         Self {
             _api_base: api_base,
             storage_base,
-            client_id: "fake_client_id",
-            client_secret: "fake_client_secret",
             refresh_token,
             access_token: Mutex::new("".to_string()),
         }
@@ -130,7 +213,7 @@ impl TokenStore {
     /// Apply Authorization header, if available.
     ///
     /// If no access_token is set, no changes are made to the builder.
-    pub async fn authenticate(&self, builder: request::Builder) -> Result<request::Builder> {
+    async fn authenticate(&self, builder: request::Builder) -> Result<request::Builder> {
         if self.refresh_token.is_none() {
             return Ok(builder);
         }
@@ -139,12 +222,12 @@ impl TokenStore {
     }
 
     /// Use the refresh token to get a new access token.
-    pub async fn refresh_access_token(&self, https_client: &HttpsClient) -> Result<()> {
+    async fn refresh_access_token(&self, https_client: &HttpsClient) -> Result<()> {
         match &self.refresh_token {
             Some(refresh_token) => {
                 let req_body = RefreshTokenRequest {
-                    client_id: &self.client_id,
-                    client_secret: &self.client_secret,
+                    client_id: GSUTIL_CLIENT_ID,
+                    client_secret: GSUTIL_CLIENT_SECRET,
                     refresh_token: refresh_token,
                     grant_type: "refresh_token",
                 };
@@ -163,15 +246,15 @@ impl TokenStore {
                     *access_token = info.access_token;
                     Ok(())
                 } else {
-                    Err(anyhow!("Unable to gain new access token."))
+                    bail!("Unable to gain new access token.");
                 }
             }
-            None => Err(anyhow!("A refresh token is required to gain new access token.")),
+            None => bail!("A refresh token is required to gain new access token."),
         }
     }
 
     /// Reads content of a stored object (blob) from GCS.
-    pub async fn download(
+    pub(crate) async fn download(
         &self,
         https_client: &HttpsClient,
         bucket: &str,
@@ -186,9 +269,8 @@ impl TokenStore {
                         self.refresh_access_token(&https_client).await?;
                         self.attempt_download(https_client, bucket, object).await?
                     }
-                    None =>
-                    // With no refresh token, there's no option to retry.
-                    {
+                    None => {
+                        // With no refresh token, there's no option to retry.
                         res
                     }
                 }
@@ -219,7 +301,24 @@ impl TokenStore {
     }
 }
 
+/// URL which guides the user to an authorization code.
+///
+/// Expected flow:
+/// - Request that the user open a browser to this location
+/// - authenticate and grant permission to this program to use GCS
+/// - user, copy-pastes the auth code the web page provides back to this program
+/// - create a TokenStore with TokenStore::new_with_code(pasted_string)
+pub fn auth_code_url() -> String {
+    APPROVE_AUTH_CODE_URL.to_string()
+}
+
 /// Fetch an existing refresh token from a .boto (gsutil) configuration file.
+///
+/// Tip, the `boto_path` is commonly "~/.boto". E.g.
+/// ```
+/// use home::home_dir;
+/// let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
+/// ```
 ///
 /// TODO(fxbug.dev/82014): Using an ffx specific token will be preferred once
 /// that feature is created. For the near term, an existing gsutil token is
@@ -227,13 +326,13 @@ impl TokenStore {
 ///
 /// Alert: The refresh token is considered a private secret for the user. Do
 ///        not print the token to a log or otherwise disclose it.
-pub fn read_boto_refresh_token(boto_path: &Path) -> Result<Option<String>> {
+pub fn read_boto_refresh_token<P: AsRef<Path>>(boto_path: P) -> Result<Option<String>> {
     // Read the file at `boto_path` to retrieve a value from a line resembling
     // "gs_oauth2_refresh_token = <string_of_chars>".
     static GS_REFRESH_TOKEN_RE: OnceCell<Regex> = OnceCell::new();
     let re = GS_REFRESH_TOKEN_RE
         .get_or_init(|| Regex::new(r#"\n\s*gs_oauth2_refresh_token\s*=\s*(\S+)"#).expect("regex"));
-    let data = fs::read_to_string(boto_path)?;
+    let data = fs::read_to_string(boto_path.as_ref())?;
     let refresh_token = match re.captures(&data) {
         Some(found) => Some(found.get(1).expect("found at least one").as_str().to_string()),
         None => None,
@@ -244,6 +343,24 @@ pub fn read_boto_refresh_token(boto_path: &Path) -> Result<Option<String>> {
 #[cfg(test)]
 mod test {
     use {super::*, fuchsia_hyper::new_https_client, hyper::StatusCode};
+
+    #[test]
+    fn test_approve_auth_code_url() {
+        // If the GSUTIL_CLIENT_ID is changed, the APPROVE_AUTH_CODE_URL must be
+        // updated as well.
+        assert_eq!(
+            auth_code_url(),
+            format!(
+                "\
+            https://accounts.google.com/o/oauth2/auth?\
+            scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
+            &redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob\
+            &response_type=code\
+            &client_id={}&access_type=offline",
+                GSUTIL_CLIENT_ID
+            )
+        );
+    }
 
     #[should_panic(expected = "Connection refused")]
     #[fuchsia_async::run_singlethreaded(test)]
@@ -261,7 +378,7 @@ mod test {
     #[ignore]
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_gcs_download_public() {
-        let token_store = TokenStore::new(/*refresh_token=*/ None);
+        let token_store = TokenStore::new_without_auth();
         let bucket = "fuchsia";
         let object = "development/5.20210610.3.1/sdk/linux-amd64/gn.tar.gz";
         let res = token_store
@@ -280,12 +397,13 @@ mod test {
     async fn test_gcs_download_auth() {
         use home::home_dir;
         let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
-        let refresh_token = read_boto_refresh_token(&boto_path).expect("boto token");
-        let token_store = TokenStore::new(refresh_token);
+        let refresh_token =
+            read_boto_refresh_token(&boto_path).expect("boto file").expect("refresh token");
+        let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None);
         let https = new_https_client();
         token_store.refresh_access_token(&https).await.expect("refresh_access_token");
         let bucket = "fuchsia-sdk";
-        let object = "development/8910718018192331792/images/astro-release.tgz";
+        let object = "development/LATEST_LINUX";
         let res = token_store.download(&https, bucket, object).await.expect("client download");
         assert_eq!(res.status(), StatusCode::OK);
     }

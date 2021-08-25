@@ -37,5 +37,8 @@ group("gcs") {
 
 group("tests") {
   testonly = true
-  deps = [ ":lib_test($host_toolchain)" ]
+  deps = [
+    ":lib_test($host_toolchain)",
+    "test:gcs_test_client_bin($host_toolchain)",
+  ]
 }
