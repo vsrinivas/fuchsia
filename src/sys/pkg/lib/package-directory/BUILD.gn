@@ -40,10 +40,12 @@ rustc_library("package-directory") {
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:proptest",
   ]
 
   sources = [
     "src/lib.rs",
+    "src/meta.rs",
     "src/meta_file.rs",
     "src/meta_subdir.rs",
     "src/non_meta_subdir.rs",

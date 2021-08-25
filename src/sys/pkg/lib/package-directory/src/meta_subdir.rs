@@ -158,12 +158,13 @@ impl vfs::directory::entry_container::Directory for MetaSubdir {
     fn unregister_watcher(self: Arc<Self>, _: usize) {}
 
     async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
+        let size = crate::usize_to_u64_safe(self.root_dir.meta_files.len());
         Ok(NodeAttributes {
             mode: MODE_TYPE_DIRECTORY
                 | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ false),
             id: 1,
-            content_size: 0,
-            storage_size: 0,
+            content_size: size,
+            storage_size: size,
             link_count: 1,
             creation_time: 0,
             modification_time: 0,
@@ -377,8 +378,8 @@ mod tests {
                 mode: MODE_TYPE_DIRECTORY
                     | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ false),
                 id: 1,
-                content_size: 0,
-                storage_size: 0,
+                content_size: 3,
+                storage_size: 3,
                 link_count: 1,
                 creation_time: 0,
                 modification_time: 0,

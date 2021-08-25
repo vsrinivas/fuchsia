@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        meta::Meta,
         meta_file::{MetaFile, MetaFileLocation},
         meta_subdir::MetaSubdir,
         non_meta_subdir::NonMetaSubdir,
@@ -37,10 +38,9 @@ use {
     },
 };
 
-#[allow(dead_code)]
 pub(crate) struct RootDir {
     pub(crate) blobfs: blobfs::Client,
-    hash: fuchsia_hash::Hash,
+    pub(crate) hash: fuchsia_hash::Hash,
     pub(crate) meta_far: FileProxy,
     // The keys are object relative path expressions.
     pub(crate) meta_files: HashMap<String, MetaFileLocation>,
@@ -268,37 +268,6 @@ impl vfs::directory::entry_container::Directory for RootDir {
     }
 }
 
-#[allow(dead_code)]
-struct Meta {
-    root_dir: Arc<RootDir>,
-}
-
-impl Meta {
-    pub fn new(root_dir: Arc<RootDir>) -> Self {
-        Meta { root_dir }
-    }
-}
-
-// TODO(fxbug.dev/75599)
-impl vfs::directory::entry::DirectoryEntry for Meta {
-    fn open(
-        self: Arc<Self>,
-        _: ExecutionScope,
-        _: u32,
-        _: u32,
-        _: VfsPath,
-        _: ServerEnd<NodeMarker>,
-    ) {
-        todo!()
-    }
-    fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
-    }
-    fn can_hardlink(&self) -> bool {
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -306,7 +275,8 @@ mod tests {
         fidl::endpoints::{create_proxy, Proxy as _},
         fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{
-            DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+            DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
+            OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
         },
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
@@ -556,6 +526,71 @@ mod tests {
                     .await
                     .unwrap(),
                 b"blob-contents".to_vec()
+            );
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_meta_as_file() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
+
+        for path in ["meta", "meta/"] {
+            let (proxy, server_end) = create_proxy::<FileMarker>().unwrap();
+
+            DirectoryEntry::open(
+                Arc::clone(&root_dir),
+                ExecutionScope::new(),
+                OPEN_RIGHT_READABLE,
+                MODE_TYPE_FILE,
+                VfsPath::validate_and_split(path).unwrap(),
+                server_end.into_channel().into(),
+            );
+
+            assert_eq!(
+                io_util::file::read(&proxy).await.unwrap(),
+                root_dir.hash.to_string().as_bytes()
+            );
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_meta_as_dir() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
+
+        for path in ["meta", "meta/"] {
+            let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+
+            DirectoryEntry::open(
+                Arc::clone(&root_dir),
+                ExecutionScope::new(),
+                OPEN_RIGHT_READABLE,
+                MODE_TYPE_DIRECTORY,
+                VfsPath::validate_and_split(path).unwrap(),
+                server_end.into_channel().into(),
+            );
+
+            assert_eq!(
+                files_async::readdir(&proxy).await.unwrap(),
+                vec![
+                    files_async::DirEntry {
+                        name: "contents".to_string(),
+                        kind: files_async::DirentKind::File
+                    },
+                    files_async::DirEntry {
+                        name: "dir".to_string(),
+                        kind: files_async::DirentKind::Directory
+                    },
+                    files_async::DirEntry {
+                        name: "file".to_string(),
+                        kind: files_async::DirentKind::File
+                    },
+                    files_async::DirEntry {
+                        name: "package".to_string(),
+                        kind: files_async::DirentKind::File
+                    },
+                ]
             );
         }
     }

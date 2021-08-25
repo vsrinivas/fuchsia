@@ -9,9 +9,9 @@ use {
     fidl::{endpoints::ServerEnd, HandleBased as _},
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
-        VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
+        VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
@@ -89,7 +89,6 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
                 | OPEN_FLAG_CREATE
                 | OPEN_FLAG_CREATE_IF_ABSENT
                 | OPEN_FLAG_TRUNCATE
-                | OPEN_FLAG_DIRECTORY
                 | OPEN_FLAG_APPEND)
             != 0
         {
@@ -126,10 +125,11 @@ impl vfs::file::File for MetaFile {
     }
 
     async fn read_at(&self, offset_chunk: u64, buffer: &mut [u8]) -> Result<u64, zx::Status> {
+        let offset_chunk = std::cmp::min(offset_chunk, self.location.length);
         let offset_far = offset_chunk + self.location.offset;
         let count = std::cmp::min(
             crate::usize_to_u64_safe(buffer.len()),
-            self.location.offset + self.location.length - offset_far,
+            self.location.length - offset_chunk,
         );
         let (status, bytes) =
             self.root_dir.meta_far.read_at(count, offset_far).await.map_err(|e| {
@@ -140,7 +140,7 @@ impl vfs::file::File for MetaFile {
             fx_log_err!("meta.far read_at protocol error: {:#}", anyhow!(e.clone()));
             e
         })?;
-        let () = &mut buffer[..bytes.len()].copy_from_slice(&bytes);
+        let () = buffer[..bytes.len()].copy_from_slice(&bytes);
         Ok(crate::usize_to_u64_safe(bytes.len()))
     }
 
@@ -338,7 +338,6 @@ mod tests {
             OPEN_FLAG_CREATE,
             OPEN_FLAG_CREATE_IF_ABSENT,
             OPEN_FLAG_TRUNCATE,
-            OPEN_FLAG_DIRECTORY,
             OPEN_FLAG_APPEND,
         ] {
             let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
@@ -420,12 +419,18 @@ mod tests {
         let (_env, meta_file) = TestEnv::new().await;
         let mut buffer = [0u8];
 
-        assert_eq!(
-            File::read_at(&meta_file, TEST_FILE_CONTENTS.len().try_into().unwrap(), &mut buffer)
+        for i in 0..=1 {
+            assert_eq!(
+                File::read_at(
+                    &meta_file,
+                    u64::try_from(TEST_FILE_CONTENTS.len()).unwrap() + i,
+                    &mut buffer
+                )
                 .await,
-            Ok(0)
-        );
-        assert_eq!(&buffer, &[0]);
+                Ok(0)
+            );
+            assert_eq!(&buffer, &[0]);
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
