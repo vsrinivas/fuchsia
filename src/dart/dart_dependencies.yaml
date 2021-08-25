@@ -5,7 +5,7 @@
 name: modules
 dependencies:
   built_collection: ^5.1.0
-  built_value: '8.1.1'
+  built_value: ^8.1.1
   checked_yaml: ^1.0.2
   cli_util: ^0.3.0
   edit_distance: ^0.4.1
