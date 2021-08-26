@@ -71,6 +71,17 @@ import("fuchsia_unittest_component.gni")
 #     which sacrifices isolation for higher performance.
 #     Type: boolean
 #
+#   wrap_cmx_test_with_cml_test (optional)
+#     If enabled, test_components that are legacy (v1) tests with cmx manifests
+#     will be wrapped with a modern (v2) test with a cml manifest. The launch
+#     URL of the wrapper will be derived from the wrapped test's launch URL.
+#     For instance:
+#       fuchsia-pkg://fuchsia.com/package#meta/test_component.cmx
+#     will become:
+#       fuchsia-pkg://fuchsia.com/package#meta/test_component.cm
+#     Type: bool
+#     Default: true
+#
 #   deps
 #   visibility
 template("fuchsia_unittest_package") {
@@ -101,6 +112,7 @@ template("fuchsia_unittest_package") {
                              "package_name",
                              "test_specs",
                              "visibility",
+                             "wrap_cmx_test_with_cml_test",
                            ])
     test_components = [ ":$component_target" ]
   }

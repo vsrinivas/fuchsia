@@ -88,6 +88,10 @@ fuchsia_unittest_package("timezone-test") {
     "../timestamp-server-dart:timestamp-server-dart",
     "//src/intl:icudtl",
   ]
+
+  # TODO(fxbug.dev/83076): Legacy test runner does not support sys environment
+  # tests. Remove below line once the issue is fixed.
+  wrap_cmx_test_with_cml_test = false
 }
 
 # Essentially same as above, but for flutter runner.
@@ -131,4 +135,8 @@ fuchsia_unittest_package("timezone-flutter-test") {
     "../timestamp-server-dart:timestamp-server-flutter",
     "//src/intl:icudtl",
   ]
+
+  # TODO(fxbug.dev/83076): Legacy test runner does not support sys environment
+  # tests. Remove below line once the issue is fixed.
+  wrap_cmx_test_with_cml_test = false
 }

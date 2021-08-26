@@ -12,23 +12,14 @@
 
 namespace run {
 
-constexpr char kLoggerTestsUrl[] =
-    "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logger_integration_go_tests.cmx";
-constexpr char kAppmgrHubTestsUrl[] =
-    "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/appmgr_hub_integration_tests.cmx";
 // System test that needs access to the system time zone service.
 constexpr char kTimezoneTestUrl[] =
     "fuchsia-pkg://fuchsia.com/timezone-test#meta/timezone_bin_test.cmx";
-constexpr char kDevicePropertySmokeTestUrl[] =
-    "fuchsia-pkg://fuchsia.com/device-property-smoke-test#meta/device_property_smoke_test.cmx";
 constexpr char kTimezoneFlutterTestUrl[] =
     "fuchsia-pkg://fuchsia.com/timezone-flutter-test#meta/timezone_flutter_bin_test.cmx";
 
 const std::unordered_set<std::string> kUrlSet({
-    {kLoggerTestsUrl},
-    {kAppmgrHubTestsUrl},
     {kTimezoneTestUrl},
-    {kDevicePropertySmokeTestUrl},
     {kTimezoneFlutterTestUrl},
 });
 

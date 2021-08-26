@@ -100,67 +100,6 @@ TEST_F(ProbeHub, RealmSvc) {
   EXPECT_EQ(glob.size(), 1u);
 }
 
-TEST_F(HubTest, Services) {
-  // Services for sys.
-  {
-    constexpr char kGlob[] = "/hub/svc";
-    files::Glob glob(kGlob);
-    EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
-    const std::string path = *glob.begin();
-
-    // Expect at least these built-in services
-    std::vector<std::string> expected_files = {
-      ".",
-      "fuchsia.boot.FactoryItems",
-      "fuchsia.boot.ReadOnlyLog",
-      "fuchsia.boot.RootResource",
-      "fuchsia.boot.WriteOnlyLog",
-      "fuchsia.device.NameProvider",
-      "fuchsia.device.manager.Administrator",
-      "fuchsia.device.manager.DebugDumper",
-      "fuchsia.hardware.pty.Device",
-      "fuchsia.kernel.Counter",
-      "fuchsia.kernel.DebugBroker",
-      "fuchsia.kernel.DebugResource",
-      "fuchsia.kernel.HypervisorResource",
-      "fuchsia.kernel.InfoResource",
-#if __x86_64__
-      "fuchsia.kernel.IoportResource",
-#elif __aarch64__
-      "fuchsia.kernel.SmcResource",
-#endif
-      "fuchsia.kernel.IrqResource",
-      "fuchsia.kernel.MmioResource",
-      "fuchsia.kernel.RootJob",
-      "fuchsia.kernel.RootJobForInspect",
-      "fuchsia.kernel.Stats",
-      "fuchsia.kernel.VmexResource",
-      "fuchsia.tracing.kernel.Controller",
-      "fuchsia.tracing.kernel.Reader",
-      "fuchsia.paver.Paver",
-      "fuchsia.process.Launcher",
-      "fuchsia.process.Resolver",
-      "fuchsia.scheduler.ProfileProvider",
-      "fuchsia.sys.Environment",
-      "fuchsia.sys.Launcher",
-      "fuchsia.sys.Loader",
-      "fuchsia.sys.test.CacheControl",
-      "fuchsia.sysinfo.SysInfo",
-      "fuchsia.virtualconsole.SessionManager"
-    };
-    sysmgr::Config config;
-    const auto service_map = config.TakeServices();
-    for (const auto& e : service_map) {
-      expected_files.push_back(e.first);
-    }
-
-    // readdir should list all services.
-    std::vector<std::string> files;
-    ASSERT_TRUE(files::ReadDirContents(path, &files));
-    EXPECT_THAT(expected_files, ::testing::IsSubsetOf(files));
-  }
-}
-
 TEST_F(HubTest, ScopePolicy) {
   constexpr char kGlobUrl[] = "fuchsia-pkg://fuchsia.com/glob#meta/glob.cmx";
   // create nested environment

@@ -127,12 +127,19 @@ impl ComponentEventsTest {
         expected_realm_path: &[String],
     ) {
         assert_eq!(component.component_name, Some(name.to_string()));
+        let url = fuchsia_url::pkg_url::PkgUrl::parse(&component.component_url.unwrap())
+            .expect("cannot parse url");
+
         assert_eq!(
-            component.component_url,
-            Some(format!(
-                "fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/{}",
-                name
-            ))
+            url.strip_variant().to_string(),
+            fuchsia_url::pkg_url::PkgUrl::new_resource(
+                "fuchsia.com".to_string(),
+                "/component_events_integration_tests".to_string(),
+                url.package_hash().map(|h| h.clone()),
+                format!("meta/{}", name)
+            )
+            .unwrap()
+            .to_string()
         );
         let instance_id = component.instance_id.expect("no instance id");
         assert!(Regex::new("[0-9]+").unwrap().is_match(&instance_id));

@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 import("//build/testing/test_spec.gni")
 import("fuchsia_package.gni")
+import("fuchsia_test_component.gni")
+import("fuchsia_test_component_manifest.gni")
 
 # Defines a Fuchsia package that contains one or more components, some of which
 # implement one or more tests, and specifies how to run tests.
@@ -57,6 +59,17 @@ import("fuchsia_package.gni")
 #     Type: string
 #     Default: target_name
 #
+#   wrap_cmx_test_with_cml_test (optional)
+#     If enabled, test_components that are legacy (v1) tests with cmx manifests
+#     will be wrapped with a modern (v2) test with a cml manifest. The launch
+#     URL of the wrapper will be derived from the wrapped test's launch URL.
+#     For instance:
+#       fuchsia-pkg://fuchsia.com/package#meta/test_component.cmx
+#     will become:
+#       fuchsia-pkg://fuchsia.com/package#meta/test_component.cm
+#     Type: bool
+#     Default: true
+#
 #   deps
 #   visibility
 template("fuchsia_test_package") {
@@ -75,11 +88,61 @@ template("fuchsia_test_package") {
     test_specs = invoker.test_specs
   }
 
+  wrap_cmx_test_with_cml_test = true
+  if (defined(invoker.wrap_cmx_test_with_cml_test)) {
+    wrap_cmx_test_with_cml_test = invoker.wrap_cmx_test_with_cml_test
+  }
+
   test_deps = []
   foreach(test, invoker.test_components) {
-    test_target = "${target_name}_test_" + get_label_info(test, "name")
+    test_target_name = get_label_info(test, "name")
+    test_target = "${target_name}_test_" + test_target_name
     manifest_name = get_target_outputs(test)
     manifest_name = get_path_info(manifest_name[0], "file")
+
+    if (wrap_cmx_test_with_cml_test &&
+        get_path_info(manifest_name, "extension") == "cmx") {
+      modern_generated_name =
+          "${target_name}_${test_target_name}_modern_generated"
+      generated_manifest_target = "${modern_generated_name}_manifest"
+      fuchsia_test_component_manifest(generated_manifest_target) {
+        metadata = {
+          test_component_manifest_program = [
+            {
+              program = {
+                legacy_manifest = "meta/$manifest_name"
+              }
+            },
+          ]
+          test_component_manifest_program_barrier = []
+          test_component_manifest_cml = [
+            {
+              include =
+                  [ "//src/sys/test_runners/legacy_test/default.shard.cml" ]
+            },
+          ]
+        }
+        visibility = [ ":*" ]
+      }
+
+      manifest = get_target_outputs(":$generated_manifest_target")
+      manifest = manifest[0]
+
+      name = get_path_info(manifest_name, "name")
+
+      fuchsia_test_component("$modern_generated_name") {
+        component_name = name
+        manifest = manifest
+        visibility = [ ":*" ]
+        deps = [ ":$generated_manifest_target" ]
+      }
+
+      manifest_name = get_target_outputs(":$modern_generated_name")
+      manifest_name = get_path_info(manifest_name[0], "file")
+
+      test_deps += [ ":$modern_generated_name" ]
+    }
+
     test_spec(test_target) {
       forward_variables_from(test_specs, "*")
       target = get_label_info(":$target_name", "label_with_toolchain")
