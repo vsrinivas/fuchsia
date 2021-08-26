@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <string.h>
 
 #include <future>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "guest_test.h"
 
@@ -121,6 +122,7 @@ using GuestTypes = ::testing::Types<ZirconEnclosedGuest, DebianEnclosedGuest>;
 
 TYPED_TEST_SUITE(VsockGuestTest, GuestTypes);
 
+// TODO(https://fxbug.dev/35555): Deflake and enable.
 TYPED_TEST(VsockGuestTest, DISABLED_ConnectDisconnect) {
   auto handle = std::async(std::launch::async, [this] { this->TestThread(); });
 
