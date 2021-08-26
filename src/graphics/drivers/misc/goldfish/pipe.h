@@ -33,7 +33,7 @@ class Pipe : public fidl::WireServer<fuchsia_hardware_goldfish::Pipe> {
 
   void Init();
 
-  void Bind(zx::channel server_request);
+  void Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::Pipe> server_request);
 
  private:
   struct Buffer {

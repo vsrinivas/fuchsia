@@ -111,7 +111,7 @@ void Pipe::Init() {
   }
 }
 
-void Pipe::Bind(zx::channel server_request) {
+void Pipe::Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::Pipe> server_request) {
   using PipeProtocol = fuchsia_hardware_goldfish::Pipe;
   using PipeServer = fidl::WireServer<PipeProtocol>;
   auto on_unbound = [this](PipeServer*, fidl::UnbindInfo info, fidl::ServerEnd<PipeProtocol>) {

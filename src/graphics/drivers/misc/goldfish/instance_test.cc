@@ -23,8 +23,9 @@ class FakeInstance : public Instance {
  public:
   FakeInstance(zx_device_t* parent) : Instance(parent) {}
 
-  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
+  zx_status_t Connect(async_dispatcher_t* dispatcher,
+                      fidl::ServerEnd<fuchsia_hardware_goldfish::PipeDevice> server) {
+    return fidl::BindSingleInFlightOnly(dispatcher, std::move(server), this);
   }
 };
 
@@ -60,10 +61,11 @@ class InstanceDeviceTest : public zxtest::Test {
     ddk_.SetProtocol(ZX_PROTOCOL_GOLDFISH_PIPE, mock_pipe_.GetProto());
     dut_ = std::make_unique<FakeInstance>(fake_ddk::FakeParent());
 
-    zx::channel client, server;
-    ASSERT_OK(zx::channel::create(0, &client, &server));
-    ASSERT_OK(dut_->Connect(loop_.dispatcher(), std::move(server)));
-    fidl_client_.client_end() = std::move(client);
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::PipeDevice>();
+    ASSERT_OK(endpoints.status_value());
+
+    ASSERT_OK(dut_->Connect(loop_.dispatcher(), std::move(endpoints->server)));
+    fidl_client_.client_end() = std::move(endpoints->client);
   }
 
   // |zxtest::Test|
@@ -89,22 +91,24 @@ class InstanceDeviceTest : public zxtest::Test {
 TEST_F(InstanceDeviceTest, OpenPipe) {
   dut_->Bind();
 
-  zx::channel pipe_client, pipe_server;
-  ASSERT_OK(zx::channel::create(0, &pipe_client, &pipe_server));
-  ASSERT_TRUE(fidl_client_.OpenPipe(std::move(pipe_server)).ok());
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::Pipe>();
+  ASSERT_TRUE(endpoints.is_ok());
+
+  ASSERT_TRUE(fidl_client_.OpenPipe(std::move(endpoints->server)).ok());
   loop_.RunUntilIdle();
 }
 
 TEST_F(InstanceDeviceTest, OpenPipeCloseDutFirst) {
   dut_->Bind();
 
-  zx::channel pipe_client, pipe_server;
-  ASSERT_OK(zx::channel::create(0, &pipe_client, &pipe_server));
-  ASSERT_TRUE(fidl_client_.OpenPipe(std::move(pipe_server)).ok());
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::Pipe>();
+  ASSERT_TRUE(endpoints.is_ok());
+
+  ASSERT_TRUE(fidl_client_.OpenPipe(std::move(endpoints->server)).ok());
   loop_.RunUntilIdle();
 
   dut_.reset();
-  pipe_client.reset();
+  endpoints->client.reset();
 }
 
 }  // namespace goldfish

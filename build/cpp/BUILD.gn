@@ -139,8 +139,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/graphics/display/testing:testing",
     "//src/graphics/drivers/aml-gpu:aml-gpu-test-bin",
     "//src/graphics/drivers/aml-gpu:sources",
-    "//src/graphics/drivers/misc/goldfish:goldfish-pipe-device-test",
-    "//src/graphics/drivers/misc/goldfish:goldfish_driver-driver",
     "//src/graphics/drivers/misc/goldfish_address_space:address_space_driver-driver",
     "//src/graphics/drivers/misc/goldfish_address_space:goldfish-address-space-test",
     "//src/graphics/drivers/misc/goldfish_control:control_driver-driver",

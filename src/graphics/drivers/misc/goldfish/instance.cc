@@ -69,7 +69,7 @@ void Instance::OpenPipe(OpenPipeRequestView request, OpenPipeCompleter::Sync& co
         auto pipe_ptr = pipe.get();
         pipes_.insert({pipe_ptr, std::move(pipe)});
 
-        pipe_ptr->Bind(pipe_request.TakeChannel());
+        pipe_ptr->Bind(std::move(pipe_request));
         // Init() must be called after Bind() as it can cause an asynchronous
         // failure. The pipe will be cleaned up later by the error handler in
         // the event of a failure.
