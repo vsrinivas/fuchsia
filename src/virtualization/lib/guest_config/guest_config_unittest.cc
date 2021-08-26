@@ -4,8 +4,6 @@
 
 #include "src/virtualization/lib/guest_config/guest_config.h"
 
-#include <zircon/compiler.h>
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -28,7 +26,7 @@ class GuestConfigParserTest : public ::testing::Test {
 
   zx_status_t ParseArgs(std::vector<const char*> args) {
     args.insert(args.begin(), "exe_name");
-    return guest_config::ParseArguments(args.size(), args.data(), &config_);
+    return guest_config::ParseArguments(static_cast<int>(args.size()), args.data(), &config_);
   }
 };
 

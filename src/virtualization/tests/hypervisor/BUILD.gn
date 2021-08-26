@@ -43,9 +43,6 @@ executable("hypervisor_tests") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_test_component("hypervisor_tests_cmp") {

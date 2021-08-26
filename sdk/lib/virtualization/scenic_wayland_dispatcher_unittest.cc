@@ -46,7 +46,7 @@ class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
       zx::channel::create(0, &c1, &c2);
       binding->events().OnNewView(
           fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>(std::move(c1)),
-          new_view_channels_.size());
+          static_cast<uint32_t>(new_view_channels_.size()));
       new_view_channels_.push_back(std::move(c2));
     }
   }
@@ -54,7 +54,7 @@ class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
   void SendOnShutdownView() {
     for (auto& binding : view_producer_bindings_.bindings()) {
       new_view_channels_.pop_back();
-      binding->events().OnShutdownView(new_view_channels_.size());
+      binding->events().OnShutdownView(static_cast<uint32_t>(new_view_channels_.size()));
     }
   }
 

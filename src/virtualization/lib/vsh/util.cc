@@ -18,9 +18,8 @@ namespace vsh {
 bool SendAllBytes(const zx::socket& socket, const uint8_t* buf, uint32_t buf_size) {
   uint32_t msg_size = htole32(buf_size);
   size_t actual = 0;
-  zx_status_t status;
 
-  status = socket.write(0, reinterpret_cast<char*>(&msg_size), sizeof(msg_size), &actual);
+  zx_status_t status = socket.write(0, &msg_size, sizeof(msg_size), &actual);
   if (status != ZX_OK || actual != sizeof(msg_size)) {
     FX_LOGS(ERROR) << "Failed to write message size to socket";
     return false;
@@ -49,10 +48,10 @@ bool SendMessage(const zx::socket& socket, const MessageLite& message) {
     return false;
   }
 
-  return SendAllBytes(socket, buf, msg_size);
+  return SendAllBytes(socket, buf, static_cast<uint32_t>(msg_size));
 }
 
-ssize_t RecvSockBlocking(const zx::socket& socket, uint8_t* buf, uint32_t buf_size) {
+uint32_t RecvSockBlocking(const zx::socket& socket, uint8_t* buf, uint32_t buf_size) {
   size_t bytes_left;
   size_t actual;
   zx_status_t status;
@@ -83,7 +82,7 @@ ssize_t RecvSockBlocking(const zx::socket& socket, uint8_t* buf, uint32_t buf_si
   return buf_size;
 }
 
-ssize_t RecvAllBytes(const zx::socket& socket, uint8_t* buf, uint32_t buf_size) {
+uint32_t RecvAllBytes(const zx::socket& socket, uint8_t* buf, uint32_t buf_size) {
   uint32_t msg_size;
 
   // Receive the message's size
@@ -104,10 +103,8 @@ ssize_t RecvAllBytes(const zx::socket& socket, uint8_t* buf, uint32_t buf_size) 
 }
 
 bool RecvMessage(const zx::socket& socket, MessageLite* message) {
-  ssize_t count;
   uint8_t buf[kMaxMessageSize];
-
-  count = RecvAllBytes(socket, buf, sizeof(buf));
+  uint32_t count = RecvAllBytes(socket, buf, sizeof(buf));
   if (count < 0) {
     return false;
   }

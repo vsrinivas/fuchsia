@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <string>
 #include <vector>
 
@@ -101,7 +100,7 @@ int main(int argc, char* argv[]) {
   // Write the root directory.
   {
     uint32_t csum = 0;
-    uint32_t first_header = image.tellp();
+    uint32_t first_header = static_cast<uint32_t>(image.tellp());
     uint32_t next_header = first_header + kMinHeaderSize;
     csum += write(image, next_header | kDirectoryFlags);  // Next header
     next_header += kMinHeaderSize;
@@ -127,15 +126,16 @@ int main(int argc, char* argv[]) {
     uint32_t next = kFileFlags;
     if (i < argc - 1) {
       // Calculate next file offset
-      uint32_t offset = image.tellp();
-      offset += kDataAlignment;                                  // Initial header contents
-      offset += roundup(filename.length() + 1, kDataAlignment);  // Name field
-      offset += roundup(contents.size(), kDataAlignment);        // Data field
+      uint32_t offset = static_cast<uint32_t>(image.tellp());
+      offset += kDataAlignment;  // Initial header contents
+      offset +=
+          roundup(static_cast<uint32_t>(filename.length()) + 1, kDataAlignment);  // Name field
+      offset += roundup(static_cast<uint32_t>(contents.size()), kDataAlignment);  // Data field
       next |= offset;
     }
     write(image, next);
     write(image, 0);  // Spec field unused
-    write(image, contents.size());
+    write(image, static_cast<uint32_t>(contents.size()));
     uint32_t csum = next;
     csum += contents.size();
     csum += checksum(filename.c_str(), filename.length());
@@ -146,10 +146,11 @@ int main(int argc, char* argv[]) {
   }
 
   // Save the total size of the image.
-  uint32_t image_size = image.tellp();
+  uint32_t image_size = static_cast<uint32_t>(image.tellp());
 
   // Pad the image to block size.
-  std::vector<char> zeros(roundup(image.tellp(), kBlockSize) - image.tellp());
+  std::vector<char> zeros(roundup(static_cast<uint32_t>(image.tellp()), kBlockSize) -
+                          image.tellp());
   image.write(zeros.data(), zeros.size());
 
   // Patch in the total image size.
