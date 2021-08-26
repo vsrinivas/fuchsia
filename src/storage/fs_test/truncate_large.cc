@@ -24,8 +24,10 @@ std::vector<LargeTruncateTestParamType> GetTestCombinations(
         // Skip larger buffer sizes on slow filesystems.
         continue;
       }
-      options.device_block_count = 3 * (1LLU << 16);
-      options.device_block_size = 1LLU << 9;
+      if (!options.has_min_volume_size) {
+        options.device_block_count = 3 * (1LLU << 16);
+        options.device_block_size = 1LLU << 9;
+      }
       options.fvm_slice_size = 1LLU << 23;
       test_combinations.push_back(std::make_tuple(options, variation));
     }

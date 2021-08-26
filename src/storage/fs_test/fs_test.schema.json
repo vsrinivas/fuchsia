@@ -81,6 +81,21 @@
                         "description": "Name given to this set of options",
                         "type": "string"
                     },
+                    "device_block_count": {
+                        "default": 196608,
+                        "description": "device_block_count",
+                        "type": "integer"
+                    },
+                    "device_block_size": {
+                        "default": 512,
+                        "description": "device_block_size",
+                        "type": "integer"
+                    },
+                    "has_min_volume_size": {
+                        "default": false,
+                        "description": "True if the filesystem requires a minimum volume size, in which case its volume size is configured as device_block_size * device_block_count for all tests",
+                        "type": "boolean"
+                    },
                     "use_fvm": {
                         "description": "True if FVM should be used",
                         "type": "boolean"

@@ -150,8 +150,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
         options.device_block_size * options.device_block_count / kPageSize / kPagesPerBlock;
   }
 
-  status =
-      zx::make_status(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", kDeviceWaitTime));
+  status = zx::make_status(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", kDeviceWaitTime));
   if (status.is_error()) {
     std::cout << "Failed waiting for /dev/sys/platform/00:00:2e/nand-ctl to appear: "
               << status.status_string() << std::endl;
@@ -465,12 +464,14 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
     } else {
       for (size_t i = 0; i < iter->value.Size(); ++i) {
         const auto& opt = iter->value[i];
-        options->push_back(TestFilesystemOptions{.description = opt["description"].GetString(),
-                                                 .use_fvm = opt["use_fvm"].GetBool(),
-                                                 .device_block_size = 512,
-                                                 .device_block_count = 196'608,
-                                                 .fvm_slice_size = 32'768,
-                                                 .filesystem = filesystem.get()});
+        options->push_back(TestFilesystemOptions{
+            .description = opt["description"].GetString(),
+            .use_fvm = opt["use_fvm"].GetBool(),
+            .has_min_volume_size = ConfigGetOrDefault<bool>(opt, "has_min_volume_size", false),
+            .device_block_size = ConfigGetOrDefault<int64_t>(opt, "device_block_size", 512),
+            .device_block_count = ConfigGetOrDefault<int64_t>(opt, "device_block_count", 196'608),
+            .fvm_slice_size = 32'768,
+            .filesystem = filesystem.get()});
       }
     }
     filesystem.release();  // Deliberate leak

@@ -59,7 +59,8 @@ INSTANTIATE_TEST_SUITE_P(
           // memory is the limiting factor).
           if (options.filesystem->GetTraits().in_memory)
             return std::nullopt;
-          if (!options.filesystem->GetTraits().has_directory_size_limit) {
+          if (!options.filesystem->GetTraits().has_directory_size_limit &&
+              !options.has_min_volume_size) {
             // Fatfs is slow and, other than the root directory on FAT12/16, is limited by the size
             // of the ram-disk rather than a directory size limit, so use a small ram-disk to keep
             // run-time reasonable, and do the same for other filesystems that don't have a

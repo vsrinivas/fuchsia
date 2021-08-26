@@ -6,11 +6,6 @@
 
 namespace fs_test {
 
-bool GetBoolOrDefault(const rapidjson::Document& config, const char* member, bool default_value) {
-  auto iter = config.FindMember(member);
-  return iter == config.MemberEnd() ? default_value : iter->value.GetBool();
-}
-
 zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
     const rapidjson::Document& config) {
   auto name = config["name"].GetString();
@@ -29,23 +24,25 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
       Traits{
           .name = config["name"].GetString(),
           .timestamp_granularity = zx::nsec(config["timestamp_granularity"].GetInt64()),
-          .supports_hard_links = GetBoolOrDefault(config, "supports_hard_links", false),
-          .supports_mmap = GetBoolOrDefault(config, "supports_mmap", false),
-          .supports_resize = GetBoolOrDefault(config, "supports_resize", false),
-          .max_file_size = config["max_file_size"].GetInt64(),
-          .in_memory = GetBoolOrDefault(config, "in_memory", false),
-          .is_case_sensitive = GetBoolOrDefault(config, "is_case_sensitive", true),
-          .supports_sparse_files = GetBoolOrDefault(config, "supports_sparse_files", true),
-          .is_slow = GetBoolOrDefault(config, "is_slow", false),
+          .supports_hard_links = ConfigGetOrDefault<bool>(config, "supports_hard_links", false),
+          .supports_mmap = ConfigGetOrDefault<bool>(config, "supports_mmap", false),
+          .supports_resize = ConfigGetOrDefault<bool>(config, "supports_resize", false),
+          .max_file_size = ConfigGetOrDefault<int64_t>(config, "max_file_size",
+                                                       std::numeric_limits<int64_t>::max()),
+          .in_memory = ConfigGetOrDefault<bool>(config, "in_memory", false),
+          .is_case_sensitive = ConfigGetOrDefault<bool>(config, "is_case_sensitive", true),
+          .supports_sparse_files = ConfigGetOrDefault<bool>(config, "supports_sparse_files", true),
+          .is_slow = ConfigGetOrDefault<bool>(config, "is_slow", false),
           .supports_fsck_after_every_transaction =
-              GetBoolOrDefault(config, "supports_fsck_after_every_transaction", false),
-          .has_directory_size_limit = GetBoolOrDefault(config, "has_directory_size_limit", false),
-          .is_journaled = GetBoolOrDefault(config, "is_journaled", true),
-          .supports_fs_query = GetBoolOrDefault(config, "supports_fs_query", true),
+              ConfigGetOrDefault<bool>(config, "supports_fsck_after_every_transaction", false),
+          .has_directory_size_limit =
+              ConfigGetOrDefault<bool>(config, "has_directory_size_limit", false),
+          .is_journaled = ConfigGetOrDefault<bool>(config, "is_journaled", true),
+          .supports_fs_query = ConfigGetOrDefault<bool>(config, "supports_fs_query", true),
           .supports_watch_event_deleted =
-              GetBoolOrDefault(config, "supports_watch_event_deleted", true),
+              ConfigGetOrDefault<bool>(config, "supports_watch_event_deleted", true),
       },
-      format, GetBoolOrDefault(config, "use_directory_admin_to_unmount", false),
+      format, ConfigGetOrDefault<bool>(config, "use_directory_admin_to_unmount", false),
       sectors_per_cluster));
 }
 

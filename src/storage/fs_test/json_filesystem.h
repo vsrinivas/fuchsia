@@ -11,6 +11,13 @@
 
 namespace fs_test {
 
+// Helper function to return a member with a default if not present.
+template <typename T>
+T ConfigGetOrDefault(const rapidjson::Value& value, const char* member, T default_value) {
+  auto iter = value.FindMember(member);
+  return iter == value.MemberEnd() ? default_value : iter->value.Get<T>();
+}
+
 // Represents a filesystem that is configured using json.  See fs_test.schema.json for the schema.
 class JsonFilesystem : public FilesystemImplWithDefaultMake<JsonFilesystem> {
  public:

@@ -51,8 +51,10 @@ struct TestFilesystemOptions {
   // partition under test to be at a different offset on the underlying device.
   uint64_t dummy_fvm_partition_size = 0;
 
-  uint64_t device_block_size = 0;
-  uint64_t device_block_count = 0;
+  // If true, configure its volume size as device_block_size * device_block_count for all tests.
+  bool has_min_volume_size = false;
+  int64_t device_block_size = 0;
+  int64_t device_block_count = 0;
   uint64_t fvm_slice_size = 0;
   uint64_t initial_fvm_slice_count = 1;
   // Only supported for blobfs for now.
@@ -116,7 +118,7 @@ class Filesystem {
     bool supports_hard_links = true;
     bool supports_mmap = false;
     bool supports_resize = false;
-    off_t max_file_size = std::numeric_limits<off_t>::max();
+    int64_t max_file_size = std::numeric_limits<int64_t>::max();
     bool in_memory = false;
     bool is_case_sensitive = true;
     bool supports_sparse_files = true;
