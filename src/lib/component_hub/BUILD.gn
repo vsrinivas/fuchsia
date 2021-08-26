@@ -15,6 +15,7 @@ rustc_library("component_hub") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fuchsia-async",
+    "//src/sys/lib/moniker",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

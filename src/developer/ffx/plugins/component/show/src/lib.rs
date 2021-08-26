@@ -26,8 +26,7 @@ async fn show_impl(rcs_proxy: rc::RemoteControlProxy, filter: &str) -> Result<()
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let components =
-        find_components(filter.to_string(), ".".to_string(), ".".to_string(), hub_dir).await?;
+    let components = find_components(filter.to_string(), hub_dir).await?;
 
     if components.is_empty() {
         return Err(format_err!(

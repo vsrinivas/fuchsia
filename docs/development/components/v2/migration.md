@@ -721,7 +721,7 @@ infer your component [moniker][moniker] as `/core/component_name` where
 You can see this hierarchy using `ffx component list` as well:
 
 ```
-.
+/
   bootstrap
     archivist
     ...

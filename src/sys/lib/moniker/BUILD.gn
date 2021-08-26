@@ -12,6 +12,7 @@ rustc_library("moniker") {
 
   visibility = [
     "//src/developer/ffx/plugins/component/*",
+    "//src/lib/component_hub/*",
     "//src/sys/component_manager/*",
     "//src/sys/lib/component_id_index/*",
     "//src/sys/lib/moniker/*",

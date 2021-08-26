@@ -5,6 +5,7 @@
 use {
     component_hub::io::Directory,
     component_hub::{list, select, show},
+    moniker::AbsoluteMonikerBase,
     std::path::PathBuf,
 };
 
@@ -32,10 +33,7 @@ async fn show() {
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let components =
-        show::find_components("test.cm".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-            .await
-            .unwrap();
+    let components = show::find_components("test.cm".to_string(), hub_dir).await.unwrap();
 
     assert_eq!(components.len(), 1);
     let component = &components[0];
@@ -44,7 +42,7 @@ async fn show() {
     assert!(component.url.starts_with("fuchsia-pkg://fuchsia.com/component_hub_integration_test"));
     assert!(component.url.ends_with("#meta/test.cm"));
 
-    assert_eq!(component.moniker, ".");
+    assert!(component.moniker.is_root());
     assert_eq!(component.component_type, "CML static component");
 
     assert!(component.resolved.is_some());
@@ -69,28 +67,19 @@ async fn select() {
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let components = select::find_components(
-        "fuchsia.foo.Bar".to_string(),
-        ".".to_string(),
-        ".".to_string(),
-        hub_dir,
-    )
-    .await
-    .unwrap();
+    let mut components =
+        select::find_components("fuchsia.foo.Bar".to_string(), hub_dir).await.unwrap();
 
     assert_eq!(components.len(), 1);
-    let component = &components[0];
-    assert_eq!(component.as_str(), ".");
+    let component = components.remove(0);
+    assert!(component.is_root());
 
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let components =
-        select::find_components("minfs".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-            .await
-            .unwrap();
+    let mut components = select::find_components("minfs".to_string(), hub_dir).await.unwrap();
 
     assert_eq!(components.len(), 1);
-    let component = &components[0];
-    assert_eq!(component.as_str(), ".");
+    let component = components.remove(0);
+    assert!(component.is_root());
 }

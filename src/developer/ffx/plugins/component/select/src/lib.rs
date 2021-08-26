@@ -43,8 +43,7 @@ async fn select_capability(remote_proxy: rc::RemoteControlProxy, capability: &st
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let matching_components =
-        find_components(capability.to_string(), ".".to_string(), ".".to_string(), hub_dir).await?;
+    let matching_components = find_components(capability.to_string(), hub_dir).await?;
     for component in matching_components {
         println!("{}", component);
     }

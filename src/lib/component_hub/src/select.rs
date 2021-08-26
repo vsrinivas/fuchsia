@@ -8,28 +8,41 @@ use {
     fuchsia_async::TimeoutExt,
     futures::future::{join, join_all, BoxFuture},
     futures::FutureExt,
+    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
 };
 
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
 // Given a v2 hub directory, collect components that expose |capability|.
-// |name| and |moniker| correspond to the name and moniker of the current component
-// respectively. This function is recursive and will find matching CMX and CML components.
-pub fn find_components(
+// This function is recursive and will find matching CMX and CML components.
+pub async fn find_components(
+    capability: String,
+    hub_dir: Directory,
+) -> Result<Vec<PartialAbsoluteMoniker>> {
+    find_components_internal(capability, String::new(), PartialAbsoluteMoniker::root(), hub_dir)
+        .await
+}
+
+fn find_components_internal(
     capability: String,
     name: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<String>>> {
+) -> BoxFuture<'static, Result<Vec<PartialAbsoluteMoniker>>> {
     async move {
         let mut futures = vec![];
         let children_dir = hub_dir.open_dir("children")?;
 
         for child_name in children_dir.entries().await? {
-            let child_moniker = format!("{}/{}", moniker, child_name);
+            let child_moniker = PartialChildMoniker::parse(&child_name)?;
+            let child_moniker = moniker.child(child_moniker);
             let child_hub_dir = children_dir.open_dir(&child_name)?;
-            let child_future =
-                find_components(capability.clone(), child_name, child_moniker, child_hub_dir);
+            let child_future = find_components_internal(
+                capability.clone(),
+                child_name,
+                child_moniker,
+                child_hub_dir,
+            );
             futures.push(child_future);
         }
 
@@ -59,9 +72,9 @@ pub fn find_components(
 // |moniker| corresponds to the moniker of the current realm.
 fn find_cmx_realms(
     capability: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<String>>> {
+) -> BoxFuture<'static, Result<Vec<PartialAbsoluteMoniker>>> {
     async move {
         let c_dir = hub_dir.open_dir("c")?;
         let c_future = find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir);
@@ -85,9 +98,9 @@ fn find_cmx_realms(
 // |moniker| corresponds to the moniker of the current component.
 fn find_cmx_components(
     capability: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<String>>> {
+) -> BoxFuture<'static, Result<Vec<PartialAbsoluteMoniker>>> {
     async move {
         let mut matching_components = vec![];
 
@@ -110,14 +123,15 @@ fn find_cmx_components(
 
 async fn find_cmx_components_in_c_dir(
     capability: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     c_dir: Directory,
-) -> Result<Vec<String>> {
+) -> Result<Vec<PartialAbsoluteMoniker>> {
     // Get all CMX child components
     let child_component_names = c_dir.entries().await?;
     let mut future_children = vec![];
     for child_component_name in child_component_names {
-        let child_moniker = format!("{}/{}", moniker, child_component_name);
+        let child_moniker = PartialChildMoniker::parse(&child_component_name)?;
+        let child_moniker = moniker.child(child_moniker);
         let job_ids_dir = c_dir.open_dir(&child_component_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
@@ -138,13 +152,14 @@ async fn find_cmx_components_in_c_dir(
 
 async fn find_cmx_realms_in_r_dir(
     capability: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     r_dir: Directory,
-) -> Result<Vec<String>> {
+) -> Result<Vec<PartialAbsoluteMoniker>> {
     // Get all CMX child realms
     let mut future_realms = vec![];
     for child_realm_name in r_dir.entries().await? {
-        let child_moniker = format!("{}/{}", moniker, child_realm_name);
+        let child_moniker = PartialChildMoniker::parse(&child_realm_name)?;
+        let child_moniker = moniker.child(child_moniker);
         let job_ids_dir = r_dir.open_dir(&child_realm_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
@@ -233,14 +248,8 @@ mod tests {
         fs::create_dir(root.join("children")).unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components(
-            "fuchsia.logger.LogSink".to_string(),
-            ".".to_string(),
-            ".".to_string(),
-            hub_dir,
-        )
-        .await
-        .unwrap();
+        let components =
+            find_components("fuchsia.logger.LogSink".to_string(), hub_dir).await.unwrap();
 
         assert!(components.is_empty());
     }
@@ -262,18 +271,12 @@ mod tests {
         File::create(root.join("resolved/expose/svc/fuchsia.logger.LogSink")).unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components(
-            "fuchsia.logger.LogSink".to_string(),
-            ".".to_string(),
-            ".".to_string(),
-            hub_dir,
-        )
-        .await
-        .unwrap();
+        let mut components =
+            find_components("fuchsia.logger.LogSink".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.as_str(), ".");
+        let component = components.remove(0);
+        assert!(component.is_root());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -291,14 +294,11 @@ mod tests {
         fs::create_dir_all(root.join("resolved/expose/hub")).unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("hub".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let mut components = find_components("hub".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.as_str(), ".");
+        let component = components.remove(0);
+        assert!(component.is_root());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -326,14 +326,11 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("minfs".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let mut components = find_components("minfs".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.as_str(), "./core");
+        let component = components.remove(0);
+        assert_eq!(component, vec!["core"].into());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -371,14 +368,11 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("dev".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let mut components = find_components("dev".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.as_str(), "./appmgr/sshd.cmx");
+        let component = components.remove(0);
+        assert_eq!(component, vec!["appmgr", "sshd.cmx"].into());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -422,14 +416,11 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("dev".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let mut components = find_components("dev".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.as_str(), "./appmgr/sshd.cmx/foo.cmx");
+        let component = components.remove(0);
+        assert_eq!(component, vec!["appmgr", "sshd.cmx", "foo.cmx"].into());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -464,10 +455,7 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("dev".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("dev".to_string(), hub_dir).await.unwrap();
 
         assert!(components.is_empty());
     }

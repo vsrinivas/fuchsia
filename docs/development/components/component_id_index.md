@@ -133,14 +133,14 @@ To determine the component instance's realm_path, you can look at the output of
 
 ```shell
 $ ffx component list
-<root>
+/
   .
   .
   core
     appmgr
-      app (realm)
+      app
         sysmgr.cmx
-        sys (realm)
+        sys
           my_other_component.cmx
           .
           .

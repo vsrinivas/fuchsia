@@ -230,12 +230,12 @@ mod tests {
         // |- children
         fs::create_dir(root.join("children")).unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let component = Component::parse(".".to_string(), root_dir).await.unwrap();
+        let component = Component::parse("/".to_string(), root_dir).await.unwrap();
 
         assert!(component.children.is_empty());
         assert!(!component.is_cmx);
         assert!(!component.is_running);
-        assert_eq!(component.name, ".");
+        assert_eq!(component.name, "/");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -250,11 +250,11 @@ mod tests {
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir(root.join("exec")).unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let component = Component::parse(".".to_string(), root_dir).await.unwrap();
+        let component = Component::parse("/".to_string(), root_dir).await.unwrap();
 
         assert!(!component.is_cmx);
         assert!(component.is_running);
-        assert_eq!(component.name, ".");
+        assert_eq!(component.name, "/");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -344,11 +344,11 @@ mod tests {
         //       |- children
         fs::create_dir_all(root.join("children/foo/children")).unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let component = Component::parse(".".to_string(), root_dir).await.unwrap();
+        let component = Component::parse("/".to_string(), root_dir).await.unwrap();
 
         assert!(!component.is_cmx);
         assert!(!component.is_running);
-        assert_eq!(component.name, ".");
+        assert_eq!(component.name, "/");
         assert_eq!(component.children.len(), 1);
 
         let child = component.children.get(0).unwrap();

@@ -217,17 +217,17 @@ The following command will display all components that expose `diagnostics`:
 ```sh
 $ fx ffx component select capability diagnostics
 
-./bootstrap/archivist
-./bootstrap/driver_manager
-./bootstrap/fshost
-./bootstrap/power_manager
-./core/appmgr
-./core/detect
-./core/last_reboot
-./core/log-stats
-./core/pkg-cache
-./core/sampler
-./core/system-update-committer
+/bootstrap/archivist
+/bootstrap/driver_manager
+/bootstrap/fshost
+/bootstrap/power_manager
+/core/appmgr
+/core/detect
+/core/last_reboot
+/core/log-stats
+/core/pkg-cache
+/core/sampler
+/core/system-update-committer
 ```
 
 ### Verifying a service is up
@@ -282,7 +282,7 @@ $ fx ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-ru
 Created component instance: hello-world-rust
 ...
 $ fx ffx component show hello-world-rust
-Moniker: ./core/ffx-laboratory:hello-world-rust
+Moniker: /core/ffx-laboratory:hello-world-rust
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 Type: v2 dynamic component
 Execution State: Running

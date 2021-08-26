@@ -8,6 +8,7 @@ use {
     fuchsia_async::TimeoutExt,
     futures::future::{join, join_all, BoxFuture},
     futures::FutureExt,
+    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
 };
 
 static SPACER: &str = "  ";
@@ -19,12 +20,15 @@ async fn does_url_match_query(query: &str, hub_dir: &Directory) -> bool {
 }
 
 // Given a v2 hub directory, collect components whose component name or URL contains |query| as a
-// substring. |name| and |moniker| correspond to the name and moniker of the current component
-// respectively. This function is recursive and will find matching CMX and CML components.
-pub fn find_components(
+// substring. This function is recursive and will find matching CMX and CML components.
+pub async fn find_components(query: String, hub_dir: Directory) -> Result<Vec<Component>> {
+    find_components_internal(query, String::new(), PartialAbsoluteMoniker::root(), hub_dir).await
+}
+
+fn find_components_internal(
     query: String,
     name: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
@@ -32,10 +36,11 @@ pub fn find_components(
         let children_dir = hub_dir.open_dir("children")?;
 
         for child_name in children_dir.entries().await? {
-            let child_moniker = format!("{}/{}", moniker, child_name);
+            let child_moniker = PartialChildMoniker::parse(&child_name)?;
+            let child_moniker = moniker.child(child_moniker);
             let child_hub_dir = children_dir.open_dir(&child_name)?;
             let child_future =
-                find_components(query.clone(), child_name, child_moniker, child_hub_dir);
+                find_components_internal(query.clone(), child_name, child_moniker, child_hub_dir);
             futures.push(child_future);
         }
 
@@ -67,7 +72,7 @@ pub fn find_components(
 // |moniker| corresponds to the moniker of the current realm.
 fn find_cmx_realms(
     query: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
@@ -94,7 +99,7 @@ fn find_cmx_realms(
 fn find_cmx_components(
     name: String,
     query: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
@@ -121,14 +126,15 @@ fn find_cmx_components(
 
 async fn find_cmx_components_in_c_dir(
     query: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     c_dir: Directory,
 ) -> Result<Vec<Component>> {
     // Get all CMX child components
     let child_component_names = c_dir.entries().await?;
     let mut future_children = vec![];
     for child_component_name in child_component_names {
-        let child_moniker = format!("{}/{}", moniker, child_component_name);
+        let child_moniker = PartialChildMoniker::parse(&child_component_name)?;
+        let child_moniker = moniker.child(child_moniker);
         let job_ids_dir = c_dir.open_dir(&child_component_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
@@ -153,13 +159,14 @@ async fn find_cmx_components_in_c_dir(
 
 async fn find_cmx_realms_in_r_dir(
     query: String,
-    moniker: String,
+    moniker: PartialAbsoluteMoniker,
     r_dir: Directory,
 ) -> Result<Vec<Component>> {
     // Get all CMX child realms
     let mut future_realms = vec![];
     for child_realm_name in r_dir.entries().await? {
-        let child_moniker = format!("{}/{}", moniker, child_realm_name);
+        let child_moniker = PartialChildMoniker::parse(&child_realm_name)?;
+        let child_moniker = moniker.child(child_moniker);
         let job_ids_dir = r_dir.open_dir(&child_realm_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
@@ -438,7 +445,7 @@ impl std::fmt::Display for Resolved {
 
 /// Basic information about a component for the `show` command.
 pub struct Component {
-    pub moniker: String,
+    pub moniker: PartialAbsoluteMoniker,
     pub url: String,
     pub component_type: String,
     pub execution: Option<Execution>,
@@ -446,7 +453,7 @@ pub struct Component {
 }
 
 impl Component {
-    async fn parse(moniker: String, hub_dir: &Directory) -> Result<Component> {
+    async fn parse(moniker: PartialAbsoluteMoniker, hub_dir: &Directory) -> Result<Component> {
         let resolved = if hub_dir.exists("resolved").await? {
             let resolved_dir = hub_dir.open_dir("resolved")?;
             Some(Resolved::parse(resolved_dir).await?)
@@ -470,7 +477,7 @@ impl Component {
         Ok(Component { moniker, url, component_type, execution, resolved })
     }
 
-    async fn parse_cmx(moniker: String, hub_dir: Directory) -> Result<Component> {
+    async fn parse_cmx(moniker: PartialAbsoluteMoniker, hub_dir: Directory) -> Result<Component> {
         let resolved = Some(Resolved::parse_cmx(&hub_dir).await?);
         let execution = Some(Execution::parse_cmx(&hub_dir).await?);
 
@@ -550,14 +557,11 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("stash".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
         let component = &components[0];
-        assert_eq!(component.moniker, "./stash");
+        assert_eq!(component.moniker, vec!["stash"].into());
         assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm");
         assert_eq!(component.component_type, "CML static component");
         assert!(component.resolved.is_none());
@@ -600,14 +604,11 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("stash".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
         let component = &components[0];
-        assert_eq!(component.moniker, "./abcd");
+        assert_eq!(component.moniker, vec!["abcd"].into());
         assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm");
         assert_eq!(component.component_type, "CML static component");
         assert!(component.resolved.is_none());
@@ -668,14 +669,11 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("efgh".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("efgh".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
         let component = &components[0];
-        assert_eq!(component.moniker, "./abcd/efgh");
+        assert_eq!(component.moniker, vec!["abcd", "efgh"].into());
         assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/efgh#meta/efgh.cm");
         assert_eq!(component.component_type, "CML static component");
         assert!(component.resolved.is_none());
@@ -736,21 +734,18 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("stash".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 2);
         let component_1 = &components[0];
-        assert_eq!(component_1.moniker, "./stash_1");
+        assert_eq!(component_1.moniker, vec!["stash_1"].into());
         assert_eq!(component_1.url, "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm");
         assert_eq!(component_1.component_type, "CML static component");
         assert!(component_1.resolved.is_none());
         assert!(component_1.execution.is_none());
 
         let component_2 = &components[1];
-        assert_eq!(component_2.moniker, "./stash_2");
+        assert_eq!(component_2.moniker, vec!["stash_2"].into());
         assert_eq!(component_2.url, "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm");
         assert_eq!(component_2.component_type, "CML static component");
         assert!(component_2.resolved.is_none());
@@ -782,10 +777,7 @@ mod tests {
         fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("stash".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
         let component = &components[0];
@@ -864,10 +856,7 @@ mod tests {
             .unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("stash".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
         let component = &components[0];
@@ -928,10 +917,7 @@ mod tests {
         fs::create_dir_all(root.join("exec/out")).unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("stash".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
         let component = &components[0];
@@ -1026,14 +1012,11 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("sshd".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("sshd".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
         let component = &components[0];
-        assert_eq!(component.moniker, "./appmgr/sshd.cmx");
+        assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx"].into());
         assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
         assert_eq!(component.component_type, "CMX component");
 
@@ -1164,16 +1147,13 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("sshd".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("sshd".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 2);
 
         {
             let component = &components[0];
-            assert_eq!(component.moniker, "./appmgr/sshd.cmx");
+            assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx"].into());
             assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
             assert_eq!(component.component_type, "CMX component");
 
@@ -1189,7 +1169,7 @@ mod tests {
 
         {
             let component = &components[1];
-            assert_eq!(component.moniker, "./appmgr/sshd.cmx");
+            assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx"].into());
             assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
             assert_eq!(component.component_type, "CMX component");
 
@@ -1297,16 +1277,13 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("sshd".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("sshd".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 2);
 
         {
             let component = &components[0];
-            assert_eq!(component.moniker, "./appmgr/sshd.cmx");
+            assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx"].into());
             assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
             assert_eq!(component.component_type, "CMX component");
 
@@ -1322,7 +1299,7 @@ mod tests {
 
         {
             let component = &components[1];
-            assert_eq!(component.moniker, "./appmgr/sys/sshd.cmx");
+            assert_eq!(component.moniker, vec!["appmgr", "sys", "sshd.cmx"].into());
             assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
             assert_eq!(component.component_type, "CMX component");
 
@@ -1428,16 +1405,13 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
-            find_components("foo.cmx".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-                .await
-                .unwrap();
+        let components = find_components("foo.cmx".to_string(), hub_dir).await.unwrap();
 
         assert_eq!(components.len(), 1);
 
         {
             let component = &components[0];
-            assert_eq!(component.moniker, "./appmgr/sshd.cmx/foo.cmx");
+            assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx", "foo.cmx"].into());
             assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx");
             assert_eq!(component.component_type, "CMX component");
 

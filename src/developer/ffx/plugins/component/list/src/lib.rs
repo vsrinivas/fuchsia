@@ -33,7 +33,7 @@ async fn list_impl(
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
 
-    let component = Component::parse(".".to_string(), hub_dir).await?;
+    let component = Component::parse("/".to_string(), hub_dir).await?;
 
     if let Some(list_filter) = list_filter {
         component.print(&list_filter, verbose, 0);

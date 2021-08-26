@@ -28,10 +28,9 @@ async fn show(rcs_proxy: rc::RemoteControlProxy, _cmd: SessionShowCommand) -> Re
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let components =
-        find_components("session:session".to_string(), ".".to_string(), ".".to_string(), hub_dir)
-            .await
-            .map_err(|e| ffx_error!("{}\n\nError was: {}", DETAILS_FAILURE, e))?;
+    let components = find_components("session:session".to_string(), hub_dir)
+        .await
+        .map_err(|e| ffx_error!("{}\n\nError was: {}", DETAILS_FAILURE, e))?;
 
     if components.is_empty() {
         return Err(format_err!(
