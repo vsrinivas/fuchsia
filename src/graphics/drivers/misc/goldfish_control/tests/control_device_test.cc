@@ -74,7 +74,7 @@ class VmoMapping {
 class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> {
  public:
   struct HeapInfo {
-    zx::channel channel;
+    fidl::ClientEnd<fuchsia_sysmem2::Heap> heap_client_end;
     bool is_registered = false;
     bool cpu_supported = false;
     bool ram_supported = false;
@@ -164,7 +164,8 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
 
   zx_status_t GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
     heap_info_[heap] = {};
-    heap_info_[heap].channel = std::move(connection);
+    heap_info_[heap].heap_client_end =
+        fidl::ClientEnd<fuchsia_sysmem2::Heap>(std::move(connection));
     return ZX_OK;
   }
 
@@ -239,7 +240,7 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
             heap_info.inaccessible_supported =
                 message->properties.coherency_domain_support().inaccessible_supported();
           });
-      status = handler.HandleOneEvent(kv.second.channel.borrow()).status();
+      status = handler.HandleOneEvent(kv.second.heap_client_end).status();
       if (status != ZX_OK) {
         break;
       }
@@ -358,8 +359,8 @@ class ControlDeviceTest : public testing::Test {
     ASSERT_OK(pipe_.SetUpPipeDevice());
     ASSERT_TRUE(pipe_.IsPipeReady());
 
-    fidl_client_ = fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice>(
-        std::move(ddk_.FidlClient()));
+    fidl_client_ =
+        fidl::BindSyncClient(ddk_.FidlClient<fuchsia_hardware_goldfish::ControlDevice>());
   }
 
   void TearDown() override {
@@ -391,13 +392,13 @@ TEST_F(ControlDeviceTest, Bind) {
 
   const auto& device_local_heap_info =
       heaps.at(static_cast<uint64_t>(fuchsia_sysmem2::wire::HeapType::kGoldfishDeviceLocal));
-  EXPECT_TRUE(device_local_heap_info.channel.is_valid());
+  EXPECT_TRUE(device_local_heap_info.heap_client_end.is_valid());
   EXPECT_TRUE(device_local_heap_info.is_registered);
   EXPECT_TRUE(device_local_heap_info.inaccessible_supported);
 
   const auto& host_visible_heap_info =
       heaps.at(static_cast<uint64_t>(fuchsia_sysmem2::wire::HeapType::kGoldfishHostVisible));
-  EXPECT_TRUE(host_visible_heap_info.channel.is_valid());
+  EXPECT_TRUE(host_visible_heap_info.heap_client_end.is_valid());
   EXPECT_TRUE(host_visible_heap_info.is_registered);
   EXPECT_TRUE(host_visible_heap_info.cpu_supported);
 }

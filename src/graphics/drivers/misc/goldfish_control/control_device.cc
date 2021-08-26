@@ -200,16 +200,15 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
   }
 
   // Initialize address space device.
-  zx::channel address_space_child_client, address_space_child_req;
-  zx_status_t status =
-      zx::channel::create(0u, &address_space_child_client, &address_space_child_req);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: zx_channel_create failed: %d", kTag, status);
-    return status;
+  zx::status endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_goldfish::AddressSpaceChildDriver>();
+  if (!endpoints.is_ok()) {
+    zxlogf(ERROR, "%s: FIDL endpoints failed: %d", kTag, endpoints.status_value());
+    return endpoints.status_value();
   }
 
-  status = address_space_.OpenChildDriver(ADDRESS_SPACE_CHILD_DRIVER_TYPE_DEFAULT,
-                                          std::move(address_space_child_req));
+  zx_status_t status = address_space_.OpenChildDriver(ADDRESS_SPACE_CHILD_DRIVER_TYPE_DEFAULT,
+                                                      endpoints->server.TakeChannel());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddressSpaceDevice::OpenChildDriver failed: %d", kTag, status);
     return status;
@@ -217,7 +216,7 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
 
   address_space_child_ =
       std::make_unique<fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>>(
-          std::move(address_space_child_client));
+          std::move(endpoints->client));
 
   return ZX_OK;
 }
@@ -229,21 +228,21 @@ zx_status_t Control::InitSyncDeviceLocked() {
   }
 
   // Initialize sync timeline client.
-  zx::channel timeline_client, timeline_req;
-  zx_status_t status = zx::channel::create(0u, &timeline_client, &timeline_req);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: zx_channel_create failed: %d", kTag, status);
-    return status;
+  zx::status endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
+  if (!endpoints.is_ok()) {
+    zxlogf(ERROR, "%s: FIDL endpoints failed: %d", kTag, endpoints.status_value());
+    return endpoints.status_value();
   }
 
-  status = sync_.CreateTimeline(std::move(timeline_req));
+  zx_status_t status = sync_.CreateTimeline(endpoints->server.TakeChannel());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: SyncDevice::CreateTimeline failed: %d", kTag, status);
     return status;
   }
 
   sync_timeline_ = std::make_unique<fidl::WireSyncClient<fuchsia_hardware_goldfish::SyncTimeline>>(
-      std::move(timeline_client));
+      std::move(endpoints->client));
   return ZX_OK;
 }
 
