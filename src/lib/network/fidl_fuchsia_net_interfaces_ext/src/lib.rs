@@ -8,7 +8,7 @@
 
 mod reachability;
 
-pub use reachability::{to_reachability_stream, wait_for_reachability};
+pub use reachability::{is_globally_routable, to_reachability_stream, wait_for_reachability};
 
 use fidl_table_validation::*;
 use futures::{Stream, TryStreamExt as _};
