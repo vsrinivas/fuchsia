@@ -323,7 +323,7 @@ bool JobDispatcher::KillJobWithKillOnOOM() {
   // Sort by max height.
   ktl::stable_sort(oom_jobs.begin(), oom_jobs.begin() + count,
                    [](const fbl::RefPtr<JobDispatcher>& a, const fbl::RefPtr<JobDispatcher>& b) {
-                     return a->max_height() < b->max_height();
+                     return a->max_height() > b->max_height();
                    });
 
   // Kill lowest to highest until we find something to kill.
@@ -584,7 +584,7 @@ void JobDispatcher::set_kill_on_oom(bool value) {
 }
 
 bool JobDispatcher::get_kill_on_oom() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<Mutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
   return kill_on_oom_;
 }
 
