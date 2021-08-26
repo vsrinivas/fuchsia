@@ -33,11 +33,12 @@ dart_library("fuchsia_scenic_flutter") {
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/pedantic",
   ]
 }
 
 # Runs these tests using:
-#   fx test fuchsia_scenic_flutter_unittests
+#   fx test --host fuchsia_scenic_flutter_unittests
 flutter_test("fuchsia_scenic_flutter_unittests") {
   sources = [
     "focus_state_test.dart",
@@ -59,6 +60,7 @@ flutter_test("fuchsia_scenic_flutter_unittests") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/pedantic",
     "//third_party/dart-pkg/pub/test",
   ]
 }

@@ -4,6 +4,7 @@
 
 // ignore_for_file: avoid_as, dead_code, null_check_always_fails
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
@@ -14,6 +15,7 @@ import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 // ignore: implementation_imports
 import 'package:fuchsia_scenic_flutter/src/pointer_injector.dart';
 import 'package:mockito/mockito.dart';
+import 'package:pedantic/pedantic.dart';
 import 'package:zircon/zircon.dart';
 
 void main() {
@@ -137,6 +139,78 @@ void main() {
     final newInjector = connection.pointerInjector;
     expect(newInjector != injector, isTrue);
   });
+
+  test('Multiple pointer events only register injector once', () async {
+    final FuchsiaViewConnection connection = TestFuchsiaViewConnection(
+      _mockViewHolderToken(),
+      viewRef: _mockViewRef(),
+      usePointerInjection: true,
+    );
+
+    // Inject multiple events which should trigger registration.
+    // Don't `await` the resulting `Future`s, since the real caller
+    // (_PlatformViewGestureRecognizer) doesn't do so.
+    //
+    // Switch the `registered` getter to return `true` after the
+    // first call to `dispatchPointerEvent()`, to emulate the
+    // case where the PointerInjector immediately updates
+    // the registration state.
+    final downEvent = PointerDownEvent();
+    when(connection.pointerInjector.registered).thenReturn(false);
+    unawaited(connection.dispatchPointerEvent(downEvent));
+    when(connection.pointerInjector.registered).thenReturn(true);
+    unawaited(connection.dispatchPointerEvent(downEvent));
+
+    // Because `registered` was true at the time of the second pointer event,
+    // FuchsiaViewConnection should not have called `register()` for the
+    // second pointer event.
+    verify((connection.pointerInjector as MockPointerInjector).register(
+      hostViewRef: anyNamed('hostViewRef'),
+      viewRef: anyNamed('viewRef'),
+      viewport: anyNamed('viewport'),
+    )).called(1);
+  });
+
+  test('Multiple pointer events preserve event order', () async {
+    // Create a FuchsiaViewConnection with a PointerInjector whose
+    // register() method never completes. This emulates the case
+    // where the FIDL call to the PointerInjector Registry doesn't
+    // complete immediately.
+    final FuchsiaViewConnection connection = TestFuchsiaViewConnection(
+      _mockViewHolderToken(),
+      viewRef: _mockViewRef(),
+      usePointerInjection: true,
+    ).._pointerInjector = _hangingPointerInjector();
+
+    // Inject a pointer event in the unregistered state.
+    // Don't `await` the resulting `Future`s, since the real caller
+    // (_PlatformViewGestureRecognizer) doesn't do so.
+    final firstDownEvent = PointerDownEvent(position: Offset(1.0, 1.0));
+    when(connection.pointerInjector.registered).thenReturn(false);
+    unawaited(connection.dispatchPointerEvent(firstDownEvent));
+
+    // Update PointerInjector to indicate that the injector is
+    // registered. This emulates the case where PointerInjector
+    // optimistically updates registration state before the FIDL
+    // call completes.
+    when(connection.pointerInjector.registered).thenReturn(true);
+
+    // Inject a pointer event in the registered state.
+    // Don't `await` the resulting `Future`s, since the real caller
+    // (_PlatformViewGestureRecognizer) doesn't do so.
+    final secondDownEvent = PointerDownEvent(position: Offset(2.0, 2.0));
+    unawaited(connection.dispatchPointerEvent(secondDownEvent));
+
+    // Verify that the events were not reordered.
+    expect(
+        verify((connection.pointerInjector as MockPointerInjector)
+                .dispatchEvent(
+                    pointer: captureAnyNamed('pointer'),
+                    viewport: anyNamed('viewport')))
+            .captured,
+        anyOf(equals(null), equals(firstDownEvent),
+            equals([firstDownEvent, secondDownEvent])));
+  });
 }
 
 ViewRef _mockViewRef() {
@@ -254,4 +328,16 @@ class MockPointerInjector extends Mock implements PointerInjector {
         #pointer: pointer,
         #viewport: viewport,
       }));
+}
+
+// Returns a MockPointerInjector whose `register()` method returns a `Future`
+// which never completes.
+MockPointerInjector _hangingPointerInjector() {
+  final injector = MockPointerInjector();
+  when(injector.register(
+    hostViewRef: anyNamed('hostViewRef'),
+    viewRef: anyNamed('viewRef'),
+    viewport: anyNamed('viewport'),
+  )).thenAnswer((_) => Completer().future);
+  return injector;
 }

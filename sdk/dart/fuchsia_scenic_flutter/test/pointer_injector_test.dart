@@ -28,7 +28,7 @@ void main() {
     final hostViewRef = _mockViewRef();
     final viewRef = _mockViewRef();
     final rect = Rect.fromLTWH(0, 0, 100, 100);
-    await injector.register(
+    injector.register(
         hostViewRef: hostViewRef, viewRef: viewRef, viewport: rect);
 
     final config = verify(registry.register(captureAny, any)).captured.single;
@@ -40,6 +40,7 @@ void main() {
         ]));
     expect(config.viewport.viewportToContextTransform,
         equals([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
+    expect(injector.registered, isTrue);
   });
 
   test('PointerInjector dispatchEvent', () async {
