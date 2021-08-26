@@ -25,7 +25,7 @@ use lowpan_driver_common::{AsyncConditionWait, Driver as LowpanDriver, FutureExt
 use spinel_pack::{TryUnpack, EUI64};
 use std::convert::TryInto;
 
-const JOIN_TIMEOUT: Duration = Duration::from_seconds(30);
+const JOIN_TIMEOUT: Duration = Duration::from_seconds(120);
 
 /// Helpers for API-related tasks.
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
