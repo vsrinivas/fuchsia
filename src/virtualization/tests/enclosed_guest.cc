@@ -186,6 +186,8 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   // Launch the guest.
   logger.Start("Launching guest", zx::sec(5));
   bool launch_complete = false;
+  std::optional<zx_status_t> guest_error;
+  guest_.set_error_handler([&guest_error](zx_status_t status) { guest_error = status; });
   realm_->LaunchInstance(url, cpp17::nullopt, std::move(cfg), guest_.NewRequest(),
                          [this, &launch_complete](uint32_t cid) {
                            guest_cid_ = cid;
@@ -199,10 +201,19 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   zx::socket serial_socket;
   guest_->GetSerial([&serial_socket](zx::socket socket) { serial_socket = std::move(socket); });
   bool success = RunLoopUntil(
-      GetLoop(), [&serial_socket] { return serial_socket.is_valid(); }, deadline);
+      GetLoop(),
+      [&guest_error, &serial_socket] {
+        return guest_error.has_value() || serial_socket.is_valid();
+      },
+      deadline);
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial.";
     return ZX_ERR_TIMED_OUT;
+  }
+  if (guest_error.has_value()) {
+    FX_LOGS(ERROR) << "Error connecting to guest's serial: "
+                   << zx_status_get_string(guest_error.value());
+    return guest_error.value();
   }
   serial_logger_.emplace(&Logger::Get(), std::move(serial_socket));
 
@@ -214,10 +225,19 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
         get_console_result = std::move(result);
       });
   success = RunLoopUntil(
-      GetLoop(), [&get_console_result] { return get_console_result.has_value(); }, deadline);
+      GetLoop(),
+      [&guest_error, &get_console_result] {
+        return guest_error.has_value() || get_console_result.has_value();
+      },
+      deadline);
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to connect to guest's console";
     return ZX_ERR_TIMED_OUT;
+  }
+  if (guest_error.has_value()) {
+    FX_LOGS(ERROR) << "Error connecting to guest's console: "
+                   << zx_status_get_string(guest_error.value());
+    return guest_error.value();
   }
   if (get_console_result->is_err()) {
     FX_PLOGS(ERROR, get_console_result->err()) << "Failed to open guest console";
