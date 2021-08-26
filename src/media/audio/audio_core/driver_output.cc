@@ -569,7 +569,9 @@ void DriverOutput::OnDriverStartComplete() {
     StartCountdownToDisableAudible(*IdlePolicy::startup_idle_countdown_duration());
     StartCountdownToDisableUltrasonic(*IdlePolicy::startup_idle_countdown_duration());
   } else {
-    FX_LOGS(WARNING) << __FUNCTION__ << " not starting idle countdowns (policy disabled)";
+    if constexpr (IdlePolicy::kLogIdleTimers) {
+      FX_LOGS(INFO) << __FUNCTION__ << " not starting idle countdowns (policy disabled)";
+    }
   }
 
   Process();

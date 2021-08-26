@@ -6,9 +6,11 @@ import("//src/media/audio/audio_core_config.gni")
 
 audio_core_config_test("tests") {
   package_name = "audio-core-test-configs-test"
-  sources = [
+  config_sources = [
+    "audio_core_config_with_gain_limits.json",
     "audio_core_config_with_inversion_filter.json",
     "audio_core_config_with_sleeper_filter.json",
     "ultrasound_audio_core_config.json",
   ]
+  policy_sources = []
 }

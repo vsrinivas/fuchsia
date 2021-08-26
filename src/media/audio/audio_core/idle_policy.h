@@ -23,7 +23,7 @@ class IdlePolicy : public ActiveStreamCountReporter, public DeviceRouter {
  public:
   // Informational logging for various aspects of the idle power-conservation mechanism
   static constexpr bool kLogChannelFrequencyRanges = false;
-  static constexpr bool kLogStaticConfigValues = true;
+  static constexpr bool kLogStaticConfigValues = false;
   static constexpr bool kLogIdlePolicyCounts = false;
   static constexpr bool kLogIdleTimers = false;
   static constexpr bool kLogSetActiveChannelsSupport = false;

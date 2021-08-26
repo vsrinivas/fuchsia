@@ -87,9 +87,52 @@ constexpr char invalid_behavior[] = R"JSON(
     }
 )JSON";
 
+constexpr char negative_countdown[] = R"JSON(
+    {
+      "audio_policy_rules": [
+        {
+          "active": {"render_usage":"MEDIA"},
+          "affected": {"render_usage":"MEDIA"},
+          "behavior": "NONE"
+        }
+      ],
+      "idle_countdown_milliseconds": -1000
+    }
+)JSON";
+
+constexpr char invalid_countdown[] = R"JSON(
+    {
+      "audio_policy_rules": [
+        {
+          "active": {"render_usage":"MEDIA"},
+          "affected": {"render_usage":"MEDIA"},
+          "behavior": "NONE"
+        }
+      ],
+      "startup_idle_countdown_milliseconds": "string_not_integer",
+    }
+)JSON";
+
+constexpr char invalid_channels[] = R"JSON(
+    {
+      "audio_policy_rules": [
+        {
+          "active": {"render_usage":"MEDIA"},
+          "affected": {"render_usage":"MEDIA"},
+          "behavior": "NONE"
+        }
+      ],
+      "use_all_ultrasonic_channels": 0
+    }
+)JSON";
+
 // Examples of valid configs.
 // A config with no rules specified is valid.
 constexpr char empty_rules_json[] = R"JSON({"audio_policy_rules": []})JSON";
+
+// A config with no rules and one idle option specified is valid.
+constexpr char empty_rules_plus_idle_json[] =
+    R"JSON({"audio_policy_rules": [], "idle_countdown_milliseconds": 0})JSON";
 
 // Make sure we don't error out if the json contains keys we don't care about.
 constexpr char ignored_key[] = R"JSON({"useless_key": 1.0, "audio_policy_rules": []})JSON";

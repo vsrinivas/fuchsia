@@ -10,11 +10,12 @@
 namespace media::audio {
 namespace {
 
-class AudioAdminUnitTest : public gtest::TestLoopFixture {};
+class PolicyLoaderTest : public gtest::TestLoopFixture {};
 
-TEST_F(AudioAdminUnitTest, GoodConfigs) {
+TEST_F(PolicyLoaderTest, GoodConfigs) {
   // Explicitly passing no rules is an acceptable configuration.
   EXPECT_TRUE(PolicyLoader::ParseConfig(test::empty_rules_json));
+  EXPECT_TRUE(PolicyLoader::ParseConfig(test::empty_rules_plus_idle_json));
 
   EXPECT_TRUE(PolicyLoader::ParseConfig(test::ignored_key));
 
@@ -28,7 +29,7 @@ TEST_F(AudioAdminUnitTest, GoodConfigs) {
   EXPECT_TRUE(PolicyLoader::ParseConfig(test::contains_all_usages_and_behaviors));
 }
 
-TEST_F(AudioAdminUnitTest, BadConfigs) {
+TEST_F(PolicyLoaderTest, BadConfigs) {
   // Configs that aren't complete enough to use.
   EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_rules).is_ok());
   EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_active).is_ok());
@@ -43,6 +44,10 @@ TEST_F(AudioAdminUnitTest, BadConfigs) {
   EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_renderusage).is_ok());
   EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_captureusage).is_ok());
   EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_behavior).is_ok());
+
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::negative_countdown).is_ok());
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_countdown).is_ok());
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_channels).is_ok());
 }
 
 }  // namespace

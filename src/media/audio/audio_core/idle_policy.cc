@@ -25,7 +25,9 @@ bool IdlePolicy::use_all_ultrasonic_channels_ = true;
 // Will be called on the FIDL thread
 void IdlePolicy::OnActiveRenderCountChanged(RenderUsage usage, uint32_t count) {
   if (!IdlePolicy::idle_countdown_duration().has_value()) {
-    FX_LOGS(WARNING) << __FUNCTION__ << " exiting early (policy disabled)";
+    if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+      FX_LOGS(INFO) << __FUNCTION__ << " exiting early (policy disabled)";
+    }
     return;
   }
   if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
@@ -83,7 +85,9 @@ void IdlePolicy::PrepareForRoutingChange(bool device_is_input, RoutingScope scop
   }
 
   if (!IdlePolicy::idle_countdown_duration().has_value()) {
-    FX_LOGS(INFO) << __FUNCTION__ << ": not caching routing state (idle policy disabled)";
+    if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+      FX_LOGS(INFO) << __FUNCTION__ << ": not caching routing state (idle policy disabled)";
+    }
     return;
   }
 
@@ -107,7 +111,9 @@ void IdlePolicy::DigestRoutingChange(bool device_is_input, RoutingScope scope) {
   }
 
   if (!IdlePolicy::idle_countdown_duration().has_value()) {
-    FX_LOGS(INFO) << __FUNCTION__ << ": not changing active channels (idle policy disabled)";
+    if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+      FX_LOGS(INFO) << __FUNCTION__ << ": not changing active channels (idle policy disabled)";
+    }
     return;
   }
 

@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_POLICY_LOADER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fpromise/result.h>
 
 #include <rapidjson/document.h>
 
@@ -17,6 +18,7 @@ class PolicyLoader {
  public:
   static AudioPolicy LoadPolicy();
 
+  static fpromise::result<AudioPolicy, zx_status_t> LoadConfigFromFile(std::string filename);
   static fpromise::result<AudioPolicy> ParseConfig(const char* file_body);
 
  private:

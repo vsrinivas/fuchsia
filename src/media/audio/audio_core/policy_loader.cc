@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/errors.h>
 
 #include <string>
 
@@ -224,62 +225,64 @@ bool PolicyLoader::ParseIdlePowerOptions(rapidjson::Document& doc,
   return true;
 }
 
-fpromise::result<std::optional<AudioPolicy>> LoadConfigFromFile(const std::string config) {
+fpromise::result<AudioPolicy, zx_status_t> PolicyLoader::LoadConfigFromFile(
+    const std::string filename) {
   fbl::unique_fd json_file;
-  json_file.reset(open(config.c_str(), O_RDONLY));
+  json_file.reset(open(filename.c_str(), O_RDONLY));
 
   if (!json_file.is_valid()) {
-    return fpromise::ok(std::nullopt);
+    return fpromise::error(ZX_ERR_NOT_FOUND);
   }
 
-  // Figure out the size of the file, then allocate storage for reading the
-  // whole thing.
+  // Figure out the size of the file, then allocate storage for reading the whole thing.
   off_t file_size = lseek(json_file.get(), 0, SEEK_END);
   if ((file_size <= 0)) {
     FX_LOGS(ERROR) << "Could not find filesize";
-    return fpromise::error();
+    return fpromise::error(ZX_ERR_NOT_FILE);
   }
 
   if (static_cast<size_t>(file_size) > kMaxSettingFileSize) {
     FX_LOGS(ERROR) << "Config file too large. Max file size: " << kMaxSettingFileSize
                    << " Config file size: " << file_size;
-    return fpromise::error();
+    return fpromise::error(ZX_ERR_FILE_BIG);
   }
 
   if (lseek(json_file.get(), 0, SEEK_SET) != 0) {
     FX_LOGS(ERROR) << "Failed to seek to 0.";
-    return fpromise::error();
+    return fpromise::error(ZX_ERR_IO);
   }
 
   // Allocate the buffer and read in the contents.
   auto buffer = std::make_unique<char[]>(file_size + 1);
   if (read(json_file.get(), buffer.get(), file_size) != file_size) {
     FX_LOGS(ERROR) << "Failed to read buffer.";
-    return fpromise::error();
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
   buffer[file_size] = 0;
 
   auto result = PolicyLoader::ParseConfig(buffer.get());
   if (result.is_error()) {
-    return fpromise::error();
+    return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
-  return fpromise::ok(std::make_optional(result.take_value()));
+  return fpromise::ok(result.take_value());
 }
 
 AudioPolicy PolicyLoader::LoadPolicy() {
   auto result = LoadConfigFromFile(kPolicyPath);
   if (result.is_ok()) {
-    auto maybe_policy = result.take_value();
-    if (maybe_policy.has_value()) {
-      FX_LOGS(INFO) << "Loaded policy with " << maybe_policy->rules().size() << " rules.";
-      return std::move(*maybe_policy);
-    } else {
-      FX_LOGS(INFO) << "No policy found; using default.";
-      return AudioPolicy();
-    }
+    return std::move(result.value());
   }
 
-  FX_LOGS(WARNING) << "Failed to load audio policy from " << kPolicyPath << ", using default.";
+  if (result.error() == ZX_ERR_NOT_FOUND) {
+    FX_LOGS(INFO) << "No audio policy found; using default.";
+  } else if (result.error() == ZX_ERR_NOT_SUPPORTED) {
+    FX_LOGS(INFO) << "Audio policy '" << kPolicyPath
+                  << "' loaded but could not be parsed; using default.";
+  } else {
+    FX_LOGS(WARNING) << "Audio policy '" << kPolicyPath << "' failed to load (err "
+                     << result.error() << "); using default.";
+  }
+
   return AudioPolicy();
 }
 
