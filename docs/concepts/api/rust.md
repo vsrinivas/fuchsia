@@ -206,31 +206,13 @@ See [C-NEWTYPE-HIDE](https://rust-lang.github.io/api-guidelines/future-proofing.
 See [C-STRUCT-BOUNDS](https://rust-lang.github.io/api-guidelines/future-proofing.html#c-struct-bounds).
 
 
-{% dynamic if user.is_googler %}
-
 ## Updating the guidelines
 
-This rubric is currently maintained by the Rust on Fuchsia Working Group.
+This rubric is currently maintained by the Rust on Fuchsia Working Group. To propose additions or
+modifications, open a CL and cc [`fuchsia-rust-api-rubric@google.com`][rubric-group] to ensure it
+is reviewed.
 
-During the process of establishing the bulk of the API rubric for the first time, discussion of new
-additions takes place on the [API Rubric email list][rubric-group] which is moderated by members of
-the Rust on Fuchsia team.
-
-* All posts are moderated to start.
-* Anyone on the Fuchsia team can join the discussion list and propose new guidelines.
-* Final approval for guidelines comes from the RoF working group.
-* Each email thread should be used to discuss a single proposed guideline.
-* The subject line should start with the category of the guideline, for example `Documentation: `,
-  `Predictability: `, etc.
-* When consensus appears to be reached on a proposal, a moderator will post a notification and add
-  the guideline to the agenda for the next working group meeting for approval.
-
-To propose a new guideline, email [tq-rust-wg@google.com](mailto:tq-rust-wg@google.com) to be added
-to the schedule.
-
-[rubric-group]: https://groups.google.com/a/google.com/g/fuchsia-rust-api-rubric
-
-{% dynamic endif %}
+[rubric-group]: mailto:fuchsia-rust-api-rubric@google.com
 
 ## Relationship with upstream Rust API guidelines
 
