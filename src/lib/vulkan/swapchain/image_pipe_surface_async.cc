@@ -68,14 +68,14 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   });
 
   // Set swapchain constraints |vulkan_token|.
-  VkBufferCollectionCreateInfoFUCHSIA import_info = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
+  VkBufferCollectionCreateInfoFUCHSIAX import_info = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIAX,
       .pNext = nullptr,
       .collectionToken = vulkan_token.Unbind().TakeChannel().release(),
   };
-  VkBufferCollectionFUCHSIA collection;
+  VkBufferCollectionFUCHSIAX collection;
   VkResult result =
-      pDisp->CreateBufferCollectionFUCHSIA(device, &import_info, pAllocator, &collection);
+      pDisp->CreateBufferCollectionFUCHSIAX(device, &import_info, pAllocator, &collection);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "Failed to import buffer collection: %d\n", result);
     return false;
@@ -100,7 +100,7 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
   };
-  result = pDisp->SetBufferCollectionConstraintsFUCHSIA(device, collection, &image_create_info);
+  result = pDisp->SetBufferCollectionConstraintsFUCHSIAX(device, collection, &image_create_info);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "Failed to set buffer collection constraints: %d\n", result);
     return false;
@@ -144,8 +144,8 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
 
   for (uint32_t i = 0; i < image_count; ++i) {
     // Create Vk image.
-    VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
+    VkBufferCollectionImageCreateInfoFUCHSIAX image_format_fuchsia = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIAX,
         .pNext = nullptr,
         .collection = collection,
         .index = i};
@@ -160,9 +160,9 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     // Extract memory handles from BufferCollection.
     VkMemoryRequirements memory_requirements;
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
-    VkBufferCollectionPropertiesFUCHSIA properties = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
-    result = pDisp->GetBufferCollectionPropertiesFUCHSIA(device, collection, &properties);
+    VkBufferCollectionPropertiesFUCHSIAX properties = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIAX};
+    result = pDisp->GetBufferCollectionPropertiesFUCHSIAX(device, collection, &properties);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "Swapchain: GetBufferCollectionPropertiesFUCHSIA failed: %d\n", status);
       return false;
@@ -173,8 +173,8 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
         .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR,
         .image = image,
     };
-    VkImportMemoryBufferCollectionFUCHSIA import_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
+    VkImportMemoryBufferCollectionFUCHSIAX import_info = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIAX,
         .pNext = &dedicated_info,
         .collection = collection,
         .index = i,
@@ -214,7 +214,7 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   }
   buffer_counts_.emplace(current_buffer_id_, image_count);
 
-  pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
+  pDisp->DestroyBufferCollectionFUCHSIAX(device, collection, pAllocator);
   buffer_collection->Close();
 
   return true;

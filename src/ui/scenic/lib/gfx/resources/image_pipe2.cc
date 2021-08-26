@@ -365,7 +365,7 @@ bool ImagePipe2::SetBufferCollectionConstraints(
   auto create_buffer_collection_result =
       vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader);
   if (create_buffer_collection_result.result != vk::Result::eSuccess) {
-    error_reporter_->ERROR() << __func__ << ": VkCreateBufferCollectionFUCHSIA failed: "
+    error_reporter_->ERROR() << __func__ << ": vkCreateBufferCollectionFUCHSIA failed: "
                              << vk::to_string(create_buffer_collection_result.result);
     return false;
   }
@@ -373,7 +373,7 @@ bool ImagePipe2::SetBufferCollectionConstraints(
   auto constraints_result = vk_device.setBufferCollectionConstraintsFUCHSIA(
       create_buffer_collection_result.value, create_info, vk_loader);
   if (constraints_result != vk::Result::eSuccess) {
-    error_reporter_->ERROR() << __func__ << ": VkSetBufferCollectionConstraints failed: "
+    error_reporter_->ERROR() << __func__ << ": vkSetBufferCollectionConstraints failed: "
                              << vk::to_string(constraints_result);
     return false;
   }

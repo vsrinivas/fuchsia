@@ -71,6 +71,7 @@ VulkanDeviceQueues::Params GetDefaultVulkanDeviceQueuesParams(bool enable_protec
 #ifdef VK_USE_PLATFORM_FUCHSIA
   device_params.required_extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   device_params.required_extension_names.insert(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+  device_params.required_extension_names.insert(VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME);
   device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   if (enable_protected_memory)

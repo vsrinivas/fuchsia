@@ -91,7 +91,7 @@ VK_TEST(VKFunctionTest, FuchsiaFunctionLoading) {
   auto escher = escher::test::GetEscher();
   auto vk_loader = escher->device()->dispatch_loader();
 
-  EXPECT_TRUE(vk_loader.vkCreateBufferCollectionFUCHSIA);
+  EXPECT_TRUE(vk_loader.vkCreateBufferCollectionFUCHSIAX);
 }
 #endif
 

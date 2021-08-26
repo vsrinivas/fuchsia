@@ -150,6 +150,7 @@ class TestSwapchain {
                                           VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
                                           VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
     std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                                        VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME,
                                         VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
 
     const VkApplicationInfo app_info = {

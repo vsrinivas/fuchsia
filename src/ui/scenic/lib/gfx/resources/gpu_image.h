@@ -40,7 +40,7 @@ class GpuImage : public Image {
   // Create image given a MemoryPtr, vk::ImageCreateInfo and memory_offset.
   //
   // |create_info| allows caller to fill out this information themselves using possible vulkan
-  // extensions, i.e. vkBufferCollectionImageCreateInfoFUCHSIA.
+  // extensions, i.e. VkBufferCollectionImageCreateInfoFUCHSIA.
   static GpuImagePtr New(Session* session, ResourceId id, MemoryPtr memory,
                          vk::ImageCreateInfo create_info, vk::Image input_image,
                          ErrorReporter* error_reporter);

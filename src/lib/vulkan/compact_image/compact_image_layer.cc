@@ -298,20 +298,20 @@ class ImageCompactor {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    VkBufferCollectionCreateInfoFUCHSIA image_collection_create_info = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
+    VkBufferCollectionCreateInfoFUCHSIAX image_collection_create_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIAX,
         .pNext = nullptr,
         .collectionToken = vulkan_image_token.Unbind().TakeChannel().release(),
     };
-    VkBufferCollectionFUCHSIA collection;
-    VkResult result = dispatch_->CreateBufferCollectionFUCHSIA(
+    VkBufferCollectionFUCHSIAX collection;
+    VkResult result = dispatch_->CreateBufferCollectionFUCHSIAX(
         device_, &image_collection_create_info, nullptr, &collection);
     if (result != VK_SUCCESS) {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
 
     auto cleanup_collection = fit::defer([this, collection, pAllocator] {
-      dispatch_->DestroyBufferCollectionFUCHSIA(device_, collection, pAllocator);
+      dispatch_->DestroyBufferCollectionFUCHSIAX(device_, collection, pAllocator);
     });
 
     VkImageCreateInfo image_create_info = {
@@ -330,11 +330,11 @@ class ImageCompactor {
         .initialLayout = pCreateInfo->initialLayout,
     };
 
-    VkSysmemColorSpaceFUCHSIA color_space = {
+    VkSysmemColorSpaceFUCHSIAX color_space = {
         .colorSpace = static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::SRGB),
     };
-    VkImageFormatConstraintsInfoFUCHSIA image_format_constraints_info = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIA,
+    VkImageFormatConstraintsInfoFUCHSIAX image_format_constraints_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIAX,
         .pNext = nullptr,
         .requiredFormatFeatures = 0,
         .flags = 0,
@@ -342,8 +342,8 @@ class ImageCompactor {
         .colorSpaceCount = 1,
         .pColorSpaces = &color_space,
     };
-    VkImageConstraintsInfoFUCHSIA image_constraints_info = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIA,
+    VkImageConstraintsInfoFUCHSIAX image_constraints_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIAX,
         .pNext = nullptr,
         .createInfoCount = 1,
         .pCreateInfos = &image_create_info,
@@ -353,26 +353,26 @@ class ImageCompactor {
         .minBufferCountForDedicatedSlack = 0,
         .minBufferCountForSharedSlack = 0,
     };
-    result = dispatch_->SetBufferCollectionImageConstraintsFUCHSIA(device_, collection,
-                                                                   &image_constraints_info);
+    result = dispatch_->SetBufferCollectionImageConstraintsFUCHSIAX(device_, collection,
+                                                                    &image_constraints_info);
     if (result != VK_SUCCESS) {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    VkBufferCollectionCreateInfoFUCHSIA buffer_collection_create_info = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
+    VkBufferCollectionCreateInfoFUCHSIAX buffer_collection_create_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIAX,
         .pNext = nullptr,
         .collectionToken = vulkan_buffer_token.Unbind().TakeChannel().release(),
     };
-    VkBufferCollectionFUCHSIA collection_for_buffer;
-    result = dispatch_->CreateBufferCollectionFUCHSIA(device_, &buffer_collection_create_info,
-                                                      nullptr, &collection_for_buffer);
+    VkBufferCollectionFUCHSIAX collection_for_buffer;
+    result = dispatch_->CreateBufferCollectionFUCHSIAX(device_, &buffer_collection_create_info,
+                                                       nullptr, &collection_for_buffer);
     if (result != VK_SUCCESS) {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
 
     auto cleanup_collection_for_buffer = fit::defer([this, collection_for_buffer, pAllocator] {
-      dispatch_->DestroyBufferCollectionFUCHSIA(device_, collection_for_buffer, pAllocator);
+      dispatch_->DestroyBufferCollectionFUCHSIAX(device_, collection_for_buffer, pAllocator);
     });
 
     VkBufferCreateInfo buffer_create_info = {
@@ -385,15 +385,15 @@ class ImageCompactor {
         .queueFamilyIndexCount = 0,
         .pQueueFamilyIndices = nullptr,
     };
-    VkBufferConstraintsInfoFUCHSIA buffer_constraints_info = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CONSTRAINTS_INFO_FUCHSIA,
+    VkBufferConstraintsInfoFUCHSIAX buffer_constraints_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CONSTRAINTS_INFO_FUCHSIAX,
         .pNext = nullptr,
         .pBufferCreateInfo = &buffer_create_info,
         .requiredFormatFeatures = 0,
         .minCount = 1,
     };
-    result = dispatch_->SetBufferCollectionBufferConstraintsFUCHSIA(device_, collection_for_buffer,
-                                                                    &buffer_constraints_info);
+    result = dispatch_->SetBufferCollectionBufferConstraintsFUCHSIAX(device_, collection_for_buffer,
+                                                                     &buffer_constraints_info);
     if (result != VK_SUCCESS) {
       return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -454,8 +454,8 @@ class ImageCompactor {
     FX_CHECK(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
              image_constraints.pixel_format.type);
 
-    VkBufferCollectionBufferCreateInfoFUCHSIA collection_buffer_create_info = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_BUFFER_CREATE_INFO_FUCHSIA,
+    VkBufferCollectionBufferCreateInfoFUCHSIAX collection_buffer_create_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_BUFFER_CREATE_INFO_FUCHSIAX,
         .pNext = nullptr,
         .collection = collection_for_buffer,
         .index = 0,
@@ -476,8 +476,8 @@ class ImageCompactor {
         .pNext = nullptr,
         .supportedOperations = kCommitMemoryOperations | kDecommitMemoryOperations,
     };
-    VkImportMemoryBufferCollectionFUCHSIA import_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
+    VkImportMemoryBufferCollectionFUCHSIAX import_info = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIAX,
         .pNext = &control_ops_info,
         .collection = collection_for_buffer,
         .index = 0,
@@ -531,8 +531,8 @@ class ImageCompactor {
         [this, aux_buffer_memory] { dispatch_->UnmapMemory(device_, aux_buffer_memory); });
 
     // Create image after successfully initializing extra state.
-    VkBufferCollectionImageCreateInfoFUCHSIA collection_image_create_info = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
+    VkBufferCollectionImageCreateInfoFUCHSIAX collection_image_create_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIAX,
         .pNext = nullptr,
         .collection = collection,
         .index = 0,
@@ -580,7 +580,7 @@ class ImageCompactor {
       dispatch_->DestroyBuffer(device_, it->second.aux.buffer, pAllocator);
       dispatch_->UnmapMemory(device_, it->second.aux.memory);
       dispatch_->FreeMemory(device_, it->second.aux.memory, pAllocator);
-      dispatch_->DestroyBufferCollectionFUCHSIA(device_, it->second.collection, pAllocator);
+      dispatch_->DestroyBufferCollectionFUCHSIAX(device_, it->second.collection, pAllocator);
       compact_images_.erase(it);
     }
     dispatch_->DestroyImage(device_, image, pAllocator);
@@ -592,8 +592,8 @@ class ImageCompactor {
 
     auto it = compact_images_.find(pInfo->image);
     if (it != compact_images_.end()) {
-      VkBufferCollectionPropertiesFUCHSIA properties;
-      dispatch_->GetBufferCollectionPropertiesFUCHSIA(device_, it->second.collection, &properties);
+      VkBufferCollectionPropertiesFUCHSIAX properties;
+      dispatch_->GetBufferCollectionPropertiesFUCHSIAX(device_, it->second.collection, &properties);
       pMemoryRequirements->memoryRequirements.memoryTypeBits &= properties.memoryTypeBits;
       auto dedicated_requirements = static_cast<VkMemoryDedicatedRequirements*>(
           vk_find_struct(pMemoryRequirements, MEMORY_DEDICATED_REQUIREMENTS));
@@ -622,8 +622,8 @@ class ImageCompactor {
     }
 
     // Create memory allocation by importing the sysmem collection.
-    VkImportMemoryBufferCollectionFUCHSIA import_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
+    VkImportMemoryBufferCollectionFUCHSIAX import_info = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIAX,
         .pNext = nullptr,
         .collection = it->second.collection,
         .index = 0,
@@ -780,7 +780,7 @@ class ImageCompactor {
     void* data;
   };
   struct CompactImage {
-    VkBufferCollectionFUCHSIA collection;
+    VkBufferCollectionFUCHSIAX collection;
     Buffer buffer;
     Buffer aux;
     VkDeviceSize allocation_size;
@@ -1146,7 +1146,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
                     device_extensions[i].extensionName)) {
           khr_buffer_device_address = true;
         }
-        if (!strcmp(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
+        if (!strcmp(VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME,
                     device_extensions[i].extensionName)) {
           fuchsia_buffer_collection_extension_available = true;
         }
@@ -1162,7 +1162,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   }
   if (!fuchsia_buffer_collection_extension_available) {
     fprintf(stderr, "Device extension not available: %s\n",
-            VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+            VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME);
   }
   if (!fuchsia_memory_control_extension_available) {
     fprintf(stderr, "Device extension not available: %s\n",
@@ -1213,7 +1213,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
     enabled_extensions.push_back(create_info.ppEnabledExtensionNames[i]);
   }
   enabled_extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-  enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+  enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_MEMORY_CONTROL_EXTENSION_NAME);
   create_info.enabledExtensionCount = static_cast<uint32_t>(enabled_extensions.size());
   create_info.ppEnabledExtensionNames = enabled_extensions.data();

@@ -149,7 +149,7 @@ vk::Result VulkanImageCreator::InitVulkan(uint32_t physical_device_index) {
       return vk::Result::eErrorInitializationFailed;
     }
 
-    std::array<const char*, 1> device_extensions{VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
+    std::array<const char*, 1> device_extensions{VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME};
 
     const float queue_priority = 0.0f;
     auto queue_create_info = vk::DeviceQueueCreateInfo()
@@ -309,14 +309,14 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
   }
 
   // Set vulkan constraints.
-  vk::UniqueHandle<vk::BufferCollectionFUCHSIA, vk::DispatchLoaderDynamic> vk_collection;
+  vk::UniqueHandle<vk::BufferCollectionFUCHSIAX, vk::DispatchLoaderDynamic> vk_collection;
 
   {
-    auto collection_create_info = vk::BufferCollectionCreateInfoFUCHSIA().setCollectionToken(
+    auto collection_create_info = vk::BufferCollectionCreateInfoFUCHSIAX().setCollectionToken(
         vulkan_token_.mutable_channel()->release());
 
-    auto result = device_->createBufferCollectionFUCHSIAUnique(collection_create_info,
-                                                               nullptr /*pAllocator*/, loader_);
+    auto result = device_->createBufferCollectionFUCHSIAXUnique(collection_create_info,
+                                                                nullptr /*pAllocator*/, loader_);
     if (result.result != vk::Result::eSuccess) {
       LOG_VERBOSE("Failed to create buffer collection: %d", result.result);
       return result.result;
@@ -328,13 +328,13 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
   assert(vk_collection);
 
   {
-    auto image_constraints_info = vk::ImageConstraintsInfoFUCHSIA()
+    auto image_constraints_info = vk::ImageConstraintsInfoFUCHSIAX()
                                       .setCreateInfoCount(1)
                                       .setPCreateInfos(image_create_info)
                                       .setMinBufferCount(1)
                                       .setMaxBufferCount(1);
 
-    auto result = device_->setBufferCollectionImageConstraintsFUCHSIA(
+    auto result = device_->setBufferCollectionImageConstraintsFUCHSIAX(
         vk_collection.get(), image_constraints_info, loader_);
     if (result != vk::Result::eSuccess) {
       LOG_VERBOSE("Failed to set constraints: %s", vk::to_string(result).data());
