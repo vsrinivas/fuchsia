@@ -115,9 +115,7 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
 
   size_t num_sessions();
 
-  void SetRegisterViewFocuser(
-      fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::Focuser>)>
-          register_view_focuser);
+  void SetViewFocuserRegistry(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry);
 
   void SetViewRefFocusedRegisterFunction(
       fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>)>
@@ -153,9 +151,7 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   GetDisplayInfoDelegateDeprecated* display_delegate_ = nullptr;
   TakeScreenshotDelegateDeprecated* screenshot_delegate_ = nullptr;
 
-  fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::Focuser>)>
-      register_view_focuser_;
-
+  fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry_;
   fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>)>
       view_ref_focused_register_;
 

@@ -13,7 +13,6 @@
 #include <unordered_map>
 
 #include "lib/inspect/cpp/inspect.h"
-#include "src/ui/scenic/lib/focus/view_focuser_registry.h"
 #include "src/ui/scenic/lib/focus/view_ref_focused_registry.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
@@ -65,9 +64,6 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   void RegisterViewRefFocused(zx_koid_t koid,
                               fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> vrf);
 
-  void RegisterViewFocuser(zx_koid_t koid,
-                           fidl::InterfaceRequest<fuchsia::ui::views::Focuser> focuser);
-
  private:
   // Ensure the focus chain is valid; preserve as much of the existing focus chain as possible.
   // - If the focus chain is still valid, do nothing.
@@ -114,8 +110,6 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
 
   // Manages endpoints for fuchsia.ui.views.ViewRefFocused.
   ViewRefFocusedRegistry view_ref_focused_registry_;
-  // Manages endpoints for fuchsia.ui.views.Focuser.
-  ViewFocuserRegistry view_focuser_registry_;
 
   inspect::Node inspect_node_;
   inspect::LazyNode lazy_;

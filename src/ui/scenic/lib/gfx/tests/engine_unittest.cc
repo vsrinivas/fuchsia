@@ -105,7 +105,9 @@ class FakeSwapchain : public scenic_impl::gfx::Swapchain {
 
 }  // namespace
 
-namespace scenic_impl::gfx::test {
+namespace scenic_impl {
+namespace gfx {
+namespace test {
 
 class EngineTest : public escher::test::TestWithVkValidationLayer {
  public:
@@ -115,7 +117,8 @@ class EngineTest : public escher::test::TestWithVkValidationLayer {
     escher_ =
         std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem(), nullptr);
     engine_ = std::make_shared<Engine>(escher_->GetWeakPtr(),
-                                       /*buffer_collection_importer=*/nullptr, inspect::Node());
+                                       /*buffer_collection_importer=*/nullptr, inspect::Node(),
+                                       /*request_focus*/ [](auto...) { return false; });
   }
 
   void TearDown() override {
@@ -410,4 +413,6 @@ VK_TEST_F(EngineTest, RenderWithDelayOutOfOrder) {
 
 #undef RENDER_SKIPPED_FRAME
 
-}  // namespace scenic_impl::gfx::test
+}  // namespace test
+}  // namespace gfx
+}  // namespace scenic_impl

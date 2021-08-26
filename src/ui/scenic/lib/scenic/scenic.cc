@@ -30,10 +30,8 @@ Scenic::Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
 
 Scenic::~Scenic() = default;
 
-void Scenic::SetRegisterViewFocuser(
-    fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::Focuser>)>
-        register_view_focuser) {
-  register_view_focuser_ = std::move(register_view_focuser);
+void Scenic::SetViewFocuserRegistry(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry) {
+  view_focuser_registry_ = view_focuser_registry;
 }
 
 void Scenic::SetViewRefFocusedRegisterFunction(
@@ -59,6 +57,9 @@ void Scenic::CloseSession(scheduling::SessionId session_id) {
     auto present_id = frame_scheduler_->RegisterPresent(session_id, /*release_fences*/ {});
     frame_scheduler_->ScheduleUpdateForSession(zx::time(0), {session_id, present_id},
                                                /*squashable*/ false);
+  }
+  if (view_focuser_registry_) {
+    view_focuser_registry_->UnregisterViewFocuser(session_id);
   }
 }
 
@@ -154,16 +155,12 @@ void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
   std::vector<fit::function<void(zx_koid_t)>> on_view_created_callbacks;
 
   if (endpoints.has_view_focuser()) {
-    if (endpoints.view_focuser() && register_view_focuser_) {
-      on_view_created_callbacks.emplace_back(
-          [this, focuser = std::move(*endpoints.mutable_view_focuser())](
-              zx_koid_t view_ref_koid) mutable {
-            FX_DCHECK(register_view_focuser_);
-            register_view_focuser_(view_ref_koid, std::move(focuser));
-          });
+    if (endpoints.view_focuser() && view_focuser_registry_) {
+      view_focuser_registry_->RegisterViewFocuser(session_id,
+                                                  std::move(*endpoints.mutable_view_focuser()));
     } else if (!endpoints.view_focuser()) {
       FX_VLOGS(2) << "Invalid fuchsia.ui.views.Focuser request.";
-    } else if (!register_view_focuser_) {
+    } else if (!view_focuser_registry_) {
       FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
     }
   }

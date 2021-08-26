@@ -11,6 +11,7 @@
 
 #include <vector>
 
+#include "src/ui/scenic/lib/gfx/engine/view_focuser_registry.h"
 #include "src/ui/scenic/lib/gfx/engine/view_tree.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
@@ -21,13 +22,17 @@ namespace scenic_impl::gfx {
 class SceneGraph;
 using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 
+// Function for requesting focus transfers to view of ViewRef koid |request| on the authority of
+// |requestor|. Return true if focus was transferred, false if it wasn't.
+using RequestFocusFunc = fit::function<bool(zx_koid_t requestor, zx_koid_t request)>;
+
 // SceneGraph stores pointers to all the Compositors created with it as a constructor argument, but
 // it does not hold ownership of them.
 //
 // Command processors update this tree.
-class SceneGraph final {
+class SceneGraph final : public ViewFocuserRegistry {
  public:
-  explicit SceneGraph();
+  explicit SceneGraph(RequestFocusFunc request_focus);
 
   SceneGraphWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
@@ -71,7 +76,40 @@ class SceneGraph final {
   // Post: view_tree_ updated
   void ProcessViewTreeUpdates(ViewTreeUpdates view_tree_updates);
 
+  //
+  // Focus transfer functionality
+  //
+
+  // |ViewFocuserRegistry|
+  // A command processor, such as GFX or Flatland, may forward a view focuser to be bound here.
+  void RegisterViewFocuser(
+      SessionId session_id,
+      fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
+
+  // |ViewFocuserRegistry|
+  // Session cleanup terminates a view focuser connection and removes the binding.
+  void UnregisterViewFocuser(SessionId session_id) override;
+
  private:
+  // A small object that associates each Focuser request with a SessionId.
+  // Close of channel does not trigger object cleanup; instead, we rely on Session cleanup.
+  class ViewFocuserEndpoint : public fuchsia::ui::views::Focuser {
+   public:
+    ViewFocuserEndpoint(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser,
+                        fit::function<void(fuchsia::ui::views::ViewRef, RequestFocusCallback)>
+                            request_focus_handler);
+    ViewFocuserEndpoint(ViewFocuserEndpoint&& original);  // Needed for emplace.
+
+    // |fuchsia.ui.views.Focuser|
+    void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback response) override;
+
+   private:
+    // Capture SceneGraph* and SessionId, no explicit pointer management.
+    // Note that it does *not* capture |this|, so it's movable in the move constructor.
+    fit::function<void(fuchsia::ui::views::ViewRef, RequestFocusCallback)> request_focus_handler_;
+    fidl::Binding<fuchsia::ui::views::Focuser> endpoint_;
+  };
+
   friend class Compositor;
 
   // SceneGraph notify us upon creation/destruction.
@@ -85,6 +123,12 @@ class SceneGraph final {
   std::vector<CompositorWeakPtr> compositors_;
 
   ViewTree view_tree_;
+
+  const RequestFocusFunc request_focus_;
+
+  // Lifetime of ViewFocuserEndpoint is tied to owning Session's lifetime.
+  // An early disconnect of ViewFocuserEndpoint is okay.
+  std::unordered_map<SessionId, ViewFocuserEndpoint> view_focuser_endpoints_;
 
   fxl::WeakPtrFactory<SceneGraph> weak_factory_;  // Must be last.
 };

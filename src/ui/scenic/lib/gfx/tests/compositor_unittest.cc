@@ -19,7 +19,9 @@
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
 
-namespace scenic_impl::gfx::test {
+namespace scenic_impl {
+namespace gfx {
+namespace test {
 struct ChannelPair {
   zx::channel server;
   zx::channel client;
@@ -59,7 +61,7 @@ class CompositorTest : public SessionTest {
     FX_DCHECK(!scene_graph_);
 
     // Generate scene graph.
-    scene_graph_ = std::make_unique<SceneGraph>();
+    scene_graph_ = std::make_unique<SceneGraph>(/*request_focus*/ [](auto...) { return false; });
 
     // Finally apply scene graph weak pointer.
     session_context.scene_graph = scene_graph_->GetWeakPtr();
@@ -237,4 +239,6 @@ TEST_F(CompositorTestSimple, ColorConversionConfigChecking) {
   EXPECT_TRUE(should_discard_config);
 }
 
-}  // namespace scenic_impl::gfx::test
+}  // namespace test
+}  // namespace gfx
+}  // namespace scenic_impl

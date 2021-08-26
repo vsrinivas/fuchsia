@@ -9,7 +9,9 @@
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
-namespace scenic_impl::gfx::test {
+namespace scenic_impl {
+namespace gfx {
+namespace test {
 
 using SceneGraphTest = SessionTest;
 
@@ -33,7 +35,7 @@ bool ContainsCompositor(const std::vector<CompositorWeakPtr>& compositors, Compo
 };
 
 TEST_F(SceneGraphTest, CompositorsGetAddedAndRemoved) {
-  SceneGraph scene_graph;
+  SceneGraph scene_graph(/*request_focus*/ [](auto...) { return false; });
   ASSERT_EQ(0u, scene_graph.compositors().size());
   {
     CompositorPtr c1 = Compositor::New(session(), session()->id(), 1, scene_graph.GetWeakPtr());
@@ -54,14 +56,14 @@ TEST_F(SceneGraphTest, CompositorsGetAddedAndRemoved) {
 }
 
 TEST_F(SceneGraphTest, LookupCompositor) {
-  SceneGraph scene_graph;
+  SceneGraph scene_graph(/*request_focus*/ [](auto...) { return false; });
   CompositorPtr c1 = Compositor::New(session(), session()->id(), 1, scene_graph.GetWeakPtr());
   auto c1_weak = scene_graph.GetCompositor(c1->global_id());
   ASSERT_EQ(c1.get(), c1_weak.get());
 }
 
 TEST_F(SceneGraphTest, FirstCompositorIsStable) {
-  SceneGraph scene_graph;
+  SceneGraph scene_graph(/*request_focus*/ [](auto...) { return false; });
 
   CompositorPtr c1 = Compositor::New(session(), session()->id(), 1, scene_graph.GetWeakPtr());
   ASSERT_EQ(scene_graph.first_compositor().get(), c1.get());
@@ -82,4 +84,6 @@ TEST_F(SceneGraphTest, FirstCompositorIsStable) {
   }
 }
 
-}  // namespace scenic_impl::gfx::test
+}  // namespace test
+}  // namespace gfx
+}  // namespace scenic_impl

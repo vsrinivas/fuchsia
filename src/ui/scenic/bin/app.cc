@@ -383,8 +383,15 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
       std::make_shared<gfx::GfxBufferCollectionImporter>(escher_->GetWeakPtr());
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
-    engine_ = std::make_shared<gfx::Engine>(escher_->GetWeakPtr(), gfx_buffer_collection_importer,
-                                            scenic_->inspect_node()->CreateChild("Engine"));
+    engine_ =
+        std::make_shared<gfx::Engine>(escher_->GetWeakPtr(), gfx_buffer_collection_importer,
+                                      scenic_->inspect_node()->CreateChild("Engine"),
+                                      /*request_focus*/
+                                      [this](zx_koid_t requestor, zx_koid_t request) {
+                                        FX_DCHECK(focus_manager_);
+                                        return focus_manager_->RequestFocus(requestor, request) ==
+                                               focus::FocusChangeStatus::kAccept;
+                                      });
   }
 
   scenic_->SetFrameScheduler(frame_scheduler_);
@@ -405,10 +412,7 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   auto snapshotter =
       std::make_unique<gfx::InternalSnapshotImpl>(engine_->scene_graph(), escher_->GetWeakPtr());
   scenic_->InitializeSnapshotService(std::move(snapshotter));
-  scenic_->SetRegisterViewFocuser(
-      [this](zx_koid_t view_ref_koid, fidl::InterfaceRequest<fuchsia::ui::views::Focuser> focuser) {
-        focus_manager_->RegisterViewFocuser(view_ref_koid, std::move(focuser));
-      });
+  scenic_->SetViewFocuserRegistry(engine_->scene_graph());
 
   // Flatland compositor must be made first; it is needed by the manager and the engine.
   {

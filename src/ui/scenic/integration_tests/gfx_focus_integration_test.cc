@@ -381,6 +381,13 @@ TEST_F(GfxFocusIntegrationTest, FocusChain_Updated_OnViewDisconnect) {
   EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], root_view_ref);
 }
 
+TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectedWhenSessionDies) {
+  EXPECT_TRUE(root_focuser_);
+  root_session_.reset();
+  RunLoopUntil([this] { return !root_focuser_; });  // Succeeds or times out.
+  EXPECT_FALSE(root_focuser_);
+}
+
 TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
   root_session_->session.set_error_handler(
       [](zx_status_t) { FAIL() << "Client shut down unexpectedly."; });

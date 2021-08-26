@@ -13,7 +13,9 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/tests/view_tree_session_test.h"
 
-namespace scenic_impl::gfx::test {
+namespace scenic_impl {
+namespace gfx {
+namespace test {
 
 // Test fixture which tests creating and handling of Annotation ViewHolders and
 // Views.
@@ -73,7 +75,7 @@ class AnnotationManagerTest : public ViewTreeSessionTest {
     FX_DCHECK(!view_linker_);
     FX_DCHECK(!scene_graph_);
     view_linker_ = ViewLinker::New();
-    scene_graph_ = std::make_unique<SceneGraph>();
+    scene_graph_ = std::make_unique<SceneGraph>(/*request_focus*/ [](auto...) { return false; });
     session_context.view_linker = view_linker_.get();
     session_context.scene_graph = scene_graph_->GetWeakPtr();
     return session_context;
@@ -1283,4 +1285,6 @@ TEST_F(AnnotationManagerTest, GlobalTransformPropagation) {
             annotation_view_holder_weak_ptr->GetGlobalTransform());
 }
 
-}  // namespace scenic_impl::gfx::test
+}  // namespace test
+}  // namespace gfx
+}  // namespace scenic_impl
