@@ -54,8 +54,9 @@ class TestMultithread {
     ASSERT_NE(connection, nullptr);
 
     uint64_t extra_page_count;
-    EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query(device_->msd_dev(), kMsdIntelGenQueryExtraPageCount,
-                                                &extra_page_count));
+    EXPECT_EQ(
+        MAGMA_STATUS_OK,
+        msd_device_query(device_->msd_dev(), kMagmaIntelGenQueryExtraPageCount, &extra_page_count));
 
     uint32_t context_id = ++context_id_;
     EXPECT_TRUE(connection->CreateContext(context_id));

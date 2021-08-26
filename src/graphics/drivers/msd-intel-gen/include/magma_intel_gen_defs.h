@@ -9,13 +9,6 @@
 
 #define MAGMA_VENDOR_ID_INTEL 0x8086
 
-// Deprecated, renamed to MagmaIntelGenQuery
-enum MsdIntelGenQuery {
-  kMsdIntelGenQuerySubsliceAndEuTotal = MAGMA_QUERY_VENDOR_PARAM_0,
-  kMsdIntelGenQueryGttSize = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
-  kMsdIntelGenQueryExtraPageCount = MAGMA_QUERY_VENDOR_PARAM_0 + 2,
-};
-
 enum MagmaIntelGenQuery {
   kMagmaIntelGenQuerySubsliceAndEuTotal = MAGMA_QUERY_VENDOR_PARAM_0,
   kMagmaIntelGenQueryGttSize = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
