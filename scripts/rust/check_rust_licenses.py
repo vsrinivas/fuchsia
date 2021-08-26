@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import sys
 import urllib.request
 from multiprocessing import Pool
@@ -82,6 +83,11 @@ def check_subdir_license(arg):
     if subdir.startswith('.') or not os.path.isdir(subdir):
         sys.stdout.write("-")
         sys.stdout.flush()
+        return
+
+    # delete crates that are empty except for an OWNERS file
+    if os.listdir(subdir) == ["OWNERS"]:
+        shutil.rmtree(subdir)
         return
 
     license_files = [
