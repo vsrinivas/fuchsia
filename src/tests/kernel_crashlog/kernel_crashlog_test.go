@@ -37,7 +37,10 @@ func testCommon(t *testing.T, crash_cmd string) *emulatortest.Instance {
 	// Upon booting run "k", which will print a usage message.  By waiting for the usage
 	// message, we can be sure the system has booted and is ready to accept "k"
 	// commands.
-	device.KernelArgs = append(device.KernelArgs, "kernel.halt-on-panic=false", "zircon.autorun.boot=/boot/bin/sh+-c+k")
+	device.KernelArgs = append(device.KernelArgs,
+		"kernel.halt-on-panic=false",
+		"kernel.render-dlog-to-crashlog=true",
+		"zircon.autorun.boot=/boot/bin/sh+-c+k")
 
 	i := distro.Create(device)
 
@@ -70,14 +73,26 @@ func TestKernelCrashlog(t *testing.T) {
 	i := testCommon(t, "k crash")
 	// See that the crash report contains ESR and FAR.
 	//
-	// This is a regression test for fxbug.dev/52182.
-	i.WaitForLogMessage("esr:         0x96000045")
+	// This is a regression test for fxbug.dev/52182. 'k crash' is going to
+	// attempt to store a value at a bad address in order to trigger its
+	// exception.  While we cannot always rely on the lower bits of the ESR being
+	// consistent, we should be able to rely on the top byte being consistent in
+	// this case.  The breakdown of the top bits is:
+	//
+	// 1) [31:26] EC : 0b100101 => Data Abort taken without a change in Exception level.
+	// 2) [25] IL    : 0b1      => Instruction was not a 16 bit instruction
+	// 3) [24] ISV   : 0b0      => Should always be 0, for this EC, the ARM ARM states "ISV is 0 for
+	//                             all faults reported in ESR_EL1 or ESR_EL3."
+	i.WaitForLogMessage("esr:         0x96")
 	i.WaitForLogMessage("far:                0x1")
 
 	// And a backtrace and counters.
 	i.WaitForLogMessage("BACKTRACE")
 	i.WaitForLogMessage("{{{bt:0")
 	i.WaitForLogMessage("counters: ")
+	i.WaitForLogMessage("--- BEGIN DLOG DUMP ---")
+	i.WaitForLogMessage("stopping other cpus")
+	i.WaitForLogMessage("--- END DLOG DUMP ---")
 }
 
 // See that when the kernel crashes because of an assert failure the crashlog contains the assert
@@ -93,6 +108,9 @@ func TestKernelCrashlogAssert(t *testing.T) {
 	i.WaitForLogMessage("KERNEL PANIC")
 	i.WaitForLogMessage("ASSERT FAILED")
 	i.WaitForLogMessage("value 42")
+	i.WaitForLogMessage("--- BEGIN DLOG DUMP ---")
+	i.WaitForLogMessage("stopping other cpus")
+	i.WaitForLogMessage("--- END DLOG DUMP ---")
 }
 
 func execDir(t *testing.T) string {

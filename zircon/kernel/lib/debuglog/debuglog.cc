@@ -14,6 +14,7 @@
 #include <lib/version.h>
 #include <platform.h>
 #include <stdint.h>
+#include <string-file.h>
 #include <string.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -25,6 +26,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <ktl/atomic.h>
+#include <ktl/limits.h>
 #include <lk/init.h>
 #include <vm/vm.h>
 
@@ -56,11 +58,7 @@ bool dlog_bypass_ =
     false;
 #endif
 
-#define DLOG_HDR_SET(fifosize, readsize) ((((readsize)&0xFFF) << 12) | ((fifosize)&0xFFF))
-#define DLOG_HDR_GET_FIFOLEN(n) ((n)&0xFFF)
-#define DLOG_HDR_GET_READLEN(n) (((n) >> 12) & 0xFFF)
-
-// The debug log maintains a circular buffer of debug log records,
+// The debuglog maintains a circular buffer of debuglog records,
 // consisting of a common header (dlog_header_t) followed by up
 // to 224 bytes of textual log message.  Records are aligned on
 // uint32_t boundaries, so the header word which indicates the
@@ -77,8 +75,8 @@ bool dlog_bypass_ =
 // they can snap their tail to the global tail and restart
 //
 //
-// Tail indicates the oldest message in the debug log to read
-// from, Head indicates the next space in the debug log to write
+// Tail indicates the oldest message in the debuglog to read
+// from, Head indicates the next space in the debuglog to write
 // a new message to.  They are clipped to the actual buffer by
 // DLOG_MASK.
 //
@@ -157,13 +155,13 @@ zx_status_t DLog::Shutdown(zx_time_t deadline) {
 }
 
 void DLog::BluescreenInit() {
-  // if we're panicing, stop processing log writes
+  // if we're panicking, stop processing log writes
   // they'll fail over to kernel console and serial
   panic_ = true;
 
   udisplay_bind_gfxconsole();
 
-  // replay debug log?
+  // replay debuglog?
 
   // Print panic string.
   //
@@ -178,7 +176,7 @@ void DLog::BluescreenInit() {
   g_crashlog.base_address = (uintptr_t)__code_start;
 }
 
-zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str) {
+zx_status_t DLog::Write(uint32_t severity, uint32_t flags, ktl::string_view str) {
   str = str.substr(0, DLOG_MAX_DATA);
 
   const char* ptr = str.data();
@@ -275,6 +273,92 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
   return ZX_OK;
 }
 
+size_t DLog::RenderToCrashlog(ktl::span<char> target_span) const {
+  // Try to obtain the spinlock which protects the debuglog.  If this fails, do
+  // not proceed, simply render a message to the crashlog indicating that we are
+  // unable to proceed.
+  //
+  // At this point in a panic, all bets are off.  If we took an exception while
+  // holding this lock, attempting to re-obtain the lock at this point in time
+  // could result in either deadlock, or infinite exception recursion, either of
+  // which would be Very Bad.  Best to just say that we cannot actually recover
+  // any portion of the debuglog to the crashlog and move on.
+  InterruptDisableGuard irqd;
+  Guard<SpinLock, TryLockNoIrqSave> guard{&lock_};
+  if (static_cast<bool>(guard)) {
+    return RenderToCrashlogLocked(target_span);
+  } else {
+    StringFile target(target_span);
+    fprintf(&target,
+            "Cannot render debuglog to the crashlog! Failed to acquire the debuglog spinlock.\n");
+    return target.used_region().size();
+  }
+}
+
+size_t DLog::RenderToCrashlogLocked(ktl::span<char> target_span) const {
+  if ((target_span.data() == nullptr) || (target_span.size() == 0)) {
+    return 0;
+  }
+
+  StringFile target(target_span);
+
+  // Check for obvious any signs that the log may have become corrupted.  Head
+  // and tail are absolute offsets into the ring buffer, and old records are
+  // destroyed to make room for new ones during write operations.  Because of
+  // this, it should not be possible for tail to ever be greater than head, and
+  // the distance between head and tail should never be larger than the size of
+  // the log buffer.
+  if ((tail_ > head_) || ((head_ - tail_) > DLOG_SIZE)) {
+    fprintf(&target, "Debug log appears corrupt: (head, tail) = (%zu, %zu)\n", head_, tail_);
+    return target.used_region().size();
+  }
+
+  // A small helper to compute the size of a record, were it to be rendered.
+  auto RenderedRecordSize = [](const Record& r) -> size_t {
+    return DLog::MeasureRenderedHeader(r.hdr) + r.region1.size() + r.region2.size() +
+           (r.ends_with_newline ? 0 : 1);
+  };
+
+  // Figure out how much space the whole log would take.
+  size_t space_consumed = 0;
+  for (size_t offset = tail_; offset < head_;) {
+    auto res = ReadRecord(offset, &target);
+    if (!res.is_ok()) {
+      return target.used_region().size();
+    }
+
+    Record& record = res.value();
+    space_consumed += RenderedRecordSize(record);
+    offset += DLOG_HDR_GET_FIFOLEN(record.hdr.preamble);
+  }
+
+  // Starting from the end, skip records until we get to the point where we can
+  // fit the rest of the rendered data into target_span, then render the rest of
+  // the records.
+  for (size_t offset = tail_; offset < head_;) {
+    auto res = ReadRecord(offset, &target);
+    if (!res.is_ok()) {
+      return target.used_region().size();
+    }
+
+    Record& record = res.value();
+    if (space_consumed > target_span.size()) {
+      space_consumed -= RenderedRecordSize(record);
+    } else {
+      target.Skip(FormatHeader(target.available_region(), record.hdr));
+      target.Write(record.region1);
+      target.Write(record.region2);
+      if (!record.ends_with_newline) {
+        target.Write("\n");
+      }
+    }
+
+    offset += DLOG_HDR_GET_FIFOLEN(record.hdr.preamble);
+  }
+
+  return target.used_region().size();
+}
+
 // The debuglog notifier thread observes when the debuglog is
 // written and calls the notify callback on any readers that
 // have one so they can process new log messages.
@@ -322,15 +406,14 @@ int DLog::DumperThread() {
     // Read out all the records and dump them to the kernel console.
     size_t actual;
     while (reader.Read(0, &rec, &actual) == ZX_OK) {
+      StringFile tmp_file({tmp, sizeof(tmp)});
       uint64_t gap = rec.hdr.sequence - expected_sequence;
       if (gap > 0) {
-        int n = snprintf(tmp, sizeof(tmp), "debuglog: dropped %zu messages\n", gap);
-        if (n > static_cast<int>(sizeof(tmp))) {
-          n = sizeof(tmp);
-        }
-        ktl::string_view str{tmp, static_cast<size_t>(n)};
-        console_write(str);
-        dlog_serial_write(str);
+        fprintf(&tmp_file, "debuglog: dropped %zu messages\n", gap);
+
+        const ktl::string_view sv = tmp_file.as_string_view();
+        console_write(sv);
+        dlog_serial_write(sv);
       }
       expected_sequence = rec.hdr.sequence + 1;
 
@@ -339,16 +422,19 @@ int DLog::DumperThread() {
       if (rec.hdr.datalen > 0 && (rec.data[rec.hdr.datalen - 1] == '\n')) {
         rec.hdr.datalen--;
       }
-      int n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ":%05" PRIu64 "> %.*s\n",
-                       (int)(rec.hdr.timestamp / ZX_SEC(1)),
-                       (int)((rec.hdr.timestamp / ZX_MSEC(1)) % 1000ULL), rec.hdr.pid, rec.hdr.tid,
-                       rec.hdr.datalen, rec.data);
-      if (n > (int)sizeof(tmp)) {
-        n = sizeof(tmp);
+
+      tmp_file.Skip(FormatHeader(tmp_file.available_region(), rec.hdr));
+      if (rec.hdr.datalen > 0) {
+        tmp_file.Write({rec.data, rec.hdr.datalen});
+        // If the record didn't end with a newline, add one now.
+        if (rec.data[rec.hdr.datalen - 1] != '\n') {
+          tmp_file.Write("\n");
+        }
       }
-      ktl::string_view str{tmp, static_cast<size_t>(n)};
-      console_write(str);
-      dlog_serial_write(str);
+
+      const ktl::string_view sv = tmp_file.as_string_view();
+      console_write(sv);
+      dlog_serial_write(sv);
     }
   }
 
@@ -357,45 +443,65 @@ int DLog::DumperThread() {
 
 // TODO: support reading multiple messages at a time
 // TODO: filter with flags
-zx_status_t DlogReader::Read(uint32_t flags, dlog_record_t* record, size_t* _actual) {
-  DLog* log = log_;
+zx_status_t DlogReader::Read(uint32_t flags, dlog_record_t* record, size_t* actual) {
   zx_status_t status = ZX_ERR_SHOULD_WAIT;
 
   {
-    Guard<SpinLock, IrqSave> guard{&log->lock_};
+    Guard<SpinLock, IrqSave> guard{&log_->lock_};
 
     size_t rtail = tail_;
 
-    // If the read-tail is not within the range of log-tail..log-head
+    // If the read-tail is not within the range of log_-tail..log_-head
     // this reader has been lapped by a writer and we reset our read-tail
-    // to the current log-tail.
+    // to the current log_-tail.
     //
-    if ((log->head_ - log->tail_) < (log->head_ - rtail)) {
-      rtail = log->tail_;
+    if ((log_->head_ - log_->tail_) < (log_->head_ - rtail)) {
+      rtail = log_->tail_;
     }
 
-    if (rtail != log->head_) {
-      size_t offset = (rtail & DLOG_MASK);
-      void* record_start = log->data_ + offset;
-      uint32_t header = *reinterpret_cast<uint32_t*>(record_start);
-
-      size_t actual = DLOG_HDR_GET_READLEN(header);
-      size_t fifospace = DLOG_SIZE - offset;
-
-      if (fifospace >= actual) {
-        // The record is contiguous.
-        memcpy(record, record_start, actual);
-      } else {
-        // The record wraps.
-        memcpy(record, record_start, fifospace);
-        memcpy(reinterpret_cast<char*>(record) + fifospace, log->data_, actual - fifospace);
+    if (rtail != log_->head_) {
+      // Attempt to read the header into the user supplied buffer.
+      status = log_->ReassembleFromOffset(
+          rtail, {reinterpret_cast<uint8_t*>(&record->hdr), sizeof(record->hdr)});
+      if (status != ZX_OK) {
+        guard.Release();  // Drop the dlog lock before panicking, or asserting anything.
+        DEBUG_ASSERT_MSG(status == ZX_OK,
+                         "DLOG read failure at offset %zu. Failed to reassemble header (%d)\n",
+                         rtail, status);
+        return status;
       }
+
+      // Perform consistency checks of the lengths.
+      const size_t readlen = DLOG_HDR_GET_READLEN(record->hdr.preamble);
+      if ((readlen < sizeof(record->hdr)) ||
+          ((readlen - sizeof(record->hdr)) != record->hdr.datalen)) {
+        guard.Release();  // Drop the dlog lock before panicking, or asserting anything.
+        DEBUG_ASSERT_MSG(
+            false,
+            "DLOG read failure at offset %zu. Bad lengths (pre %zu, hdr_sz %zu, datalen %hu)\n",
+            rtail, readlen, sizeof(record->hdr), record->hdr.datalen);
+        return ZX_ERR_INTERNAL;
+      }
+
+      // Reassemble the data from the ring buffer.
+      status = log_->ReassembleFromOffset(
+          rtail + sizeof(record->hdr),
+          {reinterpret_cast<uint8_t*>(record->data), record->hdr.datalen});
+      if (status != ZX_OK) {
+        guard.Release();  // Drop the dlog lock before panicking, or asserting anything.
+        DEBUG_ASSERT_MSG(
+            status == ZX_OK,
+            "DLOG read failure at offset %zu. Failed to reassemble %hu data bytes (%d)\n", rtail,
+            record->hdr.datalen, status);
+        return ZX_ERR_INTERNAL;
+      }
+
+      // Everything went well.  Advance the tail pointer, report the actual length read, and get
+      // out.
+      rtail += DLOG_HDR_GET_FIFOLEN(record->hdr.preamble);
+      *actual = DLOG_HDR_GET_READLEN(record->hdr.preamble);
       record->hdr.preamble = 0;
-
-      *_actual = actual;
       status = ZX_OK;
-
-      rtail += DLOG_HDR_GET_FIFOLEN(header);
     }
 
     tail_ = rtail;
@@ -480,7 +586,7 @@ void dlog_bypass_init() {
 }
 
 zx_status_t dlog_write(uint32_t severity, uint32_t flags, ktl::string_view str) {
-  return DLOG->write(severity, flags, str);
+  return DLOG->Write(severity, flags, str);
 }
 
 // Common bottleneck between sys_debug_write() and debuglog_dumper()
@@ -507,6 +613,7 @@ void dlog_serial_write(ktl::string_view str) {
 void dlog_bluescreen_init() { DLOG->BluescreenInit(); }
 void dlog_force_panic() { dlog_bypass_ = true; }
 zx_status_t dlog_shutdown(zx_time_t deadline) { return DLOG->Shutdown(deadline); }
+size_t dlog_render_to_crashlog(ktl::span<char> target) { return DLOG->RenderToCrashlog(target); }
 
 LK_INIT_HOOK(
     debuglog, [](uint level) { DLOG->StartThreads(); }, LK_INIT_LEVEL_PLATFORM)

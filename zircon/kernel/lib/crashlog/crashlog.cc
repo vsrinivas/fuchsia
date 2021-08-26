@@ -8,7 +8,9 @@
 
 #include <ctype.h>
 #include <inttypes.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
+#include <lib/debuglog.h>
 #include <lib/io.h>
 #include <lib/lockup_detector.h>
 #include <lib/version.h>
@@ -216,13 +218,28 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
           PmmChecker::get_validation_failed_count(), lockup_get_critical_section_oops_count(),
           ChannelDispatcher::get_channel_full_count(), lockup_get_no_heartbeat_oops_count());
 
-  // Finally, include the contents of the panic buffer (which may be empty).
+  // Include as much of the contents of the panic buffer as we can, if it is not
+  // empty.
   //
-  // The panic buffer is the last thing we print.  Space is limited so if the panic/assert message
-  // was long we may not be able to include the whole thing.  That's OK.  The panic buffer is a
-  // "nice to have" and we've already printed the primary diagnostics (register dump and backtrace).
-  fprintf(&outfile, "panic buffer: %s\n", panic_buffer.c_str());
-  fprintf(&outfile, "\n");
+  // The panic buffer is one of the last thing we print.  Space is limited so if
+  // the panic/assert message was long we may not be able to include the whole
+  // thing.  That's OK.  The panic buffer is a "nice to have" and we've already
+  // printed the primary diagnostics (register dump and backtrace).
+  if (panic_buffer.size()) {
+    fprintf(&outfile, "panic buffer: %s\n", panic_buffer.c_str());
+  }
+
+  // Finally, if we have been configured to do so, render as much of the recent debug log as we can
+  // fit into the crashlog memory.
+  if (gBootOptions->render_dlog_to_crashlog) {
+    constexpr ktl::string_view kHeader{"\n--- BEGIN DLOG DUMP ---\n"};
+    constexpr ktl::string_view kFooter{"\n--- END DLOG DUMP ---\n"};
+    if (outfile.available_region().size() > (kHeader.size() + kFooter.size())) {
+      outfile.Write(kHeader);
+      outfile.Skip(dlog_render_to_crashlog(outfile.available_region()));
+      outfile.Write(kFooter);
+    }
+  }
 
   return outfile.used_region().size();
 }

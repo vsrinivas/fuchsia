@@ -284,6 +284,11 @@ memory that will be dumped; the actual amount dumped depends on stack depth.
 Each 16 bytes of stack is printed on one line using up to 75 characters.
 )""")
 
+DEFINE_OPTION("kernel.render-dlog-to-crashlog", bool, render_dlog_to_crashlog, {false}, R"""(
+When set to true, as much of the recent kernel debuglog as will fit will be
+appended to the generated crashlog during a kernel panic to assist in debugging.
+)""")
+
 DEFINE_OPTION("kernel.serial", uart::all::Driver, serial, {}, R"""(
 This controls what serial port is used.  If provided, it overrides the serial
 port described by the system's bootdata.  The kernel debug serial port is

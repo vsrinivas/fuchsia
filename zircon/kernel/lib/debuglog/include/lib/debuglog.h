@@ -18,6 +18,7 @@
 #include <kernel/mutex.h>
 #include <ktl/string_view.h>
 #include <ktl/type_traits.h>
+#include <ktl/span.h>
 
 class DLog;
 typedef struct dlog_header dlog_header_t;
@@ -144,5 +145,10 @@ static inline bool dlog_bypass() {
   extern bool dlog_bypass_;
   return dlog_bypass_;
 }
+
+// Renders as many of the recent debug log entries as will fit into the memory
+// region specified by |target|.  Returns the number of bytes of target which
+// were filled.
+size_t dlog_render_to_crashlog(ktl::span<char> target);
 
 #endif  // ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_

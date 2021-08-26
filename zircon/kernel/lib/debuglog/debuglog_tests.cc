@@ -22,7 +22,7 @@ struct DebuglogTests {
 
     char msg[] = "Hello World";
 
-    log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
+    log->Write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
 
     dlog_header* header = reinterpret_cast<dlog_header*>(log->data_);
 
@@ -58,13 +58,13 @@ struct DebuglogTests {
       size_t write = to_write - sizeof(dlog_header);
       write = write > DLOG_MAX_DATA ? DLOG_MAX_DATA : write;
 
-      log->write(DEBUGLOG_WARNING, 0, {dummy, write});
+      log->Write(DEBUGLOG_WARNING, 0, {dummy, write});
       to_write -= write + sizeof(dlog_header);
     }
 
     EXPECT_EQ(pad, log->head_);
 
-    log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
+    log->Write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
 
     dlog_header* header = reinterpret_cast<dlog_header*>(log->data_ + pad);
 
@@ -95,7 +95,7 @@ struct DebuglogTests {
     const zx_time_t now = current_time();
 
     char msg[] = "Message!";
-    ASSERT_EQ(ZX_OK, log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)}));
+    ASSERT_EQ(ZX_OK, log->Write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)}));
 
     DlogReader reader;
     reader.InitializeForTest(log.get());
@@ -133,7 +133,7 @@ struct DebuglogTests {
 
     uint64_t num_written = 0;
 
-    log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
+    log->Write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
     num_written++;
 
     dlog_record_t rec{};
@@ -153,7 +153,7 @@ struct DebuglogTests {
                     sizeof(msg));
 
     for (size_t i = 0; i < DLOG_SIZE; i += sizeof(dlog_header) + sizeof(msg)) {
-      log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
+      log->Write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)});
       num_written++;
     }
 
@@ -195,6 +195,109 @@ struct DebuglogTests {
     END_TEST;
   }
 
+  static bool render_to_crashlog() {
+    BEGIN_TEST;
+
+    fbl::AllocChecker ac;
+    ktl::unique_ptr<DLog> log = ktl::make_unique<DLog>(&ac);
+    ASSERT_TRUE(ac.check());
+
+    // Define our test message and figure out a expected minimum size for the
+    // message when rendered. While we are not 100% sure how large the header
+    // for a given rendered record will be, we we know that a record with a
+    // timestamp, pid, and tid of zero will have the smallest rendered header
+    // possible.  Note that our test message does not end with a newline, but we
+    // expect rendering to add one to each record which does not end with a
+    // newline.
+    const ktl::string_view msg{"Message!"};
+    const size_t min_rendered_size = [&msg]() {
+      dlog_header_t empty_hdr;
+      memset(&empty_hdr, 0, sizeof(empty_hdr));
+      return DLog::FormatHeader({}, empty_hdr) + msg.size() + 1;
+    }();
+
+    // Allocate two targets for rendering data into, one normal sized, and one
+    // small.  Using a dedicated small buffer (instead of simply artificially
+    // limiting the length of a span wrapped around the large buffer) should
+    // help ASAN in detecting any buffer overflows.
+    constexpr size_t kLargeRenderBufferSize = 1024;
+    ktl::unique_ptr<char[]> large_storage{new (&ac) char[kLargeRenderBufferSize]};
+    ASSERT_TRUE(ac.check());
+    ASSERT_LE(min_rendered_size, kLargeRenderBufferSize);
+
+    constexpr size_t kSmallRenderBufferSize = 1;
+    ktl::unique_ptr<char[]> small_storage{new (&ac) char[kSmallRenderBufferSize]};
+    ASSERT_TRUE(ac.check());
+
+    ktl::span<char> large_target{large_storage.get(), kLargeRenderBufferSize};
+    ktl::span<char> small_target{small_storage.get(), kSmallRenderBufferSize};
+
+    // A small helper which will count the number of occurrences of |msg| in
+    // |str|.
+    auto CountOccurences = [](const ktl::string_view& str, const ktl::string_view& msg) -> size_t {
+      size_t count = 0;
+      size_t offset = 0;
+      while ((offset = str.find(msg, offset)) != str.npos) {
+        ++count;
+        ++offset;
+      }
+      return count;
+    };
+
+    // A small helper which renders a debuglog into a span provided, and gives
+    // back a string view of the result.
+    auto DoRender = [](const DLog& log, ktl::span<char> target) -> ktl::string_view {
+      return ktl::string_view{target.data(), log.RenderToCrashlog(target)};
+    };
+
+    // Rendering from an empty log should produce nothing.
+    ktl::string_view rendered;
+    rendered = DoRender(*log, large_target);
+    ASSERT_EQ(0u, rendered.size());
+
+    // Add record to the log, then render the log and verify that it contains at
+    // least a minimum number of expected bytes, and exactly one occurrence of
+    // the test string in the buffer.
+    ASSERT_EQ(ZX_OK, log->Write(DEBUGLOG_WARNING, 0, msg));
+    rendered = DoRender(*log, large_target);
+    ASSERT_GE(rendered.size(), min_rendered_size);
+    ASSERT_EQ(1u, CountOccurences(rendered, msg));
+
+    // Attempting to render into an empty target from a log with valid records
+    // in should produce no data.
+    rendered = DoRender(*log, {});
+    ASSERT_EQ(0u, rendered.size());
+
+    // Attempting to render into target with is non-empty, but does not have
+    // enough space to hold a rendered record, should also produce no data.
+    rendered = DoRender(*log, small_target);
+    ASSERT_EQ(0u, rendered.size());
+
+    // Add two more instances of the test message and re-validate
+    ASSERT_EQ(ZX_OK, log->Write(DEBUGLOG_WARNING, 0, msg));
+    ASSERT_EQ(ZX_OK, log->Write(DEBUGLOG_WARNING, 0, msg));
+    rendered = DoRender(*log, large_target);
+    ASSERT_GE(rendered.size(), min_rendered_size * 3);
+    ASSERT_EQ(3u, CountOccurences(rendered, msg));
+
+    // Figure out how many instances of our message _should_ fit in the dlog
+    // buffer, then add that many, forcing the log to wrap in the process.  Note
+    // that records are always padded out to a 4 bytes boundary.
+    const size_t kRecordSize = (msg.size() + sizeof(dlog_header_t) + 0x3) & ~0x3;
+    const size_t kRecordCount = DLOG_SIZE / kRecordSize;
+    for (size_t i = 0; i < kRecordCount; ++i) {
+      ASSERT_EQ(ZX_OK, log->Write(DEBUGLOG_WARNING, 0, msg));
+    }
+
+    // It is not clear exactly how many records should fit into our render
+    // buffer at this point, but the number should be more than 3.
+    rendered = DoRender(*log, large_target);
+    ASSERT_GT(rendered.size(), min_rendered_size * 3);
+    ASSERT_GT(CountOccurences(rendered, msg), 3u);
+
+    END_TEST;
+  }
+
   // Test that write fails with an error once the |DLog| has been shutdown.
   static bool shutdown() {
     BEGIN_TEST;
@@ -205,11 +308,11 @@ struct DebuglogTests {
 
     // Write one message and see that it succeeds.
     char msg[] = "Message!";
-    ASSERT_EQ(ZX_OK, log->write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)}));
+    ASSERT_EQ(ZX_OK, log->Write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)}));
 
     // Now ask the DLog to shutdown, write another, see that it fails.
     log->Shutdown(0);
-    ASSERT_EQ(ZX_ERR_BAD_STATE, log->write(DEBUGLOG_WARNING, 0, msg));
+    ASSERT_EQ(ZX_ERR_BAD_STATE, log->Write(DEBUGLOG_WARNING, 0, msg));
 
     // See that there is only one message in the DLog.
     DlogReader reader;
@@ -232,5 +335,6 @@ DEBUGLOG_UNITTEST(DebuglogTests::log_format)
 DEBUGLOG_UNITTEST(DebuglogTests::log_wrap)
 DEBUGLOG_UNITTEST(DebuglogTests::log_reader_read)
 DEBUGLOG_UNITTEST(DebuglogTests::log_reader_dataloss)
+DEBUGLOG_UNITTEST(DebuglogTests::render_to_crashlog)
 DEBUGLOG_UNITTEST(DebuglogTests::shutdown)
 UNITTEST_END_TESTCASE(debuglog_tests, "debuglog_tests", "Debuglog test")

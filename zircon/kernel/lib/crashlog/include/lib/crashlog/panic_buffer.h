@@ -42,8 +42,14 @@ class PanicBuffer {
   // Returns a pointer to a NUL-terminated C string.
   const char* c_str() const { return buffer_; }
 
+  // The current size of the panic buffer as a string.
+  size_t size() const {
+    Guard<SpinLock, IrqSave> guard{&lock_};
+    return pos_;
+  }
+
  private:
-  DECLARE_SPINLOCK(PanicBuffer) lock_;
+  mutable DECLARE_SPINLOCK(PanicBuffer) lock_;
   size_t pos_ TA_GUARDED(lock_) = 0;
   char buffer_[kMaxSize] TA_GUARDED(lock_) = {};
 };

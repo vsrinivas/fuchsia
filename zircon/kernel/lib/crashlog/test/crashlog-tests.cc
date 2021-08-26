@@ -75,14 +75,19 @@ bool PanicBufferTest() {
 
   PanicBuffer b;
   ASSERT_EQ(0u, strlen(b.c_str()));
+  ASSERT_EQ(0u, b.size());
 
   const char kMsg[] = "hello";
+  const size_t kMsgLen = ::strlen(kMsg);
   b.Append(kMsg);
   ASSERT_FALSE(strcmp(b.c_str(), kMsg));
+  ASSERT_EQ(kMsgLen, b.size());
 
   // Grossly over append.
   for (unsigned i = 0; i < PanicBuffer::kMaxSize; ++i) {
     b.Append(kMsg);
+    const size_t expected_size = ktl::min((i + 2) * kMsgLen, PanicBuffer::kMaxSize - 1);
+    ASSERT_EQ(expected_size, b.size());
   }
   ASSERT_EQ(PanicBuffer::kMaxSize - 1, strlen(b.c_str()));
 

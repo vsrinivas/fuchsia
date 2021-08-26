@@ -291,6 +291,12 @@ contents on the serial console.  This is the maximum size (in bytes) of stack
 memory that will be dumped; the actual amount dumped depends on stack depth.
 Each 16 bytes of stack is printed on one line using up to 75 characters.
 
+### kernel.render-dlog-to-crashlog=\<bool>
+**Default:** `false`
+
+When set to true, as much of the recent kernel debuglog as will fit will be
+appended to the generated crashlog during a kernel panic to assist in debugging.
+
 ### kernel.serial=[none | legacy | qemu | \<type>,\<base>,\<irq>]
 **Default:** `none`
 
