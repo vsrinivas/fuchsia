@@ -85,13 +85,22 @@ async fn handle_counter(
         .await
 }
 
+/// Command line arguments for the counter service.
+#[derive(argh::FromArgs)]
+struct Args {
+    /// the value at which to start the counter.
+    #[argh(option, default = "0")]
+    starting_value: u32,
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let Args { starting_value } = argh::from_env();
     let () = fuchsia_syslog::init().context("cannot init logger")?;
     let mut fs = ServiceFs::new();
     let inspector = fuchsia_inspect::component::inspector();
     let data = {
-        let data = Arc::new(Mutex::new(CounterData { value: 0 }));
+        let data = Arc::new(Mutex::new(CounterData { value: starting_value }));
         let data_clone = data.clone();
         let () = inspector.root().record_lazy_child("counter", move || {
             let srv = fuchsia_inspect::Inspector::new();

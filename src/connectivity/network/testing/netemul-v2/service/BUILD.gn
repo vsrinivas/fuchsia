@@ -94,6 +94,7 @@ fuchsia_test_package("netemul-v2-tests") {
     ":netemul-devmgr",
     "//src/connectivity/network/testing/netemul-v2/network-context",
     "//src/connectivity/network/testing/netemul-v2/test-support:counter",
+    "//src/connectivity/network/testing/netemul-v2/test-support:counter-without-program",
     "//src/connectivity/network/testing/netemul-v2/test-support:devfs-subdir-user",
     "//src/connectivity/network/tun/network-tun:component-v2",
   ]
