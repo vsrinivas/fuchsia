@@ -13,7 +13,7 @@
 
 int vsnprintf(char* buf, size_t len, const char* fmt, va_list args) {
   StringFile out({buf, len});
-  int ret = vfprintf(out.file(), fmt, args);
+  int ret = vfprintf(&out, fmt, args);
   ktl::move(out).take();
   return ret;
 }

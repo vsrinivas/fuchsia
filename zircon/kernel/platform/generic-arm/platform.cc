@@ -610,7 +610,7 @@ void platform_early_init(void) {
   if (gBootOptions->serial_source == OptionSource::kCmdLine) {
     SmallString serial_mode = {};
     StringFile string_file(serial_mode);
-    BootOptions::PrintValue(gBootOptions->serial, string_file.file());
+    BootOptions::PrintValue(gBootOptions->serial, &string_file);
     uart_disabled = (strcmp(ktl::move(string_file).take().data(), "none") == 0);
   }
 

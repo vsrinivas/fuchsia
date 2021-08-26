@@ -377,7 +377,7 @@ static void update_zbi_uart(const DebugPort& port) {
 static void handle_serial_cmdline(SerialConfig* config) {
   SmallString serial_mode = {};
   StringFile string_file(serial_mode);
-  BootOptions::PrintValue(gBootOptions->serial, string_file.file());
+  BootOptions::PrintValue(gBootOptions->serial, &string_file);
 
   // Otherwise, parse command line and update "bootloader.uart".
   zx_status_t result = parse_serial_cmdline(ktl::move(string_file).take().data(), config);
