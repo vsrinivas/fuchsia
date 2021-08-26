@@ -108,6 +108,188 @@ void DisplayInfo::InitializeInspect(inspect::Node* parent_node) {
   }
 }
 
+// static
+zx::status<fbl::RefPtr<DisplayInfo>> DisplayInfo::Create(
+    const added_display_args_t& info, ddk::I2cImplProtocolClient* i2c) {
+  fbl::AllocChecker ac;
+  fbl::RefPtr<DisplayInfo> out = fbl::AdoptRef(new (&ac) DisplayInfo);
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+
+  out->pending_layer_change = false;
+  out->vsync_layer_count = 0;
+  out->id = info.display_id;
+  out->has_edid = info.edid_present;
+  out->pixel_formats_ = fbl::Array<zx_pixel_format_t>(
+      new (&ac) zx_pixel_format_t[info.pixel_format_count], info.pixel_format_count);
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  out->cursor_infos_ = fbl::Array<cursor_info_t>(new (&ac) cursor_info_t[info.cursor_info_count],
+                                                 info.cursor_info_count);
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  memcpy(out->pixel_formats_.data(), info.pixel_format_list,
+         out->pixel_formats_.size() * sizeof(zx_pixel_format_t));
+  memcpy(out->cursor_infos_.data(), info.cursor_info_list, out->cursor_infos_.size() * sizeof(cursor_info_t));
+  if (!out->has_edid) {
+    out->params = info.panel.params;
+    return zx::ok(std::move(out));
+  }
+
+  if (!i2c->is_valid()) {
+    zxlogf(ERROR, "Presented edid display with no i2c bus");
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  bool success = false;
+  const char* edid_err = "unknown error";
+
+  uint32_t edid_attempt = 0;
+  static constexpr uint32_t kEdidRetries = 3;
+  do {
+    if (edid_attempt != 0) {
+      zxlogf(DEBUG, "Error %d/%d initializing edid: \"%s\"", edid_attempt, kEdidRetries, edid_err);
+      zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+    }
+    edid_attempt++;
+
+    I2cBus bus = {*i2c, info.panel.i2c_bus_id};
+    success = out->edid.Init(&bus, ddc_tx, &edid_err);
+  } while (!success && edid_attempt < kEdidRetries);
+
+  if (!success) {
+    zxlogf(INFO, "Failed to parse edid (%d bytes) \"%s\"", out->edid.edid_length(), edid_err);
+    if (zxlog_level_enabled(INFO) && out->edid.edid_bytes()) {
+      hexdump(out->edid.edid_bytes(), out->edid.edid_length());
+    }
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  out->PopulateDisplayAudio();
+
+  if (zxlog_level_enabled(DEBUG) && out->edid_audio_.size()) {
+    zxlogf(DEBUG, "Supported audio formats:");
+    for (auto range : out->edid_audio_) {
+      audio_stream_format_range temp_range;
+      audio::audio_stream_format_fidl_from_banjo(range, &temp_range);
+      for (auto rate : audio::utils::FrameRateEnumerator(temp_range)) {
+        zxlogf(DEBUG, "  rate=%d, channels=[%d, %d], sample=%x", rate, range.min_channels,
+               range.max_channels, range.sample_formats);
+      }
+    }
+  }
+
+  if (zxlog_level_enabled(DEBUG)) {
+    const char* manufacturer =
+        strlen(out->edid.manufacturer_name()) ? out->edid.manufacturer_name() : out->edid.manufacturer_id();
+    zxlogf(DEBUG, "Manufacturer \"%s\", product %d, name \"%s\", serial \"%s\"", manufacturer,
+           out->edid.product_code(), out->edid.monitor_name(), out->edid.monitor_serial());
+    out->edid.Print([](const char* str) { zxlogf(DEBUG, "%s", str); });
+  }
+  return zx::ok(std::move(out));
+}
+
+void DisplayInfo::PopulateDisplayAudio() {
+  fbl::AllocChecker ac;
+
+  // Displays which support any audio are required to support basic
+  // audio, so just bail if that bit isn't set.
+  if (!edid.supports_basic_audio()) {
+    return;
+  }
+
+  // TODO(fxbug.dev/32457): Revisit dedupe/merge logic once the audio API takes a stance. First,
+  // this code always adds the basic audio formats before processing the SADs, which is likely
+  // redundant on some hardware (the spec isn't clear about whether or not the basic audio formats
+  // should also be included in the SADs). Second, this code assumes that the SADs are compact
+  // and not redundant, which is not guaranteed.
+
+  // Add the range for basic audio support.
+  audio_types_audio_stream_format_range_t range;
+  range.min_channels = 2;
+  range.max_channels = 2;
+  range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+  range.min_frames_per_second = 32000;
+  range.max_frames_per_second = 48000;
+  range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY | ASF_RANGE_FLAG_FPS_44100_FAMILY;
+
+  edid_audio_.push_back(range, &ac);
+  if (!ac.check()) {
+    zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
+    return;
+  }
+
+  for (auto it = edid::audio_data_block_iterator(&edid); it.is_valid(); ++it) {
+    if (it->format() != edid::ShortAudioDescriptor::kLPcm) {
+      // TODO(stevensd): Add compressed formats when audio format supports it
+      continue;
+    }
+    audio_types_audio_stream_format_range_t range;
+
+    constexpr audio_sample_format_t zero_format = static_cast<audio_sample_format_t>(0);
+    range.sample_formats = static_cast<audio_sample_format_t>(
+        (it->lpcm_24() ? AUDIO_SAMPLE_FORMAT_24BIT_PACKED | AUDIO_SAMPLE_FORMAT_24BIT_IN32
+                       : zero_format) |
+        (it->lpcm_20() ? AUDIO_SAMPLE_FORMAT_20BIT_PACKED | AUDIO_SAMPLE_FORMAT_20BIT_IN32
+                       : zero_format) |
+        (it->lpcm_16() ? AUDIO_SAMPLE_FORMAT_16BIT : zero_format));
+
+    range.min_channels = 1;
+    range.max_channels = static_cast<uint8_t>(it->num_channels_minus_1() + 1);
+
+    // Now build continuous ranges of sample rates in the each family
+    static constexpr struct {
+      const uint32_t flag, val;
+    } kRateLut[7] = {
+        {edid::ShortAudioDescriptor::kHz32, 32000},   {edid::ShortAudioDescriptor::kHz44, 44100},
+        {edid::ShortAudioDescriptor::kHz48, 48000},   {edid::ShortAudioDescriptor::kHz88, 88200},
+        {edid::ShortAudioDescriptor::kHz96, 96000},   {edid::ShortAudioDescriptor::kHz176, 176400},
+        {edid::ShortAudioDescriptor::kHz192, 192000},
+    };
+
+    for (uint32_t i = 0; i < std::size(kRateLut); ++i) {
+      if (!(it->sampling_frequencies & kRateLut[i].flag)) {
+        continue;
+      }
+      range.min_frames_per_second = kRateLut[i].val;
+
+      if (audio::utils::FrameRateIn48kFamily(kRateLut[i].val)) {
+        range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+      } else {
+        range.flags = ASF_RANGE_FLAG_FPS_44100_FAMILY;
+      }
+
+      // We found the start of a range.  At this point, we are guaranteed
+      // to add at least one new entry into the set of format ranges.
+      // Find the end of this range.
+      uint32_t j;
+      for (j = i + 1; j < std::size(kRateLut); ++j) {
+        if (!(it->bitrate & kRateLut[j].flag)) {
+          break;
+        }
+
+        if (audio::utils::FrameRateIn48kFamily(kRateLut[j].val)) {
+          range.flags |= ASF_RANGE_FLAG_FPS_48000_FAMILY;
+        } else {
+          range.flags |= ASF_RANGE_FLAG_FPS_44100_FAMILY;
+        }
+      }
+
+      i = j - 1;
+      range.max_frames_per_second = kRateLut[i].val;
+
+      edid_audio_.push_back(range, &ac);
+      if (!ac.check()) {
+        zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
+        return;
+      }
+    }
+  }
+}
+
 void Controller::PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode) {
   mode->pixel_clock_10khz = params.pixel_freq_10khz;
   mode->h_addressable = params.horizontal_addressable;
@@ -178,104 +360,6 @@ void Controller::PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) {
   }
 }
 
-void Controller::PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info) {
-  fbl::AllocChecker ac;
-
-  // Displays which support any audio are required to support basic
-  // audio, so just bail if that bit isn't set.
-  if (!info->edid.supports_basic_audio()) {
-    return;
-  }
-
-  // TODO(fxbug.dev/32457): Revisit dedupe/merge logic once the audio API takes a stance. First,
-  // this code always adds the basic audio formats before processing the SADs, which is likely
-  // redundant on some hardware (the spec isn't clear about whether or not the basic audio formats
-  // should also be included in the SADs). Second, this code assumes that the SADs are compact
-  // and not redundant, which is not guaranteed.
-
-  // Add the range for basic audio support.
-  audio_types_audio_stream_format_range_t range;
-  range.min_channels = 2;
-  range.max_channels = 2;
-  range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-  range.min_frames_per_second = 32000;
-  range.max_frames_per_second = 48000;
-  range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY | ASF_RANGE_FLAG_FPS_44100_FAMILY;
-
-  info->edid_audio_.push_back(range, &ac);
-  if (!ac.check()) {
-    zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
-    return;
-  }
-
-  for (auto it = edid::audio_data_block_iterator(&info->edid); it.is_valid(); ++it) {
-    if (it->format() != edid::ShortAudioDescriptor::kLPcm) {
-      // TODO(stevensd): Add compressed formats when audio format supports it
-      continue;
-    }
-    audio_types_audio_stream_format_range_t range;
-
-    constexpr audio_sample_format_t zero_format = static_cast<audio_sample_format_t>(0);
-    range.sample_formats = static_cast<audio_sample_format_t>(
-        (it->lpcm_24() ? AUDIO_SAMPLE_FORMAT_24BIT_PACKED | AUDIO_SAMPLE_FORMAT_24BIT_IN32
-                       : zero_format) |
-        (it->lpcm_20() ? AUDIO_SAMPLE_FORMAT_20BIT_PACKED | AUDIO_SAMPLE_FORMAT_20BIT_IN32
-                       : zero_format) |
-        (it->lpcm_16() ? AUDIO_SAMPLE_FORMAT_16BIT : zero_format));
-
-    range.min_channels = 1;
-    range.max_channels = static_cast<uint8_t>(it->num_channels_minus_1() + 1);
-
-    // Now build continuous ranges of sample rates in the each family
-    static constexpr struct {
-      const uint32_t flag, val;
-    } kRateLut[7] = {
-        {edid::ShortAudioDescriptor::kHz32, 32000},   {edid::ShortAudioDescriptor::kHz44, 44100},
-        {edid::ShortAudioDescriptor::kHz48, 48000},   {edid::ShortAudioDescriptor::kHz88, 88200},
-        {edid::ShortAudioDescriptor::kHz96, 96000},   {edid::ShortAudioDescriptor::kHz176, 176400},
-        {edid::ShortAudioDescriptor::kHz192, 192000},
-    };
-
-    for (uint32_t i = 0; i < std::size(kRateLut); ++i) {
-      if (!(it->sampling_frequencies & kRateLut[i].flag)) {
-        continue;
-      }
-      range.min_frames_per_second = kRateLut[i].val;
-
-      if (audio::utils::FrameRateIn48kFamily(kRateLut[i].val)) {
-        range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
-      } else {
-        range.flags = ASF_RANGE_FLAG_FPS_44100_FAMILY;
-      }
-
-      // We found the start of a range.  At this point, we are guaranteed
-      // to add at least one new entry into the set of format ranges.
-      // Find the end of this range.
-      uint32_t j;
-      for (j = i + 1; j < std::size(kRateLut); ++j) {
-        if (!(it->bitrate & kRateLut[j].flag)) {
-          break;
-        }
-
-        if (audio::utils::FrameRateIn48kFamily(kRateLut[j].val)) {
-          range.flags |= ASF_RANGE_FLAG_FPS_48000_FAMILY;
-        } else {
-          range.flags |= ASF_RANGE_FLAG_FPS_44100_FAMILY;
-        }
-      }
-
-      i = j - 1;
-      range.max_frames_per_second = kRateLut[i].val;
-
-      info->edid_audio_.push_back(range, &ac);
-      if (!ac.check()) {
-        zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
-        return;
-      }
-    }
-  }
-}
-
 void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     const added_display_args_t* displays_added, size_t added_count,
     const uint64_t* displays_removed, size_t removed_count,
@@ -329,115 +413,37 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
   }
 
   for (unsigned i = 0; i < added_count; i++) {
-    fbl::AllocChecker ac, ac2;
-    fbl::RefPtr<DisplayInfo> info = fbl::AdoptRef(new (&ac) DisplayInfo);
-    if (!ac.check()) {
-      zxlogf(INFO, "Out of memory when processing display hotplug");
-      break;
+    fbl::AllocChecker ac;
+    auto info_or_status = DisplayInfo::Create(displays_added[i], &i2c_);
+    if (info_or_status.is_error()) {
+      zxlogf(INFO, "failed to add display %ld: %s",
+             displays_added[i].display_id, info_or_status.status_string());
+      continue;
     }
-    info->pending_layer_change = false;
-    info->vsync_layer_count = 0;
-
-    auto& display_params = displays_added[i];
-    auto* display_info = out_display_info_list ? &out_display_info_list[i] : nullptr;
-
-    info->id = display_params.display_id;
-
-    info->pixel_formats_ = fbl::Array<zx_pixel_format_t>(
-        new (&ac) zx_pixel_format_t[display_params.pixel_format_count],
-        display_params.pixel_format_count);
-    info->cursor_infos_ =
-        fbl::Array<cursor_info_t>(new (&ac2) cursor_info_t[display_params.cursor_info_count],
-                                  display_params.cursor_info_count);
-    if (!ac.check() || !ac2.check()) {
-      zxlogf(INFO, "Out of memory when processing display hotplug");
-      break;
-    }
-    memcpy(info->pixel_formats_.data(), display_params.pixel_format_list,
-           display_params.pixel_format_count * sizeof(zx_pixel_format_t));
-    memcpy(info->cursor_infos_.data(), display_params.cursor_info_list,
-           display_params.cursor_info_count * sizeof(cursor_info_t));
-
-    info->has_edid = display_params.edid_present;
+    auto info = std::move(info_or_status.value());
     if (info->has_edid) {
-      if (!i2c_.is_valid()) {
-        zxlogf(ERROR, "Presented edid display with no i2c bus");
-        continue;
-      }
+      fbl::Array<uint8_t> eld;
+      ComputeEld(info->edid, eld);
+      dc_.SetEld(info->id, eld.get(), eld.size());
+    }
+    auto* display_info = out_display_info_list ? &out_display_info_list[i] : nullptr;
+    if (display_info && info->has_edid) {
+      display_info->is_hdmi_out = info->edid.is_hdmi();
+      display_info->is_standard_srgb_out = info->edid.is_standard_rgb();
+      display_info->audio_format_count = static_cast<uint32_t>(info->edid_audio_.size());
 
-      bool success = false;
-      const char* edid_err = "unknown error";
-
-      uint32_t edid_attempt = 0;
-      static constexpr uint32_t kEdidRetries = 3;
-      do {
-        if (edid_attempt != 0) {
-          zxlogf(DEBUG, "Error %d/%d initializing edid: \"%s\"", edid_attempt, kEdidRetries,
-                 edid_err);
-          zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-        }
-        edid_attempt++;
-
-        I2cBus i2c = {i2c_, display_params.panel.i2c_bus_id};
-        success = info->edid.Init(&i2c, ddc_tx, &edid_err);
-      } while (!success && edid_attempt < kEdidRetries);
-
-      if (!success) {
-        zxlogf(INFO, "Failed to parse edid (%d bytes) \"%s\"", info->edid.edid_length(), edid_err);
-        if (zxlog_level_enabled(INFO) &&
-            info->edid.edid_bytes()) {
-          hexdump(info->edid.edid_bytes(), info->edid.edid_length());
-        }
-        continue;
-      }
-
-      PopulateDisplayAudio(info);
-      {
-        fbl::Array<uint8_t> eld;
-        ComputeEld(info->edid, eld);
-        dc_.SetEld(info->id, eld.get(), eld.size());
-      }
-
-      if (zxlog_level_enabled(DEBUG) && info->edid_audio_.size()) {
-        zxlogf(DEBUG, "Supported audio formats:");
-        for (auto range : info->edid_audio_) {
-          audio_stream_format_range temp_range;
-          audio::audio_stream_format_fidl_from_banjo(range, &temp_range);
-          for (auto rate : audio::utils::FrameRateEnumerator(temp_range)) {
-            zxlogf(DEBUG, "  rate=%d, channels=[%d, %d], sample=%x", rate, range.min_channels,
-                   range.max_channels, range.sample_formats);
-          }
-        }
-      }
-
-      if (display_info) {
-        display_info->is_hdmi_out = info->edid.is_hdmi();
-        display_info->is_standard_srgb_out = info->edid.is_standard_rgb();
-        display_info->audio_format_count = static_cast<uint32_t>(info->edid_audio_.size());
-
-        static_assert(
-            sizeof(display_info->monitor_name) == sizeof(edid::Descriptor::Monitor::data) + 1,
-            "Possible overflow");
-        static_assert(
-            sizeof(display_info->monitor_name) == sizeof(edid::Descriptor::Monitor::data) + 1,
-            "Possible overflow");
-        strcpy(display_info->manufacturer_id, info->edid.manufacturer_id());
-        strcpy(display_info->monitor_name, info->edid.monitor_name());
-        strcpy(display_info->monitor_serial, info->edid.monitor_serial());
-        display_info->manufacturer_name = info->edid.manufacturer_name();
-        display_info->horizontal_size_mm = info->edid.horizontal_size_mm();
-        display_info->vertical_size_mm = info->edid.vertical_size_mm();
-      }
-      if (zxlog_level_enabled(DEBUG)) {
-        const char* manufacturer = strlen(info->edid.manufacturer_name())
-                                       ? info->edid.manufacturer_name()
-                                       : info->edid.manufacturer_id();
-        zxlogf(DEBUG, "Manufacturer \"%s\", product %d, name \"%s\", serial \"%s\"", manufacturer,
-               info->edid.product_code(), info->edid.monitor_name(), info->edid.monitor_serial());
-        info->edid.Print([](const char* str) { zxlogf(DEBUG, "%s", str); });
-      }
-    } else {
-      info->params = display_params.panel.params;
+      static_assert(
+          sizeof(display_info->monitor_name) == sizeof(edid::Descriptor::Monitor::data) + 1,
+          "Possible overflow");
+      static_assert(
+          sizeof(display_info->monitor_name) == sizeof(edid::Descriptor::Monitor::data) + 1,
+          "Possible overflow");
+      strcpy(display_info->manufacturer_id, info->edid.manufacturer_id());
+      strcpy(display_info->monitor_name, info->edid.monitor_name());
+      strcpy(display_info->monitor_serial, info->edid.monitor_serial());
+      display_info->manufacturer_name = info->edid.manufacturer_name();
+      display_info->horizontal_size_mm = info->edid.horizontal_size_mm();
+      display_info->vertical_size_mm = info->edid.vertical_size_mm();
     }
 
     if (displays_.insert_or_find(info)) {

@@ -50,7 +50,14 @@ class IntegrationTest;
 
 class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
                     public fbl::RefCounted<DisplayInfo> {
+ private:
+  DisplayInfo() = default;
+  void PopulateDisplayAudio();
+
  public:
+  static zx::status<fbl::RefPtr<DisplayInfo>> Create(
+      const added_display_args_t& info, ddk::I2cImplProtocolClient* i2c);
+
   // Should be called after init_done is set to true.
   void InitializeInspect(inspect::Node* parent_node);
 
@@ -176,7 +183,6 @@ class Controller : public ControllerParent,
 
   void HandleClientOwnershipChanges() __TA_REQUIRES(mtx());
   void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx());
-  void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
 
   void OpenVirtconController(OpenVirtconControllerRequestView request,
                              OpenVirtconControllerCompleter::Sync& _completer) override;
