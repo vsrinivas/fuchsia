@@ -160,7 +160,6 @@ zx_status_t Vcpu::ArchHandleIo(const zx_packet_guest_io_t& io, uint64_t trap_key
   switch (status) {
     case ZX_OK:
     case ZX_ERR_CANCELED:
-    case ZX_ERR_STOP:
       break;
 
     default:

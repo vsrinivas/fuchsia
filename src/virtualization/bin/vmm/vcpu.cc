@@ -92,10 +92,6 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
     switch (status) {
       case ZX_OK:
         break;
-      case ZX_ERR_STOP:
-        // Only stop this VCPU.
-        deferred.cancel();
-        return ZX_OK;
       default:
         FX_LOGS(ERROR) << "Fatal error attempting to resume VCPU " << id_ << ": "
                        << zx_status_get_string(status) << ". Shutting down VM.";
@@ -106,10 +102,6 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
     switch (status) {
       case ZX_OK:
         break;
-      case ZX_ERR_STOP:
-        // Only stop this VCPU.
-        deferred.cancel();
-        return ZX_OK;
       case ZX_ERR_CANCELED:
         // Gracefully shut down the entire VM.
         FX_LOGS(INFO) << "Guest requested shutdown";
