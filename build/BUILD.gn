@@ -43,10 +43,12 @@ group("non_hermetic_deps") {
   # { fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps'; fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps(//build/toolchain:host_x64)'; } | sed 's|\([^:]*\):.*|"\1/*",|' | sort | uniq
   visibility = [
     "//build/images/*",
+    "//build/images/assembly/*",
     "//build/images/fuchsia/*",
     "//build/images/guest/*",
     "//build/images/recovery/*",
     "//build/images/sizes/*",
+    "//build/prebuilt/*",
     "//build/rust/*",
     "//scripts/sdk/gn/*",
     "//third_party/crashpad/*",
