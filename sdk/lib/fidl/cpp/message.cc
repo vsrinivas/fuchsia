@@ -71,7 +71,7 @@ zx_status_t HLCPPIncomingMessage::DecodeWithExternalHeader_InternalMayBreak(
   }
 
   fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
-  zx_status_t status = internal__fidl_decode_etc_skip_unknown_handles__v2__may_break(
+  zx_status_t status = internal__fidl_decode_etc_hlcpp__v2__may_break(
       type, bytes_.data(), bytes_.actual(), handles_.data(), handles_.actual(), error_msg_out);
   fidl_trace(DidHLCPPDecode);
 

@@ -118,13 +118,13 @@ template <Mode mode, FidlWireFormatVersion WireFormatVersion, typename Byte>
 class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
  public:
   FidlDecoder(Byte* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
-              uint32_t next_out_of_line, const char** out_error_msg, bool skip_unknown_handles)
+              uint32_t next_out_of_line, const char** out_error_msg, bool hlcpp_mode)
       : bytes_(bytes),
         num_bytes_(num_bytes),
         num_handles_(num_handles),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg),
-        skip_unknown_handles_(skip_unknown_handles) {
+        hlcpp_mode_(hlcpp_mode) {
     if (likely(handles != nullptr)) {
       handles_ = handles;
     }
@@ -132,13 +132,13 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
 
   FidlDecoder(Byte* bytes, uint32_t num_bytes, const zx_handle_info_t* handle_infos,
               uint32_t num_handle_infos, uint32_t next_out_of_line, const char** out_error_msg,
-              bool skip_unknown_handles)
+              bool hlcpp_mode)
       : bytes_(bytes),
         num_bytes_(num_bytes),
         num_handles_(num_handle_infos),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg),
-        skip_unknown_handles_(skip_unknown_handles) {
+        hlcpp_mode_(hlcpp_mode) {
     if (likely(handle_infos != nullptr)) {
       handles_ = handle_infos;
     }
@@ -325,7 +325,9 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
       return Status::kSuccess;
     }
 
-    ConvertEnvelopeToDecodedRepresentation(bytes_, envelope_copy, envelope_ptr);
+    if (hlcpp_mode_) {
+      ConvertEnvelopeToDecodedRepresentation(bytes_, envelope_copy, envelope_ptr);
+    }
 
     // If we do not have the coding table for this payload,
     // treat it as unknown and close its contained handles
@@ -348,17 +350,17 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
         SetError("number of incoming handles exceeds incoming handle array size");
         return Status::kConstraintViolationError;
       }
-      // If skip_unknown_handles_ is true, leave the unknown handles intact
+      // If hlcpp_mode_ is true, leave the unknown handles intact
       // for something else to process (e.g. HLCPP Decode)
-      if (skip_unknown_handles_ && is_resource == kFidlIsResource_Resource) {
+      if (hlcpp_mode_ && is_resource == kFidlIsResource_Resource) {
         handle_idx_ += envelope_copy.num_handles;
         return Status::kSuccess;
       }
       // Receiving unknown handles for a resource type is only an error if
-      // skip_unknown_handles_ is true, i.e. the walker itself is not
+      // hlcpp_mode_ is true, i.e. the walker itself is not
       // automatically closing all unknown handles (making it impossible for
       // the domain object to store the unknown handles).
-      if (unlikely(skip_unknown_handles_ && is_resource == kFidlIsResource_NotResource)) {
+      if (unlikely(hlcpp_mode_ && is_resource == kFidlIsResource_NotResource)) {
         SetError("received unknown handles for a non-resource type");
         return Status::kConstraintViolationError;
       }
@@ -429,7 +431,7 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
   // out into domain objects. Since HLCPP stores unknown handles
   // (and LLCPP does not), this field allows HLCPP to use the decoder while
   // keeping unknown handles in flexible resource unions intact.
-  bool skip_unknown_handles_;
+  bool hlcpp_mode_;
 
   // Decoder state
   zx_status_t status_ = ZX_OK;
@@ -438,13 +440,11 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
   zx_handle_t unknown_handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
 };
 
-template <typename HandleType, Mode mode, FidlWireFormatVersion WireFormatVersion>
+template <Mode mode, FidlWireFormatVersion WireFormatVersion>
 zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                             const HandleType* handles, uint32_t num_handles,
-                             const char** out_error_msg,
-                             void (*close_handles)(const HandleType*, uint32_t),
-                             bool close_unknown_union_handles) {
-  auto drop_all_handles = [&]() { close_handles(handles, num_handles); };
+                             const zx_handle_info_t* handles, uint32_t num_handles,
+                             const char** out_error_msg, bool hlcpp_mode) {
+  auto drop_all_handles = [&]() { FidlHandleInfoCloseMany(handles, num_handles); };
   auto set_error = [&out_error_msg](const char* msg) {
     if (out_error_msg)
       *out_error_msg = msg;
@@ -486,9 +486,8 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     }
   }
 
-  FidlDecoder<mode, WireFormatVersion, uint8_t> decoder(b, num_bytes, handles, num_handles,
-                                                        next_out_of_line, out_error_msg,
-                                                        close_unknown_union_handles);
+  FidlDecoder<mode, WireFormatVersion, uint8_t> decoder(
+      b, num_bytes, handles, num_handles, next_out_of_line, out_error_msg, hlcpp_mode);
   fidl::Walk<WireFormatVersion>(decoder, type, DecodingPosition<uint8_t>{b});
 
   if (unlikely(decoder.status() != ZX_OK)) {
@@ -510,56 +509,22 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   return ZX_OK;
 }
 
-void close_handles_op(const zx_handle_t* handles, uint32_t max_idx) {
-  // Return value intentionally ignored. This is best-effort cleanup.
-  FidlHandleCloseMany(handles, max_idx);
-}
-
-void close_handle_infos_op(const zx_handle_info_t* handle_infos, uint32_t max_idx) {
-  // Return value intentionally ignored. This is best-effort cleanup.
-  FidlHandleInfoCloseMany(handle_infos, max_idx);
-}
-
 }  // namespace
 
-zx_status_t fidl_decode_skip_unknown_handles(const fidl_type_t* type, void* bytes,
-                                             uint32_t num_bytes, const zx_handle_t* handles,
-                                             uint32_t num_handles, const char** out_error_msg) {
-  return fidl_decode_impl<zx_handle_t, Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V1>(
-      type, bytes, num_bytes, handles, num_handles, out_error_msg, close_handles_op, true);
-}
-
-zx_status_t internal__fidl_decode_skip_unknown_handles__v2__may_break(
-    const fidl_type_t* type, void* bytes, uint32_t num_bytes, const zx_handle_t* handles,
-    uint32_t num_handles, const char** out_error_msg) {
-  return fidl_decode_impl<zx_handle_t, Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V2>(
-      type, bytes, num_bytes, handles, num_handles, out_error_msg, close_handles_op, true);
-}
-
-zx_status_t fidl_decode_etc_skip_unknown_handles(const fidl_type_t* type, void* bytes,
-                                                 uint32_t num_bytes,
-                                                 const zx_handle_info_t* handle_infos,
-                                                 uint32_t num_handle_infos,
-                                                 const char** out_error_msg) {
-  return fidl_decode_impl<zx_handle_info_t, Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V1>(
-      type, bytes, num_bytes, handle_infos, num_handle_infos, out_error_msg, close_handle_infos_op,
-      true);
-}
-
-zx_status_t internal__fidl_decode_etc_skip_unknown_handles__v2__may_break(
-    const fidl_type_t* type, void* bytes, uint32_t num_bytes, const zx_handle_info_t* handle_infos,
-    uint32_t num_handle_infos, const char** out_error_msg) {
-  return fidl_decode_impl<zx_handle_info_t, Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V2>(
-      type, bytes, num_bytes, handle_infos, num_handle_infos, out_error_msg, close_handle_infos_op,
-      true);
+zx_status_t internal__fidl_decode_etc_hlcpp__v2__may_break(const fidl_type_t* type, void* bytes,
+                                                           uint32_t num_bytes,
+                                                           const zx_handle_info_t* handle_infos,
+                                                           uint32_t num_handle_infos,
+                                                           const char** out_error_msg) {
+  return fidl_decode_impl<Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V2>(
+      type, bytes, num_bytes, handle_infos, num_handle_infos, out_error_msg, true);
 }
 
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** out_error_msg) {
-  return fidl_decode_impl<zx_handle_info_t, Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V1>(
-      type, bytes, num_bytes, handle_infos, num_handle_infos, out_error_msg, close_handle_infos_op,
-      false);
+  return fidl_decode_impl<Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V1>(
+      type, bytes, num_bytes, handle_infos, num_handle_infos, out_error_msg, false);
 }
 
 zx_status_t internal_fidl_decode_etc__v2__may_break(const fidl_type_t* type, void* bytes,
@@ -567,9 +532,8 @@ zx_status_t internal_fidl_decode_etc__v2__may_break(const fidl_type_t* type, voi
                                                     const zx_handle_info_t* handle_infos,
                                                     uint32_t num_handle_infos,
                                                     const char** out_error_msg) {
-  return fidl_decode_impl<zx_handle_info_t, Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V2>(
-      type, bytes, num_bytes, handle_infos, num_handle_infos, out_error_msg, close_handle_infos_op,
-      false);
+  return fidl_decode_impl<Mode::Decode, FIDL_WIRE_FORMAT_VERSION_V2>(
+      type, bytes, num_bytes, handle_infos, num_handle_infos, out_error_msg, false);
 }
 
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,

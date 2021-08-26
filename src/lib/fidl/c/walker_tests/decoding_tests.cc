@@ -1694,16 +1694,14 @@ TEST(UnknownEnvelope, DecodeEtcUnknownHandle) {
       ZX_ERR_BAD_HANDLE);
 }
 
-TEST(UnknownEnvelope, DecodeEtcSkipUnknownHandle) {
+TEST(UnknownEnvelope, DecodeEtcHLCPP) {
   uint8_t bytes[] = {
       2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
-      0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
-      0,   0,   0,   0,   0,   0,   0,   0,  // alloc present
+      0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: zero
 
-      0,   0,   0,   0,   1,   0,   0,   0,    // envelope 2: num bytes / num handles
-      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+      0,   0,   0,   0,   1,   0,   0,   0,  // envelope 2: num bytes / num handles / not inline
   };
 
   zx_handle_info_t handles[1] = {zx_handle_info_t{
@@ -1713,7 +1711,7 @@ TEST(UnknownEnvelope, DecodeEtcSkipUnknownHandle) {
   }};
   ASSERT_EQ(ZX_OK, zx_port_create(0, &handles[0].handle));
   const char* error = nullptr;
-  auto status = fidl_decode_etc_skip_unknown_handles(
+  auto status = internal__fidl_decode_etc_hlcpp__v2__may_break(
       &fidl_test_coding::wire::fidl_test_coding_ResourceSimpleTableTable, bytes, ArrayCount(bytes),
       handles, 1, &error);
 
@@ -1760,7 +1758,7 @@ TEST(UnknownEnvelope, V2DecodeUnknownOutOfLineEnvelope) {
   };
 
   const char* error = nullptr;
-  auto status = internal_fidl_decode_etc__v2__may_break(
+  auto status = internal__fidl_decode_etc_hlcpp__v2__may_break(
       &fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes, ArrayCount(bytes), nullptr,
       0, &error);
 
