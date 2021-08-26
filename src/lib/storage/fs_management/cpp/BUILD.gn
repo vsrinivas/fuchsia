@@ -127,6 +127,7 @@ fuchsia_test_package("fs-management-tests") {
       max_severity = "ERROR"
     }
   }
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {

@@ -44,12 +44,10 @@ fuchsia_test_package("fs-management-rust-tests") {
     }
   }
   test_components = [ ":fs-management-rust-tests-component" ]
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fs-management-rust-tests",
-    "//src/storage/testing:storage-isolated-devmgr",
-  ]
+  deps = [ ":fs-management-rust-tests" ]
 }

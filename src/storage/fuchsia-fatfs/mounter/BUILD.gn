@@ -60,12 +60,10 @@ fuchsia_test_package("fatfs-mounter-tests") {
     }
   }
   test_components = [ ":fatfs-mounter-test" ]
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fatfs-mounter-tests",
-    "//src/storage/testing:storage-isolated-devmgr",
-  ]
+  deps = [ ":fatfs-mounter-tests" ]
 }

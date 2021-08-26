@@ -47,6 +47,7 @@ fuchsia_test_package("block-client-tests") {
     }
   }
   test_components = [ ":block-client-tests-component" ]
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {

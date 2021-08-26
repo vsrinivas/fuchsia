@@ -52,12 +52,10 @@ fuchsia_test_package("blackout-target-test") {
       max_severity = "ERROR"
     }
   }
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":blackout-target-test",
-    "//src/storage/testing:storage-isolated-devmgr",
-  ]
+  public_deps = [ ":blackout-target-test" ]
 }

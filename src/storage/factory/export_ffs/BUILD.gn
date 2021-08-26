@@ -63,6 +63,7 @@ fuchsia_test_package("export-ffs-tests") {
     }
   }
   test_components = [ ":export-ffs-tests-component" ]
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {

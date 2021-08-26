@@ -8,9 +8,6 @@ import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 # of boilerplate in usage sites.
 template("storage_isolated_devmgr_unittest_v2_component") {
   isolated_devmgr_unittest_v2_component(target_name) {
-    if (!defined(invoker.manifest)) {
-      package_name = "storage-isolated-devmgr"
-    }
     forward_variables_from(invoker,
                            [
                              "additional_services",

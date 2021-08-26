@@ -220,6 +220,7 @@ fuchsia_test_package("fvm-sparse-image-reader-tests") {
     }
   }
   test_components = [ ":fvm-sparse-image-reader-tests-component" ]
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {

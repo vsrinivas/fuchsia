@@ -29,12 +29,7 @@ test("ramdisk") {
 }
 
 storage_isolated_devmgr_unittest_v2_component("ramdisk-test") {
-  deps = [
-    ":ramdisk",
-    "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/ramdisk",
-    "//src/devices/bus/drivers/platform",
-  ]
+  deps = [ ":ramdisk" ]
 }
 
 fuchsia_test_package("ramdisk-tests") {
@@ -44,12 +39,11 @@ fuchsia_test_package("ramdisk-tests") {
     }
   }
   test_components = [ ":ramdisk-test" ]
+
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":ramdisk-tests",
-    "//src/storage/testing:storage-isolated-devmgr",
-  ]
+  deps = [ ":ramdisk-tests" ]
 }

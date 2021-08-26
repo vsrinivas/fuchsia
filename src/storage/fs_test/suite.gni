@@ -202,7 +202,7 @@ template("fs_test_suite") {
   }
 
   fuchsia_test_package("${suite_name}-fs-tests") {
-    deps = []
+    deps = [ "//src/storage/testing:isolated-devmgr-component" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
@@ -293,7 +293,7 @@ template("slow_fs_test_suite") {
   }
 
   fuchsia_test_package("${suite_name}-slow-fs-tests") {
-    deps = []
+    deps = [ "//src/storage/testing:isolated-devmgr-component" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

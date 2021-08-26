@@ -13,7 +13,7 @@
     children: [
         {
             name: "isolated-devmgr",
-            url: "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
+            url: "#meta/isolated-devmgr.cm",
         },
     ],
     use: [

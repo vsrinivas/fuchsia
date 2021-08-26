@@ -30,10 +30,7 @@ if (with_live_usb) {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":live-usb-unittests",
-    "//src/storage/testing:storage-isolated-devmgr",
-  ]
+  deps = [ ":live-usb-unittests" ]
 }
 
 component_manifest_resources("meta") {
@@ -113,4 +110,5 @@ fuchsia_test_package("live-usb-unittests") {
     }
   }
   test_components = [ ":live-usb-test" ]
+  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
