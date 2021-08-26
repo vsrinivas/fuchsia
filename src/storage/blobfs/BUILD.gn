@@ -28,7 +28,6 @@ static_library("blobfs") {
     "//src/storage/*",
     "//zircon/system/ulib/fvm-host",
     "//zircon/system/utest/blobfs-bench",
-    "//zircon/system/utest/fs-test-utils",
     "//zircon/system/utest/fvm",
     "//zircon/tools/blobfs",
   ]

@@ -295,7 +295,6 @@ group("cmx_allowlist") {
     "//zircon/system/ulib/zbitl/*",
     "//zircon/system/ulib/zxio/*",
     "//zircon/system/utest/dash/*",
-    "//zircon/system/utest/fs-test-utils/*",
     "//zircon/system/utest/fvm/*",
     "//zircon/system/utest/pty/*",
     "//zircon/system/utest/stdio/*",

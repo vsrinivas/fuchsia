@@ -21,7 +21,6 @@ group("tests") {
     "exit:tests",
     "fidl-utils:tests",
     "fpu:tests",
-    "fs-test-utils:tests",
     "getentropy:tests",
     "inspector:tests",
     "int-types:tests",

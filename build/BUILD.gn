@@ -244,7 +244,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/fidl/*",
     "//zircon/system/ulib/fs-host/*",
     "//zircon/system/ulib/fs-pty/*",
-    "//zircon/system/ulib/fs-test-utils/*",
     "//zircon/system/ulib/ftl-mtd/*",
     "//zircon/system/ulib/ftl/*",
     "//zircon/system/ulib/fzl/*",

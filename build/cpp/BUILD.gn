@@ -258,7 +258,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//zircon/system/ulib/debugdata/test:debugdata",
     "//zircon/system/ulib/fdio-caller/test:fdio-caller",
     "//zircon/system/ulib/fidl-async/test:fidl-async-test",
-    "//zircon/system/ulib/fs-test-utils:fs-test-utils",
     "//zircon/system/ulib/inet6:netifc-discover",
     "//zircon/system/ulib/intel-hda:intel-hda",
     "//zircon/system/ulib/log-writer-logger:log-writer-logger",
