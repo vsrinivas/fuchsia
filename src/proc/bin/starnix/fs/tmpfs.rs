@@ -15,13 +15,22 @@ impl FileSystemOps for Arc<TmpFs> {
     fn rename(
         &self,
         _fs: &FileSystem,
-        _old_parent: &FsNodeHandle,
+        old_parent: &FsNodeHandle,
         _old_name: &FsStr,
-        _new_parent: &FsNodeHandle,
+        new_parent: &FsNodeHandle,
         _new_name: &FsStr,
-        _renamed: &FsNodeHandle,
-        _replaced: Option<&FsNodeHandle>,
+        renamed: &FsNodeHandle,
+        replaced: Option<&FsNodeHandle>,
     ) -> Result<(), Errno> {
+        if renamed.is_dir() {
+            old_parent.info_write().link_count -= 1;
+            new_parent.info_write().link_count += 1;
+        }
+        if let Some(replaced) = replaced {
+            if replaced.is_dir() {
+                new_parent.info_write().link_count -= 1;
+            }
+        }
         Ok(())
     }
 }

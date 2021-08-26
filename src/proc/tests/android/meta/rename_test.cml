@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/rename_test",
-        args: [ "--gunit_filter=-*.DirectoryOverwritesDirectoryLinkCount:*.DirectoryDoesNotOverwriteNonemptyDirectory:*.FailsWhenOldParentNotWritable:*.FailsWhenNewParentNotWritable:*.OverwriteFailsWhenNewParentNotWritable:*.FileDoesNotExistWhenNewParentNotExecutable" ],
+        args: [ "--gunit_filter=-*.FailsWhenOldParentNotWritable:*.FailsWhenNewParentNotWritable:*.OverwriteFailsWhenNewParentNotWritable:*.FileDoesNotExistWhenNewParentNotExecutable" ],
     },
 }
