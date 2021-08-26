@@ -26,6 +26,11 @@ interface can be included in a given SDK. For example, interfaces with the
 Interfaces with the `partner` category are additionally available to partner
 projects. See [sdk_atom.gni](../build/sdk/sdk_atom.gni) for more details.
 
+## Version history
+
+The `version_history.json` file is not yet fully baked. Please use with
+caution.
+
 ## Governance
 
 The API surface described by the IDK is governed by the [Fuchsia API

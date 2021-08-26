@@ -1,0 +1,43 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "additionalProperties": false,
+    "definitions": {
+        "v1": {
+            "additionalProperties": false,
+            "properties": {
+                "versions": {
+                    "items": {
+                        "$ref": "#/definitions/version"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "version": {
+            "additionalProperties": false,
+            "properties": {
+                "abi_revision": {
+                    "pattern": "^0x[0-9A-F]{8}$",
+                    "type": "string"
+                },
+                "api_level": {
+                    "pattern": "^[1-9][0-9]*$",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "properties": {
+        "contents": {
+            "$ref": "#/definitions/v1"
+        },
+        "version": {
+            "pattern": "^[1-9][0-9]*$",
+            "type": "string"
+        }
+    },
+    "title": "Schema for Fuchsia platform version history",
+    "type": "object"
+}

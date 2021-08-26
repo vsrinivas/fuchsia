@@ -76,6 +76,12 @@ group("tests") {
   ]
 }
 
+validate_json("validate_version_history") {
+  visibility = [ ":*" ]
+  data = "version_history.json"
+  schema = "//build/sdk/meta/version_history.json"
+}
+
 # License/rights related information for the SDK.
 sdk_documentation("open_source") {
   name = "open_source"
@@ -374,6 +380,11 @@ sdk_molecule("core_idk") {
     "//third_party/Vulkan-Loader:libvulkan_sdk",
     "//third_party/Vulkan-Loader:vulkan_license",
     "//zircon/public/sysroot/sdk:sysroot_sdk",
+  ]
+
+  non_sdk_deps = [
+    # TODO(abarth): Remove once we actually include the version history in the IDK.
+    ":validate_version_history",
   ]
 }
 

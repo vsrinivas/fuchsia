@@ -1,0 +1,27 @@
+{
+    "contents": {
+        "versions": [
+            {
+                "abi_revision": "0x02160C9D",
+                "api_level": "1"
+            },
+            {
+                "abi_revision": "0xED8DFC35",
+                "api_level": "2"
+            },
+            {
+                "abi_revision": "0x5732FD34",
+                "api_level": "3"
+            },
+            {
+                "abi_revision": "0x8A03A915",
+                "api_level": "4"
+            },
+            {
+                "abi_revision": "0xC7003BF9",
+                "api_level": "5"
+            }
+        ]
+    },
+    "version": "1"
+}

@@ -24,6 +24,7 @@ schemas = [
   "physical_device-0bd5d21f.json",
   "product_bundle-6320eef1.json",
   "sysroot.json",
+  "version_history.json",
 ]
 
 sdk_documentation("meta") {
