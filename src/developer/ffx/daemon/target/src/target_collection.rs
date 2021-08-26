@@ -337,7 +337,9 @@ impl From<String> for TargetQuery {
             }
         }
 
-        match s.parse::<IpAddr>() {
+        let s_ip = if s.starts_with('[') && s.ends_with(']') { &s[..s.len() - 1][1..] } else { &s };
+
+        match s_ip.parse::<IpAddr>() {
             Ok(a) => Self::Addr(TargetAddr::from((a, 0))),
             Err(_) => Self::NodenameOrSerial(s),
         }
@@ -920,6 +922,15 @@ mod tests {
         assert!(
             matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(port) == ti.ssh_port)
         );
+        assert!(tq.match_info(&ti));
+
+        let tq = TargetQuery::from("[::1]");
+        let ti = TargetInfo {
+            addresses: vec![("::1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: None,
+            ..Default::default()
+        };
+        assert!(matches!(tq, TargetQuery::Addr(addr) if addr == ti.addresses[0]));
         assert!(tq.match_info(&ti));
 
         let tq = TargetQuery::from("[fe80::1]:22");
