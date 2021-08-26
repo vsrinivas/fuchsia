@@ -223,8 +223,7 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
     FX_PLOGS(ERROR, get_console_result->err()) << "Failed to open guest console";
     return get_console_result->err();
   }
-  console_ = std::make_unique<GuestConsole>(
-      std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
+  console_.emplace(std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
 
   // Wait for output to appear on the console.
   logger.Start("Waiting for output to appear on guest console", zx::sec(10));
@@ -305,11 +304,16 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady(zx::time deadline) {
 }
 
 zx_status_t ZirconEnclosedGuest::ShutdownAndWait(zx::time deadline) {
-  zx_status_t status = GetConsole()->SendBlocking("dm shutdown\n", deadline);
-  if (status != ZX_OK) {
-    return status;
+  std::optional<GuestConsole>& console_opt = GetConsole();
+  if (console_opt.has_value()) {
+    GuestConsole& console = console_opt.value();
+    zx_status_t status = console.SendBlocking("dm shutdown\n", deadline);
+    if (status != ZX_OK) {
+      return status;
+    }
+    return console.WaitForSocketClosed(deadline);
   }
-  return GetConsole()->WaitForSocketClosed(deadline);
+  return ZX_OK;
 }
 
 std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
@@ -354,11 +358,16 @@ zx_status_t DebianEnclosedGuest::WaitForSystemReady(zx::time deadline) {
 
 zx_status_t DebianEnclosedGuest::ShutdownAndWait(zx::time deadline) {
   PeriodicLogger logger("Attempting to shut down guest", zx::sec(10));
-  zx_status_t status = GetConsole()->SendBlocking("shutdown now\n", deadline);
-  if (status != ZX_OK) {
-    return status;
+  std::optional<GuestConsole>& console_opt = GetConsole();
+  if (console_opt.has_value()) {
+    GuestConsole& console = console_opt.value();
+    zx_status_t status = console.SendBlocking("shutdown now\n", deadline);
+    if (status != ZX_OK) {
+      return status;
+    }
+    return console.WaitForSocketClosed(deadline);
   }
-  return GetConsole()->WaitForSocketClosed(deadline);
+  return ZX_OK;
 }
 
 std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(

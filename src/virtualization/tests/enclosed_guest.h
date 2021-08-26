@@ -94,7 +94,7 @@ class EnclosedGuest {
 
   FakeScenic* GetScenic() { return &fake_scenic_; }
 
-  GuestConsole* GetConsole() { return console_.get(); }
+  std::optional<GuestConsole>& GetConsole() { return console_; }
 
  protected:
   // Provides guest specific |url| and |cfg|, called by Start.
@@ -132,7 +132,7 @@ class EnclosedGuest {
   FakeNetstack fake_netstack_;
 
   std::optional<SocketLogger> serial_logger_;
-  std::unique_ptr<GuestConsole> console_;
+  std::optional<GuestConsole> console_;
   uint32_t guest_cid_;
   bool ready_ = false;
 };
