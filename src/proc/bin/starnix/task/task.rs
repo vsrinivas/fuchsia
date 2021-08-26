@@ -652,9 +652,7 @@ impl Task {
     }
 
     pub fn get_pid(&self) -> pid_t {
-        // This is set to 1 because Bionic skips referencing /dev if getpid() == 1, under the
-        // assumption that anything running after init will have access to /dev.
-        1.into()
+        self.thread_group.leader
     }
 
     pub fn get_sid(&self) -> pid_t {
