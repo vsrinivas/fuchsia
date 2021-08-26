@@ -271,8 +271,9 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   auto mapped = MapControlRegisters();
   Registers* ctrl_regs = reinterpret_cast<Registers*>(mapped->ptr());
 
-  zx::channel child_client, child_server;
-  ASSERT_OK(zx::channel::create(0u, &child_client, &child_server));
+  zx::status endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_goldfish::AddressSpaceChildDriver>();
+  ASSERT_OK(endpoints.status_value());
 
   // Before opening child driver, we set up the mock PCI device
   // to accept GenHandle commands.
@@ -282,15 +283,14 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
 
   // Create device.
   ASSERT_OK(dut_->GoldfishAddressSpaceOpenChildDriver(ADDRESS_SPACE_CHILD_DRIVER_TYPE_DEFAULT,
-                                                      std::move(child_server)));
+                                                      endpoints->server.TakeChannel()));
   child_device_ops_ = ddk_.GetLastDeviceOps();
   ASSERT_TRUE(child_device_ops_.ops->release);
   Flush(ctrl_regs);
   EXPECT_EQ(ctrl_regs->handle, kChildDriverHandle);
 
   // Test availability of the FIDL channel communication.
-  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver> client(
-      std::move(child_client));
+  auto client = fidl::BindSyncClient(std::move(endpoints->client));
 
   // Set up return status and offset on the mock PCI device
   // to accept AllocateBlock() calls.
