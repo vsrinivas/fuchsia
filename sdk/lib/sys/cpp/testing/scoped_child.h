@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_CPP_TESTING_INTERNAL_SCOPED_INSTANCE_H_
-#define LIB_SYS_CPP_TESTING_INTERNAL_SCOPED_INSTANCE_H_
+#ifndef LIB_SYS_CPP_TESTING_SCOPED_CHILD_H_
+#define LIB_SYS_CPP_TESTING_SCOPED_CHILD_H_
 
 #include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -13,11 +13,11 @@
 
 #include <src/lib/fxl/macros.h>
 
-namespace sys::testing::internal {
+namespace sys::testing {
 
 // A scoped instance of a dynamically created child component. This class
 // will automatically destroy the child component once it goes out of scope.
-class ScopedInstance {
+class ScopedChild {
  public:
   // Create a dynamic child component using the fuchsia.sys2.Realm API.
   // |realm_proxy| must be bound to a connection to the fuchsia.sys2.Realm protocol.
@@ -25,19 +25,19 @@ class ScopedInstance {
   // field must refer to a name in the current component's manifest file.
   // |name| is the name to assign to the child.
   // |url| is the component component URL of the child component.
-  static ScopedInstance New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
-                            std::string name, std::string url);
+  static ScopedChild New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+                         std::string name, std::string url);
 
   // Same as above with a randomly generated `name`.
-  static ScopedInstance New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
-                            std::string url);
+  static ScopedChild New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+                         std::string url);
 
-  ~ScopedInstance();
+  ~ScopedChild();
 
-  ScopedInstance(ScopedInstance&&) noexcept;
-  ScopedInstance& operator=(ScopedInstance&&) noexcept;
+  ScopedChild(ScopedChild&&) noexcept;
+  ScopedChild& operator=(ScopedChild&&) noexcept;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ScopedInstance);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ScopedChild);
 
   // Connect to an interface in the exposed directory of the child component.
   //
@@ -86,8 +86,8 @@ class ScopedInstance {
   std::string GetChildName() const;
 
  private:
-  explicit ScopedInstance(fuchsia::sys2::RealmSyncPtr, fuchsia::sys2::ChildRef child_ref_,
-                          ServiceDirectory exposed_dir);
+  explicit ScopedChild(fuchsia::sys2::RealmSyncPtr, fuchsia::sys2::ChildRef child_ref_,
+                       ServiceDirectory exposed_dir);
 
   fuchsia::sys2::RealmSyncPtr realm_proxy_;
   fuchsia::sys2::ChildRef child_ref_;
@@ -95,6 +95,6 @@ class ScopedInstance {
   bool has_moved_;
 };
 
-}  // namespace sys::testing::internal
+}  // namespace sys::testing
 
-#endif  // LIB_SYS_CPP_TESTING_INTERNAL_SCOPED_INSTANCE_H_
+#endif  // LIB_SYS_CPP_TESTING_SCOPED_CHILD_H_

@@ -11,8 +11,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/internal/mock_runner.h>
-#include <lib/sys/cpp/testing/internal/scoped_instance.h>
 #include <lib/sys/cpp/testing/realm_builder_types.h>
+#include <lib/sys/cpp/testing/scoped_child.h>
 
 #include <memory>
 #include <string>
@@ -82,9 +82,9 @@ class Realm {
   class Builder;
 
  private:
-  explicit Realm(internal::ScopedInstance root, std::unique_ptr<internal::MockRunner> mock_runner);
+  explicit Realm(ScopedChild root, std::unique_ptr<internal::MockRunner> mock_runner);
 
-  internal::ScopedInstance root_;
+  ScopedChild root_;
   std::unique_ptr<internal::MockRunner> mock_runner_;
 };
 

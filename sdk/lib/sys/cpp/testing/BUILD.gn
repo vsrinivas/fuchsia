@@ -105,12 +105,12 @@ source_set("realm_builder") {
     "internal/mock_runner.h",
     "internal/realm.cc",
     "internal/realm.h",
-    "internal/scoped_instance.cc",
-    "internal/scoped_instance.h",
     "realm_builder.cc",
     "realm_builder.h",
     "realm_builder_types.cc",
     "realm_builder_types.h",
+    "scoped_child.cc",
+    "scoped_child.h",
   ]
 
   public_deps = [

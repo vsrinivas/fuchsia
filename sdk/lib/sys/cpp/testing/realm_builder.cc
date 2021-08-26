@@ -15,9 +15,9 @@
 #include <lib/sys/cpp/testing/internal/errors.h>
 #include <lib/sys/cpp/testing/internal/mock_runner.h>
 #include <lib/sys/cpp/testing/internal/realm.h>
-#include <lib/sys/cpp/testing/internal/scoped_instance.h>
 #include <lib/sys/cpp/testing/realm_builder.h>
 #include <lib/sys/cpp/testing/realm_builder_types.h>
+#include <lib/sys/cpp/testing/scoped_child.h>
 #include <zircon/assert.h>
 
 #include <memory>
@@ -132,7 +132,7 @@ fidl::InterfaceHandle<fuchsia::io::Directory> CreatePkgDirHandle() {
 
 }  // namespace
 
-Realm::Realm(internal::ScopedInstance root, std::unique_ptr<internal::MockRunner> mock_runner)
+Realm::Realm(ScopedChild root, std::unique_ptr<internal::MockRunner> mock_runner)
     : root_(std::move(root)), mock_runner_(std::move(mock_runner)) {}
 
 std::string Realm::GetChildName() const { return root_.GetChildName(); }
@@ -208,8 +208,8 @@ Realm Realm::Builder::Build(async_dispatcher_t* dispatcher) {
   realm_commited_ = true;
   // Hand channel to async client so that MockRunner can listen to events.
   mock_runner_->Bind(framework_intermediary_proxy_.Unbind(), dispatcher);
-  return Realm(internal::ScopedInstance::New(std::move(realm_proxy_), kCollectionName,
-                                             result.response().root_component_url),
+  return Realm(ScopedChild::New(std::move(realm_proxy_), kCollectionName,
+                                result.response().root_component_url),
                std::move(mock_runner_));
 }
 

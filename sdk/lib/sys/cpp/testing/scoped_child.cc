@@ -13,7 +13,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/internal/errors.h>
 #include <lib/sys/cpp/testing/internal/realm.h>
-#include <lib/sys/cpp/testing/internal/scoped_instance.h>
+#include <lib/sys/cpp/testing/scoped_child.h>
 #include <lib/syslog/cpp/log_level.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
@@ -21,7 +21,7 @@
 
 #include <random>
 
-namespace sys::testing::internal {
+namespace sys::testing {
 
 namespace {
 
@@ -33,21 +33,21 @@ std::size_t random_unsigned() {
 }
 }  // namespace
 
-ScopedInstance::ScopedInstance(fuchsia::sys2::RealmSyncPtr realm_proxy,
-                               fuchsia::sys2::ChildRef child_ref, ServiceDirectory exposed_dir)
+ScopedChild::ScopedChild(fuchsia::sys2::RealmSyncPtr realm_proxy, fuchsia::sys2::ChildRef child_ref,
+                         ServiceDirectory exposed_dir)
     : realm_proxy_(std::move(realm_proxy)),
       child_ref_(std::move(child_ref)),
       exposed_dir_(std::move(exposed_dir)),
       has_moved_(false) {}
 
-ScopedInstance::~ScopedInstance() {
+ScopedChild::~ScopedChild() {
   if (has_moved_) {
     return;
   }
-  DestroyChild(realm_proxy_.get(), child_ref_);
+  internal::DestroyChild(realm_proxy_.get(), child_ref_);
 }
 
-ScopedInstance::ScopedInstance(ScopedInstance&& other) noexcept
+ScopedChild::ScopedChild(ScopedChild&& other) noexcept
     : child_ref_(std::move(other.child_ref_)),
       exposed_dir_(std::move(other.exposed_dir_)),
       has_moved_(false) {
@@ -55,7 +55,7 @@ ScopedInstance::ScopedInstance(ScopedInstance&& other) noexcept
   other.has_moved_ = true;
 }
 
-ScopedInstance& ScopedInstance::operator=(ScopedInstance&& other) noexcept {
+ScopedChild& ScopedChild::operator=(ScopedChild&& other) noexcept {
   this->realm_proxy_ = std::move(other.realm_proxy_);
   this->child_ref_ = std::move(other.child_ref_);
   this->exposed_dir_ = std::move(other.exposed_dir_);
@@ -64,22 +64,22 @@ ScopedInstance& ScopedInstance::operator=(ScopedInstance&& other) noexcept {
   return *this;
 }
 
-ScopedInstance ScopedInstance::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
-                                   std::string url) {
+ScopedChild ScopedChild::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+                             std::string url) {
   std::string name = "auto-" + std::to_string(random_unsigned());
   return New(std::move(realm_proxy), std::move(collection), std::move(name), std::move(url));
 }
 
-ScopedInstance ScopedInstance::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
-                                   std::string name, std::string url) {
-  CreateChild(realm_proxy.get(), collection, name, std::move(url));
-  auto exposed_dir = OpenExposedDir(
+ScopedChild ScopedChild::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+                             std::string name, std::string url) {
+  internal::CreateChild(realm_proxy.get(), collection, name, std::move(url));
+  auto exposed_dir = internal::OpenExposedDir(
       realm_proxy.get(), fuchsia::sys2::ChildRef{.name = name, .collection = collection});
-  return ScopedInstance(std::move(realm_proxy),
-                        fuchsia::sys2::ChildRef{.name = name, .collection = collection},
-                        std::move(exposed_dir));
+  return ScopedChild(std::move(realm_proxy),
+                     fuchsia::sys2::ChildRef{.name = name, .collection = collection},
+                     std::move(exposed_dir));
 }
 
-std::string ScopedInstance::GetChildName() const { return child_ref_.name; }
+std::string ScopedChild::GetChildName() const { return child_ref_.name; }
 
-}  // namespace sys::testing::internal
+}  // namespace sys::testing
