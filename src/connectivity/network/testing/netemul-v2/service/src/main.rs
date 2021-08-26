@@ -628,7 +628,7 @@ impl ManagedRealm {
                                 Err(zx::Status::INTERNAL)
                             })?;
                         let () = lifecycle
-                            .stop(&format!("./{}:0", child_name), true)
+                            .stop(&format!("./{}", child_name), true)
                             .await
                             .map_err(|e: fidl::Error| {
                                 error!("fidl call to LifecycleController/Stop failed: {}", e);

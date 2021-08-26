@@ -86,7 +86,7 @@ impl<C: ComponentInstanceInterface> WeakComponentInstanceInterface<C> {
     pub fn upgrade(&self) -> Result<Arc<C>, ComponentInstanceError> {
         self.inner
             .upgrade()
-            .ok_or_else(|| ComponentInstanceError::instance_not_found(self.moniker.clone()))
+            .ok_or_else(|| ComponentInstanceError::instance_not_found(self.moniker.to_partial()))
     }
 }
 

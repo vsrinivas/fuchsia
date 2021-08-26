@@ -12,7 +12,7 @@ use {
         environment::Environment,
         error::ModelError,
     },
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
     std::sync::Arc,
 };
 
@@ -78,14 +78,14 @@ impl Model {
     /// resolved if that has not already happened.
     pub async fn look_up(
         &self,
-        look_up_abs_moniker: &AbsoluteMoniker,
+        look_up_abs_moniker: &PartialAbsoluteMoniker,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         let mut cur = self.root.clone();
         for moniker in look_up_abs_moniker.path().iter() {
             cur = {
                 let cur_state = cur.lock_resolved_state().await?;
-                if let Some(r) = cur_state.all_children().get(moniker) {
-                    r.clone()
+                if let Some(r) = cur_state.get_live_child(moniker) {
+                    r
                 } else {
                     return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
                 }

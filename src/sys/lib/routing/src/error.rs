@@ -7,7 +7,7 @@ use {
     clonable_error::ClonableError,
     cm_rust::{CapabilityName, EventMode},
     fidl_fuchsia_component as fcomponent, fuchsia_zircon_status as zx,
-    moniker::{AbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, PartialAbsoluteMoniker, PartialChildMoniker},
     thiserror::Error,
 };
 
@@ -15,7 +15,7 @@ use {
 #[derive(Debug, Error, Clone)]
 pub enum ComponentInstanceError {
     #[error("component instance {} not found", moniker)]
-    InstanceNotFound { moniker: AbsoluteMoniker },
+    InstanceNotFound { moniker: PartialAbsoluteMoniker },
     #[error("component manager instance unavailable")]
     ComponentManagerInstanceUnavailable {},
     #[error("policy checker not found for component instance {}", moniker)]
@@ -35,7 +35,7 @@ impl ComponentInstanceError {
         zx::Status::UNAVAILABLE
     }
 
-    pub fn instance_not_found(moniker: AbsoluteMoniker) -> ComponentInstanceError {
+    pub fn instance_not_found(moniker: PartialAbsoluteMoniker) -> ComponentInstanceError {
         ComponentInstanceError::InstanceNotFound { moniker }
     }
 

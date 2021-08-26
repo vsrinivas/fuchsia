@@ -10,6 +10,7 @@ use {
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
+    moniker::AbsoluteMonikerBase,
     std::sync::Arc,
 };
 
@@ -42,7 +43,7 @@ async fn do_discover(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
             InstanceState::Discovered => true,
             InstanceState::Resolved(_) => true,
             InstanceState::Purged => {
-                return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
+                return Err(ModelError::instance_not_found(component.abs_moniker.to_partial()));
             }
         }
     };

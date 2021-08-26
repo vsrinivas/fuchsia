@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::Arc,
 };
 
@@ -161,7 +161,7 @@ pub fn should_return_early(
     match component {
         InstanceState::New | InstanceState::Discovered | InstanceState::Resolved(_) => {}
         InstanceState::Purged => {
-            return Some(Err(ModelError::instance_not_found(abs_moniker.clone())));
+            return Some(Err(ModelError::instance_not_found(abs_moniker.to_partial())));
         }
     }
     if execution.is_shut_down() {

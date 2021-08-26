@@ -178,7 +178,7 @@ impl ComponentModelForAnalyzer {
             .expect("failed to parse moniker from id");
         match self.instances.get(id) {
             Some(instance) => Ok(Arc::clone(instance)),
-            None => Err(ComponentInstanceError::instance_not_found(abs_moniker)),
+            None => Err(ComponentInstanceError::instance_not_found(abs_moniker.to_partial())),
         }
     }
 
@@ -535,6 +535,7 @@ mod tests {
             ComponentInstanceError::instance_not_found(
                 AbsoluteMoniker::parse_string_without_instances(&other_id.to_string())
                     .expect("failed to parse moniker from id")
+                    .to_partial()
             )
             .to_string()
         );

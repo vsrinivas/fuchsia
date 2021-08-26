@@ -27,7 +27,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
-    moniker::{AbsoluteMoniker, ChildMonikerBase, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
     std::{
         cmp,
         path::PathBuf,
@@ -64,7 +64,7 @@ impl CapabilityProvider for RealmCapabilityProvider {
         let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        let scope_moniker = self.scope_moniker.clone();
+        let scope_moniker = self.scope_moniker.to_partial();
         let host = self.host.clone();
         // We only need to look up the component matching this scope.
         // These operations should all work, even if the component is not running.

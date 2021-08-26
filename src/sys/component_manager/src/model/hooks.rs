@@ -879,7 +879,7 @@ mod tests {
             root.clone(),
             "fuchsia-pkg://root",
             Err(EventError::new(
-                &ModelError::instance_not_found(root.clone()),
+                &ModelError::instance_not_found(root.to_partial()),
                 EventErrorPayload::Resolved,
             )),
         );

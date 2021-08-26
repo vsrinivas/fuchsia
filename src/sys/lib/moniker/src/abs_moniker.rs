@@ -182,6 +182,11 @@ pub trait AbsoluteMonikerBase:
         }
         Ok(())
     }
+
+    fn to_partial(&self) -> PartialAbsoluteMoniker {
+        let path: Vec<PartialChildMoniker> = self.path().iter().map(|p| p.to_partial()).collect();
+        PartialAbsoluteMoniker::new(path)
+    }
 }
 
 /// An absolute moniker describes the identity of a component instance in terms of its path

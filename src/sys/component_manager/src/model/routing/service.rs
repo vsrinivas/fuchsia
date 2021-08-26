@@ -429,12 +429,12 @@ mod tests {
         .await;
         let foo_component = test
             .model
-            .look_up(&vec!["coll:foo:1"].into())
+            .look_up(&vec!["coll:foo"].into())
             .await
             .expect("failed to find foo instance");
         let bar_component = test
             .model
-            .look_up(&vec!["coll:bar:2"].into())
+            .look_up(&vec!["coll:bar"].into())
             .await
             .expect("failed to find bar instance");
 
@@ -527,12 +527,12 @@ mod tests {
         .await;
         let foo_component = test
             .model
-            .look_up(&vec!["coll:foo:1"].into())
+            .look_up(&vec!["coll:foo"].into())
             .await
             .expect("failed to find foo instance");
         let bar_component = test
             .model
-            .look_up(&vec!["coll:bar:2"].into())
+            .look_up(&vec!["coll:bar"].into())
             .await
             .expect("failed to find bar instance");
 

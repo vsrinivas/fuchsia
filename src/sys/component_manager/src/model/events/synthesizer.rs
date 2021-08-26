@@ -180,7 +180,7 @@ impl SynthesisTask {
                 }
                 ExtendedMoniker::ComponentInstance(ref scope_moniker) => scope_moniker.clone(),
             };
-            let root = model.look_up(&scope_moniker).await?;
+            let root = model.look_up(&scope_moniker.to_partial()).await?;
             let mut component_stream = get_subcomponents(root, visited_components.clone());
             while let Some(component) = component_stream.next().await {
                 visited_components.insert(component.abs_moniker.clone());

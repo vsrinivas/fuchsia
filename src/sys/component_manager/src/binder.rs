@@ -21,7 +21,7 @@ use {
     cm_rust::{CapabilityName, CapabilityPath, ProtocolDecl},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
@@ -124,7 +124,8 @@ impl BinderCapabilityHost {
         // do here.
         if capability_provider.is_none() && capability.matches_protocol(&BINDER_SERVICE) {
             let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-            let target = WeakComponentInstance::new(&model.look_up(&target_moniker).await?);
+            let target =
+                WeakComponentInstance::new(&model.look_up(&target_moniker.to_partial()).await?);
             Ok(Some(Box::new(BinderCapabilityProvider::new(source, target, self.clone()))
                 as Box<dyn CapabilityProvider>))
         } else {
@@ -212,12 +213,12 @@ mod tests {
             let host = builtin_environment.binder_capability_host.clone();
             let source = builtin_environment
                 .model
-                .look_up(&source)
+                .look_up(&source.to_partial())
                 .await
                 .expect("failed to look up source moniker");
             let target = builtin_environment
                 .model
-                .look_up(&target)
+                .look_up(&target.to_partial())
                 .await
                 .expect("failed to look up target moniker");
 

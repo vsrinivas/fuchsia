@@ -118,7 +118,7 @@ impl Hub {
         let mut instances_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
-        let lifecycle_controller = lifecycle_controller_factory.create(&abs_moniker);
+        let lifecycle_controller = lifecycle_controller_factory.create(&abs_moniker.to_partial());
 
         Hub::add_instance_if_necessary(
             lifecycle_controller,
@@ -509,7 +509,8 @@ impl Hub {
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_discovered_async");
 
-        let lifecycle_controller = self.lifecycle_controller_factory.create(&target_moniker);
+        let lifecycle_controller =
+            self.lifecycle_controller_factory.create(&target_moniker.to_partial());
 
         let mut instances_map = self.instances.lock().await;
 

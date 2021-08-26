@@ -5,8 +5,8 @@
 use {
     anyhow::{bail, format_err, Context, Result},
     component_hub::io::Directory,
-    errors::{ffx_bail, ffx_error},
-    ffx_component::{get_lifecycle_controller_proxy, parse_moniker, COMPONENT_STOP_HELP},
+    errors::ffx_bail,
+    ffx_component::{get_lifecycle_controller_proxy, COMPONENT_STOP_HELP},
     ffx_component_stop_args::ComponentStopCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
@@ -24,6 +24,11 @@ async fn stop_impl<W: std::io::Write>(
     recursive: bool,
     writer: &mut W,
 ) -> Result<()> {
+    if !moniker.starts_with('/') {
+        ffx_bail!("Command requires an absolute moniker. To learn more about monikers, visit https://fuchsia.dev/fuchsia-src/concepts/components/v2/monikers#absolute_monikers");
+    }
+    let moniker = format!(".{}", moniker);
+
     let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
         .context("creating hub root proxy")?;
     rcs_proxy
@@ -31,15 +36,6 @@ async fn stop_impl<W: std::io::Write>(
         .await?
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
-
-    let formatted_moniker = parse_moniker(moniker).map_err(|e| {
-        ffx_error!(
-            "Failed to stop the component with moniker '{}': {}\n{}",
-            moniker,
-            e,
-            COMPONENT_STOP_HELP
-        )
-    })?;
 
     let hub_dir = Directory::from_proxy(root);
     if !hub_dir.exists("debug").await? {
@@ -53,7 +49,7 @@ async fn stop_impl<W: std::io::Write>(
     }
 
     match get_lifecycle_controller_proxy(hub_dir.proxy).await {
-        Ok(proxy) => match proxy.stop(&formatted_moniker.to_string(), recursive).await {
+        Ok(proxy) => match proxy.stop(&moniker, recursive).await {
             Ok(Ok(())) => {
                 writeln!(writer, "Successfully stopped the component with moniker '{}'", moniker)?;
             }

@@ -494,7 +494,7 @@ pub mod tests {
         // Cause `a` to resolve.
         let look_up_a = async {
             // This could fail if it races with deletion.
-            let _ = test.model.look_up(&vec!["a:0"].into()).await;
+            let _ = test.model.look_up(&vec!["a"].into()).await;
         };
         join!(
             look_up_a,

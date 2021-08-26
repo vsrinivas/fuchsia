@@ -338,7 +338,7 @@ impl EventRegistry {
         events: &HashMap<CapabilityName, EventMode>,
     ) -> Result<RouteEventsResult, ModelError> {
         let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-        let component = model.look_up(&target_moniker).await?;
+        let component = model.look_up(&target_moniker.to_partial()).await?;
         let decl = {
             let state = component.lock_state().await;
             match *state {
@@ -347,7 +347,7 @@ impl EventRegistry {
                 }
                 InstanceState::Resolved(ref s) => s.decl().clone(),
                 InstanceState::Purged => {
-                    return Err(ModelError::instance_not_found(target_moniker.clone()));
+                    return Err(ModelError::instance_not_found(target_moniker.to_partial()));
                 }
             }
         };
@@ -480,7 +480,7 @@ mod tests {
             root.clone(),
             "fuchsia-pkg://root",
             Err(EventError::new(
-                &ModelError::instance_not_found(root.clone()),
+                &ModelError::instance_not_found(root.to_partial()),
                 EventErrorPayload::Resolved,
             )),
         );

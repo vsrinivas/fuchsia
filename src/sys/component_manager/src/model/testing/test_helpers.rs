@@ -34,7 +34,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
-    moniker::{AbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
     std::collections::HashSet,
     std::default::Default,
     std::path::Path,
@@ -403,7 +403,10 @@ impl ActionsTest {
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
             let component = WeakComponentInstance::from(
-                &model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker)),
+                &model
+                    .look_up(&moniker.to_partial())
+                    .await
+                    .expect(&format!("could not look up {}", moniker)),
             );
             fasync::Task::spawn(async move {
                 builtin_environment_inner
@@ -424,7 +427,10 @@ impl ActionsTest {
     }
 
     pub async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
-        self.model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker))
+        self.model
+            .look_up(&moniker.to_partial())
+            .await
+            .expect(&format!("could not look up {}", moniker))
     }
 
     pub async fn bind(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {

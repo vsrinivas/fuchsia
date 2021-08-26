@@ -357,7 +357,8 @@ impl RoutingTest {
         collection: &'a str,
         name: &'a str,
     ) {
-        let component = self.model.look_up(&moniker).await.expect("failed to look up component");
+        let component =
+            self.model.look_up(&moniker.to_partial()).await.expect("failed to look up component");
         self.model
             .bind(&component.abs_moniker, &BindReason::Eager)
             .await
@@ -595,7 +596,8 @@ impl RoutingTest {
         // Lookup, bind, and open a connection to the component's outgoing directory.
         let (dir_proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-        let component = self.model.look_up(component).await.expect("lookup component failed");
+        let component =
+            self.model.look_up(&component.to_partial()).await.expect("lookup component failed");
         let mut server_end = server_end.into_channel();
         self.model
             .bind(&component.abs_moniker, &BindReason::Eager)
@@ -842,7 +844,7 @@ impl RoutingTestModel for RoutingTest {
         &self,
         moniker: &AbsoluteMoniker,
     ) -> Result<Arc<ComponentInstance>, anyhow::Error> {
-        self.model.look_up(moniker).await.map_err(|err| anyhow!(err))
+        self.model.look_up(&moniker.to_partial()).await.map_err(|err| anyhow!(err))
     }
 
     async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
@@ -1461,7 +1463,7 @@ pub mod capability_util {
         server_end: ServerEnd<NodeMarker>,
     ) {
         let component = model
-            .look_up(abs_moniker)
+            .look_up(&abs_moniker.to_partial())
             .await
             .expect(&format!("component not found {}", abs_moniker));
         model.bind(abs_moniker, &BindReason::Eager).await.expect("failed to bind instance");

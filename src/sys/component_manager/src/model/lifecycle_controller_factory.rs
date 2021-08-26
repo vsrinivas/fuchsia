@@ -4,7 +4,7 @@
 
 use {
     crate::model::{lifecycle_controller::LifecycleController, model::Model},
-    moniker::AbsoluteMoniker,
+    moniker::PartialAbsoluteMoniker,
     std::sync::Weak,
 };
 
@@ -17,7 +17,7 @@ impl LifecycleControllerFactory {
         Self { model }
     }
 
-    pub fn create(&self, root: &AbsoluteMoniker) -> LifecycleController {
+    pub fn create(&self, root: &PartialAbsoluteMoniker) -> LifecycleController {
         LifecycleController::new(self.model.clone(), root.clone())
     }
 }

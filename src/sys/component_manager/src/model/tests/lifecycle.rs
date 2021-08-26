@@ -32,7 +32,7 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::pending, join, lock::Mutex, prelude::*},
     matches::assert_matches,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
     std::sync::Arc,
     std::{collections::HashSet, convert::TryFrom},
 };
@@ -72,7 +72,7 @@ async fn bind_root_non_existent() {
     let m: AbsoluteMoniker = vec!["no-such-instance:0"].into();
     let res = model.bind(&m, &BindReason::Root).await;
     let expected_res: Result<Arc<ComponentInstance>, ModelError> =
-        Err(ModelError::instance_not_found(vec!["no-such-instance:0"].into()));
+        Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     mock_runner.wait_for_url("test:///root_resolved").await;
 }
@@ -120,7 +120,7 @@ async fn bind_concurrent() {
 
     // While the bind() is paused, simulate a second bind by explicitly scheduling a Start
     // action. Allow the original bind to proceed, then check the result of both bindings.
-    let m: AbsoluteMoniker = vec!["system:0"].into();
+    let m: PartialAbsoluteMoniker = vec!["system"].into();
     let component = model.look_up(&m).await.expect("failed component lookup");
     let f = ActionSet::register(component, StartAction::new(BindReason::Eager));
     let (f, action_handle) = f.remote_handle();
@@ -262,7 +262,7 @@ async fn bind_child_non_existent() {
     // can't bind to logger: it does not exist
     let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
     let res = model.bind(&m, &BindReason::Root).await;
-    let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m));
+    let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m.to_partial()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
 }
@@ -462,7 +462,7 @@ async fn bind_action_sequence() {
         let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
         // While the Resolved hook is handled, it should be possible to look up the component
         // without deadlocking.
-        let component = model.look_up(&m).await.unwrap();
+        let component = model.look_up(&m.to_partial()).await.unwrap();
         {
             let actions = component.lock_actions().await;
             assert!(actions.contains(&ActionKey::Resolve));
@@ -585,7 +585,7 @@ async fn on_terminate_stop_triggers_reboot() {
     // Bind to the critical component and make it stop. This should cause the Admin protocol to
     // receive a reboot request.
     test.model.bind(&vec!["system:0"].into(), &BindReason::Debug).await.unwrap();
-    let component = test.model.look_up(&vec!["system:0"].into()).await.unwrap();
+    let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     let stop = async move {
         ActionSet::register(component.clone(), StopAction::new(false, false)).await.unwrap();
     };
@@ -642,7 +642,7 @@ async fn on_terminate_exit_triggers_reboot() {
     // Bind to the critical component and cause it to 'exit' by making the runner close its end
     // of the controller channel. This should cause the Admin protocol to receive a reboot request.
     test.model.bind(&vec!["system:0"].into(), &BindReason::Debug).await.unwrap();
-    let component = test.model.look_up(&vec!["system:0"].into()).await.unwrap();
+    let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     let info = ComponentInfo::new(component.clone()).await;
     test.mock_runner.abort_controller(&info.channel_id);
     let reason = match receiver.next().await.unwrap() {
@@ -695,7 +695,7 @@ async fn reboot_shutdown_does_not_trigger_reboot() {
     // Bind to the critical component and make it stop. This should cause the Admin protocol to
     // receive a reboot request.
     test.model.bind(&vec!["system:0"].into(), &BindReason::Debug).await.unwrap();
-    let component = test.model.look_up(&vec!["system:0"].into()).await.unwrap();
+    let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     ActionSet::register(component.clone(), ShutdownAction::new()).await.unwrap();
     assert!(!test.model.top_instance().has_reboot_task().await);
 }
@@ -741,7 +741,7 @@ async fn on_terminate_with_missing_reboot_protocol_panics() {
     // should fail because the reboot protocol isn't exposed to it -- expect component_manager to
     // respond by crashing.
     test.model.bind(&vec!["system:0"].into(), &BindReason::Debug).await.unwrap();
-    let component = test.model.look_up(&vec!["system:0"].into()).await.unwrap();
+    let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     let info = ComponentInfo::new(component.clone()).await;
     test.mock_runner.abort_controller(&info.channel_id);
     let () = pending().await;
@@ -794,7 +794,7 @@ async fn on_terminate_with_failed_reboot_panics() {
     // of the controller channel. Admin protocol should receive a reboot request -- make it fail
     // and expect component_manager to respond by crashing.
     test.model.bind(&vec!["system:0"].into(), &BindReason::Debug).await.unwrap();
-    let component = test.model.look_up(&vec!["system:0"].into()).await.unwrap();
+    let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     let info = ComponentInfo::new(component.clone()).await;
     test.mock_runner.abort_controller(&info.channel_id);
     match receiver.next().await.unwrap() {

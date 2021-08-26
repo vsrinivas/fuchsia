@@ -13,7 +13,8 @@ use {
     futures::prelude::*,
     log::*,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, MonikerError, RelativeMoniker, RelativeMonikerBase,
+        AbsoluteMonikerBase, MonikerError, PartialAbsoluteMoniker, PartialRelativeMoniker,
+        RelativeMonikerBase,
     },
     std::{
         convert::TryFrom,
@@ -24,7 +25,7 @@ use {
 #[derive(Clone)]
 pub struct LifecycleController {
     model: Weak<Model>,
-    prefix: AbsoluteMoniker,
+    prefix: PartialAbsoluteMoniker,
 }
 
 #[derive(Debug)]
@@ -35,7 +36,7 @@ enum LifecycleOperation {
 }
 
 impl LifecycleController {
-    pub fn new(model: Weak<Model>, prefix: AbsoluteMoniker) -> Self {
+    pub fn new(model: Weak<Model>, prefix: PartialAbsoluteMoniker) -> Self {
         Self { model, prefix }
     }
 
@@ -46,7 +47,7 @@ impl LifecycleController {
         recursive_stop: bool,
     ) -> Result<(), fcomponent::Error> {
         let relative_moniker =
-            RelativeMoniker::try_from(moniker.as_str()).map_err(|e: MonikerError| {
+            PartialRelativeMoniker::try_from(moniker.as_str()).map_err(|e: MonikerError| {
                 debug!("lifecycle controller received invalid component moniker: {}", e);
                 fcomponent::Error::InvalidArguments
             })?;
@@ -56,12 +57,11 @@ impl LifecycleController {
             );
             return Err(fcomponent::Error::InvalidArguments);
         }
-        let abs_moniker = AbsoluteMoniker::from_relative(&self.prefix, &relative_moniker).map_err(
-            |e: MonikerError| {
+        let abs_moniker = PartialAbsoluteMoniker::from_relative(&self.prefix, &relative_moniker)
+            .map_err(|e: MonikerError| {
                 debug!("lifecycle controller received invalid component moniker: {}", e);
                 fcomponent::Error::InvalidArguments
-            },
-        )?;
+            })?;
         let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
 
         let component = model.look_up(&abs_moniker).await.map_err(|e| match e {
@@ -206,20 +206,20 @@ mod tests {
 
         assert_eq!(lifecycle_proxy.resolve(".").await.unwrap(), Ok(()));
 
-        assert_eq!(lifecycle_proxy.resolve("./a:0").await.unwrap(), Ok(()));
+        assert_eq!(lifecycle_proxy.resolve("./a").await.unwrap(), Ok(()));
 
         assert_eq!(
-            lifecycle_proxy.resolve(".\\scope-escape-attempt:0").await.unwrap(),
+            lifecycle_proxy.resolve(".\\scope-escape-attempt").await.unwrap(),
             Err(fcomponent::Error::InvalidArguments)
         );
 
         assert_eq!(
-            lifecycle_proxy.resolve("./doesnt-exist:0").await.unwrap(),
+            lifecycle_proxy.resolve("./doesnt-exist").await.unwrap(),
             Err(fcomponent::Error::InstanceNotFound)
         );
 
         assert_eq!(
-            lifecycle_proxy.resolve("./cant-resolve:0").await.unwrap(),
+            lifecycle_proxy.resolve("./cant-resolve").await.unwrap(),
             Err(fcomponent::Error::InstanceCannotResolve)
         );
     }

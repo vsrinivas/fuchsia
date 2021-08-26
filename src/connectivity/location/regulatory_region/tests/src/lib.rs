@@ -191,7 +191,7 @@ async fn stop_component(realm_ref: &RealmInstance, child_name: &str) {
         &format!("hub/debug/{}", fsys2::LifecycleControllerMarker::PROTOCOL_NAME),
     )
     .expect("Failed to connect to LifecycleController");
-    lifecycle.stop(&format!("./{}:0", child_name), true).await.unwrap().unwrap();
+    lifecycle.stop(&format!("./{}", child_name), true).await.unwrap().unwrap();
 }
 
 async fn new_test_context() -> Result<TestContext, Error> {

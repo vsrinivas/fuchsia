@@ -442,7 +442,7 @@ impl ComponentInstance {
                 }
                 InstanceState::Purged => {
                     return Err(ComponentInstanceError::instance_not_found(
-                        self.abs_moniker.clone(),
+                        self.abs_moniker.to_partial(),
                     ));
                 }
                 InstanceState::New | InstanceState::Discovered => {}
@@ -454,7 +454,7 @@ impl ComponentInstance {
             .map_err(|err| ComponentInstanceError::resolve_failed(&self.abs_moniker, err))?;
         let state = self.state.lock().await;
         if let InstanceState::Purged = *state {
-            return Err(ComponentInstanceError::instance_not_found(self.abs_moniker.clone()));
+            return Err(ComponentInstanceError::instance_not_found(self.abs_moniker.to_partial()));
         }
         Ok(MutexGuard::map(state, get_resolved))
     }
@@ -485,7 +485,7 @@ impl ComponentInstance {
                 match *state {
                     InstanceState::Resolved(ref s) => s.decl.clone(),
                     InstanceState::Purged => {
-                        return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
+                        return Err(ModelError::instance_not_found(self.abs_moniker.to_partial()));
                     }
                     _ => {
                         panic!("resolve_runner: not resolved")
@@ -900,7 +900,7 @@ impl ComponentInstance {
                 Ok(())
             }
             InstanceState::Purged => {
-                Err(ModelError::instance_not_found(self.abs_moniker().clone()))
+                Err(ModelError::instance_not_found(self.abs_moniker().to_partial()))
             }
             _ => {
                 panic!("Component must be resolved or destroyed before using this function")

@@ -12,7 +12,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
     futures::future::{join_all, BoxFuture},
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
     std::sync::{Arc, Weak},
 };
 
@@ -68,11 +68,11 @@ pub async fn bind_at_moniker<'a>(
     abs_moniker: &'a AbsoluteMoniker,
     reason: &BindReason,
 ) -> Result<Arc<ComponentInstance>, ModelError> {
-    let mut cur_moniker = AbsoluteMoniker::root();
+    let mut cur_moniker = PartialAbsoluteMoniker::root();
     let mut component = model.root().clone();
     bind_at(component.clone(), reason).await?;
     for m in abs_moniker.path().iter() {
-        cur_moniker = cur_moniker.child(m.clone());
+        cur_moniker = cur_moniker.child(m.to_partial());
         component = model.look_up(&cur_moniker).await?;
         bind_at(component.clone(), reason).await?;
     }
@@ -108,7 +108,7 @@ pub async fn bind_at(
                 })
                 .collect(),
             InstanceState::Purged => {
-                return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
+                return Err(ModelError::instance_not_found(component.abs_moniker.to_partial()));
             }
             InstanceState::New | InstanceState::Discovered => {
                 panic!("bind_at: not resoled")
@@ -198,7 +198,7 @@ mod tests {
         let m: AbsoluteMoniker = vec!["no-such-instance:0"].into();
         let res = model.bind(&m, &BindReason::Root).await;
         let expected_res: Result<Arc<ComponentInstance>, ModelError> =
-            Err(ModelError::instance_not_found(vec!["no-such-instance:0"].into()));
+            Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         mock_runner.wait_for_url("test:///root_resolved").await;
     }
@@ -248,7 +248,7 @@ mod tests {
 
         // While the bind() is paused, simulate a second bind by explicitly scheduling a Start
         // action. Allow the original bind to proceed, then check the result of both bindings.
-        let m: AbsoluteMoniker = vec!["system:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["system"].into();
         let component = model.look_up(&m).await.expect("failed component lookup");
         let f = ActionSet::register(component, StartAction::new(BindReason::Eager));
         let (f, action_handle) = f.remote_handle();
@@ -393,7 +393,8 @@ mod tests {
         // can't bind to logger: it does not exist
         let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
         let res = model.bind(&m, &BindReason::Root).await;
-        let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m));
+        let expected_res: Result<(), ModelError> =
+            Err(ModelError::instance_not_found(m.to_partial()));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
     }
@@ -599,7 +600,7 @@ mod tests {
             let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
             // While the Resolved hook is handled, it should be possible to look up the component
             // without deadlocking.
-            let component = model.look_up(&m).await.unwrap();
+            let component = model.look_up(&m.to_partial()).await.unwrap();
             {
                 let actions = component.lock_actions().await;
                 assert!(actions.contains(&ActionKey::Resolve));

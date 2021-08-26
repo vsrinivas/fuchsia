@@ -45,7 +45,10 @@ use {
     log::*,
     maplit::hashmap,
     matches::assert_matches,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker,
+        PartialAbsoluteMoniker,
+    },
     routing::{error::ComponentInstanceError, route_capability},
     routing_test_helpers::{
         default_service_capability, instantiate_common_routing_tests, RoutingTestModel,
@@ -1225,7 +1228,7 @@ async fn use_with_destroyed_parent() {
     .await;
 
     // Destroy "b", but preserve a reference to "c" so we can route from it below.
-    let moniker = vec!["coll:b:1", "c:0"].into();
+    let moniker = vec!["coll:b", "c"].into();
     let realm_c = test.model.look_up(&moniker).await.expect("failed to look up realm b");
     test.destroy_dynamic_child(vec![].into(), "coll", "b").await;
 
@@ -1238,7 +1241,7 @@ async fn use_with_destroyed_parent() {
         err,
         RoutingError::ComponentInstanceError(
             ComponentInstanceError::InstanceNotFound { moniker }
-        ) if moniker == vec!["coll:b:1"].into()
+        ) if moniker == vec!["coll:b"].into()
     );
 }
 
@@ -1294,7 +1297,7 @@ async fn use_from_destroyed_but_not_removed() {
     ];
     let test = RoutingTest::new("a", components).await;
     let component_b =
-        test.model.look_up(&vec!["b:0"].into()).await.expect("failed to look up realm b");
+        test.model.look_up(&vec!["b"].into()).await.expect("failed to look up realm b");
     // Destroy `b` but keep alive its reference from the parent.
     // TODO: If we had a "pre-destroy" event we could delete the child through normal means and
     // block on the event instead of explicitly registering actions.
@@ -1814,7 +1817,8 @@ async fn route_protocol_from_expose() {
         ),
     ];
     let test = RoutingTestBuilder::new("a", components).build().await;
-    let root_instance = test.model.look_up(&AbsoluteMoniker::root()).await.expect("root instance");
+    let root_instance =
+        test.model.look_up(&PartialAbsoluteMoniker::root()).await.expect("root instance");
     let expected_source_moniker = AbsoluteMoniker::parse_string_without_instances("/b").unwrap();
     assert_matches!(
     route_capability(RouteRequest::ExposeProtocol(expose_decl), &root_instance).await,
@@ -1853,8 +1857,9 @@ async fn route_service_from_parent_collection() {
         ("b", ComponentDeclBuilder::new().use_(use_decl.clone().into()).build()),
     ];
     let test = RoutingTestBuilder::new("a", components).build().await;
-    let b_component = test.model.look_up(&vec!["b:0"].into()).await.expect("b instance");
-    let a_component = test.model.look_up(&AbsoluteMoniker::root()).await.expect("root instance");
+    let b_component = test.model.look_up(&vec!["b"].into()).await.expect("b instance");
+    let a_component =
+        test.model.look_up(&PartialAbsoluteMoniker::root()).await.expect("root instance");
     let source = route_capability(RouteRequest::UseService(use_decl), &b_component)
         .await
         .expect("failed to route service");
@@ -1957,7 +1962,7 @@ async fn list_service_instances_from_collection() {
     .await;
 
     let client_component =
-        test.model.look_up(&vec!["client:0"].into()).await.expect("client instance");
+        test.model.look_up(&vec!["client"].into()).await.expect("client instance");
     let source = route_capability(RouteRequest::UseService(use_decl), &client_component)
         .await
         .expect("failed to route service");
