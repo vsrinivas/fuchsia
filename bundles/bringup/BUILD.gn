@@ -46,7 +46,6 @@ group("tests") {
     "//zircon/system/ulib/syslog/test:syslog-static-bootfs-test",
     "//zircon/system/ulib/test-utils/test:test-utils-bootfs-test",
     "//zircon/system/ulib/trace-reader/test:trace-reader-test-bootfs-test",
-    "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-bootfs-test",
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-bootfs-test",
     "//zircon/system/ulib/zx/test:zx-bootfs-test",
     "//zircon/system/ulib/zxtest/test:zxtest-bootfs-test",

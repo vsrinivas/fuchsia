@@ -325,7 +325,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/virtio/*",
     "//zircon/system/ulib/xdc-host-utils/*",
     "//zircon/system/ulib/xdc-server-utils/*",
-    "//zircon/system/ulib/zbi-bootfs/*",
     "//zircon/system/ulib/zbitl/*",
     "//zircon/system/ulib/zircon-internal/*",
     "//zircon/system/ulib/zx-panic-libc/*",
