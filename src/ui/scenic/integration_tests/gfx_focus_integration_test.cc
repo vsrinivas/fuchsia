@@ -27,13 +27,14 @@
 
 // This test exercises the focus protocols implemented by Scenic (fuchsia.ui.focus.FocusChain,
 // fuchsia.ui.views.Focuser, fuchsia.ui.views.ViewRefFocused) in the context of the GFX compositor
-// interface.  The geometry is not important in this test, so we use the following two-node (plus a
-// scene node) tree topology:
-//   (scene)
-//      |
-//    parent
-//      |
-//    child
+// interface.  The geometry is not important in this test, so we use the following three-node
+// tree topology (note that a root view is not necessary in gfx, the scene node acts as the view for
+// the root session for focus-related policy):
+//   scene
+//     |
+//  parent
+//     |
+//   child
 namespace integration_tests {
 
 const std::map<std::string, std::string> LocalServices() {
@@ -149,7 +150,7 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
     RunLoopUntil([this] { return CountReceivedFocusChains() == 1u; });
     EXPECT_FALSE(LastFocusChain()->has_focus_chain());
 
-    // Set up root view.
+    // Set up root.
     fuchsia::ui::scenic::SessionEndpoints endpoints;
     endpoints.set_view_focuser(root_focuser_.NewRequest());
     endpoints.set_view_ref_focused(root_focused_.NewRequest());
@@ -164,6 +165,14 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
     RunLoopUntil([this] { return CountReceivedFocusChains() == 2u; });
     EXPECT_TRUE(LastFocusChain()->has_focus_chain());
     EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
+
+    // And the root's ViewRefFocused Watch call should fire, since it is now focused.
+    bool root_focused = false;
+    root_focused_->Watch([&root_focused](auto update) {
+      ASSERT_TRUE(update.has_focused());
+      root_focused = update.focused();
+    });
+    RunLoopUntil([&root_focused] { return root_focused; });
 
     // Make the tests less confusing by starting count at 0.
     observed_focus_chains_.clear();
@@ -266,14 +275,15 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
 TEST_F(GfxFocusIntegrationTest, RequestValidity_RequestUnconnected_ShouldFail) {
   EXPECT_EQ(CountReceivedFocusChains(), 0u);
 
-  // Create the root View.
-  auto [root_view_token, root_view_holder_token] = scenic::ViewTokenPair::New();
+  // Create the parent View.
+  scenic::Session parent_session = CreateSession(scenic(), {});
+  auto [parent_view_token, parent_view_holder_token] = scenic::ViewTokenPair::New();
   auto [control_ref, view_ref] = scenic::ViewRefPair::New();
   ViewRef target;
   fidl::Clone(view_ref, &target);
-  scenic::View view(&root_session_->session, std::move(root_view_token), std::move(control_ref),
-                    std::move(view_ref), "root_view");
-  BlockingPresent(root_session_->session);
+  scenic::View view(&parent_session, std::move(parent_view_token), std::move(control_ref),
+                    std::move(view_ref), "parent_view");
+  BlockingPresent(parent_session);
 
   // Not connected yet, so focus change requests should fail.
   EXPECT_FALSE(RequestFocusChange(root_focuser_, target));
@@ -282,40 +292,46 @@ TEST_F(GfxFocusIntegrationTest, RequestValidity_RequestUnconnected_ShouldFail) {
 }
 
 TEST_F(GfxFocusIntegrationTest, RequestValidity_RequestorConnected_SelfRequest_ShouldSucceed) {
-  // Create the root View and attach it to the scene.
-  auto [root_view_token, root_view_holder_token] = scenic::ViewTokenPair::New();
-  auto [control_ref, root_view_ref] = scenic::ViewRefPair::New();
-  ViewRef root_view_ref_copy;
-  fidl::Clone(root_view_ref, &root_view_ref_copy);
-  scenic::View view(&root_session_->session, std::move(root_view_token), std::move(control_ref),
-                    std::move(root_view_ref_copy), "root_view");
-  BlockingPresent(root_session_->session);
-  AttachToScene(std::move(root_view_holder_token));
+  // Create the parent View and attach it to the scene.
+  fuchsia::ui::scenic::SessionEndpoints endpoints;
+  fuchsia::ui::views::FocuserPtr parent_focuser;
+  endpoints.set_view_focuser(parent_focuser.NewRequest());
+  scenic::Session parent_session = CreateSession(scenic(), std::move(endpoints));
+  auto [parent_view_token, parent_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [control_ref, parent_view_ref] = scenic::ViewRefPair::New();
+  ViewRef parent_view_ref_copy;
+  fidl::Clone(parent_view_ref, &parent_view_ref_copy);
+  scenic::View view(&parent_session, std::move(parent_view_token), std::move(control_ref),
+                    std::move(parent_view_ref_copy), "parent_view");
+  BlockingPresent(parent_session);
+  AttachToScene(std::move(parent_view_holder_token));
 
   EXPECT_EQ(CountReceivedFocusChains(), 0u);
-  // First move focus from the scene to the root view, then from root view to root view.
+  // First move focus from the scene to the parent_view, then from parent_view to parent_view.
   // Both requests should succeed.
-  ASSERT_TRUE(RequestFocusChange(root_focuser_, root_view_ref));
-  ASSERT_TRUE(RequestFocusChange(root_focuser_, root_view_ref));
+  ASSERT_TRUE(RequestFocusChange(root_focuser_, parent_view_ref));
+  ASSERT_TRUE(RequestFocusChange(parent_focuser, parent_view_ref));
   // Should only receive one focus chain, since it didn't change from the second request.
   RunLoopUntil([this] { return CountReceivedFocusChains() == 1; });
   RunLoopWithTimeout(kWaitTime);
   EXPECT_EQ(CountReceivedFocusChains(), 1u);
-  // Should contain scene node + root view.
+  // Should contain scene node + parent_view.
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
-  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], root_view_ref);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], parent_view_ref);
 }
 
 TEST_F(GfxFocusIntegrationTest, RequestValidity_RequestorConnected_ChildRequest_ShouldSucceed) {
   EXPECT_EQ(CountReceivedFocusChains(), 0u);
 
-  // Create the root View.
-  auto [root_view_token, root_view_holder_token] = scenic::ViewTokenPair::New();
-  auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
-  ViewRef root_view_ref_copy;
-  fidl::Clone(root_view_ref, &root_view_ref_copy);
-  scenic::View root_view(&root_session_->session, std::move(root_view_token),
-                         std::move(root_control_ref), std::move(root_view_ref_copy), "root_view");
+  // Create the parent View.
+  scenic::Session parent_session = CreateSession(scenic(), {});
+  auto [parent_view_token, parent_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [parent_control_ref, parent_view_ref] = scenic::ViewRefPair::New();
+  ViewRef parent_view_ref_copy;
+  fidl::Clone(parent_view_ref, &parent_view_ref_copy);
+  scenic::View parent_view(&parent_session, std::move(parent_view_token),
+                           std::move(parent_control_ref), std::move(parent_view_ref_copy),
+                           "parent_view");
 
   // Create the child view and connect it to the parent.
   scenic::Session child_session = CreateSession(scenic(), {});
@@ -326,33 +342,35 @@ TEST_F(GfxFocusIntegrationTest, RequestValidity_RequestorConnected_ChildRequest_
   scenic::View child_view(&child_session, std::move(child_view_token), std::move(child_control_ref),
                           std::move(child_view_ref_copy), "child_view");
 
-  scenic::ViewHolder child_view_holder(&root_session_->session, std::move(child_view_holder_token),
+  scenic::ViewHolder child_view_holder(&parent_session, std::move(child_view_holder_token),
                                        "child_holder");
-  root_view.AddChild(child_view_holder);
-  AttachToScene(std::move(root_view_holder_token));
+  parent_view.AddChild(child_view_holder);
+  AttachToScene(std::move(parent_view_holder_token));
   BlockingPresent(child_session);
-  BlockingPresent(root_session_->session);
+  BlockingPresent(parent_session);
   EXPECT_EQ(CountReceivedFocusChains(), 0u);
 
   // Try to move focus to child. Should succeed.
   ASSERT_TRUE(RequestFocusChange(root_focuser_, child_view_ref));
   RunLoopUntil([this] { return CountReceivedFocusChains() == 1u; });  // Succeeds or times out.
-  // Should contain scene node + root view + child_view.
+  // Should contain scene node + parent_view + child_view.
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
-  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], root_view_ref);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], parent_view_ref);
   EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[2], child_view_ref);
 }
 
 TEST_F(GfxFocusIntegrationTest, FocusChain_Updated_OnViewDisconnect) {
   EXPECT_EQ(CountReceivedFocusChains(), 0u);
 
-  // Create the root View.
-  auto [root_view_token, root_view_holder_token] = scenic::ViewTokenPair::New();
-  auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
-  ViewRef root_view_ref_copy;
-  fidl::Clone(root_view_ref, &root_view_ref_copy);
-  scenic::View root_view(&root_session_->session, std::move(root_view_token),
-                         std::move(root_control_ref), std::move(root_view_ref_copy), "root_view");
+  // Create the parent View.
+  scenic::Session parent_session = CreateSession(scenic(), {});
+  auto [parent_view_token, parent_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [parent_control_ref, parent_view_ref] = scenic::ViewRefPair::New();
+  ViewRef parent_view_ref_copy;
+  fidl::Clone(parent_view_ref, &parent_view_ref_copy);
+  scenic::View parent_view(&parent_session, std::move(parent_view_token),
+                           std::move(parent_control_ref), std::move(parent_view_ref_copy),
+                           "parent_view");
 
   // Create the child view and connect it to the parent.
   scenic::Session child_session = CreateSession(scenic(), {});
@@ -362,11 +380,12 @@ TEST_F(GfxFocusIntegrationTest, FocusChain_Updated_OnViewDisconnect) {
   fidl::Clone(child_view_ref, &child_view_ref_copy);
   scenic::View child_view(&child_session, std::move(child_view_token), std::move(child_control_ref),
                           std::move(child_view_ref_copy), "child_view");
-  scenic::ViewHolder child_view_holder(&root_session_->session, std::move(child_view_holder_token),
+  scenic::ViewHolder child_view_holder(&parent_session, std::move(child_view_holder_token),
                                        "child_holder");
-  root_view.AddChild(child_view_holder);
+  parent_view.AddChild(child_view_holder);
   BlockingPresent(child_session);
-  AttachToScene(std::move(root_view_holder_token));
+  BlockingPresent(parent_session);
+  AttachToScene(std::move(parent_view_holder_token));
 
   // Try to move focus to child. Should succeed.
   ASSERT_TRUE(RequestFocusChange(root_focuser_, child_view_ref));
@@ -374,18 +393,11 @@ TEST_F(GfxFocusIntegrationTest, FocusChain_Updated_OnViewDisconnect) {
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
 
   // Disconnect the child and watch the focus chain update.
-  root_view.DetachChild(child_view_holder);
-  BlockingPresent(root_session_->session);
+  parent_view.DetachChild(child_view_holder);
+  BlockingPresent(parent_session);
   RunLoopUntil([this] { return CountReceivedFocusChains() == 2u; });  // Succeeds or times out.
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
-  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], root_view_ref);
-}
-
-TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectedWhenSessionDies) {
-  EXPECT_TRUE(root_focuser_);
-  root_session_.reset();
-  RunLoopUntil([this] { return !root_focuser_; });  // Succeeds or times out.
-  EXPECT_FALSE(root_focuser_);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], parent_view_ref);
 }
 
 TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
@@ -399,30 +411,32 @@ TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
 }
 
 TEST_F(GfxFocusIntegrationTest, ViewRefFocused_HappyCase) {
-  std::optional<bool> root_focused;
-  root_focused_->Watch([&root_focused](auto update) {
+  // Create the parent View.
+  fuchsia::ui::scenic::SessionEndpoints endpoints;
+  fuchsia::ui::views::FocuserPtr parent_focuser;
+  fuchsia::ui::views::ViewRefFocusedPtr parent_focused_ptr;
+  endpoints.set_view_focuser(parent_focuser.NewRequest());
+  endpoints.set_view_ref_focused(parent_focused_ptr.NewRequest());
+  scenic::Session parent_session = CreateSession(scenic(), std::move(endpoints));
+  auto [parent_view_token, parent_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [parent_control_ref, parent_view_ref] = scenic::ViewRefPair::New();
+  ViewRef parent_view_ref_copy;
+  fidl::Clone(parent_view_ref, &parent_view_ref_copy);
+  scenic::View parent_view(&parent_session, std::move(parent_view_token),
+                           std::move(parent_control_ref), std::move(parent_view_ref_copy),
+                           "parent_view");
+  AttachToScene(std::move(parent_view_holder_token));
+  BlockingPresent(parent_session);
+
+  bool parent_focused = false;
+  parent_focused_ptr->Watch([&parent_focused](auto update) {
     ASSERT_TRUE(update.has_focused());
-    root_focused = update.focused();
+    parent_focused = update.focused();
   });
 
-  RunLoopUntilIdle();
-  EXPECT_FALSE(root_focused.has_value());
+  ASSERT_TRUE(RequestFocusChange(root_focuser_, parent_view_ref));
 
-  // Create the root View.
-  auto [root_view_token, root_view_holder_token] = scenic::ViewTokenPair::New();
-  auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
-  ViewRef root_view_ref_copy;
-  fidl::Clone(root_view_ref, &root_view_ref_copy);
-  scenic::View root_view(&root_session_->session, std::move(root_view_token),
-                         std::move(root_control_ref), std::move(root_view_ref_copy), "root_view");
-  AttachToScene(std::move(root_view_holder_token));
-  BlockingPresent(root_session_->session);
-
-  ASSERT_TRUE(RequestFocusChange(root_focuser_, root_view_ref));
-
-  RunLoopUntil([&root_focused] { return root_focused.has_value(); });
-  EXPECT_TRUE(root_focused.value());
-  EXPECT_TRUE(root_focused_);
+  RunLoopUntil([&parent_focused] { return parent_focused; });
 }
 
 TEST_F(GfxFocusIntegrationTest, ViewRefFocusedDisconnectedWhenSessionDies) {

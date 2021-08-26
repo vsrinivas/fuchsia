@@ -15,14 +15,10 @@
 #include "src/ui/scenic/lib/gfx/util/time.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
-namespace scenic_impl {
-namespace gfx {
+namespace scenic_impl::gfx {
 
-using fuchsia::ui::focus::FocusChainListener;
-using fuchsia::ui::focus::FocusChainListenerRegistry;
 using fuchsia::ui::views::Error;
 using fuchsia::ui::views::ViewRef;
-using ViewFocuser = fuchsia::ui::views::Focuser;
 
 CompositorWeakPtr SceneGraph::GetCompositor(GlobalId compositor_id) const {
   for (const CompositorWeakPtr& compositor : compositors_) {
@@ -33,8 +29,7 @@ CompositorWeakPtr SceneGraph::GetCompositor(GlobalId compositor_id) const {
   return Compositor::kNullWeakPtr;
 }
 
-SceneGraph::SceneGraph(RequestFocusFunc request_focus)
-    : request_focus_(std::move(request_focus)), weak_factory_(this) {}
+SceneGraph::SceneGraph() : weak_factory_(this) {}
 
 void SceneGraph::AddCompositor(const CompositorWeakPtr& compositor) {
   FX_DCHECK(compositor);
@@ -78,31 +73,6 @@ void SceneGraph::ProcessViewTreeUpdates(ViewTreeUpdates view_tree_updates) {
   }
 }
 
-void SceneGraph::RegisterViewFocuser(SessionId session_id,
-                                     fidl::InterfaceRequest<ViewFocuser> view_focuser) {
-  FX_DCHECK(session_id != 0u) << "precondition";
-  FX_DCHECK(view_focuser_endpoints_.count(session_id) == 0u) << "precondition";
-
-  fit::function<void(ViewRef, ViewFocuser::RequestFocusCallback)> request_focus_handler =
-      [this, session_id](ViewRef view_ref, ViewFocuser::RequestFocusCallback response) {
-        std::optional<zx_koid_t> requestor = this->view_tree().ConnectedViewRefKoidOf(session_id);
-        if (requestor.has_value() &&
-            request_focus_(requestor.value(), utils::ExtractKoid(view_ref))) {
-          response(fpromise::ok());  // Request received, and honored.
-          return;
-        }
-
-        response(fpromise::error(Error::DENIED));  // Report a problem.
-      };
-
-  view_focuser_endpoints_.emplace(
-      session_id, ViewFocuserEndpoint(std::move(view_focuser), std::move(request_focus_handler)));
-}
-
-void SceneGraph::UnregisterViewFocuser(SessionId session_id) {
-  view_focuser_endpoints_.erase(session_id);
-}
-
 void SceneGraph::OnNewFocusedView(const zx_koid_t old_focus, const zx_koid_t new_focus) {
   FX_DCHECK(old_focus != new_focus);
 
@@ -136,24 +106,4 @@ void SceneGraph::OnNewFocusedView(const zx_koid_t old_focus, const zx_koid_t new
   }
 }
 
-SceneGraph::ViewFocuserEndpoint::ViewFocuserEndpoint(
-    fidl::InterfaceRequest<ViewFocuser> view_focuser,
-    fit::function<void(ViewRef, RequestFocusCallback)> request_focus_handler)
-    : request_focus_handler_(std::move(request_focus_handler)),
-      endpoint_(this, std::move(view_focuser)) {
-  FX_DCHECK(request_focus_handler_) << "invariant";
-}
-
-SceneGraph::ViewFocuserEndpoint::ViewFocuserEndpoint(ViewFocuserEndpoint&& original)
-    : request_focus_handler_(std::move(original.request_focus_handler_)),
-      endpoint_(this, original.endpoint_.Unbind()) {
-  FX_DCHECK(request_focus_handler_) << "invariant";
-}
-
-void SceneGraph::ViewFocuserEndpoint::RequestFocus(ViewRef view_ref,
-                                                   RequestFocusCallback response) {
-  request_focus_handler_(std::move(view_ref), std::move(response));
-}
-
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx
