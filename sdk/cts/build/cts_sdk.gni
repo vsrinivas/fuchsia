@@ -15,14 +15,78 @@ import("//sdk/cts/build/allowed_cts_deps.gni")
 #
 template("cts_sdk") {
   sdk_target_name = "${target_name}_sdk"
-
-  # TODO(jcecil): remove "_v2" suffix after fxr/559550 lands.
+  export_target_name = "${sdk_target_name}_export"
+  generate_target_name = "${target_name}_generate"
   build_api_target_name = "${target_name}_artifacts_v2"
   main_target_name = "${target_name}"
+
+  sdk_export_dir = "${root_out_dir}/sdk/exported/${sdk_target_name}"
+  final_export_dir = "${root_out_dir}/cts_v2"
 
   # Create the CTS SDK
   sdk(sdk_target_name) {
     forward_variables_from(invoker, "*")
+  }
+
+  # Generate BUILD.gn files for the CTS dependencies (e.g. zxtest),
+  # and move all CTS files into the final directory where the Infra process
+  # expects them to be.
+  action(generate_target_name) {
+    forward_variables_from(invoker, "*")
+    script = "//scripts/sdk/gn/generate.py"
+    sources = []
+    outputs = [ "${final_export_dir}/BUILD.gn" ]
+    deps += [ ":${export_target_name}" ]
+
+    args = [
+      "--directory",
+      rebase_path("$sdk_export_dir"),
+      "--output",
+      rebase_path("$final_export_dir"),
+    ]
+
+    # The generate.py script generates a gn frontend for the CTS SDK.
+    # This involves creating BUILD.gn files for several dependencies.
+    # Those files need to be listed in the metadata field, in order to be
+    # added to the cts_artifacts.json file.
+    #
+    # TODO(fxb/81897): See if it's possible to define these files in the
+    # package SDK rules.
+    metadata = {
+      cts_artifacts = [
+        "cts/build/config/config.gni",
+        "cts/build/fuchsia_sdk_pkg.gni",
+        "cts/meta/manifest.json",
+        "cts/pkg/async/BUILD.gn",
+        "cts/pkg/async-cpp/BUILD.gn",
+        "cts/pkg/async-default/BUILD.gn",
+        "cts/pkg/async-loop-cpp/BUILD.gn",
+        "cts/pkg/async-loop-default/BUILD.gn",
+        "cts/pkg/async-loop/BUILD.gn",
+        "cts/pkg/fbl/BUILD.gn",
+        "cts/pkg/fdio/BUILD.gn",
+        "cts/pkg/fidl_base/BUILD.gn",
+        "cts/pkg/fidl_cpp/BUILD.gn",
+        "cts/pkg/fidl_cpp_base/BUILD.gn",
+        "cts/pkg/fidl_cpp_sync/BUILD.gn",
+        "cts/pkg/fidl_test_support/BUILD.gn",
+        "cts/pkg/fit-promise/BUILD.gn",
+        "cts/pkg/fit/BUILD.gn",
+        "cts/pkg/inspect/BUILD.gn",
+        "cts/pkg/inspect_service_cpp/BUILD.gn",
+        "cts/pkg/memfs/BUILD.gn",
+        "cts/pkg/stdcompat/BUILD.gn",
+        "cts/pkg/sync/BUILD.gn",
+        "cts/pkg/sys_cpp/BUILD.gn",
+        "cts/pkg/sys_inspect_cpp/BUILD.gn",
+        "cts/pkg/sys_service_cpp/BUILD.gn",
+        "cts/pkg/sysroot/meta.json",
+        "cts/pkg/trace-engine/BUILD.gn",
+        "cts/pkg/vfs_cpp/BUILD.gn",
+        "cts/pkg/zx/BUILD.gn",
+        "cts/pkg/zxtest/BUILD.gn",
+      ]
+    }
   }
 
   # Generate a manifest file that lists the paths of every item in the SDK,
@@ -30,7 +94,10 @@ template("cts_sdk") {
   build_api_module(build_api_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     data_keys = [ "cts_artifacts" ]
-    deps = [ ":${sdk_target_name}" ]
+    deps = [
+      ":${generate_target_name}",
+      ":${sdk_target_name}",
+    ]
   }
 
   group(main_target_name) {
@@ -41,8 +108,9 @@ template("cts_sdk") {
     }
     public_deps += [
       ":${build_api_target_name}",
+      ":${export_target_name}",
+      ":${generate_target_name}",
       ":${sdk_target_name}",
-      "//sdk/cts:cts_artifacts",
     ]
   }
 }

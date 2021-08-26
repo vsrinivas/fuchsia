@@ -118,7 +118,11 @@ template("cts_copy_to_sdk") {
 
     meta = {
       schema = "cts_resource"
-      dest = "${file_base}/json/${main_target_name}/meta.json"
+      if (file_base != "") {
+        dest = "${file_base}/json/${main_target_name}/meta.json"
+      } else {
+        dest = "json/${main_target_name}/meta.json"
+      }
       value = {
         type = "resource"
         name = main_target_name
