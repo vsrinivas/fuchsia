@@ -6,10 +6,10 @@
 
 use {
     crate::token_store::TokenStore,
-    anyhow::Result,
+    anyhow::{bail, Result},
     fuchsia_hyper::{new_https_client, HttpsClient},
-    hyper::{Body, Response},
-    std::sync::Arc,
+    hyper::{body::HttpBody as _, Body, Response, StatusCode},
+    std::{fs::File, io::Write, path::Path, sync::Arc},
 };
 
 /// Create clients with credentials for use with GCS.
@@ -75,24 +75,49 @@ impl Client {
         Self { https: new_https_client(), token_store }
     }
 
+    /// Save content of a stored object (blob) from GCS at location `output`.
+    ///
+    /// Wraps call to `self.write` which wraps `self.stream()`.
+    pub async fn fetch<P: AsRef<Path>>(&self, bucket: &str, object: &str, output: P) -> Result<()> {
+        let mut file = File::create(output.as_ref())?;
+        self.write(bucket, object, &mut file).await
+    }
+
     /// Reads content of a stored object (blob) from GCS.
-    pub async fn download(&self, bucket: &str, object: &str) -> Result<Response<Body>> {
+    pub async fn stream(&self, bucket: &str, object: &str) -> Result<Response<Body>> {
         self.token_store.download(&self.https, bucket, object).await
+    }
+
+    /// Write content of a stored object (blob) from GCS to writer.
+    ///
+    /// Wraps call to `self.stream`.
+    pub async fn write<W: Write>(&self, bucket: &str, object: &str, writer: &mut W) -> Result<()> {
+        let mut res = self.stream(bucket, object).await?;
+        if res.status() == StatusCode::OK {
+            while let Some(next) = res.data().await {
+                let chunk = next?;
+                writer.write_all(&chunk)?;
+            }
+            return Ok(());
+        }
+        bail!("Failed to fetch file, result status: {:?}", res.status());
     }
 }
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::token_store::read_boto_refresh_token, std::path::Path};
+    use {
+        super::*,
+        crate::token_store::read_boto_refresh_token,
+        std::{fs::read_to_string, path::Path},
+    };
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_client_factory_no_auth() {
         let client_factory = ClientFactory::new(TokenStore::new_without_auth());
         let client = client_factory.create_client();
-        let res = client
-            .download("for_testing_does_not_exist", "face_test_object")
-            .await
-            .expect("download");
+        let res =
+            client.stream("for_testing_does_not_exist", "face_test_object").await.expect("stream");
         assert_eq!(res.status(), 404);
     }
 
@@ -102,6 +127,7 @@ mod test {
     #[ignore]
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_client_factory_with_auth() {
+        // Set up authorized client.
         use home::home_dir;
         let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
         let refresh =
@@ -109,10 +135,40 @@ mod test {
         let auth = TokenStore::new_with_auth(refresh, /*access_token=*/ None);
         let client_factory = ClientFactory::new(auth);
         let client = client_factory.create_client();
-        let res = client
-            .download("for_testing_does_not_exist", "face_test_object")
-            .await
-            .expect("download");
+
+        // Try downloading something that doesn't exist.
+        let res =
+            client.stream("for_testing_does_not_exist", "face_test_object").await.expect("stream");
         assert_eq!(res.status(), 404);
+
+        // Fetch something that does exist.
+        let out_dir = tempfile::tempdir().unwrap();
+        let out_file = out_dir.path().join("downloaded");
+        client.fetch("fuchsia-sdk", "development/LATEST_LINUX", &out_file).await.expect("fetch");
+        assert!(out_file.exists());
+        let fetched = read_to_string(out_file).expect("read out_file");
+        assert!(!fetched.is_empty());
+
+        // Write the same data.
+        let mut written = Vec::new();
+        client.write("fuchsia-sdk", "development/LATEST_LINUX", &mut written).await.expect("write");
+        // The data is expected to be small (less than a KiB). For a non-test
+        // keeping the whole file in memory may be impractical.
+        let written = String::from_utf8(written).expect("streamed string");
+        assert!(!written.is_empty());
+
+        // Compare the fetched and written data.
+        assert_eq!(fetched, written);
+
+        // Stream the same data.
+        let res = client.stream("fuchsia-sdk", "development/LATEST_LINUX").await.expect("stream");
+        assert_eq!(res.status(), 200);
+        // The data is expected to be small (less than a KiB). For a non-test
+        // keeping the whole file in memory may be impractical.
+        let streamed_bytes = hyper::body::to_bytes(res.into_body()).await.expect("streamed bytes");
+        let streamed = String::from_utf8(streamed_bytes.to_vec()).expect("streamed string");
+
+        // Compare the fetched and streamed data.
+        assert_eq!(fetched, streamed);
     }
 }
