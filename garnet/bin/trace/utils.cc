@@ -5,21 +5,17 @@
 #include "garnet/bin/trace/utils.h"
 
 #include <errno.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <netdb.h>
-#include <stddef.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
 
 #include <fstream>
 #include <string>
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <src/lib/files/path.h>
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
 
 #include "src/lib/fxl/strings/trim.h"
@@ -64,32 +60,6 @@ OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line, const char
   return OptionStatus::PRESENT;
 }
 
-static bool TcpAddrFromString(std::string_view address, std::string_view port, addrinfo* out_addr) {
-  struct addrinfo hints;
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
-  hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
-
-  addrinfo* addrinfos;
-  int errcode =
-      getaddrinfo(std::string(address).c_str(), std::string(port).c_str(), &hints, &addrinfos);
-  if (errcode != 0) {
-    FX_LOGS(ERROR) << "Failed to getaddrinfo for address " << address << ":" << port << ": "
-                   << gai_strerror(errcode);
-    return false;
-  }
-  if (addrinfos == nullptr) {
-    FX_LOGS(ERROR) << "No matching addresses found for " << address << ":" << port;
-    return false;
-  }
-
-  *out_addr = *addrinfos;
-  freeaddrinfo(addrinfos);
-  return true;
-}
-
 static std::unique_ptr<std::ostream> ConnectToTraceSaver(const std::string_view& address) {
   FX_LOGS(INFO) << "Connecting to " << address;
 
@@ -105,10 +75,28 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(const std::string_view&
   // [::1] -> ::1
   ip_addr_str = fxl::TrimString(ip_addr_str, "[]");
 
-  addrinfo tcp_addr;
-  if (!TcpAddrFromString(ip_addr_str, port_str, &tcp_addr)) {
+  struct addrinfo hints = {
+      .ai_flags = AI_NUMERICHOST | AI_NUMERICSERV,
+      .ai_family = AF_UNSPEC,
+      .ai_socktype = SOCK_STREAM,
+      .ai_protocol = IPPROTO_TCP,
+  };
+
+  addrinfo* addrinfos;
+  int errcode = getaddrinfo(std::string(ip_addr_str).c_str(), std::string(port_str).c_str(), &hints,
+                            &addrinfos);
+  if (errcode != 0) {
+    FX_LOGS(ERROR) << "Failed to getaddrinfo for address " << ip_addr_str << ":" << port_str << ": "
+                   << gai_strerror(errcode);
     return nullptr;
   }
+  if (addrinfos == nullptr) {
+    FX_LOGS(ERROR) << "No matching addresses found for " << ip_addr_str << ":" << port_str;
+    return nullptr;
+  }
+
+  // |addrinfo| must not be freed until we're done with it, i.e. after the connect call below.
+  auto deferred = fit::defer([addrinfos]() { freeaddrinfo(addrinfos); });
 
   fbl::unique_fd fd(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!fd.is_valid()) {
@@ -116,7 +104,7 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(const std::string_view&
     return nullptr;
   }
 
-  if (connect(fd.get(), tcp_addr.ai_addr, tcp_addr.ai_addrlen) < 0) {
+  if (connect(fd.get(), addrinfos->ai_addr, addrinfos->ai_addrlen) < 0) {
     FX_LOGS(ERROR) << "Failed to connect: " << strerror(errno);
     return nullptr;
   }
