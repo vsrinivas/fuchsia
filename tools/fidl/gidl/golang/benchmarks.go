@@ -75,7 +75,7 @@ func BenchmarkEncode{{ .Name }}(b *testing.B) {
 		// This should be kept in sync with the buffer allocation strategy used in Go bindings.
 		respb := pools.bytes.Get().([]byte)
 		resphd := pools.handleDispositions.Get().([]zx.HandleDisposition)
-		_, _, err := fidl.Marshal(&input, respb, resphd)
+		_, _, err := fidl.MarshalWithContext(fidl.NewCtx(), &input, respb, resphd)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -87,7 +87,7 @@ func BenchmarkEncode{{ .Name }}(b *testing.B) {
 func BenchmarkDecode{{ .Name }}(b *testing.B) {
 	data := make([]byte, 65536)
 	input := {{ .Value }}
-	_, _, err := fidl.Marshal(&input, data, nil)
+	_, _, err := fidl.MarshalWithContext(fidl.NewCtx(), &input, data, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func BenchmarkDecode{{ .Name }}(b *testing.B) {
 	var output {{ .ValueType }}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := fidl.Unmarshal(data, nil, &output)
+		_, _, err := fidl.UnmarshalWithContext(fidl.NewCtx(), data, nil, &output)
 		if err != nil {
 			b.Fatal(err)
 		}

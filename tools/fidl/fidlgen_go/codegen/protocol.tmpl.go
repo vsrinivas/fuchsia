@@ -176,7 +176,7 @@ func (s_ *{{ .StubName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mes
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		{{- end }}

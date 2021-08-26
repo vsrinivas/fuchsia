@@ -103,7 +103,7 @@ func serveOne(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Cha
 	hi = hi[:nhi]
 
 	var reqHeader fidl.MessageHeader
-	hnb, hnh, err := fidl.Unmarshal(b, hi, &reqHeader)
+	hnb, hnh, err := fidl.UnmarshalWithContext(fidl.NewCtx(), b, hi, &reqHeader)
 	if err != nil {
 		return err
 	}

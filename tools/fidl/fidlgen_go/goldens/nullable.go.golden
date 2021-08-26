@@ -215,7 +215,7 @@ func (s_ *SimpleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		sum, err_ := s_.Impl.Add(args_.Ctx, in_.A, in_.B)

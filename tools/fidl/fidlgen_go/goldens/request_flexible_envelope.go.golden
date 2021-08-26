@@ -228,7 +228,7 @@ func (s_ *ProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		f, err_ := s_.Impl.RequestStrictResponseFlexible(args_.Ctx, in_.S)
@@ -241,7 +241,7 @@ func (s_ *ProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		f, err_ := s_.Impl.RequestFlexibleResponseStrict(args_.Ctx, in_.S)
