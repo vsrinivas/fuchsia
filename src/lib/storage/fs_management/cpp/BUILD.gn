@@ -76,6 +76,7 @@ test("fs-management-test") {
     "mount_test.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/digest",
@@ -94,8 +95,10 @@ test("fs-management-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fs-test-utils",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",

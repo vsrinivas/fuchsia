@@ -7,10 +7,13 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
+#include <lib/memfs/memfs.h>
 #include <lib/syslog/cpp/macros.h>
 #include <limits.h>
 #include <stdalign.h>
@@ -33,26 +36,19 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
+#include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fs-test-utils/fixture.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/storage/fvm/format.h"
+#include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace {
 
 namespace fio = fuchsia_io;
-
-fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
-  fs_test_utils::FixtureOptions options = fs_test_utils::FixtureOptions::Default(DISK_FORMAT_MINFS);
-  options.use_fvm = true;
-  options.fs_format = false;
-  options.fs_mount = false;
-  options.isolated_devmgr = false;
-  return options;
-}
 
 void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
@@ -76,7 +72,7 @@ void MountUnmountShared(size_t block_size) {
 
   ASSERT_EQ(ramdisk_create(block_size, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
-  LOG_INFO("ramdisk path: %s\n", ramdisk_path);
+  std::cout << std::string(ramdisk_path) << std::endl;
 
   ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, MkfsOptions()), ZX_OK);
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
@@ -702,22 +698,40 @@ void GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_coun
 
 class PartitionOverFvmWithRamdiskFixture : public testing::Test {
  public:
-  const char* partition_path() const { return fixture_->partition_path().c_str(); }
+  const char* partition_path() const { return partition_path_.c_str(); }
 
  protected:
+  static constexpr uint64_t kBlockSize = 512;
+
   void SetUp() override {
-    fixture_ = std::make_unique<fs_test_utils::Fixture>(PartitionOverFvmWithRamdisk());
-    ASSERT_EQ(fixture_->SetUpTestCase(), ZX_OK);
-    ASSERT_EQ(fixture_->SetUp(), ZX_OK);
+    size_t ramdisk_block_count = zx_system_get_physmem() / (1024);
+    ASSERT_EQ(ramdisk_create(kBlockSize, ramdisk_block_count, &ramdisk_), ZX_OK);
+
+    std::string ramdisk_path(ramdisk_get_path(ramdisk_));
+    uint64_t slice_size = kBlockSize * (2 << 10);
+
+    fbl::unique_fd ramdisk_fd(open(ramdisk_path.c_str(), O_RDWR));
+    ASSERT_TRUE(ramdisk_fd.is_valid()) << strerror(errno);
+
+    storage::FvmOptions options;
+    options.name = "my-fake-partition";
+    options.type = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+
+    auto partition_or = storage::CreateFvmPartition(ramdisk_path, slice_size, options);
+    ASSERT_TRUE(partition_or.is_ok()) << partition_or.status_string();
+    partition_path_ = std::move(partition_or).value();
   }
+
   void TearDown() override {
-    ASSERT_EQ(fixture_->TearDown(), ZX_OK);
-    ASSERT_EQ(fixture_->TearDownTestCase(), ZX_OK);
+    if (ramdisk_ != nullptr) {
+      ramdisk_destroy(ramdisk_);
+    }
   }
 
  private:
-  std::unique_ptr<fs_test_utils::Fixture> fixture_;
-};
+  ramdisk_client_t* ramdisk_ = nullptr;
+  std::string partition_path_;
+};  // namespace
 
 using PartitionOverFvmWithRamdiskCase = PartitionOverFvmWithRamdiskFixture;
 
@@ -742,6 +756,38 @@ TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
   ASSERT_EQ(actual_format, DISK_FORMAT_MINFS);
 }
 
+zx_status_t MountMemFs(async::Loop* loop, memfs_filesystem_t** memfs_out) {
+  zx_status_t result = ZX_OK;
+  result = loop->StartThread("mountest-test-memfs");
+  if (result != ZX_OK) {
+    std::cout << "Failed to start serving thread for MemFs." << std::endl;
+    return result;
+  }
+
+  return memfs_install_at(loop->dispatcher(), "/memfs", memfs_out);
+}
+
+zx_status_t UnmountMemFs(memfs_filesystem_t* memfs) {
+  return memfs_uninstall_unsafe(memfs, "/memfs");
+}
+
+int RunWithMemFs(const fit::function<int()>& main_fn) {
+  memfs_filesystem_t* fs;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zx_status_t status;
+  if ((status = MountMemFs(&loop, &fs)) != ZX_OK) {
+    std::cout << "Failed to mount memfs" << std::endl;
+    return -1;
+  }
+  int result = main_fn();
+  loop.Shutdown();
+  if ((status = UnmountMemFs(fs)) != ZX_OK) {
+    std::cout << "Failed to unmount memfs" << std::endl;
+    return -1;
+  }
+  return result;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -755,5 +801,6 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  return fs_test_utils::RunWithMemFs([]() { return RUN_ALL_TESTS(); });
+  // Memfs path is used for allowing mount operations, with are not allowed on local namespace.
+  return RunWithMemFs([]() { return RUN_ALL_TESTS(); });
 }
