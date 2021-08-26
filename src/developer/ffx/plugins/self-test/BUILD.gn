@@ -19,6 +19,7 @@ ffx_plugin("ffx_selftest") {
   plugin_deps = [ "experiment:ffx_selftest_experiment" ]
 
   deps = [
+    "//src/developer/ffx/daemon:lib",
     "//src/developer/ffx/lib/errors:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:libc",

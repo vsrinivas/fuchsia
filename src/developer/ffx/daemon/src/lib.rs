@@ -150,6 +150,10 @@ pub async fn is_daemon_running() -> bool {
     // (even if the path exists).
     let path = get_socket().await;
 
+    is_daemon_running_at_path(path)
+}
+
+pub fn is_daemon_running_at_path(path: String) -> bool {
     // Not strictly necessary check, but improves log output for diagnostics
     match std::fs::metadata(&path) {
         Ok(_) => {}

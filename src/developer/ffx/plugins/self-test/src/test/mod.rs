@@ -5,6 +5,7 @@
 use {
     anyhow::*,
     errors::ffx_bail,
+    ffx_daemon::is_daemon_running_at_path,
     fuchsia_async::TimeoutExt,
     serde::Serialize,
     serde_json::Value,
@@ -184,15 +185,13 @@ impl Isolate {
 
 impl Drop for Isolate {
     fn drop(&mut self) {
-        // TODO(raggi): implement a unix socket peer probe here, and avoid
-        // invoking ffx daemon stop if there's nothing on the other end.
-        let _ = self.ascendd_path;
-
-        let mut cmd = self.ffx_cmd(&["daemon", "stop"]);
-        cmd.stdin(Stdio::null());
-        cmd.stdout(Stdio::null());
-        cmd.stderr(Stdio::null());
-        let _ = cmd.spawn().map(|mut child| child.wait());
+        if is_daemon_running_at_path(self.ascendd_path.to_string_lossy().to_string()) {
+            let mut cmd = self.ffx_cmd(&["daemon", "stop"]);
+            cmd.stdin(Stdio::null());
+            cmd.stdout(Stdio::null());
+            cmd.stderr(Stdio::null());
+            let _ = cmd.spawn().map(|mut child| child.wait());
+        }
     }
 }
 
