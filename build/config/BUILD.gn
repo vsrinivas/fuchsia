@@ -616,7 +616,6 @@ config("Wno-conversion") {
   # To trim this list:
   # $ scripts/gn/trim_visibility.py --target="//build/config:Wno-conversion"
   visibility = [
-    "//garnet/bin/cpuperf/*",
     "//garnet/bin/cpuperf_provider/*",
     "//garnet/bin/insntrace/*",
     "//garnet/bin/insntrace/tests/*",

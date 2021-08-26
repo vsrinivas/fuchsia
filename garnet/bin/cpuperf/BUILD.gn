@@ -18,9 +18,6 @@ source_set("session_spec") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("session_result_spec") {
@@ -34,10 +31,6 @@ source_set("session_result_spec") {
     "//src/lib/fxl",
     "//src/lib/json_parser",
     "//third_party/rapidjson",
-  ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
   ]
 }
 
@@ -58,9 +51,6 @@ executable("bin") {
     "//src/lib/fxl",
     "//src/zircon/lib/zircon",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_shell_package("cpuperf") {
