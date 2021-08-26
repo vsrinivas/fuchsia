@@ -82,8 +82,7 @@ static zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::strin
 
 static zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx::process& process,
                                       int* out_exit_code) {
-  auto status = process.wait_one(ZX_PROCESS_TERMINATED,
-                                 zx::deadline_after(zx::duration(kTestTimeout)), nullptr);
+  zx_status_t status = process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed waiting for program " << program_name
                    << " to exit: " << zx_status_get_string(status);
