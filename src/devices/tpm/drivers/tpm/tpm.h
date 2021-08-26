@@ -17,6 +17,7 @@
 #include "src/devices/tpm/drivers/tpm/commands.h"
 
 namespace tpm {
+constexpr uint32_t kTpmVendorPrefix = (1 << 29);
 
 using TpmCommandCallback = fit::function<void(zx_status_t, TpmResponseHeader*)>;
 struct TpmCommand {
@@ -48,6 +49,8 @@ class TpmDevice : public DeviceType {
 
   // FIDL method implementation.
   void GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync& completer);
+  void ExecuteVendorCommand(ExecuteVendorCommandRequestView request,
+                            ExecuteVendorCommandCompleter::Sync& completer);
 
  private:
   template <typename CmdType>

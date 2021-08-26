@@ -5,11 +5,33 @@ library fuchsia.tpm;
 
 using zx;
 
+/// Arbitrarily large value which should be enough to handle any vendor
+/// commands.
+const MAX_VENDOR_COMMAND_LEN uint32 = 512;
+
+/// TPM response codes are fairly complex.
+/// See Section 6.6, "TPM_RC (Response Codes)" of the "Trusted Platform Module Library
+/// Part 2: Structures" for more information on how they should be interpreted.
+/// The TPM may return vendor-defined error codes or set various bits in the
+/// error to provide more information about the nature of the error.
+alias TpmRc = uint16;
+
 protocol TpmDevice {
     /// Get the TPM's device ID, vendor ID, and revision ID.
     GetDeviceId() -> (struct {
         vendor_id uint16;
         device_id uint16;
         revision_id uint8;
+    }) error zx.status;
+
+    /// Execute a vendor command.
+    /// Returns ZX_ERR_BUFFER_TOO_SMALL if the TPM responded with data that
+    /// wouldn't fit in the response buffer.
+    ExecuteVendorCommand(struct {
+        command_code uint16;
+        data vector<uint8>:MAX_VENDOR_COMMAND_LEN;
+    }) -> (struct {
+        result TpmRc;
+        data vector<uint8>:MAX_VENDOR_COMMAND_LEN;
     }) error zx.status;
 };

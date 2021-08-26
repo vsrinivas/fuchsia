@@ -296,3 +296,50 @@ TEST_F(TpmTest, TestGetDeviceId) {
   ASSERT_EQ(data.vendor_id, kVendorId);
   ASSERT_EQ(data.revision_id, kRevisionId);
 }
+
+TEST_F(TpmTest, TestSendVendorCommand) {
+  auto dev = fake_root_->GetLatestChild();
+  dev->InitOp();
+  ASSERT_OK(dev->WaitUntilInitReplyCalled());
+
+  constexpr uint32_t kTpmVendorCommand = 0x10;
+  struct TestCommandRequest {
+    TpmCmdHeader hdr;
+    uint8_t value;
+  } __PACKED;
+  struct TestCommandResponse {
+    TpmResponseHeader hdr;
+    uint8_t value;
+  } __PACKED;
+  handle_command_ = [](TpmCmdHeader* c, std::vector<uint8_t>& out) {
+    ASSERT_EQ(be32toh(c->command_code), tpm::kTpmVendorPrefix | kTpmVendorCommand);
+    ASSERT_EQ(be32toh(c->command_size), sizeof(TestCommandRequest));
+    TestCommandRequest* cmd = reinterpret_cast<TestCommandRequest*>(c);
+    ASSERT_EQ(cmd->value, 0xaa);
+
+    TestCommandResponse r{
+        .hdr =
+            {
+                .tag = htobe16(TPM_ST_NO_SESSIONS),
+                .response_size = htobe32(sizeof(TestCommandResponse)),
+                .response_code = 0,
+            },
+        .value = 0x32,
+    };
+    out.resize(sizeof(r), 0);
+    memcpy(out.data(), &r, sizeof(r));
+  };
+
+  auto tpm = GetTpmClient();
+  uint8_t value = 0xaa;
+  auto result = tpm.ExecuteVendorCommand(kTpmVendorCommand,
+                                         fidl::VectorView<uint8_t>::FromExternal(&value, 1));
+  ASSERT_OK(result.status());
+  if (result->result.is_err()) {
+    ASSERT_OK(result->result.err());
+  }
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().result, 0);
+  ASSERT_EQ(result->result.response().data.count(), 1);
+  ASSERT_EQ(result->result.response().data[0], 0x32);
+}

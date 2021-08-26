@@ -6,6 +6,7 @@
 #define SRC_DEVICES_TPM_DRIVERS_TPM_COMMANDS_H_
 
 #include <endian.h>
+#include <fuchsia/tpm/llcpp/fidl.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -39,6 +40,19 @@ struct TpmShutdownCmd {
   }
 } __PACKED;
 
+struct TpmVendorCmd {
+  TpmCmdHeader hdr;
+  uint8_t data[fuchsia_tpm::wire::kMaxVendorCommandLen];
+
+  TpmVendorCmd(uint32_t code, cpp20::span<const uint8_t> data_src) {
+    ZX_ASSERT(data_src.size_bytes() < sizeof(data));
+    hdr = {.tag = htobe16(TPM_ST_NO_SESSIONS),
+           .command_size = htobe32(data_src.size() + sizeof(hdr)),
+           .command_code = htobe32(code)};
+    memcpy(data, data_src.data(), data_src.size_bytes());
+  }
+} __PACKED;
+
 struct TpmResponseHeader {
   uint16_t tag;
   uint32_t response_size;
@@ -47,6 +61,11 @@ struct TpmResponseHeader {
  public:
   uint32_t ResponseSize() const { return betoh32(response_size); }
   uint32_t ResponseCode() const { return betoh32(response_code); }
+} __PACKED;
+
+struct TpmVendorResponse {
+  TpmResponseHeader hdr;
+  uint8_t data[0];
 } __PACKED;
 
 #endif  // SRC_DEVICES_TPM_DRIVERS_TPM_COMMANDS_H_

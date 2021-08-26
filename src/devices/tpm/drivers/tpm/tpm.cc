@@ -115,6 +115,27 @@ void TpmDevice::GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter
   completer.ReplySuccess(vendor_id_, device_id_, revision_id_);
 }
 
+void TpmDevice::ExecuteVendorCommand(ExecuteVendorCommandRequestView request,
+                                     ExecuteVendorCommandCompleter::Sync &completer) {
+  auto cmd = std::make_unique<TpmVendorCmd>(
+      kTpmVendorPrefix | request->command_code,
+      cpp20::span<const uint8_t>(request->data.data(), request->data.count()));
+
+  auto async = completer.ToAsync();
+  QueueCommand(std::move(cmd),
+               [async = std::move(async)](zx_status_t status, TpmResponseHeader *hdr) mutable {
+                 if (status != ZX_OK) {
+                   async.ReplyError(status);
+                   return;
+                 }
+
+                 TpmVendorResponse *vendor = reinterpret_cast<TpmVendorResponse *>(hdr);
+                 auto vector_view = fidl::VectorView<uint8_t>::FromExternal(
+                     vendor->data, vendor->hdr.ResponseSize() - sizeof(vendor->hdr));
+                 async.ReplySuccess(hdr->response_code, vector_view);
+               });
+}
+
 void TpmDevice::CommandThread(ddk::InitTxn txn) {
   zx_status_t status = DoInit();
   txn.Reply(status);
