@@ -994,7 +994,7 @@ fpromise::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
     if (inode.is_error()) {
       return fpromise::error("Failed to retrieve inode.");
     }
-    if (!inode->header.IsAllocated()) {
+    if (!inode->header.IsAllocated() || !inode->header.IsInode()) {
       continue;
     }
 
