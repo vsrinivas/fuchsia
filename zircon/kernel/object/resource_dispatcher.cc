@@ -302,7 +302,7 @@ static const char* kind_to_string(uint8_t kind) {
   return kKindLabels[kind];
 }
 
-void ResourceDispatcher::Dump() {
+void ResourceDispatcher::DumpResources() {
   zx_rsrc_kind_t kind;
   auto callback = [&](const ResourceDispatcher& r) -> zx_status_t {
     // exit early so we can print the list in a grouped format
@@ -339,6 +339,7 @@ void ResourceDispatcher::Dump() {
     return ZX_OK;
   };
 
+  printf("Resources in use:\n");
   printf("%32s  ", "name");
   printf("\t%10s  ", "type");
   printf("%8s  ", "flags");
@@ -356,10 +357,38 @@ void ResourceDispatcher::Dump() {
   }
 }
 
+void ResourceDispatcher::DumpAllocators() {
+  Guard<Mutex> guard{ResourcesLock::Get()};
+  printf("Available regions:\n");
+  printf("%32s  ", "type");
+  printf("\t%8s  ", "size");
+  printf("region\n");
+  printf(
+      "        "
+      "-------------------------------------------------------------------------------------------"
+      "\n");
+  auto print_func = [](uint32_t kind, const ralloc_region_t* region) -> bool {
+    printf("%32s  ", kind_to_string(kind));
+    if (kind == ZX_RSRC_KIND_MMIO) {
+      printf("\t%8s  ", FormattedBytes(region->size).c_str());
+    } else {
+      printf("\t%#8lx  ", region->size);
+    }
+    printf("[%#lx, %#lx)\n", region->base, region->base + region->size);
+    return true;
+  };
+
+  for (auto& kind : {ZX_RSRC_KIND_MMIO, ZX_RSRC_KIND_IRQ, ZX_RSRC_KIND_IOPORT}) {
+    static_storage_.rallocs[kind].WalkAvailableRegions(
+        [&kind, &print_func](const ralloc_region_t* region) { return print_func(kind, region); });
+  }
+}
+
 #include <lib/console.h>
 
 static int cmd_resource(int argc, const cmd_args* argv, uint32_t flags) {
-  ResourceDispatcher::Dump();
+  ResourceDispatcher::DumpResources();
+  ResourceDispatcher::DumpAllocators();
   return true;
 }
 

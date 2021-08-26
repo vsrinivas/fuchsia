@@ -54,7 +54,8 @@ class ResourceDispatcher final
   // Initializes the static mmembers used for bookkeeping and storage.
   static zx_status_t InitializeAllocator(zx_rsrc_kind_t kind, uint64_t base, size_t size,
                                          ResourceStorage* = nullptr);
-  static void Dump();
+  static void DumpResources();
+  static void DumpAllocators();
 
   template <typename T>
   static zx_status_t ForEachResource(T func, ResourceStorage* storage = nullptr)
