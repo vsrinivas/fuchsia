@@ -167,7 +167,13 @@ TEST_F(GenericReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
                                        "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002",
                                        uptime);
 
-  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
+  SetUpCrashReporterServer(
+      std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
+          .crash_signature = ToCrashSignature(reboot_log.RebootReason()),
+          .reboot_log = reboot_log.RebootLogStr(),
+          .uptime = uptime,
+          .is_fatal = true,
+      }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   ReportOn(reboot_log);
@@ -336,21 +342,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulReporterTest,
                                  "HIGH TEMPERATURE",
                                  cobalt::LastRebootReason::kHighTemperature,
                              },
-                             {
-                                 "NotSupported",
-                                 "NOT SUPPORTED",
-                                 cobalt::LastRebootReason::kGenericGraceful,
-                             },
-                             {
-                                 "kNotParseable",
-                                 "NOT PARSEABLE",
-                                 cobalt::LastRebootReason::kGenericGraceful,
-                             },
-                             {
-                                 "None",
-                                 std::nullopt,
-                                 cobalt::LastRebootReason::kGenericGraceful,
-                             },
                          })),
                          [](const testing::TestParamInfo<GracefulRebootTestParam>& info) {
                            return info.param.test_name;
@@ -433,6 +424,33 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
                                  cobalt::LastRebootReason::kRetrySystemUpdate,
                                  true,
                              },
+                             {
+                                 "NotSupported",
+                                 "NOT SUPPORTED",
+                                 "FINAL REBOOT REASON (GENERIC GRACEFUL)",
+                                 "fuchsia-undetermined-userspace-reboot",
+                                 zx::msec(65487494),
+                                 cobalt::LastRebootReason::kGenericGraceful,
+                                 true,
+                             },
+                             {
+                                 "NotParseable",
+                                 "NOT PARSEABLE",
+                                 "FINAL REBOOT REASON (GENERIC GRACEFUL)",
+                                 "fuchsia-undetermined-userspace-reboot",
+                                 zx::msec(65487494),
+                                 cobalt::LastRebootReason::kGenericGraceful,
+                                 true,
+                             },
+                             {
+                                 "None",
+                                 "NONE",
+                                 "FINAL REBOOT REASON (GENERIC GRACEFUL)",
+                                 "fuchsia-undetermined-userspace-reboot",
+                                 zx::msec(65487494),
+                                 cobalt::LastRebootReason::kGenericGraceful,
+                                 true,
+                             },
                          })),
                          [](const testing::TestParamInfo<GracefulRebootWithCrashTestParam>& info) {
                            return info.param.test_name;
@@ -444,7 +462,9 @@ TEST_P(GracefulWithCrashReporterTest, Succeed) {
       "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n%lu", param.output_uptime.to_msecs());
   WriteZirconRebootLogContents(zircon_reboot_log);
 
-  WriteGracefulRebootLogContents(param.graceful_reboot_log);
+  if (param.graceful_reboot_log != "NONE") {
+    WriteGracefulRebootLogContents(param.graceful_reboot_log);
+  }
 
   SetUpCrashReporterServer(
       std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{

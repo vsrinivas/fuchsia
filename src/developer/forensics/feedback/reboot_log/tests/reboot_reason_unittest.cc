@@ -114,9 +114,11 @@ TEST(RebootReasonTest, RootJobTermination) {
 TEST(RebootReasonTest, GenericGraceful) {
   const auto reason = RebootReason::kGenericGraceful;
 
-  EXPECT_FALSE(IsCrash(reason));
-  EXPECT_FALSE(IsFatal(reason));
+  EXPECT_TRUE(IsCrash(reason));
+  EXPECT_TRUE(IsFatal(reason));
   EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kGenericGraceful);
+  EXPECT_EQ(ToCrashSignature(reason), "fuchsia-undetermined-userspace-reboot");
+  EXPECT_EQ(ToCrashProgramName(reason), "system");
   EXPECT_EQ(ToFidlRebootReason(reason), std::nullopt);
 }
 

@@ -69,8 +69,8 @@ bool IsCrash(const RebootReason reason) {
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
     case RebootReason::kRetrySystemUpdate:
-      return true;
     case RebootReason::kGenericGraceful:
+      return true;
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kZbiSwap:
@@ -94,8 +94,8 @@ bool IsFatal(const RebootReason reason) {
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
     case RebootReason::kRetrySystemUpdate:
-      return true;
     case RebootReason::kGenericGraceful:
+      return true;
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kZbiSwap:
@@ -204,6 +204,7 @@ std::string ToCrashSignature(const RebootReason reason) {
     case RebootReason::kRetrySystemUpdate:
       return "fuchsia-retry-system-update";
     case RebootReason::kGenericGraceful:
+      return "fuchsia-undetermined-userspace-reboot";
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kZbiSwap:
@@ -232,8 +233,8 @@ std::string ToCrashProgramName(const RebootReason reason) {
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
     case RebootReason::kRetrySystemUpdate:
-      return "system";
     case RebootReason::kGenericGraceful:
+      return "system";
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kZbiSwap:
