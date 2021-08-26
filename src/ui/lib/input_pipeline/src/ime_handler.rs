@@ -85,6 +85,11 @@ impl ImeHandler {
     /// `key_events`: The key events to dispatch.
     /// `event_time`: The time in nanoseconds when the events were first recorded.
     async fn dispatch_key(self: &Rc<Self>, key_event: fidl_ui_input3::KeyEvent) {
+        assert!(
+            key_event.timestamp.is_some(),
+            "dispatch_key: got a key_event without a timestamp: {:?}",
+            &key_event
+        );
         match self.key_event_injector.inject(key_event).await {
             Err(err) => fx_log_err!("Failed to dispatch key to IME: {:?}", err),
             _ => {}

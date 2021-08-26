@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use {
     anyhow::{format_err, Result},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input as ui_input,
-    fidl_fuchsia_ui_input3 as ui_input3,
+    fidl_fuchsia_ui_input3 as ui_input3, fuchsia_zircon as zx,
     futures::{
         stream::{self, StreamExt, TryStreamExt},
         FutureExt,
@@ -268,6 +268,7 @@ impl From<ui_input3::NonPrintableKey> for KeyMeaningWrapper {
 
 /// Creates a `KeyEvent` with the given parameters.
 pub fn create_key_event(
+    timestamp: zx::Time,
     event_type: ui_input3::KeyEventType,
     key: impl Into<Option<input::Key>>,
     modifiers: impl Into<Option<ui_input3::Modifiers>>,
@@ -275,6 +276,7 @@ pub fn create_key_event(
 ) -> ui_input3::KeyEvent {
     let key_meaning: KeyMeaningWrapper = key_meaning.into();
     ui_input3::KeyEvent {
+        timestamp: Some(timestamp.into_nanos()),
         type_: Some(event_type),
         key: key.into(),
         modifiers: modifiers.into(),

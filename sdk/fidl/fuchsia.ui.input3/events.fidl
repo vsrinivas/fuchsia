@@ -66,6 +66,8 @@ type KeyMeaning = strict union {
 /// At least one of `key` and `key_meaning`  must be set for a valid event.
 type KeyEvent = table {
     /// Time in nanoseconds when the event was recorded, in the `CLOCK_MONOTONIC` time base.
+    /// The timestamp is **required** on every key event, and users can expect that it
+    /// will always be present.
     1: timestamp zx.time;
 
     /// Type of event.

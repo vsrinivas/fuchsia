@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_ui_input as ui_input,
     fidl_fuchsia_ui_input3::{self as ui_input3, KeyMeaning, NonPrintableKey},
     fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_warn},
+    fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
 };
 
@@ -22,18 +23,21 @@ use crate::keyboard::{events::KeyEvent, keyboard3};
 pub struct Service {
     ime_service: ImeService,
     keyboard3: keyboard3::KeyboardService,
+    clock: std::sync::Arc<zx::Clock>,
 }
 
 impl Service {
     pub async fn new(ime_service: ImeService) -> Result<Service, Error> {
         let keyboard3 = keyboard3::KeyboardService::new();
-        Ok(Service { ime_service, keyboard3 })
+        let clock = std::sync::Arc::new(zx::Clock::create(zx::ClockOpts::MONOTONIC, None).unwrap());
+        Ok(Service { ime_service, keyboard3, clock })
     }
 
     /// Starts a task that processes `fuchsia.ui.keyboard.focus.Controller`.
     /// This method returns immediately without blocking.
     pub fn spawn_focus_controller(&self, mut stream: fidl_focus::ControllerRequestStream) {
         let keyboard3 = self.keyboard3.clone();
+        let clock = self.clock.clone();
         fuchsia_async::Task::spawn(
             async move {
                 while let Some(msg) = stream.try_next().await.context(concat!(
@@ -44,7 +48,14 @@ impl Service {
                     match msg {
                         fidl_focus::ControllerRequest::Notify { view_ref, responder, .. } => {
                             let view_ref = keyboard3::ViewRef::new(view_ref);
-                            keyboard3.handle_focus_change(view_ref).await;
+                            let now = clock
+                                .read()
+                                .map_err(|e| {
+                                    fx_log_err!("couldn't read clock: {:?}", e);
+                                    e
+                                })
+                                .unwrap_or(zx::Time::ZERO);
+                            keyboard3.handle_focus_change(view_ref, now).await;
                             responder.send()?;
                         }
                     }

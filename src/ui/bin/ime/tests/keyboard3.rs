@@ -15,6 +15,7 @@ use {
     },
     fuchsia_scenic as scenic,
     fuchsia_syslog::*,
+    fuchsia_zircon as zx,
     futures::FutureExt,
     futures::{
         future,
@@ -295,6 +296,7 @@ async fn test_sync_cancel_with_connections(
 
     assert_eq!(
         ui_input3::KeyEvent {
+            timestamp: Some(0i64),
             key: Some(input::Key::A),
             type_: Some(ui_input3::KeyEventType::Cancel),
             ..ui_input3::KeyEvent::EMPTY
@@ -304,6 +306,7 @@ async fn test_sync_cancel_with_connections(
 
     assert_eq!(
         ui_input3::KeyEvent {
+            timestamp: Some(0i64),
             key: Some(input::Key::A),
             type_: Some(ui_input3::KeyEventType::Sync),
             ..ui_input3::KeyEvent::EMPTY
@@ -442,7 +445,7 @@ fn test_inject_key_yields_expected_key_and_key_meaning(
     key_meaning: impl Into<test_helpers::KeyMeaningWrapper>,
 ) -> (Option<input::Key>, Option<ui_input3::KeyMeaning>) {
     let (was_handled, received_event) = inject_key_and_receive_keyboard_protocol_message(
-        create_key_event(ui_input3::KeyEventType::Pressed, key, None, key_meaning),
+        create_key_event(zx::Time::ZERO, ui_input3::KeyEventType::Pressed, key, None, key_meaning),
     )
     .expect("injection failed");
     matches::assert_matches!(was_handled, Ok(ui_input3::KeyEventStatus::Handled));
