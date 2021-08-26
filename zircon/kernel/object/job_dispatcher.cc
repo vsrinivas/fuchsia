@@ -320,7 +320,7 @@ bool JobDispatcher::KillJobWithKillOnOOM() {
     return false;
   }
 
-  // Sort by max height.
+  // Sort |oom_jobs| in descending order by max height.
   ktl::stable_sort(oom_jobs.begin(), oom_jobs.begin() + count,
                    [](const fbl::RefPtr<JobDispatcher>& a, const fbl::RefPtr<JobDispatcher>& b) {
                      return a->max_height() > b->max_height();
