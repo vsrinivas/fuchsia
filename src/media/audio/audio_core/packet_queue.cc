@@ -21,7 +21,7 @@ namespace {
 // all or part of a packet's data is discarded because its start timestamp has already passed.)
 // For each packet queue, we will log the first underflow. For subsequent occurrences, depending on
 // audio_core's logging level, we throttle how frequently these are displayed. If log_level is set
-// to TRACE or SPEW, all client-side underflows are logged -- at log_level -1: VLOG TRACE -- as
+// to TRACE or DEBUG, all client-side underflows are logged -- at log_level -1: VLOG TRACE -- as
 // specified by kUnderflowTraceInterval. If set to INFO, we log less often, at log_level 1: INFO,
 // throttling by the factor kUnderflowInfoInterval. If set to WARNING or higher, we throttle these
 // even more, specified by kUnderflowWarningInterval. Note: by default we set NDEBUG builds to

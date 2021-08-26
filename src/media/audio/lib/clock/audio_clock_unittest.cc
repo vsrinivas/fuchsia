@@ -57,6 +57,8 @@ class AudioClockTest : public testing::Test {
     EXPECT_EQ(AudioClock::SyncMode::None, AudioClock::SyncModeForClocks(source_clock, dest_clock));
 
     ExpectZeroMicroSrc(source_clock, dest_clock);
+    EXPECT_TRUE(AudioClock::NoSynchronizationRequired(source_clock, dest_clock));
+    EXPECT_FALSE(AudioClock::SynchronizationNeedsHighQualityResampler(source_clock, dest_clock));
   }
 
   void ValidateSyncResetSource(AudioClock& source_clock, AudioClock& dest_clock) {
@@ -66,6 +68,8 @@ class AudioClockTest : public testing::Test {
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
 
     ExpectZeroMicroSrc(source_clock, dest_clock);
+    EXPECT_FALSE(AudioClock::NoSynchronizationRequired(source_clock, dest_clock));
+    EXPECT_FALSE(AudioClock::SynchronizationNeedsHighQualityResampler(source_clock, dest_clock));
   }
 
   void ValidateSyncResetDest(AudioClock& source_clock, AudioClock& dest_clock) {
@@ -75,6 +79,8 @@ class AudioClockTest : public testing::Test {
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
 
     ExpectZeroMicroSrc(source_clock, dest_clock);
+    EXPECT_FALSE(AudioClock::NoSynchronizationRequired(source_clock, dest_clock));
+    EXPECT_FALSE(AudioClock::SynchronizationNeedsHighQualityResampler(source_clock, dest_clock));
   }
 
   void ValidateSyncAdjustSource(AudioClock& source_clock, AudioClock& dest_clock) {
@@ -84,6 +90,8 @@ class AudioClockTest : public testing::Test {
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
 
     ExpectZeroMicroSrc(source_clock, dest_clock);
+    EXPECT_FALSE(AudioClock::NoSynchronizationRequired(source_clock, dest_clock));
+    EXPECT_FALSE(AudioClock::SynchronizationNeedsHighQualityResampler(source_clock, dest_clock));
   }
 
   void ValidateSyncAdjustDest(AudioClock& source_clock, AudioClock& dest_clock) {
@@ -93,6 +101,8 @@ class AudioClockTest : public testing::Test {
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
 
     ExpectZeroMicroSrc(source_clock, dest_clock);
+    EXPECT_FALSE(AudioClock::NoSynchronizationRequired(source_clock, dest_clock));
+    EXPECT_FALSE(AudioClock::SynchronizationNeedsHighQualityResampler(source_clock, dest_clock));
   }
 
   void ValidateSyncMicroSrc(AudioClock& source_clock, AudioClock& dest_clock) {
@@ -104,6 +114,8 @@ class AudioClockTest : public testing::Test {
     if (source_clock.is_client_clock() || dest_clock.is_client_clock()) {
       ExpectNonzeroMicroSrc(source_clock, dest_clock);
     }
+    EXPECT_FALSE(AudioClock::NoSynchronizationRequired(source_clock, dest_clock));
+    EXPECT_TRUE(AudioClock::SynchronizationNeedsHighQualityResampler(source_clock, dest_clock));
   }
 
   void TestRevertToMonotonic(AudioClock source_clock, AudioClock dest_clock);

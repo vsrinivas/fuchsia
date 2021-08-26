@@ -92,6 +92,9 @@ class AudioClock {
   fpromise::result<zx::clock, zx_status_t> DuplicateClockReadOnly() const;
   virtual zx::time Read() const;
 
+  // Reports whether no clock synchronization is needed (the clocks will always remain synched).
+  static bool NoSynchronizationRequired(AudioClock& source_clock, AudioClock& dest_clock);
+
   // Reports whether clock synchronization requires a high quality resampler.
   static bool SynchronizationNeedsHighQualityResampler(AudioClock& source_clock,
                                                        AudioClock& dest_clock);

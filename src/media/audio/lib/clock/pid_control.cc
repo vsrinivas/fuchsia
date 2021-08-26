@@ -8,7 +8,7 @@
 
 namespace media::audio::clock {
 
-// Reset the PID controller; set the initial result & time
+// Set the start time and reset the PID controller
 void PidControl::Start(zx::time start_time) {
   tune_time_ = start_time;
   total_pid_contribution_ = 0.0;
@@ -33,6 +33,7 @@ void PidControl::TuneForError(zx::time time_of_error, double error) {
   accum_error_ += (error * duration);
   current_error_ = error;
 
+  // TODO(fxbug.dev/83338): if needed, add low-pass filtering to the Derivative contributions
   prop_contrib_ = current_error_ * proportional_factor_;
   integ_contrib_ = accum_error_ * integral_factor_;
   deriv_contrib_ = delta_error_ * derivative_factor_;

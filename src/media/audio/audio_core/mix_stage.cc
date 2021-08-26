@@ -38,20 +38,37 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
   return zx::duration(ticks_per_frame.Scale(delay_frames));
 }
 
-}  // namespace
+// To what extent should jam-synchronizations be logged? Worst-case logging can exceed 100/sec.
+// We log each MixStage's first occurrence; for subsequent instances, depending on audio_core's
+// logging level, we throttle the logging frequency depending on log_level.
+// By default NDEBUG builds are WARNING, and DEBUG builds INFO. To disable jam-sync logging for a
+// certain level, set the interval to 0. To disable all jam-sync logging, set kLogJamSyncs to false.
+static constexpr bool kLogJamSyncs = true;
+static constexpr uint16_t kJamSyncWarningInterval = 20;  // Log 1 of every 20 jam-syncs at WARNING
+static constexpr uint16_t kJamSyncInfoInterval = 2;      // Log 1 of every 2 jam-syncs at INFO
+static constexpr uint16_t kJamSyncTraceInterval = 1;     // Log all remaining jam-syncs at TRACE
 
-// Worst-case logging can approach 100+ lines/sec.
-constexpr bool kLogJamSyncs = false;
-// For now, allow dest position to move back by up to 29 frames before triggering a position reset.
+// For now, allow dest position to move backwards by 960 frames before triggering a position reset.
+// Rollback can happen because of differences between the MixStage::ReadLock and Mixer::Mix APIs.
+// Otherwise, destination position discontinuities generally indicate a Mix that did not complete --
+// an underflow of some kind.
 // TODO(fxbug.dev/73306): Stop allowing this (change tolerance to 0 and/or remove this altogether),
 // once the system correctly moves position only forward.
-constexpr bool kAllowPositionRollback = true;
-constexpr int64_t kDestPosRollbackTolerance = 29;
+static constexpr bool kAllowPositionRollback = true;
+static constexpr int64_t kDestPosRollbackTolerance = 960;
 
-// If source position error becomes greater than this, we stop trying to smoothly synchronize and
-// instead 'snap' to the expected pos (sometimes referred to as "jam sync"). This will surface as a
-// discontinuity (if jumping backward) or a dropout (if jumping forward), for this source stream.
-constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(1);
+// Source position errors generally represent only the rate difference between time sources. We
+// reconcile clocks upon every ReadLock call, so even with wildly divergent clocks (+1000ppm vs.
+// -1000ppm) source position error would be 1/50 of the duration between ReadLock calls. We set a
+// limit of 100x that. If source position error exceeds this, we stop rate-adjustment and instead
+// 'snap' to the expected pos (referred to as "jam sync"). This surfaces as a discontinuity (if
+// jumping backward) or a dropout (if jumping forward), for this source stream only.
+//
+// For reference, micro-SRC can smoothly eliminates errors of this duration in approx 1 sec (at
+// kMicroSrcAdjustmentPpmMax). If adjusting a zx::clock, this will take less than 3 seconds.
+static constexpr zx::duration kMaxErrorThresholdDuration = zx::usec(2500);
+
+}  // namespace
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock,
@@ -595,6 +612,13 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     return;
   }
 
+  // If no synchronization is needed between these clocks (same clock, or device clocks in same
+  // domain), then source-to-dest is precisely the relationship between each side's frame rate.
+  if (AudioClock::NoSynchronizationRequired(source_clock, dest_clock)) {
+    SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
+    return;
+  }
+
   if constexpr (kAllowPositionRollback) {
     // If mix_job starts at a dest position before the prev one ended (within tolerance), roll pos
     // back using step_size, so that this is not treated as a dest position discontinuity.
@@ -620,10 +644,6 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // them (in ns) as source position error.
   auto mono_now_from_source = zx::time{
       info.clock_mono_to_frac_source_frames.ApplyInverse(info.next_source_frame.raw_value())};
-
-  FX_LOGS(TRACE) << "Dest " << dest_frame << ", source " << ffl::String::DecRational
-                 << info.next_source_frame << ", mono_now_from_dest " << mono_now_from_dest.get()
-                 << ", mono_now_from_source " << mono_now_from_source.get();
 
   // Convert both positions to monotonic time and get the delta -- this is source position error
   info.source_pos_error = mono_now_from_source - mono_now_from_dest;
@@ -674,41 +694,47 @@ void MixStage::JamSyncPositions(AudioClock& source_clock, AudioClock& dest_clock
 
   if constexpr (kLogJamSyncs) {
     std::stringstream common_stream, dest_stream, source_stream;
-    common_stream << "MixStage " << static_cast<void*>(this) << ", SourceInfo "
-                  << static_cast<void*>(&info) << ", dest_clk " << static_cast<void*>(&dest_clock)
-                  << ", source_clk " << static_cast<void*>(&source_clock) << "; "
+    common_stream << "; MixStage " << static_cast<void*>(this) << ", SourceInfo "
+                  << static_cast<void*>(&info) << "; "
                   << AudioClock::SyncInfo(source_clock, dest_clock);
-    std::string common_logging = common_stream.str();
     dest_stream << "dest " << (dest_clock.is_client_clock() ? "Client" : "Device")
                 << (dest_clock.is_adjustable() ? "Adjustable" : "Fixed") << "["
                 << static_cast<void*>(&dest_clock) << "]: " << ffl::String::DecRational
                 << info.next_dest_frame;
-    std::string dest_logging = dest_stream.str();
     source_stream << "; src " << (source_clock.is_client_clock() ? "Client" : "Device")
                   << (source_clock.is_adjustable() ? "Adjustable" : "Fixed") << "["
                   << static_cast<void*>(&source_clock) << "]: " << ffl::String::DecRational
                   << info.next_source_frame;
-    std::string source_logging = source_stream.str();
 
+    std::stringstream complete_log_msg;
     if (!initial_position_was_set) {
-      FX_LOGS(DEBUG) << "Setting initial positions: " << dest_logging << source_logging;
-      FX_LOGS(DEBUG) << common_logging;
+      complete_log_msg << "JamSync(set initial position): " << dest_stream.str()
+                       << source_stream.str() << common_stream.str();
+      // Log these at lowest level, but reset the count so we always log the next jam-sync
+      jam_sync_count_ = -1;
     } else if (prev_running_dest_frame != dest_frame) {
-      FX_LOGS(WARNING) << "Dest position discontinuity: " << dest_frame - prev_running_dest_frame
-                       << " frames; " << dest_logging << " (expect " << prev_running_dest_frame
-                       << ")" << source_logging << " (was " << ffl::String::DecRational
-                       << prev_running_source_frame << ")";
-      FX_LOGS(WARNING) << common_logging;
+      complete_log_msg << "JamSync(dest discontinuity)  : " << dest_frame - prev_running_dest_frame
+                       << " frames; " << dest_stream.str() << " (expect " << prev_running_dest_frame
+                       << ")" << source_stream.str() << " (was " << ffl::String::DecRational
+                       << prev_running_source_frame << ") at dest " << mono_now_from_dest.get()
+                       << common_stream.str();
     } else {
-      FX_LOGS(WARNING) << "Stream out-of-sync by "
+      complete_log_msg << "JamSync(source discontinuity): "
                        << static_cast<float>(prev_source_pos_error / ZX_USEC(1)) << " us (limit "
                        << static_cast<float>(static_cast<float>(kMaxErrorThresholdDuration.get()) /
                                              ZX_USEC(1))
-                       << " us) at dest " << mono_now_from_dest.get() << "; " << dest_logging
-                       << source_logging << " (expect " << ffl::String::DecRational
-                       << prev_running_source_frame << ")";
-      FX_LOGS(WARNING) << common_logging;
+                       << " us) at dest " << mono_now_from_dest.get() << "; " << dest_stream.str()
+                       << source_stream.str() << " (expect " << ffl::String::DecRational
+                       << prev_running_source_frame << ")" << common_stream.str();
     }
+    if (kJamSyncWarningInterval && (jam_sync_count_ % kJamSyncWarningInterval == 0)) {
+      FX_LOGS(WARNING) << complete_log_msg.str() << " (1/" << kJamSyncWarningInterval << ")";
+    } else if (kJamSyncInfoInterval && (jam_sync_count_ % kJamSyncInfoInterval == 0)) {
+      FX_LOGS(INFO) << complete_log_msg.str() << " (1/" << kJamSyncInfoInterval << ")";
+    } else if (kJamSyncTraceInterval && (jam_sync_count_ % kJamSyncTraceInterval == 0)) {
+      FX_LOGS(TRACE) << complete_log_msg.str() << " (1/" << kJamSyncTraceInterval << ")";
+    }
+    ++jam_sync_count_;
   }
 }
 

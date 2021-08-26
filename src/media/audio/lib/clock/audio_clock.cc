@@ -19,11 +19,11 @@
 namespace media::audio {
 
 // Log clock synchronization adjustments. As currently configured, when enabled we log clock
-// tuning once every 50 times, OR if source position error is 500ns or greater.
-constexpr bool kLogClockTuning = false;
+// tuning once every 100 times, OR if source position error is 500ns or greater.
+constexpr bool kLogClockTuning = true;
 // Make these zx::durations, if/when operator-() is added to zx::duration.
 constexpr int64_t kPositionErrorLoggingThresholdNs = 500;
-constexpr int64_t kClockTuneLoggingStride = 50;
+constexpr int64_t kClockTuneLoggingStride = 100;
 
 //
 // static methods
@@ -46,6 +46,10 @@ AudioClock AudioClock::DeviceFixed(zx::clock clock, uint32_t domain) {
 
 //
 // Policy-related static methods
+bool AudioClock::NoSynchronizationRequired(AudioClock& source_clock, AudioClock& dest_clock) {
+  return AudioClock::SyncModeForClocks(source_clock, dest_clock) == AudioClock::SyncMode::None;
+}
+
 bool AudioClock::SynchronizationNeedsHighQualityResampler(AudioClock& source_clock,
                                                           AudioClock& dest_clock) {
   return AudioClock::SyncModeForClocks(source_clock, dest_clock) == AudioClock::SyncMode::MicroSrc;

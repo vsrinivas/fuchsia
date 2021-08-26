@@ -99,6 +99,9 @@ class MixStage : public ReadableStream {
   // consecutive calls to ReadLock. This is reset once the caller has unlocked the buffer,
   // signifying that the buffer is no longer needed.
   CachedReadableStreamBuffer cached_buffer_;
+
+  // Used to variably throttle the amount of jam-sync-related logging we produce
+  uint32_t jam_sync_count_ = 0;
 };
 
 }  // namespace media::audio

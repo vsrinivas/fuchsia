@@ -201,18 +201,21 @@ TEST_F(PidControlTest, Derivative) {
   VerifyDerivativeOnly(0.0001);
 }
 
-// Start sets the control's initial time, resetting other vlaues to zero.
-TEST_F(PidControlTest, NoStart) {
+// By default, all error and time factors are zero.
+// Start resets error values to zero and sets the control's last-tuned time.
+TEST_F(PidControlTest, DefaultAndStart) {
   auto control = PidControl({.derivative_factor = 1.0});
 
-  // start_time is implicitly 0, so control.Read will base its extrapolation(time=300)
-  // across the previous tuning which had a duration of 150, thus control=(150-0)/(150-0) = 1.
+  // start_time is implicitly 0, so control.Read will base its value on an error of 150 and a time
+  // delta of 150, thus control.Read() == (150-0)/(150-0) == 1.
   control.TuneForError(zx::time(150), 150);
   EXPECT_EQ(control.Read(), 1);
 
+  // This clears any error factors and sets the last-tuned time to 100.
   control.Start(zx::time(100));
-  // start_time is 100, so control.Read will base its extrapolation(time=300)
-  // across the previous tuning which had a duration of 50, thus control=(150-0)/(150-100) = 3.
+
+  // start_time is 100, so control.Read will base its value on an error of 150 and a time delta of
+  // 50, thus control.Read() == (150-0)/(150-100) == 3.
   control.TuneForError(zx::time(150), 150);
   EXPECT_EQ(control.Read(), 3);
 }

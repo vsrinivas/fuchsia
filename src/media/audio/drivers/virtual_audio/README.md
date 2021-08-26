@@ -25,7 +25,7 @@ supported formats.
 
 ## Debugging the Virtual Audio Device Drivers
 
-TRACE and SPEW levels of logging are disabled by default. To enable them, use an 'fx set' command\
+TRACE and DEBUG levels of logging are disabled by default. To enable them, use an 'fx set' command\
 like the following:
 
     fx set x64 --args=dev_bootfs_labels=[\"//src/media/audio/drivers/virtual_audio:kernel_logging\"]

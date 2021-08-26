@@ -8,7 +8,7 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 
-// Notes: The TRACE and SPEW levels of logging are disabled by default.  In
+// Notes: The TRACE and DEBUG levels of logging are disabled by default.  In
 // order to enable them, you can pass something like the following in the kernel
 // command line args.
 //
