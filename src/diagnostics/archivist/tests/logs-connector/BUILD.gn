@@ -18,6 +18,7 @@ rustc_test("bin") {
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//src/diagnostics/archivist:lib",
     "//src/diagnostics/archivist/fidl:controller-rustc",
+    "//src/lib/diagnostics/log/message/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

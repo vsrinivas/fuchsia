@@ -4,8 +4,7 @@
 
 use {
     crate::stats::LogIdentifier,
-    archivist_lib::logs::message::Severity,
-    diagnostics_data::LogsData,
+    diagnostics_data::{LogsData, Severity},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_metrics::{
         MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec, Status,

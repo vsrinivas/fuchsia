@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::*;
-use archivist_lib::logs::message::Severity;
-use diagnostics_data::LogsData;
+use diagnostics_data::{LogsData, Severity};
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_derive::Inspect;
@@ -315,10 +314,12 @@ pub enum LogSource {
 
 #[cfg(test)]
 mod tests {
+    use diagnostics_data::{BuilderArgs, LogsDataBuilder};
+    use diagnostics_message::message::{Message, METADATA_SIZE, TEST_IDENTITY};
+
     use {
-        super::*, archivist_lib::logs::message::*, fuchsia_async as fasync,
-        fuchsia_inspect::testing::*, fuchsia_inspect::*, fuchsia_zircon as zx, futures::Future,
-        proptest::prelude::*, std::panic,
+        super::*, fuchsia_async as fasync, fuchsia_inspect::testing::*, fuchsia_inspect::*,
+        fuchsia_zircon as zx, futures::Future, proptest::prelude::*, std::panic,
     };
 
     struct GranularTestState {
@@ -755,7 +756,7 @@ mod tests {
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: zx::Time::from_nanos(1).into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.to_string(),
+                moniker: TEST_IDENTITY.moniker.clone(),
                 severity: Severity::Error,
                 size_bytes: 0,
             })
@@ -786,7 +787,7 @@ mod tests {
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: zx::Time::from_nanos(1).into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.to_string(),
+                moniker: TEST_IDENTITY.moniker.clone(),
                 severity: Severity::Error,
                 size_bytes: 0,
             })
@@ -820,7 +821,7 @@ mod tests {
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: zx::Time::from_nanos(1).into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.to_string(),
+                moniker: TEST_IDENTITY.moniker.clone(),
                 severity: Severity::Error,
                 size_bytes: 0,
             })
@@ -1061,7 +1062,7 @@ mod tests {
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: zx::Time::from_nanos(1).into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.to_string(),
+                moniker: TEST_IDENTITY.moniker.clone(),
                 severity: severity,
                 size_bytes: METADATA_SIZE + 1 + msg.len(),
             })

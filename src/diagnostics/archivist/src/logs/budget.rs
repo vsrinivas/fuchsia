@@ -128,7 +128,7 @@ mod tests {
     use super::*;
     use crate::logs::{
         container::LogsArtifactsContainer,
-        message::{Message, TEST_IDENTITY},
+        message::{MessageWithStats, TEST_IDENTITY},
         multiplex::PinStream,
         stats::LogStreamStats,
     };
@@ -140,10 +140,10 @@ mod tests {
         task::{Context, Poll},
     };
 
-    struct CursorWrapper(PinStream<Arc<Message>>);
+    struct CursorWrapper(PinStream<Arc<MessageWithStats>>);
 
     impl Stream for CursorWrapper {
-        type Item = Arc<Message>;
+        type Item = Arc<MessageWithStats>;
         fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             self.0.as_mut().poll_next(cx)
         }
@@ -189,8 +189,8 @@ mod tests {
         assert_eq!(cursor.next().await, None);
     }
 
-    fn fake_message(timestamp: i64) -> Message {
-        Message::from(
+    fn fake_message(timestamp: i64) -> MessageWithStats {
+        MessageWithStats::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: timestamp.into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),
