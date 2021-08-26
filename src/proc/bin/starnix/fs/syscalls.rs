@@ -829,6 +829,62 @@ pub fn sys_timerfd_settime(
     Ok(SUCCESS)
 }
 
+pub fn sys_epoll_create(ctx: &SyscallContext<'_>, size: i32) -> Result<SyscallResult, Errno> {
+    if size < 1 {
+        return error!(EINVAL);
+    }
+    sys_epoll_create1(ctx, 0)
+}
+
+pub fn sys_epoll_create1(ctx: &SyscallContext<'_>, flags: u32) -> Result<SyscallResult, Errno> {
+    not_implemented!("epoll_create1 not implemented");
+    if flags & !EPOLL_CLOEXEC != 0 {
+        return Err(EINVAL);
+    }
+    let ep_file = EpollFileObject::new(ctx.kernel());
+    let fd_flags = if flags & EPOLL_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
+    let fd = ctx.task.files.add_with_flags(ep_file, fd_flags)?;
+    Ok(fd.into())
+}
+
+pub fn sys_epoll_ctl(
+    _ctx: &SyscallContext<'_>,
+    _epfd: FdNumber,
+    op: u32,
+    _fd: FdNumber,
+    _event: UserRef<epoll_event>,
+) -> Result<SyscallResult, Errno> {
+    not_implemented!("epoll_ctl not implemented");
+    match op {
+        EPOLL_CTL_ADD => Ok(SUCCESS),
+        EPOLL_CTL_MOD => Ok(SUCCESS),
+        EPOLL_CTL_DEL => Ok(SUCCESS),
+        _ => Err(EINVAL),
+    }
+}
+
+pub fn sys_epoll_wait(
+    ctx: &SyscallContext<'_>,
+    epfd: FdNumber,
+    events: UserRef<epoll_event>,
+    max_events: i32,
+    timeout: i32,
+) -> Result<SyscallResult, Errno> {
+    sys_epoll_pwait(ctx, epfd, events, max_events, timeout, UserRef::<sigset_t>::default())
+}
+
+pub fn sys_epoll_pwait(
+    _ctx: &SyscallContext<'_>,
+    _epfd: FdNumber,
+    _events: UserRef<epoll_event>,
+    _max_events: i32,
+    _timeout: i32,
+    _sigmask: UserRef<sigset_t>,
+) -> Result<SyscallResult, Errno> {
+    not_implemented!("epoll_pwait not implemented");
+    Err(ENOSYS)
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -951,6 +1007,22 @@ mod tests {
                 assert!(false);
             }
         }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sys_epoll() -> Result<(), Errno> {
+        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
+        let ctx = SyscallContext::new(&task_owner.task);
+
+        if let SyscallResult::Success(epoll_fd) =
+            sys_epoll_create1(&ctx, 0).expect("sys_epoll_create1 failed")
+        {
+            sys_close(&ctx, FdNumber::from_raw(epoll_fd as i32)).expect("sys_close failed");
+        } else {
+            panic!("unexpected result from sys_epoll_create1");
+        }
+
         Ok(())
     }
 }
