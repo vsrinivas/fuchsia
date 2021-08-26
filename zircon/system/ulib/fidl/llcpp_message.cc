@@ -134,10 +134,10 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   uint32_t num_iovecs_actual;
   uint32_t num_handles_actual;
   zx_status_t status;
-  status =
-      fidl::internal::EncodeIovecEtc(message_type, data, iovecs(), iovec_capacity(), handles(),
-                                     handle_capacity(), backing_buffer(), backing_buffer_capacity(),
-                                     &num_iovecs_actual, &num_handles_actual, error_address());
+  status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V1>(
+      message_type, data, iovecs(), iovec_capacity(), handles(), handle_capacity(),
+      backing_buffer(), backing_buffer_capacity(), &num_iovecs_actual, &num_handles_actual,
+      error_address());
   if (status != ZX_OK) {
     SetResult(fidl::Result::EncodeError(status, *error_address()));
     return;

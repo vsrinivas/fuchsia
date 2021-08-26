@@ -430,6 +430,11 @@ static_assert(sizeof(fidl_xunion_v2_t) == 16, "");
 
 // Messages.
 
+typedef uint32_t FidlWireFormatVersion;
+
+#define FIDL_WIRE_FORMAT_VERSION_V1 ((uint32_t)1)
+#define FIDL_WIRE_FORMAT_VERSION_V2 ((uint32_t)2)
+
 // All fidl messages share a common 16 byte header.
 
 enum {

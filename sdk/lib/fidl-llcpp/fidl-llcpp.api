@@ -6,7 +6,7 @@
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/client.h": "22a40041462a1ea7b1693e219551b6cc",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/client_base.h": "735a9bc05f5f32ecafbf75f454efc9d6",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/client_end.h": "518af5c65d5de63b1e4edf48d71dc412",
-  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/coding.h": "28bbdbcc938986ed3894d50aa589b662",
+  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/coding.h": "4fe9f8ae3cad9a7aa7b676bac6ee41f4",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/connect_service.h": "cf0bd04eb302b8484227b9774da7201a",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/envelope.h": "de488dd466a50f6dcac93d2dc18a2266",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/extract_resource_on_destruction.h": "9b46db5221b528359b24d504047894bf",

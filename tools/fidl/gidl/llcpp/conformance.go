@@ -47,7 +47,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	const auto expected_handles = {{ .Handles }};
 	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(
-		&obj, expected_bytes, expected_handles, {{ .CheckHandleRights }}));
+		{{ .WireFormatVersion }}, &obj, expected_bytes, expected_handles, {{ .CheckHandleRights }}));
 }
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
@@ -141,8 +141,8 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, HandleDefs, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly, CheckHandleRights                         bool
+	Name, WireFormatVersion, HandleDefs, ValueBuild, ValueVar, Bytes, Handles string
+	FuchsiaOnly, CheckHandleRights                                            bool
 }
 
 type decodeSuccessCase struct {
@@ -207,11 +207,12 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeSuccess.Value, decl, libllcpp.HandleReprRaw)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupportedForEncode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
 				Name:              testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				WireFormatVersion: wireFormatVersionName(encoding.WireFormat),
 				HandleDefs:        handleDefs,
 				ValueBuild:        valueBuild,
 				ValueVar:          valueVar,
@@ -242,7 +243,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		equalityBuild, EqualityValue := libllcpp.BuildEqualityCheck(equalityInputVar, decodeSuccess.Value, decl, "handle_koids")
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
-			if !wireFormatSupportedForDecode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -276,7 +277,7 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlm
 		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeFailure.Value, decl, libllcpp.HandleReprRaw)
 		errorCode := libllcpp.LlcppErrorCode(encodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
-		for _, wireFormat := range supportedEncodeWireFormats {
+		for _, wireFormat := range supportedEncodeFailureFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:        testCaseName(encodeFailure.Name, wireFormat),
 				HandleDefs:  handleDefs,
@@ -302,7 +303,7 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 		errorCode := libllcpp.LlcppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
 		for _, encoding := range decodeFailure.Encodings {
-			if !wireFormatSupportedForDecode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -320,24 +321,16 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 	return decodeFailureCases, nil
 }
 
-var supportedEncodeWireFormats = []gidlir.WireFormat{
-	gidlir.V1WireFormat,
-}
-var supportedDecodeWireFormats = []gidlir.WireFormat{
+var supportedWireFormats = []gidlir.WireFormat{
 	gidlir.V1WireFormat,
 	gidlir.V2WireFormat,
 }
-
-func wireFormatSupportedForEncode(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedEncodeWireFormats {
-		if wireFormat == wf {
-			return true
-		}
-	}
-	return false
+var supportedEncodeFailureFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
 }
-func wireFormatSupportedForDecode(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedDecodeWireFormats {
+
+func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedWireFormats {
 		if wireFormat == wf {
 			return true
 		}

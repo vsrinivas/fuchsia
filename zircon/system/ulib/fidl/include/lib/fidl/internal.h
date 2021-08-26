@@ -36,11 +36,6 @@ enum class WireFormatVersion {
 
 __BEGIN_CDECLS
 
-typedef uint32_t FidlWireFormatVersion;
-
-#define FIDL_WIRE_FORMAT_VERSION_V1 ((uint32_t)1)
-#define FIDL_WIRE_FORMAT_VERSION_V2 ((uint32_t)2)
-
 zx_status_t FidlHandleCloseMany(const zx_handle_t* handles, size_t num_handles);
 zx_status_t FidlHandleDispositionCloseMany(const zx_handle_disposition_t* handle_dispositions,
                                            size_t num_handles);

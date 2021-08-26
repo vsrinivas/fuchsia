@@ -36,6 +36,7 @@ namespace internal {
 //
 // On success, handles in the original object will be moved to the |out_handles| array.
 // On failure, handles in the original object will be closed.
+template <FidlWireFormatVersion WireFormatVersion>
 zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs,
                            uint32_t iovecs_capacity, zx_handle_disposition_t* handle_dispositions,
                            uint32_t handle_dispositions_capacity, uint8_t* backing_buffer,

@@ -91,5 +91,6 @@ source_set("conformance_utils") {
   public_deps = [
     "//zircon/system/public",
     "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/fidl:fidl_base",
   ]
 }

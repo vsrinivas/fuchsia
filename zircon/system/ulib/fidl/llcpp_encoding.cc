@@ -72,17 +72,18 @@ struct EncodeArgs {
   const char** out_error_msg;
 };
 
-class FidlEncoder final
-    : public ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait,
-                             EncodingPosition, EnvelopeCheckpoint> {
+template <FidlWireFormatVersion WireFormatVersion>
+class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::MutatingVisitorTrait,
+                                                 EncodingPosition, EnvelopeCheckpoint> {
  public:
-  using Base = ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait,
-                               EncodingPosition, EnvelopeCheckpoint>;
+  using Base = ::fidl::Visitor<WireFormatVersion, fidl::MutatingVisitorTrait, EncodingPosition,
+                               EnvelopeCheckpoint>;
   using Status = typename Base::Status;
   using PointeeType = typename Base::PointeeType;
   using ObjectPointerPointer = typename Base::ObjectPointerPointer;
   using HandlePointer = typename Base::HandlePointer;
   using CountPointer = typename Base::CountPointer;
+  using EnvelopeType = typename Base::EnvelopeType;
   using EnvelopePointer = typename Base::EnvelopePointer;
   using Position = EncodingPosition;
 
@@ -288,8 +289,8 @@ class FidlEncoder final
     };
   }
 
-  Status LeaveEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
-                       EnvelopeCheckpoint prev_checkpoint) {
+  Status LeaveEnvelopeImpl(fidl_envelope_t in_envelope, fidl_envelope_t* out_envelope,
+                           EnvelopeCheckpoint prev_checkpoint) {
     uint32_t num_bytes = total_bytes_written_ - prev_checkpoint.num_bytes;
     uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
     // Write the num_bytes/num_handles.
@@ -297,11 +298,41 @@ class FidlEncoder final
     out_envelope->num_handles = num_handles;
     return Status::kSuccess;
   }
+  Status LeaveEnvelopeImpl(fidl_envelope_v2_t in_envelope, fidl_envelope_v2_t* out_envelope,
+                           EnvelopeCheckpoint prev_checkpoint) {
+    uint32_t num_bytes = total_bytes_written_ - prev_checkpoint.num_bytes;
+    uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
+    // Write the num_bytes/num_handles.
+    out_envelope->num_bytes = num_bytes;
+    out_envelope->num_handles = num_handles;
+    out_envelope->flags = 0;
+    return Status::kSuccess;
+  }
+  Status LeaveEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
+                       EnvelopeCheckpoint prev_checkpoint) {
+    return LeaveEnvelopeImpl(in_envelope, out_envelope, prev_checkpoint);
+  }
 
+  Status LeaveInlinedEnvelopeImpl(fidl_envelope_t in_envelope, fidl_envelope_t* out_envelope,
+                                  EnvelopeCheckpoint prev_checkpoint) {
+    ZX_PANIC("Not implemented for v1");
+  }
+  Status LeaveInlinedEnvelopeImpl(fidl_envelope_v2_t in_envelope, fidl_envelope_v2_t* out_envelope,
+                                  EnvelopeCheckpoint prev_checkpoint) {
+    out_envelope->num_handles = handle_idx_ - prev_checkpoint.num_handles;
+    out_envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    if (out_envelope->num_handles != 0) {
+      // FIDL_HANDLE_PRESENT
+      memset(out_envelope->inline_value, 0xff, sizeof(out_envelope->inline_value));
+    } else {
+      memcpy(out_envelope->inline_value, in_envelope.inline_value,
+             sizeof(in_envelope.inline_value));
+    }
+    return Status::kSuccess;
+  }
   Status LeaveInlinedEnvelope(EnvelopeType in_envelope, EnvelopePointer out_envelope,
                               EnvelopeCheckpoint prev_checkpoint) {
-    out_envelope->num_handles = handle_idx_ - prev_checkpoint.num_handles;
-    return Status::kSuccess;
+    return LeaveInlinedEnvelopeImpl(in_envelope, out_envelope, prev_checkpoint);
   }
 
   // Error when attempting to encode an unknown envelope.
@@ -365,6 +396,7 @@ namespace internal {
     return ZX_ERR_INVALID_ARGS;         \
   }
 
+template <FidlWireFormatVersion WireFormatVersion>
 zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs,
                            uint32_t num_iovecs, zx_handle_disposition_t* handle_dispositions,
                            uint32_t num_handle_dispositions, uint8_t* backing_buffer,
@@ -393,7 +425,7 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
   zx_status_t status;
   uint32_t primary_size;
   uint32_t next_out_of_line;
-  if (unlikely((status = fidl::PrimaryObjectSize<FIDL_WIRE_FORMAT_VERSION_V1>(
+  if (unlikely((status = fidl::PrimaryObjectSize<WireFormatVersion>(
                     type, num_backing_buffer, &primary_size, &next_out_of_line, out_error_msg)) !=
                ZX_OK)) {
     return status;
@@ -419,9 +451,8 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
   if (handle_dispositions != nullptr) {
     args.handles = handle_dispositions;
   }
-  FidlEncoder encoder(args);
-  ::fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V1>(encoder, type,
-                                            {.source_object = value, .dest = backing_buffer});
+  FidlEncoder<WireFormatVersion> encoder(args);
+  ::fidl::Walk<WireFormatVersion>(encoder, type, {.source_object = value, .dest = backing_buffer});
   if (unlikely(encoder.status() != ZX_OK)) {
     *out_actual_handles = 0;
     FidlHandleDispositionCloseMany(handle_dispositions, encoder.num_out_handles());
@@ -432,6 +463,17 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
   *out_actual_handles = encoder.num_out_handles();
   return ZX_OK;
 }
+
+template zx_status_t EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V1>(
+    const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs,
+    zx_handle_disposition_t* handle_dispositions, uint32_t num_handle_dispositions,
+    uint8_t* backing_buffer, uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
+    uint32_t* out_actual_handles, const char** out_error_msg);
+template zx_status_t EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+    const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs,
+    zx_handle_disposition_t* handle_dispositions, uint32_t num_handle_dispositions,
+    uint8_t* backing_buffer, uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
+    uint32_t* out_actual_handles, const char** out_error_msg);
 
 }  // namespace internal
 }  // namespace fidl

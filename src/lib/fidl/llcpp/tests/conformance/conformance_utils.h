@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/transformer.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -73,17 +74,108 @@ bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size
 // Verifies that |value| encodes to |bytes|.
 // Note: This is destructive to |value| - a new value must be created with each call.
 template <typename FidlType>
-bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
+bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlType* value,
+                   const std::vector<uint8_t>& bytes,
                    const std::vector<zx_handle_disposition_t>& handle_dispositions,
                    bool check_handle_rights) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{}, value);
-  if (!encoded.ok()) {
-    std::cout << "Encoding failed: " << encoded.error() << std::endl;
+  ::fidl::OwnedEncodedMessage<FidlType> encoded_v1(fidl::internal::AllowUnownedInputRef{}, value);
+  if (!encoded_v1.ok()) {
+    std::cout << "Encoding failed: " << encoded_v1.error() << std::endl;
     return false;
   }
-  ::fidl::OutgoingMessage& outgoing = encoded.GetOutgoingMessage();
+  ::fidl::OutgoingMessage& outgoing_v1 = encoded_v1.GetOutgoingMessage();
+  for (uint32_t i = 0; i < outgoing_v1.iovec_actual(); i++) {
+    if (outgoing_v1.iovecs()[i].buffer == nullptr) {
+      std::cout << "Iovec " << i << " unexpectedly had a null buffer" << std::endl;
+      return false;
+    }
+    if (outgoing_v1.iovecs()[i].capacity == 0) {
+      std::cout << "Iovec " << i << " had zero capacity" << std::endl;
+      return false;
+    }
+    if (outgoing_v1.iovecs()[i].reserved != 0) {
+      std::cout << "Iovec " << i << " had a non-zero reserved field" << std::endl;
+      return false;
+    }
+  }
+
+  // Populate c_msg for the given wire format-encoded bytes.
+  // For v1, just re-use the already encoded v1 bytes.
+  // For v2, encode v1, transcode v1 to v2, decode v2 and re-encode v2 to get
+  // the message bytes.
+  // TODO(fxbug.dev/83220) Re-enable disabled GIDL tests when removing this.
+  fidl_outgoing_msg_t c_msg;
+  std::unique_ptr<uint8_t[]> transformer_buffer;
+  std::unique_ptr<zx_channel_iovec_t[]> iovec_buffer;
+  std::unique_ptr<uint8_t[]> backing_buffer;
+  std::unique_ptr<zx_handle_disposition_t[]> handle_disposition_buffer;
+  switch (wire_format_version) {
+    case fidl::internal::WireFormatVersion::kV1: {
+      memcpy(&c_msg, outgoing_v1.message(), sizeof(c_msg));
+      break;
+    }
+    case fidl::internal::WireFormatVersion::kV2: {
+      auto copied_bytes = outgoing_v1.CopyBytes();
+      std::vector<zx_handle_info_t> handle_infos;
+      for (uint32_t i = 0; i < outgoing_v1.handle_actual(); i++) {
+        zx_handle_disposition_t handle_disposition = outgoing_v1.handles()[i];
+        handle_infos.push_back({
+          .handle = handle_disposition.handle,
+          .type = handle_disposition.type,
+          .rights = handle_disposition.rights,
+        });
+      }
+
+      transformer_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+      uint32_t num_transformer_bytes;
+      const char* error;
+      zx_status_t status = internal__fidl_transform__may_break(
+          FIDL_TRANSFORMATION_V1_TO_V2, FidlType::Type, copied_bytes.data(), copied_bytes.size(),
+          transformer_buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &num_transformer_bytes, &error);
+      if (status != ZX_OK) {
+        std::cout << "Transformer exited with status: " << status << " (error: " << error << ")"
+                  << std::endl;
+        return false;
+      }
+
+      status = internal_fidl_decode_etc__v2__may_break(FidlType::Type, transformer_buffer.get(),
+                                                       num_transformer_bytes, handle_infos.data(),
+                                                       handle_infos.size(), &error);
+      if (status != ZX_OK) {
+        std::cout << "V2 decoder exited with status: " << status << " (error: " << error << ")"
+                  << std::endl;
+        return false;
+      }
+
+      iovec_buffer = std::make_unique<zx_channel_iovec_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
+      backing_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+      handle_disposition_buffer =
+          std::make_unique<zx_handle_disposition_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+      uint32_t actual_iovecs;
+      uint32_t actual_handles;
+      status = ::fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+          FidlType::Type, transformer_buffer.get(), iovec_buffer.get(), ZX_CHANNEL_MAX_MSG_IOVECS,
+          handle_disposition_buffer.get(), ZX_CHANNEL_MAX_MSG_HANDLES, backing_buffer.get(),
+          ZX_CHANNEL_MAX_MSG_BYTES, &actual_iovecs, &actual_handles, &error);
+      if (status != ZX_OK) {
+        std::cout << "V2 encoder exited with status: " << status << " (error: " << error << ")"
+                  << std::endl;
+        return false;
+      }
+
+      c_msg.type = FIDL_OUTGOING_MSG_TYPE_IOVEC;
+      c_msg.iovec.iovecs = iovec_buffer.get();
+      c_msg.iovec.num_iovecs = actual_iovecs;
+      c_msg.iovec.handles = handle_disposition_buffer.get();
+      c_msg.iovec.num_handles = actual_handles;
+
+      break;
+    }
+  }
+
+  auto outgoing = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
   for (uint32_t i = 0; i < outgoing.iovec_actual(); i++) {
     if (outgoing.iovecs()[i].buffer == nullptr) {
       std::cout << "Iovec " << i << " unexpectedly had a null buffer" << std::endl;
