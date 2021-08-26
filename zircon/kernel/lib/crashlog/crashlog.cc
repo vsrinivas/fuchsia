@@ -14,6 +14,7 @@
 #include <lib/version.h>
 #include <platform.h>
 #include <stdio.h>
+#include <string-file.h>
 #include <string.h>
 #include <zircon/boot/crash-reason.h>
 
@@ -48,29 +49,7 @@ fbl::RefPtr<VmObject> recovered_crashlog TA_GUARDED(RecoveredCrashlogLock::Get()
 }  // namespace
 
 size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t reason) {
-  struct OutFile {
-    // This holds the remaining buffer available to write.
-    ktl::span<char> buffer_;
-
-    // This adapts the FILE* interface so it calls Write, below.
-    FILE stream_{this};
-
-    int Write(ktl::string_view str) {
-      // Copy as much as there is space for.
-      str = str.substr(0, ktl::min(str.size(), buffer_.size()));
-      if (str.empty()) {
-        // If there's no space at all, return error so fprintf bails out early.
-        return -1;
-      }
-      memcpy(buffer_.data(), str.data(), str.size());
-
-      // Leave only the remaining buffer space.
-      buffer_ = buffer_.subspan(str.size());
-
-      return static_cast<int>(str.size());
-    }
-  } outfile{{out, out_len}};
-  auto total_size = [&]() -> size_t { return outfile.buffer_.data() - out; };
+  StringFile outfile{{out, out_len}};
 
   uintptr_t crashlog_base_address = 0;
   const char* reason_str;
@@ -100,8 +79,8 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
       reason_str = "UNKNOWN";
       break;
   }
-  fprintf(&outfile.stream_, "ZIRCON REBOOT REASON (%s)\n\n", reason_str);
-  fprintf(&outfile.stream_, "UPTIME (ms)\n%" PRIi64 "\n\n", current_time() / ZX_MSEC(1));
+  fprintf(&outfile, "ZIRCON REBOOT REASON (%s)\n\n", reason_str);
+  fprintf(&outfile, "UPTIME (ms)\n%" PRIi64 "\n\n", current_time() / ZX_MSEC(1));
 
   // Keep the format and values in sync with the symbolizer.
   // Print before the registers (KASLR offset).
@@ -110,24 +89,24 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
 #elif defined(__aarch64__)
   const char* arch = "aarch64";
 #endif
-  fprintf(&outfile.stream_,
+  fprintf(&outfile,
           "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
           "name=zircon.elf\n\n",
           arch, version_string(), elf_build_id_string(), crashlog_base_address);
 
   // If this is an OOM, then including a backtrace doesn't make sense, return early.
   if (reason == ZirconCrashReason::Oom) {
-    return total_size();
+    return outfile.used_region().size();
   }
 
   // If this is not a SW Watchdog firing, then attempt to log stuff like the CPU
   // registers, a backtrace, some of the stack, and so on.
   if (reason != ZirconCrashReason::SoftwareWatchdog) {
-    PrintSymbolizerContext(&outfile.stream_);
+    PrintSymbolizerContext(&outfile);
 
     if (g_crashlog.iframe) {
 #if defined(__aarch64__)
-      fprintf(&outfile.stream_,
+      fprintf(&outfile,
               // clang-format off
               "REGISTERS\n"
               "  x0: %#18" PRIx64 "\n"
@@ -181,7 +160,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
               g_crashlog.iframe->lr, g_crashlog.iframe->usp, g_crashlog.iframe->elr,
               g_crashlog.iframe->spsr, g_crashlog.esr, g_crashlog.far);
 #elif defined(__x86_64__)
-      fprintf(&outfile.stream_,
+      fprintf(&outfile,
               // clang-format off
               "REGISTERS\n"
               "  CS: %#18" PRIx64 "\n"
@@ -218,15 +197,19 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
 #endif
     }
 
-    fprintf(&outfile.stream_, "BACKTRACE (up to 16 calls)\n");
+    fprintf(&outfile, "BACKTRACE (up to 16 calls)\n");
 
-    size_t len = Thread::Current::AppendBacktrace(outfile.buffer_.data(), outfile.buffer_.size());
-    outfile.buffer_ = outfile.buffer_.subspan(len);
-    fprintf(&outfile.stream_, "\n");
+    {
+      ktl::span<char> backtrace_target = outfile.available_region();
+      size_t len =
+          Thread::Current::AppendBacktrace(backtrace_target.data(), backtrace_target.size());
+      outfile.Skip(len);
+    }
+    fprintf(&outfile, "\n");
   }
 
   // Include counters for critical events.
-  fprintf(&outfile.stream_,
+  fprintf(&outfile,
           "counters: haf=%" PRId64 " paf=%" PRId64 " pvf=%" PRId64 " lcs=%" PRId64 " lhb=%" PRId64
           " cf=%" PRId64 " \n",
           HandleTableArena::get_alloc_failed_count(), pmm_get_alloc_failed_count(),
@@ -238,11 +221,10 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
   // The panic buffer is the last thing we print.  Space is limited so if the panic/assert message
   // was long we may not be able to include the whole thing.  That's OK.  The panic buffer is a
   // "nice to have" and we've already printed the primary diagnostics (register dump and backtrace).
-  fprintf(&outfile.stream_, "panic buffer: %s\n", panic_buffer.c_str());
+  fprintf(&outfile, "panic buffer: %s\n", panic_buffer.c_str());
+  fprintf(&outfile, "\n");
 
-  fprintf(&outfile.stream_, "\n");
-
-  return total_size();
+  return outfile.used_region().size();
 }
 
 void crashlog_stash(fbl::RefPtr<VmObject> crashlog) {
