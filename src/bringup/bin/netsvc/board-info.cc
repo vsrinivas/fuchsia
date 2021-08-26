@@ -30,8 +30,6 @@
 #include <fbl/unique_fd.h>
 #include <gpt/gpt.h>
 
-#include "src/lib/bootfs/parser.h"
-
 namespace {
 
 [[maybe_unused]] static bool IsChromebook(const zx::channel& sysinfo) {

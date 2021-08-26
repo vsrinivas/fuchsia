@@ -7,7 +7,6 @@ group("lib") {
   deps = [
     ":tests",
     "backoff",
-    "bootfs",
     "callback",
     "chunked-compression",
     "cobalt",
@@ -61,7 +60,6 @@ group("tests") {
     "async-utils:tests",
     "async-watchdog:tests",
     "backoff:tests",
-    "bootfs:tests",
     "by_addr:tests",
     "callback:tests",
     "chunked-compression:tests",
