@@ -17,6 +17,7 @@
 #include "src/virtualization/tests/hypervisor/hypervisor_tests.h"
 
 DECLARE_TEST_FUNCTION(vcpu_read_write_state)
+DECLARE_TEST_FUNCTION(vcpu_interrupt)
 DECLARE_TEST_FUNCTION(vcpu_wfi)
 DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv2)
 DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv3)
@@ -105,6 +106,15 @@ TEST(Guest, VcpuReadWriteState) {
   EXPECT_EQ(vcpu_state.x[30], 60u);
   EXPECT_EQ(vcpu_state.sp, 128u);
   EXPECT_EQ(vcpu_state.cpsr, 0b0110u << 28);
+}
+
+TEST(Guest, VcpuInterrupt) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+  test.interrupts_enabled = true;
+
+  ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuWfi) {

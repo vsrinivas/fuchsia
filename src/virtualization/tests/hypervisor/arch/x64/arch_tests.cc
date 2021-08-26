@@ -100,6 +100,22 @@ TEST(Guest, VcpuReadWriteState) {
   EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
 }
 
+TEST(Guest, VcpuInterrupt) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+  test.interrupts_enabled = true;
+
+  // Resume once and wait for the guest to set up an IDT.
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+
+  ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+
+  zx_vcpu_state_t vcpu_state;
+  ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+  EXPECT_EQ(vcpu_state.rax, kInterruptVector);
+}
+
 TEST(Guest, VcpuInterruptPriority) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
