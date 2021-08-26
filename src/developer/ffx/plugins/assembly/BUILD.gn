@@ -18,6 +18,7 @@ ffx_plugin("ffx_assembly") {
     "src/fvm.rs",
     "src/lib.rs",
     "src/operations.rs",
+    "src/operations/config_data.rs",
     "src/operations/extract.rs",
     "src/operations/image.rs",
     "src/update_package.rs",
@@ -26,7 +27,10 @@ ffx_plugin("ffx_assembly") {
     "src/vfs.rs",
     "src/zbi.rs",
   ]
-  args_deps = []
+  args_deps = [
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
   deps = [
     "//src/lib/assembly/base_package",
     "//src/lib/assembly/blobfs",
@@ -48,7 +52,6 @@ ffx_plugin("ffx_assembly") {
     "//third_party/rust_crates:serde_json5",
     "//third_party/rust_crates:tempfile",
   ]
-
   test_deps = [
     "//src/lib/assembly/test_keys",
     "//src/lib/assembly/test_util",

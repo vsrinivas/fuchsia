@@ -4,6 +4,7 @@
 
 use {anyhow::Result, ffx_assembly_args::*, ffx_core::ffx_plugin};
 
+mod args;
 mod base_package;
 mod blobfs;
 mod config;
@@ -23,5 +24,6 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
     match cmd.op_class {
         OperationClass::Image(args) => operations::image::assemble(args),
         OperationClass::Extract(args) => operations::extract::extract(args),
+        OperationClass::ConfigData(args) => operations::config_data::create_config_data(args),
     }
 }
