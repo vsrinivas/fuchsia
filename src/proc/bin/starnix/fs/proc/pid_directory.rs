@@ -7,9 +7,9 @@ use std::sync::Arc;
 use crate::errno;
 use crate::error;
 use crate::fd_impl_directory;
-use crate::fs::FsNodeOps;
 use crate::fs::*;
 use crate::fs_node_impl_symlink;
+use crate::mode;
 use crate::task::Task;
 use crate::types::*;
 
@@ -27,6 +27,7 @@ impl PidDirectory {
         let nodes = Arc::new(hashmap! {
             b"exe".to_vec() => ExeSymlink::new(fs, task.clone()),
             b"fd".to_vec() => FdDirectory::new(fs, task.clone()),
+            b"fdinfo".to_vec() => FdInfoDirectory::new(fs, task.clone()),
         });
 
         PidDirectory { nodes }
@@ -113,6 +114,12 @@ impl FileOps for PidDirectoryFileOps {
     }
 }
 
+fn parse_fd(name: &FsStr) -> Result<FdNumber, Errno> {
+    let name = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
+    let num = name.parse::<i32>().map_err(|_| errno!(ENOENT))?;
+    Ok(FdNumber::from_raw(num))
+}
+
 /// `FdDirectory` implements the `FsNodeOps` for a `proc/<pid>/fd` directory.
 pub struct FdDirectory {
     /// The task from which the `FdDirectory` fetches file descriptors.
@@ -131,11 +138,8 @@ impl FsNodeOps for FdDirectory {
     }
 
     fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let name = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
-        let num = name.parse::<i32>().map_err(|_| errno!(ENOENT))?;
-        let fd = FdNumber::from_raw(num);
-
-        // Make sure that the file descriptor exists before fetching the node.
+        let fd = parse_fd(name)?;
+        // Make sure that the file descriptor exists before creating the node.
         if let Ok(_) = self.task.files.get(fd) {
             Ok(node.fs().create_node(FdSymlink::new(self.task.clone(), fd), FdSymlink::file_mode()))
         } else {
@@ -144,7 +148,39 @@ impl FsNodeOps for FdDirectory {
     }
 }
 
-/// `FdDirectoryFileOps` implements `FileOps` for a `proc/<pid>/fd` directory.
+/// `FdInfoDirectory` implements the `FsNodeOps` for a `proc/<pid>/fdinfo` directory.
+pub struct FdInfoDirectory {
+    /// The task from which the `FdDirectory` fetches file descriptors.
+    task: Arc<Task>,
+}
+
+impl FdInfoDirectory {
+    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        fs.create_node_with_ops(FdInfoDirectory { task }, FileMode::IFDIR | FileMode::ALLOW_ALL)
+    }
+}
+
+impl FsNodeOps for FdInfoDirectory {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(FdDirectoryFileOps::new(self.task.clone())))
+    }
+
+    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        let fd = parse_fd(name)?;
+
+        if let Ok(file) = self.task.files.get(fd) {
+            let pos = *file.offset.lock();
+            let flags = file.flags();
+            let data = format!("pos:\t{}flags:\t0{:o}\n", pos, flags.bits()).into_bytes();
+            Ok(node.fs().create_node(Box::new(ByteVecFile::new(data)), mode!(IFREG, 0o444)))
+        } else {
+            error!(ENOENT)
+        }
+    }
+}
+
+/// `FdDirectoryFileOps` implements `FileOps` for the `proc/<pid>/fd` and
+/// `proc/<pid>/fdinfo` directories.
 ///
 /// Reading the directory returns a list of all the currently open file descriptors for the
 /// associated task.
