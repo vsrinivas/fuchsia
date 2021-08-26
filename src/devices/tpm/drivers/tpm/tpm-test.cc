@@ -30,6 +30,10 @@ enum TpmState {
   kTeardownTest,
 };
 
+constexpr uint16_t kDeviceId = 0xd00d;
+constexpr uint16_t kVendorId = 0xfeed;
+constexpr uint8_t kRevisionId = 0x4;
+
 using fuchsia_hardware_tpmimpl::wire::RegisterAddress;
 class TpmTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_tpmimpl::TpmImpl> {
  public:
@@ -87,6 +91,19 @@ class TpmTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_tp
         if (fifo_.empty()) {
           status_.set_data_avail(0);
         }
+        break;
+      }
+      case RegisterAddress::kTpmDidVid: {
+        tpm::DidVidReg reg;
+        reg.set_device_id(kDeviceId);
+        reg.set_vendor_id(kVendorId);
+        completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(
+            reinterpret_cast<uint8_t*>(reg.reg_value_ptr()), 4));
+        break;
+      }
+      case RegisterAddress::kTpmRid: {
+        uint8_t revision = kRevisionId;
+        completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(&revision, 1));
         break;
       }
       default: {
@@ -184,6 +201,16 @@ class TpmTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_tp
     }
   }
 
+  fidl::WireSyncClient<fuchsia_tpm::TpmDevice> GetTpmClient() {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_tpm::TpmDevice>();
+    ZX_ASSERT(endpoints.status_value() == ZX_OK);
+    tpm::TpmDevice* tpm = fake_root_->GetLatestChild()->GetDeviceContext<tpm::TpmDevice>();
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), tpm);
+    fidl::WireSyncClient<fuchsia_tpm::TpmDevice> client(std::move(endpoints->client));
+
+    return client;
+  }
+
  protected:
   async::Loop loop_;
   tpm::StsReg status_;
@@ -253,4 +280,19 @@ TEST_F(TpmTest, TestDdkSuspendShutdown) {
   dev->SuspendNewOp(DEV_POWER_STATE_D0, false, DEVICE_SUSPEND_REASON_POWEROFF);
   dev->WaitUntilSuspendReplyCalled();
   ASSERT_EQ(shutdown_type, TPM_SU_CLEAR);
+}
+
+TEST_F(TpmTest, TestGetDeviceId) {
+  auto dev = fake_root_->GetLatestChild();
+  dev->InitOp();
+  ASSERT_OK(dev->WaitUntilInitReplyCalled());
+
+  auto tpm = GetTpmClient();
+  auto result = tpm.GetDeviceId();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  auto& data = result->result.response();
+  ASSERT_EQ(data.device_id, kDeviceId);
+  ASSERT_EQ(data.vendor_id, kVendorId);
+  ASSERT_EQ(data.revision_id, kRevisionId);
 }

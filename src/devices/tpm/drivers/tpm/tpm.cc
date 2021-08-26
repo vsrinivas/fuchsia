@@ -54,7 +54,9 @@ zx_status_t TpmDevice::Create(void *ctx, zx_device_t *parent) {
   fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl> client(std::move(endpoints->client));
 
   auto device = std::make_unique<TpmDevice>(parent, std::move(client));
-  zx_status_t status = device->DdkAdd(ddk::DeviceAddArgs("tpm"));
+  zx_status_t status = device->DdkAdd(ddk::DeviceAddArgs("tpm")
+                                          .set_inspect_vmo(device->inspect_.DuplicateVmo())
+                                          .set_proto_id(ZX_PROTOCOL_TPM));
   if (status == ZX_OK) {
     __UNUSED auto unused = device.release();
   }
@@ -107,6 +109,10 @@ void TpmDevice::DdkUnbind(ddk::UnbindTxn txn) {
     unbind_txn_->Reply();
     unbind_txn_ = std::nullopt;
   }
+}
+
+void TpmDevice::GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync &completer) {
+  completer.ReplySuccess(vendor_id_, device_id_, revision_id_);
 }
 
 void TpmDevice::CommandThread(ddk::InitTxn txn) {
@@ -167,6 +173,28 @@ zx_status_t TpmDevice::DoInit() {
 
     return ZX_ERR_NOT_SUPPORTED;
   }
+
+  DidVidReg id;
+  status = id.ReadFrom(tpm_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  vendor_id_ = id.vendor_id();
+  device_id_ = id.device_id();
+
+  RevisionReg rev;
+  status = rev.ReadFrom(tpm_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  revision_id_ = rev.revision_id();
+
+  inspect_.GetRoot().CreateUint("vendor-id", vendor_id_, &inspect_);
+  inspect_.GetRoot().CreateUint("device-id", device_id_, &inspect_);
+  inspect_.GetRoot().CreateUint("revision-id", revision_id_, &inspect_);
+
   return ZX_OK;
 }
 

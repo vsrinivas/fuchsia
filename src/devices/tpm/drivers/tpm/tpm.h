@@ -6,7 +6,9 @@
 #define SRC_DEVICES_TPM_DRIVERS_TPM_TPM_H_
 
 #include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
+#include <fuchsia/tpm/llcpp/fidl.h>
 #include <lib/ddk/device.h>
+#include <lib/inspect/cpp/inspector.h>
 
 #include <condition_variable>
 
@@ -23,7 +25,8 @@ struct TpmCommand {
 };
 
 class TpmDevice;
-using DeviceType = ddk::Device<TpmDevice, ddk::Initializable, ddk::Suspendable, ddk::Unbindable>;
+using DeviceType = ddk::Device<TpmDevice, ddk::Initializable, ddk::Suspendable, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_tpm::TpmDevice>::Mixin>;
 
 class TpmDevice : public DeviceType {
  public:
@@ -43,6 +46,9 @@ class TpmDevice : public DeviceType {
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
 
+  // FIDL method implementation.
+  void GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync& completer);
+
  private:
   template <typename CmdType>
   void QueueCommand(std::unique_ptr<CmdType> cmd, TpmCommandCallback&& callback)
@@ -59,6 +65,11 @@ class TpmDevice : public DeviceType {
   std::thread command_thread_;
   std::optional<ddk::UnbindTxn> unbind_txn_ __TA_GUARDED(command_mutex_);
   bool shutdown_ __TA_GUARDED(command_mutex_) = false;
+  inspect::Inspector inspect_;
+
+  uint16_t vendor_id_;
+  uint16_t device_id_;
+  uint8_t revision_id_;
 };
 
 }  // namespace tpm

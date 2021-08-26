@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.tpm;
+
+using zx;
+
+protocol TpmDevice {
+    /// Get the TPM's device ID, vendor ID, and revision ID.
+    GetDeviceId() -> (struct {
+        vendor_id uint16;
+        device_id uint16;
+        revision_id uint8;
+    }) error zx.status;
+};

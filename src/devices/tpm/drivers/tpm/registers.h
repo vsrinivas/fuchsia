@@ -24,11 +24,11 @@ enum TpmFamily {
 
 // This base class just implements convenience |ReadFrom| and |WriteTo| methods that use a supplied
 // FIDL client to write/read a TPM register.
-template <class SelfType, uint16_t address>
-class TpmReg : public hwreg::RegisterBase<SelfType, uint32_t, hwreg::EnablePrinter> {
+template <class SelfType, typename BaseType, uint16_t address>
+class TpmReg : public hwreg::RegisterBase<SelfType, BaseType, hwreg::EnablePrinter> {
  public:
   zx_status_t ReadFrom(fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl>& client) {
-    auto result = client.Read(0, RegisterAddress(address), 4);
+    auto result = client.Read(0, RegisterAddress(address), sizeof(BaseType));
     if (!result.ok()) {
       zxlogf(ERROR, "Failed to send read FIDL request: %s", result.FormatDescription().data());
       return result.status();
@@ -38,19 +38,19 @@ class TpmReg : public hwreg::RegisterBase<SelfType, uint32_t, hwreg::EnablePrint
       return result->result.err();
     }
     auto& data = result->result.response().data;
-    if (data.count() != 4) {
+    if (data.count() != sizeof(BaseType)) {
       zxlogf(ERROR, "Incorrect response size");
       return ZX_ERR_BAD_STATE;
     }
 
-    uint32_t val = 0;
+    BaseType val = 0;
     memcpy(&val, data.data(), sizeof(val));
     this->set_reg_value(val);
     return ZX_OK;
   }
 
   zx_status_t WriteTo(fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl>& client) {
-    uint32_t value = this->reg_value();
+    auto value = this->reg_value();
     auto data =
         fidl::VectorView<uint8_t>::FromExternal(reinterpret_cast<uint8_t*>(&value), sizeof(value));
     auto result = client.Write(0, RegisterAddress(address), data);
@@ -72,7 +72,7 @@ class TpmReg : public hwreg::RegisterBase<SelfType, uint32_t, hwreg::EnablePrint
 // mostly compatible.
 
 // TPM_STS: 5.5.2.5, "Status Register" and 7.3.5.6, "TPM_STS".
-class StsReg : public TpmReg<StsReg, RegisterAddress::kTpmSts> {
+class StsReg : public TpmReg<StsReg, uint32_t, RegisterAddress::kTpmSts> {
  public:
   DEF_ENUM_FIELD(TpmFamily, 27, 26, tpm_family);
   DEF_BIT(25, reset_establishment);
@@ -91,7 +91,8 @@ class StsReg : public TpmReg<StsReg, RegisterAddress::kTpmSts> {
 //
 // Note that the I2C version of the interface only defines bits 0, 1, 2, and 7.
 // Reads of other fields will always return zero.
-class IntfCapabilityReg : public TpmReg<IntfCapabilityReg, RegisterAddress::kTpmIntCapability> {
+class IntfCapabilityReg
+    : public TpmReg<IntfCapabilityReg, uint32_t, RegisterAddress::kTpmIntCapability> {
  public:
   DEF_FIELD(30, 28, interface_version);
   DEF_FIELD(10, 9, data_transfer_size_support);
@@ -104,6 +105,19 @@ class IntfCapabilityReg : public TpmReg<IntfCapabilityReg, RegisterAddress::kTpm
   DEF_BIT(2, locality_change_int_supported);
   DEF_BIT(1, sts_valid_int_support);
   DEF_BIT(0, data_avail_int_support);
+};
+
+// TPM_DID_VID: 5.4.1.1, "DID/VID Register".
+class DidVidReg : public TpmReg<DidVidReg, uint32_t, RegisterAddress::kTpmDidVid> {
+ public:
+  DEF_FIELD(31, 16, device_id);
+  DEF_FIELD(15, 0, vendor_id);
+};
+
+// TPM_RID: 5.4.1.2, "RID Register".
+class RevisionReg : public TpmReg<RevisionReg, uint8_t, RegisterAddress::kTpmRid> {
+ public:
+  DEF_FIELD(7, 0, revision_id);
 };
 
 }  // namespace tpm

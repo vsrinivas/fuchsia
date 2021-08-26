@@ -21,6 +21,8 @@ type RegisterAddress = flexible enum : uint16 {
     TPM_DATA_FIFO = 0x24;
     TPM_HASH_START = 0x28;
     TPM_INTERFACE_ID = 0x30;
+    TPM_DID_VID = 0xf00;
+    TPM_RID = 0xf04;
 };
 
 /// Maximum possible amount of data that could be transferred in a single

@@ -19,10 +19,12 @@ common_deps = [
   ":tpm_bind",
   "//sdk/banjo/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_llcpp",
+  "//sdk/fidl/fuchsia.tpm:fuchsia.tpm_llcpp",
   "//src/devices/lib/driver",
   "//src/lib/ddktl",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/hwreg",
+  "//zircon/system/ulib/inspect",
   "//zircon/system/ulib/zx",
 ]
 
