@@ -53,7 +53,7 @@ class GfxBufferCollectionImporter : public allocation::BufferCollectionImporter 
 
   // Helper struct to hold information about the imported BufferCollections.
   struct BufferCollectionInfo {
-    vk::BufferCollectionFUCHSIA vk_buffer_collection;
+    vk::BufferCollectionFUCHSIAX vk_buffer_collection;
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
   };
   std::unordered_map<allocation::GlobalBufferCollectionId, BufferCollectionInfo>

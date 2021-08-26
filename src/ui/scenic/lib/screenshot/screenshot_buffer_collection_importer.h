@@ -36,7 +36,7 @@ class ScreenshotBufferCollectionImporter : public allocation::BufferCollectionIm
 
  private:
   escher::ImagePtr ExtractImage(const allocation::ImageMetadata& metadata,
-                                vk::BufferCollectionFUCHSIA collection, vk::ImageUsageFlags usage);
+                                vk::BufferCollectionFUCHSIAX collection, vk::ImageUsageFlags usage);
 
   // Dispatcher where this class runs on. Currently points to scenic main thread's dispatcher.
   async_dispatcher_t* dispatcher_;
@@ -45,7 +45,7 @@ class ScreenshotBufferCollectionImporter : public allocation::BufferCollectionIm
   escher::EscherWeakPtr escher_;
 
   struct BufferCollectionInfo {
-    vk::BufferCollectionFUCHSIA vk_buffer_collection;
+    vk::BufferCollectionFUCHSIAX vk_buffer_collection;
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
   };
 

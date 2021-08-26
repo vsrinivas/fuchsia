@@ -213,9 +213,9 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   create_info.initialLayout = vk::ImageLayout::eUndefined;
 
   tokens[0]->SetDebugClientInfo("vulkan", 0u);
-  vk::BufferCollectionCreateInfoFUCHSIA import_collection;
+  vk::BufferCollectionCreateInfoFUCHSIAX import_collection;
   import_collection.collectionToken = tokens[0].Unbind().TakeChannel().release();
-  auto import_result = environment->vk_device.createBufferCollectionFUCHSIA(
+  auto import_result = environment->vk_device.createBufferCollectionFUCHSIAX(
       import_collection, nullptr, environment->escher->device()->dispatch_loader());
   if (import_result.result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "VkImportBufferCollectionFUCHSIA failed: "
@@ -224,11 +224,11 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   }
 
   auto vulkan_collection_closer = fit::defer([environment, import_result]() {
-    environment->vk_device.destroyBufferCollectionFUCHSIA(
+    environment->vk_device.destroyBufferCollectionFUCHSIAX(
         import_result.value, nullptr, environment->escher->device()->dispatch_loader());
   });
 
-  auto constraints_result = environment->vk_device.setBufferCollectionConstraintsFUCHSIA(
+  auto constraints_result = environment->vk_device.setBufferCollectionConstraintsFUCHSIAX(
       import_result.value, create_info, environment->escher->device()->dispatch_loader());
   if (constraints_result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "VkSetBufferCollectionConstraints failed: "
@@ -271,7 +271,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   escher::ImageLayoutUpdater layout_updater(environment->escher->GetWeakPtr());
 
   for (uint32_t i = 0; i < count; ++i) {
-    vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+    vk::BufferCollectionImageCreateInfoFUCHSIAX collection_image_info;
     collection_image_info.collection = import_result.value;
     collection_image_info.index = i;
     create_info.setPNext(&collection_image_info);
@@ -284,7 +284,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
 
     auto memory_requirements =
         environment->vk_device.getImageMemoryRequirements(image_result.value);
-    auto collection_properties = environment->vk_device.getBufferCollectionPropertiesFUCHSIA(
+    auto collection_properties = environment->vk_device.getBufferCollectionPropertiesFUCHSIAX(
         import_result.value, environment->escher->device()->dispatch_loader());
     if (collection_properties.result != vk::Result::eSuccess) {
       FX_LOGS(ERROR) << "VkGetBufferCollectionProperties failed: "
@@ -296,12 +296,12 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
         << memory_requirements.memoryTypeBits << " " << collection_properties.value.memoryTypeBits;
     uint32_t memory_type_index = escher::CountTrailingZeros(
         memory_requirements.memoryTypeBits & collection_properties.value.memoryTypeBits);
-    vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+    vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIAX,
                        vk::MemoryDedicatedAllocateInfoKHR>
         alloc_info(vk::MemoryAllocateInfo()
                        .setAllocationSize(memory_requirements.size)
                        .setMemoryTypeIndex(memory_type_index),
-                   vk::ImportMemoryBufferCollectionFUCHSIA()
+                   vk::ImportMemoryBufferCollectionFUCHSIAX()
                        .setCollection(import_result.value)
                        .setIndex(i),
                    vk::MemoryDedicatedAllocateInfoKHR().setImage(image_result.value));

@@ -77,14 +77,14 @@ bool GfxBufferCollectionImporter::ImportBufferCollection(
   }
 
   // Create vk::BufferCollectionFUCHSIA.
-  vk::BufferCollectionFUCHSIA vk_buffer_collection;
+  vk::BufferCollectionFUCHSIAX vk_buffer_collection;
   {
     std::vector<vk::ImageCreateInfo> create_infos;
     for (const auto& format : kPreferredImageFormats) {
       create_infos.push_back(escher::image_utils::GetDefaultImageConstraints(format));
     }
 
-    vk::ImageConstraintsInfoFUCHSIA image_constraints_info;
+    vk::ImageConstraintsInfoFUCHSIAX image_constraints_info;
     image_constraints_info.createInfoCount = create_infos.size();
     image_constraints_info.pCreateInfos = create_infos.data();
     image_constraints_info.pFormatConstraints = nullptr;
@@ -93,22 +93,22 @@ bool GfxBufferCollectionImporter::ImportBufferCollection(
     image_constraints_info.minBufferCountForDedicatedSlack = 0;
     image_constraints_info.minBufferCountForSharedSlack = 0;
     if (escher_->allow_protected_memory())
-      image_constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIA::eProtectedOptional;
+      image_constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIAX::eProtectedOptional;
 
     // Set constraints.
-    vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
+    vk::BufferCollectionCreateInfoFUCHSIAX buffer_collection_create_info;
     buffer_collection_create_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
     auto vk_device = escher_->vk_device();
     auto vk_loader = escher_->device()->dispatch_loader();
     auto vk_buffer_collection_result =
-        vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader);
+        vk_device.createBufferCollectionFUCHSIAX(buffer_collection_create_info, nullptr, vk_loader);
     if (vk_buffer_collection_result.result != vk::Result::eSuccess) {
       FX_LOGS(ERROR) << __func__ << " failed, could not create BufferCollectionFUCHSIA: "
                      << vk::to_string(vk_buffer_collection_result.result);
       return false;
     }
     vk_buffer_collection = vk_buffer_collection_result.value;
-    auto set_contraints_result = vk_device.setBufferCollectionImageConstraintsFUCHSIA(
+    auto set_contraints_result = vk_device.setBufferCollectionImageConstraintsFUCHSIAX(
         vk_buffer_collection, image_constraints_info, vk_loader);
     if (set_contraints_result != vk::Result::eSuccess) {
       FX_LOGS(ERROR) << __func__ << " failed, could not set constraints: "
@@ -134,7 +134,7 @@ void GfxBufferCollectionImporter::ReleaseBufferCollection(
 
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
-  vk_device.destroyBufferCollectionFUCHSIA(itr->second.vk_buffer_collection, nullptr, vk_loader);
+  vk_device.destroyBufferCollectionFUCHSIAX(itr->second.vk_buffer_collection, nullptr, vk_loader);
 
   zx_status_t status = itr->second.buffer_collection_sync_ptr->Close();
   FX_DCHECK(status == ZX_OK) << "failed to close buffer collection ptr, status: " << status;
@@ -182,7 +182,7 @@ fxl::RefPtr<GpuImage> GfxBufferCollectionImporter::ExtractImage(
 
   // Grab the collection properties from Vulkan.
   auto properties_result =
-      vk_device.getBufferCollectionProperties2FUCHSIA(vk_buffer_collection, vk_loader);
+      vk_device.getBufferCollectionProperties2FUCHSIAX(vk_buffer_collection, vk_loader);
   if (properties_result.result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << __func__ << " failed, could not get collection properties: "
                    << vk::to_string(properties_result.result);
@@ -205,7 +205,7 @@ fxl::RefPtr<GpuImage> GfxBufferCollectionImporter::ExtractImage(
        vk::MemoryPropertyFlagBits::eProtected) == vk::MemoryPropertyFlagBits::eProtected;
 
   // Setup vk::ImageCreateInfo.
-  vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+  vk::BufferCollectionImageCreateInfoFUCHSIAX collection_image_info;
   collection_image_info.collection = vk_buffer_collection;
   collection_image_info.index = metadata.vmo_index;
   vk::ImageCreateInfo create_info = escher::image_utils::GetDefaultImageConstraints(
@@ -228,12 +228,12 @@ fxl::RefPtr<GpuImage> GfxBufferCollectionImporter::ExtractImage(
   vk_device.getImageMemoryRequirements(*image_result.value, &memory_requirements);
   uint32_t memory_type_index =
       escher::CountTrailingZeros(memory_requirements.memoryTypeBits & properties.memoryTypeBits);
-  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIAX,
                      vk::MemoryDedicatedAllocateInfoKHR>
       alloc_info(vk::MemoryAllocateInfo()
                      .setAllocationSize(memory_requirements.size)
                      .setMemoryTypeIndex(memory_type_index),
-                 vk::ImportMemoryBufferCollectionFUCHSIA()
+                 vk::ImportMemoryBufferCollectionFUCHSIAX()
                      .setCollection(vk_buffer_collection)
                      .setIndex(metadata.vmo_index),
                  vk::MemoryDedicatedAllocateInfoKHR().setImage(*image_result.value));

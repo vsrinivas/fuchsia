@@ -24,8 +24,8 @@ class BufferCollectionInfo {
   // Creates a new |BufferCollectionInfo| instance. The return value is null if the buffer was
   // not created successfully. This function sets the server-side sysmem image constraints.
   //
-  // TODO(fxbug.dev/48210): Make this an asynchronous call. This function is currently thread safe as
-  // Allocator_Sync pointers are thread safe, but if this becomes async it may become unsafe.
+  // TODO(fxbug.dev/48210): Make this an asynchronous call. This function is currently thread safe
+  // as Allocator_Sync pointers are thread safe, but if this becomes async it may become unsafe.
   static fitx::result<fitx::failed, BufferCollectionInfo> New(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator, escher::Escher* escher,
       BufferCollectionHandle buffer_collection_token);
@@ -55,7 +55,7 @@ class BufferCollectionInfo {
     return buffer_collection_info_;
   }
 
-  vk::BufferCollectionFUCHSIA GetFuchsiaCollection() const { return buffer_collection_fuchsia_; }
+  vk::BufferCollectionFUCHSIAX GetFuchsiaCollection() const { return buffer_collection_fuchsia_; }
 
   // TODO: deprecate along with Image.
   fitx::result<fitx::failed, zx::vmo> GetVMO(uint32_t index);
@@ -64,12 +64,12 @@ class BufferCollectionInfo {
 
  private:
   BufferCollectionInfo(fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_ptr,
-                       vk::BufferCollectionFUCHSIA buffer_collection_fuchsia)
+                       vk::BufferCollectionFUCHSIAX buffer_collection_fuchsia)
       : buffer_collection_ptr_(std::move(buffer_collection_ptr)),
         buffer_collection_fuchsia_(buffer_collection_fuchsia) {}
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_ptr_;
-  vk::BufferCollectionFUCHSIA buffer_collection_fuchsia_;
+  vk::BufferCollectionFUCHSIAX buffer_collection_fuchsia_;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info_;
 
   std::set<uint32_t> image_resource_ids_;

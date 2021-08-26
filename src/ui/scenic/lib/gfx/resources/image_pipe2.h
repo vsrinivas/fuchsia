@@ -78,7 +78,7 @@ class ImagePipe2 : public ImagePipeBase {
     // Points to BufferCollection object to communicate with Sysmem.
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_ptr;
     // Used to set constraints on for VkImage.
-    vk::BufferCollectionFUCHSIA vk_buffer_collection;
+    vk::BufferCollectionFUCHSIAX vk_buffer_collection;
     // Info of |buffer_collection_ptr|.
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
     // Set of Images associated with this BufferCollection.
@@ -89,9 +89,9 @@ class ImagePipe2 : public ImagePipeBase {
   virtual bool SetBufferCollectionConstraints(
       Session* session, fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
       const vk::ImageCreateInfo& create_info,
-      vk::BufferCollectionFUCHSIA* out_buffer_collection_fuchsia);
+      vk::BufferCollectionFUCHSIAX* out_buffer_collection_fuchsia);
   virtual void DestroyBufferCollection(Session* session,
-                                       const vk::BufferCollectionFUCHSIA& vk_buffer_collection);
+                                       const vk::BufferCollectionFUCHSIAX& vk_buffer_collection);
   virtual ImagePtr CreateImage(Session* session, ResourceId image_id,
                                const ImagePipe2::BufferCollectionInfo& info,
                                uint32_t buffer_collection_index,

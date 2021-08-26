@@ -159,14 +159,14 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
   bool SetBufferCollectionConstraints(
       Session* session, fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
       const vk::ImageCreateInfo& create_info,
-      vk::BufferCollectionFUCHSIA* out_buffer_collection_fuchsia) override {
+      vk::BufferCollectionFUCHSIAX* out_buffer_collection_fuchsia) override {
     SetConstraints(sysmem_allocator_.get(), std::move(token), 0u, 0u, 1u,
                    fuchsia::sysmem::PixelFormatType::BGRA32, false, nullptr);
     return true;
   }
 
   void DestroyBufferCollection(Session* session,
-                               const vk::BufferCollectionFUCHSIA& vk_buffer_collection) override {}
+                               const vk::BufferCollectionFUCHSIAX& vk_buffer_collection) override {}
 
   ImagePtr CreateImage(Session* session, ResourceId image_id,
                        const ImagePipe2::BufferCollectionInfo& info,

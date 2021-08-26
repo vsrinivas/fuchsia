@@ -122,7 +122,7 @@ void ImagePipe2::AddBufferCollection(
   // Set VkImage constraints
   const vk::ImageCreateInfo& create_info =
       escher::image_utils::GetDefaultImageConstraints(vk::Format::eUndefined);
-  vk::BufferCollectionFUCHSIA buffer_collection_fuchsia;
+  vk::BufferCollectionFUCHSIAX buffer_collection_fuchsia;
   const bool set_constraints = SetBufferCollectionConstraints(
       session_, std::move(vulkan_token), create_info, &buffer_collection_fuchsia);
   if (!set_constraints) {
@@ -354,23 +354,23 @@ const escher::ImagePtr& ImagePipe2::GetEscherImage() {
 bool ImagePipe2::SetBufferCollectionConstraints(
     Session* session, fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
     const vk::ImageCreateInfo& create_info,
-    vk::BufferCollectionFUCHSIA* out_buffer_collection_fuchsia) {
+    vk::BufferCollectionFUCHSIAX* out_buffer_collection_fuchsia) {
   // Set VkImage constraints using |create_info| on |token|
   auto vk_device = session->resource_context().vk_device;
   FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
 
-  vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
+  vk::BufferCollectionCreateInfoFUCHSIAX buffer_collection_create_info;
   buffer_collection_create_info.collectionToken = token.Unbind().TakeChannel().release();
   auto create_buffer_collection_result =
-      vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader);
+      vk_device.createBufferCollectionFUCHSIAX(buffer_collection_create_info, nullptr, vk_loader);
   if (create_buffer_collection_result.result != vk::Result::eSuccess) {
     error_reporter_->ERROR() << __func__ << ": vkCreateBufferCollectionFUCHSIA failed: "
                              << vk::to_string(create_buffer_collection_result.result);
     return false;
   }
 
-  auto constraints_result = vk_device.setBufferCollectionConstraintsFUCHSIA(
+  auto constraints_result = vk_device.setBufferCollectionConstraintsFUCHSIAX(
       create_buffer_collection_result.value, create_info, vk_loader);
   if (constraints_result != vk::Result::eSuccess) {
     error_reporter_->ERROR() << __func__ << ": vkSetBufferCollectionConstraints failed: "
@@ -383,11 +383,11 @@ bool ImagePipe2::SetBufferCollectionConstraints(
 }
 
 void ImagePipe2::DestroyBufferCollection(Session* session,
-                                         const vk::BufferCollectionFUCHSIA& vk_buffer_collection) {
+                                         const vk::BufferCollectionFUCHSIAX& vk_buffer_collection) {
   auto vk_device = session->resource_context().vk_device;
   FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
-  vk_device.destroyBufferCollectionFUCHSIA(vk_buffer_collection, nullptr, vk_loader);
+  vk_device.destroyBufferCollectionFUCHSIAX(vk_buffer_collection, nullptr, vk_loader);
 }
 
 ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
@@ -398,7 +398,7 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
   FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
   auto collection_properties =
-      vk_device.getBufferCollectionPropertiesFUCHSIA(info.vk_buffer_collection, vk_loader);
+      vk_device.getBufferCollectionPropertiesFUCHSIAX(info.vk_buffer_collection, vk_loader);
   if (collection_properties.result != vk::Result::eSuccess) {
     error_reporter_->ERROR() << __func__ << ": VkGetBufferCollectionProperties failed (err="
                              << vk::to_string(collection_properties.result) << ").";
@@ -416,7 +416,7 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
       escher::CountTrailingZeros(collection_properties.value.memoryTypeBits);
   // Make a copy of |vk_image_create_info|. Set size constraint that we didn't have in
   // AddBufferCollection(). Also, check if |protected buffer| is allocated.
-  vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+  vk::BufferCollectionImageCreateInfoFUCHSIAX collection_image_info;
   collection_image_info.collection = info.vk_buffer_collection;
   collection_image_info.index = buffer_collection_index;
   vk::ImageCreateInfo image_create_info =
@@ -439,12 +439,12 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
   vk::MemoryRequirements memory_reqs;
   vk_device.getImageMemoryRequirements(*image_result.value, &memory_reqs);
 
-  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIAX,
                      vk::MemoryDedicatedAllocateInfoKHR>
       alloc_info(vk::MemoryAllocateInfo()
                      .setAllocationSize(memory_reqs.size)
                      .setMemoryTypeIndex(memory_type_index),
-                 vk::ImportMemoryBufferCollectionFUCHSIA()
+                 vk::ImportMemoryBufferCollectionFUCHSIAX()
                      .setCollection(info.vk_buffer_collection)
                      .setIndex(buffer_collection_index),
                  vk::MemoryDedicatedAllocateInfoKHR().setImage(*image_result.value));

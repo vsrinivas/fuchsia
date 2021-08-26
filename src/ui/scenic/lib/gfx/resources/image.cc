@@ -59,7 +59,7 @@ ImagePtr Image::New(Session* session, ResourceId id, uint32_t width, uint32_t he
   FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
   auto collection_properties =
-      vk_device.getBufferCollectionPropertiesFUCHSIA(info.GetFuchsiaCollection(), vk_loader);
+      vk_device.getBufferCollectionPropertiesFUCHSIAX(info.GetFuchsiaCollection(), vk_loader);
   if (collection_properties.result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "Failed to get buffer collection properties.";
     return nullptr;
@@ -75,7 +75,7 @@ ImagePtr Image::New(Session* session, ResourceId id, uint32_t width, uint32_t he
     return nullptr;
   }
 
-  vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+  vk::BufferCollectionImageCreateInfoFUCHSIAX collection_image_info;
   collection_image_info.collection = info.GetFuchsiaCollection();
   collection_image_info.index = buffer_collection_index;
   vk::ImageCreateInfo image_create_info =
@@ -94,12 +94,12 @@ ImagePtr Image::New(Session* session, ResourceId id, uint32_t width, uint32_t he
   vk::MemoryRequirements memory_reqs;
   vk_device.getImageMemoryRequirements(*image_result.value, &memory_reqs);
 
-  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIAX,
                      vk::MemoryDedicatedAllocateInfoKHR>
       alloc_info(vk::MemoryAllocateInfo()
                      .setAllocationSize(memory_reqs.size)
                      .setMemoryTypeIndex(memory_type_index),
-                 vk::ImportMemoryBufferCollectionFUCHSIA()
+                 vk::ImportMemoryBufferCollectionFUCHSIAX()
                      .setCollection(info.GetFuchsiaCollection())
                      .setIndex(buffer_collection_index),
                  vk::MemoryDedicatedAllocateInfoKHR().setImage(*image_result.value));

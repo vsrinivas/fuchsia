@@ -719,7 +719,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME);
-  enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
   enabled_extensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
   enabled_extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);

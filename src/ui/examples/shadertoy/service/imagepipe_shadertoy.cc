@@ -102,10 +102,10 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
   escher_image_info.sample_count = 1;
   escher_image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
 
-  vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
+  vk::BufferCollectionCreateInfoFUCHSIAX buffer_collection_create_info;
   buffer_collection_create_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
   auto create_buffer_collection_result =
-      vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader);
+      vk_device.createBufferCollectionFUCHSIAX(buffer_collection_create_info, nullptr, vk_loader);
   if (create_buffer_collection_result.result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "VkCreateBufferCollectionFUCHSIA failed: "
                    << vk::to_string(create_buffer_collection_result.result);
@@ -114,7 +114,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
   }
   vk::ImageCreateInfo image_create_info =
       escher::image_utils::CreateVkImageCreateInfo(escher_image_info, vk::ImageLayout::eUndefined);
-  auto constraints_result = vk_device.setBufferCollectionConstraintsFUCHSIA(
+  auto constraints_result = vk_device.setBufferCollectionConstraintsFUCHSIAX(
       create_buffer_collection_result.value, image_create_info, vk_loader);
   if (constraints_result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "VkSetBufferCollectionConstraints failed: "
@@ -122,7 +122,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     Close();
     return;
   }
-  vk::BufferCollectionFUCHSIA buffer_collection_fuchsia = create_buffer_collection_result.value;
+  vk::BufferCollectionFUCHSIAX buffer_collection_fuchsia = create_buffer_collection_result.value;
 
   // Use |local_token| to set buffer count.
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
@@ -171,7 +171,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     release_semaphore_pair.second.signal(0u, escher::kFenceSignalled);
 
     // Create vkImage.
-    vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+    vk::BufferCollectionImageCreateInfoFUCHSIAX collection_image_info;
     collection_image_info.collection = buffer_collection_fuchsia;
     collection_image_info.index = i;
     image_create_info.setPNext(&collection_image_info);
@@ -186,7 +186,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
 
     // Import memory from buffer collection.
     auto collection_properties =
-        vk_device.getBufferCollectionPropertiesFUCHSIA(buffer_collection_fuchsia, vk_loader);
+        vk_device.getBufferCollectionPropertiesFUCHSIAX(buffer_collection_fuchsia, vk_loader);
     if (collection_properties.result != vk::Result::eSuccess) {
       FX_LOGS(ERROR) << "VkGetBufferCollectionProperties failed: "
                      << vk::to_string(collection_properties.result);
@@ -197,7 +197,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     auto memory_requirements = vk_device.getImageMemoryRequirements(image);
     const uint32_t memory_type_index = escher::CountTrailingZeros(
         memory_requirements.memoryTypeBits & collection_properties.value.memoryTypeBits);
-    vk::ImportMemoryBufferCollectionFUCHSIA import_info;
+    vk::ImportMemoryBufferCollectionFUCHSIAX import_info;
     import_info.collection = buffer_collection_fuchsia;
     import_info.index = i;
     vk::MemoryAllocateInfo alloc_info;
@@ -235,7 +235,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     image_pipe_->AddImage(fb.image_pipe_id, kBufferId, i, image_format);
   }
 
-  vk_device.destroyBufferCollectionFUCHSIA(buffer_collection_fuchsia, nullptr, vk_loader);
+  vk_device.destroyBufferCollectionFUCHSIAX(buffer_collection_fuchsia, nullptr, vk_loader);
   buffer_collection->Close();
 }
 

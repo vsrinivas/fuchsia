@@ -63,7 +63,7 @@ VkRenderer::~VkRenderer() {
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
   for (auto& [_, collection] : collections_) {
-    vk_device.destroyBufferCollectionFUCHSIA(collection.vk_collection, nullptr, vk_loader);
+    vk_device.destroyBufferCollectionFUCHSIAX(collection.vk_collection, nullptr, vk_loader);
   }
   collections_.clear();
 }
@@ -91,8 +91,8 @@ void VkRenderer::ReleaseBufferCollection(GlobalBufferCollectionId collection_id)
 
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
-  vk_device.destroyBufferCollectionFUCHSIA(collection_itr->second.vk_collection, nullptr,
-                                           vk_loader);
+  vk_device.destroyBufferCollectionFUCHSIAX(collection_itr->second.vk_collection, nullptr,
+                                            vk_loader);
   collections_.erase(collection_id);
 }
 
@@ -143,7 +143,7 @@ bool VkRenderer::RegisterCollection(
   }
 
   // Create the vk collection.
-  vk::BufferCollectionFUCHSIA collection;
+  vk::BufferCollectionFUCHSIAX collection;
   {
     std::vector<vk::ImageCreateInfo> create_infos;
     for (const auto& format : kPreferredImageFormats) {
@@ -151,7 +151,7 @@ bool VkRenderer::RegisterCollection(
           escher::RectangleCompositor::GetDefaultImageConstraints(format, usage));
     }
 
-    vk::ImageConstraintsInfoFUCHSIA image_constraints_info;
+    vk::ImageConstraintsInfoFUCHSIAX image_constraints_info;
     image_constraints_info.createInfoCount = create_infos.size();
     image_constraints_info.pCreateInfos = create_infos.data();
     image_constraints_info.pFormatConstraints = nullptr;
@@ -160,14 +160,14 @@ bool VkRenderer::RegisterCollection(
     image_constraints_info.minBufferCountForDedicatedSlack = 0;
     image_constraints_info.minBufferCountForSharedSlack = 0;
     if (escher_->allow_protected_memory())
-      image_constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIA::eProtectedOptional;
+      image_constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIAX::eProtectedOptional;
 
     // Create the collection and set its constraints.
-    vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
+    vk::BufferCollectionCreateInfoFUCHSIAX buffer_collection_create_info;
     buffer_collection_create_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
-    collection = escher::ESCHER_CHECKED_VK_RESULT(
-        vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
-    auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIA(
+    collection = escher::ESCHER_CHECKED_VK_RESULT(vk_device.createBufferCollectionFUCHSIAX(
+        buffer_collection_create_info, nullptr, vk_loader));
+    auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIAX(
         collection, image_constraints_info, vk_loader);
     FX_DCHECK(vk_result == vk::Result::eSuccess);
   }
@@ -263,7 +263,7 @@ void VkRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {
 }
 
 escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metadata,
-                                          vk::BufferCollectionFUCHSIA collection,
+                                          vk::BufferCollectionFUCHSIAX collection,
                                           vk::ImageUsageFlags usage) {
   TRACE_DURATION("gfx", "VkRenderer::ExtractImage");
   auto vk_device = escher_->vk_device();
@@ -271,7 +271,7 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
 
   // Grab the collection Properties from Vulkan.
   auto properties = escher::ESCHER_CHECKED_VK_RESULT(
-      vk_device.getBufferCollectionProperties2FUCHSIA(collection, vk_loader));
+      vk_device.getBufferCollectionProperties2FUCHSIAX(collection, vk_loader));
 
   // Check the provided index against actually allocated number of buffers.
   if (properties.bufferCount <= metadata.vmo_index) {
@@ -288,7 +288,7 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
        vk::MemoryPropertyFlagBits::eProtected) == vk::MemoryPropertyFlagBits::eProtected;
 
   // Setup the create info Fuchsia extension.
-  vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+  vk::BufferCollectionImageCreateInfoFUCHSIAX collection_image_info;
   collection_image_info.collection = collection;
   collection_image_info.index = metadata.vmo_index;
 
@@ -315,12 +315,12 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
   auto memory_requirements = vk_device.getImageMemoryRequirements(image_result.value);
   uint32_t memory_type_index =
       escher::CountTrailingZeros(memory_requirements.memoryTypeBits & properties.memoryTypeBits);
-  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIAX,
                      vk::MemoryDedicatedAllocateInfoKHR>
       alloc_info(vk::MemoryAllocateInfo()
                      .setAllocationSize(memory_requirements.size)
                      .setMemoryTypeIndex(memory_type_index),
-                 vk::ImportMemoryBufferCollectionFUCHSIA()
+                 vk::ImportMemoryBufferCollectionFUCHSIAX()
                      .setCollection(collection)
                      .setIndex(metadata.vmo_index),
                  vk::MemoryDedicatedAllocateInfoKHR().setImage(image_result.value));
@@ -375,7 +375,7 @@ void VkRenderer::DeregisterRenderTargetCollection(GlobalBufferCollectionId colle
 }
 
 escher::TexturePtr VkRenderer::ExtractTexture(const allocation::ImageMetadata& metadata,
-                                              vk::BufferCollectionFUCHSIA collection) {
+                                              vk::BufferCollectionFUCHSIAX collection) {
   auto image = ExtractImage(metadata, collection, escher::RectangleCompositor::kTextureUsageFlags);
   if (!image) {
     FX_LOGS(ERROR) << "Image for texture was nullptr.";

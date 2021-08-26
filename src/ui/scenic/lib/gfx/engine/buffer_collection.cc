@@ -78,14 +78,14 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
       escher::image_utils::GetDefaultImageConstraints(vk::Format::eUndefined);
 
   // Create the vk_collection and set its constraints.
-  vk::BufferCollectionFUCHSIA vk_collection;
+  vk::BufferCollectionFUCHSIAX vk_collection;
   {
-    vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
+    vk::BufferCollectionCreateInfoFUCHSIAX buffer_collection_create_info;
     buffer_collection_create_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
-    vk_collection = escher::ESCHER_CHECKED_VK_RESULT(
-        vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
+    vk_collection = escher::ESCHER_CHECKED_VK_RESULT(vk_device.createBufferCollectionFUCHSIAX(
+        buffer_collection_create_info, nullptr, vk_loader));
     auto vk_result =
-        vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, create_info, vk_loader);
+        vk_device.setBufferCollectionConstraintsFUCHSIAX(vk_collection, create_info, vk_loader);
     FX_DCHECK(vk_result == vk::Result::eSuccess);
   }
 

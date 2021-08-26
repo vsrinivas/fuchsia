@@ -28,7 +28,7 @@ ScreenshotBufferCollectionImporter::~ScreenshotBufferCollectionImporter() {
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
   for (auto& [_, collection] : buffer_collection_infos_) {
-    vk_device.destroyBufferCollectionFUCHSIA(collection.vk_buffer_collection, nullptr, vk_loader);
+    vk_device.destroyBufferCollectionFUCHSIAX(collection.vk_buffer_collection, nullptr, vk_loader);
   }
   buffer_collection_infos_.clear();
 }
@@ -84,7 +84,7 @@ bool ScreenshotBufferCollectionImporter::ImportBufferCollection(
   auto vk_device = escher_->vk_device();
 
   // Create the vk collection.
-  vk::BufferCollectionFUCHSIA collection;
+  vk::BufferCollectionFUCHSIAX collection;
   {
     std::vector<vk::ImageCreateInfo> create_infos;
     for (const auto& format : kSupportedImageFormats) {
@@ -92,7 +92,7 @@ bool ScreenshotBufferCollectionImporter::ImportBufferCollection(
           format, escher::RectangleCompositor::kRenderTargetUsageFlags));
     }
 
-    vk::ImageConstraintsInfoFUCHSIA image_constraints_info;
+    vk::ImageConstraintsInfoFUCHSIAX image_constraints_info;
     image_constraints_info.createInfoCount = create_infos.size();
     image_constraints_info.pCreateInfos = create_infos.data();
     image_constraints_info.pFormatConstraints = nullptr;
@@ -105,15 +105,15 @@ bool ScreenshotBufferCollectionImporter::ImportBufferCollection(
     // buffers. This is because clients can take a screenshot rendered into protected memory and
     // then display that screenshot image in their protected context.
     if (escher_->allow_protected_memory())
-      image_constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIA::eProtectedOptional;
+      image_constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIAX::eProtectedOptional;
 
-    vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
+    vk::BufferCollectionCreateInfoFUCHSIAX buffer_collection_create_info;
     buffer_collection_create_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
 
-    collection = escher::ESCHER_CHECKED_VK_RESULT(
-        vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
+    collection = escher::ESCHER_CHECKED_VK_RESULT(vk_device.createBufferCollectionFUCHSIAX(
+        buffer_collection_create_info, nullptr, vk_loader));
 
-    auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIA(
+    auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIAX(
         collection, image_constraints_info, vk_loader);
     if (vk_result != vk::Result::eSuccess) {
       FX_LOGS(WARNING) << __func__
@@ -140,8 +140,8 @@ void ScreenshotBufferCollectionImporter::ReleaseBufferCollection(
 
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
-  vk_device.destroyBufferCollectionFUCHSIA(collection_itr->second.vk_buffer_collection, nullptr,
-                                           vk_loader);
+  vk_device.destroyBufferCollectionFUCHSIAX(collection_itr->second.vk_buffer_collection, nullptr,
+                                            vk_loader);
   buffer_collection_infos_.erase(collection_id);
 }
 
@@ -198,7 +198,7 @@ bool ScreenshotBufferCollectionImporter::ImportBufferImage(
 void ScreenshotBufferCollectionImporter::ReleaseBufferImage(allocation::GlobalImageId image_id) {}
 
 escher::ImagePtr ScreenshotBufferCollectionImporter::ExtractImage(
-    const allocation::ImageMetadata& metadata, vk::BufferCollectionFUCHSIA collection,
+    const allocation::ImageMetadata& metadata, vk::BufferCollectionFUCHSIAX collection,
     vk::ImageUsageFlags usage) {
   TRACE_DURATION("gfx", "ScreenshotBufferCollection::ExtractImage");
   auto vk_device = escher_->vk_device();
@@ -206,7 +206,7 @@ escher::ImagePtr ScreenshotBufferCollectionImporter::ExtractImage(
 
   // Grab the collection Properties from Vulkan.
   auto properties = escher::ESCHER_CHECKED_VK_RESULT(
-      vk_device.getBufferCollectionProperties2FUCHSIA(collection, vk_loader));
+      vk_device.getBufferCollectionProperties2FUCHSIAX(collection, vk_loader));
 
   // Check the provided index against actually allocated number of buffers.
   if (properties.bufferCount <= metadata.vmo_index) {
@@ -223,7 +223,7 @@ escher::ImagePtr ScreenshotBufferCollectionImporter::ExtractImage(
        vk::MemoryPropertyFlagBits::eProtected) == vk::MemoryPropertyFlagBits::eProtected;
 
   // Setup the create info Fuchsia extension.
-  vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+  vk::BufferCollectionImageCreateInfoFUCHSIAX collection_image_info;
   collection_image_info.collection = collection;
   collection_image_info.index = metadata.vmo_index;
 
@@ -250,12 +250,12 @@ escher::ImagePtr ScreenshotBufferCollectionImporter::ExtractImage(
   auto memory_requirements = vk_device.getImageMemoryRequirements(image_result.value);
   uint32_t memory_type_index =
       escher::CountTrailingZeros(memory_requirements.memoryTypeBits & properties.memoryTypeBits);
-  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIAX,
                      vk::MemoryDedicatedAllocateInfoKHR>
       alloc_info(vk::MemoryAllocateInfo()
                      .setAllocationSize(memory_requirements.size)
                      .setMemoryTypeIndex(memory_type_index),
-                 vk::ImportMemoryBufferCollectionFUCHSIA()
+                 vk::ImportMemoryBufferCollectionFUCHSIAX()
                      .setCollection(collection)
                      .setIndex(metadata.vmo_index),
                  vk::MemoryDedicatedAllocateInfoKHR().setImage(image_result.value));

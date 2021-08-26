@@ -69,7 +69,7 @@ class VkRenderer final : public Renderer {
   // client textures.
   struct CollectionData {
     fuchsia::sysmem::BufferCollectionSyncPtr collection;
-    vk::BufferCollectionFUCHSIA vk_collection;
+    vk::BufferCollectionFUCHSIAX vk_collection;
     bool is_render_target;
   };
 
@@ -81,11 +81,11 @@ class VkRenderer final : public Renderer {
 
   // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
   escher::ImagePtr ExtractImage(const allocation::ImageMetadata& metadata,
-                                vk::BufferCollectionFUCHSIA collection, vk::ImageUsageFlags usage);
+                                vk::BufferCollectionFUCHSIAX collection, vk::ImageUsageFlags usage);
 
   // ExtractTexture() is a wrapper function to ExtractImage().
   escher::TexturePtr ExtractTexture(const allocation::ImageMetadata& metadata,
-                                    vk::BufferCollectionFUCHSIA collection);
+                                    vk::BufferCollectionFUCHSIAX collection);
 
   // Escher is how we access Vulkan.
   escher::EscherWeakPtr escher_;
