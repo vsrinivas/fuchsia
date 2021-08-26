@@ -282,107 +282,75 @@ zx_status_t ResourceDispatcher::InitializeAllocator(zx_rsrc_kind_t kind, uint64_
   return status;
 }
 
-// Size specifiers for the debug output
-constexpr int kTypeLen = 10;
-constexpr int kFlagLen = 6;
-constexpr int kNameLen = ZX_MAX_NAME_LEN - 1;
-constexpr int kNumLen = 16;
-constexpr int kPrettyLen = 8;
-
+constexpr size_t kFlagLen = 6;
 // Utility function to format the flags into a user-readable string.
-static constexpr void flags_to_string(uint32_t flags, char str[kFlagLen]) {
-  str[0] = ' ';
-  str[1] = ' ';
-  str[2] = ' ';
-  str[3] = (flags & ZX_RSRC_FLAG_EXCLUSIVE) ? ' ' : 's';
-  str[4] = (flags & ZX_RSRC_FLAG_EXCLUSIVE) ? 'x' : ' ';
-  str[5] = '\0';
+void flags_to_string(uint32_t flags, char str[kFlagLen]) {
+  memset(str, 0, kFlagLen);
+  uint8_t pos = 0;
+  if (flags & ZX_RSRC_FLAG_EXCLUSIVE) {
+    str[pos++] = 'x';
+  }
+  str[kFlagLen - 1] = '\0';
 }
 
-static void pad_field(int width) { printf("\t%.*s", width, "                        "); }
+const char* kKindLabels[ZX_RSRC_KIND_COUNT] = {
+    "mmio", "irq", "ioport", "root", "smc", "system",
+};
+
+static const char* kind_to_string(uint8_t kind) {
+  ZX_ASSERT(kind < ZX_RSRC_KIND_COUNT);
+  return kKindLabels[kind];
+}
 
 void ResourceDispatcher::Dump() {
   zx_rsrc_kind_t kind;
   auto callback = [&](const ResourceDispatcher& r) -> zx_status_t {
-    char name[ZX_MAX_NAME_LEN];
-    char flag_str[kFlagLen];
-
     // exit early so we can print the list in a grouped format
     // without adding overhead to the list management.
     if (r.get_kind() != kind) {
       return ZX_OK;
     }
 
-    // A safety check to make sure we don't need to worry about snprintf edge cases
+    char region[32]{};
+    char name[ZX_MAX_NAME_LEN]{};
+    char flag_str[kFlagLen]{};
     r.get_name(name);
     flags_to_string(r.get_flags(), flag_str);
+    printf("%32s  ", name);
+    printf("\t%10s  ", kind_to_string(r.get_kind()));
+    printf("%8s  ", flag_str);
+    printf("\t%-#10lx  ", r.get_koid());
 
-    // IRQs are allocated one at a time, so range display doesn't make much sense.
-    switch (r.get_kind()) {
-      case ZX_RSRC_KIND_ROOT:
-        printf("%.*s", kTypeLen, "root");
-        printf("\t%8lu", r.get_koid());
-        pad_field(kFlagLen);  // Root has no flags
-        printf("\t%.*s", kNameLen, name);
-        printf("\n");
-        break;
-      case ZX_RSRC_KIND_IRQ:
-        printf("%.*s", kTypeLen, "irq");
-        printf("\t%8lu", r.get_koid());
-        printf("\t%.*s", kFlagLen, flag_str);
-        printf("\t%.*s", kNameLen, name);
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*zu", kPrettyLen, r.get_size());
-        printf("\n");
-        break;
-      case ZX_RSRC_KIND_IOPORT:
-        printf("%.*s", kTypeLen, "io");
-        printf("\t%8lu", r.get_koid());
-        printf("\t%.*s", kFlagLen, flag_str);
-        printf("\t%.*s", kNameLen, name);
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).c_str());
-        printf("\n");
-        break;
-      case ZX_RSRC_KIND_MMIO:
-        printf("%.*s", kTypeLen, "mmio");
-        printf("\t%8lu", r.get_koid());
-        printf("\t%.*s", kFlagLen, flag_str);
-        printf("\t%.*s", kNameLen, name);
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).c_str());
-        printf("\n");
-        break;
-      case ZX_RSRC_KIND_SMC:
-        printf("%.*s", kTypeLen, "smc");
-        printf("\t%8lu", r.get_koid());
-        printf("\t%.*s", kFlagLen, flag_str);
-        printf("\t%.*s", kNameLen, name);
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).c_str());
-        printf("\n");
-        break;
-      case ZX_RSRC_KIND_SYSTEM:
-        printf("%.*s", kTypeLen, "system");
-        printf("\t%8lu", r.get_koid());
-        printf("\t%.*s", kFlagLen, flag_str);
-        printf("\t%.*s", kNameLen, name);
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
-        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).c_str());
-        printf("\n");
-        break;
+    if (r.get_size() && r.get_kind() != ZX_RSRC_KIND_ROOT && r.get_kind() != ZX_RSRC_KIND_SYSTEM) {
+      // Only MMIO should be printed as bytes.
+      if (r.get_kind() == ZX_RSRC_KIND_MMIO) {
+        printf("\t%8s  ", FormattedBytes(r.get_size()).c_str());
+      } else {
+        // And only resources with a size should print one.
+        printf("\t%#8zx  ", r.get_size());
+      }
+      // If we had a size then we can print a region.
+      snprintf(region, sizeof(region), "[%#lx, %#lx)", r.get_base(), r.get_base() + r.get_size());
+    } else {
+      printf("\t%8s  ", " ");
     }
 
+    printf("%-32s\n", region);
     return ZX_OK;
   };
 
-  printf("%10s\t%8s\t%4s\t%31s\t%16s\t%16s\t%8s\n\n", "type", "koid", "flags", "name", "start",
-         "end", "size");
+  printf("%32s  ", "name");
+  printf("\t%10s  ", "type");
+  printf("%8s  ", "flags");
+  printf("\t%-10s  ", "koid");
+  printf("\t%8s  ", "size");
+  printf("%-32s\n", "region");
+
+  // Values determined by staring at it until it looked good enough.
+  printf(
+      "        "
+      "-------------------------------------------------------------------------------------------"
+      "\n");
   for (kind = 0; kind < ZX_RSRC_KIND_COUNT; kind++) {
     ResourceDispatcher::ForEachResource(callback);
   }
@@ -390,11 +358,11 @@ void ResourceDispatcher::Dump() {
 
 #include <lib/console.h>
 
-static int cmd_resources(int argc, const cmd_args* argv, uint32_t flags) {
+static int cmd_resource(int argc, const cmd_args* argv, uint32_t flags) {
   ResourceDispatcher::Dump();
   return true;
 }
 
 STATIC_COMMAND_START
-STATIC_COMMAND("resource", "Inspect physical address space resource allocations", &cmd_resources)
-STATIC_COMMAND_END(resources)
+STATIC_COMMAND("resource", "Inspect physical address space resource allocations", &cmd_resource)
+STATIC_COMMAND_END(resource)
