@@ -70,60 +70,6 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
   }
 }
 
-TEST(DirectDependenciesTests, GoodDirectDepsSimpleOld) {
-  for (const std::string& type_usage : {
-           "dep2.Type",
-           "vector<dep2.Type>",
-           "array<dep2.Type>:1",
-           "request<dep2.Protocol>",
-           "vector<uint32>:dep2.Constant",
-           "array<uint32>:dep2.Constant",
-       }) {
-    SharedAmongstLibraries shared;
-    TestLibrary dep2("dep2.fidl", R"FIDL(
-  library dep2;
-
-  const uint32 Constant = 50;
-  struct Type {};
-  protocol Protocol {};
-  )FIDL",
-                     &shared);
-    ASSERT_COMPILED(dep2);
-
-    TestLibrary dep1("dep1.fidl", R"FIDL(
-  library dep1;
-
-  using dep2;
-
-  protocol Foo {
-    UsesDepType()FIDL" + type_usage + R"FIDL( data);
-  };
-  )FIDL",
-                     &shared);
-    ASSERT_TRUE(dep1.AddDependentLibrary(&dep2));
-    ASSERT_COMPILED(dep1);
-
-    TestLibrary lib("example.fidl", R"FIDL(
-  library example;
-
-  using dep1;
-
-  protocol CapturesDependencyThroughCompose {
-    compose dep1.Foo;
-  };
-  )FIDL",
-                    &shared);
-    lib.AddDependentLibrary(&dep1);
-    ASSERT_COMPILED(lib);
-
-    auto transitive_deps = lib.library()->DirectDependencies();
-    ASSERT_EQ(transitive_deps.size(), 2);
-    auto iter = transitive_deps.cbegin();
-    EXPECT_EQ(fidl::NameLibrary((*iter++)->name()), "dep1");
-    EXPECT_EQ(fidl::NameLibrary((*iter++)->name()), "dep2");
-  }
-}
-
 TEST(DirectDependenciesTests, GoodDoesNotCaptureTransitiveDeps) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -161,50 +107,6 @@ protocol CapturesDependencyThroughCompose {
 };
 )FIDL",
                   &shared, experimental_flags);
-  lib.AddDependentLibrary(&dep1);
-  ASSERT_COMPILED(lib);
-
-  auto transitive_deps = lib.library()->DirectDependencies();
-  ASSERT_EQ(transitive_deps.size(), 1);
-  auto iter = transitive_deps.cbegin();
-  EXPECT_EQ(fidl::NameLibrary((*iter++)->name()), "dep1");
-}
-
-TEST(DirectDependenciesTests, GoodDoesNotCaptureTransitiveDepsOld) {
-  SharedAmongstLibraries shared;
-  TestLibrary dep2("dep2.fidl", R"FIDL(
-library dep2;
-
-struct Foo {};
-)FIDL",
-                   &shared);
-  ASSERT_COMPILED(dep2);
-
-  TestLibrary dep1("dep1.fidl", R"FIDL(
-library dep1;
-
-using dep2;
-
-alias Bar = dep2.Foo;
-
-protocol Baz {
-  UsesDepConst(vector<Bar> foo);
-};
-)FIDL",
-                   &shared);
-  ASSERT_TRUE(dep1.AddDependentLibrary(&dep2));
-  ASSERT_COMPILED(dep1);
-
-  TestLibrary lib("example.fidl", R"FIDL(
-library example;
-
-using dep1;
-
-protocol CapturesDependencyThroughCompose {
-  compose dep1.Baz;
-};
-)FIDL",
-                  &shared);
   lib.AddDependentLibrary(&dep1);
   ASSERT_COMPILED(lib);
 

@@ -63,30 +63,6 @@ type Table = table {
 ])JSON");
 }
 
-TEST(JsonDiagnosticsTests, BadErrorOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-table Table {
-    1: string? nullable_string;
-};
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& diagnostics = library.diagnostics();
-
-  ASSERT_JSON(diagnostics, R"JSON([
-  {
-    "category": "fidlc/error",
-    "message": "Table members cannot be nullable",
-    "path": "example.fidl",
-    "start_line": 5,
-    "start_char": 4,
-    "end_line": 5,
-    "end_char": 30
-  }
-])JSON");
-}
-
 TEST(JsonDiagnosticsTests, WarnPassed) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -111,31 +87,6 @@ protocol Protocol {
     "start_char": 0,
     "end_line": 4,
     "end_char": 17
-  }
-])JSON");
-}
-
-TEST(JsonDiagnosticsTests, WarnPassedOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-[Layort = "Simple"]
-protocol Protocol {
-    Method();
-};
-)FIDL");
-  ASSERT_TRUE(library.Compile());
-  const auto& diagnostics = library.diagnostics();
-
-  ASSERT_JSON(diagnostics, R"JSON([
-  {
-    "category": "fidlc/warning",
-    "message": "suspect attribute with name 'Layort'; did you mean 'Layout'?",
-    "path": "example.fidl",
-    "start_line": 4,
-    "start_char": 1,
-    "end_line": 4,
-    "end_char": 18
   }
 ])JSON");
 }
@@ -181,42 +132,6 @@ type NewType = Table;  // Error: new type not allowed
 ])JSON");
 }
 
-TEST(JsonDiagnosticsTests, BadMultipleErrorsOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol P {};
-protocol P {};      // Error: name collision
-
-table Table {
-    1: string? s;   // Error: nullable table member
-};
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& diagnostics = library.diagnostics();
-
-  ASSERT_JSON(diagnostics, R"JSON([
-  {
-    "category": "fidlc/error",
-    "message": "multiple declarations of 'P'; also declared at example.fidl:4:10",
-    "path": "example.fidl",
-    "start_line": 5,
-    "start_char": 9,
-    "end_line": 5,
-    "end_char": 10
-  },
-  {
-    "category": "fidlc/error",
-    "message": "Table members cannot be nullable",
-    "path": "example.fidl",
-    "start_line": 8,
-    "start_char": 4,
-    "end_line": 8,
-    "end_char": 16
-  }
-])JSON");
-}
-
 TEST(JsonDiagnosticsTests, BadSpanIsEOF) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -228,30 +143,6 @@ type Table = table {
 }
 )FIDL",
                       experimental_flags);
-  ASSERT_FALSE(library.Compile());
-  const auto& diagnostics = library.diagnostics();
-
-  ASSERT_JSON(diagnostics, R"JSON([
-  {
-    "category": "fidlc/error",
-    "message": "unexpected token EndOfFile, was expecting Semicolon",
-    "path": "example.fidl",
-    "start_line": 7,
-    "start_char": 0,
-    "end_line": 7,
-    "end_char": 0
-  }
-])JSON");
-}
-
-TEST(JsonDiagnosticsTests, BadSpanIsEOFOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-table Table {
-    1: string foo;
-}
-)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& diagnostics = library.diagnostics();
 

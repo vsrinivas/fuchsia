@@ -32,20 +32,6 @@ alias alias_of_int16 = int16;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
-TEST(AliasTests, BadDuplicateAliasOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Message {
-    alias_of_int16 f;
-};
-
-alias alias_of_int16 = int16;
-alias alias_of_int16 = int16;
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
-}
-
 TEST(AliasTests, GoodPrimitive) {
   TestLibrary library(R"FIDL(
 library example;
@@ -124,19 +110,6 @@ type Message = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
-TEST(AliasTests, BadPrimitiveTypeShadowingOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-alias uint32 = uint32;
-
-struct Message {
-    uint32 f;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-}
-
 TEST(AliasTests, BadNoOptionalOnPrimitive) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -150,19 +123,6 @@ type Bad = struct {
 )FIDL",
                       experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
-}
-
-TEST(AliasTests, BadNoOptionalOnPrimitiveOld) {
-  TestLibrary library(R"FIDL(
-library test.optionals;
-
-struct Bad {
-    int64? opt_num;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "int64");
 }
 
 TEST(AliasTests, BadMultipleConstraintsOnPrimitive) {
@@ -195,21 +155,6 @@ type Bad = struct {
 )FIDL",
                       experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
-}
-
-TEST(AliasTests, BadNoOptionalOnAliasedPrimitiveOld) {
-  TestLibrary library(R"FIDL(
-library test.optionals;
-
-alias alias = int64;
-
-struct Bad {
-    alias? opt_num;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "test.optionals/alias");
 }
 
 TEST(AliasTests, GoodVectorParameterizedOnDecl) {
@@ -262,19 +207,6 @@ alias alias_of_vector = vector;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
-TEST(AliasTests, BadVectorParameterizedOnUseOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Message {
-    alias_of_vector<uint8> f;
-};
-
-alias alias_of_vector = vector;
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
-}
-
 TEST(AliasTests, BadVectorBoundedOnDecl) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -290,19 +222,6 @@ alias alias_of_vector_max_8 = vector:8;
                       experimental_flags);
   // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
-}
-
-TEST(AliasTests, BadVectorBoundedOnDeclOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Message {
-    alias_of_vector_max_8<string> f;
-};
-
-alias alias_of_vector_max_8 = vector:8;
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
 TEST(AliasTests, GoodVectorBoundedOnUse) {
@@ -421,19 +340,6 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
-TEST(AliasTests, BadCannotParameterizeTwiceOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Message {
-    alias_of_vector_of_string<string> f;
-};
-
-alias alias_of_vector_of_string = vector<string>;
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotParameterizeAlias);
-}
-
 TEST(AliasTests, BadCannotBoundTwice) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -450,19 +356,6 @@ alias alias_of_vector_of_string_max_5 = vector<string>:5;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBoundTwice);
 }
 
-TEST(AliasTests, BadCannotBoundTwiceOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Message {
-    alias_of_vector_of_string_max_5:9 f;
-};
-
-alias alias_of_vector_of_string_max_5 = vector<string>:5;
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBoundTwice);
-}
-
 TEST(AliasTests, BadCannotNullTwice) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -476,19 +369,6 @@ type Message = struct {
 alias alias_of_vector_nullable = vector<string>:optional;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotIndicateNullabilityTwice);
-}
-
-TEST(AliasTests, BadCannotNullTwiceOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Message {
-    alias_of_vector_nullable? f;
-};
-
-alias alias_of_vector_nullable = vector<string>?;
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotIndicateNullabilityTwice);
 }
 
@@ -548,23 +428,6 @@ type TheStruct = struct {
   // more granular and should be asserted here.
 }
 
-TEST(AliasTests, BadRecursiveAliasOld) {
-  TestLibrary library("first.fidl", R"FIDL(
-library example;
-
-alias TheAlias = TheStruct;
-
-struct TheStruct {
-    vector<TheAlias> many_mini_me;
-};
-)FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-
-  // TODO(fxbug.dev/35218): once recursive type handling is improved, the error message should be
-  // more granular and should be asserted here.
-}
-
 TEST(AliasTests, BadCompoundIdentifier) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -574,16 +437,6 @@ library example;
 alias foo.bar.baz = uint8;
 )FIDL",
                       experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
-}
-
-TEST(AliasTests, BadCompoundIdentifierOld) {
-  TestLibrary library("test.fidl", R"FIDL(
-library example;
-
-alias foo.bar.baz = uint8;
-)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }

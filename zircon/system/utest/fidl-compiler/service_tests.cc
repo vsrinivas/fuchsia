@@ -82,22 +82,6 @@ service SomeService {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberName);
 }
 
-TEST(ServiceTests, BadCannotHaveConflictingMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol SomeProtocol1 {};
-protocol SomeProtocol2 {};
-
-service SomeService {
-    SomeProtocol1 this_will_conflict;
-    SomeProtocol2 this_will_conflict;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberName);
-}
-
 TEST(ServiceTests, BadNoNullableProtocolMembers) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -112,20 +96,6 @@ service SomeService {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableServiceMember);
-}
-
-TEST(ServiceTests, BadNoNullableProtocolMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol SomeProtocol {};
-
-service SomeService {
-    SomeProtocol? members_are_optional_already;
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableServiceMember);
 }
 
@@ -148,20 +118,6 @@ service SomeService {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeTransportSide);
 }
 
-TEST(ServiceTests, BadOnlyProtocolMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct NotAProtocol {};
-
-service SomeService {
-    NotAProtocol not_a_protocol;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseType);
-}
-
 TEST(ServiceTests, BadCannotUseServicesInDecls) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -176,20 +132,6 @@ type CannotUseService = struct {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseService);
-}
-
-TEST(ServiceTests, BadCannotUseServicesInDeclsOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-service SomeService {};
-
-struct CannotUseService {
-    SomeService svc;
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseService);
 }
 

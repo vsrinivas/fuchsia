@@ -1044,11 +1044,4 @@ TEST(SpanTests, GoodParseTest) {
   RunParseTests(new_syntax_test_cases, " ", " ", fidl::utils::Syntax::kNew);
 }
 
-TEST(SpanTests, GoodParseTestOld) {
-  RunParseTests(test_cases, "", "", fidl::utils::Syntax::kOld);
-  RunParseTests(test_cases, " ", "", fidl::utils::Syntax::kOld);
-  RunParseTests(test_cases, "", " ", fidl::utils::Syntax::kOld);
-  RunParseTests(test_cases, " ", " ", fidl::utils::Syntax::kOld);
-}
-
 }  // namespace

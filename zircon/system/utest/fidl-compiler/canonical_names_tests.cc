@@ -282,49 +282,6 @@ TEST(CanonicalNamesTests, BadTopLevel) {
   }
 }
 
-TEST(CanonicalNamesTests, BadTopLevelOld) {
-  const auto lower = {
-      "alias fooBar = bool;",          // these comments prevent clang-format
-      "const bool fooBar = true;",     // from packing multiple items per line
-      "struct fooBar {};",             //
-      "struct fooBar {};",             //
-      "table fooBar {};",              //
-      "union fooBar { 1: bool x; };",  //
-      "enum fooBar { A = 1; };",       //
-      "bits fooBar { A = 1; };",       //
-      "protocol fooBar {};",           //
-      "service fooBar {};",            //
-  };
-  const auto upper = {
-      "alias FooBar = bool;",          //
-      "const bool FooBar = true;",     //
-      "struct FooBar {};",             //
-      "struct FooBar {};",             //
-      "table FooBar {};",              //
-      "union FooBar { 1: bool x; };",  //
-      "enum FooBar { A = 1; };",       //
-      "bits FooBar { A = 1; };",       //
-      "protocol FooBar {};",           //
-      "service FooBar {};",            //
-  };
-
-  for (const auto line1 : lower) {
-    for (const auto line2 : upper) {
-      std::ostringstream s;
-      s << "library example;\n\n" << line1 << '\n' << line2 << '\n';
-      const auto fidl = s.str();
-      TestLibrary library(fidl);
-      ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
-      const auto& errors = library.errors();
-      ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
-      ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical, "%s", fidl.c_str());
-      ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar", "%s", fidl.c_str());
-      ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar", "%s", fidl.c_str());
-      ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar", "%s", fidl.c_str());
-    }
-  }
-}
-
 TEST(CanonicalNamesTests, BadStructMembers) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -337,21 +294,6 @@ type Example = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
-TEST(CanonicalNamesTests, BadStructMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Example {
-  bool fooBar;
-  bool FooBar;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberNameCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
@@ -376,21 +318,6 @@ type Example = table {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
-TEST(CanonicalNamesTests, BadTableMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-table Example {
-  1: bool fooBar;
-  2: bool FooBar;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
 TEST(CanonicalNamesTests, BadUnionMembers) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -403,21 +330,6 @@ type Example = union {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
-TEST(CanonicalNamesTests, BadUnionMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-union Example {
-  1: bool fooBar;
-  2: bool FooBar;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberNameCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
@@ -442,21 +354,6 @@ type Example = enum {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
-TEST(CanonicalNamesTests, BadEnumMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum Example {
-  fooBar = 1;
-  FooBar = 2;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
 TEST(CanonicalNamesTests, BadBitsMembers) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -469,21 +366,6 @@ type Example = bits {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
-TEST(CanonicalNamesTests, BadBitsMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-bits Example {
-  fooBar = 1;
-  FooBar = 2;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberNameCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
@@ -508,21 +390,6 @@ protocol Example {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
-TEST(CanonicalNamesTests, BadProtocolMethodsOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Example {
-  fooBar() -> ();
-  FooBar() -> ();
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
 TEST(CanonicalNamesTests, BadMethodParameters) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -534,20 +401,6 @@ protocol Example {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
-TEST(CanonicalNamesTests, BadMethodParametersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Example {
-  example(bool fooBar, bool FooBar) -> ();
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterNameCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
@@ -571,37 +424,7 @@ protocol Example {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
-TEST(CanonicalNamesTests, BadMethodResultsOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Example {
-  example() -> (bool fooBar, bool FooBar);
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
 TEST(CanonicalNamesTests, BadServiceMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol P {};
-service Example {
-  P fooBar;
-  P FooBar;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
-}
-
-TEST(CanonicalNamesTests, BadServiceMembersOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -627,19 +450,6 @@ type HTTPServer = struct {};
 type HttpServer = struct {};
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollisionCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "HTTPServer");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "HttpServer");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "http_server");
-}
-
-TEST(CanonicalNamesTests, BadUpperAcronymOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct HTTPServer {};
-struct HttpServer {};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollisionCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "HTTPServer");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "HttpServer");
@@ -699,29 +509,6 @@ alias FOOBAR = foobar.Something;
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foobar");
 }
 
-TEST(CanonicalNamesTests, BadDependentLibraryOld) {
-  SharedAmongstLibraries shared;
-  TestLibrary dependency("foobar.fidl", R"FIDL(
-library foobar;
-
-struct Something {};
-)FIDL",
-                         &shared);
-  ASSERT_TRUE(dependency.Compile());
-
-  TestLibrary library(R"FIDL(
-library example;
-
-using foobar;
-
-alias FOOBAR = foobar.Something;
-)FIDL");
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImportCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FOOBAR");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foobar");
-}
-
 TEST(CanonicalNamesTests, BadVariousCollisions) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -763,44 +550,6 @@ TEST(CanonicalNamesTests, BadVariousCollisions) {
   }
 }
 
-TEST(CanonicalNamesTests, BadVariousCollisionsOld) {
-  const auto base_names = {
-      "a", "a1", "x_single_start", "single_end_x", "x_single_both_x", "single_x_middle",
-  };
-  const auto functions = {
-      fidl::utils::to_lower_snake_case,
-      fidl::utils::to_upper_snake_case,
-      fidl::utils::to_lower_camel_case,
-      fidl::utils::to_upper_camel_case,
-  };
-
-  for (const auto base_name : base_names) {
-    for (const auto f1 : functions) {
-      for (const auto f2 : functions) {
-        std::ostringstream s;
-        const auto name1 = f1(base_name);
-        const auto name2 = f2(base_name);
-        s << "library example;\n\nstruct " << name1 << " {};\nstruct " << name2 << " {};\n";
-        const auto fidl = s.str();
-        TestLibrary library(fidl);
-        ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
-        const auto& errors = library.errors();
-        ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
-        if (name1 == name2) {
-          ASSERT_ERR(errors[0], fidl::ErrNameCollision, "%s", fidl.c_str());
-          ASSERT_SUBSTR(errors[0]->msg.c_str(), name1.c_str(), "%s", fidl.c_str());
-        } else {
-          ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical, "%s", fidl.c_str());
-          ASSERT_SUBSTR(errors[0]->msg.c_str(), name1.c_str(), "%s", fidl.c_str());
-          ASSERT_SUBSTR(errors[0]->msg.c_str(), name2.c_str(), "%s", fidl.c_str());
-          ASSERT_SUBSTR(errors[0]->msg.c_str(), fidl::utils::canonicalize(name1).c_str(), "%s",
-                        fidl.c_str());
-        }
-      }
-    }
-  }
-}
-
 TEST(CanonicalNamesTests, BadConsecutiveUnderscores) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -811,18 +560,6 @@ type it_is_the_same = struct {};
 type it__is___the____same = struct {};
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollisionCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "it_is_the_same");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "it__is___the____same");
-}
-
-TEST(CanonicalNamesTests, BadConsecutiveUnderscoresOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct it_is_the_same {};
-struct it__is___the____same {};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollisionCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "it_is_the_same");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "it__is___the____same");
@@ -866,42 +603,6 @@ TEST(CanonicalNamesTests, BadInconsistentTypeSpelling) {
   }
 }
 
-TEST(CanonicalNamesTests, BadInconsistentTypeSpellingOld) {
-  const auto decl_templates = {
-      "alias %s = bool;",          //
-      "struct %s {};",             //
-      "struct %s {};",             //
-      "table %s {};",              //
-      "union %s { 1: bool x; };",  //
-      "enum %s { A = 1; };",       //
-      "bits %s { A = 1; };",       //
-  };
-  const auto use_template = "struct Example { %s val; };";
-
-  const auto names = {
-      std::make_pair("foo_bar", "FOO_BAR"),
-      std::make_pair("FOO_BAR", "foo_bar"),
-      std::make_pair("fooBar", "FooBar"),
-  };
-
-  for (const auto decl_template : decl_templates) {
-    for (const auto [decl_name, use_name] : names) {
-      std::string decl(decl_template), use(use_template);
-      decl.replace(decl.find("%s"), 2, decl_name);
-      use.replace(use.find("%s"), 2, use_name);
-      std::ostringstream s;
-      s << "library example;\n\n" << decl << '\n' << use << '\n';
-      const auto fidl = s.str();
-      TestLibrary library(fidl);
-      ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
-      const auto& errors = library.errors();
-      ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
-      ASSERT_ERR(errors[0], fidl::ErrUnknownType, "%s", fidl.c_str());
-      ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
-    }
-  }
-}
-
 TEST(CanonicalNamesTests, BadInconsistentConstSpelling) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -918,24 +619,6 @@ TEST(CanonicalNamesTests, BadInconsistentConstSpelling) {
       << "const EXAMPLE bool = " << use_name << ";\n";
     const auto fidl = s.str();
     TestLibrary library(fidl, experimental_flags);
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
-  }
-}
-
-TEST(CanonicalNamesTests, BadInconsistentConstSpellingOld) {
-  const auto names = {
-      std::make_pair("foo_bar", "FOO_BAR"),
-      std::make_pair("FOO_BAR", "foo_bar"),
-      std::make_pair("fooBar", "FooBar"),
-  };
-
-  for (const auto [decl_name, use_name] : names) {
-    std::ostringstream s;
-    s << "library example;\n\n"
-      << "const bool " << decl_name << " = false;\n"
-      << "const bool EXAMPLE = " << use_name << ";\n";
-    const auto fidl = s.str();
-    TestLibrary library(fidl);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
   }
 }
@@ -965,29 +648,6 @@ TEST(CanonicalNamesTests, BadInconsistentEnumMemberSpelling) {
   }
 }
 
-TEST(CanonicalNamesTests, BadInconsistentEnumMemberSpellingOld) {
-  const auto names = {
-      std::make_pair("foo_bar", "FOO_BAR"),
-      std::make_pair("FOO_BAR", "foo_bar"),
-      std::make_pair("fooBar", "FooBar"),
-  };
-
-  for (const auto [decl_name, use_name] : names) {
-    std::ostringstream s;
-    s << "library example;\n\n"
-      << "enum Enum { " << decl_name << " = 1; };\n"
-      << "const Enum EXAMPLE = Enum." << use_name << ";\n";
-    const auto fidl = s.str();
-    TestLibrary library(fidl);
-    ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
-    const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 2, "%s", fidl.c_str());
-    ASSERT_ERR(errors[0], fidl::ErrUnknownEnumMember, "%s", fidl.c_str());
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
-    ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue, "%s", fidl.c_str());
-  }
-}
-
 TEST(CanonicalNamesTests, BadInconsistentBitsMemberSpelling) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -1004,29 +664,6 @@ TEST(CanonicalNamesTests, BadInconsistentBitsMemberSpelling) {
       << "const EXAMPLE Bits = Bits." << use_name << ";\n";
     const auto fidl = s.str();
     TestLibrary library(fidl, experimental_flags);
-    ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
-    const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 2, "%s", fidl.c_str());
-    ASSERT_ERR(errors[0], fidl::ErrUnknownBitsMember, "%s", fidl.c_str());
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
-    ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue, "%s", fidl.c_str());
-  }
-}
-
-TEST(CanonicalNamesTests, BadInconsistentBitsMemberSpellingOld) {
-  const auto names = {
-      std::make_pair("foo_bar", "FOO_BAR"),
-      std::make_pair("FOO_BAR", "foo_bar"),
-      std::make_pair("fooBar", "FooBar"),
-  };
-
-  for (const auto [decl_name, use_name] : names) {
-    std::ostringstream s;
-    s << "library example;\n\n"
-      << "bits Bits { " << decl_name << " = 1; };\n"
-      << "const Bits EXAMPLE = Bits." << use_name << ";\n";
-    const auto fidl = s.str();
-    TestLibrary library(fidl);
     ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
     const auto& errors = library.errors();
     ASSERT_EQ(errors.size(), 2, "%s", fidl.c_str());

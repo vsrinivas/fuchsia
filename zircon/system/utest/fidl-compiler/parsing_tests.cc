@@ -29,15 +29,6 @@ library 0fidl.test.badcompoundidentifier;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(ParsingTests, BadCompoundIdentifierTestOld) {
-  // The leading 0 in the library name causes parsing an Identifier
-  // to fail, and then parsing a CompoundIdentifier to fail.
-  TestLibrary library(R"FIDL(
-library 0fidl.test.badcompoundidentifier;
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
-}
-
 // Test that library name formatting checks are done in the parser
 TEST(ParsingTests, BadLibraryNameTest) {
   fidl::ExperimentalFlags experimental_flags;
@@ -46,15 +37,6 @@ TEST(ParsingTests, BadLibraryNameTest) {
 library a_b;
 )FIDL",
                       experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLibraryNameComponent);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "a_b");
-}
-
-TEST(ParsingTests, BadLibraryNameTestOld) {
-  TestLibrary library(R"FIDL(
-library a_b;
-)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLibraryNameComponent);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "a_b");
@@ -405,18 +387,6 @@ type Test = struct {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "#");
 }
 
-TEST(ParsingTests, BadCharPoundSignTestOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-struct Test {
-    uint8 #uint8;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "#");
-}
-
 TEST(ParsingTests, BadCharSlashTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -432,18 +402,6 @@ type Test = struct / {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "/");
 }
 
-TEST(ParsingTests, BadCharSlashTestOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-struct Test / {
-    uint8 uint8;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "/");
-}
-
 TEST(ParsingTests, BadIdentifierTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -455,18 +413,6 @@ type test_ = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidIdentifier);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "test_");
-}
-
-TEST(ParsingTests, BadIdentifierTestOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-struct test_ {
-    uint8 uint8;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidIdentifier);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "test_");
 }
@@ -495,22 +441,6 @@ type ß = struct {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidCharacter,
-                                      fidl::ErrInvalidCharacter);
-}
-
-TEST(ParsingTests, BadInvalidCharacterTestOld) {
-  LocaleSwapper swapper("de_DE.iso88591");
-  TestLibrary library("invalid.character.fidl", R"FIDL(
-library fidl.test.maxbytes;
-
-// This is all alphanumeric in the appropriate locale, but not a valid
-// identifier.
-struct ß {
-    int32 x;
-};
-
-)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidCharacter,
                                       fidl::ErrInvalidCharacter);
 }
@@ -584,31 +514,6 @@ type UseDependent = struct {
                                          fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
 }
 
-TEST(ParsingTests, BadErrorOnTypeAliasBeforeImportsOld) {
-  SharedAmongstLibraries shared;
-  TestLibrary dependency("dependent.fidl", R"FIDL(
-library dependent;
-
-struct Something {};
-)FIDL",
-                         &shared);
-  ASSERT_TRUE(dependency.Compile());
-
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
-
-alias foo = int16;
-using dependent;
-
-struct UseDependent {
-    dependent.Something field;
-};
-)FIDL",
-                      &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
-}
-
 TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -635,24 +540,6 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
 // TODO(fxbug.dev/70247): this "Good" test is copied because it cannot use the
 //  full ASSERT_CONVERTED_AND_COMPILE macro, since the condition we are testing
 //  is a valid parse tree generation.
-TEST(ParsingTests, GoodAttributeValueHasCorrectContentsOld) {
-  TestLibrary library("example.fidl", R"FIDL(
-  library example;
-
-  [Foo="Bar"]
-  struct Empty{};
-  )FIDL");
-
-  std::unique_ptr<fidl::raw::File> ast;
-  ASSERT_TRUE(library.Parse(&ast));
-
-  fidl::raw::AttributeOld attribute =
-      std::move(ast->struct_declaration_list.front()->attributes->attributes.front());
-  ASSERT_STR_EQ(attribute.name.c_str(), "Foo");
-  ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(attribute.value.get())->MakeContents(),
-                "Bar");
-}
-
 TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -682,26 +569,6 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
 // TODO(fxbug.dev/70247): this "Good" test is copied because it cannot use the
 //  full ASSERT_CONVERTED_AND_COMPILE macro, since the condition we are testing
 //  is a valid parse tree generation.
-TEST(ParsingTests, GoodMultilineCommentHasCorrectContentsOld) {
-  TestLibrary library("example.fidl", R"FIDL(
-  library example;
-
-  /// A
-  /// multiline
-  /// comment!
-  struct Empty{};
-  )FIDL");
-
-  std::unique_ptr<fidl::raw::File> ast;
-  ASSERT_TRUE(library.Parse(&ast));
-
-  fidl::raw::AttributeOld attribute =
-      std::move(ast->struct_declaration_list.front()->attributes->attributes.front());
-  ASSERT_STR_EQ(attribute.name.c_str(), "Doc");
-  ASSERT_STR_EQ(static_cast<fidl::raw::DocCommentLiteral*>(attribute.value.get())->MakeContents(),
-                " A\n multiline\n comment!\n");
-}
-
 TEST(ParsingTests, WarnDocCommentBlankLineTest) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
@@ -806,19 +673,6 @@ protocol Example {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
 }
 
-TEST(ParsingTests, BadDocCommentNotAllowedOnParamsOld) {
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
-
-protocol Example {
-  Method(/// Doc comment
-         Bool b);
-};
-)FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
-}
-
 TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
@@ -908,20 +762,6 @@ type Empty = struct {
   ASSERT_ERR(errors[2], fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(ParsingTests, BadTrailingDocCommentInDeclTestOld) {
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
-
-struct Empty {
-   int8 a;
-   /// bad
-};
-)FIDL");
-
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
-                                      fidl::ErrUnexpectedTokenOfKind);
-}
-
 TEST(ParsingTests, BadFinalMemberMissingSemicolon) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -934,19 +774,6 @@ type Struct = struct {
 };
 )FIDL",
                       experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
-}
-
-TEST(ParsingTests, BadFinalMemberMissingSemicolonOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Struct {
-    uint8 uint_value;
-    string foo // error: missing semicolon
-};
-)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
@@ -967,21 +794,6 @@ type Struct = struct {
    // error: want "}", got EOF
 )FIDL",
                       experimental_flags);
-
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
-                                      fidl::ErrUnexpectedTokenOfKind);
-}
-
-TEST(ParsingTests, BadFinalMemberMissingNameAndSemicolonOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Struct {
-    uint8 uint_value;
-    string
-}; // error: want field name, got "}"
-   // error: want "}", got EOF
-)FIDL");
 
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);

@@ -82,20 +82,6 @@ strict union Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(UnionTests, BadMustHaveExplicitOrdinalsOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-union Foo {
-    int64 foo;
-    vector<uint32>:10 bar;
-};
-
-)FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType,
-                                      fidl::ErrMissingOrdinalBeforeType);
-}
-
 TEST(UnionTests, BadMustHaveExplicitOrdinals) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -206,17 +192,6 @@ union Foo {
   EXPECT_EQ(member4.ordinal->value, 4);
 }
 
-TEST(UnionTests, BadOrdinalOutOfBoundsOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-union Foo {
-  -1: uint32 foo;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
-}
-
 TEST(UnionTests, BadOrdinalOutOfBounds) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -229,18 +204,6 @@ type Foo = strict union {
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
-}
-
-TEST(UnionTests, BadOrdinalsMustBeUniqueOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-union Foo {
-  1: reserved;
-  1: uint64 x;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
 TEST(UnionTests, BadOrdinalsMustBeUnique) {
@@ -258,18 +221,6 @@ type Foo = strict union {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
-TEST(UnionTests, BadMemberNamesMustBeUniqueOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-union Duplicates {
-    1: string s;
-    2: int32 s;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberName);
-}
-
 TEST(UnionTests, BadMemberNamesMustBeUnique) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -285,18 +236,6 @@ type Duplicates = strict union {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberName);
 }
 
-TEST(UnionTests, BadCannotStartAtZeroOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-union Foo {
-  0: uint32 foo;
-  1: uint64 bar;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalsMustStartAtOne);
-}
-
 TEST(UnionTests, BadCannotStartAtZero) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -310,18 +249,6 @@ type Foo = strict union {
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalsMustStartAtOne);
-}
-
-TEST(UnionTests, BadDefaultNotAllowedOld) {
-  TestLibrary library(R"FIDL(
-library test;
-
-union Foo {
-    1: int64 t = 1;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDefaultsOnUnionsNotSupported);
 }
 
 // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
@@ -343,20 +270,6 @@ type Foo = strict union {
                                       fidl::ErrMissingOrdinalBeforeType);
 }
 
-TEST(UnionTests, BadMustBeDenseOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-union Example {
-    1: int64 first;
-    3: int64 third;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
-  ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
-}
-
 TEST(UnionTests, BadMustBeDense) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -372,19 +285,6 @@ type Example = strict union {
                       std::move(experimental_flags));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
-}
-
-TEST(UnionTests, BadMustHaveNonReservedMemberOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-union Foo {
-  2: reserved;
-  1: reserved;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, BadMustHaveNonReservedMember) {
@@ -403,18 +303,6 @@ type Foo = strict union {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, BadNoNullableMembersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-union Foo {
-  1: string? bar;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableUnionMember);
-}
-
 TEST(UnionTests, BadNoNullableMembers) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -430,18 +318,6 @@ type Foo = strict union {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableUnionMember);
 }
 
-TEST(UnionTests, BadNoDirectlyRecursiveUnionsOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-union Value {
-  1: Value value;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-}
-
 TEST(UnionTests, BadNoDirectlyRecursiveUnions) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -455,16 +331,6 @@ type Value = strict union {
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-}
-
-TEST(UnionTests, BadEmptyUnionOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-union Foo {};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, BadEmptyUnion) {
@@ -492,19 +358,6 @@ protocol Example {
   ASSERT_NOT_NULL(error_union);
   ASSERT_EQ(error_union->members.front().ordinal->value, 1);
   ASSERT_EQ(error_union->members.back().ordinal->value, 2);
-}
-
-TEST(UnionTests, BadNoSelectorOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-union Foo {
-  [Selector = "v2"] 1: string v;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Selector");
 }
 
 TEST(UnionTests, BadNoSelector) {

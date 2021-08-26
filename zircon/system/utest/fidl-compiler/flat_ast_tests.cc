@@ -64,21 +64,6 @@ TEST(FlatAstTests, GoodCompareHandles) {
   EXPECT_TRUE(nullable_event_rights1 < nullable_event_rights2);
 }
 
-TEST(FlatAstTests, BadCannotReferenceAnonymousNameOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Foo {
-  SomeMethod(uint8 some_param);
-};
-
-struct Bar {
-  FooSomeMethodRequest bad_member_type;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAnonymousNameReference);
-}
-
 TEST(FlatAstTests, BadCannotReferenceAnonymousName) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -95,19 +80,6 @@ type Bar = struct {
 )FIDL",
                       experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAnonymousNameReference);
-}
-
-TEST(FlatAstTests, BadAnonymousNameConflictOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Foo {
-  SomeMethod(uint8 some_param);
-};
-
-struct FooSomeMethodRequest {};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
 TEST(FlatAstTests, BadAnonymousNameConflict) {

@@ -56,17 +56,6 @@ resource_definition SomeResource : uint32 {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
-TEST(ResourceTests, BadEmptyOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-resource_definition SomeResource : uint32 {
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
-}
-
 TEST(ResourceTests, BadNoProperties) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -80,19 +69,6 @@ resource_definition SomeResource : uint32 {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneProperty);
-}
-
-TEST(ResourceTests, BadNoPropertiesOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-resource_definition SomeResource : uint32 {
-  properties {
-  };
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneProperty);
 }
 
@@ -115,25 +91,6 @@ resource_definition SomeResource : uint32 {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateResourcePropertyName);
-}
-
-TEST(ResourceTests, BadDuplicatePropertyOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum MyEnum {
-  X = 0;
-};
-
-resource_definition SomeResource : uint32 {
-  properties {
-    MyEnum stuff;
-    MyEnum stuff;
-  };
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateResourcePropertyName);
 }
 

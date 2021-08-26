@@ -115,24 +115,6 @@ protocol P {
                                       fidl::ErrUnexpectedConstraint);
 }
 
-TEST(HandleTests, BadInvalidHandleRightsTestOld) {
-  fidl::ExperimentalFlags experimental_flags;
-
-  auto library = WithLibraryZx(R"FIDL(
-library example;
-
-using zx;
-
-protocol P {
-    Method(zx.handle:<VMO, 1> h);  // rights must be zx.rights-typed.
-};
-)FIDL",
-                               std::move(experimental_flags));
-
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
-                                      fidl::ErrCouldNotResolveHandleRights);
-}
-
 TEST(HandleTests, GoodPlainHandleTest) {
   fidl::ExperimentalFlags experimental_flags;
 
@@ -226,24 +208,6 @@ type MyStruct = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
-TEST(HandleTests, BadInvalidFidlDefinedHandleSubtypeOld) {
-  fidl::ExperimentalFlags experimental_flags;
-
-  auto library = WithLibraryZx(R"FIDL(
-library example;
-
-using zx;
-
-struct MyStruct {
-  zx.handle:ZIPPY a;
-};
-)FIDL",
-                               std::move(experimental_flags));
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleSubtype);
-  EXPECT_TRUE(library.errors()[0]->msg.find("ZIPPY") != std::string::npos);
-}
-
 TEST(HandleTests, BadDisallowOldHandles) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -262,21 +226,6 @@ type MyStruct = struct {
   // it tries to resolve the parameters before checking that handle points to
   // a resource definition
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
-}
-
-TEST(HandleTests, BadDisallowOldHandlesOld) {
-  auto library = WithLibraryZx(R"FIDL(
-library example;
-
-using zx;
-
-struct MyStruct {
-    handle<vmo> h;
-};
-)FIDL");
-  // This looks like it's returning the correct error, but it's not - the unknown
-  // type here refers to `vmo` not `handle`
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -355,32 +304,6 @@ type MyStruct = resource struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
-TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTestOld) {
-  fidl::ExperimentalFlags experimental_flags;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-enum obj_type : uint32 {
-    NONE = 0;
-    VMO = 3;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-    };
-};
-
-resource struct MyStruct {
-    handle:<VMO, 1> h;
-};
-)FIDL",
-                      std::move(experimental_flags));
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleRights);
-}
-
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTest) {
   fidl::ExperimentalFlags experimental_flags;
@@ -403,27 +326,6 @@ type MyStruct = resource struct {
 
   // TODO(fxbug.dev/75112): should include ErrResourceMissingSubtypeProperty
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
-}
-
-TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTestOld) {
-  fidl::ExperimentalFlags experimental_flags;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-resource_definition handle : uint32 {
-    properties {
-        uint32 rights;
-    };
-};
-
-resource struct MyStruct {
-    handle:VMO h;
-};
-)FIDL",
-                      std::move(experimental_flags));
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleSubtype);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -452,29 +354,6 @@ type MyStruct = resource struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
-TEST(HandleTests, BadResourceSubtypeNotEnumOld) {
-  fidl::ExperimentalFlags experimental_flags;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-struct obj_type {};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-    };
-};
-
-resource struct MyStruct {
-    handle:<VMO, 1> h;
-};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleSubtype);
-}
-
 TEST(HandleTests, BadNonIdentifierSubtype) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -501,32 +380,6 @@ type MyStruct = resource struct {
 
   // TODO(fxbug.dev/75112): should include ErrHandleSubtypeMustReferToResourceSubtype
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
-}
-
-TEST(HandleTests, BadNonIdentifierSubtypeOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum obj_type : uint32 {
-    NONE = 0;
-    VMO = 3;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-    };
-};
-
-resource struct MyStruct {
-    handle:1? h;
-};
-)FIDL");
-
-  // NOTE(fxbug.dev/72924): This is just a parse error in the old syntax, since
-  // we only allow identifiers as rights. Hence why
-  // ErrHandleSubtypeMustReferToResourceSubtype is only relevant in the new syntax.
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -559,33 +412,6 @@ type MyStruct = resource struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
-TEST(HandleTests, BadResourceDefinitionNonBitsRightsOld) {
-  fidl::ExperimentalFlags experimental_flags;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-enum obj_type : uint32 {
-    NONE = 0;
-    VMO = 3;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-        string rights;
-    };
-};
-
-resource struct MyStruct {
-    handle:<VMO, "hello"> h;
-};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleRights);
-}
-
 TEST(HandleTests, BadBareHandleNoConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -601,28 +427,6 @@ type MyStruct = resource struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 
-TEST(HandleTests, BadBareHandleNoConstraintsOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-resource struct MyStruct {
-    handle h;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
-}
-
-TEST(HandleTests, BadBareHandleWithConstraintsOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-resource struct MyStruct {
-    handle:VMO h;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
-}
-
 TEST(HandleTests, BadBareHandleWithConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -635,22 +439,6 @@ type MyStruct = resource struct {
 )FIDL",
                       experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
-}
-
-TEST(HandleTests, BadBareHandleWithConstraintsThroughAliasOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-alias my_handle = handle;
-
-resource struct MyStruct {
-    my_handle:VMO h;
-};
-)FIDL");
-  // NOTE(fxbug.dev/72924): The old syntax fails in a different way because of the way it parses
-  // handles, assuming that it's a size bound since it doesn't match "handle" exactly.
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound,
-                                      fidl::ErrHandleNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsThroughAlias) {

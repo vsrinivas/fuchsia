@@ -25,18 +25,6 @@ type Foo = flexible enum : uint8 {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
-TEST(FlexibleTests, BadEnumMultipleUnknownOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-flexible enum Foo : uint8 {
-  [Unknown] ZERO = 0;
-  [Unknown] ONE = 1;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
-}
-
 TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownUnsigned) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -53,19 +41,6 @@ type Foo = flexible enum : uint8 {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
-TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownUnsignedOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-flexible enum Foo : uint8 {
-  ZERO = 0;
-  ONE = 1;
-  MAX = 255;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
-}
-
 TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownSigned) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -79,19 +54,6 @@ type Foo = flexible enum : int8 {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
-}
-
-TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownSignedOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-flexible enum Foo : int8 {
-  ZERO = 0;
-  ONE = 1;
-  MAX = 127;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
@@ -179,18 +141,6 @@ type Foo = flexible union {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
-}
-
-TEST(FlexibleTests, BadUnionMultipleUnknownOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-flexible union Foo {
-  [Unknown] 1: int32 a;
-  [Unknown] 2: int32 b;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 

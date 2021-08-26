@@ -130,19 +130,6 @@ protocol Example {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ErrorType");
 }
 
-TEST(ErrorsTests, BadErrorUnknownIdentifierOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Example {
-    Method() -> (string foo) error ErrorType;
-};
-)FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ErrorType");
-}
-
 TEST(ErrorsTests, BadErrorWrongPrimitive) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -154,18 +141,6 @@ protocol Example {
 };
 )FIDL",
                       experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidErrorType);
-}
-
-TEST(ErrorsTests, BadErrorWrongPrimitiveOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Example {
-    Method() -> (string foo) error float32;
-};
-)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidErrorType);
 }
@@ -183,16 +158,6 @@ protocol Example {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(ErrorsTests, BadErrorMissingTypeOld) {
-  TestLibrary library(R"FIDL(
-library example;
-protocol Example {
-    Method() -> (int32 flub) error;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
-}
-
 TEST(ErrorsTests, BadErrorNotAType) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -203,16 +168,6 @@ protocol Example {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
-}
-
-TEST(ErrorsTests, BadErrorNotATypeOld) {
-  TestLibrary library(R"FIDL(
-library example;
-protocol Example {
-    Method() -> (int32 flub) error "hello";
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
@@ -229,16 +184,6 @@ protocol Example {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(ErrorsTests, BadErrorNoResponseOld) {
-  TestLibrary library(R"FIDL(
-library example;
-protocol Example {
-    Method() -> error int32;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
-}
-
 TEST(ErrorsTests, BadErrorUnexpectedEndOfFile) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -251,25 +196,10 @@ type ForgotTheSemicolon = table {}
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(ErrorsTests, BadErrorUnexpectedEndOfFileOld) {
-  TestLibrary library(R"FIDL(
-library example;
-table ForgotTheSemicolon {}
-)FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
-}
-
 TEST(ErrorsTests, BadErrorEmptyFile) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("", experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
-}
-
-TEST(ErrorsTests, BadErrorEmptyFileOld) {
-  TestLibrary library("");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }

@@ -83,17 +83,6 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, BadMissingOrdinalsOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    int64 x;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedOrdinalOrCloseBrace);
-}
-
 TEST(TableTests, BadMissingOrdinals) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -110,18 +99,6 @@ type Foo = table {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType)
 }
 
-TEST(TableTests, BadDuplicateFieldNamesOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: string field;
-    2: uint32 field;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldName);
-}
-
 TEST(TableTests, BadDuplicateFieldNames) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -135,18 +112,6 @@ type Foo = table {
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldName);
-}
-
-TEST(TableTests, BadDuplicateOrdinalsOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: string foo;
-    1: uint32 bar;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldOrdinal);
 }
 
 TEST(TableTests, BadDuplicateOrdinals) {
@@ -210,21 +175,6 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, BadOptionalInStructOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: int64 t;
-};
-
-struct OptionalTableContainer {
-    Foo? foo;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
-}
-
 TEST(TableTests, BadOptionalInStruct) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -259,21 +209,6 @@ type OptionalTableContainer = struct {
 )FIDL",
                       experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
-}
-
-TEST(TableTests, BadOptionalInUnionOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: int64 t;
-};
-
-union OptionalTableContainer {
-    1: Foo? foo;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableUnionMember);
 }
 
 TEST(TableTests, BadOptionalInUnion) {
@@ -332,17 +267,6 @@ flexible union OptionalTableContainer {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, BadOptionalTableMemberOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: string? t;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableTableMember);
-}
-
 TEST(TableTests, BadOptionalTableMember) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -354,17 +278,6 @@ type Foo = table {
 };
 )FIDL",
                       std::move(experimental_flags));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableTableMember);
-}
-
-TEST(TableTests, BadOptionalNonNullableTableMemberOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: int64? t;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableTableMember);
 }
 
@@ -387,18 +300,6 @@ type Foo = table {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
-TEST(TableTests, BadDefaultNotAllowedOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: int64 t = 1;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDefaultsOnTablesNotSupported);
-}
-
 TEST(TableTests, BadDefaultNotAllowed) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -415,20 +316,6 @@ type Foo = table {
   // TODO(fxbug.dev/72924): the second error doesn't make any sense
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrMissingOrdinalBeforeType);
-}
-
-TEST(TableTests, BadMustBeDenseOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-table Example {
-    1: int64 first;
-    3: int64 third;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");
 }
 
 TEST(TableTests, BadMustBeDense) {

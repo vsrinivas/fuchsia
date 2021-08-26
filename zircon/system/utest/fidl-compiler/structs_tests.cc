@@ -48,17 +48,6 @@ type MyStruct = struct {
   ASSERT_FALSE(library.Compile());
 }
 
-TEST(StructsTests, BadMissingDefaultValueReferenceTargetOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct MyStruct {
-    int64 field = A;
-};
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-}
-
 TEST(StructsTests, GoodEnumDefaultValueEnumMemberReference) {
   TestLibrary library(R"FIDL(
 library example;
@@ -102,20 +91,6 @@ type MyStruct = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
 }
 
-TEST(StructsTests, BadDefaultValueEnumTypeOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum MyEnum : int32 { A = 1; };
-enum OtherEnum : int32 { A = 1; };
-
-struct MyStruct {
-    MyEnum field = OtherEnum.A;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
-}
-
 TEST(StructsTests, BadDefaultValuePrimitiveInEnum) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -129,20 +104,6 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");
-}
-
-TEST(StructsTests, BadDefaultValuePrimitiveInEnumOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum MyEnum : int32 { A = 1; };
-
-struct MyStruct {
-    MyEnum field = 1;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");
 }
@@ -190,20 +151,6 @@ type MyStruct = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
 }
 
-TEST(StructsTests, BadDefaultValueBitsTypeOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-bits MyBits : uint32 { A = 0x00000001; };
-bits OtherBits : uint32 { A = 0x00000001; };
-
-struct MyStruct {
-    MyBits field = OtherBits.A;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
-}
-
 TEST(StructsTests, BadDefaultValuePrimitiveInBits) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -217,20 +164,6 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyBits");
-}
-
-TEST(StructsTests, BadDefaultValuePrimitiveInBitsOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum MyBits : int32 { A = 0x00000001; };
-
-struct MyStruct {
-    MyBits field = 1;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyBits");
 }
@@ -252,19 +185,6 @@ type MyStruct = struct {
   ASSERT_FALSE(library.Compile());
 }
 
-TEST(StructsTests, BadLegacyEnumMemberReferenceOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum MyEnum : int32 { A = 5; };
-
-struct MyStruct {
-    MyEnum field = A;
-};
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-}
-
 TEST(StructsTests, BadDefaultValueNullableString) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -276,17 +196,6 @@ type MyStruct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidStructMemberType);
-}
-
-TEST(StructsTests, BadDefaultValueNullableStringOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct MyStruct {
-    string? field = "";
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidStructMemberType);
 }
 
@@ -302,18 +211,6 @@ type Duplicates = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberName);
-}
-
-TEST(StructsTests, BadDuplicateMemberNameOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Duplicates {
-    string s;
-    uint8 s;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberName);
 }
 
@@ -342,17 +239,6 @@ type MyStruct = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInlineSizeExceeds64k);
 }
 
-TEST(StructsTests, BadInlineSizeExceeds64kOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct MyStruct {
-    array<uint8>:65536 arr;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInlineSizeExceeds64k);
-}
-
 TEST(StructsTests, BadMutuallyRecursive) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -368,21 +254,6 @@ type Yang = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
-}
-
-TEST(StructsTests, BadMutuallyRecursiveOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct Yin {
-  Yang yang;
-};
-
-struct Yang {
-  Yin yin;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 

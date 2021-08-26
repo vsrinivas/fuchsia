@@ -13,29 +13,6 @@
 
 namespace {
 
-TEST(StrictnessTests, BadDuplicateModifierOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-strict union One { 1: bool b; };
-strict strict union Two { 1: bool b; };          // line 5
-strict strict strict union Three { 1: bool b; }; // line 6
-  )FIDL");
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 3);
-  ASSERT_ERR(errors[0], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[0]->span->position().line, 5);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "strict");
-  ASSERT_ERR(errors[1], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[1]->span->position().line, 6);
-  ASSERT_SUBSTR(errors[1]->msg.c_str(), "strict");
-  ASSERT_ERR(errors[2], fidl::ErrDuplicateModifier);
-  EXPECT_EQ(errors[2]->span->position().line, 6);
-  ASSERT_SUBSTR(errors[2]->msg.c_str(), "strict");
-}
-
 TEST(StrictnessTests, BadDuplicateModifier) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -60,23 +37,6 @@ type Three = strict strict strict union { 1: b bool; }; // line 6
   ASSERT_ERR(errors[2], fidl::ErrDuplicateModifier);
   EXPECT_EQ(errors[2]->span->position().line, 6);
   ASSERT_SUBSTR(errors[2]->msg.c_str(), "strict");
-}
-
-TEST(StrictnessTests, BadConflictingModifiersOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-strict flexible union SF { 1: bool b; }; // line 4
-flexible strict union FS { 1: bool b; }; // line 5
-  )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConflictingModifier,
-                                      fidl::ErrConflictingModifier);
-  EXPECT_EQ(library.errors()[0]->span->position().line, 4);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "strict");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "flexible");
-  EXPECT_EQ(library.errors()[1]->span->position().line, 5);
-  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "strict");
-  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "flexible");
 }
 
 TEST(StrictnessTests, BadConflictingModifiers) {
@@ -183,17 +143,6 @@ type Foo = strict struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
-TEST(StrictnessTests, BadStrictnessStructOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-strict struct Foo {
-    int32 i;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
-}
-
 TEST(StrictnessTests, BadStrictnessTable) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -203,15 +152,6 @@ library example;
 type StrictFoo = strict table {};
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
-}
-
-TEST(StrictnessTests, BadStrictnessTableOld) {
-  TestLibrary library("table", R"FIDL(
-library example;
-
-strict table StrictFoo {};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 

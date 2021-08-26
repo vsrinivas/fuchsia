@@ -20,19 +20,6 @@ struct S {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(ArrayTests, BadZeroSizeArrayOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct S {
-    array<uint8>:0 arr;
-};
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_ERR(errors[0], fidl::ErrMustHaveNonZeroSize);
-}
-
 TEST(ArrayTests, BadZeroSizeArray) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -45,17 +32,6 @@ type S = struct {
 )FIDL",
                       experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonZeroSize);
-}
-
-TEST(ArrayTests, BadNoSizeArrayOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct S {
-    array<uint8> arr;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveSize);
 }
 
 TEST(ArrayTests, BadNoSizeArray) {
@@ -73,17 +49,6 @@ type S = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
-TEST(ArrayTests, BadNonParameterizedArrayOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct S {
-    array arr;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
-}
-
 TEST(ArrayTests, BadNonParameterizedArray) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -97,17 +62,6 @@ type S = struct {
                       experimental_flags);
   // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
-}
-
-TEST(ArrayTests, BadOptionalArrayOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-struct S {
-    array<uint8>:10? arr;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
 TEST(ArrayTests, BadOptionalArray) {

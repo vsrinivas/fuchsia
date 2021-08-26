@@ -407,21 +407,6 @@ using we.should.not.care;
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "even_doc");
 }
 
-TEST(AttributesTests, BadNoAttributeOnUsingNotEventDocOld) {
-  TestLibrary library(R"FIDL(
-library example;
-
-/// nope
-[NoAttributeOnUsing, EvenDoc]
-using we.should.not.care;
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributesOldNotAllowedOnLibraryImport);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Doc");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NoAttributeOnUsing");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "EvenDoc");
-}
-
 // Test that a duplicate attribute is caught, and nicely reported.
 TEST(AttributesTests, BadNoTwoSameAttributeTest) {
   fidl::ExperimentalFlags experimental_flags;
@@ -437,20 +422,6 @@ protocol A {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dup");
-}
-
-TEST(AttributesTests, BadNoTwoSameAttributeTestOld) {
-  TestLibrary library("dup_attributes.fidl", R"FIDL(
-library fidl.test.dupattributes;
-
-[dup = "first", Dup = "second"]
-protocol A {
-    MethodA();
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dup");
 }
@@ -474,21 +445,6 @@ protocol A {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
 }
 
-TEST(AttributesTests, BadNoTwoSameDocAttributeTestOld) {
-  TestLibrary library("dup_attributes.fidl", R"FIDL(
-library fidl.test.dupattributes;
-
-/// first
-[Doc = "second"]
-protocol A {
-    MethodA();
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
-}
-
 TEST(AttributesTests, BadNoTwoSameAttributeOnLibraryTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -501,22 +457,6 @@ library fidl.test.dupattributes;
   library.AddSource("dup_attributes_second.fidl", R"FIDL(
 @dup("second")
  library fidl.test.dupattributes;
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dup");
-}
-
-TEST(AttributesTests, BadNoTwoSameAttributeOnLibraryTestOld) {
-  TestLibrary library;
-  library.AddSource("dup_attributes.fidl", R"FIDL(
-[Dup = "first"]
-library fidl.test.dupattributes;
-
-)FIDL");
-  library.AddSource("dup_attributes_second.fidl", R"FIDL(
-[Dup = "second"]
-library fidl.test.dupattributes;
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
@@ -582,23 +522,6 @@ protocol A {
   ASSERT_EQ(library.warnings().size(), 0);
 }
 
-TEST(AttributesTests, BadWarningsAsErrorsTestOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[Duc = "should be Doc"]
-protocol A {
-    MethodA();
-};
-
-)FIDL");
-  library.set_warnings_as_errors(true);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::WarnAttributeTypo);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Duc");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Doc");
-  ASSERT_EQ(library.warnings().size(), 0);
-}
-
 TEST(AttributesTests, BadEmptyTransport) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -615,19 +538,6 @@ protocol A {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
 }
 
-TEST(AttributesTests, BadEmptyTransportOld) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
-library fidl.test.transportattributes;
-
-[Transport]
-protocol A {
-    MethodA();
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
-}
-
 TEST(AttributesTests, BadBogusTransport) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -641,19 +551,6 @@ protocol A {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
-}
-
-TEST(AttributesTests, BadBogusTransportOld) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
-library fidl.test.transportattributes;
-
-[Transport = "Bogus"]
-protocol A {
-    MethodA();
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
 }
 
@@ -718,19 +615,6 @@ protocol A {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
 }
 
-TEST(AttributesTests, BadMultipleTransportsWithBogusOld) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
-library fidl.test.transportattributes;
-
-[Transport = "Channel, Bogus, Syscall"]
-protocol A {
-    MethodA();
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
-}
-
 TEST(AttributesTests, BadTransitionalInvalidPlacement) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -746,20 +630,6 @@ protocol MyProtocol {
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "transitional");
-}
-
-TEST(AttributesTests, BadTransitionalInvalidPlacementOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[Transitional]
-protocol MyProtocol {
-  MyMethod();
-};
-  )FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Transitional");
 }
 
 TEST(AttributesTests, BadUnknownInvalidPlacementOnUnion) {
@@ -779,20 +649,6 @@ type U = flexible union {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
 }
 
-TEST(AttributesTests, BadUnknownInvalidPlacementOnUnionOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[Unknown]
-flexible union U {
-  1: int32 a;
-};
-  )FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
-}
-
 TEST(AttributesTests, BadUnknownInvalidPlacementOnBitsMember) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -807,19 +663,6 @@ type B = flexible bits : uint32 {
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
-}
-
-TEST(AttributesTests, BadUnknownInvalidPlacementOnBitsMemberOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-flexible bits B : uint32 {
-  [Unknown] A = 0x1;
-};
-  )FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
 }
 
 TEST(AttributesTests, BadUnknownInvalidOnStrictUnionsEnums) {
@@ -847,32 +690,6 @@ type E = strict enum : uint32 {
 };
   )FIDL",
                         experimental_flags);
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
-    ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
-  }
-}
-
-TEST(AttributesTests, BadUnknownInvalidOnStrictUnionsEnumsOld) {
-  {
-    TestLibrary library(R"FIDL(
-library fidl.test;
-
-strict union U {
-  [Unknown] 1: int32 a;
-};
-  )FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
-    ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
-  }
-
-  {
-    TestLibrary library(R"FIDL(
-library fidl.test;
-
-strict enum E : uint32 {
-  [Unknown] A = 1;
-};");
-  )FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
   }
@@ -974,51 +791,6 @@ protocol MyProtocol {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "for_deprecated_c_bindings");
 }
 
-TEST(AttributesTests, BadIncorrectPlacementLayoutOld) {
-  TestLibrary library(R"FIDL(
-[ForDeprecatedCBindings]
-library fidl.test;
-
-[ForDeprecatedCBindings]
-const int32 MyConst = 0;
-
-[ForDeprecatedCBindings]
-enum MyEnum {
-    [ForDeprecatedCBindings]
-    MyMember = 5;
-};
-
-struct MyStruct {
-    [ForDeprecatedCBindings]
-    int32 MyMember;
-};
-
-[ForDeprecatedCBindings]
-union MyUnion {
-    [ForDeprecatedCBindings]
-    1: int32 MyMember;
-};
-
-[ForDeprecatedCBindings]
-table MyTable {
-    [ForDeprecatedCBindings]
-    1: int32 MyMember;
-};
-
-[ForDeprecatedCBindings]
-protocol MyProtocol {
-    [ForDeprecatedCBindings]
-    MyMethod();
-};
-
-)FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 10);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "ForDeprecatedCBindings");
-}
-
 TEST(AttributesTests, BadDeprecatedAttributes) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -1039,31 +811,6 @@ protocol MyProtocol {
 };
 )FIDL",
                       experimental_flags);
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 3);
-  for (size_t i = 0; i < errors.size(); i++) {
-    ASSERT_ERR(errors[i], fidl::ErrDeprecatedAttribute);
-  }
-}
-
-TEST(AttributesTests, BadDeprecatedAttributesOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[Layout = "Simple"]
-struct MyStruct {};
-
-[Layout = "Complex"]
-protocol MyOtherProtocol {
-  MyMethod();
-};
-
-[Layout = "Simple"]
-protocol MyProtocol {
-  MyMethod();
-};
-)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 3);
@@ -1114,32 +861,6 @@ type MyStruct = struct {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
 }
 
-TEST(AttributesTests, BadConstraintOnlyThreeMembersOnStructOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[MustHaveThreeMembers]
-struct MyStruct {
-    int64 one;
-    int64 two;
-    int64 three;
-    int64 oh_no_four;
-};
-
-)FIDL");
-  library.AddAttributeSchema("must_have_three_members",
-                             fidl::flat::AttributeSchema(
-                                 {
-                                     fidl::flat::AttributePlacement::kStructDecl,
-                                 },
-                                 {
-                                     "",
-                                 },
-                                 MustHaveThreeMembers));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MustHaveThreeMembers");
-}
-
 TEST(AttributesTests, BadConstraintOnlyThreeMembersOnMethod) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -1163,28 +884,6 @@ protocol MyProtocol {
                                  MustHaveThreeMembers));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
-}
-
-TEST(AttributesTests, BadConstraintOnlyThreeMembersOnMethodOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-protocol MyProtocol {
-    [MustHaveThreeMembers] MyMethod();
-};
-
-)FIDL");
-  library.AddAttributeSchema("must_have_three_members",
-                             fidl::flat::AttributeSchema(
-                                 {
-                                     fidl::flat::AttributePlacement::kMethod,
-                                 },
-                                 {
-                                     "",
-                                 },
-                                 MustHaveThreeMembers));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MustHaveThreeMembers");
 }
 
 TEST(AttributesTests, BadConstraintOnlyThreeMembersOnProtocol) {
@@ -1216,32 +915,6 @@ protocol MyProtocol {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
 }
 
-TEST(AttributesTests, BadConstraintOnlyThreeMembersOnProtocolOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[MustHaveThreeMembers]
-protocol MyProtocol {
-    MyMethod();
-    MySecondMethod();
-};
-
-)FIDL");
-  library.AddAttributeSchema("must_have_three_members",
-                             fidl::flat::AttributeSchema(
-                                 {
-                                     fidl::flat::AttributePlacement::kProtocolDecl,
-                                 },
-                                 {
-                                     "",
-                                 },
-                                 MustHaveThreeMembers));
-  // Twice because there are two methods.
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied,
-                                      fidl::ErrAttributeConstraintNotSatisfied);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MustHaveThreeMembers");
-}
-
 TEST(AttributesTests, BadMaxBytes) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -1255,21 +928,6 @@ type MyTable = table {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyBytes);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "27");  // 27 allowed
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "40");  // 40 found
-}
-
-TEST(AttributesTests, BadMaxBytesOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[MaxBytes = "27"]
-table MyTable {
-  1: bool here;
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyBytes);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "27");  // 27 allowed
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "40");  // 40 found
@@ -1290,18 +948,6 @@ type MyTable = table {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoundIsTooBig);
 }
 
-TEST(AttributesTests, BadMaxBytesBoundTooBigOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[MaxBytes = "4294967296"] // 2^32
-table MyTable {
-  1: uint8 u;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoundIsTooBig);
-}
-
 TEST(AttributesTests, BadMaxBytesUnableToParseBound) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -1314,18 +960,6 @@ type MyTable = table {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnableToParseBound);
-}
-
-TEST(AttributesTests, BadMaxBytesUnableToParseBoundOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[MaxBytes = "invalid"]
-table MyTable {
-  1: uint8 u;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnableToParseBound);
 }
 
@@ -1351,27 +985,6 @@ type MyUnion = resource union {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "6");  // 6 found
 }
 
-TEST(AttributesTests, BadMaxHandlesOld) {
-  fidl::ExperimentalFlags experimental_flags;
-  auto library = WithLibraryZx(R"FIDL(
-library fidl.test;
-
-using zx;
-
-[MaxHandles = "2"]
-resource union MyUnion {
-  1: uint8 hello;
-  2: array<uint8>:8 world;
-  3: vector<zx.handle>:6 foo;
-};
-
-)FIDL",
-                               std::move(experimental_flags));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyHandles);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");  // 2 allowed
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "6");  // 6 found
-}
-
 TEST(AttributesTests, BadAttributeValue) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -1384,18 +997,6 @@ protocol P {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributeValue);
-}
-
-TEST(AttributesTests, BadAttributeValueOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[ForDeprecatedCBindings = "Complex"]
-protocol P {
-    Method();
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributeValue);
 }
 
@@ -1412,19 +1013,6 @@ type MyUnion = union {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
-}
-
-TEST(AttributesTests, BadSelectorIncorrectPlacementOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[Selector = "Nonsense"]
-union MyUnion {
-  1: uint8 hello;
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
 }
 
@@ -1458,32 +1046,6 @@ type Foo = table {
   }
 }
 
-TEST(AttributesTests, BadNoAttributesOnReservedOld) {
-  {
-    TestLibrary library(R"FIDL(
-library fidl.test;
-
-union Foo {
-  [Foo]
-  1: reserved;
-};
-)FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
-  }
-
-  {
-    TestLibrary library(R"FIDL(
-  library fidl.test;
-
-  table Foo {
-    [Foo]
-    1: reserved;
-  };
-  )FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
-  }
-}
-
 TEST(AttributesTests, BadParameterAttributeIncorrectPlacement) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -1496,18 +1058,6 @@ protocol ExampleProtocol {
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
-}
-
-TEST(AttributesTests, BadParameterAttributeIncorrectPlacementOld) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-protocol ExampleProtocol {
-    Method(exampleusing.Empty arg [OnParameter]);
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 }  // namespace

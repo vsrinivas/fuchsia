@@ -34,18 +34,6 @@ protocol Special {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrGeneratedZeroValueOrdinal);
 }
 
-TEST(OrdinalsTests, BadOrdinalCannotBeZeroOld) {
-  TestLibrary library(R"FIDL(
-library methodhasher;
-
-protocol Special {
-    ThisOneHashesToZero() -> (int64 i);
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrGeneratedZeroValueOrdinal);
-}
-
 TEST(OrdinalsTests, BadClashingOrdinalValues) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -57,30 +45,6 @@ using zx;
 protocol Special {
     ClashOne(struct { s string; b bool; }) -> (struct { i int32; });
     ClashTwo(struct { s string; }) -> (struct { r zx.handle:CHANNEL; });
-};
-
-)FIDL",
-                               experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
-
-  // The FTP requires the error message as follows
-  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ClashOne|ClashTwo)_"\s*\])REGEX");
-  std::smatch sm;
-  std::string error_msg(library.errors()[0]->msg);
-  ASSERT_TRUE(std::regex_search(error_msg, sm, pattern), "%s",
-              ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
-}
-
-TEST(OrdinalsTests, BadClashingOrdinalValuesOld) {
-  fidl::ExperimentalFlags experimental_flags;
-  auto library = WithLibraryZx(R"FIDL(
-library methodhasher;
-
-using zx;
-
-protocol Special {
-    ClashOne(string s, bool b) -> (int32 i);
-    ClashTwo(string s) -> (zx.handle:CHANNEL r);
 };
 
 )FIDL",
@@ -108,32 +72,6 @@ protocol Special {
     foo(struct { s string; b bool; }) -> (struct { i int32; });
     @selector("ClashTwo")
     bar(struct { s string; }) -> (struct { r zx.handle:CHANNEL; });
-};
-
-)FIDL",
-                               experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
-
-  // The FTP requires the error message as follows
-  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ClashOne|ClashTwo)_"\s*\])REGEX");
-  std::smatch sm;
-  std::string error_msg(library.errors()[0]->msg);
-  ASSERT_TRUE(std::regex_search(error_msg, sm, pattern), "%s",
-              ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
-}
-
-TEST(OrdinalsTests, BadClashingOrdinalValuesWithAttributeOld) {
-  fidl::ExperimentalFlags experimental_flags;
-  auto library = WithLibraryZx(R"FIDL(
-library methodhasher;
-
-using zx;
-
-protocol Special {
-    [Selector = "ClashOne"]
-    foo(string s, bool b) -> (int32 i);
-    [Selector = "ClashTwo"]
-    bar(string s) -> (zx.handle:CHANNEL r);
 };
 
 )FIDL",
@@ -220,19 +158,6 @@ protocol at {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidSelectorValue);
-}
-
-TEST(OrdinalsTests, BadSelectorValueIsValidatedOld) {
-  TestLibrary library(R"FIDL(
-library not.important;
-
-protocol at {
-    // missing two components after the slash
-    [Selector = "a.b.c/selector"]
-    all();
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidSelectorValue);
 }
 
