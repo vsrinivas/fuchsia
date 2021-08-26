@@ -224,11 +224,11 @@ TEST_F(SyncDeviceTest, TriggerHostWait) {
     ctrl_regs->batch_guestcommand = 0xffffffffu;
   }
 
-  zx::channel tl_req, tl_client;
-  ASSERT_OK(zx::channel::create(0u, &tl_req, &tl_client));
-  ASSERT_OK(dut_->GoldfishSyncCreateTimeline(std::move(tl_req)));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
+  ASSERT_TRUE(endpoints.is_ok());
+  ASSERT_OK(dut_->GoldfishSyncCreateTimeline(endpoints->server.TakeChannel()));
 
-  fidl::WireSyncClient<fuchsia_hardware_goldfish::SyncTimeline> tl(std::move(tl_client));
+  auto tl = fidl::BindSyncClient(std::move(endpoints->client));
 
   uint64_t kGlSyncHandle = 0xabcd'1234'5678'90abUL;
   uint64_t kSyncThreadHandle = 0xdcba'9876'5432'01feUL;
@@ -522,11 +522,11 @@ TEST_F(SyncDeviceTest, IrqHandler) {
 TEST_F(SyncDeviceTest, TriggerHostWaitAndSignalFence) {
   ASSERT_OK(dut_->Bind());
 
-  zx::channel tl_req, tl_client;
-  ASSERT_OK(zx::channel::create(0u, &tl_req, &tl_client));
-  ASSERT_OK(dut_->GoldfishSyncCreateTimeline(std::move(tl_req)));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
+  ASSERT_TRUE(endpoints.is_ok());
+  ASSERT_OK(dut_->GoldfishSyncCreateTimeline(endpoints->server.TakeChannel()));
 
-  fidl::WireSyncClient<fuchsia_hardware_goldfish::SyncTimeline> tl(std::move(tl_client));
+  auto tl = fidl::BindSyncClient(std::move(endpoints->client));
 
   uint64_t kGlSyncHandle = 0xabcd'1234'5678'90abUL;
   uint64_t kSyncThreadHandle = 0xdcba'9876'5432'01feUL;

@@ -50,11 +50,6 @@ driver_module("goldfish_sync_driver-driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 
   configs += [ "//build/config:all_source" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_driver_component("goldfish_sync_driver") {
@@ -86,11 +81,6 @@ test("goldfish-sync-device-test") {
   ]
 
   configs += [ "//build/config:all_source" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("goldfish-sync-device-test-package") {

@@ -139,8 +139,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/graphics/display/testing:testing",
     "//src/graphics/drivers/aml-gpu:aml-gpu-test-bin",
     "//src/graphics/drivers/aml-gpu:sources",
-    "//src/graphics/drivers/misc/goldfish_sync:goldfish-sync-device-test",
-    "//src/graphics/drivers/misc/goldfish_sync:goldfish_sync_driver-driver",
     "//src/graphics/drivers/msd-arm-mali/tests/integration:msd_arm_mali_integration_tests",
     "//src/graphics/drivers/msd-intel-gen/tests/integration:msd_intel_gen_integration_tests",
     "//src/graphics/drivers/msd-vsi-vip/tests/integration:msd_vsi_vip_integration_tests",

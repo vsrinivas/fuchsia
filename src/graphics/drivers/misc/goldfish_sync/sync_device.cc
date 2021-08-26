@@ -161,7 +161,8 @@ void SyncDevice::DdkRelease() { delete this; }
 zx_status_t SyncDevice::GoldfishSyncCreateTimeline(zx::channel request) {
   fbl::RefPtr<SyncTimeline> timeline = fbl::MakeRefCounted<SyncTimeline>(this);
   timelines_.push_back(timeline);
-  zx_status_t status = timeline->Bind(std::move(request));
+  zx_status_t status =
+      timeline->Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::SyncTimeline>(std::move(request)));
   if (status != ZX_OK) {
     zxlogf(ERROR, "CreateTimeline: Cannot bind timeline, status = %d", status);
     timeline->RemoveFromContainer();
@@ -173,7 +174,7 @@ void SyncDevice::CreateTimeline(CreateTimelineRequestView request,
                                 CreateTimelineCompleter::Sync& completer) {
   fbl::RefPtr<SyncTimeline> timeline = fbl::MakeRefCounted<SyncTimeline>(this);
   timelines_.push_back(timeline);
-  timeline->Bind(request->timeline_req.TakeChannel());
+  timeline->Bind(std::move(request->timeline_req));
   completer.Reply();
 }
 
@@ -313,11 +314,10 @@ SyncTimeline::SyncTimeline(SyncDevice* parent)
 
 SyncTimeline::~SyncTimeline() = default;
 
-zx_status_t SyncTimeline::Bind(zx::channel request) {
-  zx_handle_t server_handle = request.release();
-  return async::PostTask(dispatcher_, [server_handle, this]() mutable {
+zx_status_t SyncTimeline::Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::SyncTimeline> request) {
+  return async::PostTask(dispatcher_, [request = std::move(request), this]() mutable {
     using SyncTimelineProtocol = fuchsia_hardware_goldfish::SyncTimeline;
-    fidl::BindServer(dispatcher_, zx::channel(server_handle), this,
+    fidl::BindServer(dispatcher_, std::move(request), this,
                      [](SyncTimeline* self, fidl::UnbindInfo info,
                         fidl::ServerEnd<SyncTimelineProtocol> server_end) {
                        self->OnClose(info, server_end.TakeChannel());

@@ -138,7 +138,7 @@ class SyncTimeline : public fbl::RefCounted<SyncTimeline>,
   explicit SyncTimeline(SyncDevice* parent);
   ~SyncTimeline();
 
-  zx_status_t Bind(zx::channel request);
+  zx_status_t Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::SyncTimeline> request);
   void OnClose(fidl::UnbindInfo info, zx::channel channel);
 
   // |fidl::WireServer<fuchsia_hardware_goldfish::SyncTimeline>|
