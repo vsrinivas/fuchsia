@@ -158,8 +158,6 @@ def _get_expanded_files(runtime_deps_file):
         if os.path.isdir(next_path):
             for root, _, files in os.walk(next_path):
                 for current_file in files:
-                    if current_file.startswith('.'):
-                        continue
                     expanded_files.add(
                         os.path.normpath(os.path.join(root, current_file)))
         else:
