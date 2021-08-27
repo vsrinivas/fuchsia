@@ -214,9 +214,6 @@ source_set("virtio_magma_lib") {
     defines = [ "VIRTMAGMA_DEBUG=1" ]
   }
 
-  # TODO(fxbug.dev/66436): Fix instances of undefined behavior.
-  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
-
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

@@ -12,13 +12,10 @@
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/global.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <zircon/status.h>
 
 #include "src/virtualization/bin/vmm/device/magma_image.h"
@@ -171,8 +168,8 @@ zx_status_t VirtioMagma::Handle_release_buffer(const virtio_magma_release_buffer
 
   auto connection = reinterpret_cast<magma_connection_t>(request->connection);
 
-  auto& image_map = connection_image_map_[connection];
-  image_map.erase(request->buffer);
+  const uint64_t buffer = request->buffer;
+  connection_image_map_[connection].erase(buffer);
 
   return ZX_OK;
 }
@@ -193,17 +190,18 @@ zx_status_t VirtioMagma::Handle_internal_map(const virtio_magma_internal_map_ctr
 
   zx::vmo vmo(handle);
 
+  const uint64_t length = request->length;
   zx_vaddr_t zx_vaddr;
   zx_status_t zx_status = vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0 /*vmar_offset*/, vmo,
-                                    0 /* vmo_offset */, request->length, &zx_vaddr);
+                                    0 /* vmo_offset */, length, &zx_vaddr);
   if (zx_status != ZX_OK) {
-    FX_LOGS(ERROR) << "vmar map (length " << request->length << ") failed: " << zx_status;
+    FX_LOGS(ERROR) << "vmar map (length " << length << ") failed: " << zx_status;
     response->result_return = MAGMA_STATUS_INVALID_ARGS;
     return zx_status;
   }
 
   const uint64_t buffer_id = magma_get_buffer_id(reinterpret_cast<magma_buffer_t>(request->buffer));
-  buffer_maps_.emplace(buffer_id, std::pair<zx_vaddr_t, size_t>(zx_vaddr, request->length));
+  buffer_maps_.emplace(buffer_id, std::pair<zx_vaddr_t, size_t>(zx_vaddr, length));
 
   response->address_out = zx_vaddr;
 
@@ -216,7 +214,7 @@ zx_status_t VirtioMagma::Handle_internal_unmap(const virtio_magma_internal_unmap
 
   response->hdr.type = VIRTIO_MAGMA_RESP_INTERNAL_UNMAP;
 
-  uint64_t buffer_id = magma_get_buffer_id(reinterpret_cast<magma_buffer_t>(request->buffer));
+  const uint64_t buffer_id = magma_get_buffer_id(reinterpret_cast<magma_buffer_t>(request->buffer));
 
   for (auto iter = buffer_maps_.find(buffer_id); iter != buffer_maps_.end(); iter++) {
     const auto& mapping = iter->second;
@@ -276,7 +274,8 @@ zx_status_t VirtioMagma::Handle_export(const virtio_magma_export_ctrl_t* request
     auto& image_map =
         connection_image_map_[reinterpret_cast<magma_connection_t>(request->connection)];
 
-    auto iter = image_map.find(request->buffer);
+    const uint64_t buffer = request->buffer;
+    auto iter = image_map.find(buffer);
     if (iter == image_map.end()) {
       response->hdr.type = VIRTIO_MAGMA_RESP_EXPORT;
       response->buffer_handle_out = 0;
@@ -366,8 +365,7 @@ zx_status_t VirtioMagma::Handle_import(const virtio_magma_import_ctrl_t* request
     auto& image_map =
         connection_image_map_[reinterpret_cast<magma_connection_t>(request->connection)];
 
-    magma_buffer_t image = response->buffer_out;
-    image_map[image] = std::move(info);
+    image_map[response->buffer_out] = std::move(info);
   }
 
   return ZX_OK;

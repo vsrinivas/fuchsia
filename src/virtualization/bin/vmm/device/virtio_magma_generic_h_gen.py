@@ -160,7 +160,7 @@ def generate_handle_command(magma):
         ret += '      case VIRTIO_MAGMA_CMD_' + name.upper() + ': {\n'
         ret += '        TRACE_DURATION("magma", "' + name + '");\n'
         ret += '        auto request = reinterpret_cast<const virtio_magma_' + name + '_ctrl_t*>(request_desc.addr);\n'
-        ret += '        auto response = reinterpret_cast<virtio_magma_' + name + '_resp_t*>(response_desc.addr);\n'
+        ret += '        virtio_magma_' + name + '_resp_t response{};\n'
         ret += '#ifdef VIRTMAGMA_DEBUG\n'
         ret += '        FX_LOGS(INFO) << "Received MAGMA command (" << command_type << "):\\n"\\\n'
         ret += '          "  hdr = { " << virtio_magma_ctrl_type_string((virtio_magma_ctrl_type)request->hdr.type) << ", " << request->hdr.flags << " }"\\\n'
@@ -171,12 +171,12 @@ def generate_handle_command(magma):
                         'name'] + ') << ""\\\n'
         ret += '          "";\n'
         ret += '#endif // VIRTMAGMA_DEBUG\n'
-        ret += '        if (response_desc.len < sizeof(*response)) {\n'
+        ret += '        if (response_desc.len < sizeof(response)) {\n'
         ret += '          FX_LOGS(ERROR) << "MAGMA command (" << command_type << ") response descriptor too small";\n'
         ret += '          chain.Return();\n'
         ret += '          return ZX_ERR_INVALID_ARGS;\n'
         ret += '        }\n'
-        ret += '        zx_status_t status = Handle_' + name + '(request, response);\n'
+        ret += '        zx_status_t status = Handle_' + name + '(request, &response);\n'
         ret += '        if (status != ZX_OK) {\n'
         ret += '          FX_LOGS(ERROR) << "Handle_' + name + ' failed (" << zx_status_get_string(status) << ")";\n'
         ret += '          chain.Return();\n'
@@ -184,17 +184,18 @@ def generate_handle_command(magma):
         ret += '        }\n'
         ret += '#ifdef VIRTMAGMA_DEBUG\n'
         ret += '        FX_LOGS(INFO) << "Sending MAGMA response:\\n"\\\n'
-        ret += '          "  hdr = { " << virtio_magma_ctrl_type_string((virtio_magma_ctrl_type)response->hdr.type) << ", " << response->hdr.flags << " }"\\\n'
+        ret += '          "  hdr = { " << virtio_magma_ctrl_type_string((virtio_magma_ctrl_type)response.hdr.type) << ", " << response.hdr.flags << " }"\\\n'
         for argument in export['arguments']:
             if is_response_argument(argument):
                 ret += '          "\\n  ' + argument[
-                    'name'] + ' = " << static_cast<uint64_t>(response->' + argument[
+                    'name'] + ' = " << static_cast<uint64_t>(response.' + argument[
                         'name'] + ') << ""\\\n'
         if export['type'] != 'void':
-            ret += '          "\\n  result_return = " << static_cast<int64_t>(response->result_return) << ""\\\n'
+            ret += '          "\\n  result_return = " << static_cast<int64_t>(response.result_return) << ""\\\n'
         ret += '          "";\n'
         ret += '#endif // VIRTMAGMA_DEBUG\n'
-        ret += '        *chain.Used() = sizeof(*response);\n'
+        ret += '        memcpy(response_desc.addr, &response, sizeof(response));\n'
+        ret += '        *chain.Used() = sizeof(response);\n'
         ret += '      } break;\n'
     ret += '''      default: {
         FX_LOGS(ERROR) << "Unsupported MAGMA command (" << command_type << ")";
