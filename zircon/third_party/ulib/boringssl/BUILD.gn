@@ -95,10 +95,6 @@ zx_library("boringssl") {
     }
   }
 
-  # TODO(41904): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "//build/config/zircon:temporarily_disable_ubsan_do_not_use" ]
-
   # This code doesn't use the annotation attribute.
   configs += [ "//build/config:Wno-implicit-fallthrough" ]
 
