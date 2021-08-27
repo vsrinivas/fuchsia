@@ -9,8 +9,6 @@
 
 #include <string>
 
-#include "src/lib/fxl/macros.h"
-
 using JsonDoc = rapidjson::Document;
 using JsonValue = rapidjson::Value;
 
@@ -305,7 +303,7 @@ XdrContext XdrContext::FieldWithDefault(const char field[]) {
   }
 }
 
-XdrContext XdrContext::Element(const size_t i) {
+XdrContext XdrContext::Element(const rapidjson::SizeType i) {
   switch (op_) {
     case XdrOp::TO_JSON:
       if (!value_->IsArray()) {
@@ -336,7 +334,7 @@ XdrContext XdrContext::Element(const size_t i) {
   }
 }
 
-XdrContext XdrContext::ElementWithDefault(const size_t i) {
+XdrContext XdrContext::ElementWithDefault(const rapidjson::SizeType i) {
   switch (op_) {
     case XdrOp::TO_JSON:
       if (!value_->IsArray()) {

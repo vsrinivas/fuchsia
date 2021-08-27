@@ -49,9 +49,6 @@ source_set("array_to_string") {
   sources = [ "array_to_string.h" ]
 
   deps = [ "//sdk/lib/fidl/cpp" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("json_xdr") {
@@ -66,9 +63,6 @@ source_set("json_xdr") {
     "//src/lib/json_parser",
     "//third_party/rapidjson",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("proxy") {
@@ -141,9 +135,6 @@ source_set("view_host") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/ui/scenic/cpp",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fidl("app_client_unittest_fidl") {
@@ -209,7 +200,4 @@ source_set("json_xdr_unittest") {
     ":json_xdr_unittest_fidl",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

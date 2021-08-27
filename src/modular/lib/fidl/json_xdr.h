@@ -485,9 +485,9 @@ class XdrContext {
 
         } else {
           value_->SetArray();
-          value_->Reserve((*data)->size(), allocator());
+          value_->Reserve(static_cast<rapidjson::SizeType>((*data)->size()), allocator());
 
-          for (size_t i = 0; i < (*data)->size(); ++i) {
+          for (rapidjson::SizeType i = 0; i < (*data)->size(); ++i) {
             Element(i).Value(&(*data)->at(i), filter);
           }
         }
@@ -508,7 +508,7 @@ class XdrContext {
           // Save on allocations for growing the underlying vector by one.
           (*data)->resize(value_->Size());
 
-          for (size_t i = 0; i < value_->Size(); ++i) {
+          for (rapidjson::SizeType i = 0; i < value_->Size(); ++i) {
             Element(i).Value(&(*data)->at(i), filter);
           }
         }
@@ -531,7 +531,7 @@ class XdrContext {
         value_->SetArray();
         value_->Reserve(N, allocator());
 
-        for (size_t i = 0; i < N; ++i) {
+        for (rapidjson::SizeType i = 0; i < N; ++i) {
           Element(i).Value(&data->at(i), filter);
         }
         break;
@@ -549,7 +549,7 @@ class XdrContext {
           return;
         }
 
-        for (size_t i = 0; i < N; ++i) {
+        for (rapidjson::SizeType i = 0; i < N; ++i) {
           Element(i).Value(&data->at(i), filter);
         }
       }
@@ -570,9 +570,9 @@ class XdrContext {
     switch (op_) {
       case XdrOp::TO_JSON:
         value_->SetArray();
-        value_->Reserve(data->size(), allocator());
+        value_->Reserve(static_cast<rapidjson::SizeType>(data->size()), allocator());
 
-        for (size_t i = 0; i < data->size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < data->size(); ++i) {
           Element(i).Value(&data->at(i), filter);
         }
         break;
@@ -585,7 +585,7 @@ class XdrContext {
 
         data->resize(value_->Size());
 
-        for (size_t i = 0; i < value_->Size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < value_->Size(); ++i) {
           Element(i).Value(&data->at(i), filter);
         }
     }
@@ -601,15 +601,15 @@ class XdrContext {
       case XdrOp::TO_JSON:
         if (use_data) {
           value_->SetArray();
-          value_->Reserve(data->size(), allocator());
+          value_->Reserve(static_cast<rapidjson::SizeType>(data->size()), allocator());
 
-          for (size_t i = 0; i < data->size(); ++i) {
+          for (rapidjson::SizeType i = 0; i < data->size(); ++i) {
             Element(i).Value(&data->at(i), filter);
           }
           break;
         }
         data->resize(default_value.size());
-        for (size_t i = 0; i < default_value.size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < default_value.size(); ++i) {
           ElementWithDefault(i).ValueWithDefault(&data->at(i), filter, use_data,
                                                  std::move(default_value.at(i)));
         }
@@ -622,14 +622,14 @@ class XdrContext {
             return;
           }
           data->resize(default_value.size());
-          for (size_t i = 0; i < default_value.size(); ++i) {
+          for (rapidjson::SizeType i = 0; i < default_value.size(); ++i) {
             ElementWithDefault(i).ValueWithDefault(&data->at(i), filter, use_data,
                                                    std::move(default_value.at(i)));
           }
           return;
         }
         data->resize(value_->Size());
-        for (size_t i = 0; i < value_->Size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < value_->Size(); ++i) {
           Element(i).Value(&data->at(i), filter);
         }
     }
@@ -658,9 +658,9 @@ class XdrContext {
     switch (op_) {
       case XdrOp::TO_JSON: {
         value_->SetArray();
-        value_->Reserve(data->size(), allocator());
+        value_->Reserve(static_cast<rapidjson::SizeType>(data->size()), allocator());
 
-        size_t index = 0;
+        rapidjson::SizeType index = 0;
         for (auto i = data->begin(); i != data->end(); ++i) {
           XdrContext&& element = Element(index++);
           element.value_->SetObject();
@@ -683,7 +683,7 @@ class XdrContext {
         // Erase existing data in case there are some left.
         data->clear();
 
-        size_t index = 0;
+        rapidjson::SizeType index = 0;
         for (auto i = value_->Begin(); i != value_->End(); ++i) {
           XdrContext&& element = Element(index++);
 
@@ -712,8 +712,8 @@ class XdrContext {
   rapidjson::Document::AllocatorType& allocator() const { return doc_->GetAllocator(); }
   XdrContext Field(const char field[]);
   XdrContext FieldWithDefault(const char field[]);
-  XdrContext Element(size_t i);
-  XdrContext ElementWithDefault(size_t i);
+  XdrContext Element(rapidjson::SizeType i);
+  XdrContext ElementWithDefault(rapidjson::SizeType i);
 
   // Error reporting: Recursively requests the error string from the
   // parent, and on the way back appends a description of the current

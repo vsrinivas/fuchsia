@@ -60,7 +60,7 @@ void ViewHost::UpdateScene() {
   }
 
   // Layout all children in a row.
-  const float width = logical_size().x / views_.size();
+  const float width = logical_size().x / static_cast<float>(views_.size());
   float offset = 0.f;
   for (auto& [view_key, view_data] : views_) {
     fuchsia::ui::gfx::ViewProperties view_properties = {
