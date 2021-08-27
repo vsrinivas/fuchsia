@@ -8,7 +8,10 @@ import("//build/rust/rustc_binary.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":tpm-cr50-unittests" ]
+  deps = [
+    ":tpm-cr50-unittests",
+    "client:tests",
+  ]
 }
 
 rustc_binary("bin") {
@@ -73,6 +76,7 @@ group("bootfs") {
   deps = [
     ":bin",
     ":manifest",
+    "client:gsctool",
   ]
 }
 

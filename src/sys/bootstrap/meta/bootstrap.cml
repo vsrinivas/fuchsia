@@ -718,6 +718,11 @@
             dependency: "weak_for_migration",
         },
         {
+            protocol: [ "fuchsia.tpm.cr50.Cr50" ],
+            from: "#tpm-cr50",
+            to: "#console-launcher",
+        },
+        {
             directory: "dev",
             from: "#driver_manager",
             as: "input",
@@ -884,6 +889,10 @@
         {
             protocol: [ "fuchsia.virtualconsole.SessionManager" ],
             from: "#virtual_console",
+        },
+        {
+            protocol: [ "fuchsia.tpm.cr50.Cr50" ],
+            from: "#tpm-cr50",
         },
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",

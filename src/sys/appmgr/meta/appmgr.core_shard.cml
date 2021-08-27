@@ -52,6 +52,7 @@
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.thermal.Controller",
                 "fuchsia.time.Maintenance",
+                "fuchsia.tpm.cr50.Cr50",
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.kernel.Reader",
                 "fuchsia.vboot.FirmwareParam",

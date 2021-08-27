@@ -437,6 +437,10 @@
             protocol: "fuchsia.bluetooth.internal.a2dp.Controller",
             path: "/svc_for_sys/fuchsia.bluetooth.internal.a2dp.Controller",
         },
+        {
+            protocol: "fuchsia.tpm.cr50.Cr50",
+            path: "/svc_for_sys/fuchsia.tpm.cr50.Cr50",
+        },
 
         // From archivist
         {
