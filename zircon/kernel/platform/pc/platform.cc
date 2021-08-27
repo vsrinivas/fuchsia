@@ -34,6 +34,7 @@
 #endif
 #include <lib/cksum.h>
 #include <lib/debuglog.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <lib/system-topology.h>
 #include <mexec.h>
 #include <platform.h>
@@ -59,7 +60,9 @@
 #include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/efi.h>
+#include <platform/pc/efi_crashlog.h>
 #include <platform/pc/smbios.h>
+#include <platform/ram_mappable_crashlog.h>
 #include <vm/bootalloc.h>
 #include <vm/bootreserve.h>
 #include <vm/physmap.h>
@@ -72,9 +75,14 @@ extern zbi_header_t* _zbi_base;
 
 pc_bootloader_info_t bootloader;
 
-// Stashed values from ZBI_TYPE_CRASHLOG if we saw it
-static const void* last_crashlog = nullptr;
-static size_t last_crashlog_len = 0;
+namespace {
+namespace crashlog_impls {
+lazy_init::LazyInit<RamMappableCrashlog, lazy_init::CheckType::None,
+                    lazy_init::Destructor::Disabled>
+    ram_mappable;
+EfiCrashlog efi;
+}  // namespace crashlog_impls
+}  // namespace
 
 // convert from legacy format
 static unsigned pixel_format_fixup(unsigned pf) {
@@ -200,10 +208,15 @@ static void platform_save_bootloader_data(void) {
       }
       case ZBI_TYPE_NVRAM_DEPRECATED:
       case ZBI_TYPE_NVRAM: {
-        if (payload.size() >= sizeof(zbi_nvram_t)) {
+        // If we have a valid NVRAM location passed to us by ZBI, and we have
+        // not already configured a platform crashlog implementation, use the
+        // NVRAM location to back a RamMappableCrashlog implementation and
+        // configure the generic platform layer to use it.
+        if ((payload.size() >= sizeof(zbi_nvram_t)) && !PlatformCrashlog::HasNonTrivialImpl()) {
           zbi_nvram_t info;
           memcpy(&info, payload.data(), sizeof(info));
-          platform_set_ram_crashlog_location(info.base, info.length);
+          crashlog_impls::ram_mappable.Initialize(info.base, info.length);
+          PlatformCrashlog::Bind(crashlog_impls::ram_mappable.Get());
         }
         break;
       }
@@ -229,8 +242,8 @@ static void platform_save_bootloader_data(void) {
         break;
       }
       case ZBI_TYPE_CRASHLOG: {
-        last_crashlog = payload.data();
-        last_crashlog_len = payload.size();
+        crashlog_impls::efi.SetLastCrashlogLocation(
+            {reinterpret_cast<char*>(payload.data()), payload.size()});
         break;
       }
       case ZBI_TYPE_DISCARD:
@@ -363,61 +376,9 @@ static void platform_ensure_display_memtype(uint level) {
 }
 LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1)
 
-static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
-static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR;
-
-// Something big enough for the panic log but not too enormous
-// to avoid excessive pressure on efi variable storage
-#define MAX_EFI_CRASHLOG_LEN 4096
-
-// This function accesses the efi_aspace which isn't mapped in the ASAN shadow.
-__NO_ASAN static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, size_t len) {
-  if (log == nullptr) {
-    return;
-  }
-
-  // Switch into the EFI address space.
-  EfiServicesActivation services = TryActivateEfiServices();
-  if (!services.valid()) {
-    return;
-  }
-
-  // Store the log.
-  if (len > MAX_EFI_CRASHLOG_LEN) {
-    len = MAX_EFI_CRASHLOG_LEN;
-  }
-  efi_status result =
-      services->SetVariable(crashlog_name, &zircon_guid, ZIRCON_CRASHLOG_EFIATTR, len, log);
-  // If we are writing a zero length crashlog then this has the meaning of deleting the variable
-  // from the efi storage, if the crashlog already doesn't exist then attempting to delete it is
-  // results in an error. From our point of view this error is spurious and so we avoid printing a
-  // confusing error message.
-  if (result != EFI_SUCCESS && (result != EFI_NOT_FOUND || len > 0)) {
-    printf("EFI error while attempting to store crashlog: %" PRIx64 "\n", result);
-    return;
-  }
-}
-
-size_t efi_recover_crashlog(FILE* tgt) {
-  if (last_crashlog == nullptr) {
-    return 0;
-  }
-
-  // If the user actually supplied a target, copy the crashlog into it.
-  // Otherwise, just return the length which would have been needed to hold the
-  // entire log.
-  if (tgt != nullptr) {
-    const int written =
-        tgt->Write(ktl::string_view{static_cast<const char*>(last_crashlog), last_crashlog_len});
-    return (written < 0) ? 0 : written;
-  } else {
-    return last_crashlog_len;
-  }
-}
-
 void platform_init_crashlog(void) {
-  if (platform_has_ram_crashlog()) {
-    // Nothing to do for simple nvram logs
+  // Nothing to do if we have already selected a crashlog implementation.
+  if (PlatformCrashlog::HasNonTrivialImpl()) {
     return;
   }
 
@@ -428,10 +389,8 @@ void platform_init_crashlog(void) {
     return;
   }
 
-  // Override the crashlog hooks with the EFI crashlog functions.
-  platform_stow_crashlog = efi_stow_crashlog;
-  platform_recover_crashlog = efi_recover_crashlog;
-  platform_enable_crashlog_uptime_updates = [](bool) {};
+  // Initialize and select the EfiCrashlog implementation.
+  PlatformCrashlog::Bind(crashlog_impls::efi);
 }
 
 zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {

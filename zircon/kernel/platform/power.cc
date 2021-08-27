@@ -22,10 +22,6 @@
 #include <platform/crashlog.h>
 #include <platform/debug.h>
 
-namespace {
-char crashlog_render_buffer[4096u];
-}
-
 // Common platform halt path.  This handles some tasks we always want to make
 // sure we handle before dropping into the common platform specific halt
 // routine.
@@ -33,7 +29,7 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
   // Disable the automatic uptime updating.  We are going to attempt to
   // deliberately halt the system, and we don't want the crashlog to indicate a
   // spontaneous reboot.
-  platform_enable_crashlog_uptime_updates(false);
+  PlatformCrashlog::Get().EnableCrashlogUptimeUpdates(false);
 
   // We are haling on purpose.  Disable the watchdog (if we have one, and if we
   // can) if we plan to halt instead of instigate a reboot.  If we are going to
@@ -46,17 +42,21 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
     hw_watchdog_pet();
   }
 
-  // Was this an OOM, panic, or software watchdog condition?  If so, render the
-  // payload of our crashlog before stowing our reason.  Then, whether we have a
-  // payload or not, stow our final crashlog.
-  size_t rendered_crashlog_len = 0;
+  // Was this an OOM, panic, or software watchdog condition?  If so, and we have
+  // space to render a crashlog into, render the payload of our crashlog before
+  // stowing our reason.  Then, whether we have a payload or not, stow our final
+  // crashlog.
   if ((reason == ZirconCrashReason::Oom) || (reason == ZirconCrashReason::Panic) ||
       (reason == ZirconCrashReason::SoftwareWatchdog)) {
-    memset(crashlog_render_buffer, 0, sizeof(crashlog_render_buffer));
-    rendered_crashlog_len =
-        crashlog_to_string(crashlog_render_buffer, sizeof(crashlog_render_buffer), reason);
+    auto& crashlog = PlatformCrashlog::Get();
+    size_t rendered_crashlog_len = 0;
+
+    if (ktl::span<char> target = crashlog.GetRenderTarget(); target.size() > 0) {
+      rendered_crashlog_len = crashlog_to_string(target, reason);
+    }
+
+    crashlog.Finalize(reason, rendered_crashlog_len);
   }
-  platform_stow_crashlog(reason, crashlog_render_buffer, rendered_crashlog_len);
 
   // This is a graceful reboot, invalidate the persistent dlog (if we have one)
   // and persistent trace buffer (if we have one) so that we don't attempt to

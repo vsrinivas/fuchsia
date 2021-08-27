@@ -39,6 +39,7 @@ source_set("generic-arm") {
     "//zircon/kernel/phys:handoff",
     "//zircon/kernel/vm",
     "//zircon/system/ulib/explicit-memory",
+    "//zircon/system/ulib/ram-crashlog",
     "//zircon/system/ulib/zbitl",
   ]
 }

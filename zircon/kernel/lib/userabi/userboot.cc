@@ -211,7 +211,9 @@ HandleOwner get_job_handle() {
 
 // Converts platform crashlog into a VMO
 zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
-  size_t size = platform_recover_crashlog(nullptr);
+  PlatformCrashlog::Interface& crashlog = PlatformCrashlog::Get();
+
+  size_t size = crashlog.Recover(nullptr);
   fbl::RefPtr<VmObjectPaged> crashlog_vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &crashlog_vmo);
 
@@ -222,7 +224,7 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
   if (size) {
     VmoBuffer vmo_buffer{crashlog_vmo};
     FILE vmo_file = FILE{&vmo_buffer};
-    platform_recover_crashlog(&vmo_file);
+    crashlog.Recover(&vmo_file);
   }
 
   crashlog_vmo->set_name(kCrashlogVmoName, sizeof(kCrashlogVmoName) - 1);
@@ -241,7 +243,7 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
   // to something like a WDT, or brownout) we will be able to recover this log
   // and know that we spontaneously rebooted, and have some idea of how long we
   // were running before we did.
-  platform_enable_crashlog_uptime_updates(true);
+  crashlog.EnableCrashlogUptimeUpdates(true);
   return ZX_OK;
 }
 

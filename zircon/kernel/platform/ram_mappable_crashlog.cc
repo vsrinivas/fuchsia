@@ -4,67 +4,62 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <assert.h>
-#include <debug.h>
-#include <lib/debuglog.h>
 #include <lib/persistent-debuglog.h>
-#include <platform.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-#include <kernel/lockdep.h>
-#include <kernel/spinlock.h>
 #include <kernel/timer.h>
+#include <ktl/algorithm.h>
 #include <ktl/limits.h>
-#include <platform/crashlog.h>
+#include <ktl/span.h>
+#include <platform/ram_mappable_crashlog.h>
 #include <ram-crashlog/ram-crashlog.h>
 #include <vm/physmap.h>
 
 namespace {
-
-void* ram_crashlog_vaddr;
-size_t ram_crashlog_size;
-recovered_ram_crashlog_t recovered_log;
-zx_status_t log_recovery_result = ZX_ERR_INTERNAL;
-
-DECLARE_SINGLETON_SPINLOCK(uptime_updater_lock);
-Timer uptime_updater_timer TA_GUARDED(uptime_updater_lock::Get());
-bool uptime_updater_enabled TA_GUARDED(uptime_updater_lock::Get()) = false;
-
 FILE NULL_FILE = FILE{[](void*, ktl::string_view str) -> int {
                         DEBUG_ASSERT(str.size() <= ktl::numeric_limits<int>::max());
                         return static_cast<int>(str.size());
                       },
                       nullptr};
-
-// Make sure we print the crashlog status to the klog only once, no matter how
-// many times recover_crashlog is called.
-ktl::atomic<bool> crashlog_status_printed_to_klog{false};
-inline bool should_print_crashlog_status() {
-  bool expected = false;
-  return crashlog_status_printed_to_klog.compare_exchange_strong(expected, true);
 }
 
-void default_platform_stow_crashlog(zircon_crash_reason_t reason, const void* log, size_t len) {
-  // We are not going to store more than 4GB of payload.  That is just not happening.
-  if (len > ktl::numeric_limits<uint32_t>::max()) {
-    len = ktl::numeric_limits<uint32_t>::max();
+RamMappableCrashlog::RamMappableCrashlog(paddr_t phys, size_t len)
+    : crashlog_buffer_(phys && len
+                           ? ktl::span<char>{static_cast<char*>(paddr_to_physmap(phys)), len}
+                           : ktl::span<char>{}) {
+  if (!crashlog_buffer_.empty()) {
+    // Go ahead and "recover" the log right now.  All this will do is verify the
+    // various CRCs and extract the results if everything checks out.  We don't
+    // want to do this more than once.
+    log_recovery_result_ =
+        ram_crashlog_recover(crashlog_buffer_.data(), crashlog_buffer_.size(), &recovered_log_);
+  } else {
+    memset(&recovered_log_, 0, sizeof(recovered_log_));
   }
+}
+
+void RamMappableCrashlog::Finalize(zircon_crash_reason_t reason, size_t amt) {
+  // Whatever the user tells us, the amt of the crashlog render target which was
+  // filled cannot exceed the amount that we originally reported, nor can it be
+  // larger than what a u32 can hold.
+  ktl::span<char> render_tgt = GetRenderTarget();
+  amt = ktl::min(amt, render_tgt.size());
+  amt = ktl::min<size_t>(amt, ktl::numeric_limits<uint32_t>::max());
 
   // The RAM crashlog library will gracefully handle a nullptr or 0 length here;
   // no need to explicitly check that they are valid.
-  ram_crashlog_stow(ram_crashlog_vaddr, ram_crashlog_size, log, static_cast<uint32_t>(len), reason,
-                    current_time());
+  ram_crashlog_stow(crashlog_buffer_.data(), crashlog_buffer_.size(), render_tgt.data(),
+                    static_cast<uint32_t>(amt), reason, current_time());
 }
 
-size_t default_platform_recover_crashlog(FILE* tgt) {
+size_t RamMappableCrashlog::Recover(FILE* tgt) {
   // If the user didn't supply a target FILE to render to, use the NULL_FILE
   // instead so that we compute a proper length for them as we go.
   if (tgt == nullptr) {
     tgt = &NULL_FILE;
   }
 
-  // If we failed to recover any crashlog, simply report the size as 0.
+  // Create a string representation of the HW reboot reason.
   ZbiHwRebootReason hw_reason = platform_hw_reboot_reason();
   const char* str_hw_reason;
   char str_hw_reason_buf[16];
@@ -91,18 +86,19 @@ size_t default_platform_recover_crashlog(FILE* tgt) {
       break;
   }
 
-  if (log_recovery_result != ZX_OK) {
+  // If we failed to recover any crashlog, simply report the size as 0.
+  if (log_recovery_result_ != ZX_OK) {
     // Do not bother to log any recovery errors if the log was "corrupt", and we
     // either don't know the HW reboot reason, or we know that the reason is a
     // cold boot.  We don't expect to recover any log during a cold boot, and
     // systems which do not report a HW reboot reason via the ZBI will always
     // just tell us "unknown".
-    if (should_print_crashlog_status()) {
-      if (!((log_recovery_result == ZX_ERR_IO_DATA_INTEGRITY) &&
+    if (ShouldPrintCrashlogStatus()) {
+      if (!((log_recovery_result_ == ZX_ERR_IO_DATA_INTEGRITY) &&
             ((hw_reason == ZbiHwRebootReason::Undefined) ||
              (hw_reason == ZbiHwRebootReason::Cold)))) {
         printf("Crashlog: Failed to recover crashlog.  Result %d, HW Reboot Reason %s\n",
-               log_recovery_result, str_hw_reason);
+               log_recovery_result_, str_hw_reason);
       }
     }
 
@@ -123,7 +119,7 @@ size_t default_platform_recover_crashlog(FILE* tgt) {
   // understood by the crash-log harvester up in userland.  Right now, this is
   // just a loose convention.  Someday, it would be good to pass this data in a
   // much more structured form.
-  const recovered_ram_crashlog_t& rlog = recovered_log;
+  const recovered_ram_crashlog_t& rlog = recovered_log_;
   const char* str_reason;
   switch (rlog.reason) {
     case ZirconCrashReason::Unknown:
@@ -159,7 +155,7 @@ size_t default_platform_recover_crashlog(FILE* tgt) {
       break;
   }
 
-  if (should_print_crashlog_status()) {
+  if (ShouldPrintCrashlogStatus()) {
     // Provide some basic details about the crashlog we recovered in the kernel
     // log.  This can assist in debugging failure in CI/CQ where we might have
     // access to serial logs, but nothing else.
@@ -226,60 +222,35 @@ size_t default_platform_recover_crashlog(FILE* tgt) {
   return written + rlog.payload_len;
 }
 
-void update_uptime_locked() TA_REQ(uptime_updater_lock::Get()) {
-  if (uptime_updater_enabled) {
-    constexpr zx_duration_t kDefaultUpdateInterval = ZX_SEC(1);
+void RamMappableCrashlog::EnableCrashlogUptimeUpdates(bool enabled) {
+  Guard<SpinLock, IrqSave> guard{&uptime_updater_lock_};
 
-    default_platform_stow_crashlog(ZirconCrashReason::Unknown, nullptr, 0);
-
-    Deadline next_update_time =
-        Deadline::after(kDefaultUpdateInterval, {kDefaultUpdateInterval / 2, TIMER_SLACK_CENTER});
-    uptime_updater_timer.Set(
-        next_update_time,
-        [](Timer*, zx_time_t now, void* arg) {
-          Guard<SpinLock, IrqSave> guard{uptime_updater_lock::Get()};
-          update_uptime_locked();
-        },
-        nullptr);
-  }
-}
-
-void default_platform_enable_crashlog_uptime_updates(bool enabled) {
-  // Can't enable something we don't have.
-  enabled = enabled && platform_has_ram_crashlog();
-  {
-    Guard<SpinLock, IrqSave> guard{uptime_updater_lock::Get()};
-
-    if (uptime_updater_enabled != enabled) {
-      uptime_updater_enabled = enabled;
-      if (uptime_updater_enabled) {
-        update_uptime_locked();
-      } else {
-        uptime_updater_timer.Cancel();
-      }
+  if (uptime_updater_enabled_ != enabled) {
+    uptime_updater_enabled_ = enabled;
+    if (uptime_updater_enabled_) {
+      UpdateUptimeLocked();
+    } else {
+      uptime_updater_timer_.Cancel();
     }
   }
 }
 
-}  // namespace
+void RamMappableCrashlog::UpdateUptimeLocked() {
+  if (uptime_updater_enabled_) {
+    constexpr zx_duration_t kDefaultUpdateInterval = ZX_SEC(1);
 
-void (*platform_stow_crashlog)(zircon_crash_reason_t reason, const void* log,
-                               size_t len) = default_platform_stow_crashlog;
-size_t (*platform_recover_crashlog)(FILE*) = default_platform_recover_crashlog;
-void (*platform_enable_crashlog_uptime_updates)(bool enabled) =
-    default_platform_enable_crashlog_uptime_updates;
+    ram_crashlog_stow(crashlog_buffer_.data(), crashlog_buffer_.size(), nullptr, 0,
+                      ZirconCrashReason::Unknown, current_time());
 
-void platform_set_ram_crashlog_location(paddr_t phys, size_t len) {
-  if (phys && len) {
-    ram_crashlog_vaddr = paddr_to_physmap(phys);
-    ram_crashlog_size = len;
-
-    // Go ahead and "recover" the log right now.  All this will do is verify the
-    // various CRCs and extract the results if everything checks out.  We don't
-    // want to do this more than once.
-    log_recovery_result =
-        ram_crashlog_recover(ram_crashlog_vaddr, ram_crashlog_size, &recovered_log);
+    Deadline next_update_time =
+        Deadline::after(kDefaultUpdateInterval, {kDefaultUpdateInterval / 2, TIMER_SLACK_CENTER});
+    uptime_updater_timer_.Set(
+        next_update_time,
+        [](Timer*, zx_time_t now, void* arg) {
+          auto thiz = reinterpret_cast<RamMappableCrashlog*>(arg);
+          Guard<SpinLock, IrqSave> guard{&thiz->uptime_updater_lock_};
+          thiz->UpdateUptimeLocked();
+        },
+        this);
   }
 }
-
-bool platform_has_ram_crashlog() { return ram_crashlog_vaddr && ram_crashlog_size; }

@@ -11,6 +11,7 @@
 #include <zircon/boot/crash-reason.h>
 
 #include <kernel/persistent_ram.h>
+#include <ktl/span.h>
 #include <vm/vm_object.h>
 
 #if defined(__aarch64__)
@@ -45,10 +46,9 @@ typedef struct {
 
 extern crashlog_t g_crashlog;
 
-// Serialize the crashlog to string in `out' up to `len' characters. If `reason'
-// is OOM, then a different preamble will be used, and the backtrace will not be
-// included.
-size_t crashlog_to_string(char* out, const size_t len, zircon_crash_reason_t reason);
+// Serialize the crashlog to string into target. If `reason' is OOM, then a
+// different preamble will be used, and the backtrace will not be included.
+size_t crashlog_to_string(ktl::span<char> target, zircon_crash_reason_t reason);
 
 // Stash the recovered crashlog for later retrieval with |crashlog_get_stashed|.
 void crashlog_stash(fbl::RefPtr<VmObject> crashlog);

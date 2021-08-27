@@ -9,10 +9,10 @@ import("//build/zircon/zircon_cpu.gni")
 source_set("platform") {
   sources = [
     "boot-options.cc",
-    "crashlog.cc",
     "halt_helper.cc",
     "hw_reboot_reason.cc",
     "power.cc",
+    "ram_mappable_crashlog.cc",
 
     # TODO(fxbug.dev/67615): delete once code-patching is migrated to physboot.
     "code-patches.cc",

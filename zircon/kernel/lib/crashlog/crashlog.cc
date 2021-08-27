@@ -50,8 +50,8 @@ fbl::RefPtr<VmObject> recovered_crashlog TA_GUARDED(RecoveredCrashlogLock::Get()
 
 }  // namespace
 
-size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t reason) {
-  StringFile outfile{{out, out_len}};
+size_t crashlog_to_string(ktl::span<char> target, zircon_crash_reason_t reason) {
+  StringFile outfile{target};
 
   uintptr_t crashlog_base_address = 0;
   const char* reason_str;

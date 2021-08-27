@@ -23,7 +23,7 @@ bool BasicTest() {
   auto buffer = ktl::make_unique<char[]>(&ac, kLargeBufferSize);
   ASSERT_TRUE(ac.check());
 
-  size_t len = crashlog_to_string(buffer.get(), kLargeBufferSize, ZirconCrashReason::NoCrash);
+  size_t len = crashlog_to_string({buffer.get(), kLargeBufferSize}, ZirconCrashReason::NoCrash);
   EXPECT_LE(len, kLargeBufferSize);
   EXPECT_GT(len, 0u);
 
@@ -41,7 +41,7 @@ bool OomTest() {
   auto buffer = ktl::make_unique<char[]>(&ac, kLargeBufferSize);
   ASSERT_TRUE(ac.check());
 
-  size_t len = crashlog_to_string(buffer.get(), kLargeBufferSize, ZirconCrashReason::Oom);
+  size_t len = crashlog_to_string({buffer.get(), kLargeBufferSize}, ZirconCrashReason::Oom);
   EXPECT_LE(len, kLargeBufferSize);
   EXPECT_GT(len, 0u);
 
@@ -61,7 +61,7 @@ bool TruncationTest() {
 
   buffer[sizeof(buffer) - 1] = kCanaryValue;
 
-  size_t len = crashlog_to_string(buffer, sizeof(buffer) - 1, ZirconCrashReason::NoCrash);
+  size_t len = crashlog_to_string({buffer, sizeof(buffer) - 1}, ZirconCrashReason::NoCrash);
   EXPECT_LT(len, sizeof(buffer));
   EXPECT_GT(len, 0u);
 

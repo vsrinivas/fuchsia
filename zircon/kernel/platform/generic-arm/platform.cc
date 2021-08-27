@@ -73,6 +73,7 @@
 #include <zircon/types.h>
 
 #include <pdev/pdev.h>
+#include <platform/ram_mappable_crashlog.h>
 
 // Defined in start.S.
 extern paddr_t kernel_entry_paddr;
@@ -97,6 +98,12 @@ static ktl::atomic<int> panic_started;
 static ktl::atomic<int> halted;
 
 const zbi_header_t* platform_get_zbi(void) { return zbi_root; }
+
+namespace {
+lazy_init::LazyInit<RamMappableCrashlog, lazy_init::CheckType::None,
+                    lazy_init::Destructor::Disabled>
+    ram_mappable_crashlog;
+}
 
 zbitl::Image<ktl::span<ktl::byte>> GetMexecDataImage() {
   return zbitl::Image(ktl::span<ktl::byte>{mexec_data_zbi, sizeof(mexec_data_zbi)});
@@ -336,10 +343,13 @@ static void allocate_persistent_ram(paddr_t pa, size_t length) {
     // us total.
     size_t persistent_chunks_available = length / kPersistentRamAllocationGranularity;
 
-    // Make sure that crashlog gets its minimum allocation, or all of the
-    // RAM if it cannot meet even its minimum allocation.
-    size_t crashlog_chunks = ktl::min(persistent_chunks_available,
-                                      kMinCrashlogSize / kPersistentRamAllocationGranularity);
+    // If we have not already configured a non-trivial crashlog implementation
+    // for the platform, make sure that crashlog gets its minimum allocation, or
+    // all of the RAM if it cannot meet even its minimum allocation.
+    size_t crashlog_chunks = !PlatformCrashlog::HasNonTrivialImpl()
+                                 ? ktl::min(persistent_chunks_available,
+                                            kMinCrashlogSize / kPersistentRamAllocationGranularity)
+                                 : 0;
     persistent_chunks_available -= crashlog_chunks;
 
     // Next in line is persistent debug logging.
@@ -363,8 +373,11 @@ static void allocate_persistent_ram(paddr_t pa, size_t length) {
   }
 
   // Configure up the crashlog RAM
-  dprintf(INFO, "Crashlog configured with %" PRIu64 " bytes\n", crashlog_size);
-  platform_set_ram_crashlog_location(pa, crashlog_size);
+  if (crashlog_size > 0) {
+    dprintf(INFO, "Crashlog configured with %" PRIu64 " bytes\n", crashlog_size);
+    ram_mappable_crashlog.Initialize(pa, crashlog_size);
+    PlatformCrashlog::Bind(ram_mappable_crashlog.Get());
+  }
   size_t offset = crashlog_size;
 
   // Configure the persistent debuglog RAM (if we have any)
