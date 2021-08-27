@@ -19,6 +19,7 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/device.h>

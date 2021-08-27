@@ -136,6 +136,8 @@ void Device::Query(QueryCallback callback) {
   callback(std::move(resp));
 }
 
+const std::array<uint8_t, 6> NULL_MAC_ADDR{0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
 void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallback callback) {
   debugfn();
   wlan_device::CreateIfaceResponse resp;
@@ -157,10 +159,9 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
     uint16_t iface_id;
     wlanphy_impl_create_iface_req_t create_req{.role = role,
                                                .mlme_channel = req.mlme_channel.release()};
-    if (req.init_mac_addr.has_value()) {
+    if (req.init_mac_addr != NULL_MAC_ADDR) {
       create_req.has_init_mac_addr = true;
-      std::copy(req.init_mac_addr.value().begin(), req.init_mac_addr.value().end(),
-                create_req.init_mac_addr);
+      std::copy(req.init_mac_addr.begin(), req.init_mac_addr.end(), create_req.init_mac_addr);
     } else {
       create_req.has_init_mac_addr = false;
     }

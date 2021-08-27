@@ -11,6 +11,7 @@ rustc_library("ieee80211") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:arbitrary",
     "//third_party/rust_crates:hex",

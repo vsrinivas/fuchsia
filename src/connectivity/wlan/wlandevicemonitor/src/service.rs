@@ -234,6 +234,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
+        ieee80211::NULL_MAC_ADDR,
         pin_utils::pin_mut,
         std::fs::File,
         tempfile,
@@ -938,7 +939,7 @@ mod tests {
             fidl_svc::CreateIfaceRequest {
                 phy_id: 10,
                 role: fidl_dev::MacRole::Client,
-                mac_addr: if with_mac { Some(vec![0, 1, 2, 3, 4, 5]) } else { None },
+                mac_addr: if with_mac { [0, 1, 2, 3, 4, 5] } else { NULL_MAC_ADDR },
             },
         );
         pin_mut!(create_fut);
@@ -950,7 +951,7 @@ mod tests {
                 assert_eq!(fidl_dev::MacRole::Client, req.role);
 
                 if with_mac {
-                    assert_eq!(req.init_mac_addr, Some(vec![0, 1, 2, 3, 4, 5]));
+                    assert_eq!(req.init_mac_addr, [0, 1, 2, 3, 4, 5]);
                 }
 
                 let mut response = if create_iface_fails {
@@ -1019,7 +1020,7 @@ mod tests {
             fidl_svc::CreateIfaceRequest {
                 phy_id: 10,
                 role: fidl_dev::MacRole::Client,
-                mac_addr: None,
+                mac_addr: NULL_MAC_ADDR,
             },
         );
         pin_mut!(fut);

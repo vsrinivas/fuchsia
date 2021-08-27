@@ -6,6 +6,7 @@ use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_wlan_device as wlan;
 use fuchsia_async as fasync;
 use futures::prelude::*;
+use ieee80211::NULL_MAC_ADDR;
 use std::convert::Into;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
@@ -84,7 +85,7 @@ fn create_wlanintf() -> Result<(), Error> {
     let mut req = wlan::CreateIfaceRequest {
         role: wlan::MacRole::Client,
         mlme_channel: None,
-        init_mac_addr: None,
+        init_mac_addr: NULL_MAC_ADDR,
     };
     let fut = proxy.create_iface(&mut req).map_ok(|resp| {
         println!("create results: {:?}", resp);
