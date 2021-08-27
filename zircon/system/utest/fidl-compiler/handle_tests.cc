@@ -21,28 +21,26 @@ namespace {
 using fidl::flat::GetType;
 
 TEST(HandleTests, GoodHandleRightsTest) {
-  fidl::ExperimentalFlags experimental_flags;
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
 
-resource struct MyStruct {
-    zx.handle:<THREAD, zx.rights.DUPLICATE | zx.rights.TRANSFER> h;
+type MyStruct = resource struct {
+    h zx.handle:<THREAD, zx.rights.DUPLICATE | zx.rights.TRANSFER>;
 };
-)FIDL",
-                               std::move(experimental_flags));
-  ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+  ASSERT_COMPILED(library);
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
 
   std::visit(fidl::utils::matchers{[&](const std::unique_ptr<fidl::flat::TypeConstructorOld>& t) {
-                                     EXPECT_TRUE(t->handle_subtype_identifier.has_value());
-                                     EXPECT_EQ("THREAD",
-                                               t->handle_subtype_identifier.value().span()->data());
+                                     assert(false && "new syntax should be used");
                                    },
                                    [](const std::unique_ptr<fidl::flat::TypeConstructorNew>& t) {
-                                     assert(false && "uncoverted copy should be used");
+                                     EXPECT_TRUE(t->resolved_params.subtype_raw != nullptr);
+                                     EXPECT_EQ("THREAD",
+                                               t->resolved_params.subtype_raw->span.data());
                                    }},
              h_type_ctor);
 
@@ -58,20 +56,17 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, GoodNoHandleRightsTest) {
-  fidl::ExperimentalFlags experimental_flags;
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
 
-resource struct MyStruct {
-    zx.handle:VMO h;
+type MyStruct = resource struct {
+    h zx.handle:VMO;
 };
-)FIDL",
-                               std::move(experimental_flags));
+)FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
   auto h_type = GetType(h_type_ctor);
@@ -79,14 +74,13 @@ resource struct MyStruct {
   ASSERT_EQ(h_type->kind, fidl::flat::Type::Kind::kHandle);
   auto handle_type = static_cast<const fidl::flat::HandleType*>(h_type);
 
-  std::visit(fidl::utils::matchers{
-                 [&](const std::unique_ptr<fidl::flat::TypeConstructorOld>& t) {
-                   EXPECT_TRUE(t->handle_subtype_identifier.has_value());
-                   ASSERT_TRUE(t->handle_subtype_identifier.value().span()->data() == "VMO");
-                 },
-                 [](const std::unique_ptr<fidl::flat::TypeConstructorNew>& t) {
-                   assert(false && "uncoverted copy should be used");
-                 }},
+  std::visit(fidl::utils::matchers{[&](const std::unique_ptr<fidl::flat::TypeConstructorOld>& t) {
+                                     assert(false && "new syntax should be used");
+                                   },
+                                   [](const std::unique_ptr<fidl::flat::TypeConstructorNew>& t) {
+                                     EXPECT_TRUE(t->resolved_params.subtype_raw != nullptr);
+                                     EXPECT_EQ("VMO", t->resolved_params.subtype_raw->span.data());
+                                   }},
              h_type_ctor);
   EXPECT_EQ(3, handle_type->obj_type);
   EXPECT_EQ(
@@ -95,9 +89,6 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, BadInvalidHandleRightsTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
@@ -106,8 +97,7 @@ using zx;
 protocol P {
     Method(struct { h zx.handle:<VMO, 1>; });  // rights must be zx.rights-typed.
 };
-)FIDL",
-                               std::move(experimental_flags));
+)FIDL");
 
   // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
   // possible interpretations.
@@ -116,19 +106,16 @@ protocol P {
 }
 
 TEST(HandleTests, GoodPlainHandleTest) {
-  fidl::ExperimentalFlags experimental_flags;
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
 
-resource struct MyStruct {
-    zx.handle h;
+type MyStruct = resource struct {
+    h zx.handle;
 };
-)FIDL",
-                               std::move(experimental_flags));
-  ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+  ASSERT_COMPILED(library);
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
 
@@ -144,22 +131,19 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, GoodHandleFidlDefinedTest) {
-  fidl::ExperimentalFlags experimental_flags;
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
 using zx;
 
-resource struct MyStruct {
-  zx.handle:THREAD a;
-  zx.handle:<PROCESS> b;
-  zx.handle:<VMO, zx.rights.TRANSFER> c;
+type MyStruct = resource struct {
+  a zx.handle:THREAD;
+  b zx.handle:<PROCESS>;
+  c zx.handle:<VMO, zx.rights.TRANSFER>;
 };
-)FIDL",
-                               std::move(experimental_flags));
+)FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   const auto& a = library.LookupStruct("MyStruct")->members[0].type_ctor;
   auto a_type = GetType(a);
   ASSERT_NOT_NULL(a_type);
@@ -189,9 +173,6 @@ resource struct MyStruct {
 }
 
 TEST(HandleTests, BadInvalidFidlDefinedHandleSubtype) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
@@ -200,8 +181,7 @@ using zx;
 type MyStruct = struct {
   a zx.handle:ZIPPY;
 };
-)FIDL",
-                               std::move(experimental_flags));
+)FIDL");
 
   // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
   // possible interpretations.
@@ -209,8 +189,6 @@ type MyStruct = struct {
 }
 
 TEST(HandleTests, BadDisallowOldHandles) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
@@ -219,8 +197,7 @@ using zx;
 type MyStruct = struct {
     h handle<vmo>;
 };
-)FIDL",
-                               experimental_flags);
+)FIDL");
   // TODO(fxbug.dev/77101): provide a less confusing error
   // NOTE(fxbug.dev/72924): the old syntax returns a different error because
   // it tries to resolve the parameters before checking that handle points to
@@ -230,29 +207,25 @@ type MyStruct = struct {
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, GoodResourceDefinitionOnlySubtypeNoRightsTest) {
-  fidl::ExperimentalFlags experimental_flags;
+  TestLibrary library(R"FIDL(library example;
 
-  TestLibrary library(R"FIDL(
-library example;
-
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     VMO = 3;
 };
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
     };
 };
 
-resource struct MyStruct {
-    handle:<VMO> h;
+type MyStruct = resource struct {
+    h handle:VMO;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
   auto h_type = GetType(h_type_ctor);
@@ -260,15 +233,15 @@ resource struct MyStruct {
   ASSERT_EQ(h_type->kind, fidl::flat::Type::Kind::kHandle);
   auto handle_type = static_cast<const fidl::flat::HandleType*>(h_type);
 
-  std::visit(fidl::utils::matchers{
-                 [&](const std::unique_ptr<fidl::flat::TypeConstructorOld>& t) {
-                   EXPECT_TRUE(t->handle_subtype_identifier.has_value());
-                   ASSERT_TRUE(t->handle_subtype_identifier.value().span()->data() == "VMO");
-                 },
-                 [](const std::unique_ptr<fidl::flat::TypeConstructorNew>& t) {
-                   assert(false && "uncoverted copy should be used");
-                 }},
-             h_type_ctor);
+  std::visit(
+      fidl::utils::matchers{[&](const std::unique_ptr<fidl::flat::TypeConstructorOld>& t) {
+                              assert(false && "old syntax should not be used");
+                            },
+                            [](const std::unique_ptr<fidl::flat::TypeConstructorNew>& t) {
+                              EXPECT_TRUE(t->resolved_params.subtype_raw != nullptr);
+                              ASSERT_TRUE(t->resolved_params.subtype_raw->span.data() == "VMO");
+                            }},
+      h_type_ctor);
   EXPECT_EQ(3, handle_type->obj_type);
   EXPECT_EQ(
       static_cast<const fidl::flat::NumericConstantValue<uint32_t>*>(handle_type->rights)->value,
@@ -277,9 +250,6 @@ resource struct MyStruct {
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -297,8 +267,7 @@ resource_definition handle : uint32 {
 type MyStruct = resource struct {
     h handle:<VMO, 1>;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
 
   // TODO(fxbug.dev/75112): should include ErrResourceMissingRightsProperty
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
@@ -306,9 +275,6 @@ type MyStruct = resource struct {
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -321,8 +287,7 @@ resource_definition handle : uint32 {
 type MyStruct = resource struct {
     h handle:VMO;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
 
   // TODO(fxbug.dev/75112): should include ErrResourceMissingSubtypeProperty
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
@@ -330,9 +295,6 @@ type MyStruct = resource struct {
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, BadResourceSubtypeNotEnum) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -347,17 +309,13 @@ resource_definition handle : uint32 {
 type MyStruct = resource struct {
     h handle:<VMO, 1>;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
 
   // TODO(fxbug.dev/75112): should include ErrResourceSubtypePropertyMustReferToEnum
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
 TEST(HandleTests, BadNonIdentifierSubtype) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -375,8 +333,7 @@ resource_definition handle : uint32 {
 type MyStruct = resource struct {
     h handle:<1, optional>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   // TODO(fxbug.dev/75112): should include ErrHandleSubtypeMustReferToResourceSubtype
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
@@ -384,9 +341,6 @@ type MyStruct = resource struct {
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, BadResourceDefinitionNonBitsRights) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -405,45 +359,35 @@ resource_definition handle : uint32 {
 type MyStruct = resource struct {
     h handle:<VMO, "hello">;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   // TODO(fxbug.dev/75112): should include ErrResourceMissingSubtypeProperty
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
 TEST(HandleTests, BadBareHandleNoConstraints) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type MyStruct = resource struct {
     h handle;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraints) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type MyStruct = resource struct {
     h handle:VMO;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsThroughAlias) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -452,8 +396,7 @@ alias my_handle = handle;
 type MyStruct = resource struct {
     h my_handle:VMO;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 

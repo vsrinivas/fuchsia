@@ -319,8 +319,8 @@ std::string remove_markers(const std::string& source) { return replace_markers(s
 // Extracts marked source spans from a given source string.
 // If source spans are incorrectly marked (missing or extra markers), returns
 // empty set; otherwise, returns a multiset of expected spans.
-std::multiset<std::string> extract_expected_spans(
-    const std::string& source, std::vector<std::string>* errors) {
+std::multiset<std::string> extract_expected_spans(const std::string& source,
+                                                  std::vector<std::string>* errors) {
   std::stack<size_t> stack;
   std::multiset<std::string> spans;
 
@@ -750,9 +750,7 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
       auto clean_source = remove_markers(marked_source);
 
       // Parse the source with markers removed
-      fidl::ExperimentalFlags experimental_flags;
-      experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-      TestLibrary library(clean_source, experimental_flags);
+      TestLibrary library(clean_source);
       std::unique_ptr<fidl::raw::File> ast;
       if (!library.Parse(&ast)) {
         errors.push_back("failed to parse");
@@ -766,7 +764,7 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
         break;
       }
 
-     // Get the actual spans by walking the AST
+      // Get the actual spans by walking the AST
       SourceSpanVisitor visitor(test_case.type);
       visitor.OnFile(ast);
       std::multiset<std::string> actual_spans = visitor.spans();

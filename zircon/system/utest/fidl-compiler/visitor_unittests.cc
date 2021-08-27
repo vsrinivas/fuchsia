@@ -110,12 +110,10 @@ protocol MyProtocol { // C15
 };
 )FIDL";
 
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library("example.fidl", contents, experimental_flags);
+  TestLibrary library("example.fidl", contents);
   std::unique_ptr<fidl::raw::File> ast;
   bool is_parse_success = library.Parse(&ast);
-      ;
+  ;
 
   if (is_parse_success) {
     NoopTreeVisitor visitor;

@@ -44,61 +44,6 @@
     EXPECT_ERR(library_ref.errors()[1], (err1));                 \
   }
 
-#define ASSERT_COMPILED_AND_CONVERT_WITH_DEP_INTO(library, dep, into) \
-  {                                                                   \
-    TestLibrary& library_ref = (library);                             \
-    if (!library_ref.CompileAndCheckConversion(&(into), &(dep))) {    \
-      const auto& errors = library_ref.errors();                      \
-      EXPECT_EQ(errors.size(), 0);                                    \
-      for (const auto& error : errors) {                              \
-        EXPECT_STR_EQ("", error->err.msg.data());                     \
-      }                                                               \
-      FAIL("stopping test, compilation and conversion failed");       \
-    }                                                                 \
-  }
-
-// ASSERT_COMPILED_AND_CONVERT_INTO takes an uninitialized TestLibrary
-// and populates it with the result of compiling a converted file. This is
-// useful for converting a library that will be consumed as a dependency of
-// another library.
-#define ASSERT_COMPILED_AND_CONVERT_INTO(library, into)                   \
-  {                                                                       \
-    TestLibrary no_dep;                                                   \
-    TestLibrary& into_ref = (into);                                       \
-    ASSERT_COMPILED_AND_CONVERT_WITH_DEP_INTO(library, no_dep, into_ref); \
-  }
-
-// ASSERT_COMPILED_AND_CONVERT_WITH_DEP allows a library to be converted
-// with a dependency, generated from one of ASSERT_COMPILED_AND_CONVERT_INTO or
-// ASSERT_COMPILED_AND_CLONE_INTO.
-#define ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, dep)                \
-  {                                                                       \
-    TestLibrary no_into;                                                  \
-    TestLibrary& dep_ref = (dep);                                         \
-    ASSERT_COMPILED_AND_CONVERT_WITH_DEP_INTO(library, dep_ref, no_into); \
-  }
-
-#define ASSERT_COMPILED_AND_CONVERT(library)               \
-  {                                                        \
-    TestLibrary no_dep;                                    \
-    ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, no_dep); \
-  }
-
-// ASSERT_COMPILED_AND_CLONE_INTO is identical to
-// ASSERT_COMPILED_AND_CONVERT_INTO, except that it does not convert the second
-// library (ie, it clones it instead). This is necessary because we will need
-// two copies of the dependent library: one to successfully complete the
-// pre-conversion compilation of the target library, and one to use as an
-// unconverted dependency for its converted version.
-#define ASSERT_COMPILED_AND_CLONE_INTO(library, into)                               \
-  {                                                                                 \
-    TestLibrary& library_ref = (library);                                           \
-    TestLibrary no_dep;                                                             \
-    if (!library_ref.CompileTwice(&(into), &(no_dep), fidl::utils::Syntax::kOld)) { \
-      FAIL("stopping test, dependency duplication failed");                         \
-    }                                                                               \
-  }
-
 #define ASSERT_ERR(actual_err, err_def, ...) \
   ASSERT_STR_EQ(actual_err->err.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
 

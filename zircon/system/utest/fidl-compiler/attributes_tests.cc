@@ -17,380 +17,265 @@ namespace {
 
 TEST(AttributesTests, GoodPlacementOfAttributes) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency("exampleusing.fidl", R"FIDL(
-library exampleusing;
+  TestLibrary dependency("exampleusing.fidl", R"FIDL(library exampleusing;
 
-[OnDepStruct]
-struct Empty {};
-
+@on_dep_struct
+type Empty = struct {};
 )FIDL",
                          &shared);
-  TestLibrary converted_dependency;
-  ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
+  ASSERT_COMPILED(dependency);
 
   TestLibrary library("example.fidl", R"FIDL(
-[OnLibrary]
+@on_library
 library example;
 
 using exampleusing;
 
-[OnBits]
-bits ExampleBits {
-    [OnBitsMember]
+@on_bits
+type ExampleBits = bits {
+    @on_bits_member
     MEMBER = 1;
 };
 
-[OnConst]
-const uint32 EXAMPLE_CONST = 0;
+@on_const
+const EXAMPLE_CONST uint32 = 0;
 
-[OnEnum]
-enum ExampleEnum {
-    [OnEnumMember]
+@on_enum
+type ExampleEnum = enum {
+    @on_enum_member
     MEMBER = 1;
 };
 
-[OnProtocol]
+@on_protocol
 protocol ExampleProtocol {
-    [OnMethod]
-    Method([OnParameter] exampleusing.Empty arg);
+    @on_method
+    Method(struct { @on_parameter arg exampleusing.Empty; });
 };
 
-[OnService]
+@on_service
 service ExampleService {
-    [OnServiceMember]
-    ExampleProtocol member;
+    @on_service_member
+    member client_end:ExampleProtocol;
 };
 
-[OnStruct]
-struct ExampleStruct {
-    [OnStructMember]
-    uint32 member;
+@on_struct
+type ExampleStruct = struct {
+    @on_struct_member
+    member uint32;
 };
 
-[OnTable]
-table ExampleTable {
-    [OnTableMember]
-    1: uint32 member;
+@on_table
+type ExampleTable = table {
+    @on_table_member
+    1: member uint32;
 };
 
-[OnTypeAlias]
+@on_type_alias
 alias ExampleTypeAlias = uint32;
 
-[OnUnion]
-union ExampleUnion {
-    [OnUnionMember]
-    1: uint32 variant;
+@on_union
+type ExampleUnion = union {
+    @on_union_member
+    1: variant uint32;
 };
 
 )FIDL",
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, converted_dependency);
+  ASSERT_COMPILED(library);
 
-  EXPECT_TRUE(library.library()->HasAttribute("OnLibrary"));
-
-  auto example_bits = library.LookupBits("ExampleBits");
-  ASSERT_NOT_NULL(example_bits);
-  EXPECT_TRUE(example_bits->attributes->HasAttribute("OnBits"));
-  EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("OnBitsMember"));
-
-  auto example_const = library.LookupConstant("EXAMPLE_CONST");
-  ASSERT_NOT_NULL(example_const);
-  EXPECT_TRUE(example_const->attributes->HasAttribute("OnConst"));
-
-  auto example_enum = library.LookupEnum("ExampleEnum");
-  ASSERT_NOT_NULL(example_enum);
-  EXPECT_TRUE(example_enum->attributes->HasAttribute("OnEnum"));
-  EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("OnEnumMember"));
-
-  auto example_protocol = library.LookupProtocol("ExampleProtocol");
-  ASSERT_NOT_NULL(example_protocol);
-  EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
-  EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
-  ASSERT_NOT_NULL(example_protocol->methods.front().maybe_request_payload);
-  EXPECT_TRUE(example_protocol->methods.front()
-                  .maybe_request_payload->members.front()
-                  .attributes->HasAttribute("OnParameter"));
-
-  auto example_service = library.LookupService("ExampleService");
-  ASSERT_NOT_NULL(example_service);
-  EXPECT_TRUE(example_service->attributes->HasAttribute("OnService"));
-  EXPECT_TRUE(example_service->members.front().attributes->HasAttribute("OnServiceMember"));
-
-  auto example_struct = library.LookupStruct("ExampleStruct");
-  ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->attributes->HasAttribute("OnStruct"));
-  EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("OnStructMember"));
-
-  auto example_table = library.LookupTable("ExampleTable");
-  ASSERT_NOT_NULL(example_table);
-  EXPECT_TRUE(example_table->attributes->HasAttribute("OnTable"));
-  EXPECT_TRUE(example_table->members.front().maybe_used->attributes->HasAttribute("OnTableMember"));
-
-  auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
-  ASSERT_NOT_NULL(example_type_alias);
-  EXPECT_TRUE(example_type_alias->attributes->HasAttribute("OnTypeAlias"));
-
-  auto example_union = library.LookupUnion("ExampleUnion");
-  ASSERT_NOT_NULL(example_union);
-  EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
-  EXPECT_TRUE(example_union->members.front().maybe_used->attributes->HasAttribute("OnUnionMember"));
-}
-
-TEST(AttributesTests, GoodPlacementOfAttributesWithOldDep) {
-  SharedAmongstLibraries shared;
-  TestLibrary dependency("exampleusing.fidl", R"FIDL(
-library exampleusing;
-
-[OnDepStruct]
-struct Empty {};
-
-)FIDL",
-                         &shared);
-  TestLibrary cloned_dependency;
-  ASSERT_COMPILED_AND_CLONE_INTO(dependency, cloned_dependency);
-
-  TestLibrary library("example.fidl", R"FIDL(
-[OnLibrary]
-library example;
-
-using exampleusing;
-
-[OnBits]
-bits ExampleBits {
-    [OnBitsMember]
-    MEMBER = 1;
-};
-
-[OnConst]
-const uint32 EXAMPLE_CONST = 0;
-
-[OnEnum]
-enum ExampleEnum {
-    [OnEnumMember]
-    MEMBER = 1;
-};
-
-[OnProtocol]
-protocol ExampleProtocol {
-    [OnMethod]
-    Method([OnParameter] exampleusing.Empty arg);
-};
-
-[OnService]
-service ExampleService {
-    [OnServiceMember]
-    ExampleProtocol member;
-};
-
-[OnStruct]
-struct ExampleStruct {
-    [OnStructMember]
-    uint32 member;
-};
-
-[OnTable]
-table ExampleTable {
-    [OnTableMember]
-    1: uint32 member;
-};
-
-[OnTypeAlias]
-alias ExampleTypeAlias = uint32;
-
-[OnUnion]
-union ExampleUnion {
-    [OnUnionMember]
-    1: uint32 variant;
-};
-
-)FIDL",
-                      &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, cloned_dependency);
-
-  EXPECT_TRUE(library.library()->HasAttribute("OnLibrary"));
+  EXPECT_TRUE(library.library()->HasAttribute("on_library"));
 
   auto example_bits = library.LookupBits("ExampleBits");
   ASSERT_NOT_NULL(example_bits);
-  EXPECT_TRUE(example_bits->attributes->HasAttribute("OnBits"));
-  EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("OnBitsMember"));
+  EXPECT_TRUE(example_bits->attributes->HasAttribute("on_bits"));
+  EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("on_bits_member"));
 
   auto example_const = library.LookupConstant("EXAMPLE_CONST");
   ASSERT_NOT_NULL(example_const);
-  EXPECT_TRUE(example_const->attributes->HasAttribute("OnConst"));
+  EXPECT_TRUE(example_const->attributes->HasAttribute("on_const"));
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
-  EXPECT_TRUE(example_enum->attributes->HasAttribute("OnEnum"));
-  EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("OnEnumMember"));
+  EXPECT_TRUE(example_enum->attributes->HasAttribute("on_enum"));
+  EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("on_enum_member"));
 
   auto example_protocol = library.LookupProtocol("ExampleProtocol");
   ASSERT_NOT_NULL(example_protocol);
-  EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
-  EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
+  EXPECT_TRUE(example_protocol->attributes->HasAttribute("on_protocol"));
+  EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("on_method"));
   ASSERT_NOT_NULL(example_protocol->methods.front().maybe_request_payload);
   EXPECT_TRUE(example_protocol->methods.front()
                   .maybe_request_payload->members.front()
-                  .attributes->HasAttribute("OnParameter"));
+                  .attributes->HasAttribute("on_parameter"));
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);
-  EXPECT_TRUE(example_service->attributes->HasAttribute("OnService"));
-  EXPECT_TRUE(example_service->members.front().attributes->HasAttribute("OnServiceMember"));
+  EXPECT_TRUE(example_service->attributes->HasAttribute("on_service"));
+  EXPECT_TRUE(example_service->members.front().attributes->HasAttribute("on_service_member"));
 
   auto example_struct = library.LookupStruct("ExampleStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->attributes->HasAttribute("OnStruct"));
-  EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("OnStructMember"));
+  EXPECT_TRUE(example_struct->attributes->HasAttribute("on_struct"));
+  EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("on_struct_member"));
 
   auto example_table = library.LookupTable("ExampleTable");
   ASSERT_NOT_NULL(example_table);
-  EXPECT_TRUE(example_table->attributes->HasAttribute("OnTable"));
-  EXPECT_TRUE(example_table->members.front().maybe_used->attributes->HasAttribute("OnTableMember"));
+  EXPECT_TRUE(example_table->attributes->HasAttribute("on_table"));
+  EXPECT_TRUE(
+      example_table->members.front().maybe_used->attributes->HasAttribute("on_table_member"));
 
   auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
   ASSERT_NOT_NULL(example_type_alias);
-  EXPECT_TRUE(example_type_alias->attributes->HasAttribute("OnTypeAlias"));
+  EXPECT_TRUE(example_type_alias->attributes->HasAttribute("on_type_alias"));
 
   auto example_union = library.LookupUnion("ExampleUnion");
   ASSERT_NOT_NULL(example_union);
-  EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
-  EXPECT_TRUE(example_union->members.front().maybe_used->attributes->HasAttribute("OnUnionMember"));
+  EXPECT_TRUE(example_union->attributes->HasAttribute("on_union"));
+  EXPECT_TRUE(
+      example_union->members.front().maybe_used->attributes->HasAttribute("on_union_member"));
 }
 
 TEST(AttributesTests, GoodOfficialAttributes) {
-  TestLibrary library("example.fidl", R"FIDL(
-[NoDoc]
+  TestLibrary library("example.fidl", R"FIDL(@no_doc
 library example;
 
 /// For EXAMPLE_CONSTANT
-[NoDoc, Deprecated = "Note"]
-const string EXAMPLE_CONSTANT = "foo";
+@no_doc
+@deprecated("Note")
+const EXAMPLE_CONSTANT string = "foo";
 
 /// For ExampleEnum
-[Deprecated = "Reason", Transitional]
-enum ExampleEnum {
+@deprecated("Reason")
+@transitional
+type ExampleEnum = strict enum {
     A = 1;
     /// For EnumMember
-    [Unknown] B = 2;
+    @unknown
+    B = 2;
 };
 
 /// For ExampleStruct
-[MaxBytes = "1234", MaxHandles = "5678"]
-resource struct ExampleStruct {};
+@max_bytes("1234")
+@max_handles("5678")
+type ExampleStruct = resource struct {};
 
 /// For ExampleProtocol
-[Discoverable, ForDeprecatedCBindings, Transport = "Syscall"]
+@discoverable
+@for_deprecated_c_bindings
+@transport("Syscall")
 protocol ExampleProtocol {
     /// For ExampleMethod
-    [Internal, Selector = "Bar", Transitional] ExampleMethod();
+    @internal
+    @selector("Bar")
+    @transitional
+    ExampleMethod();
 };
 
 /// For ExampleService
-[Foo = "ExampleService", NoDoc]
+@foo("ExampleService")
+@no_doc
 service ExampleService {
     /// For ExampleProtocol
-    [Foo = "ExampleProtocol", NoDoc]
-    ExampleProtocol p;
+    @foo("ExampleProtocol")
+    @no_doc
+    p client_end:ExampleProtocol;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
-  EXPECT_TRUE(library.library()->HasAttribute("NoDoc"));
+  EXPECT_TRUE(library.library()->HasAttribute("no_doc"));
 
   auto example_const = library.LookupConstant("EXAMPLE_CONSTANT");
   ASSERT_NOT_NULL(example_const);
-  EXPECT_TRUE(example_const->attributes->HasAttribute("NoDoc"));
-  EXPECT_TRUE(example_const->HasAttributeArg("Doc"));
+  EXPECT_TRUE(example_const->attributes->HasAttribute("no_doc"));
+  EXPECT_TRUE(example_const->HasAttributeArg("doc"));
   auto const_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_const->GetAttributeArg("Doc").value().get());
+      example_const->GetAttributeArg("doc").value().get());
   EXPECT_STR_EQ(const_doc_value.MakeContents(), " For EXAMPLE_CONSTANT\n");
-  EXPECT_TRUE(example_const->HasAttributeArg("Deprecated"));
+  EXPECT_TRUE(example_const->HasAttributeArg("deprecated"));
   auto const_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_const->GetAttributeArg("Deprecated").value().get());
+      example_const->GetAttributeArg("deprecated").value().get());
   EXPECT_STR_EQ(const_str_value.MakeContents(), "Note");
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
-  EXPECT_TRUE(example_enum->attributes->HasAttribute("Transitional"));
-  EXPECT_TRUE(example_enum->HasAttributeArg("Doc"));
+  EXPECT_TRUE(example_enum->attributes->HasAttribute("transitional"));
+  EXPECT_TRUE(example_enum->HasAttributeArg("doc"));
   auto enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_enum->GetAttributeArg("Doc").value().get());
+      example_enum->GetAttributeArg("doc").value().get());
   EXPECT_STR_EQ(enum_doc_value.MakeContents(), " For ExampleEnum\n");
-  EXPECT_TRUE(example_enum->HasAttributeArg("Deprecated"));
+  EXPECT_TRUE(example_enum->HasAttributeArg("deprecated"));
   auto enum_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_enum->GetAttributeArg("Deprecated").value().get());
+      example_enum->GetAttributeArg("deprecated").value().get());
   EXPECT_STR_EQ(enum_str_value.MakeContents(), "Reason");
-  EXPECT_TRUE(example_enum->members.back().attributes->HasAttribute("Unknown"));
+  EXPECT_TRUE(example_enum->members.back().attributes->HasAttribute("unknown"));
 
   auto example_struct = library.LookupStruct("ExampleStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttributeArg("Doc"));
+  EXPECT_TRUE(example_struct->HasAttributeArg("doc"));
   auto struct_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_struct->GetAttributeArg("Doc").value().get());
+      example_struct->GetAttributeArg("doc").value().get());
   EXPECT_STR_EQ(struct_doc_value.MakeContents(), " For ExampleStruct\n");
-  EXPECT_TRUE(example_struct->HasAttributeArg("MaxBytes"));
+  EXPECT_TRUE(example_struct->HasAttributeArg("max_bytes"));
   auto struct_str_value1 = static_cast<const fidl::flat::StringConstantValue&>(
-      example_struct->GetAttributeArg("MaxBytes").value().get());
+      example_struct->GetAttributeArg("max_bytes").value().get());
   EXPECT_STR_EQ(struct_str_value1.MakeContents(), "1234");
-  EXPECT_TRUE(example_struct->HasAttributeArg("MaxHandles"));
+  EXPECT_TRUE(example_struct->HasAttributeArg("max_handles"));
   auto struct_str_value2 = static_cast<const fidl::flat::StringConstantValue&>(
-      example_struct->GetAttributeArg("MaxHandles").value().get());
+      example_struct->GetAttributeArg("max_handles").value().get());
   EXPECT_STR_EQ(struct_str_value2.MakeContents(), "5678");
 
   auto example_protocol = library.LookupProtocol("ExampleProtocol");
   ASSERT_NOT_NULL(example_protocol);
-  EXPECT_TRUE(example_protocol->attributes->HasAttribute("Discoverable"));
-  EXPECT_TRUE(example_protocol->attributes->HasAttribute("ForDeprecatedCBindings"));
-  EXPECT_TRUE(example_protocol->HasAttributeArg("Doc"));
+  EXPECT_TRUE(example_protocol->attributes->HasAttribute("discoverable"));
+  EXPECT_TRUE(example_protocol->attributes->HasAttribute("for_deprecated_c_bindings"));
+  EXPECT_TRUE(example_protocol->HasAttributeArg("doc"));
   auto protocol_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_protocol->GetAttributeArg("Doc").value().get());
+      example_protocol->GetAttributeArg("doc").value().get());
   EXPECT_STR_EQ(protocol_doc_value.MakeContents(), " For ExampleProtocol\n");
-  EXPECT_TRUE(example_protocol->HasAttributeArg("Transport"));
+  EXPECT_TRUE(example_protocol->HasAttributeArg("transport"));
   auto protocol_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_protocol->GetAttributeArg("Transport").value().get());
+      example_protocol->GetAttributeArg("transport").value().get());
   EXPECT_STR_EQ(protocol_str_value.MakeContents(), "Syscall");
 
   auto& example_method = example_protocol->methods.front();
-  EXPECT_TRUE(example_method.attributes->HasAttribute("Internal"));
-  EXPECT_TRUE(example_method.attributes->HasAttribute("Transitional"));
-  EXPECT_TRUE(example_method.attributes->HasAttributeArg("Doc"));
+  EXPECT_TRUE(example_method.attributes->HasAttribute("internal"));
+  EXPECT_TRUE(example_method.attributes->HasAttribute("transitional"));
+  EXPECT_TRUE(example_method.attributes->HasAttributeArg("doc"));
   auto method_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_method.attributes->GetAttributeArg("Doc").value().get());
+      example_method.attributes->GetAttributeArg("doc").value().get());
   EXPECT_STR_EQ(method_doc_value.MakeContents(), " For ExampleMethod\n");
-  EXPECT_TRUE(example_method.attributes->HasAttributeArg("Selector"));
+  EXPECT_TRUE(example_method.attributes->HasAttributeArg("selector"));
   auto method_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_method.attributes->GetAttributeArg("Selector").value().get());
+      example_method.attributes->GetAttributeArg("selector").value().get());
   EXPECT_STR_EQ(method_str_value.MakeContents(), "Bar");
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);
-  EXPECT_TRUE(example_service->attributes->HasAttribute("NoDoc"));
-  EXPECT_TRUE(example_service->HasAttributeArg("Doc"));
+  EXPECT_TRUE(example_service->attributes->HasAttribute("no_doc"));
+  EXPECT_TRUE(example_service->HasAttributeArg("doc"));
   auto service_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_service->GetAttributeArg("Doc").value().get());
+      example_service->GetAttributeArg("doc").value().get());
   EXPECT_STR_EQ(service_doc_value.MakeContents(), " For ExampleService\n");
-  EXPECT_TRUE(example_service->HasAttributeArg("Foo"));
+  EXPECT_TRUE(example_service->HasAttributeArg("foo"));
   auto service_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_service->GetAttributeArg("Foo").value().get());
+      example_service->GetAttributeArg("foo").value().get());
   EXPECT_STR_EQ(service_str_value.MakeContents(), "ExampleService");
 
   auto& example_service_member = example_service->members.front();
-  EXPECT_TRUE(example_service_member.attributes->HasAttribute("NoDoc"));
-  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("Doc"));
+  EXPECT_TRUE(example_service_member.attributes->HasAttribute("no_doc"));
+  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("doc"));
   auto service_member_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_service_member.attributes->GetAttributeArg("Doc").value().get());
+      example_service_member.attributes->GetAttributeArg("doc").value().get());
   EXPECT_STR_EQ(service_member_doc_value.MakeContents(), " For ExampleProtocol\n");
-  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("Foo"));
+  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("foo"));
   auto service_member_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_service_member.attributes->GetAttributeArg("Foo").value().get());
+      example_service_member.attributes->GetAttributeArg("foo").value().get());
   EXPECT_STR_EQ(service_member_str_value.MakeContents(), "ExampleProtocol");
 }
 
 TEST(AttributesTests, BadNoAttributeOnUsingNotEventDoc) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -399,8 +284,7 @@ library example;
 @even_doc
 using we.should.not.care;
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributesNewNotAllowedOnLibraryImport);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "no_attribute_on_using");
@@ -409,8 +293,6 @@ using we.should.not.care;
 
 // Test that a duplicate attribute is caught, and nicely reported.
 TEST(AttributesTests, BadNoTwoSameAttributeTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
@@ -420,16 +302,13 @@ protocol A {
     MethodA();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dup");
 }
 
 // Test that doc comments and doc attributes clash are properly checked.
 TEST(AttributesTests, BadNoTwoSameDocAttributeTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
@@ -439,21 +318,17 @@ protocol A {
     MethodA();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
 }
 
 TEST(AttributesTests, BadNoTwoSameAttributeOnLibraryTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 @dup("first")
 library fidl.test.dupattributes;
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddSource("dup_attributes_second.fidl", R"FIDL(
 @dup("second")
  library fidl.test.dupattributes;
@@ -468,53 +343,32 @@ TEST(AttributesTests, WarnOnCloseAttributeTest) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
-[Duc = "should be Doc"]
+@duc("should be doc")
 protocol A {
     MethodA();
 };
 
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   const auto& warnings = library.warnings();
   ASSERT_EQ(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnAttributeTypo);
-  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "Duc");
-  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "Doc");
-}
-
-// Test that a lower_snake_cased attribute doesn't produce a warning in the old
-// syntax.
-TEST(AttributesTests, GoodAttributeCaseNormalizedOldSyntax) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-[for_deprecated_c_bindings]
-protocol A {
-    [transitional]
-    MethodA();
-};
-
-)FIDL");
-  ASSERT_TRUE(library.Compile());
-  const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 0);
+  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "duc");
+  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "doc");
 }
 
 // This tests our ability to treat warnings as errors.  It is here because this
 // is the most convenient warning.
 TEST(AttributesTests, BadWarningsAsErrorsTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
-@duc("should be Doc")
+@duc("should be doc")
 protocol A {
     MethodA();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.set_warnings_as_errors(true);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::WarnAttributeTypo);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "duc");
@@ -523,8 +377,6 @@ protocol A {
 }
 
 TEST(AttributesTests, BadEmptyTransport) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("transport_attributes.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -533,14 +385,11 @@ protocol A {
     MethodA();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
 }
 
 TEST(AttributesTests, BadBogusTransport) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("transport_attributes.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -549,59 +398,50 @@ protocol A {
     MethodA();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
 }
 
 TEST(AttributesTests, GoodChannelTransport) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
-library fidl.test.transportattributes;
+  TestLibrary library("transport_attributes.fidl", R"FIDL(library fidl.test.transportattributes;
 
-[Transport = "Channel"]
+@transport("Channel")
 protocol A {
     MethodA();
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   ASSERT_EQ(library.errors().size(), 0);
   ASSERT_EQ(library.warnings().size(), 0);
 }
 
 TEST(AttributesTests, GoodSyscallTransport) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
-library fidl.test.transportattributes;
+  TestLibrary library("transport_attributes.fidl", R"FIDL(library fidl.test.transportattributes;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol A {
     MethodA();
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   ASSERT_EQ(library.errors().size(), 0);
   ASSERT_EQ(library.warnings().size(), 0);
 }
 
 TEST(AttributesTests, GoodMultipleTransports) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
-library fidl.test.transportattributes;
+  TestLibrary library("transport_attributes.fidl", R"FIDL(library fidl.test.transportattributes;
 
-[Transport = "Channel, Syscall"]
+@transport("Channel, Syscall")
 protocol A {
     MethodA();
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   ASSERT_EQ(library.errors().size(), 0);
   ASSERT_EQ(library.warnings().size(), 0);
 }
 
 TEST(AttributesTests, BadMultipleTransportsWithBogus) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("transport_attributes.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
@@ -610,14 +450,11 @@ protocol A {
     MethodA();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
 }
 
 TEST(AttributesTests, BadTransitionalInvalidPlacement) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -625,16 +462,13 @@ library fidl.test;
 protocol MyProtocol {
   MyMethod();
 };
-  )FIDL",
-                      experimental_flags);
+  )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "transitional");
 }
 
 TEST(AttributesTests, BadUnknownInvalidPlacementOnUnion) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -642,32 +476,26 @@ library fidl.test;
 type U = flexible union {
   1: a int32;
 };
-  )FIDL",
-                      experimental_flags);
+  )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
 }
 
 TEST(AttributesTests, BadUnknownInvalidPlacementOnBitsMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
 type B = flexible bits : uint32 {
   @unknown A = 0x1;
 };
-  )FIDL",
-                      experimental_flags);
+  )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
 }
 
 TEST(AttributesTests, BadUnknownInvalidOnStrictUnionsEnums) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   {
     TestLibrary library(R"FIDL(
 library fidl.test;
@@ -675,8 +503,7 @@ library fidl.test;
 type U = strict union {
   @unknown 1: a int32;
 };
-  )FIDL",
-                        experimental_flags);
+  )FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
   }
@@ -688,8 +515,7 @@ library fidl.test;
 type E = strict enum : uint32 {
   @unknown A = 1;
 };
-  )FIDL",
-                        experimental_flags);
+  )FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
   }
@@ -697,55 +523,53 @@ type E = strict enum : uint32 {
 
 TEST(AttributesTests, GoodUnknownOkOnFlexibleOrTransitionalEnumsUnionMembers) {
   {
-    TestLibrary library(R"FIDL(
-library fidl.test;
+    TestLibrary library(R"FIDL(library fidl.test;
 
-flexible union U {
-  [Unknown] 1: int32 a;
+type U = flexible union {
+    @unknown
+    1: a int32;
 };
-  )FIDL");
-    ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+    ASSERT_COMPILED(library);
   }
 
   {
-    TestLibrary library(R"FIDL(
-library fidl.test;
+    TestLibrary library(R"FIDL(library fidl.test;
 
-[Transitional]
-strict union U {
-  [Unknown] 1: int32 a;
+@transitional
+type U = strict union {
+    @unknown
+    1: a int32;
 };");
-  )FIDL");
-    ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+    ASSERT_COMPILED(library);
   }
 
   {
-    TestLibrary library(R"FIDL(
-library fidl.test;
+    TestLibrary library(R"FIDL(library fidl.test;
 
-flexible enum E :
-  uint32 { [Unknown] A = 1;
+type E = flexible enum : uint32 {
+    @unknown
+    A = 1;
 };
-  )FIDL");
-    ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+    ASSERT_COMPILED(library);
   }
 
   {
-    TestLibrary library(R"FIDL(
-library fidl.test;
+    TestLibrary library(R"FIDL(library fidl.test;
 
-[Transitional]
-strict enum E : uint32 {
-  [Unknown] A = 1;
+@transitional
+type E = strict enum : uint32 {
+    @unknown
+    A = 1;
 };
-  )FIDL");
-    ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+    ASSERT_COMPILED(library);
   }
 }
 
 TEST(AttributesTests, BadIncorrectPlacementLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 @for_deprecated_c_bindings
 library fidl.test;
@@ -782,8 +606,7 @@ protocol MyProtocol {
     MyMethod();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 10);
@@ -792,8 +615,6 @@ protocol MyProtocol {
 }
 
 TEST(AttributesTests, BadDeprecatedAttributes) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -809,8 +630,7 @@ protocol MyOtherProtocol {
 protocol MyProtocol {
   MyMethod();
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 3);
@@ -833,8 +653,6 @@ bool MustHaveThreeMembers(fidl::Reporter* reporter,
 }
 
 TEST(AttributesTests, BadConstraintOnlyThreeMembersOnStruct) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -846,8 +664,7 @@ type MyStruct = struct {
     oh_no_four int64;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("must_have_three_members",
                              fidl::flat::AttributeSchema(
                                  {
@@ -862,8 +679,6 @@ type MyStruct = struct {
 }
 
 TEST(AttributesTests, BadConstraintOnlyThreeMembersOnMethod) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -871,8 +686,7 @@ protocol MyProtocol {
     @must_have_three_members MyMethod();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("must_have_three_members",
                              fidl::flat::AttributeSchema(
                                  {
@@ -887,8 +701,6 @@ protocol MyProtocol {
 }
 
 TEST(AttributesTests, BadConstraintOnlyThreeMembersOnProtocol) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -898,8 +710,7 @@ protocol MyProtocol {
     MySecondMethod();
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("must_have_three_members",
                              fidl::flat::AttributeSchema(
                                  {
@@ -916,8 +727,6 @@ protocol MyProtocol {
 }
 
 TEST(AttributesTests, BadMaxBytes) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -926,16 +735,13 @@ type MyTable = table {
   1: here bool;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyBytes);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "27");  // 27 allowed
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "40");  // 40 found
 }
 
 TEST(AttributesTests, BadMaxBytesBoundTooBig) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -943,14 +749,11 @@ library fidl.test;
 type MyTable = table {
   1: u uint8;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoundIsTooBig);
 }
 
 TEST(AttributesTests, BadMaxBytesUnableToParseBound) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -958,14 +761,11 @@ library fidl.test;
 type MyTable = table {
   1: u uint8;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnableToParseBound);
 }
 
 TEST(AttributesTests, BadMaxHandles) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   auto library = WithLibraryZx(R"FIDL(
 library fidl.test;
 
@@ -978,16 +778,13 @@ type MyUnion = resource union {
   3: foo vector<zx.handle:VMO>:6;
 };
 
-)FIDL",
-                               std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyHandles);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");  // 2 allowed
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "6");  // 6 found
 }
 
 TEST(AttributesTests, BadAttributeValue) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -995,14 +792,11 @@ library fidl.test;
 protocol P {
     Method();
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributeValue);
 }
 
 TEST(AttributesTests, BadSelectorIncorrectPlacement) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -1011,14 +805,11 @@ type MyUnion = union {
   1: hello uint8;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
 }
 
 TEST(AttributesTests, BadNoAttributesOnReserved) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   {
     TestLibrary library(R"FIDL(
 library fidl.test;
@@ -1027,8 +818,7 @@ type Foo = union {
   @foo
   1: reserved;
 };
-)FIDL",
-                        experimental_flags);
+)FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
   }
 
@@ -1040,15 +830,12 @@ type Foo = table {
   @foo
   1: reserved;
 };
-  )FIDL",
-                        experimental_flags);
+  )FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
   }
 }
 
 TEST(AttributesTests, BadParameterAttributeIncorrectPlacement) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -1056,8 +843,7 @@ protocol ExampleProtocol {
     Method(struct { arg exampleusing.Empty; } @on_parameter);
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 }  // namespace

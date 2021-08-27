@@ -17,9 +17,7 @@ namespace {
 void invalid_resource_modifier(const std::string& type, const std::string& definition) {
   std::string fidl_library = "library example;\n\n" + definition + "\n";
 
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(fidl_library, experimental_flags);
+  TestLibrary library(fidl_library);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "resource");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), type);
@@ -44,56 +42,44 @@ type Foo = resource enum {
 // NOTE(fxbug.dev/72924): we don't parse resource in this position in the
 // new syntax.
 TEST(ResourcenessTests, BadConstResourceness) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 resource const BAR uint32 = 1;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 // NOTE(fxbug.dev/72924): we don't parse resource in this position in the
 // new syntax.
 TEST(ResourcenessTests, BadProtocolResourceness) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 resource protocol Foo {};
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 // NOTE(fxbug.dev/72924): we don't parse resource in this position in the
 // new syntax.
 TEST(ResourcenessTests, BadAliasResourceness) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 resource alias B = bool;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(ResourcenessTests, BadDuplicateModifier) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type One = resource struct {};
 type Two = resource resource struct {};            // line 5
 type Three = resource resource resource struct {}; // line 6
-  )FIDL",
-                      experimental_flags);
+  )FIDL");
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -111,15 +97,15 @@ type Three = resource resource resource struct {}; // line 6
 
 TEST(ResourcenessTests, GoodResourceStruct) {
   for (const std::string& definition : {
-           "resource struct Foo {};",
-           "resource struct Foo { bool b; };",
-           "using zx;\nresource struct Foo { zx.handle h; };",
-           "using zx;\nresource struct Foo { array<zx.handle>:1 a; };",
-           "using zx;\nresource struct Foo { vector<zx.handle> v; };",
+           "type Foo =  resource struct {};",
+           "type Foo = resource struct { b bool; };",
+           "using zx;\ntype Foo = resource struct{ h zx.handle; };",
+           "using zx;\ntype Foo = resource struct{ a array<zx.handle, 1>; };",
+           "using zx;\ntype Foo = resource struct{ v vector<zx.handle>; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     auto library = WithLibraryZx(fidl_library);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     EXPECT_EQ(library.LookupStruct("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
               fidl_library.c_str());
   }
@@ -127,15 +113,15 @@ TEST(ResourcenessTests, GoodResourceStruct) {
 
 TEST(ResourcenessTests, GoodResourceTable) {
   for (const std::string& definition : {
-           "resource table Foo {};",
-           "resource table Foo { 1: bool b; };",
-           "using zx;\nresource table Foo { 1: zx.handle h; };",
-           "using zx;\nresource table Foo { 1: array<zx.handle>:1 a; };",
-           "using zx;\nresource table Foo { 1: vector<zx.handle> v; };",
+           "type Foo = resource table {};",
+           "type Foo = resource table { 1: b bool; };",
+           "using zx;\ntype Foo = resource table { 1: h zx.handle; };",
+           "using zx;\ntype Foo = resource table { 1: a array<zx.handle, 1>; };",
+           "using zx;\ntype Foo = resource table { 1: v vector<zx.handle>; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     auto library = WithLibraryZx(fidl_library);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     EXPECT_EQ(library.LookupTable("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
               fidl_library.c_str());
   }
@@ -143,23 +129,21 @@ TEST(ResourcenessTests, GoodResourceTable) {
 
 TEST(ResourcenessTests, GoodResourceUnion) {
   for (const std::string& definition : {
-           "resource union Foo { 1: bool b; };",
-           "using zx;\nresource union Foo { 1: zx.handle h; };",
-           "using zx;\nresource union Foo { 1: array<zx.handle>:1 a; };",
-           "using zx;\nresource union Foo { 1: vector<zx.handle> v; };",
+           "type Foo = resource union { 1: b bool; };",
+           "using zx;\ntype Foo = resource union { 1: h zx.handle; };",
+           "using zx;\ntype Foo = resource union { 1: a array<zx.handle, 1>; };",
+           "using zx;\ntype Foo = resource union { 1: v vector<zx.handle>; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     auto library = WithLibraryZx(fidl_library);
     ;
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     EXPECT_EQ(library.LookupUnion("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
               fidl_library.c_str());
   }
 }
 
 TEST(ResourcenessTests, BadHandlesInValueStruct) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   for (const std::string& definition : {
            "type Foo = struct { bad_member zx.handle; };",
            "type Foo = struct { bad_member zx.handle:optional; };",
@@ -168,7 +152,7 @@ TEST(ResourcenessTests, BadHandlesInValueStruct) {
            "type Foo = struct { bad_member vector<zx.handle>:0; };",
        }) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library, experimental_flags);
+    auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -176,8 +160,6 @@ TEST(ResourcenessTests, BadHandlesInValueStruct) {
 }
 
 TEST(ResourcenessTests, BadHandlesInValueTable) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   for (const std::string& definition : {
            "type Foo = table { 1: bad_member zx.handle; };",
            "type Foo = table { 1: bad_member array<zx.handle, 1>; };",
@@ -185,7 +167,7 @@ TEST(ResourcenessTests, BadHandlesInValueTable) {
            "type Foo = table { 1: bad_member vector<zx.handle>:0; };",
        }) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library, experimental_flags);
+    auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -193,8 +175,6 @@ TEST(ResourcenessTests, BadHandlesInValueTable) {
 }
 
 TEST(ResourcenessTests, BadHandlesInValueUnion) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   for (const std::string& definition : {
            "type Foo = union { 1: bad_member zx.handle; };",
            "type Foo = union { 1: bad_member array<zx.handle, 1>; };",
@@ -202,7 +182,7 @@ TEST(ResourcenessTests, BadHandlesInValueUnion) {
            "type Foo = union { 1: bad_member vector<zx.handle>:0; };",
        }) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library, experimental_flags);
+    auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -211,8 +191,6 @@ TEST(ResourcenessTests, BadHandlesInValueUnion) {
 }
 
 TEST(ResourcenessTests, BadProtocolsInValueType) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   for (const std::string& definition : {
            "type Foo = struct { bad_member client_end:Protocol; };",
            "type Foo = struct { bad_member client_end:<Protocol, optional>; };",
@@ -226,7 +204,7 @@ using zx;
 protocol Protocol {};
 
 )FIDL" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library, experimental_flags);
+    auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -234,8 +212,6 @@ protocol Protocol {};
   }
 }
 TEST(ResourcenessTests, BadResourceTypesInValueType) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   for (const std::string& definition : {
            "type Foo = struct { bad_member ResourceStruct; };",
            "type Foo = struct { bad_member ResourceStruct:optional; };",
@@ -251,7 +227,7 @@ type ResourceTable = resource table {};
 type ResourceUnion = resource union { 1: b bool; };
 
 )FIDL" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library, experimental_flags);
+    auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -260,8 +236,6 @@ type ResourceUnion = resource union { 1: b bool; };
 }
 
 TEST(ResourcenessTests, BadResourceAliasesInValueType) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   for (const std::string& definition : {
            "type Foo = struct { bad_member HandleAlias; };",
            "type Foo = struct { bad_member ProtocolAlias; };",
@@ -285,7 +259,7 @@ type ResourceTable = resource table {};
 type ResourceUnion = resource union { 1: b bool; };
 
 )FIDL" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library, experimental_flags);
+    auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -294,8 +268,6 @@ type ResourceUnion = resource union { 1: b bool; };
 }
 
 TEST(ResourcenessTests, BadResourcesInNestedContainers) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   for (const std::string& definition : {
            "type Foo = struct { bad_member vector<vector<zx.handle>>; };",
            "type Foo = struct { bad_member vector<vector<zx.handle:optional>>; };",
@@ -316,7 +288,7 @@ type ResourceTable = resource table {};
 type ResourceUnion = resource union { 1: b bool; };
 
 )FIDL" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library, experimental_flags);
+    auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -325,8 +297,6 @@ type ResourceUnion = resource union { 1: b bool; };
 }
 
 TEST(ResourcenessTests, BadMultipleResourceTypesInValueType) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
@@ -338,8 +308,7 @@ type Foo = struct {
 };
 
 type ResourceStruct = resource struct {};
-)FIDL",
-                               experimental_flags);
+)FIDL");
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -359,26 +328,23 @@ type ResourceStruct = resource struct {};
 }
 
 TEST(ResourcenessTests, GoodTransitiveResourceMember) {
-  std::string fidl_library = R"FIDL(
-library example;
+  std::string fidl_library = R"FIDL(library example;
 
-resource struct Top {
-  Middle middle;
+type Top = resource struct {
+    middle Middle;
 };
-resource struct Middle {
-  Bottom bottom;
+type Middle = resource struct {
+    bottom Bottom;
 };
-resource struct Bottom {};
+type Bottom = resource struct {};
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   EXPECT_EQ(library.LookupStruct("Top")->resourceness, fidl::types::Resourceness::kResource);
 }
 
 TEST(ResourcenessTests, BadTransitiveResourceMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -389,8 +355,7 @@ type Middle = struct {
   bottom Bottom;
 };
 type Bottom = resource struct {};
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeMustBeResource,
                                       fidl::ErrTypeMustBeResource);
   // `Middle` must be a resource because it includes `bottom`, a *nominal* resource.
@@ -403,42 +368,38 @@ type Bottom = resource struct {};
 }
 
 TEST(ResourcenessTests, GoodRecursiveValueTypes) {
-  std::string fidl_library = R"FIDL(
-library example;
+  std::string fidl_library = R"FIDL(library example;
 
-struct Ouro {
-  Boros? b;
+type Ouro = struct {
+    b box<Boros>;
 };
 
-struct Boros {
-  Ouro? o;
+type Boros = struct {
+    o box<Ouro>;
 };
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ResourcenessTests, GoodRecursiveResourceTypes) {
-  std::string fidl_library = R"FIDL(
-library example;
+  std::string fidl_library = R"FIDL(library example;
 
-resource struct Ouro {
-  Boros? b;
+type Ouro = resource struct {
+    b box<Boros>;
 };
 
-resource struct Boros {
-  Ouro? o;
+type Boros = resource struct {
+    o box<Ouro>;
 };
 )FIDL";
 
   TestLibrary library(fidl_library);
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ResourcenessTests, BadRecursiveResourceTypes) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -449,21 +410,23 @@ type Ouro = resource struct {
 type Boros = struct {
   bad_member Ouro:optional;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Boros");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member");
 }
 
 TEST(ResourcenessTests, GoodStrictResourceOrderIndependent) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-strict resource union SR { 1: bool b; };
-resource strict union RS { 1: bool b; };
+type SR = strict resource union {
+    1: b bool;
+};
+type RS = strict resource union {
+    1: b bool;
+};
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   const auto strict_resource = library.LookupUnion("SR");
   EXPECT_EQ(strict_resource->strictness, fidl::types::Strictness::kStrict);

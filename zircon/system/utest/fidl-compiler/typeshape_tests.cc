@@ -17,7 +17,7 @@ namespace {
 const std::string kPrologWithHandleDefinition(R"FIDL(
 library example;
 
-enum obj_type : uint32 {
+type obj_type = enum : uint32 {
     NONE = 0;
     PROCESS = 1;
     THREAD = 2;
@@ -29,7 +29,7 @@ enum obj_type : uint32 {
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
     };
 };
 )FIDL");
@@ -102,13 +102,11 @@ void CheckFieldShape(const T& field, ExpectedField expected) {
 }
 
 TEST(TypeshapeTests, GoodEmptyStruct) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct Empty {};
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+type Empty = struct {};
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto empty = test_library.LookupStruct("Empty");
   ASSERT_NOT_NULL(empty);
@@ -120,10 +118,9 @@ struct Empty {};
 }
 
 TEST(TypeshapeTests, GoodEmptyStructWithinAnotherStruct) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct Empty {};
+type Empty = struct {};
 
 // Size = 1 byte for |bool a|
 //      + 1 byte for |Empty b|
@@ -138,26 +135,25 @@ struct Empty {};
 //
 // Alignment = 4 bytes stemming from largest member (int32).
 //
-struct EmptyWithOtherThings {
-  bool a;
-  // no padding
-  Empty b;
-  // no padding
-  int16 c;
-  // no padding
-  Empty d;
-  // 3 bytes padding
-  int32 e;
-  // no padding
-  int16 f;
-  // no padding
-  Empty g;
-  // no padding
-  Empty h;
+type EmptyWithOtherThings = struct {
+    a bool;
+    // no padding
+    b Empty;
+    // no padding
+    c int16;
+    // no padding
+    d Empty;
+    // 3 bytes padding
+    e int32;
+    // no padding
+    f int16;
+    // no padding
+    g Empty;
+    // no padding
+    h Empty;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto empty_with_other_things = test_library.LookupStruct("EmptyWithOtherThings");
   ASSERT_NOT_NULL(empty_with_other_things);
@@ -199,29 +195,28 @@ struct EmptyWithOtherThings {
 }
 
 TEST(TypeshapeTests, GoodSimpleStructs) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct OneBool {
-  bool b;
+type OneBool = struct {
+    b bool;
 };
 
-struct TwoBools {
-  bool a;
-  bool b;
+type TwoBools = struct {
+    a bool;
+    b bool;
 };
 
-struct BoolAndU32 {
-  bool b;
-  uint32 u;
+type BoolAndU32 = struct {
+    b bool;
+    u uint32;
 };
 
-struct BoolAndU64 {
-  bool b;
-  uint64 u;
+type BoolAndU64 = struct {
+    b bool;
+    u uint64;
 };
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto one_bool = test_library.LookupStruct("OneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -273,23 +268,22 @@ struct BoolAndU64 {
 
 TEST(TypeshapeTests, GoodSimpleStructsWithHandles) {
   TestLibrary test_library(kPrologWithHandleDefinition + R"FIDL(
-resource struct OneHandle {
-  handle h;
+type OneHandle = resource struct {
+  h handle;
 };
 
-resource struct TwoHandles {
-  handle:CHANNEL h1;
-  handle:PORT h2;
+type TwoHandles = resource struct {
+  h1 handle:CHANNEL;
+  h2 handle:PORT;
 };
 
-resource struct ThreeHandlesOneOptional {
-  handle:CHANNEL h1;
-  handle:PORT h2;
-  handle:TIMER? opt_h3;
+type ThreeHandlesOneOptional = resource struct {
+  h1 handle:CHANNEL;
+  h2 handle:PORT;
+  opt_h3 handle:<TIMER, optional>;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto one_handle = test_library.LookupStruct("OneHandle");
   ASSERT_NOT_NULL(one_handle);
@@ -332,18 +326,17 @@ resource struct ThreeHandlesOneOptional {
 }
 
 TEST(TypeshapeTests, GoodBits) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-bits Bits16 : uint16 {
+type Bits16 = strict bits : uint16 {
     VALUE = 1;
 };
 
-bits BitsImplicit {
+type BitsImplicit = strict bits {
     VALUE = 1;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+  ASSERT_COMPILED(test_library);
 
   auto bits16 = test_library.LookupBits("Bits16");
   ASSERT_NOT_NULL(bits16);
@@ -361,33 +354,30 @@ bits BitsImplicit {
 }
 
 TEST(TypeshapeTests, GoodSimpleTables) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-table TableWithNoMembers {
+type TableWithNoMembers = table {};
+
+type TableWithOneBool = table {
+    1: b bool;
 };
 
-table TableWithOneBool {
-  1: bool b;
+type TableWithTwoBools = table {
+    1: a bool;
+    2: b bool;
 };
 
-table TableWithTwoBools {
-  1: bool a;
-  2: bool b;
+type TableWithBoolAndU32 = table {
+    1: b bool;
+    2: u uint32;
 };
 
-table TableWithBoolAndU32 {
-  1: bool b;
-  2: uint32 u;
+type TableWithBoolAndU64 = table {
+    1: b bool;
+    2: u uint64;
 };
-
-table TableWithBoolAndU64 {
-  1: bool b;
-  2: uint64 u;
-};
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto no_members = test_library.LookupTable("TableWithNoMembers");
   ASSERT_NOT_NULL(no_members);
@@ -481,40 +471,39 @@ table TableWithBoolAndU64 {
 }
 
 TEST(TypeshapeTests, GoodTablesWithReservedFields) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-table SomeReserved {
-  1: bool b;
-  2: reserved;
-  3: bool b2;
-  4: reserved;
+type SomeReserved = table {
+    1: b bool;
+    2: reserved;
+    3: b2 bool;
+    4: reserved;
 };
 
-table LastNonReserved {
-  1: reserved;
-  2: reserved;
-  3: bool b;
+type LastNonReserved = table {
+    1: reserved;
+    2: reserved;
+    3: b bool;
 };
 
-table LastReserved {
-  1: bool b;
-  2: bool b2;
-  3: reserved;
-  4: reserved;
+type LastReserved = table {
+    1: b bool;
+    2: b2 bool;
+    3: reserved;
+    4: reserved;
 };
 
-table AllReserved {
-  1: reserved;
-  2: reserved;
-  3: reserved;
+type AllReserved = table {
+    1: reserved;
+    2: reserved;
+    3: reserved;
 };
 
-table OneReserved {
-  1: reserved;
+type OneReserved = table {
+    1: reserved;
 };
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto some_reserved = test_library.LookupTable("SomeReserved");
   ASSERT_NOT_NULL(some_reserved);
@@ -604,12 +593,12 @@ TEST(TypeshapeTests, GoodSimpleTablesWithHandles) {
 library example;
 using zx;
 
-resource table TableWithOneHandle {
-  1: zx.handle h;
+type TableWithOneHandle = resource table {
+  1: h zx.handle;
 };
 
     )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+  ASSERT_COMPILED(test_library);
 
   auto one_handle = test_library.LookupTable("TableWithOneHandle");
   ASSERT_NOT_NULL(one_handle);
@@ -635,46 +624,44 @@ resource table TableWithOneHandle {
 }
 
 TEST(TypeshapeTests, GoodOptionalStructs) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct OneBool {
-  bool b;
+type OneBool = struct {
+    b bool;
 };
 
-struct OptionalOneBool {
-  OneBool? s;
+type OptionalOneBool = struct {
+    s box<OneBool>;
 };
 
-struct TwoBools {
-  bool a;
-  bool b;
+type TwoBools = struct {
+    a bool;
+    b bool;
 };
 
-struct OptionalTwoBools {
-  TwoBools? s;
+type OptionalTwoBools = struct {
+    s box<TwoBools>;
 };
 
-struct BoolAndU32 {
-  bool b;
-  uint32 u;
+type BoolAndU32 = struct {
+    b bool;
+    u uint32;
 };
 
-struct OptionalBoolAndU32 {
-  BoolAndU32? s;
+type OptionalBoolAndU32 = struct {
+    s box<BoolAndU32>;
 };
 
-struct BoolAndU64 {
-  bool b;
-  uint64 u;
+type BoolAndU64 = struct {
+    b bool;
+    u uint64;
 };
 
-struct OptionalBoolAndU64 {
-  BoolAndU64? s;
+type OptionalBoolAndU64 = struct {
+    s box<BoolAndU64>;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto one_bool = test_library.LookupStruct("OptionalOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -720,81 +707,79 @@ struct OptionalBoolAndU64 {
 }
 
 TEST(TypeshapeTests, GoodOptionalTables) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct OneBool {
-  bool b;
+type OneBool = struct {
+    b bool;
 };
 
-table TableWithOptionalOneBool {
-  1: OneBool s;
+type TableWithOptionalOneBool = table {
+    1: s OneBool;
 };
 
-table TableWithOneBool {
-  1: bool b;
+type TableWithOneBool = table {
+    1: b bool;
 };
 
-table TableWithOptionalTableWithOneBool {
-  1: TableWithOneBool s;
+type TableWithOptionalTableWithOneBool = table {
+    1: s TableWithOneBool;
 };
 
-struct TwoBools {
-  bool a;
-  bool b;
+type TwoBools = struct {
+    a bool;
+    b bool;
 };
 
-table TableWithOptionalTwoBools {
-  1: TwoBools s;
+type TableWithOptionalTwoBools = table {
+    1: s TwoBools;
 };
 
-table TableWithTwoBools {
-  1: bool a;
-  2: bool b;
+type TableWithTwoBools = table {
+    1: a bool;
+    2: b bool;
 };
 
-table TableWithOptionalTableWithTwoBools {
-  1: TableWithTwoBools s;
+type TableWithOptionalTableWithTwoBools = table {
+    1: s TableWithTwoBools;
 };
 
-struct BoolAndU32 {
-  bool b;
-  uint32 u;
+type BoolAndU32 = struct {
+    b bool;
+    u uint32;
 };
 
-table TableWithOptionalBoolAndU32 {
-  1: BoolAndU32 s;
+type TableWithOptionalBoolAndU32 = table {
+    1: s BoolAndU32;
 };
 
-table TableWithBoolAndU32 {
-  1: bool b;
-  2: uint32 u;
+type TableWithBoolAndU32 = table {
+    1: b bool;
+    2: u uint32;
 };
 
-table TableWithOptionalTableWithBoolAndU32 {
-  1: TableWithBoolAndU32 s;
+type TableWithOptionalTableWithBoolAndU32 = table {
+    1: s TableWithBoolAndU32;
 };
 
-struct BoolAndU64 {
-  bool b;
-  uint64 u;
+type BoolAndU64 = struct {
+    b bool;
+    u uint64;
 };
 
-table TableWithOptionalBoolAndU64 {
-  1: BoolAndU64 s;
+type TableWithOptionalBoolAndU64 = table {
+    1: s BoolAndU64;
 };
 
-table TableWithBoolAndU64 {
-  1: bool b;
-  2: uint64 u;
+type TableWithBoolAndU64 = table {
+    1: b bool;
+    2: u uint64;
 };
 
-table TableWithOptionalTableWithBoolAndU64 {
-  1: TableWithBoolAndU64 s;
+type TableWithOptionalTableWithBoolAndU64 = table {
+    1: s TableWithBoolAndU64;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto one_bool = test_library.LookupTable("TableWithOptionalOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -958,41 +943,39 @@ table TableWithOptionalTableWithBoolAndU64 {
 }
 
 TEST(TypeshapeTests, GoodUnions) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct BoolAndU64 {
-  bool b;
-  uint64 u;
+type BoolAndU64 = struct {
+    b bool;
+    u uint64;
 };
 
-union UnionOfThings {
-  1: bool ob;
-  2: BoolAndU64 bu;
+type UnionOfThings = strict union {
+    1: ob bool;
+    2: bu BoolAndU64;
 };
 
-struct Bool {
-  bool b;
+type Bool = struct {
+    b bool;
 };
 
-struct OptBool {
-  Bool? opt_b;
+type OptBool = struct {
+    opt_b box<Bool>;
 };
 
-union UnionWithOutOfLine {
-  1: OptBool opt_bool;
+type UnionWithOutOfLine = strict union {
+    1: opt_bool OptBool;
 };
 
-struct OptionalUnion {
-  UnionOfThings? u;
+type OptionalUnion = struct {
+    u UnionOfThings:optional;
 };
 
-table TableWithOptionalUnion {
-  1: UnionOfThings u;
+type TableWithOptionalUnion = table {
+    1: u UnionOfThings;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto union_with_out_of_line = test_library.LookupUnion("UnionWithOutOfLine");
   ASSERT_NO_FAILURES(CheckTypeShape(union_with_out_of_line,
@@ -1089,20 +1072,20 @@ TEST(TypeshapeTests, GoodUnionsWithHandles) {
 library example;
 using zx;
 
-resource union OneHandleUnion {
-  1: zx.handle one_handle;
-  2: bool one_bool;
-  3: uint32 one_int;
+type OneHandleUnion = strict resource union {
+  1: one_handle zx.handle;
+  2: one_bool bool;
+  3: one_int uint32;
 };
 
-resource union ManyHandleUnion {
-  1: zx.handle one_handle;
-  2: array<zx.handle>:8 handle_array;
-  3: vector<zx.handle>:8 handle_vector;
+type ManyHandleUnion = strict resource union {
+  1: one_handle zx.handle;
+  2: handle_array array<zx.handle, 8>;
+  3: handle_vector vector<zx.handle>:8;
 };
 
     )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+  ASSERT_COMPILED(test_library);
 
   auto one_handle_union = test_library.LookupUnion("OneHandleUnion");
   ASSERT_NOT_NULL(one_handle_union);
@@ -1194,41 +1177,39 @@ resource union ManyHandleUnion {
 }
 
 TEST(TypeshapeTests, GoodVectors) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct PaddedVector {
-  vector<int32>:3 pv;
+type PaddedVector = struct {
+    pv vector<int32>:3;
 };
 
-struct NoPaddingVector {
-  vector<uint64>:3 npv;
+type NoPaddingVector = struct {
+    npv vector<uint64>:3;
 };
 
-struct UnboundedVector {
-  vector<int32> uv;
+type UnboundedVector = struct {
+    uv vector<int32>;
 };
 
-struct UnboundedVectors {
-  vector<int32> uv1;
-  vector<int32> uv2;
+type UnboundedVectors = struct {
+    uv1 vector<int32>;
+    uv2 vector<int32>;
 };
 
-table TableWithPaddedVector {
-  1: vector<int32>:3 pv;
+type TableWithPaddedVector = table {
+    1: pv vector<int32>:3;
 };
 
-table TableWithUnboundedVector {
-  1: vector<int32> uv;
+type TableWithUnboundedVector = table {
+    1: uv vector<int32>;
 };
 
-table TableWithUnboundedVectors {
-  1: vector<int32> uv1;
-  2: vector<int32> uv2;
+type TableWithUnboundedVectors = table {
+    1: uv1 vector<int32>;
+    2: uv2 vector<int32>;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto padded_vector = test_library.LookupStruct("PaddedVector");
   ASSERT_NOT_NULL(padded_vector);
@@ -1322,48 +1303,48 @@ TEST(TypeshapeTests, GoodVectorsWithHandles) {
 library example;
 using zx;
 
-resource struct HandleVector {
-  vector<zx.handle>:8 hv;
+type HandleVector = resource struct {
+  hv vector<zx.handle>:8;
 };
 
-resource struct HandleNullableVector {
-  vector<zx.handle>:8? hv;
+type HandleNullableVector = resource struct {
+  hv vector<zx.handle>:<8, optional>;
 };
 
-resource table TableWithHandleVector {
-  1: vector<zx.handle>:8 hv;
+type TableWithHandleVector = resource table {
+  1: hv vector<zx.handle>:8;
 };
 
-resource struct UnboundedHandleVector {
-  vector<zx.handle> hv;
+type UnboundedHandleVector = resource struct {
+  hv vector<zx.handle>;
 };
 
-resource table TableWithUnboundedHandleVector {
-  1: vector<zx.handle> hv;
+type TableWithUnboundedHandleVector = resource table {
+  1: hv vector<zx.handle>;
 };
 
-resource struct OneHandle {
-  zx.handle h;
+type OneHandle = resource struct {
+  h zx.handle;
 };
 
-resource struct HandleStructVector {
-  vector<OneHandle>:8 sv;
+type HandleStructVector = resource struct {
+  sv vector<OneHandle>:8;
 };
 
-resource table TableWithOneHandle {
-  1: zx.handle h;
+type TableWithOneHandle = resource table {
+  1: h zx.handle;
 };
 
-resource struct HandleTableVector {
-  vector<TableWithOneHandle>:8 sv;
+type HandleTableVector = resource struct {
+  sv vector<TableWithOneHandle>:8;
 };
 
-resource table TableWithHandleStructVector {
-  1: vector<OneHandle>:8 sv;
+type TableWithHandleStructVector = resource table {
+  1: sv vector<OneHandle>:8;
 };
 
     )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+  ASSERT_COMPILED(test_library);
 
   auto handle_vector = test_library.LookupStruct("HandleVector");
   ASSERT_NOT_NULL(handle_vector);
@@ -1470,27 +1451,25 @@ resource table TableWithHandleStructVector {
 }
 
 TEST(TypeshapeTests, GoodStrings) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct ShortString {
-  string:5 s;
+type ShortString = struct {
+    s string:5;
 };
 
-struct UnboundedString {
-  string s;
+type UnboundedString = struct {
+    s string;
 };
 
-table TableWithShortString {
-  1: string:5 s;
+type TableWithShortString = table {
+    1: s string:5;
 };
 
-table TableWithUnboundedString {
-  1: string s;
+type TableWithUnboundedString = table {
+    1: s string;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto short_string = test_library.LookupStruct("ShortString");
   ASSERT_NOT_NULL(short_string);
@@ -1547,27 +1526,25 @@ table TableWithUnboundedString {
 }
 
 TEST(TypeshapeTests, GoodArrays) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-struct AnArray {
-  array<int64>:5 a;
+type AnArray = struct {
+    a array<int64, 5>;
 };
 
-table TableWithAnArray {
-  1: array<int64>:5 a;
+type TableWithAnArray = table {
+    1: a array<int64, 5>;
 };
 
-table TableWithAnInt32ArrayWithPadding {
-  1: array<int32>:3 a;
+type TableWithAnInt32ArrayWithPadding = table {
+    1: a array<int32, 3>;
 };
 
-table TableWithAnInt32ArrayNoPadding {
-  1: array<int32>:4 a;
+type TableWithAnInt32ArrayNoPadding = table {
+    1: a array<int32, 4>;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto an_array = test_library.LookupStruct("AnArray");
   ASSERT_NOT_NULL(an_array);
@@ -1646,24 +1623,24 @@ TEST(TypeshapeTests, GoodArraysWithHandles) {
 library example;
 using zx;
 
-resource struct HandleArray {
-  array<zx.handle>:8 ha;
+type HandleArray = resource struct {
+  h1 array<zx.handle, 8>;
 };
 
-resource table TableWithHandleArray {
-  1: array<zx.handle>:8 ha;
+type TableWithHandleArray = resource table {
+  1: ha array<zx.handle, 8>;
 };
 
-resource struct NullableHandleArray {
-  array<zx.handle?>:8 ha;
+type NullableHandleArray = resource struct {
+  ha array<zx.handle:optional, 8>;
 };
 
-resource table TableWithNullableHandleArray {
-  1: array<zx.handle?>:8 ha;
+type TableWithNullableHandleArray = resource table {
+  1: ha array<zx.handle:optional, 8>;
 };
 
     )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+  ASSERT_COMPILED(test_library);
 
   auto handle_array = test_library.LookupStruct("HandleArray");
   ASSERT_NOT_NULL(handle_array);
@@ -1729,49 +1706,48 @@ resource table TableWithNullableHandleArray {
 // TODO(pascallouis): write an "xunions_with_handles" test case.
 
 TEST(TypeshapeTests, GoodFlexibleUnions) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-flexible union XUnionWithOneBool {
-  1: bool b;
+type XUnionWithOneBool = flexible union {
+    1: b bool;
 };
 
-struct StructWithOptionalXUnionWithOneBool {
-  XUnionWithOneBool? opt_xunion_with_bool;
+type StructWithOptionalXUnionWithOneBool = struct {
+    opt_xunion_with_bool XUnionWithOneBool:optional;
 };
 
-flexible union XUnionWithBoundedOutOfLineObject {
-  // smaller than |v| below, so will not be selected for max-out-of-line
-  // calculation.
-  1: bool b;
+type XUnionWithBoundedOutOfLineObject = flexible union {
+    // smaller than |v| below, so will not be selected for max-out-of-line
+    // calculation.
+    1: b bool;
 
-  // 1. vector<int32>:5 = 8 bytes for vector element count
-  //                    + 8 bytes for data pointer
-  //                    + 24 bytes out-of-line (20 bytes contents +
-  //                                            4 bytes for 8-byte alignment)
-  //                    = 40 bytes total
-  // 1. vector<vector<int32>:5>:6 = vector of up to six of vector<int32>:5
-  //                              = 8 bytes for vector element count
-  //                              + 8 bytes for data pointer
-  //                              + 240 bytes out-of-line (40 bytes contents * 6)
-  //                              = 256 bytes total
-  2: vector<vector<int32>:5>:6 v;
+    // 1. vector<int32>:5 = 8 bytes for vector element count
+    //                    + 8 bytes for data pointer
+    //                    + 24 bytes out-of-line (20 bytes contents +
+    //                                            4 bytes for 8-byte alignment)
+    //                    = 40 bytes total
+    // 1. vector<vector<int32>:5>:6 = vector of up to six of vector<int32>:5
+    //                              = 8 bytes for vector element count
+    //                              + 8 bytes for data pointer
+    //                              + 240 bytes out-of-line (40 bytes contents * 6)
+    //                              = 256 bytes total
+    2: v vector<vector<int32>:5>:6;
 };
 
-flexible union XUnionWithUnboundedOutOfLineObject {
-  1: string s;
+type XUnionWithUnboundedOutOfLineObject = flexible union {
+    1: s string;
 };
 
-flexible union XUnionWithoutPayloadPadding {
-  1: array<uint64>:7 a;
+type XUnionWithoutPayloadPadding = flexible union {
+    1: a array<uint64, 7>;
 };
 
-flexible union PaddingCheck {
-  1: array<uint8>:3 three;
-  2: array<uint8>:5 five;
+type PaddingCheck = flexible union {
+    1: three array<uint8, 3>;
+    2: five array<uint8, 5>;
 };
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto one_bool = test_library.LookupUnion("XUnionWithOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -1912,42 +1888,39 @@ flexible union PaddingCheck {
 }
 
 TEST(TypeshapeTests, GoodEnvelopeStrictness) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
-strict union StrictLeafXUnion {
-    1: int64 a;
+type StrictLeafXUnion = strict union {
+    1: a int64;
 };
 
-flexible union FlexibleLeafXUnion {
-    1: int64 a;
+type FlexibleLeafXUnion = flexible union {
+    1: a int64;
 };
 
-flexible union FlexibleXUnionOfStrictXUnion {
-    1: StrictLeafXUnion xu;
+type FlexibleXUnionOfStrictXUnion = flexible union {
+    1: xu StrictLeafXUnion;
 };
 
-flexible union FlexibleXUnionOfFlexibleXUnion {
-    1: FlexibleLeafXUnion xu;
+type FlexibleXUnionOfFlexibleXUnion = flexible union {
+    1: xu FlexibleLeafXUnion;
 };
 
-strict union StrictXUnionOfStrictXUnion {
-    1: StrictLeafXUnion xu;
+type StrictXUnionOfStrictXUnion = strict union {
+    1: xu StrictLeafXUnion;
 };
 
-strict union StrictXUnionOfFlexibleXUnion {
-    1: FlexibleLeafXUnion xu;
+type StrictXUnionOfFlexibleXUnion = strict union {
+    1: xu FlexibleLeafXUnion;
 };
 
-table FlexibleLeafTable {
-};
+type FlexibleLeafTable = table {};
 
-strict union StrictXUnionOfFlexibleTable {
-    1: FlexibleLeafTable ft;
+type StrictXUnionOfFlexibleTable = strict union {
+    1: ft FlexibleLeafTable;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto strict_xunion = test_library.LookupUnion("StrictLeafXUnion");
   ASSERT_NOT_NULL(strict_xunion);
@@ -2098,29 +2071,27 @@ strict union StrictXUnionOfFlexibleTable {
 }
 
 TEST(TypeshapeTests, GoodProtocolsAndRequestOfProtocols) {
-  TestLibrary test_library(R"FIDL(
-library example;
+  TestLibrary test_library(R"FIDL(library example;
 
 protocol SomeProtocol {};
 
-resource struct UsingSomeProtocol {
-  SomeProtocol value;
+type UsingSomeProtocol = resource struct {
+    value client_end:SomeProtocol;
 };
 
-resource struct UsingOptSomeProtocol {
-  SomeProtocol? value;
+type UsingOptSomeProtocol = resource struct {
+    value client_end:<SomeProtocol, optional>;
 };
 
-resource struct UsingRequestSomeProtocol {
-  request<SomeProtocol> value;
+type UsingRequestSomeProtocol = resource struct {
+    value server_end:SomeProtocol;
 };
 
-resource struct UsingOptRequestSomeProtocol {
-  request<SomeProtocol>? value;
+type UsingOptRequestSomeProtocol = resource struct {
+    value server_end:<SomeProtocol, optional>;
 };
-
-    )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto using_some_protocol = test_library.LookupStruct("UsingSomeProtocol");
   ASSERT_NOT_NULL(using_some_protocol);
@@ -2161,31 +2132,29 @@ library example;
 
 using zx;
 
-struct ExternalArrayStruct {
-    array<ExternalSimpleStruct>:EXTERNAL_SIZE_DEF a;
+type ExternalArrayStruct = struct {
+    a array<ExternalSimpleStruct, EXTERNAL_SIZE_DEF>;
 };
 
-struct ExternalStringSizeStruct {
-    string:EXTERNAL_SIZE_DEF a;
+type ExternalStringSizeStruct = struct {
+    a string:EXTERNAL_SIZE_DEF;
 };
 
-resource struct ExternalVectorSizeStruct {
-    vector<zx.handle>:EXTERNAL_SIZE_DEF a;
-};
-
-    )FIDL");
-  test_library.AddSource("extern_defs.fidl", R"FIDL(
-library example;
-
-const uint32 EXTERNAL_SIZE_DEF = ANOTHER_INDIRECTION;
-const uint32 ANOTHER_INDIRECTION = 32;
-
-struct ExternalSimpleStruct {
-    uint32 a;
+type ExternalVectorSizeStruct = resource struct {
+    a vector<zx.handle>:EXTERNAL_SIZE_DEF;
 };
 
     )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(test_library);
+  test_library.AddSource("extern_defs.fidl", R"FIDL(library example;
+
+const EXTERNAL_SIZE_DEF uint32 = ANOTHER_INDIRECTION;
+const ANOTHER_INDIRECTION uint32 = 32;
+
+type ExternalSimpleStruct = struct {
+    a uint32;
+};
+)FIDL");
+  ASSERT_COMPILED(test_library);
 
   auto ext_struct = test_library.LookupStruct("ExternalSimpleStruct");
   ASSERT_NOT_NULL(ext_struct);
@@ -2228,12 +2197,11 @@ struct ExternalSimpleStruct {
 //  this test in the new syntax, we "fake" an empty struct payload by generating
 //  the flat::Struct ourselves, rather than using the compiled output.
 TEST(TypeshapeTests, GoodEmptyStructPayload) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Empty {};
+type Empty = struct {};
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto empty = library.LookupStruct("Empty");
   ASSERT_NOT_NULL(empty);
@@ -2260,18 +2228,21 @@ struct Empty {};
 }
 
 TEST(TypeshapeTests, GoodRecursiveRequest) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-resource struct WebMessage {
-  request<MessagePort> message_port_req;
+type WebMessage = resource struct {
+    message_port_req server_end:MessagePort;
 };
 
 protocol MessagePort {
-  PostMessage(WebMessage message) -> (bool success);
+    PostMessage(resource struct {
+        message WebMessage;
+    }) -> (struct {
+        success bool;
+    });
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NOT_NULL(web_message);
@@ -2321,18 +2292,21 @@ protocol MessagePort {
 }
 
 TEST(TypeshapeTests, GoodRecursiveOptRequest) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-resource struct WebMessage {
-  request<MessagePort>? opt_message_port_req;
+type WebMessage = resource struct {
+    opt_message_port_req server_end:<MessagePort, optional>;
 };
 
 protocol MessagePort {
-  PostMessage(WebMessage message) -> (bool success);
+    PostMessage(resource struct {
+        message WebMessage;
+    }) -> (struct {
+        success bool;
+    });
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NOT_NULL(web_message);
@@ -2377,18 +2351,21 @@ protocol MessagePort {
 }
 
 TEST(TypeshapeTests, GoodRecursiveProtocol) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-resource struct WebMessage {
-  MessagePort message_port;
+type WebMessage = resource struct {
+    message_port client_end:MessagePort;
 };
 
 protocol MessagePort {
-  PostMessage(WebMessage message) -> (bool success);
+    PostMessage(resource struct {
+        message WebMessage;
+    }) -> (struct {
+        success bool;
+    });
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NOT_NULL(web_message);
@@ -2433,18 +2410,21 @@ protocol MessagePort {
 }
 
 TEST(TypeshapeTests, GoodRecursiveOptProtocol) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-resource struct WebMessage {
-  MessagePort? opt_message_port;
+type WebMessage = resource struct {
+    opt_message_port client_end:<MessagePort, optional>;
 };
 
 protocol MessagePort {
-  PostMessage(WebMessage message) -> (bool success);
+    PostMessage(resource struct {
+        message WebMessage;
+    }) -> (struct {
+        success bool;
+    });
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NOT_NULL(web_message);
@@ -2489,14 +2469,13 @@ protocol MessagePort {
 }
 
 TEST(TypeshapeTests, GoodRecursiveStruct) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct TheStruct {
-  TheStruct? opt_one_more;
+type TheStruct = struct {
+    opt_one_more box<TheStruct>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto the_struct = library.LookupStruct("TheStruct");
   ASSERT_NOT_NULL(the_struct);
@@ -2514,12 +2493,12 @@ struct TheStruct {
 
 TEST(TypeshapeTests, GoodRecursiveStructWithHandles) {
   TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
-resource struct TheStruct {
-  handle:VMO some_handle;
-  TheStruct? opt_one_more;
+type TheStruct = resource struct {
+  some_handle handle:VMO;
+  opt_one_more box<TheStruct>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto the_struct = library.LookupStruct("TheStruct");
   ASSERT_NOT_NULL(the_struct);
@@ -2542,18 +2521,17 @@ resource struct TheStruct {
 }
 
 TEST(TypeshapeTests, GoodCoRecursiveStruct) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct A {
-    B? foo;
+type A = struct {
+    foo box<B>;
 };
 
-struct B {
-    A? bar;
+type B = struct {
+    bar box<A>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto struct_a = library.LookupStruct("A");
   ASSERT_NOT_NULL(struct_a);
@@ -2583,17 +2561,17 @@ TEST(TypeshapeTests, GoodCoRecursiveStructWithHandles) {
 library example;
 using zx;
 
-resource struct A {
-    zx.handle a;
-    B? foo;
+type A = resource struct {
+    a zx.handle;
+    foo box<B>;
 };
 
-resource struct B {
-    zx.handle b;
-    A? bar;
+type B = resource struct {
+    b zx.handle;
+    bar box<A>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto struct_a = library.LookupStruct("A");
   ASSERT_NOT_NULL(struct_a);
@@ -2621,18 +2599,17 @@ resource struct B {
 }
 
 TEST(TypeshapeTests, GoodCoRecursiveStruct2) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Foo {
-    Bar b;
+type Foo = struct {
+    b Bar;
 };
 
-struct Bar {
-    Foo? f;
+type Bar = struct {
+    f box<Foo>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto struct_foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(struct_foo);
@@ -2659,30 +2636,30 @@ struct Bar {
 
 TEST(TypeshapeTests, GoodStructTwoDeep) {
   TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
-resource struct DiffEntry {
-    vector<uint8>:256 key;
+type DiffEntry = resource struct {
+    key vector<uint8>:256;
 
-    Value? base;
-    Value? left;
-    Value? right;
+    base box<Value>;
+    left box<Value>;
+    right box<Value>;
 };
 
-resource struct Value {
-    Buffer? value;
-    Priority priority;
+type Value = resource struct {
+    value box<Buffer>;
+    priority Priority;
 };
 
-resource struct Buffer {
-    handle:VMO vmo;
-    uint64 size;
+type Buffer = resource struct {
+    vmo handle:VMO;
+    size uint64;
 };
 
-enum Priority {
+type Priority = enum {
     EAGER = 0;
     LAZY = 1;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto buffer = library.LookupStruct("Buffer");
   ASSERT_NOT_NULL(buffer);
@@ -2720,16 +2697,14 @@ enum Priority {
 
 TEST(TypeshapeTests, GoodProtocolChildAndParent) {
   SharedAmongstLibraries shared;
-  TestLibrary parent_library("parent.fidl", R"FIDL(
-library parent;
+  TestLibrary parent_library("parent.fidl", R"FIDL(library parent;
 
 protocol Parent {
-  Sync() -> ();
+    Sync() -> ();
 };
 )FIDL",
                              &shared);
-  TestLibrary converted_parent;
-  ASSERT_COMPILED_AND_CONVERT_INTO(parent_library, converted_parent);
+  ASSERT_COMPILED(parent_library);
 
   TestLibrary child_library("child.fidl", R"FIDL(
 library child;
@@ -2742,42 +2717,7 @@ protocol Child {
 )FIDL",
                             &shared);
   ASSERT_TRUE(child_library.AddDependentLibrary(std::move(parent_library)));
-  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(child_library, converted_parent);
-
-  auto child = child_library.LookupProtocol("Child");
-  ASSERT_NOT_NULL(child);
-  ASSERT_EQ(child->all_methods.size(), 1);
-  auto& sync_with_info = child->all_methods[0];
-  auto sync_request = sync_with_info.method->maybe_request_payload;
-  EXPECT_EQ(sync_with_info.method->has_request, true);
-  ASSERT_NULL(sync_request);
-}
-
-TEST(TypeshapeTests, GoodProtocolChildAndParentWithOldDep) {
-  SharedAmongstLibraries shared;
-  TestLibrary parent_library("parent.fidl", R"FIDL(
-library parent;
-
-protocol Parent {
-  Sync() -> ();
-};
-)FIDL",
-                             &shared);
-  TestLibrary cloned_parent;
-  ASSERT_COMPILED_AND_CLONE_INTO(parent_library, cloned_parent);
-
-  TestLibrary child_library("child.fidl", R"FIDL(
-library child;
-
-using parent;
-
-protocol Child {
-  compose parent.Parent;
-};
-)FIDL",
-                            &shared);
-  ASSERT_TRUE(child_library.AddDependentLibrary(std::move(parent_library)));
-  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(child_library, cloned_parent);
+  ASSERT_COMPILED(child_library);
 
   auto child = child_library.LookupProtocol("Child");
   ASSERT_NOT_NULL(child);
@@ -2789,20 +2729,19 @@ protocol Child {
 }
 
 TEST(TypeshapeTests, GoodUnionSize8Alignment4Sandwich) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union UnionSize8Alignment4 {
-    1: uint32 variant;
+type UnionSize8Alignment4 = strict union {
+    1: variant uint32;
 };
 
-struct Sandwich {
-    uint32 before;
-    UnionSize8Alignment4 union;
-    uint32 after;
+type Sandwich = struct {
+    before uint32;
+    union UnionSize8Alignment4;
+    after uint32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto sandwich = library.LookupStruct("Sandwich");
   ASSERT_NOT_NULL(sandwich);
@@ -2854,20 +2793,19 @@ struct Sandwich {
 }
 
 TEST(TypeshapeTests, GoodUnionSize12Alignment4Sandwich) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union UnionSize12Alignment4 {
-    1: array<uint8>:6 variant;
+type UnionSize12Alignment4 = strict union {
+    1: variant array<uint8, 6>;
 };
 
-struct Sandwich {
-    uint32 before;
-    UnionSize12Alignment4 union;
-    int32 after;
+type Sandwich = struct {
+    before uint32;
+    union UnionSize12Alignment4;
+    after int32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto sandwich = library.LookupStruct("Sandwich");
   ASSERT_NOT_NULL(sandwich);
@@ -2919,25 +2857,24 @@ struct Sandwich {
 }
 
 TEST(TypeshapeTests, GoodUnionSize24Alignment8Sandwich) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct StructSize16Alignment8 {
-    uint64 f1;
-    uint64 f2;
+type StructSize16Alignment8 = struct {
+    f1 uint64;
+    f2 uint64;
 };
 
-union UnionSize24Alignment8 {
-    1: StructSize16Alignment8 variant;
+type UnionSize24Alignment8 = strict union {
+    1: variant StructSize16Alignment8;
 };
 
-struct Sandwich {
-    uint32 before;
-    UnionSize24Alignment8 union;
-    uint32 after;
+type Sandwich = struct {
+    before uint32;
+    union UnionSize24Alignment8;
+    after uint32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto sandwich = library.LookupStruct("Sandwich");
   ASSERT_NOT_NULL(sandwich);
@@ -2989,20 +2926,19 @@ struct Sandwich {
 }
 
 TEST(TypeshapeTests, GoodUnionSize36Alignment4Sandwich) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union UnionSize36Alignment4 {
-    1: array<uint8>:32 variant;
+type UnionSize36Alignment4 = strict union {
+    1: variant array<uint8, 32>;
 };
 
-struct Sandwich {
-    uint32 before;
-    UnionSize36Alignment4 union;
-    uint32 after;
+type Sandwich = struct {
+    before uint32;
+    union UnionSize36Alignment4;
+    after uint32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto sandwich = library.LookupStruct("Sandwich");
   ASSERT_NOT_NULL(sandwich);
@@ -3058,12 +2994,12 @@ TEST(TypeshapeTests, GoodZeroSizeVector) {
 library example;
 using zx;
 
-resource struct A {
-    vector<zx.handle>:0 zero_size;
+type A = resource struct {
+    zero_size vector<zx.handle>:0;
 };
 
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto struct_a = library.LookupStruct("A");
   ASSERT_NOT_NULL(struct_a);

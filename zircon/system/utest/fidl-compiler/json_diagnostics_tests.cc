@@ -37,16 +37,13 @@ void ExpectJson(std::vector<Diagnostic*> diagnostics, std::string expected_json)
 }
 
 TEST(JsonDiagnosticsTests, BadError) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type Table = table {
     1: nullable_string string:optional;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& diagnostics = library.diagnostics();
 
@@ -64,8 +61,6 @@ type Table = table {
 }
 
 TEST(JsonDiagnosticsTests, WarnPassed) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -73,8 +68,7 @@ library example;
 protocol Protocol {
     Method();
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_TRUE(library.Compile());
   const auto& diagnostics = library.diagnostics();
 
@@ -92,8 +86,6 @@ protocol Protocol {
 }
 
 TEST(JsonDiagnosticsTests, BadMultipleErrors) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -105,8 +97,7 @@ type Table = table {
 };
 
 type NewType = Table;  // Error: new type not allowed
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& diagnostics = library.diagnostics();
 
@@ -133,16 +124,13 @@ type NewType = Table;  // Error: new type not allowed
 }
 
 TEST(JsonDiagnosticsTests, BadSpanIsEOF) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type Table = table {
     1: foo string;
 }
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& diagnostics = library.diagnostics();
 

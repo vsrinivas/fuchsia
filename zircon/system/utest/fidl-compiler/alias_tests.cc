@@ -16,8 +16,6 @@ using fidl::flat::GetLayoutInvocation;
 using fidl::flat::GetType;
 
 TEST(AliasTests, BadDuplicateAlias) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -27,22 +25,20 @@ type Message = struct {
 
 alias alias_of_int16 = int16;
 alias alias_of_int16 = int16;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
 TEST(AliasTests, GoodPrimitive) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Message {
-    alias_of_int16 f;
+type Message = struct {
+    f alias_of_int16;
 };
 
 alias alias_of_int16 = int16;
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   auto msg = library.LookupStruct("Message");
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
@@ -64,16 +60,15 @@ alias alias_of_int16 = int16;
 }
 
 TEST(AliasTests, GoodPrimitiveTypeAliasBeforeUse) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
 alias alias_of_int16 = int16;
 
-struct Message {
-    alias_of_int16 f;
+type Message = struct {
+    f alias_of_int16;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   auto msg = library.LookupStruct("Message");
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
@@ -95,8 +90,6 @@ struct Message {
 }
 
 TEST(AliasTests, BadPrimitiveTypeShadowing) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -105,14 +98,11 @@ alias uint32 = uint32;
 type Message = struct {
     f uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
 TEST(AliasTests, BadNoOptionalOnPrimitive) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test.optionals;
 
@@ -120,14 +110,11 @@ type Bad = struct {
     opt_num int64:optional;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
 TEST(AliasTests, BadMultipleConstraintsOnPrimitive) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test.optionals;
 
@@ -135,14 +122,11 @@ type Bad = struct {
     opt_num int64:<optional, foo, bar>;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
 }
 
 TEST(AliasTests, BadNoOptionalOnAliasedPrimitive) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test.optionals;
 
@@ -152,22 +136,20 @@ type Bad = struct {
     opt_num alias:optional;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
 TEST(AliasTests, GoodVectorParameterizedOnDecl) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Message {
-    alias_of_vector_of_string f;
+type Message = struct {
+    f alias_of_vector_of_string;
 };
 
 alias alias_of_vector_of_string = vector<string>;
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   auto msg = library.LookupStruct("Message");
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
@@ -191,8 +173,6 @@ alias alias_of_vector_of_string = vector<string>;
 }
 
 TEST(AliasTests, BadVectorParameterizedOnUse) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -201,15 +181,12 @@ type Message = struct {
 };
 
 alias alias_of_vector = vector;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(AliasTests, BadVectorBoundedOnDecl) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -218,23 +195,21 @@ type Message = struct {
 };
 
 alias alias_of_vector_max_8 = vector:8;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(AliasTests, GoodVectorBoundedOnUse) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Message {
-    alias_of_vector_of_string:8 f;
+type Message = struct {
+    f alias_of_vector_of_string:8;
 };
 
 alias alias_of_vector_of_string = vector<string>;
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   auto msg = library.LookupStruct("Message");
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
@@ -258,16 +233,15 @@ alias alias_of_vector_of_string = vector<string>;
 }
 
 TEST(AliasTests, GoodVectorNullableOnDecl) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Message {
-    alias_of_vector_of_string_nullable f;
+type Message = struct {
+    f alias_of_vector_of_string_nullable;
 };
 
-alias alias_of_vector_of_string_nullable = vector<string>?;
+alias alias_of_vector_of_string_nullable = vector<string>:optional;
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   auto msg = library.LookupStruct("Message");
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
@@ -291,16 +265,15 @@ alias alias_of_vector_of_string_nullable = vector<string>?;
 }
 
 TEST(AliasTests, GoodVectorNullableOnUse) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Message {
-    alias_of_vector_of_string? f;
+type Message = struct {
+    f alias_of_vector_of_string:optional;
 };
 
 alias alias_of_vector_of_string = vector<string>;
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   auto msg = library.LookupStruct("Message");
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
@@ -324,8 +297,6 @@ alias alias_of_vector_of_string = vector<string>;
 }
 
 TEST(AliasTests, BadCannotParameterizeTwice) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -334,15 +305,12 @@ type Message = struct {
 };
 
 alias alias_of_vector_of_string = vector<string>;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(AliasTests, BadCannotBoundTwice) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -351,14 +319,11 @@ type Message = struct {
 };
 
 alias alias_of_vector_of_string_max_5 = vector<string>:5;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBoundTwice);
 }
 
 TEST(AliasTests, BadCannotNullTwice) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -367,8 +332,7 @@ type Message = struct {
 };
 
 alias alias_of_vector_nullable = vector<string>:optional;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotIndicateNullabilityTwice);
 }
 
@@ -376,41 +340,37 @@ TEST(AliasTests, GoodMultiFileAliasReference) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
-struct Protein {
-    AminoAcids amino_acids;
+type Protein = struct {
+  amino_acids AminoAcids;
 };
 )FIDL");
 
-  library.AddSource("second.fidl", R"FIDL(
-library example;
+  library.AddSource("second.fidl", R"FIDL(library example;
 
 alias AminoAcids = vector<uint64>:32;
 )FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(AliasTests, GoodMultiFileNullableAliasReference) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
-struct Protein {
-    AminoAcids? amino_acids;
+type Protein = struct {
+    amino_acids AminoAcids:optional;
 };
 )FIDL");
 
-  library.AddSource("second.fidl", R"FIDL(
-library example;
+  library.AddSource("second.fidl", R"FIDL(library example;
 
 alias AminoAcids = vector<uint64>:32;
 )FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(AliasTests, BadRecursiveAlias) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -419,8 +379,7 @@ alias TheAlias = TheStruct;
 type TheStruct = struct {
     many_mini_me vector<TheAlias>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 
@@ -429,31 +388,25 @@ type TheStruct = struct {
 }
 
 TEST(AliasTests, BadCompoundIdentifier) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("test.fidl", R"FIDL(
 library example;
 
 alias foo.bar.baz = uint8;
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(AliasTests, GoodUsingLibrary) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency("dependent.fidl", R"FIDL(
-library dependent;
+  TestLibrary dependency("dependent.fidl", R"FIDL(library dependent;
 
-struct Bar {
-  int8 s;
+type Bar = struct {
+    s int8;
 };
-
 )FIDL",
                          &shared);
-  TestLibrary converted_dependency;
-  ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
+  ASSERT_COMPILED(dependency);
 
   TestLibrary library("example.fidl", R"FIDL(
 library example;
@@ -465,86 +418,7 @@ alias Bar2 = dependent.Bar;
 )FIDL",
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, converted_dependency);
-}
-
-TEST(AliasTests, GoodUsingLibraryWithOldDep) {
-  SharedAmongstLibraries shared;
-  TestLibrary dependency("dependent.fidl", R"FIDL(
-library dependent;
-
-struct Bar {
-  int8 s;
-};
-
-)FIDL",
-                         &shared);
-  TestLibrary cloned_dependency;
-  ASSERT_COMPILED_AND_CLONE_INTO(dependency, cloned_dependency);
-
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
-
-using dependent;
-
-alias Bar2 = dependent.Bar;
-
-)FIDL",
-                      &shared);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, cloned_dependency);
-}
-
-// This test documents the faulty behavior of handle aliases in the old syntax:
-// since the alias isn't named "handle", we try to parse a subtype/size rather
-// than handle constraints.
-TEST(AliasTests, BadHandleAlias) {
-  auto library = WithLibraryZx(R"FIDL(
-library example;
-
-using zx;
-
-alias my_handle = zx.handle:VMO;
-
-resource struct MyStruct {
-    my_handle:3 h;
-};
-)FIDL",
-                               fidl::ExperimentalFlags());
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotHaveSize)
-}
-
-TEST(AliasTests, BadBoundsOnRequestType) {
-  // Test that CreateInvocation::Size doesn't get ignored on type aliases when
-  // applying constraints
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Foo {};
-
-alias MyRequest = request<Foo>;
-
-struct Data {
-  MyRequest:10 foo;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotHaveSize);
-}
-
-TEST(AliasTests, BadBoundsOnArray) {
-  // Test that CreateInvocation::Size doesn't get ignored on type aliases when
-  // applying constraints
-  TestLibrary library(R"FIDL(
-library example;
-
-alias MyArray = array<uint8>:10;
-
-struct Data {
-  MyArray:10 foo;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotParameterizeAlias);
+  ASSERT_COMPILED(library);
 }
 
 }  // namespace

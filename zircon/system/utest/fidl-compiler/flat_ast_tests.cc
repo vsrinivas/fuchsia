@@ -65,8 +65,6 @@ TEST(FlatAstTests, GoodCompareHandles) {
 }
 
 TEST(FlatAstTests, BadCannotReferenceAnonymousName) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -77,14 +75,11 @@ protocol Foo {
 type Bar = struct {
   bad_member_type FooSomeMethodRequest;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAnonymousNameReference);
 }
 
 TEST(FlatAstTests, BadAnonymousNameConflict) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -93,20 +88,20 @@ protocol Foo {
 };
 
 type FooSomeMethodRequest = struct {};
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
 TEST(FlatAstTests, GoodSingleAnonymousNameUse) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
 protocol Foo {
-  SomeMethod() -> (uint8 some_param) error uint32;
+    SomeMethod() -> (struct {
+        some_param uint8;
+    }) error uint32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 }  // namespace

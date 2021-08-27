@@ -14,16 +14,13 @@
 namespace {
 
 TEST(StrictnessTests, BadDuplicateModifier) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type One = strict union { 1: b bool; };
 type Two = strict strict union { 1: b bool; };          // line 5
 type Three = strict strict strict union { 1: b bool; }; // line 6
-  )FIDL",
-                      std::move(experimental_flags));
+  )FIDL");
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -40,15 +37,12 @@ type Three = strict strict strict union { 1: b bool; }; // line 6
 }
 
 TEST(StrictnessTests, BadConflictingModifiers) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type SF = strict flexible union { 1: b bool; }; // line 4
 type FS = flexible strict union { 1: b bool; }; // line 5
-  )FIDL",
-                      std::move(experimental_flags));
+  )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConflictingModifier,
                                       fidl::ErrConflictingModifier);
   EXPECT_EQ(library.errors()[0]->span->position().line, 4);
@@ -61,23 +55,21 @@ type FS = flexible strict union { 1: b bool; }; // line 5
 
 TEST(StrictnessTests, GoodBitsStrictness) {
   TestLibrary library(
-      R"FIDL(
-library example;
+      R"FIDL(library example;
 
-bits DefaultStrictFoo {
+type DefaultStrictFoo = strict bits {
     BAR = 0x1;
 };
 
-strict bits StrictFoo {
+type StrictFoo = strict bits {
     BAR = 0x1;
 };
 
-flexible bits FlexibleFoo {
+type FlexibleFoo = flexible bits {
     BAR = 0x1;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   EXPECT_EQ(library.LookupBits("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupBits("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(library.LookupBits("DefaultStrictFoo")->strictness, fidl::types::Strictness::kStrict);
@@ -85,109 +77,95 @@ flexible bits FlexibleFoo {
 
 TEST(StrictnessTests, GoodEnumStrictness) {
   TestLibrary library(
-      R"FIDL(
-library example;
+      R"FIDL(library example;
 
-enum DefaultStrictFoo {
+type DefaultStrictFoo = strict enum {
     BAR = 1;
 };
 
-strict enum StrictFoo {
+type StrictFoo = strict enum {
     BAR = 1;
 };
 
-flexible enum FlexibleFoo {
+type FlexibleFoo = flexible enum {
     BAR = 1;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   EXPECT_EQ(library.LookupEnum("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupEnum("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(library.LookupEnum("DefaultStrictFoo")->strictness, fidl::types::Strictness::kStrict);
 }
 
 TEST(StrictnessTests, GoodFlexibleEnum) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-flexible enum Foo {
-  BAR = 1;
+type Foo = flexible enum {
+    BAR = 1;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(StrictnessTests, GoodFlexibleBitsRedundant) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-flexible bits Foo {
-  BAR = 0x1;
+type Foo = flexible bits {
+    BAR = 0x1;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(StrictnessTests, BadStrictnessStruct) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = strict struct {
     i int32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
 TEST(StrictnessTests, BadStrictnessTable) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("table", R"FIDL(
 library example;
 
 type StrictFoo = strict table {};
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
 TEST(StrictnessTests, GoodUnionStrictness) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union Foo {
-    1: int32 i;
+type Foo = strict union {
+    1: i int32;
 };
 
-flexible union FlexibleFoo {
-    1: int32 i;
+type FlexibleFoo = flexible union {
+    1: i int32;
 };
 
-strict union StrictFoo {
-    1: int32 i;
+type StrictFoo = strict union {
+    1: i int32;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   EXPECT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(library.LookupUnion("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupUnion("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
 }
 
 TEST(StrictnessTests, GoodStrictUnionRedundant) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-strict union Foo {
-  1: int32 i;
+type Foo = strict union {
+    1: i int32;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   ASSERT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kStrict);
 }
 

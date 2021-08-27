@@ -11,8 +11,6 @@
 namespace {
 
 TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   for (const std::string& type_usage : {
            "dep2.Type",
            "vector<dep2.Type>",
@@ -31,7 +29,7 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
   type Type = struct {};
   protocol Protocol {};
   )FIDL",
-                     &shared, experimental_flags);
+                     &shared);
     ASSERT_COMPILED(dep2);
 
     TestLibrary dep1("dep1.fidl",
@@ -45,7 +43,7 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
                          type_usage + R"FIDL(; });
   };
   )FIDL",
-                     &shared, experimental_flags);
+                     &shared);
     ASSERT_TRUE(dep1.AddDependentLibrary(&dep2));
     ASSERT_COMPILED(dep1);
 
@@ -58,7 +56,7 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
     compose dep1.Foo;
   };
   )FIDL",
-                    &shared, experimental_flags);
+                    &shared);
     lib.AddDependentLibrary(&dep1);
     ASSERT_COMPILED(lib);
 
@@ -71,15 +69,13 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
 }
 
 TEST(DirectDependenciesTests, GoodDoesNotCaptureTransitiveDeps) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   SharedAmongstLibraries shared;
   TestLibrary dep2("dep2.fidl", R"FIDL(
 library dep2;
 
 type Foo = struct {};
 )FIDL",
-                   &shared, experimental_flags);
+                   &shared);
   ASSERT_COMPILED(dep2);
 
   TestLibrary dep1("dep1.fidl", R"FIDL(
@@ -93,7 +89,7 @@ protocol Baz {
   UsesDepConst(struct { foo vector<Bar>; });
 };
 )FIDL",
-                   &shared, experimental_flags);
+                   &shared);
   ASSERT_TRUE(dep1.AddDependentLibrary(&dep2));
   ASSERT_COMPILED(dep1);
 
@@ -106,7 +102,7 @@ protocol CapturesDependencyThroughCompose {
   compose dep1.Baz;
 };
 )FIDL",
-                  &shared, experimental_flags);
+                  &shared);
   lib.AddDependentLibrary(&dep1);
   ASSERT_COMPILED(lib);
 

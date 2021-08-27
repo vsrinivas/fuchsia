@@ -22,16 +22,15 @@ const fidl::coded::StructPadding& padding(const fidl::coded::StructElement& elem
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfArrays) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Arrays {
-  array<uint8>:7 prime;
-  array<array<uint8>:7>:11 next_prime;
-  array<array<array<uint8>:7>:11>:13 next_next_prime;
+type Arrays = struct {
+    prime array<uint8, 7>;
+    next_prime array<array<uint8, 7>, 11>;
+    next_next_prime array<array<array<uint8, 7>, 11>, 13>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -73,17 +72,16 @@ struct Arrays {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfVectors) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct SomeStruct {};
+type SomeStruct = struct {};
 
-struct Vectors {
-  vector<SomeStruct>:10 bytes1;
-  vector<vector<SomeStruct>:10>:20 bytes12;
+type Vectors = struct {
+    bytes1 vector<SomeStruct>:10;
+    bytes12 vector<vector<SomeStruct>:10>:20;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -136,50 +134,50 @@ library example;
 
 using zx;
 
-bits Bits : uint32 {
+type Bits = bits : uint32 {
   A = 1;
 };
 
-enum Enum : uint32 {
+type Enum = enum : uint32 {
   A = 1;
 };
 
 protocol P {};
 
-struct EmptyStruct{};
+type EmptyStruct = struct {};
 
-struct NeverMutateStruct {
-  uint32 v1;
-  Bits v2;
-  Enum v3;
+type NeverMutateStruct = struct {
+  v1 uint32;
+  v2 Bits;
+  v3 Enum;
 };
 
-struct PaddingStruct {
-  uint32 v1;
-  uint64 v2;
+type PaddingStruct = struct {
+  v1 uint32;
+  v2 uint64;
 };
 
-resource table Table {};
-resource union Union {
-    1: uint32 a;
+type Table = resource table {};
+type Union = resource union {
+    1: a uint32;
 };
 
-resource struct Value {
+type Value = resource struct {
   // The number in the name corresponds to the field index in the assertions below.
-  vector<EmptyStruct> never0;
-  vector<NeverMutateStruct> never1;
-  vector<NeverMutateStruct?> maybe2;
-  vector<PaddingStruct> maybe3;
-  vector<vector<uint32>> maybe4;
-  vector<string> maybe5;
-  vector<zx.handle> maybe6;
-  vector<request<P>> maybe7;
-  vector<P> maybe8;
-  vector<Table> maybe9;
-  vector<Union> maybe10;
+  never0 vector<EmptyStruct>;
+  never1 vector<NeverMutateStruct>;
+  maybe2 vector<box<NeverMutateStruct>>;
+  maybe3 vector<PaddingStruct>;
+  maybe4 vector<vector<uint32>>;
+  maybe5 vector<string>;
+  maybe6 vector<zx.handle>;
+  maybe7 vector<server_end:P>;
+  maybe8 vector<client_end:P>;
+  maybe9 vector<Table>;
+  maybe10 vector<Union>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   auto decl = library.library()->LookupDeclByName(fidl::flat::Name::CreateSourced(
       library.library(), fidl::SourceSpan("Value", library.source_file())));
   ASSERT_NOT_NULL(decl);
@@ -204,16 +202,17 @@ resource struct Value {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocol) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
 protocol SomeProtocol {};
 
 protocol UseOfProtocol {
-    Call(SomeProtocol arg);
+    Call(resource struct {
+        arg client_end:SomeProtocol;
+    });
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -248,17 +247,24 @@ protocol UseOfProtocol {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocolEnds) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
 protocol SomeProtocol {};
 
 protocol UseOfProtocolEnds {
-  ClientEnds(SomeProtocol in) -> (SomeProtocol? out);
-  ServerEnds(request<SomeProtocol>? in) -> (request<SomeProtocol> out);
+    ClientEnds(resource struct {
+        in client_end:SomeProtocol;
+    }) -> (resource struct {
+        out client_end:<SomeProtocol, optional>;
+    });
+    ServerEnds(resource struct {
+        in server_end:<SomeProtocol, optional>;
+    }) -> (resource struct {
+        out server_end:SomeProtocol;
+    });
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -377,15 +383,14 @@ protocol UseOfProtocolEnds {
 // because the compiler emits both the non-nullable and nullable union types regardless of whether
 // it is used in the library in which it was defined.
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfUnions) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union MyXUnion {
-  1: bool foo;
-  2: int32 bar;
+type MyXUnion = strict union {
+    1: foo bool;
+    2: bar int32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -437,25 +442,23 @@ union MyXUnion {
 // because the compiler emits both the non-nullable and nullable union types regardless of whether
 // it is used in the library in which it was defined.
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfNullableUnions) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union MyXUnion {
-  1: bool foo;
-  2: int32 bar;
+type MyXUnion = strict union {
+    1: foo bool;
+    2: bar int32;
 };
 
-struct Wrapper1 {
-  MyXUnion? xu;
+type Wrapper1 = struct {
+    xu MyXUnion:optional;
 };
 
 // This ensures that MyXUnion? doesn't show up twice in the coded types.
-struct Wrapper2 {
-  MyXUnion? xu;
+type Wrapper2 = struct {
+    xu MyXUnion:optional;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -488,39 +491,37 @@ struct Wrapper2 {
 // This mostly exists to make sure that the same nullable objects aren't
 // represented more than once in the coding tables.
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfNullablePointers) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct MyStruct {
-  bool foo;
-  int32 bar;
+type MyStruct = struct {
+    foo bool;
+    bar int32;
 };
 
-union MyUnion {
-  1: bool foo;
-  2: int32 bar;
+type MyUnion = strict union {
+    1: foo bool;
+    2: bar int32;
 };
 
-flexible union MyXUnion {
-  1: bool foo;
-  2: int32 bar;
+type MyXUnion = flexible union {
+    1: foo bool;
+    2: bar int32;
 };
 
-struct Wrapper1 {
-  MyStruct? ms;
-  MyUnion? mu;
-  MyXUnion? xu;
+type Wrapper1 = struct {
+    ms box<MyStruct>;
+    mu MyUnion:optional;
+    xu MyXUnion:optional;
 };
 
 // This ensures that MyXUnion? doesn't show up twice in the coded types.
-struct Wrapper2 {
-  MyStruct? ms;
-  MyUnion? mu;
-  MyXUnion? xu;
+type Wrapper2 = struct {
+    ms box<MyStruct>;
+    mu MyUnion:optional;
+    xu MyXUnion:optional;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -530,35 +531,30 @@ struct Wrapper2 {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedHandle) {
-  fidl::ExperimentalFlags experimental_flags;
+  TestLibrary library(R"FIDL(library example;
 
-  TestLibrary library(R"FIDL(
-library example;
-
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     VMO = 3;
 };
 
-bits rights {
-  SOME_RIGHT = 1;
+type rights = strict bits {
+    SOME_RIGHT = 1;
 };
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
         rights rights;
     };
 };
 
-resource struct MyStruct {
-    handle:<VMO, rights.SOME_RIGHT> h;
+type MyStruct = resource struct {
+    h handle:<VMO, rights.SOME_RIGHT>;
 };
+)FIDL");
 
-)FIDL",
-                      std::move(experimental_flags));
-
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -573,26 +569,24 @@ resource struct MyStruct {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfStructsWithPaddings) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct BoolAndInt32 {
-  bool foo;
-  // 3 bytes of padding here.
-  int32 bar;
+type BoolAndInt32 = struct {
+    foo bool;
+    // 3 bytes of padding here.
+    bar int32;
 };
 
-struct Complex {
-  int32 i32;
-  bool b1;
-  // 3 bytes of padding here.
-  int64 i64;
-  int16 i16;
-  // 6 bytes of padding here.
+type Complex = struct {
+    i32 int32;
+    b1 bool;
+    // 3 bytes of padding here.
+    i64 int64;
+    i16 int16;
+// 6 bytes of padding here.
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -646,34 +640,32 @@ struct Complex {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfMultilevelNestedStructs) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
 // alignment 4
-struct Level0 {
-  int8 a;
-  //padding 3
-  int32 b;
-  int8 c;
-  // padding 3;
+type Level0 = struct {
+    a int8;
+    //padding 3
+    b int32;
+    c int8;
+// padding 3;
 };
 
 // alignment 8
-struct Level1 {
-  Level0 l0;
-  // 4 bytes padding + 3 inside of Level0.
-  uint64 d;
+type Level1 = struct {
+    l0 Level0;
+    // 4 bytes padding + 3 inside of Level0.
+    d uint64;
 };
 
 // alignment 8
-struct Level2 {
-  Level1 l1;
-  uint8 e;
-  // 7 bytes of padding.
+type Level2 = struct {
+    l1 Level1;
+    e uint8;
+// 7 bytes of padding.
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -718,23 +710,21 @@ struct Level2 {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfRecursiveOptionalStructs) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct OneLevelRecursiveOptionalStruct {
-  OneLevelRecursiveOptionalStruct? val;
+type OneLevelRecursiveOptionalStruct = struct {
+    val box<OneLevelRecursiveOptionalStruct>;
 };
 
-struct TwoLevelRecursiveOptionalStructA {
-  TwoLevelRecursiveOptionalStructB b;
+type TwoLevelRecursiveOptionalStructA = struct {
+    b TwoLevelRecursiveOptionalStructB;
 };
 
-struct TwoLevelRecursiveOptionalStructB {
-  TwoLevelRecursiveOptionalStructA? a;
+type TwoLevelRecursiveOptionalStructB = struct {
+    a box<TwoLevelRecursiveOptionalStructA>;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -780,23 +770,21 @@ struct TwoLevelRecursiveOptionalStructB {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfReusedStructs) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
 // InnerStruct is reused and appears twice.
-struct InnerStruct{
-  int8 a;
-  // 1 byte padding
-  int16 b;
+type InnerStruct = struct{
+    a int8;
+    // 1 byte padding
+    b int16;
 };
 
-struct OuterStruct {
-  InnerStruct a;
-  InnerStruct b;
+type OuterStruct = struct {
+    a InnerStruct;
+    b InnerStruct;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -826,31 +814,29 @@ struct OuterStruct {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfOptionals) {
-  fidl::ExperimentalFlags experimental_flags;
   auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
 
-struct InnerStruct{
-  int8 a;
+type InnerStruct = struct {
+  a int8;
   // 1 byte padding
-  int16 b;
+  b int16;
 };
 
-union SimpleUnion {
-    1: int64 a;
+type SimpleUnion = union {
+    1: a int64;
 };
 
-resource struct OuterStruct {
-  InnerStruct a;
-  zx.handle? opt_handle;
-  SimpleUnion? opt_union;
-  InnerStruct b;
+type OuterStruct = resource struct {
+  a InnerStruct;
+  opt_handle zx.handle:optional;
+  opt_union SimpleUnion:optional;
+  b InnerStruct;
 };
 
-)FIDL",
-                               experimental_flags);
-  ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -884,22 +870,20 @@ resource struct OuterStruct {
 // the object graph provided by earlier stages of the compiler rather than
 // implementing a lookup which may not be the same as the lookup done earlier.
 TEST(CodedTypesGeneratorTests, GoodScopingBugShouldNotAffectCodingTables) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
 alias membertype = uint32;
 
-struct byte {
-    membertype member = 1;
+type byte = struct {
+    member membertype = 1;
 };
 
-struct badlookup {
-  byte f1;
-  bytes f2;
+type badlookup = struct {
+    f1 byte;
+    f2 bytes;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -914,16 +898,15 @@ struct badlookup {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfTables) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-table MyTable {
-  1: bool foo;
-  2: int32 bar;
-  3: array<bool>:42 baz;
+type MyTable = table {
+    1: foo bool;
+    2: bar int32;
+    3: baz array<bool, 42>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -978,21 +961,19 @@ table MyTable {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfBits) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-strict bits StrictBits : uint8 {
+type StrictBits = strict bits : uint8 {
     HELLO = 0x1;
     WORLD = 0x10;
 };
 
-flexible bits FlexibleBits : uint8 {
+type FlexibleBits = flexible bits : uint8 {
     HELLO = 0x1;
     WORLD = 0x10;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -1024,21 +1005,19 @@ flexible bits FlexibleBits : uint8 {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfStrictEnum) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-strict enum StrictEnum : uint16 {
+type StrictEnum = strict enum : uint16 {
     HELLO = 0x1;
     WORLD = 0x10;
 };
 
-flexible enum FlexibleEnum : uint16 {
+type FlexibleEnum = flexible enum : uint16 {
     HELLO = 0x1;
     WORLD = 0x10;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -1073,19 +1052,18 @@ flexible enum FlexibleEnum : uint16 {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfUnionsWithReverseOrdinals) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct First {};
-struct Second {};
+type First = struct {};
+type Second = struct {};
 
-union MyUnion {
-  3: Second second;
-  2: reserved;
-  1: First first;
+type MyUnion = strict union {
+    3: second Second;
+    2: reserved;
+    1: first First;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -1123,82 +1101,76 @@ void check_duplicate_coded_type_names(const fidl::CodedTypesGenerator& gen) {
 }
 
 TEST(CodedTypesGeneratorTests, GoodDuplicateCodedTypesTwoUnions) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union U1 {
-  1: array<string>:2 hs;
+type U1 = strict union {
+    1: hs array<string, 2>;
 };
 
-union U2 {
-  1: array<array<string>:2>:2 hss;
+type U2 = strict union {
+    1: hss array<array<string, 2>, 2>;
 };
-  )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
 
 TEST(CodedTypesGeneratorTests, GoodDuplicateCodedTypesUnionArrayArray) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union Union {
-    1: array<string>:2 hs;
-    2: array<array<string>:2>:2 hss;
+type Union = strict union {
+    1: hs array<string, 2>;
+    2: hss array<array<string, 2>, 2>;
 };
-  )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
 
 TEST(CodedTypesGeneratorTests, GoodDuplicateCodedTypesUnionVectorArray) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-union Union {
-    1: array<string>:2 hs;
-    2: vector<array<string>:2>:2 hss;
+type Union = strict union {
+    1: hs array<string, 2>;
+    2: hss vector<array<string, 2>>:2;
 };
-  )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
 
 TEST(CodedTypesGeneratorTests, GoodDuplicateCodedTypesTableArrayArray) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-table Table {
-    1: array<string>:2 hs;
-    2: array<array<string>:2>:2 hss;
+type Table = table {
+    1: hs array<string, 2>;
+    2: hss array<array<string, 2>, 2>;
 };
-  )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+)FIDL");
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
   check_duplicate_coded_type_names(gen);
 }
 
 TEST(CodedTypesGeneratorTests, GoodUnionResourceness) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-resource union ResourceUnion {
-  1: bool first;
+type ResourceUnion = strict resource union {
+    1: first bool;
 };
 
-union NonResourceUnion {
-  1: bool first;
+type NonResourceUnion = strict union {
+    1: first bool;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
@@ -1224,19 +1196,17 @@ union NonResourceUnion {
 }
 
 TEST(CodedTypesGeneratorTests, GoodTableResourceness) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-resource table ResourceTable {
-  1: bool first;
+type ResourceTable = resource table {
+    1: first bool;
 };
 
-table NonResourceTable {
-  1: bool first;
+type NonResourceTable = table {
+    1: first bool;
 };
-
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 

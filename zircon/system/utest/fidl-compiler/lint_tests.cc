@@ -32,77 +32,65 @@ namespace {
   } while (0)
 
 TEST(LintTests, BadConstNames) {
-  TestLibrary library(R"FIDL(
-library fuchsia.a;
+  TestLibrary library(R"FIDL(library fuchsia.a;
 
-const uint64 bad_CONST = 1234;
+const bad_CONST uint64 = 1234;
 )FIDL");
-  TestLibrary converted;
-  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
-  ASSERT_FALSE(converted.Lint());
-  ASSERT_WARNINGS(1, converted, "bad_CONST");
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint());
+  ASSERT_WARNINGS(1, library, "bad_CONST");
 }
 
 TEST(LintTests, BadConstNamesKconst) {
-  TestLibrary library(R"FIDL(
-library fuchsia.a;
+  TestLibrary library(R"FIDL(library fuchsia.a;
 
-const uint64 kAllIsCalm = 1234;
+const kAllIsCalm uint64 = 1234;
 )FIDL");
-  TestLibrary converted;
-  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
-  ASSERT_FALSE(converted.Lint());
-  ASSERT_WARNINGS(1, converted, "kAllIsCalm");
-  const auto& warnings = converted.lints();
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint());
+  ASSERT_WARNINGS(1, library, "kAllIsCalm");
+  const auto& warnings = library.lints();
   ASSERT_SUBSTR(warnings[0].c_str(), "ALL_IS_CALM");
 }
 
 TEST(LintTests, GoodConstNames) {
-  TestLibrary library(R"FIDL(
-library fuchsia.a;
+  TestLibrary library(R"FIDL(library fuchsia.a;
 
-const uint64 GOOD_CONST = 1234;
+const GOOD_CONST uint64 = 1234;
 )FIDL");
-  TestLibrary converted;
-  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
-  ASSERT_TRUE(converted.Lint());
-  ASSERT_WARNINGS(0, converted, "");
+  ASSERT_COMPILED(library);
+  ASSERT_TRUE(library.Lint());
+  ASSERT_WARNINGS(0, library, "");
 }
 
 TEST(LintTests, BadProtocolNames) {
-  TestLibrary library(R"FIDL(
-library fuchsia.a;
+  TestLibrary library(R"FIDL(library fuchsia.a;
 
 protocol URLLoader {};
 )FIDL");
-  TestLibrary converted;
-  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
-  ASSERT_FALSE(converted.Lint());
-  ASSERT_WARNINGS(1, converted, "URLLoader");
-  const auto& warnings = converted.lints();
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint());
+  ASSERT_WARNINGS(1, library, "URLLoader");
+  const auto& warnings = library.lints();
   ASSERT_SUBSTR(warnings[0].c_str(), "UrlLoader");
 }
 
 TEST(LintTests, GoodProtocolNames) {
-  TestLibrary library(R"FIDL(
-library fuchsia.a;
+  TestLibrary library(R"FIDL(library fuchsia.a;
 
 protocol UrlLoader {};
 )FIDL");
-  TestLibrary converted;
-  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
-  ASSERT_TRUE(converted.Lint());
-  ASSERT_WARNINGS(0, converted, "");
+  ASSERT_COMPILED(library);
+  ASSERT_TRUE(library.Lint());
+  ASSERT_WARNINGS(0, library, "");
 }
 
 TEST(LintTests, BadLibraryNamesBannedName) {
-  TestLibrary library(R"FIDL(
-library fuchsia.zxsocket;
+  TestLibrary library(R"FIDL(library fuchsia.zxsocket;
 )FIDL");
-  TestLibrary converted;
-  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
-  ASSERT_FALSE(converted.Lint());
-  ASSERT_WARNINGS(1, converted, "zxsocket");
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint());
+  ASSERT_WARNINGS(1, library, "zxsocket");
 }
 
 TEST(LintTests, BadUsingNames) {
@@ -113,10 +101,9 @@ using zx as bad_USING;
 
 alias unused = bad_USING.handle;
 )FIDL");
-  TestLibrary converted;
-  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
-  ASSERT_FALSE(converted.Lint());
-  ASSERT_WARNINGS(1, converted, "bad_USING");
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint());
+  ASSERT_WARNINGS(1, library, "bad_USING");
 }
 
 TEST(LintTests, GoodUsingNames) {
@@ -127,10 +114,9 @@ using zx as good_using;
 
 alias unused = good_using.handle;
 )FIDL");
-  TestLibrary converted;
-  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
-  ASSERT_TRUE(converted.Lint());
-  ASSERT_WARNINGS(0, converted, "");
+  ASSERT_COMPILED(library);
+  ASSERT_TRUE(library.Lint());
+  ASSERT_WARNINGS(0, library, "");
 }
 
 }  // namespace

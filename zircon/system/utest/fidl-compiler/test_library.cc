@@ -16,14 +16,14 @@ TestLibrary WithLibraryZx(const std::string& filename, const std::string& source
   return WithLibraryZx(filename, source_code, fidl::ExperimentalFlags());
 }
 
-TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code, fidl::ExperimentalFlags flags) {
+TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code,
+                          fidl::ExperimentalFlags flags) {
   TestLibrary main_lib(filename, source_code, flags);
 
   std::string zx = R"FIDL(
-deprecated_syntax;
 library zx;
 
-enum obj_type : uint32 {
+type obj_type = enum : uint32 {
     NONE = 0;
     PROCESS = 1;
     THREAD = 2;
@@ -33,14 +33,14 @@ enum obj_type : uint32 {
     PORT = 6;
 };
 
-bits rights : uint32 {
+type rights = bits : uint32 {
     DUPLICATE = 0x00000001;
     TRANSFER = 0x00000002;
 };
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
         rights rights;
     };
 };
@@ -49,7 +49,7 @@ resource_definition handle : uint32 {
   // Regardless of what the caller wants for their library, always allow handle
   // rights and the new syntax for the ZX library
   auto zx_flags = flags;
-  zx_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  zx_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary zx_lib("zx.fidl", zx, main_lib.OwnedShared(), zx_flags);
   zx_lib.Compile();
   main_lib.AddDependentLibrary(std::move(zx_lib));

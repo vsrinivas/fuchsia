@@ -11,8 +11,6 @@
 namespace {
 
 TEST(FlexibleTests, BadEnumMultipleUnknown) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -20,14 +18,11 @@ type Foo = flexible enum : uint8 {
   @unknown ZERO = 0;
   @unknown ONE = 1;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
 TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownUnsigned) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -36,14 +31,11 @@ type Foo = flexible enum : uint8 {
   ONE = 1;
   MAX = 255;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
 TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownSigned) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -52,22 +44,21 @@ type Foo = flexible enum : int8 {
   ONE = 1;
   MAX = 127;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
 TEST(FlexibleTests, GoodEnumCanUseMaxValueIfOtherIsUnknownUnsigned) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-flexible enum Foo : uint8 {
-  ZERO = 0;
-  [Unknown] ONE = 1;
-  MAX = 255;
+type Foo = flexible enum : uint8 {
+    ZERO = 0;
+    @unknown
+    ONE = 1;
+    MAX = 255;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto foo_enum = library.LookupEnum("Foo");
   ASSERT_NOT_NULL(foo_enum);
@@ -77,16 +68,16 @@ flexible enum Foo : uint8 {
 }
 
 TEST(FlexibleTests, GoodEnumCanUseMaxValueIfOtherIsUnknownSigned) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-flexible enum Foo : int8 {
-  ZERO = 0;
-  [Unknown] ONE = 1;
-  MAX = 127;
+type Foo = flexible enum : int8 {
+    ZERO = 0;
+    @unknown
+    ONE = 1;
+    MAX = 127;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto foo_enum = library.LookupEnum("Foo");
   ASSERT_NOT_NULL(foo_enum);
@@ -96,16 +87,16 @@ flexible enum Foo : int8 {
 }
 
 TEST(FlexibleTests, GoodEnumCanUseZeroAsUnknownValue) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-flexible enum Foo : int8 {
-  [Unknown] ZERO = 0;
-  ONE = 1;
-  MAX = 127;
+type Foo = flexible enum : int8 {
+    @unknown
+    ZERO = 0;
+    ONE = 1;
+    MAX = 127;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto foo_enum = library.LookupEnum("Foo");
   ASSERT_NOT_NULL(foo_enum);
@@ -115,23 +106,21 @@ flexible enum Foo : int8 {
 }
 
 TEST(FlexibleTests, GoodUnionWithSingleUnknown) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-flexible union Foo {
-  1: int32 a;
-  [Unknown] 2: int32 b;
+type Foo = flexible union {
+    1: a int32;
+    @unknown
+    2: b int32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto foo_union = library.LookupUnion("Foo");
   ASSERT_NOT_NULL(foo_union);
 }
 
 TEST(FlexibleTests, BadUnionMultipleUnknown) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -139,8 +128,7 @@ type Foo = flexible union {
   @unknown 1: a int32;
   @unknown 2: b int32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 

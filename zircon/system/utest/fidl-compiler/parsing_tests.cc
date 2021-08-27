@@ -18,25 +18,19 @@ namespace {
 // Test that an invalid compound identifier fails parsing. Regression
 // test for fxbug.dev/7600.
 TEST(ParsingTests, BadCompoundIdentifierTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   // The leading 0 in the library name causes parsing an Identifier
   // to fail, and then parsing a CompoundIdentifier to fail.
   TestLibrary library(R"FIDL(
 library 0fidl.test.badcompoundidentifier;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 // Test that library name formatting checks are done in the parser
 TEST(ParsingTests, BadLibraryNameTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library a_b;
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLibraryNameComponent);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "a_b");
@@ -45,142 +39,139 @@ library a_b;
 // Test that otherwise reserved words can be appropriately parsed when context
 // is clear.
 TEST(ParsingTests, GoodParsingReservedWordsInStructTest) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct struct {
-    bool field;
+type struct = struct {
+    field bool;
 };
 
-struct flexible {};
-struct strict {};
-struct resource {};
+type flexible = struct {};
+type strict = struct {};
+type resource = struct {};
 
-struct InStruct {
-    struct foo;
-    flexible bar;
-    strict baz;
-    resource qux;
+type InStruct = struct {
+    foo struct;
+    bar flexible;
+    baz strict;
+    qux resource;
 
-    bool as;
-    bool library;
-    bool using;
+    as bool;
+    library bool;
+    using bool;
 
-    bool array;
-    bool handle;
-    bool request;
-    bool string;
-    bool vector;
+    array bool;
+    handle bool;
+    request bool;
+    string bool;
+    vector bool;
 
     bool bool;
-    bool int8;
-    bool int16;
-    bool int32;
-    bool int64;
-    bool uint8;
-    bool uint16;
-    bool uint32;
-    bool uint64;
-    bool float32;
-    bool float64;
+    int8 bool;
+    int16 bool;
+    int32 bool;
+    int64 bool;
+    uint8 bool;
+    uint16 bool;
+    uint32 bool;
+    uint64 bool;
+    float32 bool;
+    float64 bool;
 
-    bool true;
-    bool false;
+    true bool;
+    false bool;
 
-    bool reserved;
+    reserved bool;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 // Test that otherwise reserved words can be appropriately parsed when context
 // is clear.
 TEST(ParsingTests, GoodParsingReservedWordsInConstraint) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct Unshadowed {};
+type Unshadowed = struct {};
 
 // Keywords
-const uint16 as = 1;
+const as uint16 = 1;
 alias as_constraint = vector<Unshadowed>:as;
-const uint16 library = 1;
+const library uint16 = 1;
 alias library_constraint = vector<Unshadowed>:library;
-const uint16 using = 1;
+const using uint16 = 1;
 alias using_constraint = vector<Unshadowed>:using;
-const uint16 alias = 1;
+const alias uint16 = 1;
 alias alias_constraint = vector<Unshadowed>:alias;
-const uint16 type = 1;
+const type uint16 = 1;
 alias type_constraint = vector<Unshadowed>:type;
-const uint16 const = 1;
+const const uint16 = 1;
 alias const_constraint = vector<Unshadowed>:const;
-const uint16 protocol = 1;
+const protocol uint16 = 1;
 alias protocol_constraint = vector<Unshadowed>:protocol;
-const uint16 service = 1;
+const service uint16 = 1;
 alias service_constraint = vector<Unshadowed>:service;
-const uint16 compose = 1;
+const compose uint16 = 1;
 alias compose_constraint = vector<Unshadowed>:compose;
-const uint16 reserved = 1;
+const reserved uint16 = 1;
 alias reserved_constraint = vector<Unshadowed>:reserved;
 
 // Layouts
-const uint16 bits = 1;
+const bits uint16 = 1;
 alias bits_constraint = vector<Unshadowed>:bits;
-const uint16 enum = 1;
+const enum uint16 = 1;
 alias enum_constraint = vector<Unshadowed>:enum;
-const uint16 struct = 1;
+const struct uint16 = 1;
 alias struct_constraint = vector<Unshadowed>:struct;
-const uint16 table = 1;
+const table uint16 = 1;
 alias table_constraint = vector<Unshadowed>:table;
-const uint16 union = 1;
+const union uint16 = 1;
 alias union_constraint = vector<Unshadowed>:union;
 
 // Builtins
-const uint16 array = 1;
+const array uint16 = 1;
 alias array_constraint = vector<Unshadowed>:array;
-const uint16 handle = 1;
+const handle uint16 = 1;
 alias handle_constraint = vector<Unshadowed>:handle;
-const uint16 request = 1;
+const request uint16 = 1;
 alias request_constraint = vector<Unshadowed>:request;
-const uint16 string = 1;
+const string uint16 = 1;
 alias string_constraint = vector<Unshadowed>:string;
-const uint16 optional = 1;
+const optional uint16 = 1;
 alias optional_constraint = vector<Unshadowed>:optional;
 
 // Primitives
-const uint16 bool = 1;
+const bool uint16 = 1;
 alias bool_constraint = vector<Unshadowed>:bool;
-const uint16 int8 = 1;
+const int8 uint16 = 1;
 alias int8_constraint = vector<Unshadowed>:int8;
-const uint16 int16 = 1;
+const int16 uint16 = 1;
 alias int16_constraint = vector<Unshadowed>:int16;
-const uint16 int32 = 1;
+const int32 uint16 = 1;
 alias int32_constraint = vector<Unshadowed>:int32;
-const uint16 int64 = 1;
+const int64 uint16 = 1;
 alias int64_constraint = vector<Unshadowed>:int64;
-const uint16 uint8 = 1;
+const uint8 uint16 = 1;
 alias uint8_constraint = vector<Unshadowed>:uint8;
-const uint16 uint32 = 1;
+const uint32 uint16 = 1;
 alias uint32_constraint = vector<Unshadowed>:uint32;
-const uint16 uint64 = 1;
+const uint64 uint16 = 1;
 alias uint64_constraint = vector<Unshadowed>:uint64;
-const uint16 float32 = 1;
+const float32 uint16 = 1;
 alias float32_constraint = vector<Unshadowed>:float32;
-const uint16 float64 = 1;
+const float64 uint16 = 1;
 alias float64_constraint = vector<Unshadowed>:float64;
 
 // Must go last so we don't overwrite uint16 for other tests.
 const uint16 uint16 = 1;
 alias uint16_constraint = vector<Unshadowed>:uint16;
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ParsingTests, GoodParsingHandlesInStructTest) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     PROCESS = 1;
     THREAD = 2;
@@ -212,207 +203,240 @@ enum obj_type : uint32 {
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
     };
 };
 
-resource struct Handles {
-    handle plain_handle;
+type Handles = resource struct {
+    plain_handle handle;
 
-    handle:BTI bti_handle;
-    handle:CHANNEL channel_handle;
-    handle:CLOCK clock_handle;
-    handle:LOG debuglog_handle;
-    handle:EVENT event_handle;
-    handle:EVENTPAIR eventpair_handle;
-    handle:EXCEPTION exception_handle;
-    handle:FIFO fifo_handle;
-    handle:GUEST guest_handle;
-    handle:INTERRUPT interrupt_handle;
-    handle:IOMMU iommu_handle;
-    handle:JOB job_handle;
-    handle:PAGER pager_handle;
-    handle:PCI_DEVICE pcidevice_handle;
-    handle:PMT pmt_handle;
-    handle:PORT port_handle;
-    handle:PROCESS process_handle;
-    handle:PROFILE profile_handle;
-    handle:RESOURCE resource_handle;
-    handle:SOCKET socket_handle;
-    handle:SUSPEND_TOKEN suspendtoken_handle;
-    handle:THREAD thread_handle;
-    handle:TIMER timer_handle;
-    handle:VCPU vcpu_handle;
-    handle:VMAR vmar_handle;
-    handle:VMO vmo_handle;
+    bti_handle handle:BTI;
+    channel_handle handle:CHANNEL;
+    clock_handle handle:CLOCK;
+    debuglog_handle handle:LOG;
+    event_handle handle:EVENT;
+    eventpair_handle handle:EVENTPAIR;
+    exception_handle handle:EXCEPTION;
+    fifo_handle handle:FIFO;
+    guest_handle handle:GUEST;
+    interrupt_handle handle:INTERRUPT;
+    iommu_handle handle:IOMMU;
+    job_handle handle:JOB;
+    pager_handle handle:PAGER;
+    pcidevice_handle handle:PCI_DEVICE;
+    pmt_handle handle:PMT;
+    port_handle handle:PORT;
+    process_handle handle:PROCESS;
+    profile_handle handle:PROFILE;
+    resource_handle handle:RESOURCE;
+    socket_handle handle:SOCKET;
+    suspendtoken_handle handle:SUSPEND_TOKEN;
+    thread_handle handle:THREAD;
+    timer_handle handle:TIMER;
+    vcpu_handle handle:VCPU;
+    vmar_handle handle:VMAR;
+    vmo_handle handle:VMO;
 };
 )FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ParsingTests, GoodParsingHandleConstraintTest) {
-  fidl::ExperimentalFlags experimental_flags;
+  TestLibrary library(R"FIDL(library example;
 
-  TestLibrary library(R"FIDL(
-library example;
-
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     VMO = 3;
 };
 
-bits rights : uint32 {
-  TRANSFER = 1;
+type rights = strict bits : uint32 {
+    TRANSFER = 1;
 };
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
         rights rights;
     };
 };
 
-resource struct Handles {
-    handle plain_handle;
-    handle:VMO subtype_handle;
-    handle:<VMO, rights.TRANSFER> rights_handle;
+type Handles = resource struct {
+    plain_handle handle;
+    subtype_handle handle:VMO;
+    rights_handle handle:<VMO, rights.TRANSFER>;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
 TEST(ParsingTests, GoodParsingReservedWordsInUnionTest) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct struct {
-    bool field;
+type struct = struct {
+    field bool;
 };
 
-union InUnion {
-    1:  struct foo;
+type InUnion = strict union {
+    1: foo struct;
 
-    2:  bool as;
-    3:  bool library;
-    4:  bool using;
+    2: as bool;
+    3: library bool;
+    4: using bool;
 
-    5:  bool array;
-    6:  bool handle;
-    7:  bool request;
-    8:  bool string;
-    9:  bool vector;
+    5: array bool;
+    6: handle bool;
+    7: request bool;
+    8: string bool;
+    9: vector bool;
 
-    10: bool bool;
-    11: bool int8;
-    12: bool int16;
-    13: bool int32;
-    14: bool int64;
-    15: bool uint8;
-    16: bool uint16;
-    17: bool uint32;
-    18: bool uint64;
-    19: bool float32;
-    20: bool float64;
+   10: bool bool;
+   11: int8 bool;
+   12: int16 bool;
+   13: int32 bool;
+   14: int64 bool;
+   15: uint8 bool;
+   16: uint16 bool;
+   17: uint32 bool;
+   18: uint64 bool;
+   19: float32 bool;
+   20: float64 bool;
 
-    21: bool true;
-    22: bool false;
+   21: true bool;
+   22: false bool;
 
-    23: bool reserved;
+   23: reserved bool;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 // Test that otherwise reserved words can be appropriately parsed when context
 // is clear.
 TEST(ParsingTests, GoodParsingReservedWordsInProtocolTest) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 
-struct struct {
-    bool field;
+type struct = struct {
+    field bool;
 };
 
 protocol InProtocol {
-    as(bool as);
-    library(bool library);
-    using(bool using);
+    as(struct {
+        as bool;
+    });
+    library(struct {
+        library bool;
+    });
+    using(struct {
+        using bool;
+    });
 
-    array(bool array);
-    handle(bool handle);
-    request(bool request);
-    string(bool string);
-    vector(bool vector);
+    array(struct {
+        array bool;
+    });
+    handle(struct {
+        handle bool;
+    });
+    request(struct {
+        request bool;
+    });
+    string(struct {
+        string bool;
+    });
+    vector(struct {
+        vector bool;
+    });
 
-    bool(bool bool);
-    int8(bool int8);
-    int16(bool int16);
-    int32(bool int32);
-    int64(bool int64);
-    uint8(bool uint8);
-    uint16(bool uint16);
-    uint32(bool uint32);
-    uint64(bool uint64);
-    float32(bool float32);
-    float64(bool float64);
+    bool(struct {
+        bool bool;
+    });
+    int8(struct {
+        int8 bool;
+    });
+    int16(struct {
+        int16 bool;
+    });
+    int32(struct {
+        int32 bool;
+    });
+    int64(struct {
+        int64 bool;
+    });
+    uint8(struct {
+        uint8 bool;
+    });
+    uint16(struct {
+        uint16 bool;
+    });
+    uint32(struct {
+        uint32 bool;
+    });
+    uint64(struct {
+        uint64 bool;
+    });
+    float32(struct {
+        float32 bool;
+    });
+    float64(struct {
+        float64 bool;
+    });
 
-    true(bool true);
-    false(bool false);
+    true(struct {
+        true bool;
+    });
+    false(struct {
+        false bool;
+    });
 
-    reserved(bool reserved);
+    reserved(struct {
+        reserved bool;
+    });
 
-    foo(struct arg, int32 arg2, struct arg3);
+    foo(struct {
+        arg struct;
+        arg2 int32;
+        arg3 struct;
+    });
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ParsingTests, BadCharPoundSignTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
 type Test = struct {
     #uint8 uint8;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "#");
 }
 
 TEST(ParsingTests, BadCharSlashTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
 type Test = struct / {
     uint8 uint8;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "/");
 }
 
 TEST(ParsingTests, BadIdentifierTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
 type test_ = struct {
     uint8 uint8;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidIdentifier);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "test_");
 }
@@ -427,8 +451,6 @@ class LocaleSwapper {
 };
 
 TEST(ParsingTests, BadInvalidCharacterTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   LocaleSwapper swapper("de_DE.iso88591");
   TestLibrary library("invalid.character.fidl", R"FIDL(
 library fidl.test.maxbytes;
@@ -439,35 +461,27 @@ type ß = struct {
     x int32;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidCharacter,
                                       fidl::ErrInvalidCharacter);
 }
 
 TEST(ParsingTests, GoodEmptyStructTest) {
-  TestLibrary library("empty_struct.fidl", R"FIDL(
-library fidl.test.emptystruct;
+  TestLibrary library("empty_struct.fidl", R"FIDL(library fidl.test.emptystruct;
 
-struct Empty {
-};
-
+type Empty = struct {};
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ParsingTests, BadErrorOnTypeAliasBeforeImports) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   SharedAmongstLibraries shared;
-  TestLibrary dependency("dependent.fidl", R"FIDL(
-library dependent;
+  TestLibrary dependency("dependent.fidl", R"FIDL(library dependent;
 
-struct Something {};
+type Something = struct {};
 )FIDL",
                          &shared);
-  TestLibrary converted_dependency;
-  ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
+  ASSERT_COMPILED(dependency);
 
   TestLibrary library("example.fidl", R"FIDL(
 library example;
@@ -479,51 +493,18 @@ type UseDependent = struct {
     field dependent.Something;
 };
 )FIDL",
-                      &shared, experimental_flags);
+                      &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_ERRORED_DURING_COMPILE_WITH_DEP(library, converted_dependency,
-                                         fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
-}
-
-TEST(ParsingTests, BadErrorOnTypeAliasBeforeImportsWithOldDep) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  SharedAmongstLibraries shared;
-  TestLibrary dependency("dependent.fidl", R"FIDL(
-library dependent;
-
-struct Something {};
-)FIDL",
-                         &shared);
-  TestLibrary cloned_dependency;
-  ASSERT_COMPILED_AND_CLONE_INTO(dependency, cloned_dependency);
-
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
-
-alias foo = int16;
-using dependent;
-
-type UseDependent = struct {
-    field dependent.Something;
-};
-)FIDL",
-                      &shared, experimental_flags);
-  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_ERRORED_DURING_COMPILE_WITH_DEP(library, cloned_dependency,
-                                         fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
 }
 
 TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("example.fidl", R"FIDL(
   library example;
 
   @foo("Bar")
   type Empty = struct{};
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
@@ -537,12 +518,7 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
   ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(arg.value.get())->MakeContents(), "Bar");
 }
 
-// TODO(fxbug.dev/70247): this "Good" test is copied because it cannot use the
-//  full ASSERT_CONVERTED_AND_COMPILE macro, since the condition we are testing
-//  is a valid parse tree generation.
 TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("example.fidl", R"FIDL(
   library example;
 
@@ -550,8 +526,7 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
   /// multiline
   /// comment!
   type Empty = struct {};
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
@@ -566,9 +541,6 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
                 " A\n multiline\n comment!\n");
 }
 
-// TODO(fxbug.dev/70247): this "Good" test is copied because it cannot use the
-//  full ASSERT_CONVERTED_AND_COMPILE macro, since the condition we are testing
-//  is a valid parse tree generation.
 TEST(ParsingTests, WarnDocCommentBlankLineTest) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
@@ -576,26 +548,16 @@ library example;
 /// start
 
 /// end
-struct Empty{};
+type Empty = struct {};
 )FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   const auto& warnings = library.warnings();
-  // TODO(fxbug.dev/70247): The number of warnings has doubled, as we are going
-  //  to collect every warning twice: once for the original compilation, and
-  //  once again for the converted one.  This number will need to be halved
-  //  during cleanup.
-  ASSERT_EQ(warnings.size(), 2);
+  ASSERT_EQ(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnBlankLinesWithinDocCommentBlock);
-  ASSERT_ERR(warnings[1], fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
-// TODO(fxbug.dev/70247): This test cannot be run by converting old code, and so
-//  must maintain a manual copy here until conversion is complete.  See the test
-//  with below for more info.
-TEST(NewSyntaxTests, WarnCommentInsideDocCommentTestNew) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+TEST(NewSyntaxTests, WarnCommentInsideDocCommentTest) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -603,31 +565,9 @@ library example;
 // middle
 /// end
 type Empty = struct {};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_TRUE(library.Compile());
-  const auto& warnings = library.warnings();
-  ASSERT_GE(warnings.size(), 1);
-  ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
-}
-
-// TODO(fxbug.dev/70247): The converter moves the errant comment into the proper
-//  location, so this test no longer produces warnings after conversion.  A
-//  manual copy of the test has been added to above - once conversion is
-//  completed and ASSERT_COMPILED_AND_CONVERT is removed, that test should be
-//  copied in place of this one.
-TEST(ParsingTests, WarnCommentInsideDocCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
-
-/// start
-// middle
-/// end
-struct Empty{};
 )FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_TRUE(library.Compile());
   const auto& warnings = library.warnings();
   ASSERT_GE(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
@@ -641,25 +581,17 @@ library example;
 // middle
 
 /// end
-struct Empty{};
+type Empty = struct {};
 )FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   const auto& warnings = library.warnings();
-  // TODO(fxbug.dev/70247): The number of warnings has doubled, as we are going
-  //  to collect every warning twice: once for the original compilation, and
-  //  once again for the converted one.  This number will need to be halved
-  //  during cleanup.
-  ASSERT_EQ(warnings.size(), 4);
+  ASSERT_EQ(warnings.size(), 2);
   ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
   ASSERT_ERR(warnings[1], fidl::WarnBlankLinesWithinDocCommentBlock);
-  ASSERT_ERR(warnings[2], fidl::WarnCommentWithinDocCommentBlock);
-  ASSERT_ERR(warnings[3], fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
 TEST(ParsingTests, BadDocCommentNotAllowedOnParams) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -667,15 +599,13 @@ protocol Example {
   Method(/// Doc comment
          struct { b bool; });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
 }
 
 TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
+  TestLibrary library("example.fidl", R"FIDL(library example;
 
 // some comments above,
 // maybe about the doc comment
@@ -683,66 +613,54 @@ library example;
 /// multiline
 /// comment!
 // another comment about the struct
-struct Empty{};
+type Empty = struct{};
 )FIDL");
 
   library.set_warnings_as_errors(true);
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
+  TestLibrary library("example.fidl", R"FIDL(library example;
 
 /// doc comment
-
-
-
-struct Empty{};
+type Empty = struct {};
 )FIDL");
 
   library.set_warnings_as_errors(true);
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentWithCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
+  TestLibrary library("example.fidl", R"FIDL(library example;
 
 /// doc comment
 
 
 // regular comment
 
-struct Empty{};
+type Empty = struct {};
 )FIDL");
 
   library.set_warnings_as_errors(true);
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(ParsingTests, WarnTrailingDocCommentTest) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
-struct Empty{};
+type Empty = struct {};
 /// bad
 )FIDL");
 
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   const auto& warnings = library.warnings();
-  // TODO(fxbug.dev/70247): The number of warnings has doubled, as we are going
-  //  to collect every warning twice: once for the original compilation, and
-  //  once again for the converted one.  This number will need to be halved
-  //  during cleanup.
-  ASSERT_EQ(warnings.size(), 2);
+  ASSERT_EQ(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnDocCommentMustBeFollowedByDeclaration);
-  ASSERT_ERR(warnings[1], fidl::WarnDocCommentMustBeFollowedByDeclaration);
 }
 
 TEST(ParsingTests, BadTrailingDocCommentInDeclTest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -750,8 +668,7 @@ type Empty = struct {
    a = int8;
    /// bad
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_FALSE(library.Compile());
 
@@ -763,8 +680,6 @@ type Empty = struct {
 }
 
 TEST(ParsingTests, BadFinalMemberMissingSemicolon) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -772,8 +687,7 @@ type Struct = struct {
     uint_value uint8;
     foo string // error: missing semicolon
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
@@ -782,8 +696,6 @@ type Struct = struct {
 // one that it replaces, in that the "missing" portion of the struct member is a
 // type, not a name.
 TEST(ParsingTests, BadFinalMemberMissingTypeAndSemicolon) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -792,33 +704,25 @@ type Struct = struct {
     string_value
 }; // error: want type, got "}"
    // error: want "}", got EOF
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ParsingTests, BadMissingConstraintBrackets) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct {
     bad_no_brackets vector<uint8>:10,optional;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(ParsingTests, GoodSingleConstraint) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -826,56 +730,40 @@ type Foo = struct {
   with_brackets vector<int32>:<10>;
   without_brackets vector<int32>:10;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
 TEST(ParsingTests, BadSubtypeCtor) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct : uint32 {};
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifySubtype);
 }
 
 TEST(ParsingTests, BadLayoutClass) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = foobar {};
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLayoutClass);
 }
 
 TEST(ParsingTests, BadIdentifierModifiers) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct {
   data strict uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
 TEST(ParsingTests, BadIdentifierWithConstraintsModifiers) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -884,8 +772,7 @@ type Bar = table {};
 type Foo = struct {
   data strict Bar:optional;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 

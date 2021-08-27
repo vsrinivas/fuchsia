@@ -11,8 +11,6 @@
 namespace {
 
 TEST(RecoverableParsingTests, BadRecoverAtEndOfFile) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -23,15 +21,12 @@ type Enum = enum {
 type Bits = bits {
     CONSTANT = ;  // Second error
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedToken);
 }
 
 TEST(RecoverableParsingTests, BadRecoverAtEndOfDecl) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -48,15 +43,12 @@ type Union = union {
 type Struct = struct {
     value string;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverAtEndOfMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -92,8 +84,7 @@ type TimeZone = struct {
     name string;
     region vector<string>;
 };
-  )FIDL",
-                      experimental_flags);
+  )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 6);
@@ -111,8 +102,6 @@ type TimeZone = struct {
 }
 
 TEST(RecoverableParsingTests, BadDoNotCompileAfterParsingFails) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -122,14 +111,11 @@ type NameCollision = struct {};
 type NameCollision = struct {};       // This name collision error will not be
                                       // reported, because if parsing fails
                                       // compilation is skipped
-  )FIDL",
-                      experimental_flags);
+  )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextBitsMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -139,15 +125,12 @@ type Bits = bits {
     FOUR = 0x4    // Second error
     EIGHT = 0x8;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextEnumMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -157,15 +140,12 @@ type Enum = enum {
     THREE = 3   // Second error
     FOUR = 4;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextProtocolMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -179,8 +159,7 @@ protocol P {
     ValidMethod();
     Method() -> (struct { num uint16; }) error;  // Error
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   // NOTE(fxbug.dev/72924): the difference in errors is due to the change in
@@ -198,8 +177,6 @@ protocol P {
 }
 
 TEST(ParsingTests, BadRecoverableParamListParsing) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -208,16 +185,13 @@ protocol Example {
       { b bool; }) -> (/// Doc comment
       struct  { b bool; });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters,
                                       fidl::ErrDocCommentOnParameters);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextServiceMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -230,15 +204,12 @@ service Service {
   q Q              // Second error
   r R;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextStructMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -248,8 +219,7 @@ type Struct = struct {
     vector_value vector<handle>      // Error
     int_value int32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 3);
@@ -259,8 +229,6 @@ type Struct = struct {
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextTableMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -270,8 +238,7 @@ type Table = table {
     3: value_with space vector<handle>; // Error
     4: int_value int32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 3);
@@ -283,8 +250,6 @@ type Table = table {
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextUnionMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -294,42 +259,12 @@ type Union = union {
     4: missing_semicolon string // Second error
     5: int_value int16;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
-// TODO(fxbug.dev/70247): This only applies to the old syntax, since the new
-// syntax uses ParseTypeConstructor for request/response types
-TEST(RecoverableParsingTests, BadRecoverToNextParameterInList) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Protocol {
-    Method(uint8, uint16 n);
-    Method(, string s);
-    -> Event(Type, uint8 num, string compound.identifier);
-    Method(uint8 num, uint16 num) -> (uint16 value, string value_with space);
-    Method(Type param, request<<LocationLookup> frame) - (uint16 port);
-};
-)FIDL");
-  EXPECT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 8);
-  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[2], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[3], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[4], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[5], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[6], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[7], fidl::ErrExpectedProtocolMember);
-}
-
 TEST(RecoverableParsingTests, BadRecoverFinalMemberMissingSemicolon) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -342,15 +277,12 @@ type Struct = struct {
 type Good = struct {};
 
 extra_token // Second error
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrExpectedDeclaration);
 }
 
 TEST(RecoverableParsingTests, BadRecoverFinalMemberMissingNameAndSemicolon) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -365,8 +297,7 @@ type Struct = struct {
 type Good = struct {};
 
 extra_token // Second error
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrExpectedDeclaration);
 }

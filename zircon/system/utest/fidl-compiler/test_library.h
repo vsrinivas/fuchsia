@@ -17,6 +17,8 @@
 #include <fidl/source_file.h>
 #include <fidl/tables_generator.h>
 
+#include "fidl/experimental_flags.h"
+
 static std::unique_ptr<fidl::SourceFile> MakeSourceFile(const std::string& filename,
                                                         const std::string& raw_source_code) {
   std::string source_code(raw_source_code);
@@ -71,7 +73,9 @@ class TestLibrary final {
         all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
         library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_,
                                                        GetGeneratedOrdinal64ForTesting,
-                                                       experimental_flags_)) {}
+                                                       experimental_flags_)) {
+    experimental_flags_.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  }
 
   explicit TestLibrary(const std::string& raw_source_code,
                        fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
@@ -131,122 +135,6 @@ class TestLibrary final {
     }
     compiled_ = library_->Compile();
     return compiled_;
-  }
-
-  bool IsCompiled() const { return compiled_; }
-
-  // This method should be used in place of Compile for TestLibraries that work
-  // in either syntax. It assumes that the library's source files are specified
-  // in the old syntax. This will compile the library, then run fidlconv on each
-  // file and compile the result, and check that the two libraries result in the
-  // same IR. The new_syntax_lib argument should be an empty library, which will
-  // be populated with the output of the conversion. This function takes an
-  // optional (already converted) dependent library as the second argument.
-  bool CompileAndCheckConversion(TestLibrary* new_syntax_lib, TestLibrary* optional_dep) {
-    assert(!experimental_flags_.IsFlagEnabled(fidl::ExperimentalFlags::Flag::kAllowNewSyntax) &&
-           "CompileAndCheckConversion accepts FIDL files in the old syntax - did you mean to use "
-           "Compile()?");
-
-    if (!CompileTwice(new_syntax_lib, optional_dep, fidl::utils::Syntax::kNew))
-      return false;
-
-    // Compare the IR of the two compiled libraries.
-    auto from_old = GenerateJSON();
-    auto from_new = new_syntax_lib->GenerateJSON();
-    if (from_new != from_old) {
-      std::ofstream output_from_new("fidl_json_from_new_syntax.txt");
-      output_from_new << from_new;
-      output_from_new.close();
-
-      std::ofstream output_from_old("fidl_json_from_old_syntax.txt");
-      output_from_old << from_old;
-      output_from_old.close();
-      return false;
-    }
-
-    return true;
-  }
-
-  // Compiles this library, then populates new_syntax_lib such that this exact
-  // library can be converted into either the new or old syntax then compiled
-  // again, depending on the value of the last argument.
-  bool CompileTwice(TestLibrary* new_syntax_lib, TestLibrary* optional_dep,
-                    fidl::utils::Syntax to_syntax) {
-    // Compile once
-    if (!Compile())
-      return false;
-
-    // Convert each file to the new syntax.
-    std::vector<std::unique_ptr<fidl::SourceFile>> converted_files;
-    for (auto source_file : all_sources_) {
-      fidl::Lexer lexer(*source_file, reporter_);
-      fidl::Parser parser(&lexer, reporter_, experimental_flags_);
-      auto ast = parser.Parse();
-      assert(parser.Success());
-
-      fidl::conv::ConvertingTreeVisitor converter =
-          fidl::conv::ConvertingTreeVisitor(to_syntax, library_.get());
-      converter.OnFile(ast);
-      auto converted = std::make_unique<fidl::SourceFile>(std::string(source_file->filename()),
-                                                          converter.converted_output());
-      converted_files.push_back(std::move(converted));
-      // TODO(fxbug.dev/72918): format the file and compare it to expected result
-      // (if provided)
-    }
-
-    // In order to "reset" the library for the second compilation attempt (this
-    // time against the converted syntax), we must make a copy of the state from
-    // one of two sources: the converted dependency TestLibrary object (if such
-    // a dependency is passed in), or otherwise from this TestLibrary itself.
-    //
-    // When we ran the first compilation, the various members of this
-    // TestLibrary were mutated.  We would like to retain that data as though it
-    // were "shared" - for example, typespace entries from the first run should
-    // be kept for the second one.
-    //
-    // To ensure that "new_syntax_lib" to has all of the same data as the old
-    // library there are two sources we can copy it from, depending on whether
-    // or not we have a dependency.  If we do have a dependency, all of that
-    // dependencies information (its typespace, sources, etc) can be re-used.
-    // If we do not have a dependency, we can just pull that information from
-    // the recently compiled library instead.
-    if (optional_dep->IsCompiled()) {
-      // There exists a dependency, so copy all TestLibrary state from it to the
-      // new library that will be used for the post conversion compilation. The
-      // dependency that is the source of this copy must be passed in as a
-      // dependent library of the new library, in lieu of copying over the
-      // "all_libraries_" field directly.
-      new_syntax_lib->typespace_ = optional_dep->typespace_;
-      new_syntax_lib->all_sources_of_all_libraries_ = optional_dep->all_sources_of_all_libraries_;
-      new_syntax_lib->experimental_flags_ = optional_dep->experimental_flags_;
-      new_syntax_lib->library_ = std::make_unique<fidl::flat::Library>(
-          new_syntax_lib->all_libraries_, new_syntax_lib->reporter_, new_syntax_lib->typespace_,
-          GetGeneratedOrdinal64ForTesting, new_syntax_lib->experimental_flags_);
-      new_syntax_lib->AddDependentLibrary(optional_dep);
-    } else {
-      new_syntax_lib->all_libraries_ = this->all_libraries_;
-      new_syntax_lib->all_sources_of_all_libraries_ = this->all_sources_of_all_libraries_;
-      new_syntax_lib->experimental_flags_ = this->experimental_flags_;
-      new_syntax_lib->library_ = std::make_unique<fidl::flat::Library>(
-          new_syntax_lib->all_libraries_, new_syntax_lib->reporter_, new_syntax_lib->typespace_,
-          GetGeneratedOrdinal64ForTesting, new_syntax_lib->experimental_flags_);
-    }
-    if (to_syntax == fidl::utils::Syntax::kNew) {
-      new_syntax_lib->experimental_flags_.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-    }
-
-    // Compile a second time.
-    for (auto& source : converted_files) {
-      new_syntax_lib->AddSource(std::move(source));
-    }
-    if (!new_syntax_lib->Compile()) {
-      for (auto src : new_syntax_lib->all_sources_) {
-        std::cout << src->data() << std::endl;
-      }
-      return false;
-    }
-
-    return true;
   }
 
   // TODO(pascallouis): remove, this does not use a library.
@@ -451,6 +339,7 @@ class TestLibrary final {
 TestLibrary WithLibraryZx(const std::string& source_code);
 TestLibrary WithLibraryZx(const std::string& source_code, fidl::ExperimentalFlags flags);
 TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code);
-TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code, fidl::ExperimentalFlags flags);
+TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code,
+                          fidl::ExperimentalFlags flags);
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_

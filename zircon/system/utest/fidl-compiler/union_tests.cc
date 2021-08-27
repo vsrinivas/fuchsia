@@ -15,76 +15,69 @@
 namespace {
 
 TEST(UnionTests, GoodKeywordsAsFieldNames) {
-  TestLibrary library(R"FIDL(
-library test;
+  TestLibrary library(R"FIDL(library test;
 
-struct struct {
-    bool field;
+type struct = struct {
+    field bool;
 };
 
-union Foo {
-    1: int64 union;
-    2: bool library;
+type Foo = strict union {
+    1: union int64;
+    2: library bool;
     3: uint32 uint32;
-    4: struct member;
-    5: bool reserved;
+    4: member struct;
+    5: reserved bool;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(UnionTests, GoodRecursiveUnion) {
-  TestLibrary library(R"FIDL(
-library test;
+  TestLibrary library(R"FIDL(library test;
 
-union Value {
-  1: bool bool_value;
-  2: vector<Value?> list_value;
+type Value = strict union {
+    1: bool_value bool;
+    2: list_value vector<Value:optional>;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(UnionTests, GoodMutuallyRecursive) {
-  TestLibrary library(R"FIDL(
-library test;
+  TestLibrary library(R"FIDL(library test;
 
-union Foo {
-  1: Bar bar;
+type Foo = strict union {
+    1: bar Bar;
 };
 
-struct Bar {
-  Foo? foo;
+type Bar = struct {
+    foo Foo:optional;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(UnionTests, GoodFlexibleUnion) {
-  TestLibrary library(R"FIDL(
-library test;
+  TestLibrary library(R"FIDL(library test;
 
-flexible union Foo {
-  1: string bar;
+type Foo = flexible union {
+    1: bar string;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(UnionTests, GoodStrictUnion) {
-  TestLibrary library(R"FIDL(
-library test;
+  TestLibrary library(R"FIDL(library test;
 
-strict union Foo {
-  1: string bar;
+type Foo = strict union {
+    1: bar string;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 }
 
 TEST(UnionTests, BadMustHaveExplicitOrdinals) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
@@ -93,22 +86,20 @@ type Foo = strict union {
     bar vector<uint32>:10;
 };
 
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType,
                                       fidl::ErrMissingOrdinalBeforeType);
 }
 
 TEST(UnionTests, GoodExplicitOrdinals) {
-  TestLibrary library(R"FIDL(
-library test;
+  TestLibrary library(R"FIDL(library test;
 
-union Foo {
-  1: int64 foo;
-  2: vector<uint32>:10 bar;
+type Foo = strict union {
+    1: foo int64;
+    2: bar vector<uint32>:10;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto fidl_union = library.LookupUnion("Foo");
   ASSERT_NOT_NULL(fidl_union);
@@ -123,18 +114,17 @@ union Foo {
 }
 
 TEST(UnionTests, GoodOrdinalsWithReserved) {
-  TestLibrary library(R"FIDL(
-library test;
+  TestLibrary library(R"FIDL(library test;
 
-union Foo {
-  1: reserved;
-  2: int64 foo;
-  3: reserved;
-  4: vector<uint32>:10 bar;
-  5: reserved;
+type Foo = strict union {
+    1: reserved;
+    2: foo int64;
+    3: reserved;
+    4: bar vector<uint32>:10;
+    5: reserved;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto fidl_union = library.LookupUnion("Foo");
   ASSERT_NOT_NULL(fidl_union);
@@ -158,18 +148,17 @@ union Foo {
 }
 
 TEST(UnionTests, GoodOrdinalsOutOfOrder) {
-  TestLibrary library(R"FIDL(
-library test;
+  TestLibrary library(R"FIDL(library test;
 
-union Foo {
-  5: int64 foo;
-  2: vector<uint32>:10 bar;
-  3: reserved;
-  1: reserved;
-  4: uint32 baz;
+type Foo = strict union {
+    5: foo int64;
+    2: bar vector<uint32>:10;
+    3: reserved;
+    1: reserved;
+    4: baz uint32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
 
   auto fidl_union = library.LookupUnion("Foo");
   ASSERT_NOT_NULL(fidl_union);
@@ -193,22 +182,17 @@ union Foo {
 }
 
 TEST(UnionTests, BadOrdinalOutOfBounds) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
 type Foo = strict union {
   -1: uint32 foo;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
 }
 
 TEST(UnionTests, BadOrdinalsMustBeUnique) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
@@ -216,14 +200,11 @@ type Foo = strict union {
   1: reserved;
   1: uint64 x;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
 TEST(UnionTests, BadMemberNamesMustBeUnique) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
@@ -231,14 +212,11 @@ type Duplicates = strict union {
     1: s string;
     2: s int32;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberName);
 }
 
 TEST(UnionTests, BadCannotStartAtZero) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
@@ -246,15 +224,12 @@ type Foo = strict union {
   0: foo uint32;
   1: bar uint64;
 };
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
 // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
 TEST(UnionTests, BadDefaultNotAllowed) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library test;
 
@@ -262,8 +237,7 @@ type Foo = strict union {
     1: t int64 = 1;
 };
 
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
   // TODO(fxbug.dev/72924): the second error doesn't make any sense
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
@@ -271,8 +245,6 @@ type Foo = strict union {
 }
 
 TEST(UnionTests, BadMustBeDense) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -281,15 +253,12 @@ type Example = strict union {
     3: third int64;
 };
 
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
 TEST(UnionTests, BadMustHaveNonReservedMember) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -298,14 +267,11 @@ type Foo = strict union {
   1: reserved;
 };
 
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, BadNoNullableMembers) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -313,14 +279,11 @@ type Foo = strict union {
   1: bar string:optional;
 };
 
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableUnionMember);
 }
 
 TEST(UnionTests, BadNoDirectlyRecursiveUnions) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -328,32 +291,27 @@ type Value = strict union {
   1: value Value;
 };
 
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
 TEST(UnionTests, BadEmptyUnion) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = strict union {};
 
-)FIDL",
-                      std::move(experimental_flags));
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, GoodErrorSyntaxExplicitOrdinals) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library(R"FIDL(library example;
 protocol Example {
-  Method() -> () error int32;
+    Method() -> (struct {}) error int32;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_COMPILED(library);
   const fidl::flat::Union* error_union = library.LookupUnion("Example_Method_Result");
   ASSERT_NOT_NULL(error_union);
   ASSERT_EQ(error_union->members.front().ordinal->value, 1);
@@ -361,8 +319,6 @@ protocol Example {
 }
 
 TEST(UnionTests, BadNoSelector) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -370,50 +326,8 @@ type Foo = strict union {
   @selector("v2") 1: v string;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
-}
-
-// TODO(fxbug.dev/70247): as we clean up the migration, it will probably have
-// been long enough that we can remove this error and the special handling for
-// "xunion"
-TEST(UnionTests, BadDeprecatedXUnionError) {
-  {
-    TestLibrary library(R"FIDL(
-  library test;
-
-  xunion Foo {
-    1: string foo;
-  };
-
-  )FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrXunionDeprecated);
-  }
-
-  {
-    TestLibrary library(R"FIDL(
-  library test;
-
-  flexible xunion FlexibleFoo {
-    1: string foo;
-  };
-
-  )FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrXunionDeprecated);
-  }
-
-  {
-    TestLibrary library(R"FIDL(
-  library test;
-
-  strict xunion StrictFoo {
-    1: string foo;
-  };
-
-  )FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrStrictXunionDeprecated);
-  }
 }
 
 }  // namespace

@@ -322,10 +322,8 @@ class LintTest {
     if (!library_) {
       assert(!source_template_.str().empty() &&
              "source_template() must be set before library() is called");
-      fidl::ExperimentalFlags flags;
-      flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-      library_ = std::make_unique<TestLibrary>(filename_,
-                                               source_template_.Substitute(substitutions_), flags);
+      library_ =
+          std::make_unique<TestLibrary>(filename_, source_template_.Substitute(substitutions_));
     }
     return *library_;
   }

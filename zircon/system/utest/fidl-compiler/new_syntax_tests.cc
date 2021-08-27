@@ -28,192 +28,14 @@ using fidl::flat::GetLayoutInvocation;
 using fidl::flat::GetName;
 using fidl::flat::GetType;
 
-TEST(NewSyntaxTests, SyntaxTokenCases) {
-  struct Case {
-    const std::optional<fidl::ExperimentalFlags::Flag> flag;
-    const bool has_token;
-    const fidl::utils::Syntax syntax;
-    const std::optional<fidl::diagnostics::DiagnosticDef> error;
-  };
-
-  // test every combination of flag value (no flag, old only, either, new only),
-  // token/no token, old/new syntax.
-  std::vector<Case> cases = {
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kOldSyntaxOnly,
-          .has_token = false,
-          .syntax = fidl::utils::Syntax::kOld,
-          .error = std::nullopt,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kOldSyntaxOnly,
-          .has_token = false,
-          .syntax = fidl::utils::Syntax::kNew,
-          .error = fidl::ErrExpectedDeclaration,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kOldSyntaxOnly,
-          .has_token = true,
-          .syntax = fidl::utils::Syntax::kOld,
-          .error = std::nullopt,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kOldSyntaxOnly,
-          .has_token = true,
-          .syntax = fidl::utils::Syntax::kNew,
-          .error = fidl::ErrExpectedDeclaration,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kAllowNewSyntax,
-          .has_token = false,
-          .syntax = fidl::utils::Syntax::kOld,
-          .error = fidl::ErrExpectedDeclaration,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kAllowNewSyntax,
-          .has_token = false,
-          .syntax = fidl::utils::Syntax::kNew,
-          .error = std::nullopt,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kAllowNewSyntax,
-          .has_token = true,
-          .syntax = fidl::utils::Syntax::kOld,
-          .error = std::nullopt,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kAllowNewSyntax,
-          .has_token = true,
-          .syntax = fidl::utils::Syntax::kNew,
-          .error = fidl::ErrExpectedDeclaration,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kNewSyntaxOnly,
-          .has_token = false,
-          .syntax = fidl::utils::Syntax::kOld,
-          .error = fidl::ErrExpectedDeclaration,
-      },
-      Case{.flag = fidl::ExperimentalFlags::Flag::kNewSyntaxOnly,
-           .has_token = false,
-           .syntax = fidl::utils::Syntax::kNew,
-           .error = std::nullopt},
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kNewSyntaxOnly,
-          .has_token = true,
-          .syntax = fidl::utils::Syntax::kOld,
-          .error = fidl::ErrRemoveSyntaxVersion,
-      },
-      Case{
-          .flag = fidl::ExperimentalFlags::Flag::kNewSyntaxOnly,
-          .has_token = true,
-          .syntax = fidl::utils::Syntax::kNew,
-          .error = fidl::ErrRemoveSyntaxVersion,
-      },
-      Case{
-          .flag = std::nullopt,
-          .has_token = false,
-          .syntax = fidl::utils::Syntax::kOld,
-          .error = std::nullopt,
-      },
-      Case{
-          .flag = std::nullopt,
-          .has_token = false,
-          .syntax = fidl::utils::Syntax::kNew,
-          .error = fidl::ErrExpectedDeclaration,
-      },
-      Case{
-          .flag = std::nullopt,
-          .has_token = true,
-          .syntax = fidl::utils::Syntax::kOld,
-          .error = fidl::ErrRemoveSyntaxVersion,
-      },
-      Case{
-          .flag = std::nullopt,
-          .has_token = true,
-          .syntax = fidl::utils::Syntax::kNew,
-          .error = fidl::ErrRemoveSyntaxVersion,
-      },
-  };
-  for (const auto& test_case : cases) {
-    fidl::ExperimentalFlags flags;
-    if (test_case.flag)
-      flags.SetFlag(*test_case.flag);
-
-    std::ostringstream lib;
-    if (test_case.has_token)
-      lib << "deprecated_syntax;\n";
-    lib << "library example;\n\n";
-
-    if (test_case.syntax == fidl::utils::Syntax::kNew) {
-      lib << "type S = struct {};\n";
-    } else {
-      lib << "struct S {};\n";
-    }
-
-    TestLibrary library(lib.str(), flags);
-    std::unique_ptr<fidl::raw::File> dont_care;
-    if (test_case.error.has_value()) {
-      ASSERT_ERRORED_DURING_COMPILE(library, *test_case.error);
-    } else {
-      ASSERT_COMPILED(library);
-    }
-  }
-}
-
-TEST(NewSyntaxTests, BadSyntaxVersionWithoutFlag) {
-  TestLibrary library(R"FIDL(
-deprecated_syntax;
-library example;
-)FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrRemoveSyntaxVersion);
-}
-
-TEST(NewSyntaxTests, BadSyntaxVersionMisplaced) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-library example;
-deprecated_syntax;
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMisplacedSyntaxVersion);
-}
-
-TEST(NewSyntaxTests, BadSyntaxVersionMisplacedWithoutFlag) {
-  TestLibrary library(R"FIDL(
-library example;
-deprecated_syntax;
-)FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrRemoveSyntaxVersion);
-}
-
-TEST(NewSyntaxTests, BadSyntaxVersionRepeated) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-deprecated_syntax;
-library example;
-deprecated_syntax;
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMisplacedSyntaxVersion);
-}
-
 TEST(NewSyntaxTests, GoodTypeDeclOfBitsLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = bits {
     FOO = 1;
     BAR = 2;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupBits("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
@@ -221,16 +43,13 @@ type TypeDecl = bits {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfBitsLayoutWithSubtype) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = bits : uint64 {
     FOO = 1;
     BAR = 2;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupBits("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
@@ -239,9 +58,6 @@ type TypeDecl = bits : uint64 {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfBitsLayoutWithStrictnesss) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 type t1 = bits {
@@ -253,8 +69,7 @@ type t2 = flexible bits {
 type t3 = strict bits {
     FOO = 1;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
 
@@ -272,16 +87,13 @@ type t3 = strict bits {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfEnumLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = enum {
     FOO = 1;
     BAR = 2;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupEnum("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
@@ -289,16 +101,13 @@ type TypeDecl = enum {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfEnumLayoutWithSubtype) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = enum : int32 {
     FOO = 1;
     BAR = 2;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupEnum("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
@@ -307,23 +116,17 @@ type TypeDecl = enum : int32 {
 }
 
 TEST(NewSyntaxTests, BadTypeDeclOfEnumLayoutWithInvalidSubtype) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = enum : "123" {
     FOO = 1;
     BAR = 2;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidWrappedType);
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfEnumLayoutWithStrictnesss) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 type t1 = enum {
@@ -335,8 +138,7 @@ type t2 = flexible enum {
 type t3 = strict enum {
     FOO = 1;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
 
@@ -354,16 +156,13 @@ type t3 = strict enum {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfStructLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
     field1 uint16 = 5;
     field2 uint16;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
@@ -371,8 +170,6 @@ type TypeDecl = struct {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfStructLayoutWithResourceness) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
@@ -382,8 +179,7 @@ type t1 = struct {
 type t2 = resource struct {
     f1 zx.handle;
 };
-)FIDL",
-                               experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
 
@@ -397,9 +193,6 @@ type t2 = resource struct {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfTableLayoutWithResourceness) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
@@ -409,8 +202,7 @@ type t1 = table {
 type t2 = resource table {
     1: f1 zx.handle;
 };
-)FIDL",
-                               experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
 
@@ -424,8 +216,6 @@ type t2 = resource table {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfUnionLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = union {
@@ -433,8 +223,7 @@ type TypeDecl = union {
     2: reserved;
     3: variant2 uint16;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupUnion("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
@@ -442,9 +231,6 @@ type TypeDecl = union {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfUnionLayoutWithResourceness) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
@@ -454,8 +240,7 @@ type t1 = union {
 type t2 = resource union {
     1: v1 zx.handle;
 };
-)FIDL",
-                               experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
 
@@ -471,9 +256,6 @@ type t2 = resource union {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfUnionLayoutWithStrictnesss) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 type t1 = union {
@@ -485,8 +267,7 @@ type t2 = flexible union {
 type t3 = strict union {
     1: v1 uint8;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
 
@@ -507,9 +288,6 @@ type t3 = strict union {
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfUnionLayoutWithResourcenessAndStrictness) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
@@ -525,8 +303,7 @@ type t3 = resource strict union {
 type t4 = strict resource union {
     1: v1 zx.handle;
 };
-)FIDL",
-                               experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
 
@@ -552,23 +329,17 @@ type t4 = strict resource union {
 }
 
 TEST(NewSyntaxTests, BadTypeDeclDisallowPartialModifiers) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type t1 = union { 1: foo uint8; };
 type t2 = strict t1;
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
 TEST(NewSyntaxTests, GoodTypeDeclOfAnonymousLayouts) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
@@ -589,8 +360,7 @@ type TypeDecl = struct {
       1: i0 bool;
     };
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
@@ -613,22 +383,17 @@ type TypeDecl = struct {
 }
 
 TEST(NewSyntaxTests, BadTypeDeclOfNewTypeErrors) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 type S = struct{};
 type N = S;
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNewTypesNotAllowed);
 }
 
 TEST(NewSyntaxTests, GoodAlias) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
@@ -636,8 +401,7 @@ type TypeDecl = struct {
     field2 uint16;
 };
 alias AliasOfDecl = TypeDecl;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
@@ -646,8 +410,6 @@ alias AliasOfDecl = TypeDecl;
 }
 
 TEST(NewSyntaxTests, GoodTypeParameters) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type Inner = struct{};
@@ -677,8 +439,7 @@ type TypeDecl = struct {
        i3 array<struct{},5>;
      },5>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
@@ -697,9 +458,6 @@ type TypeDecl = struct {
 }
 
 TEST(NewSyntaxTests, GoodLayoutMemberConstraints) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   // TODO(fxbug.dev/65978): a number of fields in this struct declaration have
   //  been commented out until their respective features (client/server_end)
   //  have been added to the compiler.
@@ -711,8 +469,7 @@ type t1 = resource struct {
   u0 union { 1: b bool; };
   u1 union { 1: b bool; }:optional;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 
   auto type_decl = library.LookupStruct("t1");
@@ -737,9 +494,6 @@ type t1 = resource struct {
 // This test ensures that recoverable parsing works as intended for constraints,
 // and returns useful and actionable information back to users.
 TEST(NewSyntaxTests, BadConstraintsRecoverability) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
@@ -763,8 +517,7 @@ type TypeDecl = struct {
     // errors[11]: unexpected token
     f9 vector<uint16>:,16,,optional,;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
@@ -784,17 +537,13 @@ type TypeDecl = struct {
 
 // TODO(fxbug.dev/72671): this should be covered by an existing old syntax test
 TEST(NewSyntaxTests, GoodConstParsing) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 const MY_NUMBER uint32 = 11259375;
 const MY_STRING string:10 = "ten";
 const MY_VAR uint32 = MY_NUMBER;
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 
   {
@@ -827,9 +576,6 @@ const MY_VAR uint32 = MY_NUMBER;
 }
 
 TEST(NewSyntaxTests, GoodConstraintsOnVectors) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -852,8 +598,7 @@ type TypeDecl= struct {
   a14 TypeAlias:optional;
   a15 TypeAlias:<16,optional>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
@@ -983,9 +728,6 @@ type TypeDecl= struct {
 }
 
 TEST(NewSyntaxTests, GoodConstraintsOnUnions) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -999,8 +741,7 @@ type TypeDecl= struct {
   u4 UnionAlias;
   u5 UnionAlias:optional;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
@@ -1034,9 +775,6 @@ type TypeDecl= struct {
 }
 
 TEST(NewSyntaxTests, GoodConstraintsOnHandles) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 using zx;
@@ -1049,8 +787,7 @@ type TypeDecl = resource struct {
   h4 zx.handle:<VMO,zx.rights.TRANSFER>;
   h5 zx.handle:<VMO,zx.rights.TRANSFER,optional>;
 };
-)FIDL",
-                               experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
@@ -1094,44 +831,9 @@ type TypeDecl = resource struct {
   EXPECT_EQ(h5_type->nullability, fidl::types::Nullability::kNullable);
 }
 
-// Ensure that we don't accidentally enable the new syntax when the new syntax
-// flag is not enabled.
-TEST(NewSyntaxTests, BadTypedChannelNewInOld) {
-  {
-    TestLibrary library(R"FIDL(
-library test;
-
-protocol MyProtocol {};
-
-struct Foo {
-  client_end:MyProtocol foo;
-};
-
-)FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
-  }
-
-  {
-    TestLibrary library(R"FIDL(
-library test;
-
-protocol MyProtocol {};
-
-struct Foo {
-  server_end:MyProtocol foo;
-};
-
-)FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
-  }
-}
-
 // Ensure that we don't accidentally enable the old syntax when the new syntax
 // flag is enabled.
 TEST(NewSyntaxTests, BadTypedChannelOldInNew) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   {
     TestLibrary library(R"FIDL(
 library test;
@@ -1142,8 +844,7 @@ type Foo = struct {
   foo MyProtocol;
 };
 
-)FIDL",
-                        experimental_flags);
+)FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseProtocol);
   }
 
@@ -1157,8 +858,7 @@ type Foo = resource struct {
   foo request<MyProtocol>;
 };
 
-)FIDL",
-                        experimental_flags);
+)FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
   }
 
@@ -1172,17 +872,13 @@ type Foo = resource struct {
   foo request<Bar>;
 };
 
-)FIDL",
-                        experimental_flags);
+)FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
   }
 }
 
 // The new syntax works when the new syntax flag is enabled.
 TEST(NewSyntaxTests, GoodTypedChannelNewInNew) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library test;
 
@@ -1195,93 +891,59 @@ type Foo = resource struct {
   maybe_bar server_end:<MyProtocol, optional>;
 };
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
-TEST(NewSyntaxTests, BadBoxInOldSyntax) {
-  TestLibrary library(R"FIDL(
-library test;
-
-struct Foo {};
-
-struct Bar {
-  box<Foo> foo;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
-}
-
 TEST(NewSyntaxTests, BadTooManyLayoutParameters) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct {
   foo uint8<8>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(NewSyntaxTests, BadNotEnoughParameters) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct {
   foo array<8>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(NewSyntaxTests, BadTooManyConstraints) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct {
   foo uint8:<1, 2, 3>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
 }
 
 TEST(NewSyntaxTests, BadParameterizedAnonymousLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct {
   bar struct {}<1>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(NewSyntaxTests, BadConstrainTwice) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
@@ -1293,16 +955,12 @@ type Foo = struct {
     foo MyVmo:CHANNEL;
 };
 
-)FIDL",
-                               experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConstrainTwice);
 }
 
 TEST(NewSyntaxTests, GoodNoOverlappingConstraints) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
@@ -1314,48 +972,36 @@ type Foo = resource struct {
     foo MyVmo:optional;
 };
 
-)FIDL",
-                               experimental_flags);
+)FIDL");
 
   ASSERT_COMPILED(library);
 }
 
 TEST(NewSyntaxTests, BadWantTypeLayoutParameter) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct {
     foo vector<3>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedType);
 }
 
 TEST(NewSyntaxTests, BadWantValueLayoutParameter) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = struct {
     foo array<uint8, uint8>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedValueButGotType);
 }
 
 TEST(NewSyntaxTests, BadShadowedOptional) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1364,32 +1010,25 @@ const optional uint8 = 3;
 type Foo = resource struct {
     foo vector<uint8>:<10, optional>;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
 TEST(NewSyntaxTests, BadWrongConstraintType) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = resource struct {
     foo vector<uint8>:"hello";
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
 
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
                                       fidl::ErrUnexpectedConstraint);
 }
 
 TEST(NewSyntaxTests, BadProtocolMethodNamedParameterList) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1397,14 +1036,11 @@ type MyStruct = struct{};
 protocol MyProtocol {
   MyMethod(S);
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
 }
 
 TEST(NewSyntaxTests, BadProtocolMethodBitsLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1413,15 +1049,12 @@ protocol MyProtocol {
     FOO = 1;
   });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bits");
 }
 
 TEST(NewSyntaxTests, BadProtocolMethodEnumLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1430,15 +1063,12 @@ protocol MyProtocol {
     FOO = 1;
   });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "enum");
 }
 
 TEST(NewSyntaxTests, BadProtocolMethodTableLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1447,15 +1077,12 @@ protocol MyProtocol {
     1: foo bool;
   });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedParameterListType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "table");
 }
 
 TEST(NewSyntaxTests, BadProtocolMethodUnionLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1464,39 +1091,32 @@ protocol MyProtocol {
     1: foo bool;
   });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedParameterListType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "union");
 }
 
 TEST(NewSyntaxTests, BadProtocolMethodEmptyResponseWithError) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 protocol MyProtocol {
   MyMethod() -> () error uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
 }
 
 // TODO(fxbug.dev/76349): attributes on struct payloads are not supported for
 //  the time being.
 TEST(NewSyntaxTests, BadAttributesOnPayloadStruct) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 protocol MyProtocol {
   MyMethod(@attr struct { s string; });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedAttributesOnPayloadStructs);
 }
 
@@ -1504,16 +1124,13 @@ protocol MyProtocol {
 //  only supported in the new syntax.  Until this is supported, we throw a user
 //  facing error instead.
 TEST(NewSyntaxTests, BadProtocolMethodEmptyRequestStruct) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 protocol MyProtocol {
   MyMethod(struct {}) -> ();
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
@@ -1521,30 +1138,24 @@ protocol MyProtocol {
 //  only supported in the new syntax.  Until this is supported, we throw a user
 //  facing error instead.
 TEST(NewSyntaxTests, BadProtocolMethodEmptyResponseStruct) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 protocol MyProtocol {
   MyMethod() -> (struct {});
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
 TEST(NewSyntaxTests, GoodProtocolMethodEmptyStructsWithError) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
 protocol MyProtocol {
   MyMethod() -> (struct {}) error uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   auto protocol = library.LookupProtocol("MyProtocol");
   ASSERT_NOT_NULL(protocol);

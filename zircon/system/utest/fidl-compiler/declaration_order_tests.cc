@@ -95,7 +95,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(1, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Protocol"));
@@ -108,19 +108,19 @@ TEST(DeclarationOrderTest, GoodNonnullableRef) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-struct #Request# {
-  array<#Element#>:4 req;
+type #Request# = struct {
+  req array<#Element#, 4>;
 };
 
-struct #Element# {};
+type #Element# = struct {};
 
 protocol #Protocol# {
-  SomeMethod(#Request# req);
+  SomeMethod(struct { req #Request#; });
 };
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Element"));
@@ -136,21 +136,21 @@ TEST(DeclarationOrderTest, GoodNullableRefBreaksDependency) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-resource struct #Request# {
-  array<#Element#?>:4 req;
+type #Request# = resource struct {
+  req array<box<#Element#>, 4>;
 };
 
-resource struct #Element# {
-  #Protocol# prot;
+type #Element# = resource struct {
+  prot client_end:#Protocol#;
 };
 
 protocol #Protocol# {
-  SomeMethod(#Request# req);
+  SomeMethod(resource struct { req #Request#; });
 };
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
 
@@ -183,17 +183,17 @@ TEST(DeclarationOrderTest, GoodRequestTypeBreaksDependencyGraph) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-resource struct #Request# {
-  request<#Protocol#> req;
+type #Request# = resource struct {
+  req server_end:#Protocol#;
 };
 
 protocol #Protocol# {
-  SomeMethod(#Request# req);
+  SomeMethod(resource struct { req #Request#; });
 };
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(3, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
@@ -208,22 +208,22 @@ TEST(DeclarationOrderTest, GoodNonnullableUnion) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-resource union #Xunion# {
-  1: request<#Protocol#> req;
-  2: #Payload# foo;
+type #Xunion# = resource union {
+  1: req server_end:#Protocol#;
+  2: foo #Payload#;
 };
 
 protocol #Protocol# {
-  SomeMethod(#Xunion# req);
+  SomeMethod(resource struct { req #Xunion#; });
 };
 
-struct #Payload# {
-  int32 a;
+type #Payload# = struct {
+  a int32;
 };
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
@@ -239,22 +239,22 @@ TEST(DeclarationOrderTest, GoodNullableUnion) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-resource union #Xunion# {
-  1: request<#Protocol#> req;
-  2: #Payload# foo;
+type #Xunion# = resource union {
+  1: req server_end:#Protocol#;
+  2: foo #Payload#;
 };
 
 protocol #Protocol# {
-  SomeMethod(#Xunion#? req);
+  SomeMethod(resource struct { req #Xunion#:optional; });
 };
 
-struct #Payload# {
-  int32 a;
+type #Payload# = struct {
+  a int32;
 };
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
 
@@ -286,25 +286,25 @@ TEST(DeclarationOrderTest, GoodNonnullableUnionInStruct) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-struct #Payload# {
-  int32 a;
+type #Payload# = struct {
+  a int32;
 };
 
 protocol #Protocol# {
-  SomeMethod(#Request# req);
+  SomeMethod(struct { req #Request#; });
 };
 
-struct #Request# {
-  #Xunion# xu;
+type #Request# = struct {
+  xu #Xunion#;
 };
 
-union #Xunion# {
-  1: #Payload# foo;
+type #Xunion# = union {
+  1: foo #Payload#;
 };
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
@@ -321,25 +321,25 @@ TEST(DeclarationOrderTest, GoodNullableUnionInStruct) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-struct #Payload# {
-  int32 a;
+type #Payload# = struct {
+  a int32;
 };
 
 protocol #Protocol# {
-  SomeMethod(#Request# req);
+  SomeMethod(struct { req #Request#; });
 };
 
-struct #Request# {
-  #Xunion#? xu;
+type #Request# = struct {
+  xu #Xunion#:optional;
 };
 
-union #Xunion# {
-  1: #Payload# foo;
+type #Xunion# = union {
+  1: foo #Payload#;
 };
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
 
@@ -370,72 +370,29 @@ union #Xunion# {
 TEST(DeclarationOrderTest, GoodDeclsAcrossLibraries) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     SharedAmongstLibraries shared;
-    TestLibrary dependency("dependency.fidl", R"FIDL(
-library dependency;
+    TestLibrary dependency("dependency.fidl", R"FIDL(library dependency;
 
-struct ExampleDecl1 {};
-
+type ExampleDecl1 = struct {};
 )FIDL",
                            &shared);
-    TestLibrary converted_dependency;
-    ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
+    ASSERT_COMPILED(dependency);
 
     TestLibrary library("example.fidl", R"FIDL(
 library example;
 
 using dependency;
 
-struct ExampleDecl0 {};
-struct ExampleDecl2 {};
+type ExampleDecl0 = struct {};
+type ExampleDecl2 = struct {};
 
 protocol ExampleDecl1 {
-  Method(dependency.ExampleDecl1 arg);
+  Method(struct { arg dependency.ExampleDecl1; });
 };
 
 )FIDL",
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, converted_dependency);
-
-    auto decl_order = library.declaration_order();
-    ASSERT_EQ(5, decl_order.size());
-    ASSERT_DECL_FQ_NAME(decl_order[0], "example/ExampleDecl2");
-    ASSERT_DECL_FQ_NAME(decl_order[1], "example/ExampleDecl0");
-    ASSERT_DECL_FQ_NAME(decl_order[2], "dependency/ExampleDecl1");
-    ASSERT_DECL_FQ_NAME(decl_order[3], "example/ExampleDecl1MethodRequest");
-    ASSERT_DECL_FQ_NAME(decl_order[4], "example/ExampleDecl1");
-  }
-}
-
-TEST(DeclarationOrderTest, GoodDeclsAcrossLibrariesWithOldDep) {
-  for (int i = 0; i < kRepeatTestCount; i++) {
-    SharedAmongstLibraries shared;
-    TestLibrary dependency("dependency.fidl", R"FIDL(
-library dependency;
-
-struct ExampleDecl1 {};
-
-)FIDL",
-                           &shared);
-    TestLibrary cloned_dependency;
-    ASSERT_COMPILED_AND_CLONE_INTO(dependency, cloned_dependency);
-
-    TestLibrary library("example.fidl", R"FIDL(
-library example;
-
-using dependency;
-
-struct ExampleDecl0 {};
-struct ExampleDecl2 {};
-
-protocol ExampleDecl1 {
-  Method(dependency.ExampleDecl1 arg);
-};
-
-)FIDL",
-                        &shared);
-    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, cloned_dependency);
+    ASSERT_COMPILED(library);
 
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
@@ -453,13 +410,13 @@ TEST(DeclarationOrderTest, GoodConstTypeComesFirst) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-const #Alias# #Constant# = 42;
+const #Constant# #Alias# = 42;
 
 alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(2, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
@@ -473,13 +430,13 @@ TEST(DeclarationOrderTest, GoodEnumOrdinalTypeComesFirst) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-enum #Enum# : #Alias# { A = 1; };
+type #Enum# = enum : #Alias# { A = 1; };
 
 alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(2, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
@@ -493,13 +450,13 @@ TEST(DeclarationOrderTest, GoodBitsOrdinalTypeComesFirst) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-bits #Bits# : #Alias# { A = 1; };
+type #Bits# = bits : #Alias# { A = 1; };
 
 alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(2, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));

@@ -11,8 +11,6 @@
 namespace {
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryConsume) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -22,8 +20,7 @@ protocol P {};              // Error: name collision
 @foo
 @foo("foo")                 // Error: attribute name collision
 type Foo = struct {};
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 2);
@@ -32,8 +29,6 @@ type Foo = struct {};
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryCompile) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -59,8 +54,7 @@ type NonDenseTable = table {
     1: s string;
     3: b uint8;                   // Error: non-dense ordinals
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 4);
@@ -71,8 +65,6 @@ type NonDenseTable = table {
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributes) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -90,8 +82,7 @@ type Table = table {
 type Struct = struct {
     foo uint16;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 4);
