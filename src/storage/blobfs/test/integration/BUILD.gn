@@ -104,6 +104,9 @@ test("blobfs_integration") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/service:service-llcpp",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 storage_isolated_devmgr_unittest_v2_component("blobfs-integration-component") {

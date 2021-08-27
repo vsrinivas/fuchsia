@@ -45,6 +45,9 @@ executable("controller_unittest_bin") {
   if (internal_access) {
     defines = [ "INTERNAL_ACCESS" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("controller_unittest") {

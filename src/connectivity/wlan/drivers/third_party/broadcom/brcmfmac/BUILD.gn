@@ -118,6 +118,9 @@ source_set("bcdc") {
     ":core",
     ":linuxisms",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for timer implementation.
@@ -206,6 +209,9 @@ source_set("core") {
 
   # Suppress warnings the brcmfmac code doesn't comply with.
   configs += [ "//build/config:Wno-unused-but-set-variable" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Source set including the driver sources, and the bus definitions conditionally compiled in on each
@@ -271,6 +277,9 @@ driver_module("driver_module-driver") {
     ":driver_sources",
     "//src/connectivity/wlan/lib/common/cpp:common",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("driver_module") {
@@ -297,6 +306,9 @@ driver_module("test_driver_module-driver") {
     "pcie:pcie_driver_test",
   ]
   defines = [ "CONFIG_BRCMFMAC_DRIVER_TEST=1" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("test_driver_module") {

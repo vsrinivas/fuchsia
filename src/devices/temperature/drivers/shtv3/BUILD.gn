@@ -38,6 +38,9 @@ driver_module("shtv3-driver") {
   ]
   sources = [ "shtv3.cc" ]
   deps = [ ":common" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("shtv3") {
@@ -56,6 +59,9 @@ test("shtv3-test-bin") {
     "//src/devices/i2c/testing/fake-i2c",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("shtv3-test") {

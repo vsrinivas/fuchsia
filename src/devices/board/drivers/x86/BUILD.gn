@@ -144,6 +144,9 @@ driver_module("platform-bus-x86-driver") {
     "//zircon/system/ulib/region-alloc",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("platform-bus-x86") {

@@ -265,6 +265,9 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/lib/ktl",
         "//zircon/kernel/lib/libc",
       ]
+
+      # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+      configs += [ "//build/config:Wno-conversion" ]
     }
   }
 

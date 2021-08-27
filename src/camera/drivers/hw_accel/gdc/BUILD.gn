@@ -100,6 +100,9 @@ executable("gdc_task_unittest_bin") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("gdc_task_unittest") {

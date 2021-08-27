@@ -63,6 +63,9 @@ source_set("sim_common") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//zircon/system/ulib/async",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("sim") {
@@ -77,6 +80,9 @@ source_set("sim") {
   public_deps = [ ":sim_common" ]
   public_configs = [ ":config_sim" ]
   friend = [ "test/*" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("sim_mfg") {
@@ -91,4 +97,7 @@ source_set("sim_mfg") {
   public_deps = [ ":sim_common" ]
   public_configs = [ ":config_sim_mfg" ]
   friend = [ "test/*" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

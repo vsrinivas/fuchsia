@@ -46,6 +46,9 @@ test("fidl_llcpp_wire_type_api_tests_bin") {
       "xunion_test.cc",
     ]
     deps += [ "//src/lib/fidl/llcpp/tests:types_test_utils" ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 

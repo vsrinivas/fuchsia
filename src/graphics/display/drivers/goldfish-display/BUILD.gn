@@ -28,6 +28,9 @@ driver_module("goldfish-display-driver") {
     ":goldfish-display-bind",
     "//src/devices/lib/driver",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("goldfish-display") {
@@ -76,6 +79,9 @@ test("goldfish-unittests") {
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

@@ -44,6 +44,9 @@ executable("unittests") {
     "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("util") {
@@ -64,4 +67,7 @@ source_set("util") {
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
     "//src/ui/scenic/lib/input",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

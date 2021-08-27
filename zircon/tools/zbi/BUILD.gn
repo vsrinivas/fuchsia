@@ -20,7 +20,7 @@ zx_host_tool("zbi") {
   defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config/zircon:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

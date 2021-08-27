@@ -127,4 +127,7 @@ source_set("test_harness_impl_unittest") {
     "//src/modular/lib/pseudo_dir:pseudo_dir_server",
     "//zircon/public/lib/fidl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -155,6 +155,9 @@ if (toolchain_environment == "physmem" ||
       "//zircon/system/ulib/bitmap",
       "//zircon/system/ulib/pretty",
     ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   source_set("boot-mmu") {

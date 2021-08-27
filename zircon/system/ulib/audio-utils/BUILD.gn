@@ -29,4 +29,7 @@ zx_library("audio-utils") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/service:service-llcpp",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -145,6 +145,9 @@ executable("mediaplayer_tests_bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 resource("mp4_resource") {

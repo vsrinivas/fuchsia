@@ -55,6 +55,9 @@ test("aml-spi-test-bin") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("aml-spi-test") {
@@ -80,6 +83,9 @@ driver_module("aml-spi-driver") {
   ]
   sources = [ "aml-spi.cc" ]
   deps = [ ":common" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("aml-spi") {

@@ -35,6 +35,9 @@ source_set("stub_device") {
     "//src/lib/ddktl",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("device_inspect_utils") {
@@ -96,6 +99,9 @@ executable("cfg80211_test") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("debug_test") {
@@ -156,6 +162,9 @@ executable("dma_pool_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("dma_ring_test") {
@@ -169,6 +178,9 @@ executable("dma_ring_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("intrusive_list_test") {
@@ -193,6 +205,9 @@ executable("netbuf_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/zircon-internal",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("task_queue_test") {

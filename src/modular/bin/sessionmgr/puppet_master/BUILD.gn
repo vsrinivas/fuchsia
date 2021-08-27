@@ -54,6 +54,9 @@ executable("puppet_master_impl_unittest") {
     "//src/modular/lib/testing:test_with_session_storage",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_component("puppet-master-impl-unittest") {

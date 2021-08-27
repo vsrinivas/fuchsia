@@ -58,6 +58,9 @@ zx_library("acpi_lite") {
       "//zircon/kernel/lib/libc",
     ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (!is_kernel) {

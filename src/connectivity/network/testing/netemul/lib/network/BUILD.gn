@@ -103,4 +103,7 @@ executable("network_test_bin") {
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.hardware.ethertap" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

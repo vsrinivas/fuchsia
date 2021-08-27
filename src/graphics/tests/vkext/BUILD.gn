@@ -32,6 +32,9 @@ executable("vkext_bin") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("vkext_linux") {

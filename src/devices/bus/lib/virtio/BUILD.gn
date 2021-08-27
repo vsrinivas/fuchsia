@@ -21,6 +21,9 @@ test("virtio-backend-test") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("virtio-backend-test-package") {
@@ -63,4 +66,7 @@ zx_library("virtio") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/virtio",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

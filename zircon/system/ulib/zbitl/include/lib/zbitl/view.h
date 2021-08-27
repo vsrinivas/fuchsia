@@ -313,7 +313,7 @@ class View {
       Assert(__func__);
       view_->StartIteration();
       const uint32_t next_item_offset =
-          offset_ + sizeof(zbi_header_t) + ZBI_ALIGN(value_.header->length);
+          offset_ + static_cast<uint32_t>(sizeof(zbi_header_t)) + ZBI_ALIGN(value_.header->length);
       Update(next_item_offset);
       return *this;
     }

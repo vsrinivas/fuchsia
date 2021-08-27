@@ -86,6 +86,9 @@ driver_module("gt6853-module-driver") {
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
     "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("gt6853-module") {
@@ -113,6 +116,9 @@ test("gt6853-test") {
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
     "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("gt6853-test-package") {

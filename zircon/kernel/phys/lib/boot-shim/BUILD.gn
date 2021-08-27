@@ -48,6 +48,9 @@ zx_library("boot-shim") {
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/uart",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (!is_kernel) {
@@ -88,6 +91,9 @@ test("boot-shim-unittests") {
     "//zircon/kernel/phys/lib/memalloc",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("boot-shim-tests") {

@@ -55,6 +55,9 @@ source_set("sim_library") {
     "//zircon/system/public",
   ]
   public_configs = [ ":test_config" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Stub entrypoints for MVM.
@@ -76,6 +79,9 @@ executable("dummy_test") {
     ":sim_library",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("fw_test") {
@@ -88,6 +94,9 @@ executable("fw_test") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("iwl_phy_db_test") {
@@ -113,6 +122,9 @@ executable("mac80211_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("mac_ctxt_test") {
@@ -125,6 +137,9 @@ executable("mac_ctxt_test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("mvm_mlme_test") {
@@ -141,6 +156,9 @@ executable("mvm_mlme_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Test code for MVM features.
@@ -158,6 +176,9 @@ executable("mvm_test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("notif_wait_test") {
@@ -182,6 +203,9 @@ executable("nvm_test") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("pcie_test") {
@@ -206,6 +230,9 @@ executable("pcie_test") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("phy_ctxt_test") {
@@ -218,6 +245,9 @@ executable("phy_ctxt_test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("platform_test") {
@@ -242,6 +272,9 @@ executable("sta_test") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("utils_test") {
@@ -253,6 +286,9 @@ executable("utils_test") {
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 _tests = [

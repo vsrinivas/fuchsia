@@ -23,6 +23,9 @@ source_set("fvm-descriptor") {
     "//src/storage/volume_image:partition",
   ]
   deps = [ "//src/storage/volume_image/utils:block-utils" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("fvm-metadata") {
@@ -44,6 +47,9 @@ source_set("fvm-image-extend") {
     "//src/storage/volume_image/utils:io-interfaces",
   ]
   deps = [ ":fvm-metadata" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("fvm-sparse-image") {
@@ -64,6 +70,9 @@ source_set("fvm-sparse-image") {
     "//src/storage/volume_image/utils:lz4-compression",
     "//src/storage/volume_image/utils:lz4-decompress-reader",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("fvm-unpack") {
@@ -79,6 +88,9 @@ source_set("fvm-unpack") {
     "//src/storage/volume_image/utils:fd-io",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # This source set is included in the volume image test package in the directory above.
@@ -106,6 +118,9 @@ source_set("fvm-test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/lz4",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_data_image_path = "$target_out_dir/test_data.blk"
@@ -202,6 +217,9 @@ test("fvm_sparse_image_reader_test") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/block-client",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 storage_isolated_devmgr_unittest_v2_component(

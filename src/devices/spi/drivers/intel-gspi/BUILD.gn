@@ -47,6 +47,9 @@ driver_module("driver_module") {
   ]
   deps = common_deps
   sources = [ "intel-gspi.cc" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("driver") {
@@ -78,6 +81,9 @@ test("intel-gspi-test-bin") {
         "//zircon/system/ulib/zxtest",
         "//src/devices/lib/acpi/mock:mock-acpi",
       ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("intel-gspi-test") {

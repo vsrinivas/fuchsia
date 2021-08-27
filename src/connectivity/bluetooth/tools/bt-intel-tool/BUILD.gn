@@ -31,6 +31,9 @@ executable("bin") {
     "//sdk/lib/fit",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_shell_package("bt-intel-tool") {

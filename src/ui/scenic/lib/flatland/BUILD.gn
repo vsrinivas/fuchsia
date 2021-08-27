@@ -68,6 +68,9 @@ source_set("flatland") {
     "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("pixeltests") {

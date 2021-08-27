@@ -28,4 +28,7 @@ executable("configuration_tests") {
     "//src/ui/a11y/lib/configuration",
     "//third_party/rapidjson",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -113,6 +113,9 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("blobfs-unittest") {
@@ -132,4 +135,7 @@ test("blobfs_host") {
     "//src/storage/blobfs",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

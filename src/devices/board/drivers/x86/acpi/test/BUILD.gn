@@ -19,4 +19,7 @@ source_set("mock-acpi") {
     "//third_party/acpica",
     "//zircon/system/ulib/zxc",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

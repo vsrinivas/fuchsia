@@ -32,6 +32,9 @@ executable("sdio_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("brcmfmac_sdio_test") {

@@ -38,6 +38,9 @@ source_set("test_main") {
     "//third_party/googletest:gtest",
   ]
 
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
@@ -54,6 +57,9 @@ test("ap_mlme_tests") {
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 
   configs += [
     "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
@@ -75,6 +81,9 @@ test("client_mlme_tests") {
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 
   configs += [
     "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
@@ -112,6 +121,9 @@ test("mac_tests") {
     "//third_party/googletest:gtest",
   ]
 
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
@@ -133,6 +145,9 @@ test("mesh_tests") {
     "//third_party/googletest:gtest",
   ]
 
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
   configs += [
     "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -153,6 +168,9 @@ test("service_tests") {
     "//third_party/googletest:gtest",
   ]
 
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
@@ -169,6 +187,9 @@ test("timer_manager_tests") {
     "//third_party/googletest:gtest",
   ]
 
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
@@ -183,6 +204,9 @@ test("buffer_utils_tests") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
@@ -204,6 +228,9 @@ test("common_tests") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }

@@ -31,7 +31,7 @@ source_set("ldso") {
   configs -= [ "//build/config:symbol_visibility_hidden" ]
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
-  configs += [ "//build/config/zircon:Wno-unused-function" ]
+  configs += [ "//build/config:Wno-unused-function" ]
 
   # TODO(41901): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.

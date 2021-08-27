@@ -70,6 +70,9 @@ source_set("testing_deps") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("pixel_test") {
@@ -135,6 +138,9 @@ source_set("scenic_pixeltests") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("unittests") {
@@ -193,6 +199,9 @@ executable("unittests") {
   ]
 
   include_dirs = [ "//src/ui/lib/escher" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("swapchain_tests") {
@@ -251,6 +260,9 @@ executable("viewstate_apptests") {
     "//src/ui/lib/glm_workaround",
     "//src/ui/testing/views",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("mock_pose_buffer_provider_cc") {

@@ -376,58 +376,6 @@ config("default_warnings") {
   }
 }
 
-config("Wno-unused-function") {
-  cflags = [ "-Wno-unused-function" ]
-
-  visibility = [
-    "//zircon/third_party/ulib/musl/ldso",
-    "//zircon/third_party/ulib/musl/src/network",
-    "//zircon/third_party/ulib/musl/src/time",
-  ]
-}
-
-# TODO(fxbug.dev/58162): clean up usages of this config
-config("Wno-conversion") {
-  # NOTE: Use individual cflags_cc and cflags_c here because these
-  # need to appear _after_ the -Wconversion in default_warnings above.
-  cflags_cc = [ "-Wno-conversion" ]
-  cflags_c = cflags_cc
-  visibility = [
-    "//sdk/lib/fit/*",
-    "//third_party/lz4/*",
-    "//tools/fidl/fidlc/*",
-    "//zircon/kernel/arch/x86/*",
-    "//zircon/kernel/arch/x86/cpuid/*",
-    "//zircon/kernel/debugcommands/*",
-    "//zircon/kernel/dev/iommu/dummy/*",
-    "//zircon/kernel/dev/pcie/*",
-    "//zircon/kernel/lib/cmdline/*",
-    "//zircon/kernel/lib/console",
-    "//zircon/kernel/lib/heap/cmpctmalloc/*",
-    "//zircon/kernel/object/*",
-    "//zircon/kernel/phys/*",
-    "//zircon/kernel/platform/*",
-    "//zircon/kernel/tests/*",
-    "//zircon/kernel/vm/*",
-    "//zircon/system/ulib/cmdline/*",
-    "//zircon/system/ulib/elf-psabi/*",
-    "//zircon/system/ulib/elfload/*",
-    "//zircon/system/ulib/fidl/*",
-    "//zircon/system/ulib/gfx/*",
-    "//zircon/system/ulib/hwreg/*",
-    "//zircon/system/ulib/ldmsg/*",
-    "//zircon/system/ulib/pretty/*",
-    "//zircon/system/ulib/tftp/*",
-    "//zircon/system/ulib/zxc/*",
-    "//zircon/system/ulib/zxtest/*",
-    "//zircon/third_party/*",
-    "//zircon/third_party/ulib/cksum/*",
-    "//zircon/third_party/ulib/usbhost/*",
-    "//zircon/tools/kazoo/*",
-    "//zircon/tools/zbi/*",
-  ]
-}
-
 config("default_template_backtrace_limit") {
   cflags_cc = [ "-ftemplate-backtrace-limit=0" ]
 }

@@ -16,6 +16,9 @@ executable("stacktrace_unittest") {
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("testutil") {

@@ -15,7 +15,7 @@ sdk_source_set("fitx") {
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config/zircon:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 sdk_source_set("zx") {
@@ -55,5 +55,5 @@ zx_library("zxc") {
   }
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config/zircon:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

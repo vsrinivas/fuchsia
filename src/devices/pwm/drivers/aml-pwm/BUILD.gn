@@ -31,6 +31,9 @@ driver_module("aml-pwm-driver") {
     ":common",
     "//src/devices/lib/driver",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("aml-pwm") {
@@ -52,6 +55,9 @@ test("aml-pwm-test-bin") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("common") {

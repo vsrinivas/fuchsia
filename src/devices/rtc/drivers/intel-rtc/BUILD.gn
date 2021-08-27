@@ -35,6 +35,9 @@ driver_module("intel-rtc-driver") {
   output_name = "intel-rtc"
   sources = [ "intel-rtc.cc" ]
   deps = common_deps
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("intel-rtc") {
@@ -55,6 +58,9 @@ test("intel-rtc-test-bin") {
            "//zircon/system/ulib/async-loop:async-loop-cpp",
            "//zircon/system/ulib/zxtest",
          ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("intel-rtc-test") {

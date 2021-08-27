@@ -22,4 +22,7 @@ source_set("mocks") {
     "//src/ui/a11y/lib/screen_reader/focus",
     "//src/ui/a11y/lib/util",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

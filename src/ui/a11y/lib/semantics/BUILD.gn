@@ -35,4 +35,7 @@ source_set("semantics") {
     "//src/ui/a11y/lib/semantics/util",
     "//zircon/third_party/uapp/dash:output_h",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

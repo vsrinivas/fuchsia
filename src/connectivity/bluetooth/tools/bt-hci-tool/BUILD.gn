@@ -23,6 +23,9 @@ executable("bin") {
     "//src/connectivity/bluetooth/core/bt-host/transport",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_shell_package("bt-hci-tool") {

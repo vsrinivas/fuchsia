@@ -31,6 +31,9 @@ executable("bin") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/service:service-llcpp",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_shell_package("tones") {

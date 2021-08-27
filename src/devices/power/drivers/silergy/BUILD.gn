@@ -42,6 +42,9 @@ driver_module("sy-buck-driver") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/hwreg-i2c",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("sy-buck") {
@@ -77,6 +80,9 @@ test("sy-buck-test-bin") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hwreg-i2c",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("sy-buck-test") {

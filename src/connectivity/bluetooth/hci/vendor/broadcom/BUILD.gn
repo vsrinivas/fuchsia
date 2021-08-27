@@ -38,6 +38,9 @@ driver_module("bt-hci-broadcom-driver") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("bt-hci-broadcom") {
@@ -76,6 +79,9 @@ test("bt-hci-broadcom-test-bin") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("bt-hci-broadcom-test") {

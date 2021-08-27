@@ -78,6 +78,9 @@ foreach(src, src_storage_types) {
         "SRC_STORAGE_TYPE=${src}",
         "DEST_STORAGE_TYPE=${dest}",
       ]
+
+      # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+      configs += [ "//build/config:Wno-conversion" ]
     }
     copy_test_deps += [ ":${source_set_name}" ]
   }
@@ -112,6 +115,9 @@ test("zbitl-unittests") {
   } else if (is_host) {
     deps += [ ":host-test-data" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 resource("zbitl-test-resources") {

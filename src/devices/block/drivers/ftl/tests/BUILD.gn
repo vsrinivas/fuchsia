@@ -18,6 +18,9 @@ source_set("shared") {
     "//src/devices/block/drivers/ftl:common",
     "//src/devices/testing/mock-ddk",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

@@ -210,6 +210,9 @@ if (current_toolchain != default_toolchain) {
       "//zircon/system/ulib/zbitl",
       "//zircon/system/ulib/zxc",
     ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   phys_zbi_test("zbi-chain-load-hello-world-test") {

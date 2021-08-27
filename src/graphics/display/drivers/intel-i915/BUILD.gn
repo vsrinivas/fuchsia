@@ -55,6 +55,9 @@ source_set("common_srcs") {
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("intel-i915-driver") {
@@ -86,6 +89,9 @@ test("intel-i915-test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).

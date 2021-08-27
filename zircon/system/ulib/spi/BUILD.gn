@@ -10,4 +10,7 @@ zx_library("spi") {
   sources = [ "spi.cc" ]
   public_deps = [ "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp" ]
   deps = [ "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -73,6 +73,9 @@ zx_library("vm") {
   # the reference so it will never actually be called, but the compiler can't
   # figure that out statically so we must disable its warning.
   configs += [ ":suppress-nonheap-warning" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 config("suppress-nonheap-warning") {

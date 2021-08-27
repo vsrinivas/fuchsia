@@ -127,6 +127,9 @@ test("fvm_unit") {
       "//zircon/system/ulib/fdio-caller",
     ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("fvm_unit_test_component") {

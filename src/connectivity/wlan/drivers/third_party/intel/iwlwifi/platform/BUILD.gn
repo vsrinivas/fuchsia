@@ -87,4 +87,7 @@ source_set("fuchsia_device") {
   ]
   friend =
       [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:*" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

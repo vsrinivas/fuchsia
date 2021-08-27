@@ -82,6 +82,9 @@ source_set("lib") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -159,6 +162,9 @@ executable("system_monitor_harvester_test") {
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

@@ -432,6 +432,9 @@ driver_module("test-pci-driver") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("test-pci") {

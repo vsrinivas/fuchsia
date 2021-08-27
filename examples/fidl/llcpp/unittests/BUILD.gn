@@ -19,6 +19,9 @@ test("test") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # [END test]

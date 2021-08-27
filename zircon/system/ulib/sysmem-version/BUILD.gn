@@ -15,6 +15,9 @@ zx_library("sysmem-version") {
     "//zircon/system/ulib/fidl-async-2",
   ]
   deps = [ "//zircon/public/lib/fidl" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

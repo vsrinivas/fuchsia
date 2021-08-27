@@ -60,6 +60,9 @@ driver_module("wlanphy-testdev-driver") {
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.

@@ -84,6 +84,9 @@ executable("hsv_generator_unittest_bin") {
     ":hsv_color_source",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("image_format_rgba_unittest_bin") {

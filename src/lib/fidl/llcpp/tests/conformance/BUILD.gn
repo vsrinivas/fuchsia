@@ -78,6 +78,9 @@ test("fidl_llcpp_request_response_tests_bin") {
     "//src/lib/fidl/llcpp/tests/wire_types:fidl.llcpp.types.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("fidl_llcpp_request_response_tests") {
@@ -93,4 +96,7 @@ source_set("conformance_utils") {
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl:fidl_base",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

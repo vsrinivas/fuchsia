@@ -19,6 +19,9 @@ source_set("fake_msgbuf_interfaces") {
     "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test_utils") {
@@ -31,6 +34,9 @@ source_set("test_utils") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("flow_ring_handler_test") {
@@ -50,6 +56,9 @@ executable("flow_ring_handler_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("flow_ring_test") {
@@ -68,6 +77,9 @@ executable("flow_ring_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("msgbuf_ring_handler_test") {
@@ -84,6 +96,9 @@ executable("msgbuf_ring_handler_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 _tests = [

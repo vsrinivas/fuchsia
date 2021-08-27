@@ -59,6 +59,9 @@ source_set("zbitl") {
   if (toolchain_environment == "kernel") {
     deps += [ "//zircon/kernel/lib/console" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (toolchain_environment == "kernel") {

@@ -65,6 +65,9 @@ source_set("common") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
   public_deps = [ "//zircon/system/ulib/fbl" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("ram-nand-test") {

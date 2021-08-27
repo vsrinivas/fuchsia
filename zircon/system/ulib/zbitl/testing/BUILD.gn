@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/cpp/cpp_fuzzer.gni")
+import("//build/fuzzing/fuzzer.gni")
 
 group("testing") {
   testonly = true
@@ -36,9 +37,14 @@ cpp_fuzzer("copy-fuzzer") {
   }
 }
 
-cpp_fuzzer("bootfs-iteration-fuzzer") {
+# Why does passing configs not work when cpp_fuzzer is used? GN produces an
+# undefined identifier error, but cpp_fuzzer is a direct delegate to fuzzer.
+fuzzer("bootfs-iteration-fuzzer") {
   sources = [ "bootfs-iteration-fuzzer.cc" ]
   deps = [ ".." ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 cpp_fuzzer("mem-config-fuzzer") {

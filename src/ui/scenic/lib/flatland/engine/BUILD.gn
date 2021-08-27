@@ -42,6 +42,9 @@ template("engine_library") {
     if (make_cpu_accessible) {
       public_configs += [ ":cpu_accessible_config" ]
     }
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 

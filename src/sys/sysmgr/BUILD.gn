@@ -42,6 +42,9 @@ source_set("lib") {
   if (auto_update_packages) {
     public_configs = [ ":update_packages_config" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

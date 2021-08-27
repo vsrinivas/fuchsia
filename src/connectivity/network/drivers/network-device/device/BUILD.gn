@@ -72,6 +72,9 @@ test("test_bin") {
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("network-device-lib-test") {
@@ -93,6 +96,9 @@ test("microbenchmarks_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/perftest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("network-device-microbenchmarks") {

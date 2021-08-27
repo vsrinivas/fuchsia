@@ -77,6 +77,9 @@ driver_module("fragment-driver") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("fragment-component") {

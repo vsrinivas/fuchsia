@@ -42,4 +42,7 @@ source_set("generic-arm") {
     "//zircon/system/ulib/ram-crashlog",
     "//zircon/system/ulib/zbitl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -25,4 +25,7 @@ source_set("types_test_utils") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

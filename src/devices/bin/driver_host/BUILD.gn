@@ -80,6 +80,9 @@ source_set("common") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 shared_library("driver") {
@@ -106,6 +109,9 @@ driver_module("driver-host-test-driver-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("driver-host-test-driver") {
@@ -160,6 +166,9 @@ driver_module("driver-host-restart-driver-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("driver-host-restart-driver") {

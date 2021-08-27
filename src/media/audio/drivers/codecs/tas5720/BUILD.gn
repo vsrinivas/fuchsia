@@ -36,6 +36,9 @@ driver_module("tas5720-driver") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("tas5720") {
@@ -69,6 +72,9 @@ test("tas5720-test-bin") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("tas5720-test-package") {

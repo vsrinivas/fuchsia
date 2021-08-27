@@ -35,4 +35,7 @@ zx_library("crypto") {
     # <lib/crypto/entropy/jitterentropy_collector.h> has #include <lib/jitterentropy/jitterentropy.h>.
     "//zircon/third_party/lib/jitterentropy:headers",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

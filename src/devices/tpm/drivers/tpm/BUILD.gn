@@ -32,6 +32,9 @@ driver_module("driver_module") {
   output_name = "tpm-driver"
   sources = [ "tpm.cc" ]
   deps = common_deps
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("tpm-driver") {
@@ -55,6 +58,9 @@ test("tpm-driver-test-bin") {
            "//src/devices/testing/mock-ddk",
            "//zircon/system/ulib/zxtest",
          ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("tpm-driver-test") {

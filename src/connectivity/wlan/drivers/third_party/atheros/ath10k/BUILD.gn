@@ -106,6 +106,9 @@ driver_module("ath10k_driver-driver") {
 
   # Suppress warnings the atheros code doesn't comply with.
   configs += [ "//build/config:Wno-unused-but-set-variable" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("ath10k_driver") {

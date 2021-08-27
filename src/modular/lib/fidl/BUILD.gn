@@ -68,7 +68,7 @@ source_set("json_xdr") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("proxy") {
@@ -209,4 +209,7 @@ source_set("json_xdr_unittest") {
     ":json_xdr_unittest_fidl",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

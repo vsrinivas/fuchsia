@@ -39,6 +39,9 @@ driver_module("tas27xx-driver") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("tas27xx") {
@@ -74,6 +77,9 @@ test("tas27xx-test-bin") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("tas27xx-test-package") {

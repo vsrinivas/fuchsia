@@ -60,6 +60,9 @@ zx_library("memalloc") {
     # <lib/memalloc/pool.h> has #include <lib/zx/status.h>.
     "//zircon/system/ulib/zxc:headers",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("testing") {

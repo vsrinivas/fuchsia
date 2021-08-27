@@ -111,6 +111,9 @@ if (toolchain_environment == "userboot") {
       "//zircon/third_party/ulib/musl/src/string:minimal_str",
       "//zircon/third_party/ulib/musl/src/string:stdmem",
     ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   # This generated header lists all the ABI symbols in the vDSO with their

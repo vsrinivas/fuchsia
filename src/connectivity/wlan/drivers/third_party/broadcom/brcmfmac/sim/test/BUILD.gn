@@ -30,6 +30,9 @@ source_set("sim_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("active_scan_test") {
@@ -52,6 +55,9 @@ executable("active_scan_test") {
     "//third_party/googletest:gtest",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("arp_test") {
@@ -71,6 +77,9 @@ executable("arp_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("assoc_test") {
@@ -94,6 +103,9 @@ executable("assoc_test") {
     "//third_party/googletest:gtest",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("auth_test") {
@@ -112,6 +124,9 @@ executable("auth_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bad_entropy_test") {
@@ -125,6 +140,9 @@ executable("bad_entropy_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("beacon_lost_test") {
@@ -142,6 +160,9 @@ executable("beacon_lost_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bootloader_mac_addr_test") {
@@ -155,6 +176,9 @@ executable("bootloader_mac_addr_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("call_after_del_iface_test") {
@@ -168,6 +192,9 @@ executable("call_after_del_iface_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("cc_test") {
@@ -185,6 +212,9 @@ executable("cc_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("channel_switch_test") {
@@ -201,6 +231,9 @@ executable("channel_switch_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("crash_recovery_test") {
@@ -220,6 +253,9 @@ executable("crash_recovery_test") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("create_softap_test") {
@@ -244,6 +280,9 @@ executable("create_softap_test") {
     "//third_party/googletest:gmock",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("data_frame_test") {
@@ -263,6 +302,9 @@ executable("data_frame_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("disassoc_test") {
@@ -282,6 +324,9 @@ executable("disassoc_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("dynamic_if_test") {
@@ -302,6 +347,9 @@ executable("dynamic_if_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("err_inject_test") {
@@ -322,6 +370,9 @@ executable("err_inject_test") {
 
   # TODO(fxbug.dev/62982): fix stack-use-after-return and delete
   deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("escan_params_test") {
@@ -338,6 +389,9 @@ executable("escan_params_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("firmware_config_test") {
@@ -358,6 +412,9 @@ executable("firmware_config_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("wmm_status_test") {
@@ -371,6 +428,9 @@ executable("wmm_status_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("ifc_query_test") {
@@ -387,6 +447,9 @@ executable("ifc_query_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("iovar_test") {
@@ -405,6 +468,9 @@ executable("iovar_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("lifecycle_test") {
@@ -422,6 +488,9 @@ executable("lifecycle_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("mfg_test") {
@@ -449,6 +518,9 @@ executable("mfg_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/no_ddk",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("no_random_mac_test") {
@@ -462,6 +534,9 @@ executable("no_random_mac_test") {
     "//src/devices/testing/no_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("passive_scan_test") {
@@ -480,6 +555,9 @@ executable("passive_scan_test") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("phy_query_test") {
@@ -496,6 +574,9 @@ executable("phy_query_test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("scan_dwell_time_test") {
@@ -511,6 +592,9 @@ executable("scan_dwell_time_test") {
     "//src/devices/testing/no_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("scan_while_scanning_test") {
@@ -524,6 +608,9 @@ executable("scan_while_scanning_test") {
     "//src/devices/testing/no_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("set_keys_test") {
@@ -537,6 +624,9 @@ executable("set_keys_test") {
     "//src/devices/testing/no_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("set_multicast_test") {
@@ -550,6 +640,9 @@ executable("set_multicast_test") {
     "//src/devices/testing/no_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("start_ap_while_scanning_test") {
@@ -564,6 +657,9 @@ executable("start_ap_while_scanning_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("timeout_test") {
@@ -583,6 +679,9 @@ executable("timeout_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 _tests = [

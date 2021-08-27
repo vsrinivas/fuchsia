@@ -85,6 +85,9 @@ if (is_kernel) {
     if (current_cpu == "x64") {
       deps += [ "//zircon/kernel/platform/pc" ]
     }
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   # Only this file depends on vdso-valid-sysret.h.

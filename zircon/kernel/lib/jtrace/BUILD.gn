@@ -26,4 +26,7 @@ zx_library("jtrace") {
     "//zircon/kernel:jtrace_config",
     "//zircon/kernel:persistent_ram_config",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

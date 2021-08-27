@@ -16,4 +16,7 @@ executable("gpt") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

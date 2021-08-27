@@ -124,6 +124,9 @@ executable("data_provider_unittest_exe") {
     "//third_party/rapidjson",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("data_provider_controller_unittest_exe") {
@@ -228,6 +231,9 @@ executable("inspect_data_budget_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("inspect_unittest_exe") {

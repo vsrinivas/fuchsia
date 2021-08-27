@@ -129,7 +129,7 @@ zx_library("ngunwind") {
   }
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config/zircon:Wno-conversion" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 config("private_config") {

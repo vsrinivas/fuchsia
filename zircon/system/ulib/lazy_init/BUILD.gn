@@ -19,6 +19,9 @@ zx_library("lazy_init") {
   if (is_fuchsia && !is_kernel) {
     deps = [ "//zircon/system/ulib/zx" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

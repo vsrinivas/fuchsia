@@ -110,6 +110,9 @@ source_set("source_set") {
   if (enable_mdns_trace) {
     defines = [ "MDNS_TRACE" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("mdns_test") {

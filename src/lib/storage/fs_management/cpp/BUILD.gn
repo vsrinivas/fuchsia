@@ -55,6 +55,9 @@ if (is_fuchsia) {
     # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
     # See linked bug for details.
     configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 } else {
   source_set("fs-management") {
@@ -65,6 +68,9 @@ if (is_fuchsia) {
     ]
 
     public_configs = [ ":headers_config" ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 
@@ -110,6 +116,9 @@ test("fs-management-test") {
     "//zircon/third_party/uapp/fsck-msdosfs",
     "//zircon/third_party/uapp/mkfs-msdosfs",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).

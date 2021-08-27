@@ -26,6 +26,9 @@ executable("fvm") {
   if (!is_fuchsia) {
     deps += [ "//zircon/system/ulib/zx-panic-libc" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 sdk_host_tool("fvm_sdk") {

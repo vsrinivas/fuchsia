@@ -51,6 +51,9 @@ driver_module("aml-hdmi-driver") {
   output_name = "aml-hdmi"
   sources = [ "aml-hdmi.cc" ]
   deps = [ ":common_srcs" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("aml-hdmi") {
@@ -72,6 +75,9 @@ test("aml-hdmi-test-bin") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("aml-hdmi-test") {

@@ -119,6 +119,9 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     inputs = [ fdio_version_script ]
     ldflags = [ "-Wl,--version-script=" +
                 rebase_path(fdio_version_script, root_build_dir) ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 } else {
   source_set("fdio") {

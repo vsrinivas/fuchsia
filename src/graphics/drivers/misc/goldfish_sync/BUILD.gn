@@ -81,6 +81,9 @@ test("goldfish-sync-device-test") {
   ]
 
   configs += [ "//build/config:all_source" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("goldfish-sync-device-test-package") {

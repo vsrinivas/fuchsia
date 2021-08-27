@@ -24,6 +24,9 @@ test("pci-protocol-fake-test") {
     "//src/devices/pci/testing:pci-protocol-fake",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("pci-protocol-fake-test-package") {

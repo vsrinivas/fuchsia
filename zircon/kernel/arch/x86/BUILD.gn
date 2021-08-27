@@ -216,6 +216,9 @@ zx_library("x86") {
     # <arch/x86/system_topology.h> has #include <lib/acpi_lite.h>.
     "//zircon/kernel/lib/acpi_lite:headers",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("syscall") {

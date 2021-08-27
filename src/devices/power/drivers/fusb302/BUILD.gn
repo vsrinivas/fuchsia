@@ -43,6 +43,9 @@ driver_module("fusb302-driver") {
 
   # TODO: delete the below and fix compiler errors.
   configs += [ "//build/config:Wno-unused-but-set-variable" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("fusb302") {
@@ -69,6 +72,9 @@ test("fusb302-test-bin") {
 
   # TODO: delete the below and fix compiler errors.
   configs += [ "//build/config:Wno-unused-but-set-variable" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("fusb302-test") {

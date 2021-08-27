@@ -132,6 +132,9 @@ source_set("lib") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/virtio",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -202,6 +205,9 @@ executable("vmm_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_component("device_unittests_component") {

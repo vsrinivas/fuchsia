@@ -51,6 +51,9 @@ source_set("pcie") {
     ":pcie_driver_test",
     "test/*",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("pcie_driver_test") {
@@ -69,4 +72,7 @@ source_set("pcie_driver_test") {
     "//src/lib/ddk",
     "//zircon/system/public",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

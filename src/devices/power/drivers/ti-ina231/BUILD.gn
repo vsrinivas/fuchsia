@@ -46,6 +46,9 @@ driver_module("ti-ina231-driver") {
   ]
   sources = [ "ti-ina231.cc" ]
   deps = [ ":common" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("ti-ina231") {
@@ -71,6 +74,9 @@ test("ti-ina231-test-bin") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("ti-ina231-test") {

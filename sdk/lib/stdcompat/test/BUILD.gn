@@ -45,9 +45,6 @@ group("stdcompat-test-deps") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 # This target will be forced to compile using stdcompat provided polyfills and no inline variables.
@@ -58,6 +55,9 @@ test("stdcompat-polyfills-no-inline-variables-unit-test") {
     ":stdcompat-select-polyfills",
     ":stdcompat-no-inline-variables",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # This target will be forced to compile using stdcompat provided polyfills.
@@ -65,12 +65,18 @@ test("stdcompat-polyfills-unit-test") {
   sources = stdcompat_test_sources
   deps = [ ":stdcompat-test-deps" ]
   configs += [ ":stdcompat-select-polyfills" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # This target will let the feature-test macro pick std implementation if available.
 test("stdcompat-unit-test") {
   sources = stdcompat_test_sources
   deps = [ ":stdcompat-test-deps" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("stdcompat-test") {

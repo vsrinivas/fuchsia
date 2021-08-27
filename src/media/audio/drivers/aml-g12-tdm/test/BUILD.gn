@@ -43,6 +43,9 @@ executable("aml-g12-tdm-test-bin") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("aml-g12-tdm-dai-test-bin") {
@@ -78,6 +81,9 @@ executable("aml-g12-tdm-dai-test-bin") {
     # TODO(andresoportus): Remove depedency on TLS (maybe done by C++ bindings unification).
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("stream-test-package") {

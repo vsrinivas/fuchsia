@@ -44,6 +44,9 @@ source_set("src") {
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/syslog",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -82,6 +85,9 @@ test("network_tun_unittest") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("network-tun-test") {

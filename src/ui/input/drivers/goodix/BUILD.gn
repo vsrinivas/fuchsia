@@ -53,6 +53,9 @@ driver_module("goodix-module-driver") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("goodix-module") {
@@ -117,6 +120,9 @@ test("gt92xx-test") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("gt92xx-test-package") {

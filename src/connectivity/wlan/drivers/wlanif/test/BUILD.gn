@@ -32,6 +32,9 @@ test("convert_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("device_unittest") {
@@ -53,6 +56,9 @@ test("device_unittest") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("impl_unittest") {

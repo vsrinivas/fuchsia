@@ -159,6 +159,9 @@ test("xhci-core-unittest-bin") {
 
   # TODO: delete the below and fix compiler errors.
   configs += [ "//build/config:Wno-unused-but-set-variable" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("xhci-event-ring-unittest-bin") {

@@ -51,6 +51,9 @@ source_set("use_media_decoder_source_set") {
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/syslog",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("use_media_decoder") {

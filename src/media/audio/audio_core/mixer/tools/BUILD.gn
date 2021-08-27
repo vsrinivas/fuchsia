@@ -29,6 +29,9 @@ executable("profiler_bin") {
     "//src/media/audio/lib/format",
     "//zircon/system/ulib/perftest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_shell_package("audio_mixer_profiler") {

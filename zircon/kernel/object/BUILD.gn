@@ -115,6 +115,9 @@ zx_library("object") {
     # <object/clock_dispatcher.h> has #include <lib/affine/transform.h>.
     "//zircon/system/ulib/affine",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("tests") {

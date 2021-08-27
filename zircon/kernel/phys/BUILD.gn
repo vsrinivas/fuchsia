@@ -144,6 +144,9 @@ if (toolchain_environment == "kernel.phys" ||
       "//zircon/system/ulib/uart",
       "//zircon/system/ulib/zbitl",
     ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   # Transitive dependencies for the <phys/main.h> header.
@@ -270,6 +273,9 @@ if (toolchain_environment == "kernel.phys" ||
       # allocation.h has #include <fbl/alloc_checker.h>.
       "//zircon/system/ulib/fbl",
     ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   source_set("boot-zbi") {
@@ -286,6 +292,9 @@ if (toolchain_environment == "kernel.phys" ||
       "//zircon/system/ulib/zbitl",
       "//zircon/system/ulib/zxc",
     ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   # This is a little library instead of a source_set() so it can be included
@@ -341,6 +350,9 @@ zbi_executable("physboot") {
   if (current_cpu == "arm64") {
     exclude_toolchain_tags = [ "lto" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("handoff") {

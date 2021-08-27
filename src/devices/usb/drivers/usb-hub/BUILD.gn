@@ -39,6 +39,9 @@ driver_module("usb-hub-driver") {
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("usb-hub") {

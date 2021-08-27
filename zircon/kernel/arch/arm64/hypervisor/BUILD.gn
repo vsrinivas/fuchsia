@@ -27,4 +27,7 @@ source_set("hypervisor") {
     "//zircon/kernel/lib/ktrace",
     "//zircon/system/ulib/affine",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

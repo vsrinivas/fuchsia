@@ -34,6 +34,9 @@ driver_module("driver_module") {
   output_name = "cr50-spi-driver"
   sources = [ "cr50-spi.cc" ]
   deps = common_deps
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("cr50-spi-driver") {
@@ -57,6 +60,9 @@ test("cr50-spi-test-bin") {
            "//src/devices/testing/mock-ddk",
            "//zircon/system/ulib/zxtest",
          ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("cr50-spi-test") {

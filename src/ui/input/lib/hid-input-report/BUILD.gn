@@ -23,6 +23,9 @@ source_set("hid-input-report") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("lib-hid-input-report-test") {
@@ -52,6 +55,9 @@ test("lib-hid-input-report-test") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("test") {

@@ -78,6 +78,9 @@ source_set("lib") {
   } else {
     defines += [ "CAMERA_GYM_ENABLE_ROOT_PRESENTER=(false)" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("camera_gym_bin") {
@@ -188,6 +191,9 @@ executable("stream_cycler_test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture:gtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("stream_cycler_test") {

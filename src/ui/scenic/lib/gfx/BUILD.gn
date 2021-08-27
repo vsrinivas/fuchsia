@@ -54,6 +54,7 @@ source_set("gfx_always_optimized") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 
@@ -269,6 +270,9 @@ source_set("gfx") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("object_linker") {
@@ -286,6 +290,7 @@ source_set("object_linker") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
 

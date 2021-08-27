@@ -25,6 +25,9 @@ if (toolchain_environment == "kernel.phys") {
       "//zircon/kernel/phys/lib/page-table",
       "//zircon/system/ulib/zbitl",
     ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   source_set("phys") {

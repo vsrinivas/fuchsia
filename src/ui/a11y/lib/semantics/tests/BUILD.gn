@@ -62,6 +62,9 @@ executable("semantics_tests") {
 
   # This is a dependency of the semantic tree to perform certain matrix transform operations.
   include_dirs = [ "//third_party/glm" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("flutter_semantics_tests") {

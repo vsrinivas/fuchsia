@@ -208,6 +208,9 @@ static_library("blobfs") {
       "BLOBFS_ENABLE_STREAMING_WRITES",
     ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fidl("fuchsia.blobfs.internal") {

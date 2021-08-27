@@ -65,6 +65,9 @@ template("ot_radio_driver") {
 
       deps += [ ":version-string-${driver_suffix}" ]
     }
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   fuchsia_driver_component("ot-radio-${driver_suffix}") {

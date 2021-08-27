@@ -88,6 +88,9 @@ source_set("src") {
     "//zircon/system/ulib/intel-hda",
     "//zircon/system/ulib/refcount",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 firmware("firmware") {
@@ -153,6 +156,9 @@ executable("intel-hda-stream-test-bin") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("intel-hda-stream-test") {
