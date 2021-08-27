@@ -697,7 +697,7 @@ bool migrate_stress_test() {
     zx_status_t result = thread.thread->Join(&ret, Deadline::after(ZX_SEC(5)).when());
     if (result != ZX_OK) {
       // If the thread has not completed in 5 seconds, it is likely that the
-      // thread has hung or been forgotton about by the scheduler.
+      // thread has hung for an unknown reason.
       //
       // TODO(fxbug.dev/78695): We are currently seeing some flakes in CI/CQ
       // that cannot be reproduced locally. Once resolved, this additional
