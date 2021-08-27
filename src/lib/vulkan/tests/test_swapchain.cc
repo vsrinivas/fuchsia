@@ -22,6 +22,7 @@
 
 namespace {
 
+constexpr uint32_t kVendorIDIntel = 0x8086;
 uint64_t ZirconIdFromHandle(uint32_t handle) {
   zx_info_handle_basic_t info;
   zx_status_t status =
@@ -35,6 +36,12 @@ VkPhysicalDeviceType GetVkPhysicalDeviceType(VkPhysicalDevice device) {
   VkPhysicalDeviceProperties properties;
   vkGetPhysicalDeviceProperties(device, &properties);
   return properties.deviceType;
+}
+
+uint32_t GetVkPhysicalDeviceVendorID(VkPhysicalDevice device) {
+  VkPhysicalDeviceProperties properties;
+  vkGetPhysicalDeviceProperties(device, &properties);
+  return properties.vendorID;
 }
 
 // FakeImagePipe runs async loop on its own thread to allow the test
@@ -130,13 +137,12 @@ class FakeImagePipe : public fuchsia::images::testing::ImagePipe2_TestBase {
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 debug_utils_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                      VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-                     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-  fprintf(stderr, "Got debug utils callback: %s\n", pCallbackData->pMessage);
-  return VK_FALSE;
-}
+                     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 
 class TestSwapchain {
  public:
+  static constexpr uint32_t kSwapchainImageCount = 3;
+
   template <class T>
   void LoadProc(T* proc, const char* name) {
     auto get_device_proc_addr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
@@ -149,9 +155,16 @@ class TestSwapchain {
     std::vector<const char*> instance_ext{VK_KHR_SURFACE_EXTENSION_NAME,
                                           VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
                                           VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
-    std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                                        VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME};
+    std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
+    const VkValidationFeatureEnableEXT sync_validation =
+        VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
+    const VkValidationFeaturesEXT validation_features = {
+        .sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT,
+        .pNext = nullptr,
+        .enabledValidationFeatureCount = 1,
+        .pEnabledValidationFeatures = &sync_validation,
+    };
     const VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = nullptr,
@@ -163,7 +176,7 @@ class TestSwapchain {
     };
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pNext = nullptr,
+        .pNext = &validation_features,
         .pApplicationInfo = &app_info,
         .enabledLayerCount = static_cast<uint32_t>(instance_layers.size()),
         .ppEnabledLayerNames = instance_layers.data(),
@@ -221,15 +234,18 @@ class TestSwapchain {
 
     auto pfnCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
         vkGetInstanceProcAddr(vk_instance_, "vkCreateDebugUtilsMessengerEXT"));
+    get_surface_support_khr_ = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceSupportKHR>(
+        vkGetInstanceProcAddr(vk_instance_, "vkGetPhysicalDeviceSurfaceSupportKHR"));
 
     VkDebugUtilsMessengerCreateInfoEXT callback = {
         .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
         .pNext = nullptr,
         .flags = 0,
         .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT,
+        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
         .pfnUserCallback = debug_utils_callback,
-        .pUserData = nullptr};
+        .pUserData = this};
     result = pfnCreateDebugUtilsMessengerEXT(vk_instance_, &callback, NULL, &messenger_cb_);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "Failed to install debug callback\n");
@@ -263,6 +279,15 @@ class TestSwapchain {
       return;
     }
 
+    VkCommandPoolCreateInfo pool_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = protected_memory_ ? VK_COMMAND_POOL_CREATE_PROTECTED_BIT : 0u,
+        .queueFamilyIndex = 0,
+    };
+
+    EXPECT_EQ(VK_SUCCESS, vkCreateCommandPool(vk_device_, &pool_info, nullptr, &vk_command_pool_));
+
     PFN_vkGetDeviceProcAddr get_device_proc_addr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
         vkGetInstanceProcAddr(vk_instance_, "vkGetDeviceProcAddr"));
     if (!get_device_proc_addr) {
@@ -277,10 +302,24 @@ class TestSwapchain {
     LoadProc(&queue_present_khr_, "vkQueuePresentKHR");
     LoadProc(&get_device_queue2_, "vkGetDeviceQueue2");
 
+    if (protected_memory_) {
+      VkDeviceQueueInfo2 queue_info2 = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,
+                                        .pNext = nullptr,
+                                        .flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT,
+                                        .queueFamilyIndex = 0,
+                                        .queueIndex = 0};
+      get_device_queue2_(vk_device_, &queue_info2, &vk_queue_);
+    } else {
+      vkGetDeviceQueue(vk_device_, 0, 0, &vk_queue_);
+    }
+
     init_ = true;
   }
 
   ~TestSwapchain() {
+    if (vk_command_pool_) {
+      vkDestroyCommandPool(vk_device_, vk_command_pool_, nullptr);
+    }
     if (messenger_cb_) {
       auto pfnDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
           vkGetInstanceProcAddr(vk_instance_, "vkDestroyDebugUtilsMessengerEXT"));
@@ -294,15 +333,33 @@ class TestSwapchain {
       vkDestroyInstance(vk_instance_, nullptr);
   }
 
+  void ValidateSurfaceForDevice(VkSurfaceKHR surface) {
+    VkBool32 surface_supported = false;
+    EXPECT_EQ(VK_SUCCESS, get_surface_support_khr_(vk_physical_device_, /*queue_family_index*/ 0,
+                                                   surface, &surface_supported));
+    EXPECT_TRUE(surface_supported);
+  }
+
+  std::vector<VkImage> GetSwapchainImages(VkSwapchainKHR swapchain) {
+    uint32_t image_count = 0;
+    EXPECT_EQ(VK_SUCCESS, get_swapchain_images_khr_(vk_device_, swapchain, &image_count, nullptr));
+    EXPECT_EQ(image_count, kSwapchainImageCount);
+    std::vector<VkImage> images(image_count);
+    EXPECT_EQ(VK_SUCCESS,
+              get_swapchain_images_khr_(vk_device_, swapchain, &image_count, images.data()));
+    return images;
+  }
+
   VkResult CreateSwapchainHelper(VkSurfaceKHR surface, VkFormat format, VkImageUsageFlags usage,
                                  VkSwapchainKHR* swapchain_out) {
+    ValidateSurfaceForDevice(surface);
     VkSwapchainCreateInfoKHR create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = nullptr,
         .flags = protected_memory_ ? VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR
                                    : static_cast<VkSwapchainCreateFlagsKHR>(0),
         .surface = surface,
-        .minImageCount = 3,
+        .minImageCount = kSwapchainImageCount,
         .imageFormat = format,
         .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
         .imageArrayLayers = 1,
@@ -318,7 +375,13 @@ class TestSwapchain {
         .oldSwapchain = VK_NULL_HANDLE,
     };
 
-    return create_swapchain_khr_(vk_device_, &create_info, nullptr, swapchain_out);
+    VkResult result = create_swapchain_khr_(vk_device_, &create_info, nullptr, swapchain_out);
+    if (result != VK_SUCCESS)
+      return result;
+
+    // Get Swapchain images to make the validation layers happy.
+    GetSwapchainImages(*swapchain_out);
+    return VK_SUCCESS;
   }
 
   void Surface(bool use_dynamic_symbol) {
@@ -377,10 +440,67 @@ class TestSwapchain {
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
+  void TransitionLayout(VkImage image, VkImageLayout to) {
+    VkCommandBuffer command_buffer;
+    VkCommandBufferAllocateInfo alloc_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .commandPool = vk_command_pool_,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    EXPECT_EQ(VK_SUCCESS, vkAllocateCommandBuffers(vk_device_, &alloc_info, &command_buffer));
+    VkCommandBufferBeginInfo begin_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .pInheritanceInfo = nullptr,
+    };
+    EXPECT_EQ(VK_SUCCESS, vkBeginCommandBuffer(command_buffer, &begin_info));
+    VkImageMemoryBarrier image_barrer = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = nullptr,
+        .srcAccessMask = 0,
+        .dstAccessMask = 0,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = to,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image,
+        .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                             .baseMipLevel = 0,
+                             .levelCount = 1,
+                             .baseArrayLayer = 0,
+                             .layerCount = 1}};
+    vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                         &image_barrer);
+    VkProtectedSubmitInfo protected_submit = {.sType = VK_STRUCTURE_TYPE_PROTECTED_SUBMIT_INFO,
+                                              .pNext = nullptr,
+                                              .protectedSubmit = protected_memory_};
+    VkSubmitInfo submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = &protected_submit,
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &command_buffer,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr,
+    };
+    EXPECT_EQ(VK_SUCCESS, vkEndCommandBuffer(command_buffer));
+    EXPECT_EQ(VK_SUCCESS, vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE));
+    EXPECT_EQ(VK_SUCCESS, vkQueueWaitIdle(vk_queue_));
+    vkFreeCommandBuffers(vk_device_, vk_command_pool_, 1, &command_buffer);
+  }
+
   VkInstance vk_instance_ = VK_NULL_HANDLE;
   VkPhysicalDevice vk_physical_device_ = VK_NULL_HANDLE;
   VkDevice vk_device_ = VK_NULL_HANDLE;
+  VkCommandPool vk_command_pool_ = VK_NULL_HANDLE;
+  VkQueue vk_queue_ = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT messenger_cb_ = nullptr;
+  PFN_vkGetPhysicalDeviceSurfaceSupportKHR get_surface_support_khr_;
   PFN_vkCreateSwapchainKHR create_swapchain_khr_;
   PFN_vkDestroySwapchainKHR destroy_swapchain_khr_;
   PFN_vkGetSwapchainImagesKHR get_swapchain_images_khr_;
@@ -392,20 +512,54 @@ class TestSwapchain {
   const bool protected_memory_ = false;
   bool init_ = false;
   bool protected_memory_is_supported_ = false;
+  bool allows_validation_errors_ = false;
 };
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+debug_utils_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                     VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+  fprintf(stderr, "Got debug utils callback: %s\n", pCallbackData->pMessage);
+  auto swapchain = static_cast<TestSwapchain*>(pUserData);
+  EXPECT_TRUE(swapchain->allows_validation_errors_);
+  return VK_FALSE;
+}
 using UseProtectedMemory = bool;
 using WithCopy = bool;
+using ValidationBeforeLayer = bool;
 
-class SwapchainTest : public ::testing::TestWithParam<std::tuple<UseProtectedMemory, WithCopy>> {
+using ParamType = std::tuple<UseProtectedMemory, WithCopy, ValidationBeforeLayer>;
+
+static std::string NameFromParam(const testing::TestParamInfo<ParamType>& info) {
+  bool protected_mem = std::get<0>(info.param);
+  bool with_copy = std::get<1>(info.param);
+  bool validation_before = std::get<2>(info.param);
+  return std::string() + (protected_mem ? "Protected" : "Unprotected") +
+         (with_copy ? "Copy" : "NoCopy") +
+         (validation_before ? "ValidationBefore" : "ValidationAfter");
+}
+
+class SwapchainTest : public ::testing::TestWithParam<ParamType> {
  protected:
   void SetUp() override {
     std::vector<const char*> instance_layers;
+    // The copy swapchain doesn't pass validation, so skip this test.
+    // TODO(fxbug.dev/83314): Re-enable when swapchain is fixed.
+    if (with_copy() && validation_before_layer()) {
+      GTEST_SKIP();
+    }
     if (with_copy()) {
       instance_layers.push_back("VK_LAYER_FUCHSIA_imagepipe_swapchain_copy");
     }
+    if (validation_before_layer()) {
+      instance_layers.push_back("VK_LAYER_KHRONOS_validation");
+    }
     instance_layers.push_back("VK_LAYER_FUCHSIA_imagepipe_swapchain");
-    instance_layers.push_back("VK_LAYER_KHRONOS_validation");
+    // The copy swapchain doesn't pass validation, so don't enable validation when using it.
+    // TODO(fxbug.dev/83314): Re-enable when swapchain is fixed.
+    if (!validation_before_layer() && !with_copy()) {
+      instance_layers.push_back("VK_LAYER_KHRONOS_validation");
+    }
 
     auto test = std::make_unique<TestSwapchain>(instance_layers, use_protected_memory());
     if (use_protected_memory() && !test->protected_memory_is_supported_) {
@@ -416,11 +570,29 @@ class SwapchainTest : public ::testing::TestWithParam<std::tuple<UseProtectedMem
     test_ = std::move(test);
   }
 
+  void TearDown() override {
+    for (auto& semaphore : single_use_semaphores_) {
+      vkDestroySemaphore(test_->vk_device_, semaphore, nullptr);
+    }
+  }
+
   bool use_protected_memory() { return std::get<0>(GetParam()); }
 
   bool with_copy() { return std::get<1>(GetParam()); }
 
+  bool validation_before_layer() { return std::get<2>(GetParam()); }
+
+  VkSemaphore MakeSingleUseSemaphore() {
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    EXPECT_EQ(VK_SUCCESS,
+              vkCreateSemaphore(test_->vk_device_, &semaphore_create_info, nullptr, &semaphore));
+    single_use_semaphores_.push_back(semaphore);
+    return semaphore;
+  }
+
   std::unique_ptr<TestSwapchain> test_;
+  std::vector<VkSemaphore> single_use_semaphores_;
 };
 
 TEST_P(SwapchainTest, Surface) { test_->Surface(false); }
@@ -438,6 +610,11 @@ TEST_P(SwapchainTest, CreateTwice) {
 TEST_P(SwapchainTest, CreateForStorage) {
   // TODO(60853): STORAGE usage is currently not supported by FEMU Vulkan ICD.
   if (GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) {
+    GTEST_SKIP();
+  }
+
+  if (GetVkPhysicalDeviceVendorID(test_->vk_physical_device_) == kVendorIDIntel) {
+    // TODO(fxbug.dev/83325): STORAGE usage isn't supported by Intel.
     GTEST_SKIP();
   }
 
@@ -484,10 +661,13 @@ TEST_P(SwapchainTest, AcquireFence) {
       .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .pNext = nullptr, .flags = 0};
   vkCreateFence(test_->vk_device_, &info, nullptr, &fence);
 
+  // The swapchain itself outputs an error when it receives a fence.
+  test_->allows_validation_errors_ = true;
   uint32_t image_index;
   EXPECT_EQ(VK_ERROR_DEVICE_LOST,
             test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0, VK_NULL_HANDLE, fence,
                                            &image_index));
+  test_->allows_validation_errors_ = false;
   vkDestroyFence(test_->vk_device_, fence, nullptr);
 
   test_->destroy_swapchain_khr_(test_->vk_device_, swapchain, nullptr);
@@ -495,7 +675,9 @@ TEST_P(SwapchainTest, AcquireFence) {
 }
 
 INSTANTIATE_TEST_SUITE_P(SwapchainTestSuite, SwapchainTest,
-                         ::testing::Combine(::testing::Bool(), ::testing::Bool()));
+                         ::testing::Combine(::testing::Bool(), ::testing::Bool(),
+                                            ::testing::Bool()),
+                         NameFromParam);
 
 class SwapchainFidlTest : public SwapchainTest {};
 
@@ -535,6 +717,8 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
     vkGetDeviceQueue(test_->vk_device_, 0, 0, &queue);
   }
 
+  // Supplying neither fences nor semaphores is against the vulkan spec.
+  test_->allows_validation_errors_ = true;
   uint32_t image_index;
   // Acquire all initial images.
   for (uint32_t i = 0; i < 3; i++) {
@@ -551,6 +735,7 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   ASSERT_DEATH(test_->acquire_next_image_khr_(test_->vk_device_, swapchain, UINT64_MAX,
                                               VK_NULL_HANDLE, VK_NULL_HANDLE, &image_index),
                ".*Currently all images are pending.*");
+  test_->allows_validation_errors_ = false;
 
   uint32_t present_index;  // Initialized below.
   VkResult present_result;
@@ -568,8 +753,12 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   constexpr uint32_t kFrameCount = 100;
   for (uint32_t i = 0; i < kFrameCount; i++) {
     present_index = i % 3;
+    auto swapchain_images = test_->GetSwapchainImages(swapchain);
+    test_->TransitionLayout(swapchain_images[present_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     ASSERT_EQ(VK_SUCCESS, test_->queue_present_khr_(queue, &present_info));
 
+    // Supplying neither fences nor semaphores is against the vulkan spec.
+    test_->allows_validation_errors_ = true;
     constexpr uint64_t kTimeoutNs = std::chrono::nanoseconds(std::chrono::seconds(10)).count();
     ASSERT_EQ(VK_SUCCESS,
               test_->acquire_next_image_khr_(test_->vk_device_, swapchain, kTimeoutNs,
@@ -579,6 +768,7 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
     EXPECT_EQ(VK_NOT_READY,
               test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0, VK_NULL_HANDLE,
                                              VK_NULL_HANDLE, &image_index));
+    test_->allows_validation_errors_ = false;
   }
 
   test_->destroy_swapchain_khr_(test_->vk_device_, swapchain, nullptr);
@@ -629,10 +819,13 @@ TEST_P(SwapchainFidlTest, ForceQuit) {
 
   uint32_t image_index;
   EXPECT_EQ(VK_SUCCESS,
-            test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                           VK_NULL_HANDLE, &image_index));
+            test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0,
+                                           MakeSingleUseSemaphore(), VK_NULL_HANDLE, &image_index));
 
-  uint32_t present_index = 0;
+  auto swapchain_images = test_->GetSwapchainImages(swapchain);
+  test_->TransitionLayout(swapchain_images[image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+  uint32_t present_index = image_index;
   VkResult present_result;
   VkPresentInfoKHR present_info = {
       .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -700,9 +893,9 @@ TEST_P(SwapchainFidlTest, DeviceLostAvoidSemaphoreHang) {
   uint32_t image_index;
   // Acquire all initial images.
   for (uint32_t i = 0; i < 3; i++) {
-    EXPECT_EQ(VK_SUCCESS,
-              test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                             VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_SUCCESS, test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0,
+                                                         MakeSingleUseSemaphore(), VK_NULL_HANDLE,
+                                                         &image_index));
     EXPECT_EQ(i, image_index);
   }
 
@@ -720,8 +913,11 @@ TEST_P(SwapchainFidlTest, DeviceLostAvoidSemaphoreHang) {
   };
 
   present_index = 0;
+  auto swapchain_images = test_->GetSwapchainImages(swapchain);
+  test_->TransitionLayout(swapchain_images[present_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
   ASSERT_EQ(VK_SUCCESS, test_->queue_present_khr_(queue, &present_info));
   present_index = 1;
+  test_->TransitionLayout(swapchain_images[present_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
   ASSERT_EQ(VK_SUCCESS, test_->queue_present_khr_(queue, &present_info));
 
   VkSemaphoreCreateInfo semaphore_create_info{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
@@ -749,16 +945,20 @@ TEST_P(SwapchainFidlTest, DeviceLostAvoidSemaphoreHang) {
   });
   auto acquire_future = std::async(std::launch::async, [test = test_.get(), &swapchain]() mutable {
     uint32_t image_index;
-    // No semaphore or fence, so this should wait on the CPU.
+    // No semaphore or fence, so this should wait on the CPU. Supplying neither fences nor
+    // semaphores is against the vulkan spec.
+    test->allows_validation_errors_ = true;
     EXPECT_EQ(VK_ERROR_SURFACE_LOST_KHR,
               test->acquire_next_image_khr_(test->vk_device_, swapchain, UINT64_MAX, VK_NULL_HANDLE,
                                             VK_NULL_HANDLE, &image_index));
+    test->allows_validation_errors_ = false;
   });
   vkDeviceWaitIdle(test_->vk_device_);
   // Wait before the queue_present_khr to externally synchronize access to |swapchain|.
   acquire_future.wait();
 
   present_index = 2;
+  test_->TransitionLayout(swapchain_images[present_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
   EXPECT_EQ(VK_SUCCESS, test_->queue_present_khr_(queue, &present_info));
   EXPECT_EQ(VK_ERROR_SURFACE_LOST_KHR, present_result);
 
@@ -804,22 +1004,23 @@ TEST_P(SwapchainFidlTest, AcquireZeroTimeout) {
   } else {
     vkGetDeviceQueue(test_->vk_device_, 0, 0, &queue);
   }
-
   uint32_t image_index;
   // Acquire all initial images.
   for (uint32_t i = 0; i < 3; i++) {
-    EXPECT_EQ(VK_SUCCESS,
-              test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                             VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_SUCCESS, test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0,
+                                                         MakeSingleUseSemaphore(), VK_NULL_HANDLE,
+                                                         &image_index));
     EXPECT_EQ(i, image_index);
   }
 
   // Timeout of zero with no pending presents
   EXPECT_EQ(VK_NOT_READY,
-            test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                           VK_NULL_HANDLE, &image_index));
+            test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0,
+                                           MakeSingleUseSemaphore(), VK_NULL_HANDLE, &image_index));
 
   uint32_t present_index = 0;
+  auto swapchain_images = test_->GetSwapchainImages(swapchain);
+  test_->TransitionLayout(swapchain_images[present_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
   VkResult present_result;
   VkPresentInfoKHR present_info = {
       .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -835,6 +1036,8 @@ TEST_P(SwapchainFidlTest, AcquireZeroTimeout) {
   ASSERT_EQ(VK_SUCCESS, test_->queue_present_khr_(queue, &present_info));
 
   {
+    // It's a validation error to not specify a fence or semaphore.
+    test_->allows_validation_errors_ = true;
     // Timeout of zero with pending presents
     VkResult result = test_->acquire_next_image_khr_(test_->vk_device_, swapchain, 0,
                                                      VK_NULL_HANDLE, VK_NULL_HANDLE, &image_index);
@@ -844,6 +1047,7 @@ TEST_P(SwapchainFidlTest, AcquireZeroTimeout) {
     } else {
       EXPECT_EQ(result, VK_NOT_READY);
     }
+    test_->allows_validation_errors_ = false;
   }
 
   // Close the remote end because we've configured it to not-present, and the swapchain
@@ -855,4 +1059,6 @@ TEST_P(SwapchainFidlTest, AcquireZeroTimeout) {
 }
 
 INSTANTIATE_TEST_SUITE_P(SwapchainFidlTestSuite, SwapchainFidlTest,
-                         ::testing::Combine(::testing::Bool(), ::testing::Bool()));
+                         ::testing::Combine(::testing::Bool(), ::testing::Bool(),
+                                            ::testing::Bool()),
+                         NameFromParam);
