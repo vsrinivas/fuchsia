@@ -10,7 +10,6 @@
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <poll.h>
-#include <zircon/syscalls/port.h>
 
 #include <map>
 #include <vector>
@@ -26,7 +25,7 @@ namespace {
 
 // Inotify structure for individual watch descriptor, which is equivalent to a filter.
 struct FdioInotifyWd {
-  FdioInotifyWd(int input_filter_mask, uint64_t wd) {
+  FdioInotifyWd(int input_filter_mask, int wd) {
     mask = input_filter_mask;
     watch_descriptor = wd;
   }
@@ -49,7 +48,7 @@ struct FdioInotify {
   zx::socket server;
 
   // Monotonically increasing client-side watch descriptor generator. 0 value is reserved.
-  uint64_t next_watch_descriptor __TA_GUARDED(lock) = 1;
+  int next_watch_descriptor __TA_GUARDED(lock) = 1;
 
   // Store filepath to watch desciptor mapping for identifying existing filters for a filepath.
   std::unique_ptr<std::map<std::string, std::unique_ptr<FdioInotifyWd>>> filepath_to_filter

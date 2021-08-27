@@ -1353,7 +1353,7 @@ static int socketpair_create(int fd[2], uint32_t options, int flags) {
   size_t n = 0;
 
   fbl::AutoLock lock(&fdio_lock);
-  for (size_t i = 0; i < fdio_fdtab.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(fdio_fdtab.size()); ++i) {
     if (fdio_fdtab[i].try_set(ios[n])) {
       fd[n] = i;
       n++;
@@ -1805,14 +1805,15 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
   }
 
   if (nitems != 0) {
-    zx_status_t status = zx::handle::wait_many(items, nitems, zx::deadline_after(timeout));
+    zx_status_t status =
+        zx::handle::wait_many(items, static_cast<uint32_t>(nitems), zx::deadline_after(timeout));
     // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
     if (!(status == ZX_OK || status == ZX_ERR_TIMED_OUT)) {
       return ERROR(status);
     }
   }
 
-  nfds_t nfds = 0;
+  int nfds = 0;
   // |items_index| is the index into the next entry in the |items| array. As not
   // all FDs in the wait set correspond to a kernel wait, the |items_index|
   // value corresponding to a particular FD can be lower than the index of that
@@ -1905,7 +1906,8 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
     ++nitems;
   }
 
-  zx_status_t status = zx::handle::wait_many(items, nitems, zx::deadline_after(timeout));
+  zx_status_t status =
+      zx::handle::wait_many(items, static_cast<uint32_t>(nitems), zx::deadline_after(timeout));
   // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
   if (!(status == ZX_OK || status == ZX_ERR_TIMED_OUT)) {
     return ERROR(status);

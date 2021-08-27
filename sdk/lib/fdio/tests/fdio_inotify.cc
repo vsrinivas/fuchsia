@@ -123,7 +123,8 @@ class Server final : public fio::testing::Directory_TestBase {
     struct inotify_event* event = reinterpret_cast<struct inotify_event*>(event_buf.data());
     // Copy in the fixed fields to the event buffer.
     memcpy(event, &kEvent, sizeof(kEvent));
-    event->len = name_len + 1;  // The |len| field includes the null terminator.
+    event->len =
+        static_cast<uint32_t>(name_len + 1);  // The |len| field includes the null terminator.
     // Copy in the name.
     memcpy(event->name, path.data(), name_len);
     event->name[name_len] = '\0';

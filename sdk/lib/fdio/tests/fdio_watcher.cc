@@ -75,7 +75,8 @@ TEST(WatcherTest, Smoke) {
       *it++ = 1;
     }
 
-    completer.Reply(watcher.write(0, bytes, std::distance(std::begin(bytes), it), nullptr, 0));
+    completer.Reply(watcher.write(
+        0, bytes, static_cast<uint32_t>(std::distance(std::begin(bytes), it)), nullptr, 0));
   });
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &server));

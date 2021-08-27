@@ -340,7 +340,7 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
   memset(&info, 0xff, sizeof(info));
 
   if (value.has_state()) {
-    info.tcpi_state = [](fsocket::wire::TcpState state) {
+    info.tcpi_state = [](fsocket::wire::TcpState state) -> uint8_t {
       switch (state) {
         case fsocket::wire::TcpState::kEstablished:
           return TCP_ESTABLISHED;
@@ -368,7 +368,7 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
     }(value.state());
   }
   if (value.has_ca_state()) {
-    info.tcpi_ca_state = [](fsocket::wire::TcpCongestionControlState ca_state) {
+    info.tcpi_ca_state = [](fsocket::wire::TcpCongestionControlState ca_state) -> uint8_t {
       switch (ca_state) {
         case fsocket::wire::TcpCongestionControlState::kOpen:
           return TCP_CA_Open;
@@ -2036,7 +2036,7 @@ struct stream_socket : public zxio {
       return preflight.status_value();
     }
     if (std::optional err = preflight.value(); err.has_value()) {
-      *out_code = err.value();
+      *out_code = static_cast<uint16_t>(err.value());
       return ZX_OK;
     }
 
@@ -2053,7 +2053,7 @@ struct stream_socket : public zxio {
           return err.status_value();
         }
         *out_actual = 0;
-        *out_code = err.value();
+        *out_code = static_cast<uint16_t>(err.value());
         return ZX_OK;
       }
       default:
@@ -2069,7 +2069,7 @@ struct stream_socket : public zxio {
       return preflight.status_value();
     }
     if (std::optional err = preflight.value(); err.has_value()) {
-      *out_code = err.value();
+      *out_code = static_cast<uint16_t>(err.value());
       return ZX_OK;
     }
 
@@ -2086,8 +2086,8 @@ struct stream_socket : public zxio {
         if (err.is_error()) {
           return err.status_value();
         }
-        if (int value = err.value(); value != 0) {
-          *out_code = value;
+        if (int32_t value = err.value(); value != 0) {
+          *out_code = static_cast<uint16_t>(value);
           return ZX_OK;
         }
 
@@ -2115,7 +2115,7 @@ struct stream_socket : public zxio {
       if (err.is_error()) {
         return err.take_error();
       }
-      if (int value = err.value(); value != 0) {
+      if (int32_t value = err.value(); value != 0) {
         return zx::ok(value);
       }
       // Error was consumed.

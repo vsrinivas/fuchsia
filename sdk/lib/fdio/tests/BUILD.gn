@@ -110,9 +110,6 @@ test("fdio-test") {
       "//zircon/system/ulib/test-utils",
     ]
   }
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("fdio-gtest") {
