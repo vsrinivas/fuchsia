@@ -287,6 +287,8 @@ zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<st
 zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
                                             fuchsia::virtualization::GuestConfig* cfg) {
   *url = kZirconGuestUrl;
+  // Disable netsvc to avoid spamming the net device with logs.
+  cfg->mutable_cmdline_add()->emplace_back("netsvc.disable=true");
   return ZX_OK;
 }
 

@@ -88,8 +88,6 @@ class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
       return status;
     }
     cfg->set_virtio_gpu(false);
-    // Disable netsvc to avoid spamming the net device with logs.
-    cfg->mutable_cmdline_add()->emplace_back("kernel.serial=none netsvc.disable=true");
     cfg->mutable_net_devices()->emplace_back(kSecondNicNetSpec);
     return ZX_OK;
   }
