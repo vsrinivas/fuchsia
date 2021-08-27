@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <random>
 #include <sstream>
 #include <utility>
 
@@ -24,21 +23,6 @@ namespace {
 
 #define ASSERT_NO_FINDINGS(TEST) ASSERT_NO_FATAL_FAILURES(TEST.ExpectNoFindings())
 
-// Generate a string of 12 random lower-case letters.
-std::string random_string() {
-  static size_t desired_size = 12;
-  static std::string characters = "abcdefghijklmnopqrstuvwxyz";
-  constexpr size_t kSeed = 1337;
-  static std::default_random_engine gen(kSeed);
-  static std::uniform_int_distribution<size_t> distribution(0, characters.size() - 1);
-  std::string random_str;
-  random_str.reserve(desired_size);
-  while (random_str.size() < desired_size) {
-    random_str += characters[distribution(gen)];
-  }
-  return random_str;
-}
-
 class LintTest {
  public:
   LintTest() = default;
@@ -49,7 +33,7 @@ class LintTest {
                        std::string replacement = "") {
     assert(!source_template_.str().empty() &&
            "source_template() must be called before AddFinding()");
-    std::string template_string = convert_template().str();
+    std::string template_string = source_template_.str();
     size_t start = template_string.find(violation_string);
     if (start == std::string::npos) {
       std::cout << "ERROR: violation_string '" << violation_string
@@ -145,36 +129,13 @@ class LintTest {
   }
 
   LintTest& substitute(const Substitutions& substitutions) {
-    // TODO(fxbug.dev/70247): Delete this
-    // Make sure we add "random" characters to each substitution.
-    Substitutions with_rands_added;
-    for (const auto& substitution : substitutions) {
-      std::visit(fidl::utils::matchers{
-                     [&](const std::string& str) -> void {
-                       with_rands_added.insert(std::pair(
-                           substitution.first, SubstitutionWithRandom{str, random_string()}));
-                     },
-                     [&](const SubstitutionWithRandom& with_rand) -> void {
-                       with_rands_added.insert(std::pair(substitution.first, with_rand));
-                     },
-                 },
-                 substitution.second);
-    }
-    substitutions_ = with_rands_added;
+    substitutions_ = substitutions;
     return *this;
   }
 
   // Shorthand for the common occurrence of a single substitution variable.
-  LintTest& substitute(const std::string& var_name, SubstitutionValue sub) {
-    return substitute(
-        {{var_name, std::visit(fidl::utils::matchers{
-                                   [&](const std::string& str) -> SubstitutionValue {
-                                     return SubstitutionWithRandom{str, random_string()};
-                                   },
-                                   [&](const SubstitutionWithRandom& with_rand)
-                                       -> SubstitutionValue { return with_rand; },
-                               },
-                               sub)}});
+  LintTest& substitute(const std::string& var_name, const std::string& value) {
+    return substitute({{var_name, value}});
   }
 
   LintTest& include_checks(std::vector<std::string> included_check_ids) {
@@ -212,7 +173,6 @@ class LintTest {
  private:
   // Removes all expected findings previously added with AddFinding().
   void execute_helper(bool expect_findings, bool assert_positions_match) {
-    convert_template();
     std::ostringstream ss;
     if (default_check_id_.empty()) {
       ss << std::endl << "Failed test";
@@ -289,7 +249,6 @@ class LintTest {
     excluded_check_ids_.clear();
     excluded_check_ids_to_confirm_.clear();
     exclude_by_default_ = false;
-    converted_template_ = TemplateString();
     that_ = "";
   }
 
@@ -300,10 +259,9 @@ class LintTest {
 
   void ValidTest() const {
     ASSERT_FALSE(source_template_.str().empty(), "Missing source template");
-    ASSERT_FALSE(converted_template_.str().empty(), "Template not converted to new syntax");
     if (!substitutions_.empty()) {
-      ASSERT_FALSE(converted_template_.Substitute(substitutions_, false) !=
-                       converted_template_.Substitute(substitutions_, true),
+      ASSERT_FALSE(source_template_.Substitute(substitutions_, false) !=
+                       source_template_.Substitute(substitutions_, true),
                    "Missing template substitutions");
     }
     if (expected_findings_.empty()) {
@@ -360,45 +318,14 @@ class LintTest {
     os << "============================" << std::endl;
   }
 
-  // Convert a template to the new syntax.
-  TemplateString& convert_template() {
-    if (!converted_template_) {
-      assert(!source_template_.str().empty() &&
-             "source_template() must be set before convert_template() is called");
-      // Don't perform the conversion for tests that have declared that their source is already in
-      // the new syntax.
-      if (source_syntax_ == fidl::utils::Syntax::kNew) {
-        converted_template_ = source_template_;
-        return converted_template_;
-      }
-
-      TestLibrary old_source_syntax_lib =
-          WithLibraryZx(filename_, source_template_.SubstituteWithRandomized(substitutions_));
-      old_source_syntax_lib.Compile();
-      auto& source_file = old_source_syntax_lib.source_file();
-      fidl::ExperimentalFlags old_flags;
-      old_flags.SetFlag(fidl::ExperimentalFlags::Flag::kOldSyntaxOnly);
-      fidl::Lexer lexer(source_file, old_source_syntax_lib.Reporter());
-      fidl::Parser parser(&lexer, old_source_syntax_lib.Reporter(), old_flags);
-      auto ast = parser.Parse();
-      assert(parser.Success());
-
-      fidl::conv::ConvertingTreeVisitor converter = fidl::conv::ConvertingTreeVisitor(
-          fidl::utils::Syntax::kNew, old_source_syntax_lib.library());
-      converter.OnFile(ast);
-
-      auto converted = converter.converted_output();
-      converted_template_ = TemplateString::Unsubstitute(converted, substitutions_);
-    }
-    return converted_template_;
-  }
-
   TestLibrary& library() {
     if (!library_) {
+      assert(!source_template_.str().empty() &&
+             "source_template() must be set before library() is called");
       fidl::ExperimentalFlags flags;
       flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-      const auto subbed = convert_template().Substitute(substitutions_);
-      library_ = std::make_unique<TestLibrary>(filename_, subbed, flags);
+      library_ = std::make_unique<TestLibrary>(filename_,
+                                               source_template_.Substitute(substitutions_), flags);
     }
     return *library_;
   }
@@ -415,7 +342,6 @@ class LintTest {
   bool exclude_by_default_ = false;
   Findings expected_findings_;
   TemplateString source_template_;
-  TemplateString converted_template_;
   fidl::utils::Syntax source_syntax_ = fidl::utils::Syntax::kOld;
   Substitutions substitutions_;
 
@@ -535,7 +461,7 @@ TEST(LintFindingsTests, ConstantShouldUseCommonPrefixSuffixPleaseImplementMe) {
       .source_template(R"FIDL(
 library fidl.a;
 
-const uint64 ${TEST} = 1234;
+const ${TEST} uint64 = 1234;
 )FIDL");
 
   test.substitute("TEST", "MIN_HEIGHT");
@@ -833,19 +759,19 @@ TEST(LintFindingsTests, InvalidCaseForConstant) {
       {"constants", R"FIDL(
 library fidl.a;
 
-const uint64 ${TEST} = 1234;
+const ${TEST} uint64 = 1234;
 )FIDL"},
       {"enum members", R"FIDL(
 library fidl.a;
 
-enum Int8Enum : int8 {
+type Int8Enum = flexible enum : int8 {
     ${TEST} = -1;
 };
 )FIDL"},
       {"bitfield members", R"FIDL(
 library fidl.a;
 
-bits Uint32Bitfield : uint32 {
+type Uint32Bitfield = flexible bits : uint32 {
   ${TEST} = 0x00000004;
 };
 )FIDL"},
@@ -947,36 +873,36 @@ protocol test_protocol {
       {"enums", R"FIDL(
 library zx;
 
-enum ${TEST} : int8 {
+type ${TEST} = flexible enum : int8 {
     SOME_CONST = -1;
 };
 )FIDL"},
       {"bitfields", R"FIDL(
 library zx;
 
-bits ${TEST} : uint32 {
+type ${TEST} = flexible bits : uint32 {
   SOME_BIT = 0x00000004;
 };
 )FIDL"},
       {"structs", R"FIDL(
 library zx;
 
-struct ${TEST} {
-    string:64 decl_member;
+type ${TEST} = struct {
+    decl_member string:64;
 };
 )FIDL"},
       {"tables", R"FIDL(
 library zx;
 
-table ${TEST} {
-    1: string:64 decl_member;
+type ${TEST} = table {
+    1: decl_member string:64;
 };
 )FIDL"},
       {"unions", R"FIDL(
 library zx;
 
-union ${TEST} {
-    1: string:64 decl_member;
+type ${TEST} = flexible union {
+    1: decl_member string:64;
 };
 )FIDL"},
   };
@@ -1019,36 +945,36 @@ protocol TestProtocol {
       {"enums", R"FIDL(
 library fidl.a;
 
-enum ${TEST} : int8 {
+type ${TEST} = flexible enum : int8 {
     SOME_CONST = -1;
 };
 )FIDL"},
       {"bitfields", R"FIDL(
 library fidl.a;
 
-bits ${TEST} : uint32 {
+type ${TEST} = flexible bits : uint32 {
   SOME_BIT = 0x00000004;
 };
 )FIDL"},
       {"structs", R"FIDL(
 library fidl.a;
 
-struct ${TEST} {
-    string:64 decl_member;
+type ${TEST} = struct {
+    decl_member string:64;
 };
 )FIDL"},
       {"tables", R"FIDL(
 library fidl.a;
 
-table ${TEST} {
-    1: string:64 decl_member;
+type ${TEST} = table {
+    1: decl_member string:64;
 };
 )FIDL"},
       {"unions", R"FIDL(
 library fidl.a;
 
-union ${TEST} {
-    1: string:64 decl_member;
+type ${TEST} = flexible union {
+    1: decl_member string:64;
 };
 )FIDL"},
   };
@@ -1266,7 +1192,7 @@ library fidl.a;
 
 library fidl.a;
 )FIDL")
-      .substitute("BLANK_LINE", SubstitutionWithRandom{"", "//" + random_string()})
+      .substitute("BLANK_LINE", "")
       .suggestion("Update your header with:\n\n" + copyright_template.str())
       .AddFinding("${BLANK_LINE}");
   ASSERT_FINDINGS(test);
@@ -1617,15 +1543,15 @@ TEST(LintFindingsTests, NoTrailingComment) {
       .source_template(R"FIDL(
 library fidl.a;
 
-struct SeasonToShirtAndPantMapEntry {
+type SeasonToShirtAndPantMapEntry = struct {
 
   // winter, spring, summer, or fall
-  string:64 season;
+  season string:64;
 
   // all you gotta do is call
-  string:64 shirt_and_pant_type;
+  shirt_and_pant_type string:64;
 
-  bool clashes;
+  clashes bool;
 };
 )FIDL");
 
@@ -1634,14 +1560,14 @@ struct SeasonToShirtAndPantMapEntry {
   test.source_template(R"FIDL(
 library fidl.a;
 
-struct SeasonToShirtAndPantMapEntry {
+type SeasonToShirtAndPantMapEntry = struct {
 
-  string:64 season; // winter, spring, summer, or fall
+  season string:64; // winter, spring, summer, or fall
 
   // all you gotta do is call
-  string:64 shirt_and_pant_type;
+  shirt_and_pant_type string:64;
 
-  bool clashes;
+  clashes bool;
 };
 )FIDL")
       .AddFinding("// winter, spring, summer, or fall");
@@ -1681,48 +1607,48 @@ TEST(LintFindingsTests, StringBoundsNotSpecified) {
       .source_template(R"FIDL(
 library fidl.a;
 
-struct SomeStruct {
-  ${TEST} test_str;
+type SomeStruct = struct {
+  test_str ${TEST};
 };
 )FIDL");
 
-  test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
+  test.substitute("TEST", "string:64");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"string:MAX", ""});
+  test.substitute("TEST", "string:MAX");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<string:64>:64", ""});
+  test.substitute("TEST", "vector<string:64>:64");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"string", ""});
+  test.substitute("TEST", "string");
   ASSERT_FINDINGS(test);
 
   test.source_template(R"FIDL(
 library fidl.a;
 
-const ${TEST} TEST_STRING = "A const str";
+const TEST_STRING ${TEST} = "A const str";
 
 )FIDL");
 
-  test.substitute("TEST", SubstitutionWithRandom{"string", ""});
+  test.substitute("TEST", "string");
   ASSERT_NO_FINDINGS(test);
 
   test.source_template(R"FIDL(
 library fidl.a;
 
-struct SomeStruct {
-  vector<${TEST}>:64 test_str;
+type SomeStruct = struct {
+  test_str vector<${TEST}>:64;
 };
 )FIDL");
 
-  test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
+  test.substitute("TEST", "string:64");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"string:MAX", ""});
+  test.substitute("TEST", "string:MAX");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"string", ""});
+  test.substitute("TEST", "string");
   ASSERT_FINDINGS(test);
 
   test.that("developer cannot work around the check by aliasing").source_template(R"FIDL(
@@ -1730,35 +1656,35 @@ library fidl.a;
 
 alias unbounded_str = ${TEST};
 
-struct SomeStruct {
-  unbounded_str test_string;
+type SomeStruct = struct {
+  test_string unbounded_str;
 };
 )FIDL");
 
-  test.substitute("TEST", SubstitutionWithRandom{"string", ""});
+  test.substitute("TEST", "string");
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
+  test.substitute("TEST", "string:64");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"string:MAX", ""});
+  test.substitute("TEST", "string:MAX");
   ASSERT_NO_FINDINGS(test);
 
   test.that("'optional' constraint is not mistaken for size")
       .source_template(R"FIDL(
 library fidl.a;
 
-struct SomeStruct {
-  ${TEST}? test_str;
+type SomeStruct = struct {
+  test_str ${TEST};
 };
 )FIDL")
-      .substitute("TEST", SubstitutionWithRandom{"string", ""});
+      .substitute("TEST", "string:optional");
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
+  test.substitute("TEST", "string:<64, optional>");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"string:MAX", ""});
+  test.substitute("TEST", "string:<MAX, optional>");
   ASSERT_NO_FINDINGS(test);
 }
 
@@ -1769,10 +1695,10 @@ TEST(LintFindingsTests, TodoShouldNotBeDocComment) {
 library fidl.a;
 
 ${TEST1} TODO: Finish the TestStruct declaration
-struct TestStruct {
+type TestStruct = struct {
 
   ${TEST2}TODO: Replace the placeholder
-  string:64 placeholder;${DOC_NOT_ALLOWED_HERE1} TODO(fxbug.dev/FIDL-0000): Add some more fields
+  placeholder string:64;${DOC_NOT_ALLOWED_HERE1} TODO(fxbug.dev/FIDL-0000): Add some more fields
 };
 )FIDL";
 
@@ -1956,39 +1882,39 @@ TEST(LintFindingsTests, VectorBoundsNotSpecified) {
       .source_template(R"FIDL(
 library fidl.a;
 
-struct SomeStruct {
-  ${TEST} test_vector;
+type SomeStruct = struct {
+  test_vector ${TEST};
 };
 )FIDL");
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
+  test.substitute("TEST", "vector<uint8>:64");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:MAX", ""});
+  test.substitute("TEST", "vector<uint8>:MAX");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
+  test.substitute("TEST", "vector<uint8>");
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<vector<uint8>:64>", ""});
+  test.substitute("TEST", "vector<vector<uint8>:64>");
   ASSERT_FINDINGS(test);
 
   // Test nested vectors
   test.source_template(R"FIDL(
 library fidl.a;
 
-struct SomeStruct {
-  vector<${TEST}>:64 test_vector;
+type SomeStruct = struct {
+  test_vector vector<${TEST}>:64;
 };
 )FIDL");
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
+  test.substitute("TEST", "vector<uint8>:64");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:MAX", ""});
+  test.substitute("TEST", "vector<uint8>:MAX");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
+  test.substitute("TEST", "vector<uint8>");
   ASSERT_FINDINGS(test);
 
   test.that("developer cannot work around the check by indirect typing using an alias")
@@ -1998,34 +1924,34 @@ library fidl.a;
 // explanation for why we want this
 alias unbounded_vector = ${TEST};
 
-struct SomeStruct {
-  unbounded_vector test_vector;
+type SomeStruct = struct {
+  test_vector unbounded_vector;
 };
 )FIDL")
-      .substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
+      .substitute("TEST", "vector<uint8>");
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
+  test.substitute("TEST", "vector<uint8>:64");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:MAX", ""});
+  test.substitute("TEST", "vector<uint8>:MAX");
   ASSERT_NO_FINDINGS(test);
 
   test.that("'optional' constraint is not mistaken for size")
       .source_template(R"FIDL(
 library fidl.a;
 
-struct SomeStruct {
-  ${TEST}? test_vector;
+type SomeStruct = struct {
+  test_vector ${TEST};
 };
 )FIDL")
-      .substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
+      .substitute("TEST", "vector<uint8>:optional");
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
+  test.substitute("TEST", "vector<uint8>:<64, optional>");
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:MAX", ""});
+  test.substitute("TEST", "vector<uint8>:<MAX, optional>");
   ASSERT_NO_FINDINGS(test);
 }
 
@@ -2057,9 +1983,9 @@ TEST(LintFindingsTests, IncludeAndExcludeChecks) {
   test.check_id("multiple checks").source_template(R"FIDL(
 library ${LIBRARY};
 
-struct ${STRUCT_NAME} {
+type ${STRUCT_NAME} = struct {
   ${COMMENT_STYLE} TODO: Replace the placeholder
-  string:64 placeholder;
+  placeholder string:64;
 };
 )FIDL");
 
