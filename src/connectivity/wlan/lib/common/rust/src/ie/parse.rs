@@ -263,7 +263,13 @@ pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B
                 // The first three bytes after OUI are OUI type, OUI subtype, and version.
                 Some(WMM_OUI_TYPE) if reader.bytes_remaining() >= 3 => {
                     let body = reader.into_remaining();
-                    match body[1] {
+                    let subtype = body[1];
+                    // The version byte is 0x01 for both WMM Information and Parameter elements
+                    // as of WFA WMM v1.2.0.
+                    if body[2] != 0x01 {
+                        return Err(FrameParseError::new("Unexpected WMM Version byte"));
+                    }
+                    match subtype {
                         // Safe to split because we already checked that there are at least 3
                         // bytes remaining.
                         WMM_INFO_OUI_SUBTYPE => VendorIe::WmmInfo(body.split_at(3).1),

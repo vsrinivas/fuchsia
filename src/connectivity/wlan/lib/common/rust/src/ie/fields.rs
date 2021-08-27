@@ -95,7 +95,7 @@ pub struct ApWmmInfo(pub u8);
 #[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
 pub struct ClientWmmInfo(pub u8);
 
-// WFA WMM v1.2, 2.2.2 Table 5
+// WFA WMM v1.2.0, 2.2.2 Table 5
 #[repr(C, packed)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes, Unaligned, Default)]
 pub struct WmmParam {
@@ -107,7 +107,7 @@ pub struct WmmParam {
     pub ac_vo_params: WmmAcParams,
 }
 
-// WFA WMM v1.2, 2.2.2 Figure 9
+// WFA WMM v1.2.0, 2.2.2 Figure 9
 #[repr(C, packed)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes, Unaligned, Default)]
 pub struct WmmAcParams {
@@ -117,7 +117,9 @@ pub struct WmmAcParams {
     pub txop_limit: u16,
 }
 
-// WFA WMM v1.2, 2.2.2 Figure 10
+// WFA WMM v1.2.0, 2.2.2 Figure 10
+// TODO(fxbug.dev/82563): ACI is dependent on the AC parameters its encoding, so
+// it shouldn't be allowed to be set arbitrarily.
 #[bitfield(
     0..=3   aifsn,
     4       acm,
@@ -128,7 +130,7 @@ pub struct WmmAcParams {
 #[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned, Default)]
 pub struct WmmAciAifsn(pub u8);
 
-// WFA WMM v1.2, 2.2.2 Figure 11
+// WFA WMM v1.2.0, 2.2.2 Figure 11
 #[bitfield(
     0..=3   ecw_min,
     4..=7   ecw_max,
