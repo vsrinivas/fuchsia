@@ -142,8 +142,33 @@ void dump_formats(const audio::utils::AudioDeviceStream& stream) {
   stream.GetSupportedFormats([](const fuchsia_hardware_audio::wire::SupportedFormats& formats) {
     auto& pcm = formats.pcm_supported_formats();
     printf("\nNumber of channels      :");
+    bool has_attributes = false;
     for (auto i : pcm.channel_sets()) {
       printf(" %zu", i.attributes().count());
+      for (auto j : i.attributes()) {
+        if (j.has_min_frequency()) {
+          has_attributes = true;
+        }
+        if (j.has_max_frequency()) {
+          has_attributes = true;
+        }
+      }
+    }
+    if (has_attributes) {
+      printf("\nChannels attributes     :");
+      for (auto i : pcm.channel_sets()) {
+        for (auto j : i.attributes()) {
+          printf(" ");
+          if (j.has_min_frequency()) {
+            printf("%u", j.min_frequency());
+          }
+          printf("/");
+          if (j.has_max_frequency()) {
+            printf("%u", j.max_frequency());
+          }
+        }
+        printf(" (min/max Hz for %zu channels)", i.attributes().count());
+      }
     }
     printf("\nFrame rate              :");
     for (auto i : pcm.frame_rates()) {
