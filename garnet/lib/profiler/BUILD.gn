@@ -68,7 +68,7 @@ source_set("profiler_lib") {
     "//zircon/system/ulib/syslog",
   ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  # gpertools sources do not build with Wconversion.
   configs += [ "//build/config:Wno-conversion" ]
 }
 
