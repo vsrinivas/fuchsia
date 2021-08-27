@@ -44,9 +44,9 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 // By default NDEBUG builds are WARNING, and DEBUG builds INFO. To disable jam-sync logging for a
 // certain level, set the interval to 0. To disable all jam-sync logging, set kLogJamSyncs to false.
 static constexpr bool kLogJamSyncs = true;
-static constexpr uint16_t kJamSyncWarningInterval = 20;  // Log 1 of every 20 jam-syncs at WARNING
-static constexpr uint16_t kJamSyncInfoInterval = 2;      // Log 1 of every 2 jam-syncs at INFO
-static constexpr uint16_t kJamSyncTraceInterval = 1;     // Log all remaining jam-syncs at TRACE
+static constexpr uint16_t kJamSyncWarningInterval = 200;  // Log 1 of every 200 jam-syncs at WARNING
+static constexpr uint16_t kJamSyncInfoInterval = 20;      // Log 1 of every 20 jam-syncs at INFO
+static constexpr uint16_t kJamSyncTraceInterval = 1;      // Log all remaining jam-syncs at TRACE
 
 // For now, allow dest position to move backwards by 960 frames before triggering a position reset.
 // Rollback can happen because of differences between the MixStage::ReadLock and Mixer::Mix APIs.
