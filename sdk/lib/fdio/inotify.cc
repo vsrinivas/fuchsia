@@ -175,7 +175,7 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
   }
 
   if (pathname[0] == '\0') {
-    return ERRNO(EINVAL);
+    return ERRNO(ENOENT);
   }
 
   fdio_ptr iodir = fdio_iodir(&pathname, AT_FDCWD);

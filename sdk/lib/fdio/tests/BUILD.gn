@@ -53,6 +53,7 @@ test("fdio-test") {
   # FDIO tests that can run on host as well as target.
   sources = [
     "eventfd.cc",
+    "fdio_inotify.cc",
     "fdio_lock.cc",
     "fdio_poll.cc",
     "fdio_select.cc",
@@ -74,7 +75,6 @@ test("fdio-test") {
       "fdio_fdio.cc",
       "fdio_get_vmo.cc",
       "fdio_handle_fd.cc",
-      "fdio_inotify.cc",
       "fdio_io.cc",
       "fdio_memfd.cc",
       "fdio_null_namespace.cc",
