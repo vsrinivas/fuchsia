@@ -59,6 +59,16 @@ template("physical_device_manifest") {
     contents = file_contents
     output_conversion = "json"
     outputs = [ file ]
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "physical_device"
+          path = rebase_path(file, root_build_dir)
+          type = "manifest"
+        },
+      ]
+    }
   }
 
   # Verify that the metadata complies with the specified schema.

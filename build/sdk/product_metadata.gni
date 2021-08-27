@@ -93,6 +93,16 @@ template("product_metadata") {
     contents = file_contents
     output_conversion = "json"
     outputs = [ file ]
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "product_bundle"
+          path = rebase_path(file, root_build_dir)
+          type = "manifest"
+        },
+      ]
+    }
   }
 
   validator_target = "${target_name}_json_validator"
