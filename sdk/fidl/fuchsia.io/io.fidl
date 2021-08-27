@@ -499,6 +499,7 @@ protocol File {
     ///
     /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     /// - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
+    /// - `OPEN_RIGHT_EXECUTABLE` if `flags` includes `VMO_FLAG_EXEC`.
     GetBuffer(struct {
         flags uint32;
     }) -> (resource struct {
