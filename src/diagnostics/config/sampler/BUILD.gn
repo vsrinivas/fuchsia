@@ -1,0 +1,55 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# The list of Sampler configuration files in the current directory that
+# are used to configure data to be sent to Cobalt. Files that are not listed
+# in this variable will be ignored.
+sampler_files = [
+  "archivist.json",
+  "avrcp.json",
+  "bthost.json",
+  "display.json",
+  "file-usage-metrics.json",
+  "ftl.json",
+  "fvm.json",
+  "netstack.json",
+  "sdmmc.json",
+  "sysmem.json",
+  "system-update-committer.json",
+  "connectivity-wlan.json",
+]
+
+config_data("sampler-config-data") {
+  for_pkg = "sampler"
+  sources = sampler_files
+
+  # The component will see this as /config/metrics/foo.json
+  outputs = [ "metrics/{{source_file_part}}" ]
+}
+
+resource("sampler-validation-resources") {
+  sources = sampler_files
+
+  # The component will see this as /pkg/config/metrics/foo.json
+  outputs = [ "config/metrics/{{source_file_part}}" ]
+}
+
+# Test component for config validation.
+fuchsia_unittest_component("config-validation-component") {
+  deps = [
+    ":sampler-validation-resources",
+    "//src/diagnostics/sampler/tests:config-validation",
+  ]
+}
+
+fuchsia_test_package("config-validation-package") {
+  test_components = [ ":config-validation-component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":config-validation-package" ]
+}

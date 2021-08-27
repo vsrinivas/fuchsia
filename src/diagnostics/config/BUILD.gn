@@ -12,5 +12,8 @@ group("config") {
 
 group("tests") {
   testonly = true
-  deps = [ "triage:tests" ]
+  deps = [
+    "sampler:tests",
+    "triage:tests",
+  ]
 }

@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
-import("//src/diagnostics/sampler/build/config_generator.gni")
 
 # Library containing core logic for sampler,
 # library launched by generic diagnostics Launcher
@@ -66,33 +65,11 @@ fuchsia_unittest_package("sampler-tests") {
   manifest = "meta/sampler_lib_test.cml"
 }
 
-# Custom build rule responsible for generating them
-# default config-data the production Sampler service uses
-# as well as the resource rule used by the configuration
-# verification test.
-sampler_configuration("production_sampler") {
-  configs = [
-    "config/archivist.json",
-    "config/avrcp.json",
-    "config/bthost.json",
-    "config/display.json",
-    "config/file-usage-metrics.json",
-    "config/ftl.json",
-    "config/fvm.json",
-    "config/netstack.json",
-    "config/radar.json",
-    "config/sdmmc.json",
-    "config/sysmem.json",
-    "config/system-update-committer.json",
-    "config/connectivity-wlan.json",
-  ]
-}
-
 # Rules defining the Sampler component.
 fuchsia_component("sampler-component") {
   component_name = "sampler"
   deps = [
-    ":production_sampler_config_data",
+    "//src/diagnostics/config/sampler:sampler-config-data",
     "//src/diagnostics/launcher:bin",
   ]
   manifest = "meta/sampler.cml"

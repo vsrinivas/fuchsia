@@ -25,10 +25,7 @@ rustc_test("config-validation") {
 
 # Test component for config validation.
 fuchsia_unittest_component("config-validation-test") {
-  deps = [
-    ":config-validation",
-    "//src/diagnostics/sampler:production_sampler_resources",
-  ]
+  deps = [ ":config-validation" ]
 }
 
 # Integration test binary for sampler service.
@@ -90,6 +87,14 @@ config_data("test-config") {
   outputs = [ "metrics/test_config.json" ]
 }
 
+resource("validation-resources") {
+  sources = [
+    "configs/reboot_required_config.json",
+    "configs/test_config.json",
+  ]
+  outputs = [ "config/metrics/{{source_file_part}}" ]
+}
+
 fuchsia_test_package("sampler-integration-tests") {
   test_components = [ ":config-validation-test" ]
 
@@ -102,6 +107,7 @@ fuchsia_test_package("sampler-integration-tests") {
     ":reboot-required-config",
     ":sampler-for-test",
     ":test-config",
+    ":validation-resources",
     "//src/diagnostics/sampler/tests/test_component:single_counter_test_component",
   ]
 }

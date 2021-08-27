@@ -84,6 +84,6 @@ resource("netcfg-netemul-config") {
 }
 
 resource("sampler-config") {
-  sources = [ "//src/diagnostics/sampler/config/netstack.json" ]
+  sources = [ "//src/diagnostics/config/sampler/netstack.json" ]
   outputs = [ "data/sampler-config/netstack.json" ]
 }
