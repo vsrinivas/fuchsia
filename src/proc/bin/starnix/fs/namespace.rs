@@ -109,21 +109,48 @@ pub fn create_filesystem(
 /// The `SymlinkMode` enum encodes how symlinks are followed during path traversal.
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 
-/// A counter representing the number of remaining symlink traversals. Path resolution uses
-/// this to determine whether or not symlinks can be followed.
+/// Whether to follow a symlink at the end of a path resolution.
 pub enum SymlinkMode {
-    Follow(u8),
+    /// Follow a symlink at the end of a path resolution.
+    Follow,
+
+    /// Do not follow a symlink at the end of a path resolution.
     NoFollow,
 }
 
 /// The maximum number of symlink traversals that can be made during path resolution.
 const MAX_SYMLINK_FOLLOWS: u8 = 40;
 
-impl SymlinkMode {
-    /// Returns a `SymlinkMode::Follow` with a count that is set to the maximum number of
-    /// symlinks that can be followed during path traversal.
-    pub fn max_follow() -> SymlinkMode {
-        SymlinkMode::Follow(MAX_SYMLINK_FOLLOWS)
+/// The context passed during namespace lookups.
+///
+/// Namespace lookups need to mutate a shared context in order to correctly
+/// count the number of remaining symlink traversals.
+pub struct LookupContext {
+    /// The SymlinkMode for the lookup.
+    ///
+    /// As the lookup proceeds, the follow count is decremented each time the
+    /// lookup traverses a symlink.
+    pub symlink_mode: SymlinkMode,
+
+    /// The number of symlinks remaining the follow.
+    ///
+    /// Each time path resolution calls readlink, this value is decremented.
+    pub remaining_follows: u8,
+}
+
+impl LookupContext {
+    pub fn new(symlink_mode: SymlinkMode) -> LookupContext {
+        LookupContext { remaining_follows: MAX_SYMLINK_FOLLOWS, symlink_mode }
+    }
+
+    pub fn with(&self, symlink_mode: SymlinkMode) -> LookupContext {
+        LookupContext { remaining_follows: self.remaining_follows, symlink_mode }
+    }
+}
+
+impl Default for LookupContext {
+    fn default() -> Self {
+        LookupContext::new(SymlinkMode::Follow)
     }
 }
 
@@ -192,7 +219,8 @@ impl NamespaceNode {
         if name.is_empty() || name == b"." || name == b".." {
             return error!(EINVAL);
         }
-        let child = self.lookup(task, name, SymlinkMode::NoFollow)?;
+        let mut context = LookupContext::new(SymlinkMode::NoFollow);
+        let child = self.lookup(&mut context, task, name)?;
 
         let unlink = || {
             if child.mountpoint().is_some() {
@@ -216,9 +244,9 @@ impl NamespaceNode {
     /// Traverse down a parent-to-child link in the namespace.
     pub fn lookup(
         &self,
+        context: &mut LookupContext,
         task: &Task,
         name: &FsStr,
-        symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
         if !self.entry.node.is_dir() {
             error!(ENOTDIR)
@@ -230,8 +258,15 @@ impl NamespaceNode {
         } else {
             let mut child = self.with_new_entry(self.entry.component_lookup(name)?);
             while child.entry.node.info().mode.is_lnk() {
-                match symlink_mode {
-                    SymlinkMode::Follow(count) if count > 0 => {
+                match context.symlink_mode {
+                    SymlinkMode::NoFollow => {
+                        break;
+                    }
+                    SymlinkMode::Follow => {
+                        if context.remaining_follows == 0 {
+                            return error!(ELOOP);
+                        }
+                        context.remaining_follows -= 1;
                         child = match child.entry.node.readlink(task)? {
                             SymlinkTarget::Path(link_target) => {
                                 let link_directory = if link_target[0] == b'/' {
@@ -239,20 +274,10 @@ impl NamespaceNode {
                                 } else {
                                     self.clone()
                                 };
-                                task.lookup_node(
-                                    link_directory,
-                                    &link_target,
-                                    SymlinkMode::Follow(count - 1),
-                                )?
+                                task.lookup_node(context, link_directory, &link_target)?
                             }
                             SymlinkTarget::Node(node) => node,
                         }
-                    }
-                    SymlinkMode::Follow(0) => {
-                        return error!(ELOOP);
-                    }
-                    _ => {
-                        break;
                     }
                 };
             }
@@ -392,19 +417,16 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let dev = ns
-            .root()
-            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
-            .expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let dev =
+            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
-        let dev = ns
-            .root()
-            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
-            .expect("failed to lookup dev");
-        let pts = dev
-            .lookup(&task_owner.task, b"pts", SymlinkMode::max_follow())
-            .expect("failed to lookup pts");
+        let mut context = LookupContext::default();
+        let dev =
+            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let pts = dev.lookup(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
@@ -424,22 +446,23 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let dev = ns
-            .root()
-            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
-            .expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let dev =
+            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
+        let mut context = LookupContext::default();
         let new_dev = ns
             .root()
-            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
+            .lookup(&mut context, &task_owner.task, b"dev")
             .expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.entry, &new_dev.entry));
         assert_ne!(&dev, &new_dev);
 
-        let _new_pts = new_dev
-            .lookup(&task_owner.task, b"pts", SymlinkMode::max_follow())
-            .expect("failed to lookup pts");
-        assert!(dev.lookup(&task_owner.task, b"pts", SymlinkMode::max_follow()).is_err());
+        let mut context = LookupContext::default();
+        let _new_pts =
+            new_dev.lookup(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
+        let mut context = LookupContext::default();
+        assert!(dev.lookup(&mut context, &task_owner.task, b"pts").is_err());
 
         Ok(())
     }
@@ -455,19 +478,16 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let dev = ns
-            .root()
-            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
-            .expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let dev =
+            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
-        let dev = ns
-            .root()
-            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
-            .expect("failed to lookup dev");
-        let pts = dev
-            .lookup(&task_owner.task, b"pts", SymlinkMode::max_follow())
-            .expect("failed to lookup pts");
+        let mut context = LookupContext::default();
+        let dev =
+            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let pts = dev.lookup(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
 
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());

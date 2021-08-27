@@ -174,14 +174,14 @@ mod test {
         let fs = RemoteFs::new(root.into_channel().unwrap().into_zx_channel(), rights);
         let ns = Namespace::new(fs.clone());
         let root = ns.root();
-        assert_eq!(
-            root.lookup(&task_owner.task, b"nib", SymlinkMode::max_follow()).err(),
-            Some(errno!(ENOENT))
-        );
-        root.lookup(&task_owner.task, b"lib", SymlinkMode::max_follow()).unwrap();
+        let mut context = LookupContext::default();
+        assert_eq!(root.lookup(&mut context, &task_owner.task, b"nib").err(), Some(errno!(ENOENT)));
+        let mut context = LookupContext::default();
+        root.lookup(&mut context, &task_owner.task, b"lib").unwrap();
 
+        let mut context = LookupContext::default();
         let _test_file = root
-            .lookup(&task_owner.task, b"bin/hello_starnix", SymlinkMode::max_follow())?
+            .lookup(&mut context, &task_owner.task, b"bin/hello_starnix")?
             .open(OpenFlags::RDONLY)?;
         Ok(())
     }

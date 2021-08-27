@@ -221,7 +221,7 @@ struct LookupOptions {
 
 impl Default for LookupOptions {
     fn default() -> Self {
-        LookupOptions { allow_empty_path: false, symlink_mode: SymlinkMode::max_follow() }
+        LookupOptions { allow_empty_path: false, symlink_mode: SymlinkMode::Follow }
     }
 }
 
@@ -242,7 +242,8 @@ fn lookup_at(
         return error!(ENOENT);
     }
     let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
-    parent.lookup(task, basename, options.symlink_mode)
+    let mut context = LookupContext::new(options.symlink_mode);
+    parent.lookup(&mut context, task, basename)
 }
 
 pub fn sys_openat(
@@ -382,7 +383,7 @@ pub fn sys_newfstatat(
         symlink_mode: if flags & AT_SYMLINK_NOFOLLOW != 0 {
             SymlinkMode::NoFollow
         } else {
-            SymlinkMode::max_follow()
+            SymlinkMode::Follow
         },
     };
     let name = lookup_at(ctx.task, dir_fd, user_path, options)?;
@@ -405,7 +406,8 @@ pub fn sys_readlinkat(
         if stat.st_mode & S_IRUSR == 0 {
             return error!(EACCES);
         }
-        Ok(parent.lookup(ctx.task, basename, SymlinkMode::NoFollow)?.entry)
+        let mut context = LookupContext::new(SymlinkMode::NoFollow);
+        Ok(parent.lookup(&mut context, ctx.task, basename)?.entry)
     })?;
 
     let target = match entry.node.readlink(ctx.task)? {
@@ -505,7 +507,7 @@ pub fn sys_linkat(
     let options = LookupOptions {
         allow_empty_path: flags & AT_EMPTY_PATH != 0,
         symlink_mode: if flags & AT_SYMLINK_FOLLOW != 0 {
-            SymlinkMode::max_follow()
+            SymlinkMode::Follow
         } else {
             SymlinkMode::NoFollow
         },
@@ -756,7 +758,7 @@ pub fn sys_mount(
     );
 
     let fs = create_filesystem(ctx.kernel(), source, fs_type, b"")?;
-    ctx.task.lookup_node(ctx.task.fs.root.clone(), target, SymlinkMode::max_follow())?.mount(fs)?;
+    ctx.task.lookup_path_from_root(target)?.mount(fs)?;
     Ok(SUCCESS)
 }
 

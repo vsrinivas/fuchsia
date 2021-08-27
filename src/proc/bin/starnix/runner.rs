@@ -225,9 +225,7 @@ fn create_filesystem_from_spec<'a>(
     let fs = match fs_type {
         "bind" => {
             let task = task.ok_or(errno!(ENOENT))?;
-            Dir(task
-                .lookup_node(task.fs.root.clone(), fs_src.as_bytes(), SymlinkMode::max_follow())?
-                .entry)
+            Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry)
         }
         "remotefs" => {
             let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
@@ -317,18 +315,16 @@ fn start_component(
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =
             create_filesystem_from_spec(&kernel, Some(&task_owner.task), &pkg, mount_spec)?;
-        let mount_point =
-            task_owner.task.lookup_node(fs.root.clone(), mount_point, SymlinkMode::max_follow())?;
+        let mount_point = task_owner.task.lookup_path_from_root(mount_point)?;
         mount_point.mount(child_fs)?;
     }
 
     // Hack to allow mounting apexes before apexd is working.
     // TODO(tbodt): Remove once apexd works.
     if let Some(apexes) = apex_hack {
-        fs.root
-            .lookup(&task_owner.task, b"apex", SymlinkMode::max_follow())?
-            .mount(WhatToMount::Fs(TmpFs::new()))?;
-        let apex_dir = fs.root.lookup(&task_owner.task, b"apex", SymlinkMode::max_follow())?;
+        let task = &task_owner.task;
+        task.lookup_path_from_root(b"apex")?.mount(WhatToMount::Fs(TmpFs::new()))?;
+        let apex_dir = task.lookup_path_from_root(b"apex")?;
         for apex in apexes {
             let apex = apex.as_bytes();
             let apex_subdir = apex_dir.create_node(
@@ -336,11 +332,7 @@ fn start_component(
                 FileMode::IFDIR | FileMode::from_bits(0o700),
                 DeviceType::NONE,
             )?;
-            let apex_source = task_owner.task.lookup_node(
-                fs.root.clone(),
-                &[b"/system/apex/", apex].concat(),
-                SymlinkMode::max_follow(),
-            )?;
+            let apex_source = task.lookup_path_from_root(&[b"system/apex/", apex].concat())?;
             apex_subdir.mount(WhatToMount::Dir(apex_source.entry))?;
         }
     }

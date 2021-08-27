@@ -450,45 +450,40 @@ impl Task {
     /// final path component.
     fn resolve_open_path(
         &self,
+        context: &mut LookupContext,
         dir: NamespaceNode,
         path: FsString,
         mode: FileMode,
         flags: OpenFlags,
-        symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
-        let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
-        let (parent, basename) =
-            self.lookup_parent(dir.clone(), &path, SymlinkMode::max_follow())?;
-        // The remaining follows tracks how many symlink traversals remain before ELOOP should
-        // be returned.
-        let remaining_follows = match symlink_mode {
-            SymlinkMode::Follow(count) => count,
-            SymlinkMode::NoFollow => 0,
-        };
+        let mut parent_content = context.with(SymlinkMode::Follow);
+        let (parent, basename) = self.lookup_parent(&mut parent_content, dir.clone(), &path)?;
+        context.remaining_follows = parent_content.remaining_follows;
 
-        match parent.lookup(self, basename, SymlinkMode::NoFollow) {
+        let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
+
+        let mut child_context = context.with(SymlinkMode::NoFollow);
+        match parent.lookup(&mut child_context, self, basename) {
             Ok(name) => {
                 if name.entry.node.info().mode.is_lnk() {
-                    if remaining_follows == 0 && must_create {
-                        // Since `must_create` is set, and a node was found, this returns EEXIST
-                        // instead of ELOOP.
-                        return error!(EEXIST);
-                    } else if remaining_follows == 0 {
+                    if context.symlink_mode == SymlinkMode::NoFollow
+                        || context.remaining_follows == 0
+                    {
+                        if must_create {
+                            // Since `must_create` is set, and a node was found, this returns EEXIST
+                            // instead of ELOOP.
+                            return error!(EEXIST);
+                        }
                         // A symlink was found, but too many symlink traversals have been
                         // attempted.
                         return error!(ELOOP);
                     }
 
+                    context.remaining_follows -= 1;
                     match name.entry.node.readlink(self)? {
                         SymlinkTarget::Path(path) => {
                             let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
-                            self.resolve_open_path(
-                                dir,
-                                path,
-                                mode,
-                                flags,
-                                SymlinkMode::Follow(remaining_follows - 1),
-                            )
+                            self.resolve_open_path(context, dir, path, mode, flags)
                         }
                         SymlinkTarget::Node(node) => Ok(node),
                     }
@@ -540,10 +535,11 @@ impl Task {
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
 
         let symlink_mode =
-            if nofollow || must_create { SymlinkMode::NoFollow } else { SymlinkMode::max_follow() };
+            if nofollow || must_create { SymlinkMode::NoFollow } else { SymlinkMode::Follow };
 
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        let name = self.resolve_open_path(dir, path.to_vec(), mode, flags, symlink_mode)?;
+        let mut context = LookupContext::new(symlink_mode);
+        let name = self.resolve_open_path(&mut context, dir, path.to_vec(), mode, flags)?;
 
         // Be sure not to reference the mode argument after this point.
         // Below, we shadow the mode argument with the mode of the file we are
@@ -598,7 +594,8 @@ impl Task {
         path: &'a FsStr,
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        self.lookup_parent(dir, path, SymlinkMode::max_follow())
+        let mut context = LookupContext::default();
+        self.lookup_parent(&mut context, dir, path)
     }
 
     /// Lookup the parent of a namespace node.
@@ -617,15 +614,15 @@ impl Task {
     /// The returned parent might not be a directory.
     pub fn lookup_parent<'a>(
         &self,
+        context: &mut LookupContext,
         dir: NamespaceNode,
         path: &'a FsStr,
-        symlink_mode: SymlinkMode,
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let mut current_node = dir;
         let mut it = path.split(|c| *c == b'/');
         let mut current_path_component = it.next().unwrap_or(b"");
         while let Some(next_path_component) = it.next() {
-            current_node = current_node.lookup(self, current_path_component, symlink_mode)?;
+            current_node = current_node.lookup(context, self, current_path_component)?;
             current_path_component = next_path_component;
         }
         Ok((current_node, current_path_component))
@@ -639,12 +636,20 @@ impl Task {
     /// This function resolves the component of the given path.
     pub fn lookup_node(
         &self,
+        context: &mut LookupContext,
         dir: NamespaceNode,
         path: &FsStr,
-        symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
-        let (parent, basename) = self.lookup_parent(dir, path, symlink_mode)?;
-        parent.lookup(self, basename, symlink_mode)
+        let (parent, basename) = self.lookup_parent(context, dir, path)?;
+        parent.lookup(context, self, basename)
+    }
+
+    /// Lookup a namespace node starting at the root directory.
+    ///
+    /// Resolves symlinks.
+    pub fn lookup_path_from_root(&self, path: &FsStr) -> Result<NamespaceNode, Errno> {
+        let mut context = LookupContext::default();
+        self.lookup_node(&mut context, self.fs.root.clone(), path)
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
