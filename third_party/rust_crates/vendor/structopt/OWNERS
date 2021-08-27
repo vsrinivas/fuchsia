@@ -5,7 +5,6 @@
 include /build/OWNERS
 include /build/sdk/OWNERS
 include /examples/diagnostics/inspect/OWNERS
-include /examples/rolldice/OWNERS
 include /garnet/bin/setui_client/OWNERS
 include /garnet/examples/OWNERS
 include /garnet/examples/intl/OWNERS

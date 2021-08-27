@@ -14,6 +14,7 @@ include /src/connectivity/overnet/OWNERS
 include /src/connectivity/wlan/OWNERS
 include /src/connectivity/wlan/wlancfg/OWNERS
 include /src/developer/ffx/OWNERS
+include /src/developer/ffx/lib/gcs/OWNERS
 include /src/developer/ffx/lib/pkg/OWNERS
 include /src/developer/ffx/plugins/assembly/OWNERS
 include /src/developer/ffx/plugins/emulator/OWNERS
@@ -23,13 +24,13 @@ include /src/developer/fuchsia-criterion/OWNERS
 include /src/developer/remote-control/OWNERS
 include /src/diagnostics/OWNERS
 include /src/diagnostics/iquery/OWNERS
-include /src/diagnostics/lib/selectors/OWNERS
 include /src/fonts/OWNERS
 include /src/identity/OWNERS
 include /src/intl/OWNERS
 include /src/lib/analytics/OWNERS
 include /src/lib/assembly/OWNERS
 include /src/lib/component_hub/OWNERS
+include /src/lib/diagnostics/selectors/OWNERS
 include /src/lib/fuchsia-component/OWNERS
 include /src/lib/storage/OWNERS
 include /src/lib/syslog/OWNERS

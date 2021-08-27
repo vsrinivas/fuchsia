@@ -4,6 +4,7 @@
 
 include /examples/OWNERS
 include /src/connectivity/overnet/OWNERS
+include /src/connectivity/wlan/OWNERS
 include /src/connectivity/wlan/wlancfg/OWNERS
 include /src/devices/lib/OWNERS
 include /src/diagnostics/OWNERS

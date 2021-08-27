@@ -13,12 +13,14 @@ include /src/fonts/OWNERS
 include /src/lib/diagnostics/inspect/rust/OWNERS
 include /src/lib/fuchsia-component-test/OWNERS
 include /src/lib/test_diagnostics/OWNERS
+include /src/proc/OWNERS
 include /src/sys/appmgr/OWNERS
 include /src/sys/component_manager/OWNERS
 include /src/sys/lib/cm_rust/OWNERS
 include /src/sys/lib/routing/OWNERS
 include /src/sys/pkg/OWNERS
 include /src/sys/run_test_suite/OWNERS
+include /src/sys/test_manager/OWNERS
 include /src/sys/test_runners/OWNERS
 include /src/testing/sl4f/OWNERS
 include /src/ui/OWNERS

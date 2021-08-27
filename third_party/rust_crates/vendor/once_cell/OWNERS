@@ -10,6 +10,8 @@ include /src/lib/diagnostics/OWNERS
 include /src/lib/ui/carnelian/OWNERS
 include /src/proc/OWNERS
 include /src/storage/OWNERS
+include /src/sys/pkg/OWNERS
+include /src/testing/sl4f/OWNERS
 include /third_party/rust_crates/vendor/async-executor/OWNERS
 include /third_party/rust_crates/vendor/async-io/OWNERS
 include /third_party/rust_crates/vendor/blocking/OWNERS

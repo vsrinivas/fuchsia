@@ -9,6 +9,7 @@ include /src/connectivity/network/dhcp/OWNERS
 include /src/connectivity/wlan/OWNERS
 include /src/connectivity/wlan/wlancfg/OWNERS
 include /src/devices/lib/OWNERS
+include /src/devices/tpm/OWNERS
 include /src/diagnostics/iquery/OWNERS
 include /src/diagnostics/lib/triage/OWNERS
 include /src/diagnostics/validator/inspect/OWNERS
