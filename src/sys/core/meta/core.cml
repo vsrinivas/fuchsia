@@ -482,6 +482,11 @@
             to: "#starnix_manager",
         },
         {
+            protocol: [ "fuchsia.starnix.developer.Manager" ],
+            from: "#starnix_manager",
+            to: "#appmgr",
+        },
+        {
             directory: "config-data",
             from: "parent",
             to: "#hwinfo",

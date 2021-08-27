@@ -342,6 +342,10 @@
             path: "/svc_for_sys/fuchsia.developer.remotecontrol.RemoteControl",
         },
         {
+            protocol: "fuchsia.starnix.developer.Manager",
+            path: "/svc_for_sys/fuchsia.starnix.developer.Manager",
+        },
+        {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
             path: "/svc_for_sys/fuchsia.hardware.serial.NewDeviceProxy",
         },

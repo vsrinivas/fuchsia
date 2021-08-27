@@ -29,6 +29,7 @@
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.space.Manager",
+            "fuchsia.starnix.developer.Manager",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
