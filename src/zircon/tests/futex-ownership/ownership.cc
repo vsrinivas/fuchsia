@@ -58,12 +58,12 @@ struct WakeOperation<OpType::kStandard> {
 template <>
 struct WakeOperation<OpType::kRequeue> {
   static zx_status_t wake(const fbl::futex_t& wake_futex, uint32_t count) {
-    const fbl::futex_t& requeue_futex(0);
+    const fbl::futex_t requeue_futex{0};
     return zx_futex_requeue(&wake_futex, count, 0, &requeue_futex, 0u, ZX_HANDLE_INVALID);
   }
 
   static zx_status_t wake_single_owner(const fbl::futex_t& wake_futex) {
-    const fbl::futex_t& requeue_futex(0);
+    const fbl::futex_t requeue_futex{0};
     return zx_futex_requeue_single_owner(&wake_futex, 0, &requeue_futex, 0u, ZX_HANDLE_INVALID);
   }
 };

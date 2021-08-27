@@ -21,7 +21,7 @@ class Event {
   void Reset();
 
  private:
-  fbl::futex_t signaled_ = {0};
+  fbl::futex_t signaled_{0};
 };
 
 #endif  // SRC_ZIRCON_TESTING_MUTEX_PI_EXERCISER_EVENT_H_

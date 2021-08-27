@@ -56,7 +56,7 @@ class Event {
   void Reset();
 
  private:
-  fbl::futex_t signaled_ = {0};
+  fbl::futex_t signaled_{0};
 };
 
 // A lightweight wrapper for threads which allow us to create threads and have

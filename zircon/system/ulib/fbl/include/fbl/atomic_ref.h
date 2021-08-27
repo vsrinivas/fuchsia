@@ -20,7 +20,7 @@ namespace fbl {
 // types that are fixed for external reasons; in all other cases, you prefer
 // atomic<T>.
 
-enum memory_order {
+enum memory_order : int {
   memory_order_relaxed = __ATOMIC_RELAXED,
   memory_order_consume = __ATOMIC_CONSUME,
   memory_order_acquire = __ATOMIC_ACQUIRE,
@@ -65,23 +65,23 @@ class atomic_ref {
   }
   bool compare_exchange_weak(T& expected, T desired, fbl::memory_order success,
                              fbl::memory_order failure) const noexcept {
-    return __atomic_compare_exchange_n(ptr_, &expected, desired, true,
-                                       static_cast<int>(success), static_cast<int>(failure));
+    return __atomic_compare_exchange_n(ptr_, &expected, desired, true, static_cast<int>(success),
+                                       static_cast<int>(failure));
   }
   bool compare_exchange_weak(T& expected, T desired,
                              fbl::memory_order order = fbl::memory_order_seq_cst) const noexcept {
-    return __atomic_compare_exchange_n(ptr_, &expected, desired, true,
-                                       static_cast<int>(order), static_cast<int>(order));
+    return __atomic_compare_exchange_n(ptr_, &expected, desired, true, static_cast<int>(order),
+                                       static_cast<int>(order));
   }
   bool compare_exchange_strong(T& expected, T desired, fbl::memory_order success,
                                fbl::memory_order failure) const noexcept {
-    return __atomic_compare_exchange_n(ptr_, &expected, desired, false,
-                                       static_cast<int>(success), static_cast<int>(failure));
+    return __atomic_compare_exchange_n(ptr_, &expected, desired, false, static_cast<int>(success),
+                                       static_cast<int>(failure));
   }
   bool compare_exchange_strong(T& expected, T desired,
                                fbl::memory_order order = fbl::memory_order_seq_cst) const noexcept {
-    return __atomic_compare_exchange_n(ptr_, &expected, desired, false,
-                                       static_cast<int>(order), static_cast<int>(order));
+    return __atomic_compare_exchange_n(ptr_, &expected, desired, false, static_cast<int>(order),
+                                       static_cast<int>(order));
   }
 
   T fetch_add(T arg, fbl::memory_order order = fbl::memory_order_seq_cst) const noexcept {
