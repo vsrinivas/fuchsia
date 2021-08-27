@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        ie::{self, IeType},
+        ie::{self, write_wmm_param, IeType},
         mac,
         test_utils::fake_frames::{
             fake_eap_rsne, fake_wpa1_ie, fake_wpa2_enterprise_rsne, fake_wpa2_rsne,
@@ -60,13 +60,6 @@ const DEFAULT_MOCK_IES: &'static [u8] = &[
     0xc3, 0x03, 0x01, 0x24, 0x24,
     // Aruba, Hewlett Packard vendor-specific IE
     0xdd, 0x07, 0x00, 0x0b, 0x86, 0x01, 0x04, 0x08, 0x09,
-    // WMM parameters
-    0xdd, 0x18, 0x00, 0x50, 0xf2, 0x02, 0x01, 0x01, 0x80, // U-APSD enabled
-    0x00, // reserved
-    0x03, 0xa4, 0x00, 0x00, // AC_BE parameters
-    0x27, 0xa4, 0x00, 0x00, // AC_BK parameters
-    0x42, 0x43, 0x5e, 0x00, // AC_VI parameters
-    0x62, 0x32, 0x2f, 0x00, // AC_VO parameters
 ];
 
 pub struct BssDescriptionCreator {
@@ -84,6 +77,7 @@ pub struct BssDescriptionCreator {
     pub protection_cfg: FakeProtectionCfg,
     pub ssid: Ssid,
     pub rates: Vec<u8>,
+    pub wmm_param: Option<ie::WmmParam>,
 
     // *** Modifiable capability_info bits
     // The privacy, ess, and ibss bits are reserved for the
@@ -122,6 +116,13 @@ impl BssDescriptionCreator {
         }
         if let Some(wpa1_vendor_ie) = derive_wpa1_vendor_ies(self.protection_cfg) {
             ies_updater.set_raw(&wpa1_vendor_ie[..]).context("set WPA1 vendor IE")?;
+        }
+
+        if let Some(wmm_param) = self.wmm_param {
+            let mut wmm_param_vendor_ie = vec![];
+            write_wmm_param(&mut wmm_param_vendor_ie, &wmm_param)
+                .context("failed to write WmmParam to vendor IE buffer")?;
+            ies_updater.set_raw(&wmm_param_vendor_ie[..]).context("set WMM parameter IE")?;
         }
 
         let capability_info = mac::CapabilityInfo(0)
@@ -267,6 +268,31 @@ pub fn build_fake_bss_description_creator__(
         protection_cfg,
         ssid: Ssid::from("fake-ssid"),
         rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
+        wmm_param: Some(ie::WmmParam {
+            wmm_info: ie::WmmInfo(0).with_ap_wmm_info(ie::ApWmmInfo(0).with_uapsd(true)),
+            _reserved: 0,
+            ac_be_params: ie::WmmAcParams {
+                aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(3).with_aci(0),
+                ecw_min_max: ie::EcwMinMax(0).with_ecw_min(4).with_ecw_max(10),
+                txop_limit: 0,
+            },
+            ac_bk_params: ie::WmmAcParams {
+                aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(7).with_aci(1),
+                ecw_min_max: ie::EcwMinMax(0).with_ecw_min(4).with_ecw_max(10),
+                txop_limit: 0,
+            },
+            ac_vi_params: ie::WmmAcParams {
+                aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(2).with_aci(2),
+                ecw_min_max: ie::EcwMinMax(0).with_ecw_min(3).with_ecw_max(4),
+                txop_limit: 94,
+            },
+            ac_vo_params: ie::WmmAcParams {
+                aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(2).with_aci(3),
+                ecw_min_max: ie::EcwMinMax(0).with_ecw_min(2).with_ecw_max(3),
+                txop_limit: 47,
+            },
+        }),
+
         cf_pollable: false,
         cf_poll_req: false,
         short_preamble: false,
@@ -277,6 +303,7 @@ pub fn build_fake_bss_description_creator__(
         radio_measurement: false,
         delayed_block_ack: false,
         immediate_block_ack: false,
+
         ies_overrides: IesOverrides::new(),
     }
 }
@@ -491,7 +518,11 @@ mod tests {
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
             // WMM parameters
-            0xdd, 0x18, 0x00, 0x50, 0xf2, 0x02, 0x01, 0x01, 0x80, // U-APSD enabled
+            0xdd, 0x18, // Vendor IE header
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x02, 0x01, // WMM Type and WMM Parameter Subtype
+            0x01, // Version 1
+            0x80, // U-APSD enabled
             0x00, // reserved
             0x03, 0xa4, 0x00, 0x00, // AC_BE parameters
             0x27, 0xa4, 0x00, 0x00, // AC_BK parameters
