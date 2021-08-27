@@ -1,0 +1,176 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.tpm.cr50;
+
+using zx;
+using fuchsia.tpm;
+
+const CCD_CAPABILITY_COUNT_MAX uint32 = 32;
+
+/// Vendor-specific TPM response codes.
+type Cr50Status = flexible enum : uint8 {
+    /// Command succeeded.
+    SUCCESS = 0;
+    /// Incorrect parameters.
+    BOGUS_ARGS = 1;
+    /// Failed while reading from flash.
+    READ_FLASH_FAIL = 2;
+    /// Failed while writing to flash.
+    WRITE_FLASH_FAIL = 3;
+    /// Request or part of request too big.
+    REQUEST_TOO_BIG = 4;
+    /// Response too big for the response buffer allocated by the TPM.
+    RESPONSE_TOO_BIG = 5;
+    /// Unspecified internal error.
+    INTERNAL_ERROR = 6;
+    /// Command not allowed in current state.
+    NOT_ALLOWED = 7;
+    /// Command was given an unknown subcommand.
+    NO_SUCH_SUBCOMMAND = 8;
+    /// Command is in progress.
+    IN_PROGRESS = 9;
+    /// Password is required for this command.
+    PASSWORD_REQUIRED = 10;
+    /// Non-volatile memory was locked.
+    NVMEM_LOCKED = 11;
+    /// Unsupported command.
+    NO_SUCH_COMMAND = 127;
+};
+
+/// State of case-closed debugging features on this device.
+type CcdState = flexible enum : uint8 {
+    /// Locked. CCD configuration is read-only. ALWAYS capabilities are
+    /// available.
+    LOCKED = 0;
+    /// Unlocked:
+    /// * Requires a short physical presence check.
+    /// * CCD password can be changed (unless it was set with CCD open).
+    /// * Limited access to CCD configuration (can toggle capabilities between
+    /// ALWAYS and UNLESS_LOCKED, but cannot set flags or change OPEN
+    /// capabilities).
+    UNLOCKED = 1;
+    /// Opened. Full access to all CCD capabilities and configuration.
+    /// Requires a long physical presence check.
+    OPEN = 2;
+};
+
+/// Case-closed debugging capabilities.
+type CcdCapability = flexible enum {
+    /// UART from AP.
+    GSC_RX_AP_TX = 0;
+    /// UART to AP.
+    GSC_TX_AP_RX = 1;
+    /// UART from EC.
+    GSC_RX_EC_TX = 2;
+    /// UART to EC.
+    GSC_TX_EC_RX = 3;
+    /// Access to AP SPI flash.
+    AP_FLASH = 4;
+    /// Access to EC flash.
+    EC_FLASH = 5;
+    /// Override WP (temporarily or at boot).
+    OVERRIDE_WP = 6;
+    /// Reboot EC/AP.
+    REBOOT_EC_AP = 7;
+    /// Allow access to full console.
+    GSC_FULL_CONSOLE = 8;
+    /// Unlock/open CCD without AP reboot.
+    UNLOCK_NO_REBOOT = 9;
+    /// Unlock/open CCD without short physical presence check.
+    UNLOCK_NO_SHORT_PP = 10;
+    /// Open CCD without TPM wipe.
+    OPEN_NO_TPM_WIPE = 11;
+    /// Open TPM without long physical presence check.
+    OPEN_NO_LONG_PP = 12;
+    /// Allow disconnecting the battery to bypass the physical presence check.
+    BATTERY_BYPASS_PP = 13;
+    /// Unused.
+    UNUSED = 14;
+    /// Access I2C via USB.
+    I2C = 15;
+    /// Read-only access to hash or dump EC/AP flash.
+    FLASH_READ = 16;
+    /// Open CCD without developer mode enabled.
+    OPEN_NO_DEV_MODE = 17;
+    /// Open CCD from USB.
+    OPEN_FROM_USB = 18;
+    /// Override battery presence temporarily or at boot.
+    OVERRIDE_BATTERY_STATE = 19;
+};
+
+/// Represents the state of a CCD capability.
+type CcdCapabilityState = flexible enum {
+    /// Default value.
+    DEFAULT = 0;
+    /// Always available, even if locked.
+    ALWAYS = 1;
+    /// Available unless locked. (i.e. in UNLOCKED or OPEN states).
+    UNLESS_LOCKED = 2;
+    /// Only available if opened.
+    IF_OPENED = 3;
+};
+
+type CcdCapabilitySetting = struct {
+    capability CcdCapability;
+    current_state CcdCapabilityState;
+    default_state CcdCapabilityState;
+};
+
+type CcdFlags = flexible bits {
+    /// Test lab mode enabled. Read only.
+    TEST_LAB = 0x1;
+    /// State when password was set (0 = open, 1 = unlocked). Read only.
+    PASSWORD_SET_WHEN_UNLOCKED = 0x2;
+    /// Factory mode state. Read only.
+    FACTORY_MODE_ENABLED = 0x4;
+
+    /// Enable Rddkeepalive at boot.
+    RDDKEEPALIVE_AT_BOOT = 0x8000;
+    /// Override battery presence at boot.
+    OVERRIDE_BATT_AT_BOOT = 0x10000;
+    /// If overriding battery presence, what state? (0 = disconnected, 1 =
+    /// connected).
+    OVERRIDE_BATT_STATE_CONNECT = 0x20000;
+    /// Override write protect at boot.
+    OVERRIDE_WP_AT_BOOT = 0x40000;
+    /// If override WP, what value should it have? (0 = disabled, 1 = enabled).
+    OVERRIDE_WP_STATE_ENABLED = 0x80000;
+};
+
+type CcdIndicator = flexible bits : uint8 {
+    /// 1 if CCD has a password.
+    HAS_PASSWORD = 0x1;
+    /// 1 if all capabilities are default.
+    ALL_CAPS_DEFAULT = 0x2;
+};
+
+type CcdInfo = struct {
+    /// CCD capability settings.
+    capabilities vector<CcdCapabilitySetting>:CCD_CAPABILITY_COUNT_MAX;
+    /// CCD flags.
+    flags CcdFlags;
+    /// Current CCD state, some bits configurable.
+    state CcdState;
+    /// Indicates internal CCD state.
+    indicator CcdIndicator;
+    /// True if CCD is forcibly disabled.
+    force_disabled bool;
+};
+
+/// Response code type for cr50 commands.
+type Cr50Rc = flexible union {
+    /// TPM standard response code.
+    1: tpm fuchsia.tpm.TpmRc;
+    /// Cr50 vendor response code.
+    2: cr50 Cr50Status;
+};
+
+@discoverable
+protocol Cr50 {
+    /// Get information about the current state of case-closed debugging.
+    CcdGetInfo() -> (struct {
+        rc Cr50Rc;
+        info CcdInfo:optional;
+    }) error zx.status;
+};

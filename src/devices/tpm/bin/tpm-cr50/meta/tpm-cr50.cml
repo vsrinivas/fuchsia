@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/tpm-cr50",
+    },
+    capabilities: [
+        { protocol: "fuchsia.tpm.cr50.Cr50" },
+    ],
+    use: [
+        {
+            directory: "dev-class-tpm",
+            rights: [ "rw*" ],
+            path: "/dev/class/tpm",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.tpm.cr50.Cr50",
+            from: "self",
+        },
+    ],
+}

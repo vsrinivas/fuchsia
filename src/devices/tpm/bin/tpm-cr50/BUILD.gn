@@ -1,0 +1,81 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/component_manifest_resources.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":tpm-cr50-unittests" ]
+}
+
+rustc_binary("bin") {
+  output_name = "tpm-cr50"
+  with_unit_tests = true
+
+  configs += [ "//build/config/rust:bootfs" ]
+
+  # Can't dynamically link libstd and libtest for ZBI binaries
+  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.tpm:fuchsia.tpm-rustc",
+    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [
+    "src/cr50.rs",
+    "src/cr50/command.rs",
+    "src/cr50/command/ccd.rs",
+    "src/cr50/status.rs",
+    "src/main.rs",
+    "src/util.rs",
+  ]
+}
+
+component_manifest_resources("manifest") {
+  sources = [ "meta/tpm-cr50.cml" ]
+}
+
+fuchsia_component("component") {
+  component_name = "tpm-cr50"
+  manifest = "meta/tpm-cr50.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("tpm-cr50") {
+  package_name = "tpm-cr50"
+  deps = [ ":component" ]
+}
+
+group("bootfs") {
+  deps = [
+    ":bin",
+    ":manifest",
+  ]
+}
+
+fuchsia_unittest_package("tpm-cr50-unittests") {
+  deps = [ ":bin_test" ]
+}
