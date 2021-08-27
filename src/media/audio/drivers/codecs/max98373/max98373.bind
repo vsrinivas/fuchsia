@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using fuchsia.maxim.platform;
+using fuchsia.acpi;
 
+fuchsia.BIND_ACPI_BUS_TYPE == fuchsia.acpi.BIND_ACPI_BUS_TYPE.I2C;
+fuchsia.acpi.hid == "MX98373";
 fuchsia.BIND_COMPOSITE == 1;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.maxim.platform.BIND_PLATFORM_DEV_VID.MAXIM;
-accept fuchsia.BIND_PLATFORM_DEV_DID {
-  fuchsia.maxim.platform.BIND_PLATFORM_DEV_DID.MAX98373
-}

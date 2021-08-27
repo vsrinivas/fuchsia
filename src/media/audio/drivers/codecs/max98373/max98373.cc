@@ -14,6 +14,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
+#include "src/devices/lib/acpi/client.h"
 #include "src/media/audio/drivers/codecs/max98373/max98373-bind.h"
 
 namespace {
@@ -22,6 +23,7 @@ namespace {
 constexpr uint16_t kRegReset                   = 0x2000;
 constexpr uint16_t kRegGlobalEnable            = 0x20ff;
 constexpr uint16_t kRegPcmInterfaceFormat      = 0x2024;
+constexpr uint16_t kRegPcmInterfaceClockRatio  = 0x2026;
 constexpr uint16_t kRegPcmInterfaceSampleRate  = 0x2027;
 constexpr uint16_t kRegPcmInterfaceInput       = 0x202b;
 constexpr uint16_t kRegDigitalVol              = 0x203d;
@@ -55,7 +57,7 @@ static const audio::DaiSupportedFormats kSupportedDaiFormats = {
 
 int Max98373::Thread() {
   auto status = HardwareReset();
-  if (status != ZX_OK) {
+  if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {  // Ok if not supported.
     return thrd_error;
   }
   return thrd_success;
@@ -70,8 +72,8 @@ zx_status_t Max98373::HardwareReset() {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(3)));
     return ZX_OK;
   }
-  zxlogf(ERROR, "Could not hardware reset the codec");
-  return ZX_ERR_INTERNAL;
+  zxlogf(INFO, "No support for GPIO reset the codec");
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Max98373::Reset() {
@@ -89,6 +91,8 @@ zx_status_t Max98373::Reset() {
     return ZX_ERR_INTERNAL;
   }
 
+  // TODO(83399): These parameters and all configuration should be done via the
+  // audio hardware codec FIDL API.
   constexpr float initial_gain = -20.f;
   constexpr struct {
     uint16_t reg;
@@ -98,7 +102,8 @@ zx_status_t Max98373::Reset() {
       {kRegSpkPathAndDspEnable, kRegSpkPathAndDspEnableSpkOn},
       {kRegDigitalVol, static_cast<uint8_t>(-initial_gain * 2.f)},
       {kRegPcmInterfaceInput, 0x01},       // PCM DIN enable.
-      {kRegPcmInterfaceFormat, 0xc0},      // I2S 32 bits. LRCLK starts low.
+      {kRegPcmInterfaceClockRatio, 0x08},  // TDM 8 channels, 256 BCLK to LRCLK.
+      {kRegPcmInterfaceFormat, 0xd8},      // TDM0 mode, 32 bits words.
       {kRegPcmInterfaceSampleRate, 0x08},  // 48KHz.
   };
   for (auto& i : kDefaults) {
@@ -123,6 +128,11 @@ zx::status<DriverIds> Max98373::Initialize() {
   if (rc != thrd_success) {
     return zx::error(rc);
   }
+  zx_status_t status = Reset();
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
   return zx::ok(ids);
 }
 
@@ -132,6 +142,20 @@ zx_status_t Max98373::Shutdown() {
 }
 
 zx_status_t Max98373::Create(zx_device_t* parent) {
+  auto client = acpi::Client::Create(parent);
+  if (client.is_ok()) {
+    ddk::I2cChannel i2c(parent, "i2c000");
+    if (!i2c.is_valid()) {
+      zxlogf(ERROR, "Could not get i2c protocol");
+      return ZX_ERR_NO_RESOURCES;
+    }
+
+    // No GPIO control.
+    auto dev = SimpleCodecServer::Create<Max98373>(parent, i2c, ddk::GpioProtocolClient{});
+    dev.release();  // devmgr is now in charge of the memory for dev.
+    return ZX_OK;
+  }
+
   ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "Could not get i2c protocol");

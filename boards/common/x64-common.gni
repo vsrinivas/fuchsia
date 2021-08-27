@@ -32,6 +32,7 @@ _bootfs_deps =
       "//src/media/audio/drivers/codecs/alc5514",
       "//src/media/audio/drivers/codecs/alc5663",
       "//src/media/audio/drivers/codecs/max98927",
+      "//src/media/audio/drivers/codecs/max98373",
       "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
       "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
       "//src/media/audio/drivers/intel-hda/controller:intel-hda",

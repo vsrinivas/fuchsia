@@ -15,6 +15,27 @@
 
 namespace audio {
 
+class Max98373Test : public zxtest::Test {
+ public:
+  void SetUp() override {
+    // Reset by the TAS driver initialization.
+    mock_i2c_
+        .ExpectWriteStop({0x20, 0x00, 0x01}, ZX_ERR_INTERNAL)  // Reset, error will retry.
+        .ExpectWriteStop({0x20, 0x00, 0x01}, ZX_ERR_INTERNAL)  // Reset, error will retry.
+        .ExpectWriteStop({0x20, 0x00, 0x01})                   // Reset.
+        .ExpectWrite({0x21, 0xff})
+        .ExpectReadStop({0x43})                // Get revision id.
+        .ExpectWriteStop({0x20, 0xff, 0x01})   // Global enable.
+        .ExpectWriteStop({0x20, 0x43, 0x01})   // Speaker enable.
+        .ExpectWriteStop({0x20, 0x3d, 0x28})   // Set gain to -20dB.
+        .ExpectWriteStop({0x20, 0x2b, 0x01})   // Data in enable.
+        .ExpectWriteStop({0x20, 0x26, 0x08})   // 256 ratio.
+        .ExpectWriteStop({0x20, 0x24, 0xd8})   // TDM.
+        .ExpectWriteStop({0x20, 0x27, 0x08});  // 48KHz.
+  }
+  mock_i2c::MockI2c mock_i2c_;
+};
+
 struct Max98373Codec : public Max98373 {
   explicit Max98373Codec(const ddk::I2cChannel& i2c, const ddk::GpioProtocolClient& codec_reset,
                          zx_device_t* parent)
@@ -22,11 +43,10 @@ struct Max98373Codec : public Max98373 {
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 };
 
-TEST(Max98373Test, GetInfo) {
+TEST_F(Max98373Test, GetInfo) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio;
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(unused_i2c.GetProto(),
+  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(),
                                                         std::move(unused_gpio), fake_parent.get());
   ASSERT_NOT_NULL(codec);
   // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
@@ -46,11 +66,10 @@ TEST(Max98373Test, GetInfo) {
   }
 }
 
-TEST(Max98373Test, Reset) {
+TEST_F(Max98373Test, Reset) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
 
-  mock_i2c
+  mock_i2c_
       .ExpectWriteStop({0x20, 0x00, 0x01}, ZX_ERR_INTERNAL)  // Reset, error will retry.
       .ExpectWriteStop({0x20, 0x00, 0x01}, ZX_ERR_INTERNAL)  // Reset, error will retry.
       .ExpectWriteStop({0x20, 0x00, 0x01})                   // Reset.
@@ -60,13 +79,14 @@ TEST(Max98373Test, Reset) {
       .ExpectWriteStop({0x20, 0x43, 0x01})   // Speaker enable.
       .ExpectWriteStop({0x20, 0x3d, 0x28})   // Set gain to -20dB.
       .ExpectWriteStop({0x20, 0x2b, 0x01})   // Data in enable.
-      .ExpectWriteStop({0x20, 0x24, 0xc0})   // I2S.
+      .ExpectWriteStop({0x20, 0x26, 0x08})   // 256 ratio.
+      .ExpectWriteStop({0x20, 0x24, 0xd8})   // TDM.
       .ExpectWriteStop({0x20, 0x27, 0x08});  // 48KHz.
 
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
   ddk::GpioProtocolClient gpio(mock_gpio.GetProto());
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c.GetProto(), std::move(gpio),
+  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(), std::move(gpio),
                                                         fake_parent.get());
   ASSERT_NOT_NULL(codec);
   // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
@@ -80,19 +100,18 @@ TEST(Max98373Test, Reset) {
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
   ASSERT_OK(client.Reset());
 
-  mock_i2c.VerifyAndClear();
+  mock_i2c_.VerifyAndClear();
   mock_gpio.VerifyAndClear();
 }
 
-TEST(Max98373Test, SetGainGood) {
+TEST_F(Max98373Test, SetGainGood) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
 
-  mock_i2c.ExpectWriteStop({0x20, 0x3d, 0x40});  // -32dB.
+  mock_i2c_.ExpectWriteStop({0x20, 0x3d, 0x40});  // -32dB.
 
   ddk::GpioProtocolClient unused_gpio;
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c.GetProto(), std::move(unused_gpio),
-                                                        fake_parent.get());
+  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(),
+                                                        std::move(unused_gpio), fake_parent.get());
   ASSERT_NOT_NULL(codec);
   // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
   // does not own.  We release it now, because we don't own it.
@@ -108,18 +127,17 @@ TEST(Max98373Test, SetGainGood) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
-  mock_i2c.VerifyAndClear();
+  mock_i2c_.VerifyAndClear();
 }
 
-TEST(Max98373Test, SetGainOurOfRangeLow) {
+TEST_F(Max98373Test, SetGainOurOfRangeLow) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
 
-  mock_i2c.ExpectWriteStop({0x20, 0x3d, 0x7f});  // -63.5dB.
+  mock_i2c_.ExpectWriteStop({0x20, 0x3d, 0x7f});  // -63.5dB.
 
   ddk::GpioProtocolClient unused_gpio;
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c.GetProto(), std::move(unused_gpio),
-                                                        fake_parent.get());
+  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(),
+                                                        std::move(unused_gpio), fake_parent.get());
   ASSERT_NOT_NULL(codec);
   // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
   // does not own.  We release it now, because we don't own it.
@@ -135,18 +153,17 @@ TEST(Max98373Test, SetGainOurOfRangeLow) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
-  mock_i2c.VerifyAndClear();
+  mock_i2c_.VerifyAndClear();
 }
 
-TEST(Max98373Test, SetGainOurOfRangeHigh) {
+TEST_F(Max98373Test, SetGainOurOfRangeHigh) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
 
-  mock_i2c.ExpectWriteStop({0x20, 0x3d, 0x00});  // 0dB.
+  mock_i2c_.ExpectWriteStop({0x20, 0x3d, 0x00});  // 0dB.
 
   ddk::GpioProtocolClient unused_gpio;
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c.GetProto(), std::move(unused_gpio),
-                                                        fake_parent.get());
+  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(),
+                                                        std::move(unused_gpio), fake_parent.get());
   ASSERT_NOT_NULL(codec);
   // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
   // does not own.  We release it now, because we don't own it.
@@ -162,7 +179,7 @@ TEST(Max98373Test, SetGainOurOfRangeHigh) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
-  mock_i2c.VerifyAndClear();
+  mock_i2c_.VerifyAndClear();
 }
 
 }  // namespace audio
