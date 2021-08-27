@@ -21,7 +21,8 @@ impl<DS, NI> SpinelDriver<DS, NI> {
     }
 }
 
-#[fasync::run_until_stalled(test)]
+// TODO(fxbug.dev/81732): go back to #[fasync::run_until_stalled(test)] at some point.
+#[fasync::run_singlethreaded(test)]
 async fn test_spinel_lowpan_driver() {
     let (device_client, device_stream, ncp_task) = new_fake_spinel_pair();
     let network_interface = DummyNetworkInterface::default();
@@ -464,7 +465,7 @@ async fn test_spinel_lowpan_driver() {
         }
     };
 
-    futures::select! {
+    futures::select_biased! {
         ret = driver_stream.try_for_each(|_|futures::future::ready(Ok(()))).fuse()
             => panic!("Driver stream error: {:?}", ret),
         ret = ncp_task.fuse()
