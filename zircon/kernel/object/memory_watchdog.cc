@@ -10,6 +10,7 @@
 
 #include <object/executor.h>
 #include <object/memory_watchdog.h>
+#include <platform/halt_helper.h>
 #include <vm/scanner.h>
 
 namespace {
@@ -33,6 +34,56 @@ const char* PressureLevelToString(MemoryWatchdog::PressureLevel level) {
 
 bool IsDiagnosticLevel(MemoryWatchdog::PressureLevel level) {
   return level == MemoryWatchdog::PressureLevel::kImminentOutOfMemory;
+}
+
+void HandleOnOomReboot() {
+  if (!TakeHaltToken()) {
+    // We failed to acquire the token.  Someone else must have it.  That's OK.  We'll rely on them
+    // to halt/reboot.  Nothing left for us to do but wait.
+    printf("memory-pressure: halt/reboot already in progress; sleeping forever\n");
+    Thread::Current::Sleep(ZX_TIME_INFINITE);
+  }
+  // We now have the halt token so we're committed.  To ensure we record the true cause of the
+  // reboot, we must ensure nothing (aside from a panic) prevents us from halting with reason OOM.
+
+  // We are out of or nearly out of memory so future attempts to allocate may fail.  From this
+  // point on, avoid performing any allocation.  Establish a "no allocation allowed" scope to
+  // detect (assert) if we attempt to allocate.
+  ScopedMemoryAllocationDisabled allocation_disabled;
+
+  const int kSleepSeconds = 8;
+  printf("memory-pressure: pausing for %ds after OOM mem signal\n", kSleepSeconds);
+  zx_status_t status = Thread::Current::SleepRelative(ZX_SEC(kSleepSeconds));
+  if (status != ZX_OK) {
+    printf("memory-pressure: sleep after OOM failed: %d\n", status);
+  }
+  printf("memory-pressure: rebooting due to OOM\n");
+
+  // Tell the oom_tests host test that we are about to generate an OOM
+  // crashlog to keep it happy.  Without these messages present in a
+  // specific order in the log, the test will fail.
+  printf("memory-pressure: stowing crashlog\nZIRCON REBOOT REASON (OOM)\n");
+
+  // The debuglog could contain diagnostic messages that would assist in debugging the cause of
+  // the OOM.  Shutdown debuglog before rebooting in order to flush any queued messages.
+  //
+  // It is important that we don't hang during this process so set a deadline for the debuglog
+  // to shutdown.
+  //
+  // How long should we wait?  Shutting down the debuglog includes flushing any buffered
+  // messages to the serial port (if present).  Writing to a serial port can be slow.  Assuming
+  // we have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1, it will take roughly
+  // 11.4 seconds to drain the buffer.  The timeout should be long enough to allow a full DLOG
+  // buffer to be drained.
+  zx_time_t deadline = current_time() + ZX_SEC(20);
+  status = dlog_shutdown(deadline);
+  if (status != ZX_OK) {
+    // If `dlog_shutdown` failed, there's not much we can do besides print an error (which
+    // probably won't make it out anyway since we've already called `dlog_shutdown`) and
+    // continue on to `platform_halt`.
+    printf("ERROR: dlog_shutdown failed: %d\n", status);
+  }
+  platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::Oom);
 }
 
 }  // namespace
@@ -101,49 +152,8 @@ void MemoryWatchdog::OnOom() {
       Thread::Current::SleepRelative(ZX_MSEC(500));
       break;
 
-    case OomBehavior::kReboot: {
-      // We are out of or nearly out of memory so future attempts to allocate may fail.  From this
-      // point on, avoid performing any allocation.  Establish a "no allocation allowed" scope to
-      // detect (assert) if we attempt to allocate.
-      ScopedMemoryAllocationDisabled allocation_disabled;
-
-      const int kSleepSeconds = 8;
-      printf("memory-pressure: pausing for %ds after OOM mem signal\n", kSleepSeconds);
-      zx_status_t status = Thread::Current::SleepRelative(ZX_SEC(kSleepSeconds));
-      if (status != ZX_OK) {
-        printf("memory-pressure: sleep after OOM failed: %d\n", status);
-      }
-      printf("memory-pressure: rebooting due to OOM\n");
-
-      // Tell the oom_tests host test that we are about to generate an OOM
-      // crashlog to keep it happy.  Without these messages present in a
-      // specific order in the log, the test will fail.
-      printf("memory-pressure: stowing crashlog\nZIRCON REBOOT REASON (OOM)\n");
-
-      // TODO(fxbug.dev/57008): What prevents another thread from concurrently initiating a
-      // halt/reboot of some kind (via RootJobObserver, syscall, etc.)?
-
-      // The debuglog could contain diagnostic messages that would assist in debugging the cause of
-      // the OOM.  Shutdown debuglog before rebooting in order to flush any queued messages.
-      //
-      // It is important that we don't hang during this process so set a deadline for the debuglog
-      // to shutdown.
-      //
-      // How long should we wait?  Shutting down the debuglog includes flushing any buffered
-      // messages to the serial port (if present).  Writing to a serial port can be slow.  Assuming
-      // we have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1, it will take roughly
-      // 11.4 seconds to drain the buffer.  The timeout should be long enough to allow a full DLOG
-      // buffer to be drained.
-      zx_time_t deadline = current_time() + ZX_SEC(20);
-      status = dlog_shutdown(deadline);
-      if (status != ZX_OK) {
-        // If `dlog_shutdown` failed, there's not much we can do besides print an error (which
-        // probably won't make it out anyway since we've already called `dlog_shutdown`) and
-        // continue on to `platform_halt`.
-        printf("ERROR: dlog_shutdown failed: %d\n", status);
-      }
-      platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::Oom);
-    }
+    case OomBehavior::kReboot:
+      HandleOnOomReboot();
   }
 }
 

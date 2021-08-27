@@ -52,6 +52,43 @@ func TestOOMSignal(t *testing.T) {
 	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
 }
 
+// Verifies that once the system has committed to an OOM reboot, the termination of a critical
+// process will not supercede the OOM and change the reboot reason.
+func TestOOMSignalBeforeCriticalProcess(t *testing.T) {
+	exDir := execDir(t)
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
+	arch := distro.TargetCPU()
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i := distro.Create(device)
+	i.Start()
+
+	// Ensure the kernel OOM system was properly initialized.
+	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
+
+	// Make sure the shell is ready to accept commands over serial.
+	i.WaitForLogMessage("console.shell: enabled")
+
+	// Trigger a simulated OOM, without leaking any memory.
+	i.RunCommand("k pmm oom signal")
+	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
+
+	// See that we're committed to the OOM.
+	i.WaitForLogMessage("memory-pressure: pausing for")
+
+	// Kill a critical process.
+	i.RunCommand("killall bootsvc")
+
+	// Ensure that the reboot has stowed a correct crashlog.
+	i.WaitForLogMessage("memory-pressure: stowing crashlog")
+	i.WaitForLogMessage("ZIRCON REBOOT REASON (OOM)")
+
+	// Ensure that the system reboots without panicking.
+	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
+}
+
 // Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
 // reboots.
 func TestOOM(t *testing.T) {

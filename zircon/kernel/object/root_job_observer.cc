@@ -17,8 +17,15 @@
 
 namespace {
 
-__NO_RETURN void Halt() {
+// May or may not return.
+void Halt() {
   const char* notice = gBootOptions->root_job_notice.data();
+  if (!TakeHaltToken()) {
+    printf("root-job: halt/reboot already in progress; returning\n");
+    return;
+  }
+  // We now have the halt token so we're committed.  There is no return from this point.
+
   if (strlen(notice) != 0) {
     printf("root-job: notice: %s\n", notice);
   }

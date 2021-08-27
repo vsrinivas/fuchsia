@@ -140,6 +140,29 @@ bool TestCallbackFiresWhenNoChildren() {
   END_TEST;
 }
 
+// Ensure that the it's safe for multiple observers to observe termination of a root job.
+bool TestMultipleObserversOneJob() {
+  BEGIN_TEST;
+
+  // Create a new root job containing one process.
+  fbl::RefPtr<JobDispatcher> root_job = JobDispatcher::CreateRootJob();
+  KernelHandle<ProcessDispatcher> child_process = CreateProcess(root_job);
+
+  // Create two observers.
+  int count = 0;
+  RootJobObserver observer1{root_job, nullptr, [&]() { ++count; }};
+  RootJobObserver observer2{root_job, nullptr, [&]() { ++count; }};
+
+  // Kill the process.
+  ASSERT_EQ(count, 0);
+  child_process.dispatcher()->Kill(1);
+
+  // Ensure the callback fired twice.
+  ASSERT_EQ(count, 2);
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(root_job_observer)
@@ -147,4 +170,5 @@ UNITTEST("CreateDestroy", TestCreateDestroy)
 UNITTEST("CallbackFiresOnRootJobDeath", TestCallbackFiresOnRootJobDeath)
 UNITTEST("ChildrenAlreadyDeadWhenCallbackFires", TestChildrenAlreadyDeadWhenCallbackFires)
 UNITTEST("CallbackFiresWhenNoChildren", TestCallbackFiresWhenNoChildren)
+UNITTEST("MultipleObserversOneJob", TestMultipleObserversOneJob)
 UNITTEST_END_TESTCASE(root_job_observer, "root_job_observer", "RootJobObserver tests")

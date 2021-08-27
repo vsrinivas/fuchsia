@@ -10,9 +10,25 @@
 #include <platform.h>
 #include <zircon/boot/crash-reason.h>
 
+// This function is used to coordinate concurrent halt/reboot operations.
+//
+// The idea is there's a single resource, the "halt token" and only the holder of the token may
+// initiate a halt/reboot (except for panics).  This function attempts to acquire the token and
+// signals an irrevocable intention to halt (or reboot) the system.
+//
+// If this function returns true, the caller has acquired the token and is now responsible for
+// halting/reboot.
+//
+// If this function returns false, the caller failed to acquire the token (because some other caller
+// got it).  In this case the caller must take no action and allow the holder to halt/reboot.
+[[nodiscard]] bool TakeHaltToken();
+
 // Gracefully halt and perform |action|.
 //
-// Panics if the system cannot be successfully halted before |panic_deadline| is reached.
+// This function attempts to acquire the halt token.  If successful, it will perform |action| or
+// panic if the system cannot be successfully halted before |panic_deadline| is reached.
+//
+// If the halt token cannot be acquired, this function will block forever.
 void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t,
                                    zx_time_t panic_deadline);
 

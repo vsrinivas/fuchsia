@@ -15,11 +15,12 @@ class RootJobObserver final : public SignalObserver {
  public:
   ~RootJobObserver() final;
 
-  // Create a RootJobObserver that halts the system when the root job terminates.
+  // Create a RootJobObserver that halts the system when the root job terminates
+  // (i.e. asserts ZX_JOB_NO_CHILDREN).
   RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle);
 
   // Create a RootJobObserver that calls the given callback when the root job
-  // terminates.
+  // terminates (i.e. asserts ZX_JOB_NO_CHILDREN).
   //
   // The callback is called while holding the watched JobDispatcher's lock, so
   // the callback must avoid calling anything that may attempt to acquire that

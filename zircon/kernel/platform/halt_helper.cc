@@ -10,8 +10,17 @@
 #include <kernel/mp.h>
 #include <platform/halt_helper.h>
 
+ktl::atomic<bool> gHaltInProgress = false;
+
+bool TakeHaltToken() { return !gHaltInProgress.exchange(true); }
+
 void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t reason,
                                    zx_time_t panic_deadline) {
+  if (!TakeHaltToken()) {
+    printf("platform_graceful_halt_helper: halt/reboot already in progress; sleeping forever\n");
+    Thread::Current::Sleep(ZX_TIME_INFINITE);
+  }
+
   printf("platform_graceful_halt_helper: action=%d reason=%u panic_deadline=%ld current_time=%ld\n",
          action, static_cast<uint32_t>(reason), panic_deadline, current_time());
 
