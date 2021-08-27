@@ -68,27 +68,27 @@ void RK4SpringSimulation::ElapseTime(float seconds) {
 
 bool RK4SpringSimulation::EvaluateRK(float step_size) {
   FX_DCHECK(step_size <= kMaxStepSize);
-  float x = spring_value_ - 1.0;
+  float x = spring_value_ - 1.0f;
   float v = velocity_;
 
   float a_dx = v;
   float a_dv = x_acceleration(x, v);
 
-  float b_dx = v + a_dv * (step_size * 0.5);
-  float b_dv = x_acceleration(x + a_dx * (step_size * 0.5), b_dx);
+  float b_dx = v + a_dv * (step_size * 0.5f);
+  float b_dv = x_acceleration(x + a_dx * (step_size * 0.5f), b_dx);
 
-  float c_dx = v + b_dv * (step_size * 0.5);
-  float c_dv = x_acceleration(x + b_dx * (step_size * 0.5), c_dx);
+  float c_dx = v + b_dv * (step_size * 0.5f);
+  float c_dv = x_acceleration(x + b_dx * (step_size * 0.5f), c_dx);
 
   float d_dx = v + c_dv * step_size;
   float d_dv = x_acceleration(x + c_dx * step_size, d_dx);
 
-  float dxdt = 1.0 / 6.0 * (a_dx + 2.0 * (b_dx + c_dx) + d_dx);
-  float dvdt = 1.0 / 6.0 * (a_dv + 2.0 * (b_dv + c_dv) + d_dv);
+  float dxdt = 1.0f / 6.0f * (a_dx + 2.0f * (b_dx + c_dx) + d_dx);
+  float dvdt = 1.0f / 6.0f * (a_dv + 2.0f * (b_dv + c_dv) + d_dv);
   float aft_x = x + dxdt * step_size;
   float aft_v = v + dvdt * step_size;
 
-  spring_value_ = 1.0 + aft_x;
+  spring_value_ = 1.0f + aft_x;
   float final_velocity = aft_v;
   float net_float = aft_x;
   float net_1d_velocity = aft_v;

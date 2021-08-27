@@ -47,8 +47,8 @@ class RK4SpringSimulation {
   // Returns true if the spring has settled to minimum amount.
   bool EvaluateRK(float step_size);
 
-  // The settle theshold for the spring (for both distance and/or velocity).
-  const float kTolerance = 0.01;
+  // The settle threshold for the spring (for both distance and/or velocity).
+  const float kTolerance = 0.01f;
 
   const float kMaxStepSize = 1 / 60.f;
 

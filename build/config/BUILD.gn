@@ -996,7 +996,6 @@ config("Wno-conversion") {
     "//src/ui/scenic/lib/gfx/tests:*",
     "//src/ui/scenic/lib/input:*",
     "//src/ui/scenic/lib/input/tests:*",
-    "//src/ui/scenic/lib/scenic/util:*",
     "//src/ui/scenic/lib/scheduling/tests:*",
     "//src/ui/scenic/lib/screenshot:*",
     "//src/ui/tools/gltf_export:*",

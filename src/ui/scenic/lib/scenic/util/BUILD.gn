@@ -20,9 +20,6 @@ source_set("util") {
   ]
 
   deps = [ "//src/lib/fxl" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("rk4_spring_simulation") {
@@ -35,7 +32,4 @@ source_set("rk4_spring_simulation") {
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
