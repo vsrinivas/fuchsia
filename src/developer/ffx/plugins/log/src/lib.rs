@@ -421,7 +421,7 @@ pub async fn log_impl<W: std::io::Write>(
             time_format: cmd.clock.clone(),
             show_metadata: cmd.show_metadata,
             no_symbols: cmd.no_symbols,
-            show_tags: cmd.show_tags,
+            show_tags: !cmd.hide_tags,
         },
     );
 
@@ -558,7 +558,7 @@ pub async fn log_cmd<W: std::io::Write>(
 mod test {
     use {
         super::*,
-        diagnostics_data::Timestamp,
+        diagnostics_data::{LogsDataBuilder, Timestamp},
         errors::ResultExt as _,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
         fidl_fuchsia_developer_bridge::{DaemonDiagnosticsStreamParameters, DaemonRequest},
@@ -662,7 +662,7 @@ mod test {
             exclude: vec![],
             tags: vec![],
             exclude_tags: vec![],
-            show_tags: false,
+            hide_tags: false,
             clock: TimeFormat::Monotonic,
             no_color: false,
             moniker: vec![],
@@ -684,7 +684,7 @@ mod test {
         LogCommand { dump: true, ..empty_log_command() }
     }
 
-    fn logs_data() -> LogsData {
+    fn logs_data_builder() -> LogsDataBuilder {
         diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
             timestamp_nanos: Timestamp::from(default_ts().as_nanos() as i64),
             component_url: Some("component_url".to_string()),
@@ -693,11 +693,11 @@ mod test {
             size_bytes: 1,
         })
         .set_message("message")
-        .add_tag("tag1")
-        .add_tag("tag2")
         .set_pid(1)
         .set_tid(2)
-        .build()
+    }
+    fn logs_data() -> LogsData {
+        logs_data_builder().add_tag("tag1").add_tag("tag2").build()
     }
 
     fn default_log_formatter_options() -> LogFormatterOptions {
@@ -1623,6 +1623,21 @@ mod test {
         assert_eq!(
             formatter.format_target_log_data(logs_data(), None),
             "[1615535969.000][some/moniker][tag1,tag2][W\u{1b}[m] message\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_hides_tags_if_empty() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions { show_tags: true, ..default_log_formatter_options() },
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(logs_data_builder().build(), None),
+            "[1615535969.000][some/moniker][][W\u{1b}[m] message\u{1b}[m"
         );
     }
 }

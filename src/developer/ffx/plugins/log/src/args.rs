@@ -91,9 +91,9 @@ pub struct LogCommand {
     #[argh(option)]
     pub exclude_tags: Vec<String>,
 
-    /// show tags in addition to source component
+    /// hide tags from output
     #[argh(switch)]
-    pub show_tags: bool,
+    pub hide_tags: bool,
 
     /// disable coloring logs according to severity.
     /// Note that you can permanently disable this with
