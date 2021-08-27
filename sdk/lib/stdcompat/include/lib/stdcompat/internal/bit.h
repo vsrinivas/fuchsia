@@ -28,11 +28,11 @@ template <class T>
   const auto rotate_by = s % digits;
 
   if (rotate_by > 0) {
-    return (x << rotate_by) | (x >> (digits - rotate_by));
+    return static_cast<T>((x << rotate_by) | (x >> (digits - rotate_by)));
   }
 
   if (rotate_by < 0) {
-    return (x >> -rotate_by) | (x << (digits + rotate_by));
+    return static_cast<T>((x >> -rotate_by) | (x << (digits + rotate_by)));
   }
 
   return x;
@@ -41,11 +41,11 @@ template <class T>
 template <class T>
 [[gnu::warn_unused_result]] constexpr std::enable_if_t<is_bit_type<T>::value, T> rotr(
     T x, int s) noexcept {
-  auto digits = std::numeric_limits<T>::digits;
-  auto rotate_by = s % digits;
+  int digits = std::numeric_limits<T>::digits;
+  int rotate_by = s % digits;
 
   if (rotate_by > 0) {
-    return (x >> rotate_by) | (x << (digits - rotate_by));
+    return static_cast<T>((x >> rotate_by) | (x << (digits - rotate_by)));
   }
 
   if (rotate_by < 0) {
@@ -182,7 +182,8 @@ popcount(T value) noexcept {
 
 template <typename T>
 constexpr std::enable_if_t<is_bit_type<T>::value, T> bit_width(T value) {
-  const T zeros_left = (value == 0) ? std::numeric_limits<T>::digits : count_zeros_from_left(value);
+  const T zeros_left =
+      (value == 0) ? std::numeric_limits<T>::digits : static_cast<T>(count_zeros_from_left(value));
   return std::numeric_limits<T>::digits - zeros_left;
 }
 
@@ -202,7 +203,7 @@ bit_ceil(T value) {
 
 template <typename T>
 constexpr std::enable_if_t<is_bit_type<T>::value, T> bit_floor(T value) {
-  return static_cast<T>(1) << (bit_width(value) - 1);
+  return static_cast<T>(T(1) << (bit_width(value) - T(1)));
 }
 
 template <unsigned little, unsigned big>

@@ -18,7 +18,7 @@ using uint128_t = unsigned __int128;
 using uint128_t = unsigned;
 #endif
 
-// Types have overriden operator& to double check that |cpp20::addressof| is used intead of &.
+// Types have overridden operator& to double check that |cpp20::addressof| is used instead of &.
 struct A {
   constexpr A* operator&() const { return nullptr; }
   std::array<uint8_t, 8> bytes;
@@ -108,8 +108,7 @@ constexpr bool CheckCountZeroFromLeft() {
   static_assert(cpp20::countl_zero(static_cast<T>(0)) == (std::numeric_limits<T>::digits));
   static_assert(cpp20::countl_zero(static_cast<T>(-1)) == 0);
   for (T i = 1; i < std::numeric_limits<T>::digits; ++i) {
-    T t = 1;
-    t = t << (i - 1);
+    T t = static_cast<T>(T(1) << (i - T(1)));
     if (static_cast<T>(cpp20::countl_zero(t)) != (std::numeric_limits<T>::digits - i)) {
       return false;
     }
@@ -149,8 +148,7 @@ constexpr bool CheckCountZeroFromRight() {
   static_assert(cpp20::countr_zero(static_cast<T>(0)) == (std::numeric_limits<T>::digits));
   static_assert(cpp20::countr_zero(static_cast<T>(-1)) == 0);
   for (T i = 1; i < std::numeric_limits<T>::digits; ++i) {
-    T t = 1;
-    t = t << (i - 1);
+    T t = static_cast<T>(T(1) << (i - T(1)));
     if (static_cast<T>(cpp20::countr_zero(t)) != i - 1) {
       return false;
     }
@@ -188,8 +186,7 @@ constexpr bool CheckCountOneFromLeft() {
   static_assert(cpp20::countl_one(static_cast<T>(-1)) == (std::numeric_limits<T>::digits));
   static_assert(cpp20::countl_one(static_cast<T>(0)) == 0);
   for (T i = 1; i < std::numeric_limits<T>::digits; ++i) {
-    T t = 1;
-    t = t << (i - 1);
+    T t = static_cast<T>(T(1) << (i - T(1)));
     if (static_cast<T>(cpp20::countl_one(static_cast<T>(~t))) !=
         (std::numeric_limits<T>::digits - i)) {
       return false;
@@ -227,8 +224,7 @@ constexpr bool CheckCountOneFromRight() {
   static_assert(cpp20::countr_one(static_cast<T>(0)) == 0);
   static_assert(cpp20::countr_one(static_cast<T>(-1)) == std::numeric_limits<T>::digits);
   for (T i = 1; i < std::numeric_limits<T>::digits; ++i) {
-    T t = 1;
-    t = t << (i - 1);
+    T t = static_cast<T>(T(1) << (i - T(1)));
     if (static_cast<T>(cpp20::countr_one(static_cast<T>(~t))) != i - 1) {
       return false;
     }
@@ -378,16 +374,14 @@ TEST(BitOpsTest, RotRWithShiftIsOk) {
 
 template <typename T>
 constexpr bool CheckPopCount() {
-  constexpr auto digits = std::numeric_limits<T>::digits;
-
   // Check for the first i bits set.
-  for (auto i = 0; i < digits; ++i) {
-    T kVal = (static_cast<T>(1) << i) - 1;
+  for (int i = 0; i < std::numeric_limits<T>::digits; ++i) {
+    T t = static_cast<T>(T(1) << i) - T(1);
     // Also check powers of 2.
     if (cpp20::popcount(static_cast<T>(static_cast<T>(1) << i)) != 1) {
       return false;
     }
-    if (cpp20::popcount(kVal) != i) {
+    if (cpp20::popcount(t) != i) {
       return false;
     }
   }
@@ -476,9 +470,9 @@ constexpr bool CheckHasSingleBit() {
   static_assert(!cpp20::has_single_bit(static_cast<T>(-1)), "has_single_bit failed.");
   static_assert(cpp20::has_single_bit(static_cast<T>(1)), "has_single_bit failed.");
 
-  for (auto i = 0; i < std::numeric_limits<T>::digits; ++i) {
-    const T kVal = static_cast<T>(1u) << i;
-    if (!cpp20::has_single_bit(kVal)) {
+  for (int i = 0; i < std::numeric_limits<T>::digits; ++i) {
+    T t = static_cast<T>(T(1) << i);
+    if (!cpp20::has_single_bit(t)) {
       return false;
     }
   }
@@ -517,12 +511,12 @@ constexpr bool CheckBitWidth() {
                 "has_single_bit failed.");
 
   for (T i = 0; i < std::numeric_limits<T>::digits; ++i) {
-    const T kVal = static_cast<T>(1u) << i;
-    if (cpp20::bit_width(kVal) != i + 1) {
+    T t = static_cast<T>(T(1) << i);
+    if (cpp20::bit_width(t) != i + 1) {
       return false;
     }
 
-    if (kVal > 1 && cpp20::bit_width(static_cast<T>(kVal - 1)) != i) {
+    if (t > 1 && cpp20::bit_width(static_cast<T>(t - 1)) != i) {
       return false;
     }
   }
@@ -558,14 +552,14 @@ constexpr bool CheckBitCeil() {
   static_assert(cpp20::bit_ceil<T>(static_cast<T>(0)) == 1, "bit_ceil must be 1 for zero and one.");
   static_assert(cpp20::bit_ceil<T>(static_cast<T>(1)) == 1, "bit_ceil must be 1 for zero and one.");
 
-  for (T i = 0; i < std::numeric_limits<T>::digits; ++i) {
-    const T kVal = (static_cast<T>(1) << i);
-    if (cpp20::bit_ceil(kVal) != kVal) {
+  for (int i = 0; i < std::numeric_limits<T>::digits; ++i) {
+    T t = static_cast<T>(T(1) << i);
+    if (cpp20::bit_ceil(t) != t) {
       return false;
     }
 
     // Only for non special cases 0, 1.
-    if (kVal - 1 > 1 && cpp20::bit_ceil(static_cast<T>(kVal - 1)) != kVal) {
+    if (t - 1 > 1 && cpp20::bit_ceil(static_cast<T>(t - 1)) != t) {
       return false;
     }
   }
@@ -603,14 +597,14 @@ constexpr bool CheckBitFloor() {
   static_assert(cpp20::bit_floor<T>(static_cast<T>(1)) == 1,
                 "bit_ceil must be 1 for zero and one.");
 
-  for (T i = 0; i < std::numeric_limits<T>::digits; ++i) {
-    const T kVal = (static_cast<T>(1) << i);
-    if (cpp20::bit_floor(kVal) != kVal) {
+  for (int i = 0; i < std::numeric_limits<T>::digits; ++i) {
+    T t = static_cast<T>(T(1) << i);
+    if (cpp20::bit_floor(t) != t) {
       return false;
     }
 
     // Only for non special case 0.
-    if (kVal - 1 > 1 && cpp20::bit_floor(static_cast<T>(kVal - 1)) != kVal >> 1) {
+    if (t - 1 > 1 && cpp20::bit_floor(static_cast<T>(t - 1)) != t >> 1) {
       return false;
     }
   }
