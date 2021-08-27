@@ -325,7 +325,7 @@ void GpuDevice::send_command_response(const RequestType* cmd, ResponseType** res
 
   // Keep this single message at a time
   sem_wait(&request_sem_);
-  fit::defer([this]() { sem_post(&request_sem_); });
+  auto cleanup = fit::defer([this]() { sem_post(&request_sem_); });
 
   uint16_t i;
   struct vring_desc* desc = vring_.AllocDescChain(2, &i);
