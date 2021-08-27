@@ -1,18 +1,18 @@
 {
-  "project_id" : 9,
-  "poll_rate_sec" : 1800,
-  "metrics": [
-    {
-      "selector": "bootstrap/driver_manager:root/sdio_core:tx_errors",
-      "metric_id": 3,
-      "metric_type": "Integer",
-      "event_codes": []
-    },
-    {
-      "selector": "bootstrap/driver_manager:root/sdio_core:rx_errors",
-      "metric_id": 4,
-      "metric_type": "Integer",
-      "event_codes": []
-    }
-  ]
+    "metrics": [
+        {
+            "event_codes": [],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sdio_core:tx_errors"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 4,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sdio_core:rx_errors"
+        }
+    ],
+    "poll_rate_sec": 1800,
+    "project_id": 9
 }

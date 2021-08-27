@@ -1,18 +1,18 @@
 {
-    "project_id": 10,
-    "poll_rate_sec": 600,
     "metrics": [
         {
-            "selector": "bootstrap/driver_manager:root/display:vsync_stalls",
+            "event_codes": [],
             "metric_id": 1,
             "metric_type": "Occurrence",
-            "event_codes": []
+            "selector": "bootstrap/driver_manager:root/display:vsync_stalls"
         },
         {
-            "selector": "bootstrap/driver_manager:root/amlogic-display/osd:rdma_stalls",
+            "event_codes": [],
             "metric_id": 2,
             "metric_type": "Occurrence",
-            "event_codes": []
+            "selector": "bootstrap/driver_manager:root/amlogic-display/osd:rdma_stalls"
         }
-    ]
+    ],
+    "poll_rate_sec": 600,
+    "project_id": 10
 }

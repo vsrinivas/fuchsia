@@ -1,46 +1,59 @@
 {
-    "project_id": 4247972873,
-    "poll_rate_sec": 3600,
     "metrics": [
-      {
-        "selector": "core/system-update-committer:root/verification/ota_verification_duration:success",
-        "metric_id": 21,
-        "metric_type": "Integer",
-        "event_codes": [0],
-        "upload_once": true,
-	"use_legacy_cobalt": true
-      },
-      {
-        "selector": "core/system-update-committer:root/verification/ota_verification_duration:failure_blobfs",
-        "metric_id": 21,
-        "metric_type": "Integer",
-        "event_codes": [1],
-        "upload_once": true,
-	"use_legacy_cobalt": true
-      },
-      {
-        "selector": "core/system-update-committer:root/verification/ota_verification_failure:verify",
-        "metric_id": 22,
-        "metric_type": "Occurrence",
-        "event_codes": [1, 1],
-        "upload_once": true,
-	"use_legacy_cobalt": true
-      },
-      {
-        "selector": "core/system-update-committer:root/verification/ota_verification_failure:fidl",
-        "metric_id": 22,
-        "metric_type": "Occurrence",
-        "event_codes": [1, 2],
-        "upload_once": true,
-	"use_legacy_cobalt": true
-      },
-      {
-        "selector": "core/system-update-committer:root/verification/ota_verification_failure:timeout",
-        "metric_id": 22,
-        "metric_type": "Occurrence",
-        "event_codes": [1, 3],
-        "upload_once": true,
-	"use_legacy_cobalt": true
-      }
-    ]
+        {
+            "event_codes": [
+                0
+            ],
+            "metric_id": 21,
+            "metric_type": "Integer",
+            "selector": "core/system-update-committer:root/verification/ota_verification_duration:success",
+            "upload_once": true,
+            "use_legacy_cobalt": true
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 21,
+            "metric_type": "Integer",
+            "selector": "core/system-update-committer:root/verification/ota_verification_duration:failure_blobfs",
+            "upload_once": true,
+            "use_legacy_cobalt": true
+        },
+        {
+            "event_codes": [
+                1,
+                1
+            ],
+            "metric_id": 22,
+            "metric_type": "Occurrence",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:verify",
+            "upload_once": true,
+            "use_legacy_cobalt": true
+        },
+        {
+            "event_codes": [
+                1,
+                2
+            ],
+            "metric_id": 22,
+            "metric_type": "Occurrence",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:fidl",
+            "upload_once": true,
+            "use_legacy_cobalt": true
+        },
+        {
+            "event_codes": [
+                1,
+                3
+            ],
+            "metric_id": 22,
+            "metric_type": "Occurrence",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:timeout",
+            "upload_once": true,
+            "use_legacy_cobalt": true
+        }
+    ],
+    "poll_rate_sec": 3600,
+    "project_id": 4247972873
 }

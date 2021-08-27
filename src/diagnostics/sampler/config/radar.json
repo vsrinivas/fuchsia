@@ -1,24 +1,24 @@
 {
-  "project_id" : 12,
-  "poll_rate_sec" : 3600,
-  "metrics": [
-    {
-      "selector": "bootstrap/driver_manager:root/selina:timeout_error_rate",
-      "metric_id": 1,
-      "metric_type": "Integer",
-      "event_codes": []
-    },
-    {
-      "selector": "bootstrap/driver_manager:root/selina:fifo_overflow_error_rate",
-      "metric_id": 2,
-      "metric_type": "Integer",
-      "event_codes": []
-    },
-    {
-      "selector": "bootstrap/driver_manager:root/selina:other_error_rate",
-      "metric_id": 3,
-      "metric_type": "Integer",
-      "event_codes": []
-    }
-  ]
+    "metrics": [
+        {
+            "event_codes": [],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/selina:timeout_error_rate"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/selina:fifo_overflow_error_rate"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/selina:other_error_rate"
+        }
+    ],
+    "poll_rate_sec": 3600,
+    "project_id": 12
 }

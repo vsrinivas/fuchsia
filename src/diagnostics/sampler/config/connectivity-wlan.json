@@ -1,12 +1,12 @@
 {
-  "project_id" : 3708719327,
-  "poll_rate_sec" : 1800,
-  "metrics": [
-    {
-      "selector": "bootstrap/driver_manager:root/brcmfmac-phy:fw_recovered",
-      "metric_id": 340,
-      "metric_type": "Occurrence",
-      "event_codes": []
-    }
-  ]
+    "metrics": [
+        {
+            "event_codes": [],
+            "metric_id": 340,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/brcmfmac-phy:fw_recovered"
+        }
+    ],
+    "poll_rate_sec": 1800,
+    "project_id": 3708719327
 }
