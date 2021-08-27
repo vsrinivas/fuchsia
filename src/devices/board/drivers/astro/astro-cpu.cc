@@ -16,6 +16,7 @@
 
 #include "astro-gpios.h"
 #include "astro.h"
+#include "src/devices/board/drivers/astro/astro-cpu-bind.h"
 
 namespace {
 
@@ -27,49 +28,6 @@ constexpr pbus_mmio_t cpu_mmios[]{
         .base = S905D2_AOBUS_BASE,
         .length = S905D2_AOBUS_LENGTH,
     },
-};
-
-constexpr zx_bind_inst_t power_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
-    BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, static_cast<uint32_t>(S905d2PowerDomains::kArmCore)),
-};
-
-constexpr device_fragment_part_t power_dfp[] = {
-    {countof(power_match), power_match},
-};
-
-constexpr zx_bind_inst_t clock_pll_div16_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12a_clk::CLK_SYS_PLL_DIV16),
-};
-
-constexpr device_fragment_part_t clock_pll_div16_dfp[] = {
-    {countof(clock_pll_div16_match), clock_pll_div16_match},
-};
-
-constexpr zx_bind_inst_t clock_cpu_div16_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12a_clk::CLK_SYS_CPU_CLK_DIV16),
-};
-
-constexpr device_fragment_part_t clock_cpu_div16_dfp[] = {
-    {countof(clock_cpu_div16_match), clock_cpu_div16_match},
-};
-
-constexpr zx_bind_inst_t clock_cpu_scaler_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12a_clk::CLK_SYS_CPU_CLK),
-};
-
-constexpr device_fragment_part_t clock_cpu_scaler_dfp[] = {
-    {countof(clock_cpu_scaler_match), clock_cpu_scaler_match},
-};
-
-constexpr device_fragment_t fragments[] = {
-    {"power-01", countof(power_dfp), power_dfp},
-    {"clock-pll-div16-01", countof(clock_pll_div16_dfp), clock_pll_div16_dfp},
-    {"clock-cpu-div16-01", countof(clock_cpu_div16_dfp), clock_cpu_div16_dfp},
-    {"clock-cpu-scaler-01", countof(clock_cpu_scaler_dfp), clock_cpu_scaler_dfp},
 };
 
 constexpr amlogic_cpu::operating_point_t operating_points[] = {
@@ -136,8 +94,8 @@ zx_status_t Astro::CpuInit() {
     return result;
   }
 
-  result = pbus_.CompositeDeviceAdd(&cpu_dev, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), "power-01");
+  result = pbus_.AddComposite(&cpu_dev, reinterpret_cast<uint64_t>(aml_cpu_fragments),
+                              countof(aml_cpu_fragments), "power-01");
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d", __func__, result);
   }

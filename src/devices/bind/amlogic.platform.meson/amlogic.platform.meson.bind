@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library amlogic.platform.meson;
+
+// Values taken from <soc/aml-meson/g12a-clk.h>
+uint G12A_CLK_ID {
+  // Meson Gate clocks
+  CLK_SYS_PLL_DIV16 = 65536,
+  CLK_DOS = 65539,
+  CLK_DOS_GCLK_VDEC = 65602,
+  CLK_SYS_CPU_CLK_DIV16 = 65537,
+
+  // CPU clocks
+  CLK_SYS_CPU_CLK = 1048576,
+};

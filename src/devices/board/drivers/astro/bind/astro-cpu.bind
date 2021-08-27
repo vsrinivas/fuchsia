@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite aml_cpu;
+
+using amlogic.platform.meson;
+using amlogic.platform.s905d2;
+using fuchsia.clock;
+using fuchsia.google.platform;
+using fuchsia.platform;
+using fuchsia.power;
+
+primary node "power-01" {
+  fuchsia.BIND_PROTOCOL == fuchsia.power.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_POWER_DOMAIN == amlogic.platform.s905d2.POWER_DOMAIN.ARM_CORE;
+}
+
+node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOOGLE_AMLOGIC_CPU;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "clock-pll-div16-01" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_PLL_DIV16;
+}
+
+node "clock-cpu-div16-01" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_CPU_CLK_DIV16;
+}
+
+node "clock-cpu-scaler-01" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_CPU_CLK;
+}

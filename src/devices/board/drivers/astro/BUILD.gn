@@ -59,6 +59,23 @@ driver_bind_rules("astro-buttons-bind") {
   ]
 }
 
+driver_bind_rules("astro-cpu-bind") {
+  rules = "bind/astro-cpu.bind"
+  header_output = "astro-cpu-bind.h"
+  bind_output = "astro-cpu-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/amlogic.platform.meson",
+    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.power",
+    "//src/devices/bind/fuchsia.sysmem",
+    "//src/devices/bind/fuchsia.tee",
+  ]
+}
+
 driver_bind_rules("astro-display-bind") {
   rules = "bind/astro-display.bind"
   header_output = "astro-display-bind.h"
@@ -103,6 +120,20 @@ driver_bind_rules("astro-tee-bind") {
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
+driver_bind_rules("astro-video-bind") {
+  rules = "bind/astro-video.bind"
+  header_output = "astro-video-bind.h"
+  bind_output = "astro-video_bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+    "//src/devices/bind/fuchsia.tee",
   ]
 }
 
@@ -169,10 +200,12 @@ driver_module("astro-driver") {
     ":astro-bind",
     ":astro-bluetooth-bind_header",
     ":astro-buttons-bind_header",
+    ":astro-cpu-bind_header",
     ":astro-display-bind_header",
     ":astro-pwm-bind_header",
     ":astro-securemem-bind_header",
     ":astro-tee-bind_header",
+    ":astro-video-bind_header",
     ":ft3x27-touch-bind_header",
     ":gt92xx-touch-bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",

@@ -142,3 +142,7 @@ uint GPIOE_PIN_ID {
     PIN_2 = 99,
     PIN_3 = 100,
 };
+
+uint POWER_DOMAIN {
+  ARM_CORE = 0,
+};
