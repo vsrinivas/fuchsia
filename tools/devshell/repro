@@ -19,9 +19,9 @@
 ##       "Tryjob" section of a Gerrit CL. For example:
 ##       https://ci.chromium.org/p/fuchsia/builders/try/fuchsia-x64-release/b8860637037546448224?
 ##
-##  FINT_PARAMS_FILE: a local path to a fint params file, usually a *.fint.textproto file
-##       in //integration/infra/config/generated/*/specs/. For example:
-##       integration/infra/config/generated/fuchsia/specs/try/fuchsia-x64-release.fint.textproto
+##  FINT_PARAMS_FILE: a local path to a fint params file, usually a *.textproto file
+##       in //integration/infra/config/generated/*/fint_params/. For example:
+##       integration/infra/config/generated/fuchsia/fint_params/try/core-x64-release.textproto
 ##
 ## Please provide feedback on go/fx-repro-feedback
 
@@ -44,7 +44,10 @@ function repro {
   local builder="$3"
   local build_id="$4"
 
-  local fint_params_file fint_params_file_relative build_dir_name
+  local fint_params_file build_dir_name
+  local fint_params_file_relative
+  local fint_params_file_relative_legacy
+
   local instructions_file
 
   local can_sync_to=true
@@ -87,21 +90,28 @@ function repro {
   # Older builds don't emit the fint params path as an output property, so we
   # have to fall back to a more fragile approach for constructing the path.
   # TODO(olivernewman): Delete this more fragile logic after we no longer need
-  # to reproduce any builds from before fxrev.dev/551763 landed.
+  # to reproduce any builds from before fxrev.dev/573872 landed.
   if [[ -z "$fint_params_file_relative" ]]; then
     # Note that it's not a strict requirement that a fint params file have the
     # same name as its builder; it just happens to be the case for most builders
     # (except the builders that do multiple builds and thus have multiple fint
     # params files).
-    fint_params_file_relative="integration/infra/config/generated/${project}/specs/${bucket}/${builder}.fint.textproto"
+    fint_params_file_relative="integration/infra/config/generated/${project}/fint_params/${bucket}/${builder}.textproto"
+    # Older revisions used the following pattern:
+    fint_params_file_relative_legacy="integration/infra/config/generated/${project}/specs/${bucket}/${builder}.fint.textproto"
   fi
   fint_params_file="${FUCHSIA_DIR}/${fint_params_file_relative}"
+  fint_params_file_legacy="${FUCHSIA_DIR}/${fint_params_file_relative_legacy}"
 
   if [[ ! -f "${fint_params_file}" ]]; then
-    fx-error "Cannot find fint parameters for this build: ${fint_params_file}"
-    fx-error "If this is an internal builder, make sure your Fuchsia source tree has the internal"
-    fx-error "integration repository as described in https://fuchsia.dev/internal/intree/development/get-the-source-code"
-    return 1
+    if [[ -f "${fint_params_file_legacy}" ]]; then
+      fint_params_file="$fint_params_file_legacy"
+    else
+      fx-error "Cannot find fint parameters for this build: ${fint_params_file} or ${fint_params_file_legacy}"
+      fx-error "If this is an internal builder, make sure your Fuchsia source tree has the internal"
+      fx-error "integration repository as described in https://fuchsia.dev/internal/intree/development/get-the-source-code"
+      return 1
+    fi
   fi
 
   build_dir_name="$(create_builddir_name)"
@@ -327,7 +337,8 @@ function main {
     fx-error "without the '-subbuild' suffix."
     return 1
 
-  elif [[ "${build_url}" =~ ^integration/infra/config/generated/(.+)/specs/(.+)/(.+).textproto$ ]]; then
+  elif [[ "${build_url}" =~ ^integration/infra/config/generated/(.+)/fint_params/(.+)/(.+).textproto$ ]] ||
+       [[ "${build_url}" =~ ^integration/infra/config/generated/(.+)/specs/(.+)/(.+).fint.textproto$ ]]; then
     local fint_params="${FUCHSIA_DIR}/${build_url}"
     if [[ ! -f "${fint_params}" ]]; then
       fx-error "Cannot find file ${fint_params}"
