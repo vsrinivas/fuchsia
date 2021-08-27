@@ -102,12 +102,12 @@ fidl::InterfaceRequest<fuchsia::media::StreamProcessor> CodecClient::GetTheReque
   return std::move(temp_codec_request_);
 }
 
-void CodecClient::SetMinInputBufferSize(uint64_t min_input_buffer_size) {
+void CodecClient::SetMinInputBufferSize(uint32_t min_input_buffer_size) {
   ZX_DEBUG_ASSERT(!is_start_called_);
   min_input_buffer_size_ = min_input_buffer_size;
 }
 
-void CodecClient::SetMinOutputBufferSize(uint64_t min_output_buffer_size) {
+void CodecClient::SetMinOutputBufferSize(uint32_t min_output_buffer_size) {
   ZX_DEBUG_ASSERT(!is_start_called_);
   min_output_buffer_size_ = min_output_buffer_size;
 }
@@ -178,7 +178,7 @@ void CodecClient::Start() {
   for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
     std::unique_ptr<CodecBuffer> local_buffer = CodecBuffer::CreateFromVmo(
         i, std::move(buffer_collection_info.buffers[i].vmo),
-        buffer_collection_info.buffers[i].vmo_usable_start,
+        static_cast<uint32_t>(buffer_collection_info.buffers[i].vmo_usable_start),
         buffer_collection_info.settings.buffer_settings.size_bytes, true,
         buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
     if (!local_buffer) {
@@ -687,7 +687,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
       for (uint32_t i = 0; i < packet_count; i++) {
         std::unique_ptr<CodecBuffer> buffer = CodecBuffer::CreateFromVmo(
             i, std::move(buffer_collection_info.buffers[i].vmo),
-            buffer_collection_info.buffers[i].vmo_usable_start,
+            static_cast<uint32_t>(buffer_collection_info.buffers[i].vmo_usable_start),
             buffer_collection_info.settings.buffer_settings.size_bytes, true,
             buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
         if (!buffer) {

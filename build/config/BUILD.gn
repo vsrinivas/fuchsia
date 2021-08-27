@@ -903,7 +903,6 @@ config("Wno-conversion") {
     "//src/media/lib/codec_impl:*",
     "//src/media/lib/codec_impl/unit_tests:*",
     "//src/media/lib/extend_bits/unit_tests:*",
-    "//src/media/lib/test:*",
     "//src/media/playback/mediaplayer:*",
     "//src/media/playback/mediaplayer/demux:*",
     "//src/media/playback/mediaplayer/ffmpeg:*",
