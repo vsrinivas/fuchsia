@@ -158,15 +158,49 @@ with migrations see [this guide][sys-migration-guide].
 The legacy test runner detects if a test passed or failed by observing its
 return code, with zero indicating success and non-zero indicating failure.
 
-All legacy tests are automatically wrapped in a modern test and executed using
-the legacy test runner. The launch URL of the wrapper will be derived from the wrapped
-test's launch URL. For instance:
+You can follow the example below to wrap a legacy test with the legacy test
+runner.
 
-&nbsp;&nbsp;&nbsp;&nbsp;`fuchsia-pkg://fuchsia.com/package#meta/test_component.cmx`
+```json5
+// Create this new file, simple_test.cml
+{
+    include: [
+        "//src/sys/test_runners/legacy_test/default.shard.cml",
+    ],
+    program: {
+        // Reference your existing test component manifest simple_test.cmx
+        legacy_manifest: "meta/simple_test.cmx",
+    },
+}
+```
 
-will become:
+Then change your `BUILD.gn` build definitions as follows:
 
-&nbsp;&nbsp;&nbsp;&nbsp;`fuchsia-pkg://fuchsia.com/package#meta/test_component.cm`
+```gn
+import("//build/components.gni")
+
+# This is your existing legacy test
+fuchsia_test_component("simple_test_legacy") {
+  component_name = "simple_test"
+  manifest = "meta/simple_test.cmx"
+  deps = [ ":simple_test_bin" ]
+}
+
+# Add this wrapper
+fuchsia_test_component("simple_test_modern") {
+  component_name = "simple_test"
+  manifest = "meta/simple_test.cml"
+  deps = [ ":simple_test_legacy" ]
+}
+
+# Specify the wrapper as the test component in your test package
+fuchsia_test_package("simple_test") {
+  test_components = [ ":simple_test_modern" ]
+  # Note that if simple_test_legacy was in test_components before, then it's now
+  # replaced with the wrapper.
+}
+
+```
 
 The legacy test runner does not understand concepts such as test cases (or
 filtering on them), running multiple test cases in parallel, etc. It does
@@ -182,33 +216,6 @@ To run Rust tests, at most 5 test cases at a time:
 
 ```posix-terminal
 fx test <test> -- --test-threads=5
-```
-
-To suppress this behavior set `wrap_cmx_test_with_cml_test` to false on `fuchsia_test_package`
-or `fuchsia_unittest_package`. **Don't forget to file a bug and track the reason
-for the exclusion.**
-
-Change your `BUILD.gn` to exclude your legacy test:
-
-```gn
-import("//build/components.gni")
-
-# This is your legacy test
-fuchsia_test_component("simple_test_legacy") {
-  component_name = "simple_test"
-  manifest = "meta/simple_test.cmx"
-  deps = [ ":simple_test_bin" ]
-}
-
-# Exclude your test from auto-wrapping.
-fuchsia_test_package("simple_test") {
-  test_components = [ ":simple_test_legacy" ]
-
-  # TODO(fxbug.dev/XXXXX) : Excluding the test due to ...
-  # Remove below line once the issue is fixed.
-  wrap_cmx_test_with_cml_test = false
-}
-
 ```
 
 ### Controlling parallel execution of test cases
