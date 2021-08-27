@@ -8,6 +8,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fit/defer.h>
+#include <time.h>
 
 #include <algorithm>
 #include <memory>
@@ -18,6 +19,9 @@
 #include "src/media/audio/drivers/codecs/tas27xx/ti_tas27xx-bind.h"
 
 namespace audio {
+
+constexpr uint8_t kCodecInterrupt = 0x01;
+constexpr uint8_t kCodecShutdown = 0x02;
 
 static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
 static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
@@ -34,6 +38,14 @@ static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .bits_per_sample = kSupportedBitsPerSample,
 };
 
+bool Tas27xx::InErrorState() {
+  uint8_t pwr_ctl;
+  constexpr uint8_t kPwrCtlModeMask = 0x3;
+  constexpr uint8_t kPwrCtlModeShutdown = 0x2;
+  zx_status_t status = ReadReg(PWR_CTL, &pwr_ctl);
+  return started_ && status == ZX_OK && (pwr_ctl & kPwrCtlModeMask) == kPwrCtlModeShutdown;
+}
+
 Tas27xx::Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio,
                  bool vsense, bool isense)
     : SimpleCodecServer(device),
@@ -47,43 +59,77 @@ Tas27xx::Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClie
   if (status != ZX_OK) {
     zxlogf(DEBUG, "device_get_metadata failed %d", status);
   }
-  status_time_ = inspect().GetRoot().CreateInt("status_time", 0);
-  codec_status_ = inspect().GetRoot().CreateUint("codec_status", 0);
+  driver_inspect_ = inspect().GetRoot().CreateChild("tas27xx");
+}
+
+void Tas27xx::ReportState(State& state, const char* description) {
+  int64_t secs = zx::nsec(zx::clock::get_monotonic().get()).to_secs();
+  state.seconds = driver_inspect_.CreateInt(std::string("seconds_until_") + description, secs);
+
+  uint8_t ltch0, ltch1, ltch2;
+  ReadReg(INT_LTCH0, &ltch0);
+  ReadReg(INT_LTCH1, &ltch1);
+  ReadReg(INT_LTCH2, &ltch2);
+
+  // Clock error interrupts may happen during a rate change as the codec
+  // attempts to auto configure to the tdm bus.
+  if (ltch0 & INT_MASK0_TDM_CLOCK_ERROR) {
+    zxlogf(INFO, "tas27xx: TDM clock disrupted (may be due to rate change)");
+  }
+  // While these are logged as errors, the amp will enter a shutdown mode
+  // until the condition is remedied, then the output will ramp back on.
+  if (ltch0 & INT_MASK0_OVER_CURRENT_ERROR) {
+    zxlogf(ERROR, "tas27xx: Over current error");
+  }
+  if (ltch0 & INT_MASK0_OVER_TEMP_ERROR) {
+    zxlogf(ERROR, "tas27xx: Over temperature error");
+  }
+  state.latched_interrupt_state = driver_inspect_.CreateUint(
+      std::string("after_") + description + "_latched_interrupt_state",
+      (static_cast<uint64_t>(ltch0) << 0) | (static_cast<uint64_t>(ltch1) << 8) |
+          (static_cast<uint64_t>(ltch2) << 16));
+
+  float temperature = 0.f;
+  zx_status_t status = GetTemperature(&temperature);
+  if (status == ZX_OK) {
+    state.temperature = driver_inspect_.CreateInt(std::string("after_") + description + "_mcelsius",
+                                                  static_cast<int64_t>(temperature * 1'000.f));
+  }
+  float voltage = 0.f;
+  status = GetVbat(&voltage);
+  if (status == ZX_OK) {
+    state.voltage = driver_inspect_.CreateUint(std::string("after_") + description + "_mvolt",
+                                               static_cast<uint64_t>(voltage * 1'000.f));
+  }
 }
 
 int Tas27xx::Thread() {
-  zx::time timestamp;
-  zx_status_t status;
-  uint8_t ltch0, ltch1, ltch2;
-
   while (true) {
-    status = irq_.wait(&timestamp);
-    if (!running_.load()) {
-      break;
+    zx::time hardware_state_check_timeout = zx::deadline_after(zx::sec(3));
+    zx_port_packet_t packet;
+    zx_status_t status = port_.wait(hardware_state_check_timeout, &packet);
+    if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
+      zxlogf(ERROR, "port wait failed: %s", zx_status_get_string(status));
+      return thrd_error;
     }
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "tas27xx: Interrupt Errror - %d", status);
-      return status;
+    if (status == ZX_ERR_TIMED_OUT) {
+      if (InErrorState()) {
+        zxlogf(ERROR, "codec in error state");
+        ReportState(state_after_error_, "error");
+        hardware_state_check_timeout = zx::time::infinite();  // Stop after error.
+      } else {
+        ReportState(state_after_timer_, "timer");
+      }
+    } else {
+      switch (packet.key) {
+        case kCodecShutdown:
+          return thrd_success;
+          break;
+        case kCodecInterrupt: {
+          ReportState(state_after_interrupt_, "interrupt");
+        } break;
+      }
     }
-    ReadReg(INT_LTCH0, &ltch0);
-    ReadReg(INT_LTCH1, &ltch1);
-    ReadReg(INT_LTCH2, &ltch2);
-    // Clock error interrupts may happen during a rate change as the codec
-    // attempts to auto configure to the tdm bus.
-    if (ltch0 & INT_MASK0_TDM_CLOCK_ERROR) {
-      zxlogf(INFO, "tas27xx: TDM clock disrupted (may be due to rate change)");
-    }
-    // While these are logged as errors, the amp will enter a shutdown mode
-    //  until the condition is remedied, then the output will ramp back on.
-    if (ltch0 & INT_MASK0_OVER_CURRENT_ERROR) {
-      zxlogf(ERROR, "tas27xx: Over current error");
-    }
-    if (ltch0 & INT_MASK0_OVER_TEMP_ERROR) {
-      zxlogf(ERROR, "tas27xx: Over temperature error");
-    }
-    status_time_.Set(timestamp.get());
-    codec_status_.Set(static_cast<uint64_t>(ltch0) | (static_cast<uint64_t>(ltch1) << 8) |
-                      (static_cast<uint64_t>(ltch2) << 16));
   }
 
   zxlogf(INFO, "tas27xx: Exiting interrupt thread");
@@ -103,6 +149,10 @@ zx_status_t Tas27xx::GetTemperature(float* temperature) {
     return status;
   }
   *temperature = *temperature + static_cast<float>((reg >> 4) * 0.0625);
+  constexpr float kMinimumTemperature = -93.f;
+  if (*temperature == kMinimumTemperature) {
+    return ZX_ERR_SHOULD_WAIT;  // Not available.
+  }
   return status;
 }
 
@@ -119,6 +169,9 @@ zx_status_t Tas27xx::GetVbat(float* voltage) {
     return status;
   }
   *voltage = *voltage + static_cast<float>((reg >> 4) * 0.0039);
+  if (*voltage == 0.f) {
+    return ZX_ERR_SHOULD_WAIT;  // Not available.
+  }
   return status;
 }
 
@@ -215,6 +268,18 @@ zx::status<DriverIds> Tas27xx::Initialize() {
   status = fault_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "tas27xx: Could not get codec interrupt %d", status);
+    return zx::error(status);
+  }
+
+  status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "port creation failed: %s", zx_status_get_string(status));
+    return zx::error(status);
+  }
+
+  status = irq_.bind(port_, kCodecInterrupt, 0);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "interrupt bind failed: %s", zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -354,8 +419,11 @@ Info Tas27xx::GetInfo() {
 zx_status_t Tas27xx::Shutdown() {
   if (running_.load()) {
     running_.store(false);
-    irq_.destroy();
+    zx_port_packet packet = {kCodecShutdown, ZX_PKT_TYPE_USER, ZX_OK, {}};
+    zx_status_t status = port_.queue(&packet);
+    ZX_ASSERT(status == ZX_OK);
     thrd_join(thread_, NULL);
+    irq_.destroy();
   }
   return ZX_OK;
 }
