@@ -102,18 +102,11 @@ std::string element_type_str(ElementType type) { return kElementTypeNames[type];
 constexpr std::string_view kMarkerLeft = "«";
 constexpr std::string_view kMarkerRight = "»";
 
-// Used to delineate the decl_start_tokens that have been temporarily added to
-// the raw AST for fidlconv.
-constexpr std::string_view kDeclStartTokenLeft = "⸢";
-constexpr std::string_view kDeclStartTokenRight = "⸥";
-
 class SourceSpanVisitor : public fidl::raw::TreeVisitor {
  public:
   SourceSpanVisitor(ElementType test_case_type) : test_case_type_(test_case_type) {}
 
   const std::multiset<std::string>& spans() { return spans_; }
-
-  const std::multiset<std::string>& decl_start_tokens() { return decl_start_tokens_; }
 
   void OnIdentifier(std::unique_ptr<fidl::raw::Identifier> const& element) override {
     CheckSpanOfType(ElementType::Identifier, *element);
@@ -157,19 +150,6 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::BinaryOperatorConstant, *element);
     TreeVisitor::OnBinaryOperatorConstant(element);
   }
-  void OnAttributeOld(const fidl::raw::AttributeOld& element) override {
-    CheckSpanOfType(ElementType::Attribute, element);
-    TreeVisitor::OnAttributeOld(element);
-  }
-  void OnAttributeListOld(std::unique_ptr<fidl::raw::AttributeListOld> const& element) override {
-    CheckSpanOfType(ElementType::AttributeList, *element);
-    TreeVisitor::OnAttributeListOld(element);
-  }
-  void OnTypeConstructorOld(
-      std::unique_ptr<fidl::raw::TypeConstructorOld> const& element) override {
-    CheckSpanOfType(ElementType::TypeConstructor, *element);
-    TreeVisitor::OnTypeConstructorOld(element);
-  }
   void OnLibraryDecl(std::unique_ptr<fidl::raw::LibraryDecl> const& element) override {
     CheckSpanOfType(ElementType::Library, *element);
     TreeVisitor::OnLibraryDecl(element);
@@ -182,31 +162,9 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::ConstDeclaration, *element);
     TreeVisitor::OnConstDeclaration(element);
   }
-  void OnBitsMember(std::unique_ptr<fidl::raw::BitsMember> const& element) override {
-    CheckSpanOfType(ElementType::BitsMember, *element);
-    TreeVisitor::OnBitsMember(element);
-  }
-  void OnBitsDeclaration(std::unique_ptr<fidl::raw::BitsDeclaration> const& element) override {
-    CheckSpanOfType(ElementType::BitsDeclaration, *element);
-    CheckDeclStartToken(ElementType::BitsDeclaration, *element->decl_start_token);
-    TreeVisitor::OnBitsDeclaration(element);
-  }
-  void OnEnumMember(std::unique_ptr<fidl::raw::EnumMember> const& element) override {
-    CheckSpanOfType(ElementType::EnumMember, *element);
-    TreeVisitor::OnEnumMember(element);
-  }
-  void OnEnumDeclaration(std::unique_ptr<fidl::raw::EnumDeclaration> const& element) override {
-    CheckSpanOfType(ElementType::EnumDeclaration, *element);
-    CheckDeclStartToken(ElementType::EnumDeclaration, *element->decl_start_token);
-    TreeVisitor::OnEnumDeclaration(element);
-  }
   void OnParameter(std::unique_ptr<fidl::raw::Parameter> const& element) override {
     CheckSpanOfType(ElementType::Parameter, *element);
     TreeVisitor::OnParameter(element);
-  }
-  void OnParameterListOld(std::unique_ptr<fidl::raw::ParameterListOld> const& element) override {
-    CheckSpanOfType(ElementType::ParameterList, *element);
-    TreeVisitor::OnParameterListOld(element);
   }
   void OnParameterListNew(std::unique_ptr<fidl::raw::ParameterListNew> const& element) override {
     CheckSpanOfType(ElementType::ParameterListNew, *element);
@@ -242,33 +200,6 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
       std::unique_ptr<fidl::raw::ServiceDeclaration> const& element) override {
     CheckSpanOfType(ElementType::ServiceDeclaration, *element);
     TreeVisitor::OnServiceDeclaration(element);
-  }
-  void OnStructMember(std::unique_ptr<fidl::raw::StructMember> const& element) override {
-    CheckSpanOfType(ElementType::StructMember, *element);
-    TreeVisitor::OnStructMember(element);
-  }
-  void OnStructDeclaration(std::unique_ptr<fidl::raw::StructDeclaration> const& element) override {
-    CheckSpanOfType(ElementType::StructDeclaration, *element);
-    CheckDeclStartToken(ElementType::StructDeclaration, *element->decl_start_token);
-    TreeVisitor::OnStructDeclaration(element);
-  }
-  void OnTableMember(std::unique_ptr<fidl::raw::TableMember> const& element) override {
-    CheckSpanOfType(ElementType::TableMember, *element);
-    TreeVisitor::OnTableMember(element);
-  }
-  void OnTableDeclaration(std::unique_ptr<fidl::raw::TableDeclaration> const& element) override {
-    CheckSpanOfType(ElementType::TableDeclaration, *element);
-    CheckDeclStartToken(ElementType::TableDeclaration, *element->decl_start_token);
-    TreeVisitor::OnTableDeclaration(element);
-  }
-  void OnUnionMember(std::unique_ptr<fidl::raw::UnionMember> const& element) override {
-    CheckSpanOfType(ElementType::UnionMember, *element);
-    TreeVisitor::OnUnionMember(element);
-  }
-  void OnUnionDeclaration(std::unique_ptr<fidl::raw::UnionDeclaration> const& element) override {
-    CheckSpanOfType(ElementType::UnionDeclaration, *element);
-    CheckDeclStartToken(ElementType::UnionDeclaration, *element->decl_start_token);
-    TreeVisitor::OnUnionDeclaration(element);
   }
 
   // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
@@ -362,24 +293,12 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     spans_.insert(std::string(element.span().data()));
   }
 
-  // TODO(fxbug.dev/70247): when fidlconv is removed, make sure to remove all of
-  //  the "decl_start_token" stuff as well, as that is the only tool that uses
-  //  it.
-  void CheckDeclStartToken(const ElementType type, const fidl::Token& token) {
-    if (type != test_case_type_) {
-      return;
-    }
-    decl_start_tokens_.insert(std::string(token.span().data()));
-  }
-
   ElementType test_case_type_;
   std::multiset<std::string> spans_;
-  std::multiset<std::string> decl_start_tokens_;
 };
 
 std::string replace_markers(const std::string& source, std::string_view left_replace,
-                            std::string_view right_replace, const std::string_view marker_left,
-                            const std::string_view marker_right) {
+                            std::string_view right_replace) {
   std::string result(source);
 
   const auto replace_all = [&](std::string_view pattern, std::string_view replace_with) {
@@ -390,22 +309,18 @@ std::string replace_markers(const std::string& source, std::string_view left_rep
     }
   };
 
-  replace_all(marker_left, left_replace);
-  replace_all(marker_right, right_replace);
+  replace_all(kMarkerLeft, left_replace);
+  replace_all(kMarkerRight, right_replace);
   return result;
 }
 
-std::string remove_markers(const std::string& source) {
-  auto removed_span_markers = replace_markers(source, "", "", kMarkerLeft, kMarkerRight);
-  return replace_markers(removed_span_markers, "", "", kDeclStartTokenLeft, kDeclStartTokenRight);
-}
+std::string remove_markers(const std::string& source) { return replace_markers(source, "", ""); }
 
 // Extracts marked source spans from a given source string.
 // If source spans are incorrectly marked (missing or extra markers), returns
-// std::nullopt; otherwise, returns a multiset of expected spans.
-std::optional<std::multiset<std::string>> extract_expected_spans(
-    const std::string& source, std::vector<std::string>* errors, const std::string_view marker_left,
-    const std::string_view marker_right) {
+// empty set; otherwise, returns a multiset of expected spans.
+std::multiset<std::string> extract_expected_spans(
+    const std::string& source, std::vector<std::string>* errors) {
   std::stack<size_t> stack;
   std::multiset<std::string> spans;
 
@@ -414,17 +329,18 @@ std::optional<std::multiset<std::string>> extract_expected_spans(
   };
 
   for (size_t i = 0; i < source.length();) {
-    if (match(i, marker_left)) {
-      i += marker_left.length();
+    if (match(i, kMarkerLeft)) {
+      i += kMarkerLeft.length();
       stack.push(i);
-    } else if (match(i, marker_right)) {
+    } else if (match(i, kMarkerRight)) {
       if (stack.empty()) {
         std::stringstream error_msg;
-        error_msg << "unexpected closing marker '" << marker_right << "' at position " << i
+        error_msg << "unexpected closing marker '" << kMarkerRight << "' at position " << i
                   << " in source string";
         errors->push_back(error_msg.str());
         // Return an empty set if errors
-        return std::nullopt;
+        spans.clear();
+        break;
       }
 
       const std::string span = remove_markers(source.substr(stack.top(),  // index of left marker
@@ -432,7 +348,7 @@ std::optional<std::multiset<std::string>> extract_expected_spans(
       );
       stack.pop();
       spans.insert(span);
-      i += marker_right.length();
+      i += kMarkerRight.length();
     } else {
       i += 1;
     }
@@ -440,10 +356,10 @@ std::optional<std::multiset<std::string>> extract_expected_spans(
 
   if (!stack.empty()) {
     std::stringstream error_msg;
-    error_msg << "expected closing marker '" << marker_right << "'";
+    error_msg << "expected closing marker '" << kMarkerRight << "'";
     errors->push_back(error_msg.str());
     // Return an empty set if errors
-    return std::nullopt;
+    spans.clear();
   }
 
   return spans;
@@ -455,236 +371,6 @@ struct TestCase {
 };
 
 const std::vector<TestCase> test_cases = {
-    {ElementType::Identifier,
-     {
-         R"FIDL(library «x»; struct «S» { «int64» «i»; };)FIDL",
-         R"FIDL(library «x»; struct «S» { «handle»:«THREAD» «h»; };)FIDL",
-     }},
-    {ElementType::CompoundIdentifier,
-     {
-         R"FIDL(library «foo.bar.baz»;)FIDL",
-     }},
-    {ElementType::StringLiteral,
-     {
-         R"FIDL(library x; const string x = «"hello"»;)FIDL",
-         R"FIDL(library x; [attr=«"foo"»]const string x = «"goodbye"»;)FIDL",
-     }},
-    {ElementType::NumericLiteral,
-     {
-         R"FIDL(library x; const uint8 x = «42»;)FIDL",
-     }},
-    {ElementType::TrueLiteral,
-     {
-         R"FIDL(library x; const bool x = «true»;)FIDL",
-     }},
-    {ElementType::FalseLiteral,
-     {
-         R"FIDL(library x; const bool x = «false»;)FIDL",
-     }},
-    {ElementType::Ordinal64,
-     {
-         R"FIDL(library x; union U { «1:» uint8 one; };)FIDL",
-     }},
-    {ElementType::IdentifierConstant,
-     {
-         R"FIDL(library x; const bool x = true; const bool y = «x»;)FIDL",
-     }},
-    {ElementType::LiteralConstant,
-     {
-         R"FIDL(library x; const bool x = «true»;)FIDL",
-         R"FIDL(library x; const uint8 x = «42»;)FIDL",
-         R"FIDL(library x; const string x = «"hi"»;)FIDL",
-     }},
-    {ElementType::BinaryOperatorConstant,
-     {
-         R"FIDL(library x;
-const uint8 one = 0x0001;
-const uint16 two_fifty_six = 0x0100;
-const uint16 two_fifty_seven = «one | two_fifty_six»;
-         )FIDL",
-         R"FIDL(library x; const uint16 two_fifty_seven = «0x0001 | 0x0100»;)FIDL",
-     }},
-    {ElementType::ConstDeclaration,
-     {
-         R"FIDL(library example;
-«const uint32 C_SIMPLE   = 11259375»;
-«const uint32 C_HEX_S    = 0xABCDEF»;
-«const uint32 C_HEX_L    = 0XABCDEF»;
-«const uint32 C_BINARY_S = 0b101010111100110111101111»;
-«const uint32 C_BINARY_L = 0B101010111100110111101111»;
-      )FIDL"}},
-    {ElementType::EnumDeclaration,
-     {
-         R"FIDL(library example; «⸢enum⸥ TestEnum { A = 1; B = 2; }»;)FIDL",
-         R"FIDL(library example; «[attr] ⸢strict⸥ enum TestEnum { A = 1; B = 2; }»;)FIDL",
-         R"FIDL(library example; «⸢flexible⸥ enum TestEnum { A = 1; B = 2; }»;)FIDL",
-     }},
-    {ElementType::EnumMember,
-     {
-         R"FIDL(library x; enum y { «[attr] A = identifier»; };)FIDL",
-     }},
-    {ElementType::BitsDeclaration,
-     {
-         R"FIDL(library example; «⸢bits⸥ TestBits { A = 1; B = 2; }»;)FIDL",
-         R"FIDL(library example; «⸢strict⸥ bits TestBits { A = 1; B = 2; }»;)FIDL",
-         R"FIDL(library example; «[attr] ⸢flexible⸥ bits TestBits { A = 1; B = 2; }»;)FIDL",
-     }},
-    {ElementType::BitsMember,
-     {
-         R"FIDL(library x; bits y { «A = 0x1»; «B = 0x2»; };)FIDL",
-     }},
-    {ElementType::AttributeList,
-     {
-         R"FIDL(«[a]» library x;)FIDL",
-         R"FIDL(«[a, b="1"]» library x;)FIDL",
-     }},
-    {ElementType::Attribute,
-     {
-         R"FIDL([«a»] library x;)FIDL",
-         R"FIDL([«a», «b="1"»] library x;)FIDL",
-     }},
-    {ElementType::Library,
-     {
-         R"FIDL(«library x»; using y;)FIDL",
-         R"FIDL(«library x.y.z»; using y;)FIDL",
-     }},
-    {ElementType::Using,
-     {
-         R"FIDL(library x; «using y»;)FIDL",
-         R"FIDL(library x; «using y as z»;)FIDL",
-     }},
-    {ElementType::ResourceDeclaration, {R"FIDL(
-     library example; «resource_definition Res : uint32 { properties { Enum subtype; }; }»;)FIDL"}},
-    {ElementType::ResourceProperty, {R"FIDL(
-     library example; resource_definition Res : uint32 { properties { «Enum subtype»; }; };)FIDL"}},
-    {ElementType::ProtocolDeclaration,
-     {
-         R"FIDL(library x; «protocol X {}»;)FIDL",
-         R"FIDL(library x; «[attr] protocol X { compose OtherProtocol; }»;)FIDL",
-     }},
-    {ElementType::ProtocolMethod,  // Method
-     {
-         R"FIDL(library x; protocol X { «Method(int32 a) -> (bool res)»; };)FIDL",
-         R"FIDL(library x; protocol X { «-> Event(bool res)»; };)FIDL",
-     }},
-    {ElementType::ProtocolMethod,
-     {
-         R"FIDL(library x; protocol X { «Method()»; };)FIDL",
-         R"FIDL(library x; protocol X { «[attr] Method(int32 a, bool b)»; };)FIDL",
-         R"FIDL(library x; protocol X { «Method(int32 a) -> ()»; };)FIDL",
-         R"FIDL(library x; protocol X { «Method(int32 a) -> (bool res, int32 res2)»; };)FIDL",
-     }},
-    {ElementType::ProtocolMethod,  // Event
-     {
-         R"FIDL(library x; protocol X { «-> Event()»; };)FIDL",
-         R"FIDL(library x; protocol X { «[attr] -> Event(bool res, int32 res2)»; };)FIDL",
-     }},
-    {ElementType::ProtocolCompose,
-     {
-         R"FIDL(library x; protocol X { «compose OtherProtocol»; };)FIDL",
-         R"FIDL(library x; protocol X { «[attr] compose OtherProtocol»; };)FIDL",
-         R"FIDL(library x; protocol X {
-            «/// Foo
-            compose OtherProtocol»;
-          };)FIDL",
-     }},
-    {ElementType::ParameterList,
-     {
-         R"FIDL(library x; protocol X { Method«()»; };)FIDL",
-         R"FIDL(library x; protocol X { Method«(int32 a, bool b)»; };)FIDL",
-     }},
-    {ElementType::Parameter,
-     {
-         R"FIDL(library x; protocol X { Method(«int32 a», «bool b»); };)FIDL",
-         R"FIDL(library x; protocol X { -> Event(«int32 a», «bool b»); };)FIDL",
-     }},
-    {ElementType::ServiceDeclaration,
-     {
-         R"FIDL(library x; «service X {}»;)FIDL",
-         R"FIDL(library x; protocol P {}; «service X { P Z; }»;)FIDL",
-     }},
-    {ElementType::ServiceMember,
-     {
-         R"FIDL(library x; protocol P {}; service X { «P Z»; };)FIDL",
-         R"FIDL(library x; protocol P {}; service X { «[attr] P Z»; };)FIDL",
-     }},
-    {ElementType::StructDeclaration,
-     {
-         R"FIDL(library x; «⸢struct⸥ X { bool y; [attr] int32 z = 2; }»;)FIDL",
-         R"FIDL(library x; «⸢resource⸥ struct X { bool y; [attr] int32 z = 2; }»;)FIDL",
-         R"FIDL(library x; «[attr] ⸢resource⸥ struct X { bool y; [attr] int32 z = 2; }»;)FIDL",
-     }},
-    {ElementType::StructMember,
-     {
-         R"FIDL(library x; struct X { «bool y»; «[attr] int32 z = 2»; };)FIDL",
-     }},
-    {ElementType::TableDeclaration,
-     {
-         R"FIDL(library x; «[attr] ⸢resource⸥ table X {
-          1: bool y;
-          2: reserved;
-          [attr] 3: int32 z;
-      }»;)FIDL",
-         R"FIDL(library x; «⸢resource⸥ table X {
-          1: bool y;
-      }»;)FIDL",
-         R"FIDL(library x; «⸢table⸥ X {
-          1: bool y;
-      }»;)FIDL",
-     }},
-    {ElementType::TableMember,
-     {
-         R"FIDL(library x; [attr] table X {
-          «1: bool y»;
-          «2: reserved»;
-          «[attr] 3: int32 z»;
-      };)FIDL",
-     }},
-    {ElementType::UnionDeclaration,
-     {
-         R"FIDL(library x; «[attr] ⸢union⸥ X {
-          1: int64 intval;
-          2: reserved;
-          [attr] 3: float64 floatval;
-          4: string:MAX_STRING_SIZE stringval;
-      }»;)FIDL",
-         R"FIDL(library x; «[attr] ⸢strict⸥ union X {
-          1: int64 intval;
-      }»;)FIDL",
-         R"FIDL(library x; «⸢flexible⸥ union X {
-          1: int64 intval;
-      }»;)FIDL",
-         R"FIDL(library x; «⸢resource⸥ union X {
-          1: int64 intval;
-      }»;)FIDL",
-         R"FIDL(library x; «⸢flexible⸥ resource union X {
-          1: int64 intval;
-      }»;)FIDL",
-         R"FIDL(library x; «[attr] ⸢resource⸥ flexible union X {
-          1: int64 intval;
-      }»;)FIDL",
-     }},
-    {ElementType::UnionMember,
-     {
-         R"FIDL(library x; [attr] union X {
-          «1: int64 intval»;
-          «2: reserved»;
-          «[attr] 3: float64 floatval»;
-          «4: string:MAX_STRING_SIZE stringval»;
-      };)FIDL",
-     }},
-    {ElementType::TypeConstructor,
-     {
-         R"FIDL(library x; const «int32» x = 1;)FIDL",
-         R"FIDL(library x; const «handle:<VMO, zx.rights.READ>?» x = 1;)FIDL",
-         R"FIDL(library x; const «Foo<«Bar<«handle:VMO»>:20»>?» x = 1;)FIDL",
-         R"FIDL(library x; const «handle:VMO» x = 1;)FIDL",
-     }},
-};
-
-// TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
-// --- start new syntax ---
-const std::vector<TestCase> new_syntax_test_cases = {
     {ElementType::AttributeArg,
      {
          R"FIDL(library x; @attr(«"foo"») const bool MY_BOOL = false;)FIDL",
@@ -756,7 +442,7 @@ const std::vector<TestCase> new_syntax_test_cases = {
           type T = table {
             «1: intval int64»;
             «2: reserved»;
-            «3: floatval float64»;
+            «@attr 3: floatval float64»;
             «4: stringval string:100»;
             «5: inner union {
               «1: boolval bool»;
@@ -771,7 +457,7 @@ const std::vector<TestCase> new_syntax_test_cases = {
           type S = struct {
             «intval int64»;
             «boolval bool = false»;
-            «stringval string:100»;
+            «@attr stringval string:100»;
             «inner struct {
               «floatval float64»;
               «uintval uint8 = 7»;
@@ -784,7 +470,13 @@ const std::vector<TestCase> new_syntax_test_cases = {
          R"FIDL(library x;
           type E = enum {
             «A = 1»;
-            «B = 2»;
+            «@attr B = 2»;
+          };
+         )FIDL",
+         R"FIDL(library x;
+          type B = bits {
+            «A = 0x1»;
+            «@attr B = 0x2»;
           };
          )FIDL",
      }},
@@ -853,6 +545,10 @@ const std::vector<TestCase> new_syntax_test_cases = {
      }},
     {ElementType::TypeConstructorNew,
      {
+         R"FIDL(library x; const x «int32» = 1;)FIDL",
+         R"FIDL(library x; const x «zx.handle:<VMO, zx.rights.READ, optional>» = 1;)FIDL",
+         R"FIDL(library x; const x «Foo<«Bar<«zx.handle:VMO»>:20»>:optional» = 1;)FIDL",
+         R"FIDL(library x; const x «zx.handle:VMO» = 1;)FIDL",
          R"FIDL(library x; type y = «array<uint8,4>»;)FIDL",
          R"FIDL(library x; type y = «vector<«array<Foo,4>»>»;)FIDL",
          R"FIDL(library x; type y = «string:100»;)FIDL",
@@ -920,6 +616,114 @@ const std::vector<TestCase> new_syntax_test_cases = {
           };
          )FIDL",
      }},
+    {ElementType::ServiceDeclaration,
+     {
+         R"FIDL(library x; «service X {}»;)FIDL",
+         R"FIDL(library x; protocol P {}; «service X { Z client_end:P; }»;)FIDL",
+     }},
+    {ElementType::ServiceMember,
+     {
+         R"FIDL(library x; protocol P {}; service X { «Z client_end:P»; };)FIDL",
+         R"FIDL(library x; protocol P {}; service X { «@attr Z client_end:P»; };)FIDL",
+     }},
+    {ElementType::ProtocolCompose,
+     {
+         R"FIDL(library x; protocol X { «compose OtherProtocol»; };)FIDL",
+         R"FIDL(library x; protocol X { «@attr compose OtherProtocol»; };)FIDL",
+         R"FIDL(library x; protocol X {
+            «/// Foo
+            compose OtherProtocol»;
+          };)FIDL",
+     }},
+    {ElementType::Library,
+     {
+         R"FIDL(«library x»; using y;)FIDL",
+         R"FIDL(«library x.y.z»; using y;)FIDL",
+     }},
+    {ElementType::Using,
+     {
+         R"FIDL(library x; «using y»;)FIDL",
+         R"FIDL(library x; «using y as z»;)FIDL",
+     }},
+    {ElementType::ResourceDeclaration, {R"FIDL(
+     library example; «resource_definition Res : uint32 { properties { subtype Enum; }; }»;)FIDL"}},
+    {ElementType::ResourceProperty, {R"FIDL(
+     library example; resource_definition Res : uint32 { properties { «subtype Enum»; }; };)FIDL"}},
+    {ElementType::ProtocolDeclaration,
+     {
+         R"FIDL(library x; «protocol X {}»;)FIDL",
+         R"FIDL(library x; «@attr protocol X { compose OtherProtocol; }»;)FIDL",
+     }},
+    {ElementType::ProtocolMethod,  // Method
+     {
+         R"FIDL(library x; protocol X { «Method(struct { a int32; }) -> (struct { res bool; })»; };)FIDL",
+         R"FIDL(library x; protocol X { «-> Event(struct { res bool; })»; };)FIDL",
+     }},
+    {ElementType::ProtocolMethod,
+     {
+         R"FIDL(library x; protocol X { «Method()»; };)FIDL",
+         R"FIDL(library x; protocol X { «@attr Method(struct { a int32; b bool; })»; };)FIDL",
+         R"FIDL(library x; protocol X { «Method(struct { a int32; }) -> ()»; };)FIDL",
+         R"FIDL(library x; protocol X { «Method(struct { a int32; }) -> (struct { res bool; res2 int32; })»; };)FIDL",
+     }},
+    {ElementType::ProtocolMethod,  // Event
+     {
+         R"FIDL(library x; protocol X { «-> Event()»; };)FIDL",
+         R"FIDL(library x; protocol X { «@attr -> Event(struct { res bool; res2 int32; })»; };)FIDL",
+     }},
+    {ElementType::CompoundIdentifier,
+     {
+         R"FIDL(library «foo.bar.baz»;)FIDL",
+     }},
+    {ElementType::StringLiteral,
+     {
+         R"FIDL(library x; const x string = «"hello"»;)FIDL",
+         R"FIDL(library x; @attr(«"foo"») const x string = «"goodbye"»;)FIDL",
+     }},
+    {ElementType::NumericLiteral,
+     {
+         R"FIDL(library x; const x uint8 = «42»;)FIDL",
+     }},
+    {ElementType::TrueLiteral,
+     {
+         R"FIDL(library x; const x bool = «true»;)FIDL",
+     }},
+    {ElementType::FalseLiteral,
+     {
+         R"FIDL(library x; const x bool = «false»;)FIDL",
+     }},
+    {ElementType::Ordinal64,
+     {
+         R"FIDL(library x; type U = union { «1:» one uint8; };)FIDL",
+     }},
+    {ElementType::IdentifierConstant,
+     {
+         R"FIDL(library x; const x bool = true; const y bool = «x»;)FIDL",
+     }},
+    {ElementType::LiteralConstant,
+     {
+         R"FIDL(library x; const x bool = «true»;)FIDL",
+         R"FIDL(library x; const x uint8 = «42»;)FIDL",
+         R"FIDL(library x; const x string = «"hi"»;)FIDL",
+     }},
+    {ElementType::BinaryOperatorConstant,
+     {
+         R"FIDL(library x;
+const one uint8 = 0x0001;
+const two_fifty_six uint16 = 0x0100;
+const two_fifty_seven uint16 = «one | two_fifty_six»;
+         )FIDL",
+         R"FIDL(library x; const two_fifty_seven uint16 = «0x0001 | 0x0100»;)FIDL",
+     }},
+    {ElementType::ConstDeclaration,
+     {
+         R"FIDL(library example;
+«const C_SIMPLE uint32   = 11259375»;
+«const C_HEX_S uint32    = 0xABCDEF»;
+«const C_HEX_L uint32    = 0XABCDEF»;
+«const C_BINARY_S uint32 = 0b101010111100110111101111»;
+«const C_BINARY_L uint32 = 0B101010111100110111101111»;
+      )FIDL"}},
 };
 // --- end new syntax ---
 
@@ -928,7 +732,7 @@ constexpr std::string_view kFailedMsg = "\x1B[31mFailed\033[0m";
 constexpr std::string_view kErrorMsg = "\x1B[31mERROR:\033[0m";
 
 void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert_left_padding,
-                   const std::string& insert_right_padding, fidl::utils::Syntax syntax) {
+                   const std::string& insert_right_padding) {
   std::cerr << '\n'
             << std::left << '\t' << "\x1B[34mWhere left padding = \"" << insert_left_padding
             << "\" and right padding = \"" << insert_right_padding << "\":\033[0m\n";
@@ -942,16 +746,12 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
       // Insert the specified left/right padding.
       auto marked_source =
           replace_markers(unpadded_source, insert_left_padding + kMarkerLeft.data(),
-                          kMarkerRight.data() + insert_right_padding, kMarkerLeft, kMarkerRight);
-      auto source_with_decl_token_markers_removed =
-          replace_markers(marked_source, "", "", kDeclStartTokenLeft, kDeclStartTokenRight);
+                          kMarkerRight.data() + insert_right_padding);
       auto clean_source = remove_markers(marked_source);
 
       // Parse the source with markers removed
       fidl::ExperimentalFlags experimental_flags;
-      if (syntax == fidl::utils::Syntax::kNew) {
-        experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-      }
+      experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
       TestLibrary library(clean_source, experimental_flags);
       std::unique_ptr<fidl::raw::File> ast;
       if (!library.Parse(&ast)) {
@@ -959,65 +759,42 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
         break;
       }
 
-      // Get the expected decl_start_tokens from the marked source
-      auto expected_decl_start_tokens_result =
-          extract_expected_spans(marked_source, &errors, kDeclStartTokenLeft, kDeclStartTokenRight);
-      // Returns an empty set when there are errors
-      if (!expected_decl_start_tokens_result) {
-        break;
-      }
-      auto expected_decl_start_tokens = expected_decl_start_tokens_result.value();
-
       // Get the expected spans from the marked source
-      auto expected_spans_result = extract_expected_spans(source_with_decl_token_markers_removed,
-                                                          &errors, kMarkerLeft, kMarkerRight);
+      std::multiset<std::string> expected_spans = extract_expected_spans(marked_source, &errors);
       // Returns an empty set when there are errors
-      if (!expected_spans_result) {
+      if (expected_spans.empty()) {
         break;
       }
-      auto expected_spans = expected_spans_result.value();
 
-      // Get the actual spans by walking the AST
+     // Get the actual spans by walking the AST
       SourceSpanVisitor visitor(test_case.type);
       visitor.OnFile(ast);
       std::multiset<std::string> actual_spans = visitor.spans();
-      std::multiset<std::string> actual_decl_start_tokens = visitor.decl_start_tokens();
 
-      // Repeat the actual vs expected comparison twice - once for the spans,
-      // and then again for the decl_start_tokens.
-      auto expecteds =
-          std::vector<std::multiset<std::string>>({expected_spans, expected_decl_start_tokens});
-      auto actuals =
-          std::vector<std::multiset<std::string>>({actual_spans, actual_decl_start_tokens});
-      auto left_markers = std::vector<std::string_view>({kMarkerLeft, kDeclStartTokenLeft});
-      auto right_markers = std::vector<std::string_view>({kMarkerRight, kDeclStartTokenRight});
-      for (size_t i = 0; i < expecteds.size(); ++i) {
-        // Report errors where the checker found unexpected spans
-        // (spans in actual but not expected)
-        std::multiset<std::string> actual_minus_expected;
-        std::set_difference(actuals[i].begin(), actuals[i].end(), expecteds[i].begin(),
-                            expecteds[i].end(),
-                            std::inserter(actual_minus_expected, actual_minus_expected.begin()));
-        for (const auto& span : actual_minus_expected) {
-          std::stringstream error_msg;
-          error_msg << "unexpected occurrence of type " << element_type_str(test_case.type) << ": "
-                    << left_markers[i] << span << right_markers[i];
-          errors.push_back(error_msg.str());
-        }
+      // Report errors where the checker found unexpected spans
+      // (spans in actual but not expected)
+      std::multiset<std::string> actual_minus_expected;
+      std::set_difference(actual_spans.begin(), actual_spans.end(), expected_spans.begin(),
+                          expected_spans.end(),
+                          std::inserter(actual_minus_expected, actual_minus_expected.begin()));
+      for (const auto& span : actual_minus_expected) {
+        std::stringstream error_msg;
+        error_msg << "unexpected occurrence of type " << element_type_str(test_case.type) << ": "
+                  << kMarkerLeft << span << kMarkerRight;
+        errors.push_back(error_msg.str());
+      }
 
-        // Report errors if the checker failed to find expected spans
-        // (spans in expected but not actual)
-        std::multiset<std::string> expected_minus_actual;
-        std::set_difference(expecteds[i].begin(), expecteds[i].end(), actuals[i].begin(),
-                            actuals[i].end(),
-                            std::inserter(expected_minus_actual, expected_minus_actual.begin()));
-        for (const auto& span : expected_minus_actual) {
-          std::stringstream error_msg;
-          error_msg << "expected (but didn't find) " << (i == 0 ? "span" : "decl_start_token")
-                    << " of type " << element_type_str(test_case.type) << ": " << left_markers[i]
-                    << span << right_markers[i];
-          errors.push_back(error_msg.str());
-        }
+      // Report errors if the checker failed to find expected spans
+      // (spans in expected but not actual)
+      std::multiset<std::string> expected_minus_actual;
+      std::set_difference(expected_spans.begin(), expected_spans.end(), actual_spans.begin(),
+                          actual_spans.end(),
+                          std::inserter(expected_minus_actual, expected_minus_actual.begin()));
+      for (const auto& span : expected_minus_actual) {
+        std::stringstream error_msg;
+        error_msg << "expected (but didn't find) span of type " << element_type_str(test_case.type)
+                  << ": " << kMarkerLeft << span << kMarkerRight;
+        errors.push_back(error_msg.str());
       }
     }
 
@@ -1038,10 +815,10 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
 }
 
 TEST(SpanTests, GoodParseTest) {
-  RunParseTests(new_syntax_test_cases, "", "", fidl::utils::Syntax::kNew);
-  RunParseTests(new_syntax_test_cases, " ", "", fidl::utils::Syntax::kNew);
-  RunParseTests(new_syntax_test_cases, "", " ", fidl::utils::Syntax::kNew);
-  RunParseTests(new_syntax_test_cases, " ", " ", fidl::utils::Syntax::kNew);
+  RunParseTests(test_cases, "", "");
+  RunParseTests(test_cases, " ", "");
+  RunParseTests(test_cases, "", " ");
+  RunParseTests(test_cases, " ", " ");
 }
 
 }  // namespace
