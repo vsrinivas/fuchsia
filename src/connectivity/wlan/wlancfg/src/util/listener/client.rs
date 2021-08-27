@@ -4,21 +4,22 @@
 
 use {
     super::generic::{CurrentStateCache, Listener, Message},
+    crate::client::types as client_types,
     fidl_fuchsia_wlan_policy as fidl_policy,
     futures::{channel::mpsc, future::BoxFuture, prelude::*},
 };
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ClientNetworkState {
-    pub id: fidl_policy::NetworkIdentifier,
-    pub state: fidl_policy::ConnectionState,
-    pub status: Option<fidl_policy::DisconnectStatus>,
+    pub id: client_types::NetworkIdentifier,
+    pub state: client_types::ConnectionState,
+    pub status: Option<client_types::DisconnectStatus>,
 }
 
 impl Into<fidl_policy::NetworkState> for ClientNetworkState {
     fn into(self) -> fidl_policy::NetworkState {
         fidl_policy::NetworkState {
-            id: Some(self.id),
+            id: Some(self.id.into()),
             state: Some(self.state),
             status: self.status,
             ..fidl_policy::NetworkState::EMPTY
@@ -89,6 +90,7 @@ pub type ClientListenerMessageSender = mpsc::UnboundedSender<ClientListenerMessa
 mod tests {
     use {
         super::{super::generic::CurrentStateCache, *},
+        crate::client::types::Ssid,
         fidl_fuchsia_wlan_policy as fidl_policy,
     };
 
@@ -101,9 +103,9 @@ mod tests {
         let update = ClientStateUpdate {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: String::from("ssid 1").into_bytes(),
-                    type_: fidl_policy::SecurityType::Wpa2,
+                id: client_types::NetworkIdentifier {
+                    ssid: Ssid::from("ssid 1"),
+                    security_type: client_types::SecurityType::Wpa2,
                 },
                 state: fidl_policy::ConnectionState::Connected,
                 status: None,
@@ -116,9 +118,9 @@ mod tests {
             ClientStateUpdate {
                 state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
                 networks: vec![ClientNetworkState {
-                    id: fidl_policy::NetworkIdentifier {
-                        ssid: String::from("ssid 1").into_bytes(),
-                        type_: fidl_policy::SecurityType::Wpa2,
+                    id: client_types::NetworkIdentifier {
+                        ssid: Ssid::from("ssid 1"),
+                        security_type: client_types::SecurityType::Wpa2,
                     },
                     state: fidl_policy::ConnectionState::Connected,
                     status: None,
@@ -133,9 +135,9 @@ mod tests {
         let mut current_state_cache = ClientStateUpdate {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: String::from("ssid 1").into_bytes(),
-                    type_: fidl_policy::SecurityType::Wpa2,
+                id: client_types::NetworkIdentifier {
+                    ssid: Ssid::from("ssid 1"),
+                    security_type: client_types::SecurityType::Wpa2,
                 },
                 state: fidl_policy::ConnectionState::Connected,
                 status: None,
@@ -146,9 +148,9 @@ mod tests {
         let update = ClientStateUpdate {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: String::from("ssid 2").into_bytes(),
-                    type_: fidl_policy::SecurityType::Wpa2,
+                id: client_types::NetworkIdentifier {
+                    ssid: Ssid::from("ssid 2"),
+                    security_type: client_types::SecurityType::Wpa2,
                 },
                 state: fidl_policy::ConnectionState::Connecting,
                 status: None,
@@ -163,17 +165,17 @@ mod tests {
                 state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
                 networks: vec![
                     ClientNetworkState {
-                        id: fidl_policy::NetworkIdentifier {
-                            ssid: String::from("ssid 1").into_bytes(),
-                            type_: fidl_policy::SecurityType::Wpa2,
+                        id: client_types::NetworkIdentifier {
+                            ssid: Ssid::from("ssid 1"),
+                            security_type: client_types::SecurityType::Wpa2,
                         },
                         state: fidl_policy::ConnectionState::Connected,
                         status: None,
                     },
                     ClientNetworkState {
-                        id: fidl_policy::NetworkIdentifier {
-                            ssid: String::from("ssid 2").into_bytes(),
-                            type_: fidl_policy::SecurityType::Wpa2,
+                        id: client_types::NetworkIdentifier {
+                            ssid: Ssid::from("ssid 2"),
+                            security_type: client_types::SecurityType::Wpa2,
                         },
                         state: fidl_policy::ConnectionState::Connecting,
                         status: None,
@@ -190,17 +192,17 @@ mod tests {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![
                 ClientNetworkState {
-                    id: fidl_policy::NetworkIdentifier {
-                        ssid: String::from("ssid 1").into_bytes(),
-                        type_: fidl_policy::SecurityType::Wpa2,
+                    id: client_types::NetworkIdentifier {
+                        ssid: Ssid::from("ssid 1"),
+                        security_type: client_types::SecurityType::Wpa2,
                     },
                     state: fidl_policy::ConnectionState::Connected,
                     status: None,
                 },
                 ClientNetworkState {
-                    id: fidl_policy::NetworkIdentifier {
-                        ssid: String::from("ssid 2").into_bytes(),
-                        type_: fidl_policy::SecurityType::Wpa2,
+                    id: client_types::NetworkIdentifier {
+                        ssid: Ssid::from("ssid 2"),
+                        security_type: client_types::SecurityType::Wpa2,
                     },
                     state: fidl_policy::ConnectionState::Connecting,
                     status: None,
@@ -212,9 +214,9 @@ mod tests {
         let update = ClientStateUpdate {
             state: None,
             networks: vec![ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: String::from("ssid 1").into_bytes(),
-                    type_: fidl_policy::SecurityType::Wpa2,
+                id: client_types::NetworkIdentifier {
+                    ssid: Ssid::from("ssid 1"),
+                    security_type: client_types::SecurityType::Wpa2,
                 },
                 state: fidl_policy::ConnectionState::Disconnected,
                 status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
@@ -230,17 +232,17 @@ mod tests {
                 state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
                 networks: vec![
                     ClientNetworkState {
-                        id: fidl_policy::NetworkIdentifier {
-                            ssid: String::from("ssid 2").into_bytes(),
-                            type_: fidl_policy::SecurityType::Wpa2,
+                        id: client_types::NetworkIdentifier {
+                            ssid: Ssid::from("ssid 2"),
+                            security_type: client_types::SecurityType::Wpa2,
                         },
                         state: fidl_policy::ConnectionState::Connecting,
                         status: None,
                     },
                     ClientNetworkState {
-                        id: fidl_policy::NetworkIdentifier {
-                            ssid: String::from("ssid 1").into_bytes(),
-                            type_: fidl_policy::SecurityType::Wpa2,
+                        id: client_types::NetworkIdentifier {
+                            ssid: Ssid::from("ssid 1"),
+                            security_type: client_types::SecurityType::Wpa2,
                         },
                         state: fidl_policy::ConnectionState::Disconnected,
                         status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
@@ -253,9 +255,9 @@ mod tests {
         let update = ClientStateUpdate {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: String::from("ssid 2").into_bytes(),
-                    type_: fidl_policy::SecurityType::Wpa2,
+                id: client_types::NetworkIdentifier {
+                    ssid: Ssid::from("ssid 2"),
+                    security_type: client_types::SecurityType::Wpa2,
                 },
                 state: fidl_policy::ConnectionState::Connected,
                 status: None,
@@ -269,9 +271,9 @@ mod tests {
             ClientStateUpdate {
                 state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
                 networks: vec![ClientNetworkState {
-                    id: fidl_policy::NetworkIdentifier {
-                        ssid: String::from("ssid 2").into_bytes(),
-                        type_: fidl_policy::SecurityType::Wpa2,
+                    id: client_types::NetworkIdentifier {
+                        ssid: Ssid::from("ssid 2"),
+                        security_type: client_types::SecurityType::Wpa2,
                     },
                     state: fidl_policy::ConnectionState::Connected,
                     status: None,
@@ -285,9 +287,9 @@ mod tests {
         let single_network_state = ClientStateUpdate {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: String::from("ssid 1").into_bytes(),
-                    type_: fidl_policy::SecurityType::Wpa2,
+                id: client_types::NetworkIdentifier {
+                    ssid: Ssid::from("ssid 1"),
+                    security_type: client_types::SecurityType::Wpa2,
                 },
                 state: fidl_policy::ConnectionState::Connected,
                 status: None,
@@ -300,7 +302,7 @@ mod tests {
                 state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
                 networks: Some(vec![fidl_policy::NetworkState {
                     id: Some(fidl_policy::NetworkIdentifier {
-                        ssid: String::from("ssid 1").into_bytes(),
+                        ssid: Ssid::from("ssid 1").to_vec(),
                         type_: fidl_policy::SecurityType::Wpa2,
                     }),
                     state: Some(fidl_policy::ConnectionState::Connected),
@@ -315,17 +317,17 @@ mod tests {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![
                 ClientNetworkState {
-                    id: fidl_policy::NetworkIdentifier {
-                        ssid: String::from("ssid 2").into_bytes(),
-                        type_: fidl_policy::SecurityType::Wpa2,
+                    id: client_types::NetworkIdentifier {
+                        ssid: Ssid::from("ssid 2"),
+                        security_type: client_types::SecurityType::Wpa2,
                     },
                     state: fidl_policy::ConnectionState::Connecting,
                     status: None,
                 },
                 ClientNetworkState {
-                    id: fidl_policy::NetworkIdentifier {
-                        ssid: String::from("ssid 1").into_bytes(),
-                        type_: fidl_policy::SecurityType::Wpa2,
+                    id: client_types::NetworkIdentifier {
+                        ssid: Ssid::from("ssid 1"),
+                        security_type: client_types::SecurityType::Wpa2,
                     },
                     state: fidl_policy::ConnectionState::Disconnected,
                     status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
@@ -340,7 +342,7 @@ mod tests {
                 networks: Some(vec![
                     fidl_policy::NetworkState {
                         id: Some(fidl_policy::NetworkIdentifier {
-                            ssid: String::from("ssid 2").into_bytes(),
+                            ssid: Ssid::from("ssid 2").to_vec(),
                             type_: fidl_policy::SecurityType::Wpa2,
                         }),
                         state: Some(fidl_policy::ConnectionState::Connecting),
@@ -349,7 +351,7 @@ mod tests {
                     },
                     fidl_policy::NetworkState {
                         id: Some(fidl_policy::NetworkIdentifier {
-                            ssid: String::from("ssid 1").into_bytes(),
+                            ssid: Ssid::from("ssid 1").to_vec(),
                             type_: fidl_policy::SecurityType::Wpa2,
                         }),
                         state: Some(fidl_policy::ConnectionState::Disconnected),

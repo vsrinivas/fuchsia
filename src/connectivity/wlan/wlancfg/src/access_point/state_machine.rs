@@ -114,7 +114,7 @@ pub struct ApConfig {
 impl From<ApConfig> for fidl_sme::ApConfig {
     fn from(config: ApConfig) -> Self {
         fidl_sme::ApConfig {
-            ssid: config.id.ssid,
+            ssid: config.id.ssid.to_vec(),
             password: config.credential,
             radio_cfg: config.radio_config.to_fidl(),
         }
@@ -558,7 +558,6 @@ mod tests {
         super::*,
         crate::util::listener,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_policy as fidl_policy,
         futures::{stream::StreamFuture, task::Poll, Future},
         pin_utils::pin_mut,
         wlan_common::{
@@ -595,8 +594,8 @@ mod tests {
 
     fn create_network_id() -> types::NetworkIdentifier {
         types::NetworkIdentifier {
-            ssid: b"test_ssid".to_vec(),
-            type_: fidl_policy::SecurityType::None,
+            ssid: types::Ssid::from("test_ssid"),
+            security_type: types::SecurityType::None,
         }
     }
 
@@ -1953,7 +1952,7 @@ mod tests {
 
         // Insert a stop request to be processed after starting the AP fails.
         let mut requested_id = create_network_id();
-        requested_id.ssid = b"second_test_ssid".to_vec();
+        requested_id.ssid = types::Ssid::from("second_test_ssid");
 
         let requested_config = ApConfig {
             id: requested_id.clone(),
@@ -2340,7 +2339,7 @@ mod tests {
         assert_variant!(state.inner.lock().state.as_ref(), Some(ApStateUpdate {
                 id: types::NetworkIdentifier {
                     ssid,
-                    type_: fidl_policy::SecurityType::None,
+                    security_type: types::SecurityType::None,
                 },
                 state: types::OperatingState::Starting,
                 mode: Some(types::ConnectivityMode::Unrestricted),
@@ -2348,7 +2347,7 @@ mod tests {
                 frequency: None,
                 clients: None,
         }) => {
-            let expected_ssid = b"test_ssid".to_vec();
+            let expected_ssid = types::Ssid::from("test_ssid");
             assert_eq!(ssid, &expected_ssid);
         });
 
@@ -2359,8 +2358,8 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: b"test_ssid".to_vec(),
-                type_: fidl_policy::SecurityType::None,
+                ssid: types::Ssid::from("test_ssid"),
+                security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
             assert_eq!(access_points[0].state, types::OperatingState::Starting);
@@ -2395,8 +2394,8 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: b"test_ssid".to_vec(),
-                type_: fidl_policy::SecurityType::None,
+                ssid: types::Ssid::from("test_ssid"),
+                security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
             assert_eq!(access_points[0].state, types::OperatingState::Active);
@@ -2407,7 +2406,11 @@ mod tests {
         });
 
         // Consume a status update and expect a new notification to be generated.
-        let ap_info = fidl_sme::Ap { ssid: b"test_ssid".to_vec(), channel: 6, num_clients: 123 };
+        let ap_info = fidl_sme::Ap {
+            ssid: types::Ssid::from("test_ssid").to_vec(),
+            channel: 6,
+            num_clients: 123,
+        };
         state
             .consume_sme_status_update(Cbw::Cbw20, ap_info)
             .expect("failure while updating SME status");
@@ -2419,8 +2422,8 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: b"test_ssid".to_vec(),
-                type_: fidl_policy::SecurityType::None,
+                ssid: types::Ssid::from("test_ssid"),
+                security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
             assert_eq!(access_points[0].state, types::OperatingState::Active);
@@ -2454,8 +2457,8 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: b"test_ssid".to_vec(),
-                type_: fidl_policy::SecurityType::None,
+                ssid: types::Ssid::from("test_ssid"),
+                security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
             assert_eq!(access_points[0].state, types::OperatingState::Starting);
@@ -2476,8 +2479,8 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: b"test_ssid".to_vec(),
-                type_: fidl_policy::SecurityType::None,
+                ssid: types::Ssid::from("test_ssid"),
+                security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
             assert_eq!(access_points[0].state, types::OperatingState::Starting);
@@ -2498,8 +2501,8 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: b"test_ssid".to_vec(),
-                type_: fidl_policy::SecurityType::None,
+                ssid: types::Ssid::from("test_ssid"),
+                security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
             assert_eq!(access_points[0].state, types::OperatingState::Active);
@@ -2569,7 +2572,11 @@ mod tests {
         let _ = state
             .consume_sme_status_update(
                 Cbw::Cbw20,
-                fidl_sme::Ap { ssid: b"test_ssid".to_vec(), channel: 6, num_clients: 123 },
+                fidl_sme::Ap {
+                    ssid: types::Ssid::from("test_ssid").to_vec(),
+                    channel: 6,
+                    num_clients: 123,
+                },
             )
             .expect_err("unexpectedly able to update SME status");
         let _ = state.set_stopped_state().expect_err("unexpectedly able to set stopped state");

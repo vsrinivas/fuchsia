@@ -72,7 +72,7 @@ pub trait IfaceManagerApi {
     async fn start_ap(&mut self, config: ap_fsm::ApConfig) -> Result<oneshot::Receiver<()>, Error>;
 
     /// Stops the AP interface corresponding to the provided configuration and destroys it.
-    async fn stop_ap(&mut self, ssid: Vec<u8>, password: Vec<u8>) -> Result<(), Error>;
+    async fn stop_ap(&mut self, ssid: Ssid, password: Vec<u8>) -> Result<(), Error>;
 
     /// Stops all AP interfaces and destroys them.
     async fn stop_all_aps(&mut self) -> Result<(), Error>;
@@ -191,7 +191,7 @@ impl IfaceManagerApi for IfaceManager {
         receiver.await?
     }
 
-    async fn stop_ap(&mut self, ssid: Vec<u8>, password: Vec<u8>) -> Result<(), Error> {
+    async fn stop_ap(&mut self, ssid: Ssid, password: Vec<u8>) -> Result<(), Error> {
         let (responder, receiver) = oneshot::channel();
         let req = StopApRequest { ssid, password, responder };
         self.sender.try_send(IfaceManagerRequest::StopAp(req))?;
@@ -230,7 +230,7 @@ mod tests {
         crate::{access_point::types, config_management::network_config::Credential},
         anyhow::format_err,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
         pin_utils::pin_mut,
         test_case::test_case,
@@ -365,8 +365,8 @@ mod tests {
 
         // Issue a disconnect command and wait for the command to be sent.
         let req = ap_types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: fidl_policy::SecurityType::None,
+            ssid: Ssid::from("foo"),
+            security_type: ap_types::SecurityType::None,
         };
         let req_reason = client_types::DisconnectReason::NetworkUnsaved;
         let disconnect_fut = test_values.iface_manager.disconnect(req.clone(), req_reason);
@@ -405,8 +405,8 @@ mod tests {
 
         // Issue a disconnect command and wait for the command to be sent.
         let req = ap_types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: fidl_policy::SecurityType::None,
+            ssid: Ssid::from("foo"),
+            security_type: ap_types::SecurityType::None,
         };
         let disconnect_fut = test_values
             .iface_manager
@@ -446,9 +446,9 @@ mod tests {
         // Issue a connect command and wait for the command to be sent.
         let req = client_types::ConnectRequest {
             target: client_types::ConnectionCandidate {
-                network: fidl_policy::NetworkIdentifier {
-                    ssid: "foo".as_bytes().to_vec(),
-                    type_: fidl_policy::SecurityType::None,
+                network: client_types::NetworkIdentifier {
+                    ssid: Ssid::from("foo"),
+                    security_type: client_types::SecurityType::None,
                 },
                 credential: Credential::None,
                 bss_description: None,
@@ -491,9 +491,9 @@ mod tests {
         // Issue a connect command and wait for the command to be sent.
         let req = client_types::ConnectRequest {
             target: client_types::ConnectionCandidate {
-                network: fidl_policy::NetworkIdentifier {
-                    ssid: "foo".as_bytes().to_vec(),
-                    type_: fidl_policy::SecurityType::None,
+                network: client_types::NetworkIdentifier {
+                    ssid: Ssid::from("foo"),
+                    security_type: client_types::SecurityType::None,
                 },
                 credential: Credential::None,
                 bss_description: None,
@@ -1048,8 +1048,8 @@ mod tests {
     fn create_ap_config() -> ap_fsm::ApConfig {
         ap_fsm::ApConfig {
             id: types::NetworkIdentifier {
-                ssid: "foo".as_bytes().to_vec(),
-                type_: fidl_policy::SecurityType::None,
+                ssid: Ssid::from("foo"),
+                security_type: types::SecurityType::None,
             },
             credential: vec![],
             radio_config: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6),
@@ -1125,7 +1125,7 @@ mod tests {
 
         // Stop an AP
         let stop_fut =
-            test_values.iface_manager.stop_ap("foo".as_bytes().to_vec(), "bar".as_bytes().to_vec());
+            test_values.iface_manager.stop_ap(Ssid::from("foo"), "bar".as_bytes().to_vec());
         pin_mut!(stop_fut);
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Pending);
 
@@ -1138,7 +1138,7 @@ mod tests {
             Poll::Ready(Some(IfaceManagerRequest::StopAp(StopApRequest{
                 ssid, password, responder
             }))) => {
-                assert_eq!(ssid, "foo".as_bytes().to_vec());
+                assert_eq!(ssid, Ssid::from("foo"));
                 assert_eq!(password, "bar".as_bytes().to_vec());
 
                 responder.send(Ok(())).expect("failed to send stop AP response");
@@ -1158,7 +1158,7 @@ mod tests {
 
         // Stop an AP
         let stop_fut =
-            test_values.iface_manager.stop_ap("foo".as_bytes().to_vec(), "bar".as_bytes().to_vec());
+            test_values.iface_manager.stop_ap(Ssid::from("foo"), "bar".as_bytes().to_vec());
         pin_mut!(stop_fut);
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Pending);
 

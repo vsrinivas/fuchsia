@@ -403,7 +403,7 @@ impl IfaceManagerService {
     ) -> Result<oneshot::Receiver<()>, Error> {
         // Get a ClientIfaceContainer.
         let mut client_iface =
-            if connect_req.target.network.type_ == client_types::SecurityType::Wpa3 {
+            if connect_req.target.network.security_type == client_types::SecurityType::Wpa3 {
                 self.get_wpa3_capable_client(None).await?
             } else {
                 self.get_client(None).await?
@@ -767,7 +767,7 @@ impl IfaceManagerService {
 
     fn stop_ap(
         &mut self,
-        ssid: Vec<u8>,
+        ssid: ap_types::Ssid,
         credential: Vec<u8>,
     ) -> BoxFuture<'static, Result<(), Error>> {
         if let Some(removal_index) =
@@ -1236,7 +1236,7 @@ mod tests {
             task::Poll,
             TryFutureExt, TryStreamExt,
         },
-        ieee80211::Ssid,
+        lazy_static::lazy_static,
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         tempfile::TempDir,
@@ -1253,15 +1253,19 @@ mod tests {
     pub const TEST_AP_IFACE_ID: u16 = 1;
 
     // Fake WLAN network that tests will scan for and connect to.
-    pub static TEST_SSID: &str = "test_ssid";
+    lazy_static! {
+        pub static ref TEST_SSID: ap_types::Ssid = ap_types::Ssid::from("test_ssid");
+    }
     pub static TEST_PASSWORD: &str = "test_password";
 
     /// Produces wlan network configuration objects to be used in tests.
-    pub fn create_connect_request(ssid: &str, password: &str) -> client_types::ConnectRequest {
-        let ssid = ssid.as_bytes().to_vec();
+    pub fn create_connect_request(
+        ssid: &ap_types::Ssid,
+        password: &str,
+    ) -> client_types::ConnectRequest {
         let network = ap_types::NetworkIdentifier {
             ssid: ssid.clone(),
-            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
+            security_type: ap_types::SecurityType::Wpa,
         };
         let credential = Credential::Password(password.as_bytes().to_vec());
 
@@ -1270,7 +1274,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(fake_fidl_bss_description!(Wpa1, ssid: Ssid::from(&ssid))),
+                bss_description: Some(fake_fidl_bss_description!(Wpa1, ssid: ssid.clone())),
                 multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -1596,8 +1600,8 @@ mod tests {
 
         if configured {
             client_container.config = Some(ap_types::NetworkIdentifier {
-                ssid: TEST_SSID.as_bytes().to_vec(),
-                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
+                ssid: TEST_SSID.clone(),
+                security_type: ap_types::SecurityType::Wpa,
             });
             client_container.client_state_machine = Some(Box::new(FakeClient::new()));
         }
@@ -1606,12 +1610,12 @@ mod tests {
         (iface_manager, server.into_stream().unwrap().into_future())
     }
 
-    fn create_ap_config(ssid: &str, password: &str) -> ap_fsm::ApConfig {
+    fn create_ap_config(ssid: &ap_types::Ssid, password: &str) -> ap_fsm::ApConfig {
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
         ap_fsm::ApConfig {
             id: ap_types::NetworkIdentifier {
-                ssid: ssid.as_bytes().to_vec(),
-                type_: fidl_fuchsia_wlan_policy::SecurityType::None,
+                ssid: ssid.clone(),
+                security_type: ap_types::SecurityType::None,
             },
             credential: password.as_bytes().to_vec(),
             radio_config,
@@ -1830,14 +1834,14 @@ mod tests {
     #[fuchsia::test]
     fn test_connect_with_configured_iface() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-        let other_test_ssid = "other_ssid_connecting";
+        let other_test_ssid = ap_types::Ssid::from("other_ssid_connecting");
 
         // Create a configured ClientIfaceContainer.
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Configure the mock CSM with the expected connect request
-        let connect_request = create_connect_request(other_test_ssid, TEST_PASSWORD);
+        let connect_request = create_connect_request(&other_test_ssid, TEST_PASSWORD);
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
@@ -1871,10 +1875,7 @@ mod tests {
         assert_eq!(iface_manager.clients.len(), 1);
         assert_eq!(
             iface_manager.clients[0].config,
-            Some(
-                NetworkIdentifier::new(other_test_ssid.as_bytes().to_vec(), SecurityType::Wpa)
-                    .into()
-            )
+            Some(NetworkIdentifier::new(other_test_ssid, SecurityType::Wpa).into())
         );
     }
 
@@ -1896,7 +1897,7 @@ mod tests {
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Add credentials for the test network to the saved networks.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let save_network_fut = test_values.saved_networks.store(network_id.clone(), credential);
         pin_mut!(save_network_fut);
@@ -1906,7 +1907,7 @@ mod tests {
 
         {
             let connect_response_fut = {
-                let config = create_connect_request(TEST_SSID, TEST_PASSWORD);
+                let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
                 let connect_fut = iface_manager.connect(config);
                 pin_mut!(connect_fut);
 
@@ -1953,7 +1954,7 @@ mod tests {
             let connect_txn_handle = assert_variant!(
                 poll_sme_req(&mut exec, &mut _sme_stream),
                 Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
-                    assert_eq!(req.ssid, TEST_SSID.as_bytes().to_vec());
+                    assert_eq!(req.ssid, TEST_SSID.clone());
                     assert_eq!(req.credential, fidl_fuchsia_wlan_sme::Credential::Password(TEST_PASSWORD.as_bytes().to_vec()));
                     let (_stream, ctrl) = txn.expect("connect txn unused")
                         .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2003,7 +2004,7 @@ mod tests {
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Add credentials for the test network to the saved networks.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa3);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa3);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let save_network_fut =
             test_values.saved_networks.store(network_id.clone(), credential.clone());
@@ -2021,7 +2022,7 @@ mod tests {
                         observed_in_passive_scan: Some(true),
                         bss_description: Some(fake_fidl_bss_description!(
                             Wpa3,
-                            ssid: Ssid::from(TEST_SSID)
+                            ssid: TEST_SSID.clone()
                         )),
                         multiple_bss_candidates: Some(true),
                     },
@@ -2072,7 +2073,7 @@ mod tests {
             let connect_txn_handle = assert_variant!(
                 poll_sme_req(&mut exec, &mut _sme_stream),
                 Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
-                    assert_eq!(req.ssid, TEST_SSID.as_bytes().to_vec());
+                    assert_eq!(req.ssid, TEST_SSID.clone());
                     assert_eq!(req.credential, fidl_fuchsia_wlan_sme::Credential::Password(TEST_PASSWORD.as_bytes().to_vec()));
                     let (_stream, ctrl) = txn.expect("connect txn unused")
                         .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2108,10 +2109,10 @@ mod tests {
             create_iface_manager_with_client(&test_values, false);
 
         // Call connect on the IfaceManager
-        let ssid = b"some_ssid".to_vec();
+        let ssid = ap_types::Ssid::from("some_ssid");
         let network = ap_types::NetworkIdentifier {
             ssid: ssid.clone(),
-            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa3,
+            security_type: ap_types::SecurityType::Wpa3,
         };
         let credential = Credential::Password(b"some_password".to_vec());
 
@@ -2120,7 +2121,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(fake_fidl_bss_description!(Wpa3, ssid: Ssid::from(&ssid))),
+                bss_description: Some(fake_fidl_bss_description!(Wpa3, ssid: ssid.clone())),
                 multiple_bss_candidates: None,
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2138,10 +2139,10 @@ mod tests {
     fn test_connect_wpa3_with_configured_iface() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
         // Build the connect request for connecting to the WPA3 network.
-        let ssid = b"some_wpa3_network".to_vec();
+        let ssid = ap_types::Ssid::from("some_wpa3_network");
         let network = ap_types::NetworkIdentifier {
             ssid: ssid.clone(),
-            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa3,
+            security_type: ap_types::SecurityType::Wpa3,
         };
         let credential = Credential::Password(b"password".to_vec());
         let connect_request = client_types::ConnectRequest {
@@ -2149,7 +2150,7 @@ mod tests {
                 network: network.clone(),
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(fake_fidl_bss_description!(Wpa3, ssid: Ssid::from(&ssid))),
+                bss_description: Some(fake_fidl_bss_description!(Wpa3, ssid: ssid.clone())),
                 multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2227,7 +2228,7 @@ mod tests {
         );
 
         // Call connect on the IfaceManager
-        let config = create_connect_request(TEST_SSID, TEST_PASSWORD);
+        let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
         let connect_fut = iface_manager.connect(config);
 
         // Verify that the request to connect results in an error.
@@ -2251,7 +2252,7 @@ mod tests {
         drop(test_values.device_service_stream);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(test_values.saved_networks.store(network_id, credential))
@@ -2259,7 +2260,7 @@ mod tests {
             .is_none());
 
         // Ask the IfaceManager to connect and make sure that it fails.
-        let config = create_connect_request(TEST_SSID, TEST_PASSWORD);
+        let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
         let connect_fut = iface_manager.connect(config);
 
         pin_mut!(connect_fut);
@@ -2275,7 +2276,7 @@ mod tests {
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(test_values.saved_networks.store(network_id, credential))
@@ -2285,8 +2286,8 @@ mod tests {
         {
             // Issue a call to disconnect from the network.
             let network_id = ap_types::NetworkIdentifier {
-                ssid: TEST_SSID.as_bytes().to_vec(),
-                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
+                ssid: TEST_SSID.clone(),
+                security_type: ap_types::SecurityType::Wpa,
             };
             let disconnect_fut = iface_manager
                 .disconnect(network_id, client_types::DisconnectReason::NetworkUnsaved);
@@ -2312,7 +2313,7 @@ mod tests {
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Create a PhyManager with knowledge of a single client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(test_values.saved_networks.store(network_id, credential))
@@ -2322,8 +2323,8 @@ mod tests {
         {
             // Issue a disconnect request for a bogus network configuration.
             let network_id = ap_types::NetworkIdentifier {
-                ssid: "nonexistent_ssid".as_bytes().to_vec(),
-                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
+                ssid: ap_types::Ssid::from("nonexistent_ssid"),
+                security_type: ap_types::SecurityType::Wpa,
             };
             let disconnect_fut = iface_manager
                 .disconnect(network_id, client_types::DisconnectReason::NetworkUnsaved);
@@ -2363,8 +2364,8 @@ mod tests {
 
         // Call disconnect on the IfaceManager
         let network_id = ap_types::NetworkIdentifier {
-            ssid: "nonexistent_ssid".as_bytes().to_vec(),
-            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
+            ssid: ap_types::Ssid::from("nonexistent_ssid"),
+            security_type: ap_types::SecurityType::Wpa,
         };
         let disconnect_fut =
             iface_manager.disconnect(network_id, client_types::DisconnectReason::NetworkUnsaved);
@@ -2392,8 +2393,8 @@ mod tests {
 
         // Call disconnect on the IfaceManager
         let network_id = ap_types::NetworkIdentifier {
-            ssid: TEST_SSID.as_bytes().to_vec(),
-            type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
+            ssid: TEST_SSID.clone(),
+            security_type: ap_types::SecurityType::Wpa,
         };
         let disconnect_fut =
             iface_manager.disconnect(network_id, client_types::DisconnectReason::NetworkUnsaved);
@@ -2413,7 +2414,7 @@ mod tests {
         iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
         // Create a PhyManager with a single, known client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(test_values.saved_networks.store(network_id, credential))
@@ -2461,7 +2462,7 @@ mod tests {
         iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
         // Create a PhyManager with one known client.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(test_values.saved_networks.store(network_id, credential))
@@ -2546,7 +2547,7 @@ mod tests {
         }));
 
         // Create a PhyManager with a single, known client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(test_values.saved_networks.store(network_id, credential))
@@ -2592,7 +2593,7 @@ mod tests {
         }));
 
         // Create a PhyManager with a single, known client iface.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(test_values.saved_networks.store(network_id, credential))
@@ -2831,7 +2832,7 @@ mod tests {
         let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
-        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+        let config = create_ap_config(&TEST_SSID, TEST_PASSWORD);
 
         {
             let fut = iface_manager.start_ap(config);
@@ -2851,7 +2852,7 @@ mod tests {
         let test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: false, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
-        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+        let config = create_ap_config(&TEST_SSID, TEST_PASSWORD);
 
         {
             let fut = iface_manager.start_ap(config);
@@ -2885,7 +2886,7 @@ mod tests {
         );
 
         // Call start_ap.
-        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+        let config = create_ap_config(&TEST_SSID, TEST_PASSWORD);
         let fut = iface_manager.start_ap(config);
 
         pin_mut!(fut);
@@ -2900,13 +2901,12 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
-        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+        let config = create_ap_config(&TEST_SSID, TEST_PASSWORD);
         iface_manager.aps[0].config = Some(config);
         iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         {
-            let fut = iface_manager
-                .stop_ap(TEST_SSID.as_bytes().to_vec(), TEST_PASSWORD.as_bytes().to_vec());
+            let fut = iface_manager.stop_ap(TEST_SSID.clone(), TEST_PASSWORD.as_bytes().to_vec());
             pin_mut!(fut);
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
         }
@@ -2926,8 +2926,7 @@ mod tests {
         iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         {
-            let fut = iface_manager
-                .stop_ap(TEST_SSID.as_bytes().to_vec(), TEST_PASSWORD.as_bytes().to_vec());
+            let fut = iface_manager.stop_ap(TEST_SSID.clone(), TEST_PASSWORD.as_bytes().to_vec());
             pin_mut!(fut);
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
         }
@@ -2948,13 +2947,12 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: false, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
-        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+        let config = create_ap_config(&TEST_SSID, TEST_PASSWORD);
         iface_manager.aps[0].config = Some(config);
         iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         {
-            let fut = iface_manager
-                .stop_ap(TEST_SSID.as_bytes().to_vec(), TEST_PASSWORD.as_bytes().to_vec());
+            let fut = iface_manager.stop_ap(TEST_SSID.clone(), TEST_PASSWORD.as_bytes().to_vec());
             pin_mut!(fut);
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
         }
@@ -2973,13 +2971,12 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: false };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
-        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+        let config = create_ap_config(&TEST_SSID, TEST_PASSWORD);
         iface_manager.aps[0].config = Some(config);
         iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         {
-            let fut = iface_manager
-                .stop_ap(TEST_SSID.as_bytes().to_vec(), TEST_PASSWORD.as_bytes().to_vec());
+            let fut = iface_manager.stop_ap(TEST_SSID.clone(), TEST_PASSWORD.as_bytes().to_vec());
             pin_mut!(fut);
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
         }
@@ -3012,8 +3009,7 @@ mod tests {
             test_values.cobalt_api,
             test_values.telemetry_sender,
         );
-        let fut =
-            iface_manager.stop_ap(TEST_SSID.as_bytes().to_vec(), TEST_PASSWORD.as_bytes().to_vec());
+        let fut = iface_manager.stop_ap(TEST_SSID.clone(), TEST_PASSWORD.as_bytes().to_vec());
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
     }
@@ -3160,7 +3156,7 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
-        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+        let config = create_ap_config(&TEST_SSID, TEST_PASSWORD);
 
         // Issue an initial start command.
         {
@@ -3174,9 +3170,9 @@ mod tests {
         let initial_start_time = iface_manager.aps[0].enabled_time.clone();
 
         // Now issue a second start command.
-        let alternate_ssid = "some_other_ssid";
+        let alternate_ssid = ap_types::Ssid::from("some_other_ssid");
         let alternate_password = "some_other_password";
-        let config = create_ap_config(alternate_ssid, alternate_password);
+        let config = create_ap_config(&alternate_ssid, alternate_password);
         {
             let fut = iface_manager.start_ap(config);
 
@@ -3867,9 +3863,9 @@ mod tests {
         // Send a disconnect request.
         let (ack_sender, ack_receiver) = oneshot::channel();
         let req = DisconnectRequest {
-            network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier {
-                ssid: TEST_SSID.as_bytes().to_vec(),
-                type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
+            network_id: client_types::NetworkIdentifier {
+                ssid: TEST_SSID.clone(),
+                security_type: client_types::SecurityType::Wpa,
             },
             reason: client_types::DisconnectReason::NetworkUnsaved,
             responder: ack_sender,
@@ -3887,9 +3883,9 @@ mod tests {
         );
     }
 
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: Some(create_connect_request(TEST_SSID, TEST_PASSWORD))},
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: Some(create_connect_request(&TEST_SSID, TEST_PASSWORD))},
         TestType::Pass; "successfully connected a client")]
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: Some(create_connect_request(TEST_SSID, TEST_PASSWORD))},
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: Some(create_connect_request(&TEST_SSID, TEST_PASSWORD))},
         TestType::ClientError; "client drops receiver")]
     #[fuchsia::test(add_test_attr = false)]
     fn service_connect_test(fake_client: FakeClient, test_type: TestType) {
@@ -4138,7 +4134,11 @@ mod tests {
             unimplemented!()
         }
 
-        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+        async fn stop_ap(
+            &mut self,
+            _ssid: ap_types::Ssid,
+            _password: Vec<u8>,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -4563,7 +4563,7 @@ mod tests {
         // Request that an AP be started.
         let (start_sender, start_receiver) = oneshot::channel();
         let req = StartApRequest {
-            config: create_ap_config(TEST_SSID, TEST_PASSWORD),
+            config: create_ap_config(&TEST_SSID, TEST_PASSWORD),
             responder: start_sender,
         };
         let req = IfaceManagerRequest::StartAp(req);
@@ -4589,13 +4589,13 @@ mod tests {
 
         // Create an IfaceManager with a configured fake AP interface.
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
-        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+        let config = create_ap_config(&TEST_SSID, TEST_PASSWORD);
         iface_manager.aps[0].config = Some(config);
 
         // Request that an AP be stopped.
         let (stop_sender, stop_receiver) = oneshot::channel();
         let req = StopApRequest {
-            ssid: TEST_SSID.as_bytes().to_vec(),
+            ssid: TEST_SSID.clone(),
             password: TEST_PASSWORD.as_bytes().to_vec(),
             responder: stop_sender,
         };
@@ -4664,7 +4664,7 @@ mod tests {
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let save_network_fut = test_values.saved_networks.store(network_id, credential);
         pin_mut!(save_network_fut);
@@ -4674,7 +4674,7 @@ mod tests {
 
         // Ask the IfaceManager to reconnect.
         let mut sme_stream = {
-            let config = create_connect_request(TEST_SSID, TEST_PASSWORD);
+            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
             let reconnect_fut =
                 iface_manager.attempt_client_reconnect(TEST_CLIENT_IFACE_ID, config);
             pin_mut!(reconnect_fut);
@@ -4714,7 +4714,7 @@ mod tests {
         let connect_txn_handle = assert_variant!(
             poll_sme_req(&mut exec, &mut sme_stream),
             Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
-                assert_eq!(req.ssid, TEST_SSID.as_bytes().to_vec());
+                assert_eq!(req.ssid, TEST_SSID.clone());
                 assert_eq!(req.credential, fidl_fuchsia_wlan_sme::Credential::Password(TEST_PASSWORD.as_bytes().to_vec()));
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -4756,7 +4756,7 @@ mod tests {
         );
 
         // Update the saved networks with knowledge of the test SSID and credentials.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         assert!(exec
             .run_singlethreaded(test_values.saved_networks.store(network_id, credential))
@@ -4765,7 +4765,7 @@ mod tests {
 
         // Ask the IfaceManager to reconnect.
         {
-            let config = create_connect_request(TEST_SSID, TEST_PASSWORD);
+            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
             let reconnect_fut =
                 iface_manager.attempt_client_reconnect(TEST_CLIENT_IFACE_ID, config);
             pin_mut!(reconnect_fut);
@@ -4802,7 +4802,7 @@ mod tests {
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let save_network_fut = test_values.saved_networks.store(network_id, credential);
         pin_mut!(save_network_fut);
@@ -4812,7 +4812,7 @@ mod tests {
 
         // Ask the IfaceManager to reconnect.
         {
-            let config = create_connect_request(TEST_SSID, TEST_PASSWORD);
+            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
             let reconnect_fut =
                 iface_manager.attempt_client_reconnect(TEST_CLIENT_IFACE_ID, config);
             pin_mut!(reconnect_fut);
@@ -4843,7 +4843,7 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
 
         // Insert a saved network.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let mut stash_server = {
             let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -5004,7 +5004,7 @@ mod tests {
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
 
         // Create a candidate network.
-        let ssid = TEST_SSID.as_bytes().to_vec();
+        let ssid = TEST_SSID.clone();
         let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let network = Some(client_types::ConnectionCandidate {
@@ -5076,7 +5076,7 @@ mod tests {
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
 
         // Create a candidate network.
-        let ssid = TEST_SSID.as_bytes().to_vec();
+        let ssid = TEST_SSID.clone();
         let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let network = Some(client_types::ConnectionCandidate {
@@ -5117,7 +5117,7 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
 
         // Create a fake network entry so that a reconnect will be attempted.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
@@ -5347,7 +5347,7 @@ mod tests {
             let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
             let ap_container = ApIfaceContainer {
                 iface_id: TEST_AP_IFACE_ID,
-                config: Some(create_ap_config(TEST_SSID, TEST_PASSWORD)),
+                config: Some(create_ap_config(&TEST_SSID, TEST_PASSWORD)),
                 ap_state_machine: Box::new(fake_ap),
                 enabled_time: None,
             };

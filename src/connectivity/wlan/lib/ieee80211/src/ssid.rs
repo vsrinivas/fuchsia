@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{
-    borrow::Cow,
-    fmt,
-    ops::{Deref, Index},
-    slice::SliceIndex,
-    str,
+use {
+    arbitrary::Arbitrary,
+    std::{
+        borrow::Cow,
+        fmt,
+        ops::{Deref, Index},
+        slice::SliceIndex,
+        str,
+    },
 };
 
 /// A newtype wrapping a boxed slice with bytes representing an SSID
@@ -41,6 +44,7 @@ use std::{
 /// assert_eq!(ssid, [0x01, 0x02, 0x03, 0x04, 0x05]);
 /// assert_eq!(ssid, vec![0x01, 0x02, 0x03, 0x04, 0x05]);
 /// ```
+#[derive(Arbitrary)] // Derive Arbitrary for fuzzer
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Ssid(Box<[u8]>);
 

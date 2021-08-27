@@ -61,7 +61,7 @@ impl Into<Vec<fidl_policy::AccessPointState>> for ApStatesUpdate {
         self.access_points
             .iter()
             .map(|ap| fidl_policy::AccessPointState {
-                id: Some(types::NetworkIdentifier::from(ap.id.clone())),
+                id: Some(fidl_policy::NetworkIdentifier::from(ap.id.clone())),
                 state: Some(fidl_policy::OperatingState::from(ap.state)),
                 mode: ap.mode.map(|mode| fidl_policy::ConnectivityMode::from(mode)),
                 band: ap.band.map(|band| fidl_policy::OperatingBand::from(band)),
@@ -105,11 +105,15 @@ pub type ApListenerMessageSender = mpsc::UnboundedSender<ApMessage>;
 mod tests {
     use {
         super::{super::generic::CurrentStateCache, *},
+        crate::client::types::Ssid,
         fidl_fuchsia_wlan_policy as fidl_policy,
     };
 
     fn create_network_id() -> types::NetworkIdentifier {
-        types::NetworkIdentifier { ssid: b"test".to_vec(), type_: fidl_policy::SecurityType::None }
+        types::NetworkIdentifier {
+            ssid: Ssid::from("test"),
+            security_type: types::SecurityType::None,
+        }
     }
 
     #[fuchsia::test]
@@ -167,9 +171,9 @@ mod tests {
         assert_eq!(
             fidl_state,
             vec![fidl_policy::AccessPointState {
-                id: Some(types::NetworkIdentifier {
-                    ssid: b"test".to_vec(),
-                    type_: fidl_policy::SecurityType::None
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: Ssid::from("test").to_vec(),
+                    type_: fidl_policy::SecurityType::None,
                 }),
                 state: Some(fidl_policy::OperatingState::Starting),
                 mode: Some(fidl_policy::ConnectivityMode::Unrestricted),

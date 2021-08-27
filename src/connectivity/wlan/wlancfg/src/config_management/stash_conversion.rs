@@ -4,18 +4,19 @@
 
 use {
     super::network_config::{Credential, NetworkConfig, NetworkIdentifier, SecurityType},
+    crate::client::types as client_types,
     wlan_stash::policy as policy_stash,
 };
 
 impl From<policy_stash::NetworkIdentifier> for NetworkIdentifier {
     fn from(item: policy_stash::NetworkIdentifier) -> Self {
-        Self { ssid: item.ssid, security_type: item.security_type.into() }
+        Self { ssid: client_types::Ssid::from(item.ssid), security_type: item.security_type.into() }
     }
 }
 
 impl From<NetworkIdentifier> for policy_stash::NetworkIdentifier {
     fn from(item: NetworkIdentifier) -> Self {
-        Self { ssid: item.ssid, security_type: item.security_type.into() }
+        Self { ssid: item.ssid.into(), security_type: item.security_type.into() }
     }
 }
 
@@ -77,17 +78,20 @@ pub fn network_config_vec_to_persistent_data(
 
 #[cfg(test)]
 mod tests {
-    use {super::super::*, wlan_stash::policy as pstash};
+    use {
+        super::{super::*, *},
+        wlan_stash::policy as pstash,
+    };
 
     #[fuchsia::test]
     fn network_identifier_to_stash_from_policy() {
         assert_eq!(
             pstash::NetworkIdentifier::from(NetworkIdentifier {
-                ssid: b"ssid".to_vec(),
+                ssid: client_types::Ssid::from("ssid"),
                 security_type: SecurityType::Wep,
             }),
             pstash::NetworkIdentifier {
-                ssid: b"ssid".to_vec(),
+                ssid: client_types::Ssid::from("ssid").into(),
                 security_type: pstash::SecurityType::Wep,
             }
         );
@@ -97,10 +101,13 @@ mod tests {
     fn network_identifier_to_policy_from_stash() {
         assert_eq!(
             NetworkIdentifier::from(pstash::NetworkIdentifier {
-                ssid: b"ssid".to_vec(),
+                ssid: client_types::Ssid::from("ssid").into(),
                 security_type: pstash::SecurityType::Wep,
             }),
-            NetworkIdentifier { ssid: b"ssid".to_vec(), security_type: SecurityType::Wep }
+            NetworkIdentifier {
+                ssid: client_types::Ssid::from("ssid"),
+                security_type: SecurityType::Wep
+            }
         );
     }
 
@@ -152,7 +159,7 @@ mod tests {
     fn persistent_data_from_network_config() {
         // Check that from() works when has_ever_connected is true and false.
         let has_ever_connected = false;
-        let id = NetworkIdentifier::new(b"ssid".to_vec(), SecurityType::Wpa3);
+        let id = NetworkIdentifier::new("ssid", SecurityType::Wpa3);
         let credential = Credential::Password(b"foo_pass".to_vec());
         let network_config = NetworkConfig::new(id, credential, has_ever_connected)
             .expect("failed to create network config");
@@ -165,7 +172,7 @@ mod tests {
         );
 
         let has_ever_connected = true;
-        let id = NetworkIdentifier::new(b"ssid".to_vec(), SecurityType::None);
+        let id = NetworkIdentifier::new("ssid", SecurityType::None);
         let credential = Credential::None;
         let network_config = NetworkConfig::new(id, credential, has_ever_connected)
             .expect("failed to create network config");

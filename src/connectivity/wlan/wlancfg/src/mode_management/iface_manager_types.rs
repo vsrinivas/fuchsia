@@ -13,6 +13,8 @@ use {
     futures::channel::oneshot,
 };
 
+pub use ieee80211::Ssid;
+
 #[derive(Debug)]
 pub struct DisconnectRequest {
     pub network_id: ap_types::NetworkIdentifier,
@@ -79,7 +81,7 @@ pub struct StartApRequest {
 
 #[derive(Debug)]
 pub struct StopApRequest {
-    pub ssid: Vec<u8>,
+    pub ssid: Ssid,
     pub password: Vec<u8>,
     pub responder: oneshot::Sender<Result<(), Error>>,
 }

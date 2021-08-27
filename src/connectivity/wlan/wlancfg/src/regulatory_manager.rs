@@ -76,7 +76,8 @@ mod tests {
     use {
         super::{Arc, IfaceManagerApi, Mutex, RegulatoryManager},
         crate::{
-            access_point::state_machine as ap_fsm, client::types,
+            access_point::{state_machine as ap_fsm, types as ap_types},
+            client::types as client_types,
             regulatory_manager::REGION_CODE_LEN,
         },
         anyhow::{format_err, Error},
@@ -86,7 +87,7 @@ mod tests {
             RegulatoryRegionWatcherMarker, RegulatoryRegionWatcherRequest,
             RegulatoryRegionWatcherRequestStream,
         },
-        fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme, fuchsia_async as fasync,
+        fidl_fuchsia_wlan_sme, fuchsia_async as fasync,
         futures::{
             channel::{mpsc, oneshot},
             stream::{self, Stream, StreamExt},
@@ -414,15 +415,15 @@ mod tests {
     impl<S: Stream<Item = Result<(), Error>> + Send + Unpin> IfaceManagerApi for StubIfaceManager<S> {
         async fn disconnect(
             &mut self,
-            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
-            _reason: types::DisconnectReason,
+            _network_id: client_types::NetworkIdentifier,
+            _reason: client_types::DisconnectReason,
         ) -> Result<(), Error> {
             unimplemented!();
         }
 
         async fn connect(
             &mut self,
-            _connect_req: types::ConnectRequest,
+            _connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             unimplemented!();
         }
@@ -458,7 +459,7 @@ mod tests {
 
         async fn stop_client_connections(
             &mut self,
-            _reason: types::DisconnectReason,
+            _reason: client_types::DisconnectReason,
         ) -> Result<(), Error> {
             unimplemented!()
         }
@@ -474,7 +475,11 @@ mod tests {
             unimplemented!();
         }
 
-        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+        async fn stop_ap(
+            &mut self,
+            _ssid: ap_types::Ssid,
+            _password: Vec<u8>,
+        ) -> Result<(), Error> {
             unimplemented!();
         }
 
