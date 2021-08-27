@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <arpa/inet.h>
-#include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
@@ -19,7 +17,6 @@
 #include "guest_test.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
-#include "src/lib/inet/ip_address.h"
 
 using ::testing::Each;
 using ::testing::HasSubstr;
@@ -86,7 +83,10 @@ static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNet
 class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
  public:
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
-    *url = kZirconGuestUrl;
+    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(url, cfg);
+    if (status != ZX_OK) {
+      return status;
+    }
     cfg->set_virtio_gpu(false);
     // Disable netsvc to avoid spamming the net device with logs.
     cfg->mutable_cmdline_add()->emplace_back("kernel.serial=none netsvc.disable=true");
@@ -135,7 +135,10 @@ TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
 class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
  public:
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
-    *url = kDebianGuestUrl;
+    zx_status_t status = DebianEnclosedGuest::LaunchInfo(url, cfg);
+    if (status != ZX_OK) {
+      return status;
+    }
     cfg->set_virtio_gpu(false);
     cfg->mutable_net_devices()->emplace_back(kSecondNicNetSpec);
     return ZX_OK;

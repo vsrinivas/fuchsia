@@ -21,13 +21,6 @@
 #include "src/virtualization/third_party/vm_tools/vm_guest.grpc.pb.h"
 #include "src/virtualization/third_party/vm_tools/vm_host.grpc.pb.h"
 
-static constexpr char kZirconGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";
-static constexpr char kDebianGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
-static constexpr char kTerminaGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
-
 enum class GuestKernel {
   ZIRCON,
   LINUX,

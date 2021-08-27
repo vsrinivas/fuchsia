@@ -29,6 +29,10 @@
 
 namespace {
 
+constexpr char kZirconGuestUrl[] = "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";
+constexpr char kDebianGuestUrl[] = "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
+constexpr char kTerminaGuestUrl[] =
+    "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
 constexpr char kGuestManagerUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
 constexpr char kRealm[] = "realmguestintegrationtest";
