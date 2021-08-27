@@ -36,6 +36,7 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/vector.h>
 
+#include "display-info.h"
 #include "id-map.h"
 #include "image.h"
 #include "src/lib/async-watchdog/watchdog.h"
@@ -47,55 +48,6 @@ class Controller;
 class ControllerTest;
 class DisplayConfig;
 class IntegrationTest;
-
-class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
-                    public fbl::RefCounted<DisplayInfo> {
- private:
-  DisplayInfo() = default;
-  void PopulateDisplayAudio();
-
- public:
-  static zx::status<fbl::RefPtr<DisplayInfo>> Create(
-      const added_display_args_t& info, ddk::I2cImplProtocolClient* i2c);
-
-  // Should be called after init_done is set to true.
-  void InitializeInspect(inspect::Node* parent_node);
-
-  bool has_edid;
-  edid::Edid edid;
-  fbl::Vector<edid::timing_params_t> edid_timings;
-  fbl::Vector<audio_types_audio_stream_format_range_t> edid_audio_;
-
-  // This field has no meaning if EDID information is available.
-  display_params_t params;
-
-  fbl::Array<zx_pixel_format_t> pixel_formats_;
-  fbl::Array<cursor_info_t> cursor_infos_;
-
-  // Flag indicating that the display is ready to be published to clients.
-  bool init_done = false;
-
-  // A list of all images which have been sent to display driver. For multiple
-  // images which are displayed at the same time, images with a lower z-order
-  // occur first.
-  list_node_t images = LIST_INITIAL_VALUE(images);
-  // The number of layers in the applied configuration which are important for vsync (i.e.
-  // that have images).
-  uint32_t vsync_layer_count;
-
-  // Set when a layer change occurs on this display and cleared in vsync
-  // when the new layers are all active.
-  bool pending_layer_change;
-  // Flag indicating that a new configuration was delayed during a layer change
-  // and should be reapplied after the layer change completes.
-  bool delayed_apply;
-
-  // True when we're in the process of switching between display clients.
-  bool switching_client = false;
-
-  inspect::Node node;
-  inspect::ValueList properties;
-};
 
 using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable,
                                      ddk::Messageable<fuchsia_hardware_display::Provider>::Mixin>;

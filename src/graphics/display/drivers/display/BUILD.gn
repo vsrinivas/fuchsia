@@ -43,6 +43,7 @@ source_set("shared") {
   sources = [
     "client.cc",
     "controller.cc",
+    "display-info.cc",
     "eld.cc",
     "fence.cc",
     "image.cc",
