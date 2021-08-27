@@ -652,8 +652,6 @@ config("Wno-conversion") {
     "//garnet/lib/trace_converters:*",
     "//garnet/public/lib/fostr:*",
     "//garnet/public/lib/test_runner/cpp:*",
-    "//sdk/lib/fit:*",
-    "//sdk/lib/fit-promise:*",
     "//sdk/lib/media/audio/cpp:*",
     "//sdk/lib/media/cpp:*",
     "//sdk/lib/sys/cpp/tests:*",
