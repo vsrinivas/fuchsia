@@ -13,6 +13,13 @@ To migrate your system component from v1 to v2, do the following:
 -   [Migrate the component manifest](#create-component-manifest)
 -   [Migrate the tests](#migrate-tests)
 
+{% dynamic if user.is_googler %}
+
+For important additional considerations and resources you should review
+go/tq-cf-v2-migration-resources.
+
+{% dynamic endif %]
+
 Depending on the features your component supports, you may need to explore the
 following sections for additional guidance:
 
