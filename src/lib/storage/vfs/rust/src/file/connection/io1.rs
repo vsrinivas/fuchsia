@@ -17,8 +17,9 @@ use {
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
         NodeMarker, SeekOrigin, INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
+        VMO_FLAG_WRITE,
     },
     fuchsia_zircon::{
         self as zx,
@@ -479,6 +480,10 @@ impl<T: 'static + File> FileConnection<T> {
             return Err(zx::Status::ACCESS_DENIED);
         }
 
+        if connection_flags & OPEN_RIGHT_EXECUTABLE == 0 && new_vmo_flags & VMO_FLAG_EXEC != 0 {
+            return Err(zx::Status::ACCESS_DENIED);
+        }
+
         if new_vmo_flags & VMO_FLAG_PRIVATE != 0 && new_vmo_flags & VMO_FLAG_EXACT != 0 {
             return Err(zx::Status::INVALID_ARGS);
         }
@@ -866,6 +871,16 @@ mod tests {
         assert!(buffer.is_none());
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: 0 },]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_getbuffer_vmo_exec_requires_right_executable() {
+        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let (status, buffer) = env.proxy.get_buffer(VMO_FLAG_EXEC).await.unwrap();
+        assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
+        assert!(buffer.is_none());
+        let events = env.file.operations.lock().unwrap();
+        assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
     }
 
     #[fasync::run_singlethreaded(test)]
