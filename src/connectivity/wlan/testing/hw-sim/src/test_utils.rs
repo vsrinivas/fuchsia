@@ -15,7 +15,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt, TryStreamExt},
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     log::{debug, info},
     pin_utils::pin_mut,
     std::{
@@ -25,7 +25,7 @@ use {
         sync::Arc,
         task::{Context, Poll},
     },
-    wlan_common::{bss::Protection, mac::Bssid, test_utils::ExpectWithin},
+    wlan_common::{bss::Protection, test_utils::ExpectWithin},
     wlan_dev::DeviceEnv,
     wlantap_client::Wlantap,
 };

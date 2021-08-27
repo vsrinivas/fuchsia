@@ -5,12 +5,12 @@
 use {
     crate::{create_rx_info, send_beacon},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_tap as wlantap,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     std::collections::hash_map::HashMap,
     wlan_common::{
         bss::Protection,
         buffer_reader::BufferReader,
-        mac::{Bssid, FrameControl, FrameType, Msdu, MsduIterator},
+        mac::{FrameControl, FrameType, Msdu, MsduIterator},
     },
 };
 

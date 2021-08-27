@@ -256,8 +256,8 @@ pub struct ServingApInfoNode {
 impl ServingApInfoNode {
     fn new(node: Node, ap: &ServingApInfo, hasher: &WlanHasher) -> Self {
         let mut serving_ap_info_node = Self {
-            bssid: node.create_string("bssid", ap.bssid.to_mac_string()),
-            bssid_hash: node.create_string("bssid_hash", hasher.hash_mac_addr(&ap.bssid)),
+            bssid: node.create_string("bssid", ap.bssid.0.to_mac_string()),
+            bssid_hash: node.create_string("bssid_hash", hasher.hash_mac_addr(&ap.bssid.0)),
             ssid: node.create_string("ssid", ap.ssid.to_string()),
             ssid_hash: node.create_string("ssid_hash", hasher.hash_ssid(&ap.ssid)),
             rssi_dbm: node.create_int("rssi_dbm", ap.rssi_dbm as i64),
@@ -284,8 +284,8 @@ impl ServingApInfoNode {
     }
 
     fn update(&mut self, ap: &ServingApInfo, hasher: &WlanHasher) {
-        self.bssid.set(&ap.bssid.to_mac_string());
-        self.bssid_hash.set(&hasher.hash_mac_addr(&ap.bssid));
+        self.bssid.set(&ap.bssid.0.to_mac_string());
+        self.bssid_hash.set(&hasher.hash_mac_addr(&ap.bssid.0));
         self.ssid.set(&ap.ssid.to_string());
         self.ssid_hash.set(&hasher.hash_ssid(&ap.ssid));
         self.rssi_dbm.set(ap.rssi_dbm as i64);

@@ -29,7 +29,7 @@ use {
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, MacAddr, Ssid},
     log::{error, warn},
     scanner::Scanner,
     state::States,
@@ -41,7 +41,7 @@ use {
         buffer_writer::BufferWriter,
         data_writer,
         ie::{self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader},
-        mac::{self, Aid, Bssid, MacAddr, PowerState},
+        mac::{self, Aid, PowerState},
         mgmt_writer,
         sequence::SequenceManager,
         time::TimeUnit,
@@ -229,7 +229,7 @@ impl ClientMlme {
             Ok(()) => {
                 self.sta.replace(Client::new(
                     bss.ssid.clone(),
-                    Bssid(bss.bssid),
+                    bss.bssid,
                     self.ctx.device.wlanmac_info().mac_addr,
                     bss.beacon_period,
                     bss.rsne().is_some()
@@ -264,7 +264,7 @@ impl ClientMlme {
             .map_err(|status| Error::Status(format!("Error setting device channel"), status))?;
 
         let bss_config = banjo_internal::BssConfig {
-            bssid: bss.bssid.clone(),
+            bssid: bss.bssid.0,
             bss_type: banjo_internal::BssType::INFRASTRUCTURE,
             remote: true,
         };

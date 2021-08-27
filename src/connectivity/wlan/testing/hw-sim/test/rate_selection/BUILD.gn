@@ -9,6 +9,7 @@ rustc_test("rate_selection") {
   deps = [
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

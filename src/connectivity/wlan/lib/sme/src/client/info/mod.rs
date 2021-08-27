@@ -19,7 +19,7 @@ use {
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     wlan_common::{
         self,
         bss::{BssDescription, Protection},
@@ -309,7 +309,7 @@ pub struct DisconnectInfo {
     pub connected_duration: zx::Duration,
     pub last_rssi: i8,
     pub last_snr: i8,
-    pub bssid: [u8; 6],
+    pub bssid: Bssid,
     pub ssid: Ssid,
     pub channel: wlan_common::channel::Channel,
     pub disconnect_source: DisconnectSource,

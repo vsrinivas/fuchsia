@@ -6,12 +6,13 @@ use {
     anyhow::ensure,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
+    ieee80211::Bssid,
     pin_utils::pin_mut,
     wlan_common::{buffer_reader::BufferReader, mac},
     wlan_hw_sim::*,
 };
 
-const BSS: mac::Bssid = mac::Bssid([0x65, 0x74, 0x68, 0x6e, 0x65, 0x74]);
+const BSS: Bssid = Bssid([0x65, 0x74, 0x68, 0x6e, 0x65, 0x74]);
 const PAYLOAD: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 async fn send_and_receive<'a>(

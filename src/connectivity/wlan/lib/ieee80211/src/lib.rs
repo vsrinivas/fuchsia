@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod bssid;
 mod ssid;
 
+pub use bssid::Bssid;
+pub use bssid::MacAddr;
+pub use bssid::WILDCARD_BSSID;
 pub use ssid::Ssid;

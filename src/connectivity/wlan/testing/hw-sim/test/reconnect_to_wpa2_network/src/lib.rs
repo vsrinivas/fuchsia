@@ -9,12 +9,9 @@ use {
     fuchsia_async::Task,
     fuchsia_zircon::prelude::*,
     futures::channel::oneshot,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    wlan_common::{
-        bss::Protection,
-        mac::{self, Bssid},
-    },
+    wlan_common::{bss::Protection, mac},
     wlan_hw_sim::*,
     wlan_rsn::{
         self,
@@ -51,7 +48,7 @@ fn handle_phy_event(
     event: &WlantapPhyEvent,
     phy: &WlantapPhyProxy,
     ssid: &Ssid,
-    bssid: &mac::Bssid,
+    bssid: &Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
     update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,

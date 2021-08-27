@@ -6,9 +6,9 @@ use {
     fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_zircon::DurationNum,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    wlan_common::mac::{self, Bssid},
+    wlan_common::mac,
     wlan_hw_sim::*,
 };
 

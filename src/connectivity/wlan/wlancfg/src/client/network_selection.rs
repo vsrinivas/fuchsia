@@ -177,7 +177,7 @@ impl InternalBss<'_> {
             "{}({:4}), {}, {:>4}dBm, channel {:8}, score {:4}{}{}{}{}",
             self.hasher.hash_ssid(&Ssid::from(&self.saved_network_info.network_id.ssid)),
             self.saved_security_type_to_string(),
-            self.hasher.hash_mac_addr(&self.scanned_bss.bssid),
+            self.hasher.hash_mac_addr(&self.scanned_bss.bssid.0),
             rssi,
             channel,
             self.score(),
@@ -200,7 +200,7 @@ impl<'a> WriteInspect for InternalBss<'a> {
     fn write_inspect(&self, writer: &InspectNode, key: &str) {
         inspect_insert!(writer, var key: {
             ssid_hash: self.hasher.hash_ssid(&Ssid::from(&self.saved_network_info.network_id.ssid)),
-            bssid_hash: self.hasher.hash_mac_addr(&self.scanned_bss.bssid),
+            bssid_hash: self.hasher.hash_mac_addr(&self.scanned_bss.bssid.0),
             rssi: self.scanned_bss.rssi,
             score: self.score(),
             security_type_saved: self.saved_security_type_to_string(),
@@ -1706,7 +1706,7 @@ mod tests {
                     "selected": {
                         ssid_hash: networks[2].hasher.hash_ssid(
                             &Ssid::from(&networks[2].saved_network_info.network_id.ssid)),
-                        bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].scanned_bss.bssid),
+                        bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].scanned_bss.bssid.0),
                         rssi: i64::from(networks[2].scanned_bss.rssi),
                         score: i64::from(networks[2].score()),
                         security_type_saved: networks[2].saved_security_type_to_string(),
@@ -1953,7 +1953,7 @@ mod tests {
                 bss_description: generate_random_bss_description(),
             },
             fidl_sme::ScanResult {
-                bssid: bss_1.bssid.clone(),
+                bssid: bss_1.bssid.0,
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 0,
                 snr_db: 0,
@@ -2035,14 +2035,14 @@ mod tests {
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_1.clone().into(),
             &credential_1.clone(),
-            [0, 0, 0, 0, 0, 0],
+            types::Bssid([0, 0, 0, 0, 0, 0]),
             fidl_sme::ConnectResultCode::Success,
             Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_2.clone().into(),
             &credential_2.clone(),
-            [0, 0, 0, 0, 0, 0],
+            types::Bssid([0, 0, 0, 0, 0, 0]),
             fidl_sme::ConnectResultCode::Success,
             Some(fidl_common::ScanType::Passive),
         ));
@@ -2293,14 +2293,14 @@ mod tests {
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             wpa_network_id.clone().into(),
             &credential,
-            [0, 0, 0, 0, 0, 0],
+            types::Bssid([0, 0, 0, 0, 0, 0]),
             fidl_sme::ConnectResultCode::Success,
             Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             wpa3_network_id.clone().into(),
             &wpa3_credential,
-            [0, 0, 0, 0, 0, 0],
+            types::Bssid([0, 0, 0, 0, 0, 0]),
             fidl_sme::ConnectResultCode::Success,
             Some(fidl_common::ScanType::Passive),
         ));
@@ -2514,11 +2514,21 @@ mod tests {
         });
     }
 
+    fn generate_random_bssid() -> types::Bssid {
+        types::Bssid(
+            (0..6)
+                .map(|_| rand::random::<u8>())
+                .collect::<Vec<u8>>()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+        )
+    }
+
     fn generate_random_bss() -> types::Bss {
         let mut rng = rand::thread_rng();
-        let bss = (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
         types::Bss {
-            bssid: bss.as_slice().try_into().unwrap(),
+            bssid: generate_random_bssid(),
             rssi: rng.gen_range(-100, 20),
             channel: generate_random_channel(),
             timestamp_nanos: 0,

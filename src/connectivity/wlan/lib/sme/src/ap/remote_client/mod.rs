@@ -11,12 +11,13 @@ use {
         ap::{
             aid,
             event::{ClientEvent, Event},
-            Context, MacAddr, MlmeRequest, RsnCfg,
+            Context, MlmeRequest, RsnCfg,
         },
         timer::EventId,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
+    ieee80211::MacAddr,
     log::error,
     wlan_common::{
         ie::SupportedRate,

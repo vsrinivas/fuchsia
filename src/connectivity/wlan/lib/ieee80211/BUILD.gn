@@ -10,11 +10,15 @@ rustc_library("ieee80211") {
   with_unit_tests = true
   edition = "2018"
 
-  deps = [ "//third_party/rust_crates:hex" ]
+  deps = [
+    "//src/lib/zerocopy",
+    "//third_party/rust_crates:hex",
+  ]
 
   test_deps = [ "//third_party/rust_crates:lazy_static" ]
 
   sources = [
+    "src/bssid.rs",
     "src/lib.rs",
     "src/ssid.rs",
   ]

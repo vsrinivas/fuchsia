@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, prelude::DurationNum};
-
-use crate::{timer::TimeoutDuration, MacAddr};
+use {
+    crate::timer::TimeoutDuration,
+    fuchsia_zircon::{self as zx, prelude::DurationNum},
+    ieee80211::MacAddr,
+};
 
 // fxbug.dev/53818 exposed the issue that longer timeout is needed for starting AP while the
 // client iface is scanning, this is not a magic number, but a number we chose after

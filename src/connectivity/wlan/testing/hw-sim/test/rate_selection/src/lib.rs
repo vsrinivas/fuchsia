@@ -10,6 +10,7 @@ use {
     fuchsia_async::Interval,
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, poll, StreamExt},
+    ieee80211::Bssid,
     log::info,
     pin_utils::pin_mut,
     std::collections::HashMap,
@@ -21,14 +22,14 @@ use {
 // Refer to |KMinstrelUpdateIntervalForHwSim| in //src/connectivity/wlan/drivers/wlan/device.cpp
 const DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
 
-const BSS_MINSTL: mac::Bssid = mac::Bssid([0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a]);
+const BSS_MINSTL: Bssid = Bssid([0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a]);
 
 fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> WlanTxStatusEntry {
     fidl_fuchsia_wlan_tap::WlanTxStatusEntry { tx_vec_idx: tx_vec_idx, attempts: 1 }
 }
 
 fn send_tx_status_report(
-    bssid: mac::Bssid,
+    bssid: Bssid,
     tx_vec_idx: u16,
     is_successful: bool,
     proxy: &WlantapPhyProxy,
@@ -56,7 +57,7 @@ fn send_tx_status_report(
 fn handle_rate_selection_event<F, G>(
     event: WlantapPhyEvent,
     phy: &WlantapPhyProxy,
-    bssid: &mac::Bssid,
+    bssid: &Bssid,
     hm: &mut HashMap<u16, u64>,
     should_succeed: F,
     is_converged: &mut G,

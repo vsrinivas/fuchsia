@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::mac::*;
+use {crate::mac::*, ieee80211::MacAddr};
 
 pub const EAPOL_PDU: &[u8] = &[5, 5, 5, 5, 5, 5, 5, 5];
 

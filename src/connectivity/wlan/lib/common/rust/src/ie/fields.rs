@@ -4,11 +4,12 @@
 
 use {
     crate::{
-        buffer_reader::BufferReader, mac::MacAddr, mac::ReasonCode, organization::Oui,
+        buffer_reader::BufferReader, mac::ReasonCode, organization::Oui,
         unaligned_view::UnalignedView,
     },
     banjo_ddk_hw_wlan_ieee80211 as banjo_80211,
     banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+    ieee80211::MacAddr,
     std::mem::size_of,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},

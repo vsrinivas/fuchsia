@@ -721,7 +721,8 @@ mod test {
             ecc,
         },
         hex::FromHex,
-        wlan_common::{assert_variant, mac::MacAddr},
+        ieee80211::MacAddr,
+        wlan_common::assert_variant,
     };
 
     // IEEE 802.11-18/1104r0: "New Test Vectors for SAE" provides all of these values.

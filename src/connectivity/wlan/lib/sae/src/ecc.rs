@@ -227,7 +227,7 @@ impl FiniteCyclicGroup for Group {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wlan_common::mac::MacAddr;
+    use ieee80211::MacAddr;
 
     // IEEE 802.11-2016 provides an incorrect SAE test vector.
     // IEEE 802.11-18/1104r0: New Test Vectors for SAE

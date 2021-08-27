@@ -16,6 +16,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        ieee80211::MacAddr,
         std::fmt,
         thiserror::Error,
         wlan_common::{

@@ -346,7 +346,7 @@ fn send_scan_results(
 
 fn convert_scan_result(s: ScanResult) -> fidl_sme::ScanResult {
     fidl_sme::ScanResult {
-        bssid: s.bssid,
+        bssid: s.bssid.0,
         ssid: s.ssid.into(),
         rssi_dbm: s.rssi_dbm,
         snr_db: s.snr_db,
@@ -382,7 +382,7 @@ mod tests {
         fidl_fuchsia_wlan_sme::{self as fidl_sme},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{stream::StreamFuture, task::Poll},
-        ieee80211::Ssid,
+        ieee80211::{Bssid, Ssid},
         pin_utils::pin_mut,
         rand::{prelude::ThreadRng, Rng},
         std::convert::TryInto,
@@ -690,7 +690,7 @@ mod tests {
             snr_db: rng.gen::<i8>(),
         };
         let scan_result = ScanResult {
-            bssid: bss_description.bssid.clone(),
+            bssid: Bssid(bss_description.bssid),
             ssid,
             rssi_dbm: bss_description.rssi_dbm,
             snr_db: bss_description.snr_db,

@@ -19,12 +19,12 @@ use {
     banjo_ddk_hw_wlan_wlaninfo::WlanInfoDriverFeature,
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
-    ieee80211::Ssid,
+    ieee80211::{MacAddr, Ssid},
     log::error,
     std::collections::{HashMap, VecDeque},
     wlan_common::{
         ie,
-        mac::{self, is_multicast, CapabilityInfo, EthernetIIHdr, MacAddr},
+        mac::{self, is_multicast, CapabilityInfo, EthernetIIHdr},
         tim, TimeUnit,
     },
     zerocopy::ByteSlice,
@@ -620,10 +620,9 @@ mod tests {
             timer::{FakeScheduler, Scheduler, Timer},
         },
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        ieee80211::Bssid,
         wlan_common::{
-            assert_variant,
-            big_endian::BigEndianU16,
-            mac::{Bssid, CapabilityInfo},
+            assert_variant, big_endian::BigEndianU16, mac::CapabilityInfo,
             test_utils::fake_frames::fake_wpa2_rsne,
         },
     };

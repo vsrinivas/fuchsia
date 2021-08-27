@@ -19,13 +19,13 @@ use {
         responder::Responder,
         sink::MlmeSink,
         timer::{self, EventId, TimedEvent, Timer},
-        MacAddr, MlmeRequest,
+        MlmeRequest,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
-    ieee80211::Ssid,
+    ieee80211::{MacAddr, Ssid},
     log::{debug, error, info, warn},
     std::collections::HashMap,
     wlan_common::{
@@ -795,6 +795,7 @@ mod tests {
         super::*,
         crate::{test_utils::*, MlmeStream, Station},
         fidl_fuchsia_wlan_mlme as fidl_mlme,
+        ieee80211::MacAddr,
         lazy_static::lazy_static,
         wlan_common::{
             assert_variant,
@@ -805,12 +806,12 @@ mod tests {
         },
     };
 
+    const AP_ADDR: MacAddr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
+    const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
+    const CLIENT_ADDR2: MacAddr = [0x22, 0x22, 0x22, 0x22, 0x22, 0x22];
     lazy_static! {
         static ref SSID: Ssid = Ssid::from([0x46, 0x55, 0x43, 0x48, 0x53, 0x49, 0x41]);
     }
-    const AP_ADDR: [u8; 6] = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
-    const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
-    const CLIENT_ADDR2: [u8; 6] = [0x22, 0x22, 0x22, 0x22, 0x22, 0x22];
     const RSNE: &'static [u8] = &[
         0x30, // element id
         0x2A, // length

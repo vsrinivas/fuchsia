@@ -2921,7 +2921,7 @@ mod tests {
             .disconnect_list
             .get_recent(zx::Time::ZERO);
         assert_variant!(disconnects.as_slice(), [disconnect] => {
-            assert_eq!(disconnect.bssid, bss_description.bssid);
+            assert_eq!(disconnect.bssid.0, bss_description.bssid);
         });
     }
 

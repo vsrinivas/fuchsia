@@ -679,6 +679,7 @@ mod tests {
         crate::ddk_converter::build_ddk_assoc_ctx,
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
         fidl_fuchsia_wlan_mlme as fidl_mlme,
+        ieee80211::{Bssid, MacAddr},
         std::{
             convert::TryInto,
             sync::{Arc, Mutex},
@@ -714,7 +715,7 @@ mod tests {
         (MinstrelRateSelector::new(timer_manager, update_interval, probe_sequence), timer)
     }
 
-    const TEST_MAC_ADDR: [u8; 6] = [50, 53, 51, 56, 55, 52];
+    const TEST_MAC_ADDR: MacAddr = [50, 53, 51, 56, 55, 52];
     const BASIC_RATE_BIT: u8 = 0b10000000;
     const RATES: [u8; 12] =
         [2, 4, 11, 22, 12 | BASIC_RATE_BIT, 18, 24, 36, 48, 72, 96, 108 | BASIC_RATE_BIT];
@@ -741,13 +742,7 @@ mod tests {
             })),
             vht_cap: None,
         };
-        build_ddk_assoc_ctx(
-            wlan_common::mac::Bssid(TEST_MAC_ADDR.clone()),
-            42,
-            negotiated_capabilities,
-            None,
-            None,
-        )
+        build_ddk_assoc_ctx(Bssid(TEST_MAC_ADDR), 42, negotiated_capabilities, None, None)
     }
 
     #[test]

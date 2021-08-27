@@ -21,10 +21,11 @@ use {
     banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
+    ieee80211::{Bssid, MacAddr},
     log::{error, warn},
     thiserror::Error,
     wlan_common::{
-        mac::{self, Bssid, CapabilityInfo, MacAddr},
+        mac::{self, CapabilityInfo},
         mgmt_writer,
         time::TimeUnit,
     },

@@ -4,8 +4,9 @@
 
 use {
     crate::{buffer_reader::BufferReader, unaligned_view::UnalignedView},
+    ieee80211::MacAddr,
     num::Unsigned,
-    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
+    zerocopy::{ByteSlice, LayoutVerified},
 };
 
 mod ctrl;
@@ -35,15 +36,6 @@ pub type Aid = u16;
 // IEEE Std 802.11-2016, 9.4.1.8: A non-DMG STA assigns the value of the AID in the range of 1 to
 // 2007.
 pub const MAX_AID: u16 = 2007;
-
-pub type MacAddr = [u8; 6];
-
-// Bssid is a newtype to wrap MacAddr where a BSSID is explicitly required, e.g. for beacon fields
-// or management frame helper functions (e.g. ap::write_open_auth_frame and
-// client::write_open_auth_frame).
-#[repr(transparent)]
-#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Bssid(pub MacAddr);
 
 pub const BCAST_ADDR: MacAddr = [0xFF; 6];
 

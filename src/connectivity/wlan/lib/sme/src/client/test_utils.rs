@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
     futures::channel::mpsc,
-    ieee80211::Ssid,
+    ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
     std::sync::{
         atomic::{AtomicBool, Ordering},
@@ -30,7 +30,7 @@ use {
 
 pub fn fake_serving_ap_info() -> ServingApInfo {
     ServingApInfo {
-        bssid: [55, 11, 22, 3, 9, 70],
+        bssid: Bssid([55, 11, 22, 3, 9, 70]),
         ssid: Ssid::from(b"foo".clone()),
         rssi_dbm: 0,
         snr_db: 0,
@@ -80,12 +80,12 @@ pub fn create_join_conf(result_code: fidl_mlme::JoinResultCode) -> fidl_mlme::Ml
 }
 
 pub fn create_auth_conf(
-    bssid: [u8; 6],
+    bssid: Bssid,
     result_code: fidl_mlme::AuthenticateResultCode,
 ) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::AuthenticateConf {
         resp: fidl_mlme::AuthenticateConfirm {
-            peer_sta_address: bssid,
+            peer_sta_address: bssid.0,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             result_code,
         },
