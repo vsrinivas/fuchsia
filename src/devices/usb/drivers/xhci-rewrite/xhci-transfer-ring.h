@@ -120,16 +120,6 @@ class TransferRing {
   TRBPromise AddressDeviceCommand(uint8_t slot_id, uint8_t port_id, std::optional<HubInfo> hub_info,
                                   bool bsr);
 
-  zx_status_t InitializeSlotBuffer(uint8_t slot_id, uint8_t port_id,
-                                   const std::optional<HubInfo>& hub_info, ddk::IoBuffer* out);
-
-  zx_status_t InitializeEndpointContext(uint8_t slot_id, uint8_t port_id,
-                                        const std::optional<HubInfo>& hub_info,
-                                        const ddk::IoBuffer& slot_context_buffer);
-  zx_status_t InitializeOutputContextBuffer(uint8_t slot_id, uint8_t port_id,
-                                            const std::optional<HubInfo>& hub_info,
-                                            ddk::IoBuffer* out);
-
  private:
   bool AvailableSlots(size_t count) __TA_REQUIRES(mutex_);
   zx_status_t AllocInternal(Control control) __TA_REQUIRES(mutex_);

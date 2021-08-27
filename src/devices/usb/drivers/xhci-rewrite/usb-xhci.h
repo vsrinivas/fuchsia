@@ -81,18 +81,27 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void DdkInit(ddk::InitTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);
-
   void DdkRelease();
-
-  // Queues a control request
-  void UsbHciControlRequestQueue(Request request);
-
-  // Queues a normal request
-  void UsbHciNormalRequestQueue(Request request);
 
   // USB HCI protocol implementation.
   void UsbHciRequestQueue(usb_request_t* usb_request,
                           const usb_request_complete_callback_t* complete_cb);
+  void UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf);
+  // Retrieves the max number of device slots supported by this host controller
+  size_t UsbHciGetMaxDeviceCount();
+  zx_status_t UsbHciEnableEndpoint(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,
+                                   const usb_ss_ep_comp_descriptor_t* ss_com_desc, bool enable);
+  uint64_t UsbHciGetCurrentFrame();
+  zx_status_t UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
+                                 const usb_hub_descriptor_t* desc, bool multi_tt);
+  zx_status_t UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb_speed_t speed);
+  zx_status_t UsbHciHubDeviceRemoved(uint32_t device_id, uint32_t port);
+  zx_status_t UsbHciHubDeviceReset(uint32_t device_id, uint32_t port);
+  zx_status_t UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address);
+  zx_status_t UsbHciResetDevice(uint32_t hub_address, uint32_t device_id);
+  size_t UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address);
+  zx_status_t UsbHciCancelAll(uint32_t device_id, uint8_t ep_address);
+  size_t UsbHciGetRequestSize();
 
   // Queues a USB request (compatibility shim for usb::CallbackRequest in unit test)
   void RequestQueue(usb_request_t* usb_request,
@@ -103,46 +112,13 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Queues a request and returns a promise
   fpromise::promise<OwnedRequest, void> UsbHciRequestQueue(OwnedRequest usb_request);
 
-  void UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf);
-
-  // Retrieves the max number of device slots supported by this host controller
-  size_t UsbHciGetMaxDeviceCount();
-
-  zx_status_t UsbHciEnableEndpoint(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,
-                                   const usb_ss_ep_comp_descriptor_t* ss_com_desc, bool enable);
-
   TRBPromise UsbHciEnableEndpoint(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,
                                   const usb_ss_ep_comp_descriptor_t* ss_com_desc);
-
   TRBPromise UsbHciDisableEndpoint(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,
                                    const usb_ss_ep_comp_descriptor_t* ss_com_desc);
-
-  uint64_t UsbHciGetCurrentFrame();
-
-  zx_status_t UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
-                                 const usb_hub_descriptor_t* desc, bool multi_tt);
-
-  zx_status_t UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb_speed_t speed);
-
-  zx_status_t UsbHciHubDeviceRemoved(uint32_t device_id, uint32_t port);
-
-  zx_status_t UsbHciHubDeviceReset(uint32_t device_id, uint32_t port);
-
-  zx_status_t UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address);
-
   TRBPromise UsbHciResetEndpointAsync(uint32_t device_id, uint8_t ep_address);
 
   bool Running() const { return running_; }
-
-  zx_status_t UsbHciResetDevice(uint32_t hub_address, uint32_t device_id);
-
-  size_t UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address);
-
-  zx_status_t UsbHciCancelAll(uint32_t device_id, uint8_t ep_address);
-
-  TRBPromise UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address);
-
-  size_t UsbHciGetRequestSize();
 
   // Offlines a device slot, removing its device node from the topology.
   TRBPromise DeviceOffline(uint32_t slot, TRB* continuation);
@@ -196,20 +172,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   zx::profile& get_profile() { return profile_; }
 
-  template <typename T>
-  void PostCallback(T&& callback) {
-    ddk_interaction_executor_.schedule_task(fpromise::make_ok_promise().then(
-        [this, cb = std::forward<T>(callback)](fpromise::result<void, void>& result) mutable {
-          cb(bus_);
-        }));
-  }
-
   uint8_t get_port_count() { return static_cast<uint8_t>(params_.MaxPorts()); }
-
-  TRBPromise UsbHciHubDeviceAddedAsync(uint32_t device_id, uint32_t port, usb_speed_t speed);
-
-  TRBPromise ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
-                               const usb_hub_descriptor_t* desc, bool multi_tt);
 
   // Resets a port. Not to be confused with ResetDevice.
   void ResetPort(uint16_t port);
@@ -271,23 +234,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // when xHCI binds
   zx_status_t InitThread();
 
-  // Resets the xHCI controller. This should only be called during initialization.
-  void ResetController();
-
-  // Initializes PCI
-  zx_status_t InitPci();
-
-  // Initializes MMIO
-  zx_status_t InitMmio();
-
-  // Performs the handoff from the BIOS to the xHCI driver
-  void BiosHandoff();
-
-  // Performs platform-specific initialization functions
-  void InitQuirks();
-
-  zx_status_t HciFinalize();
-
   const zx::bti& bti() const { return bti_; }
 
   size_t get_page_size() const { return page_size_; }
@@ -337,6 +283,25 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   // Starts the transfer of a control request
   void ControlRequestCommit(UsbRequestState* state);
+
+  template <typename T>
+  void PostCallback(T&& callback) {
+    ddk_interaction_executor_.schedule_task(fpromise::make_ok_promise().then(
+        [this, cb = std::forward<T>(callback)](fpromise::result<void, void>& result) mutable {
+          cb(bus_);
+        }));
+  }
+
+  TRBPromise ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
+                               const usb_hub_descriptor_t* desc, bool multi_tt);
+
+  // UsbHci Helper Functions
+  // Queues a control request
+  void UsbHciControlRequestQueue(Request request);
+  // Queues a normal request
+  void UsbHciNormalRequestQueue(Request request);
+  TRBPromise UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address);
+  TRBPromise UsbHciHubDeviceAddedAsync(uint32_t device_id, uint32_t port, usb_speed_t speed);
 
   // Global scheduler lock. This should be held when adding or removing
   // interrupters, and; eventually dynamically assigning transfer rings
@@ -419,12 +384,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Status information for each port in the system
   std::unique_ptr<PortState[]> port_state_;
 
-  // Completion which is signalled when the bus interface is bound
-  sync_completion_t bus_completion;
-
-  // Completion which is signalled when xHCI enters an operational state
-  sync_completion_t bringup_;
-
   // HCSPARAMS1 register (see xHCI section 5.3.3)
   HCSPARAMS1 params_;
 
@@ -461,11 +420,25 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // This is an opaque pointer that is managed by the test.
   void* test_harness_;
 
+  // InitThread Helper Functions and Variables
+  // Resets the xHCI controller. This should only be called during initialization.
+  void ResetController();
+  // Initializes PCI
+  zx_status_t InitPci();
+  // Initializes MMIO
+  zx_status_t InitMmio();
+  // Performs the handoff from the BIOS to the xHCI driver
+  void BiosHandoff();
+  // Performs platform-specific initialization functions
+  void InitQuirks();
+  zx_status_t HciFinalize();
   // Completion event which is signalled when driver initialization finishes
   sync_completion_t init_complete_;
-
+  // Completion which is signalled when the bus interface is bound
+  sync_completion_t bus_completion;
+  // Completion which is signalled when xHCI enters an operational state
+  sync_completion_t bringup_;
   std::optional<thrd_t> init_thread_;
-
   std::optional<ddk::InitTxn> init_txn_;
 };
 

@@ -75,6 +75,11 @@ class DeviceState {
                                   EventRing* event_ring, CommandRing* command_ring,
                                   ddk::MmioBuffer* mmio, bool bsr);
 
+  fbl::Mutex& transaction_lock() __TA_RETURN_CAPABILITY(transaction_lock_) {
+    return transaction_lock_;
+  }
+
+ private:
   zx_status_t InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_id, uint8_t port_id,
                                    const std::optional<HubInfo>& hub_info,
                                    std::unique_ptr<dma_buffer::PagedBuffer>* out);
@@ -88,11 +93,6 @@ class DeviceState {
                                             std::unique_ptr<dma_buffer::PagedBuffer>* out)
       __TA_REQUIRES(transaction_lock_);
 
-  fbl::Mutex& transaction_lock() __TA_RETURN_CAPABILITY(transaction_lock_) {
-    return transaction_lock_;
-  }
-
- private:
   uint8_t slot_ = 0;
   uint8_t port_ = 0;
   fbl::Mutex transaction_lock_;
