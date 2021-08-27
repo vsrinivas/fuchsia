@@ -75,11 +75,6 @@ fuchsia_test_package("netstack-integration-tests") {
     ":netcfg-netemul-config",
     "//src/connectivity/network/netcfg:component-v2",
   ]
-
-  if (is_coverage) {
-    # TODO(https://fxbug.dev/82948): Re-enable this test when we can avoid failure.
-    test_components -= [ ":netstack-filter-integration-test" ]
-  }
 }
 
 resource("netcfg-netemul-config") {
