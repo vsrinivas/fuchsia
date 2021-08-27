@@ -13,10 +13,10 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc, SinkExt, StreamExt},
     inspect_fetcher::InspectFetcher,
+    log::*,
     parking_lot::Mutex,
     serde_json::{self, json, Map, Value},
     std::{collections::HashMap, sync::Arc},
-    tracing::*,
 };
 
 // The capability name for the Inspect reader

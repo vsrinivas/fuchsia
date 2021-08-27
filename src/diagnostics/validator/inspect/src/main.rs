@@ -12,10 +12,14 @@ mod trials; // Defines the trials to run
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
-    fidl_test_inspect_validate as validate,
+    fidl_test_inspect_validate as validate, fuchsia_async as fasync, fuchsia_syslog as syslog,
     serde::Serialize,
     std::str::FromStr,
 };
+
+fn init_syslog() {
+    syslog::init_with_tags(&[]).expect("should not fail");
+}
 
 /// Validate Inspect VMO formats written by 'puppet' programs controlled by
 /// this Validator program and exercising Inspect library implementations.
@@ -92,8 +96,9 @@ impl FromStr for DiffType {
     }
 }
 
-#[fuchsia::component]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    init_syslog();
     let mut results = results::Results::new();
     let Opt { output, puppet_urls, version, diff_type, test_archive, .. } = argh::from_env();
     if version {

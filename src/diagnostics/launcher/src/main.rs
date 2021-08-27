@@ -4,7 +4,11 @@
 
 //! `launcher` launches librarified subprograms. See README.md.
 
-use {anyhow::Error, argh::FromArgs};
+use {
+    anyhow::{Context, Error},
+    argh::FromArgs,
+    fuchsia_async as fasync,
+};
 
 /// Top-level command.
 #[derive(FromArgs, PartialEq, Debug)]
@@ -23,7 +27,7 @@ enum CreateChildArgs {
     Kcounter(kcounter::CommandLine),
 }
 
-#[fuchsia::component(logging = false)]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let log_tag = match std::env::args().nth(1).as_ref().map(|s| s.as_str()) {
         Some(log_stats::PROGRAM_NAME) => log_stats::PROGRAM_NAME,
@@ -35,7 +39,7 @@ async fn main() -> Result<(), Error> {
         // help text. Then the program will exit.
         _ => "launcher",
     };
-    diagnostics_log::init!(&[log_tag]);
+    fuchsia_syslog::init_with_tags(&[log_tag]).context("initializing logging").unwrap();
     let args = v2_argh_wrapper::load_command_line::<LauncherArgs>()?;
     match args.program {
         CreateChildArgs::Detect(args) => detect::main(args).await,

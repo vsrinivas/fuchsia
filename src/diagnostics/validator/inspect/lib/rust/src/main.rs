@@ -17,14 +17,16 @@ use {
         DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_test_inspect_validate::*,
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::*,
+    fuchsia_syslog as syslog,
     fuchsia_zircon::HandleBased,
     futures::prelude::*,
     inspect_runtime::service,
+    log::*,
     std::collections::HashMap,
     std::sync::Arc,
-    tracing::*,
     vfs::{
         directory::{
             entry::DirectoryEntry,
@@ -604,8 +606,9 @@ fn make_diagnostics_dir<T: ServiceObjTrait>(fs: &mut ServiceFs<T>) -> Arc<Simple
     dir
 }
 
-#[fuchsia::component]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&[]).expect("should not fail");
     info!("Puppet starting");
 
     let mut fs = ServiceFs::new_local();

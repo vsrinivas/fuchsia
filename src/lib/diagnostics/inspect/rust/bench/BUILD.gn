@@ -18,7 +18,7 @@ rustc_binary("bin") {
 
   deps = [
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//src/lib/mapped-vmo",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",

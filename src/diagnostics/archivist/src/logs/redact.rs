@@ -437,7 +437,7 @@ mod test {
     }
 
     // A single Redactor is used for every line in the stream, so the numbers grow.
-    #[fuchsia::test]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn redact_all_in_stream() {
         let data = vec![
             ("Email: alice@website.tld", "Email: <REDACTED-EMAIL>"),

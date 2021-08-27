@@ -23,8 +23,9 @@ struct Opt {
     puppet_url: String,
 }
 
-#[fuchsia::component]
+#[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&[]).unwrap();
     let Opt { puppet_url } = argh::from_env();
     Puppet::launch(&puppet_url).await?.test().await
 }

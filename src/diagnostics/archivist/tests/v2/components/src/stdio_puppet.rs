@@ -4,9 +4,11 @@
 
 use anyhow::Error;
 use fidl_fuchsia_archivist_tests::{StdioPuppetRequest, StdioPuppetRequestStream};
+use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_syslog as syslog;
 use futures::prelude::*;
-use tracing::error;
+use log::error;
 
 /// Serves `StdioPuppet` requests received through the provided stream.
 async fn run_stdio_puppet(mut stream: StdioPuppetRequestStream) -> Result<(), Error> {
@@ -27,8 +29,10 @@ enum PuppetServices {
     StdioPuppet(StdioPuppetRequestStream),
 }
 
-#[fuchsia::component]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&[]).expect("should not fail");
+
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(PuppetServices::StdioPuppet);
 

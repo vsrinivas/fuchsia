@@ -5,6 +5,7 @@
 use {
     crate::{deprecated_fidl_server::*, table::*},
     anyhow::{format_err, Error},
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, ArrayProperty},
     futures::{FutureExt, StreamExt},
@@ -54,7 +55,7 @@ struct Options {
     extra_number: Option<i64>,
 }
 
-#[fuchsia::component]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let opts = Options::from_args();
     if opts.rows == 0 || opts.columns == 0 {

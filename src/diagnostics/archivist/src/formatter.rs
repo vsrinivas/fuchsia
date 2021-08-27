@@ -215,7 +215,7 @@ mod tests {
     use crate::diagnostics::AccessorStats;
     use futures::stream::iter;
 
-    #[fuchsia::test]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn two_items_joined_and_split() {
         let inputs = &[&"FFFFFFFFFF", &"GGGGGGGGGG"];
         let joined = &["[\"FFFFFFFFFF\",\n\"GGGGGGGGGG\"]"];

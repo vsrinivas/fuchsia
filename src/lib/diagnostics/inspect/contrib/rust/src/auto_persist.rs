@@ -7,6 +7,7 @@ use {
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::mpsc, Future, StreamExt},
     injectable_time::{MonotonicTime, TimeSource},
+    log::{error, info},
     std::{
         ops::{Deref, DerefMut},
         sync::{
@@ -14,7 +15,6 @@ use {
             Arc,
         },
     },
-    tracing::{error, info},
 };
 
 pub type PersistenceReqSender = mpsc::Sender<String>;

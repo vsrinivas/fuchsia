@@ -10,10 +10,11 @@ use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessag
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use fuchsia_component_test::builder::{Capability, CapabilityRoute, RouteEndpoint};
+use fuchsia_syslog::{self as syslog, fx_log_info};
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, Stream, StreamExt};
-use tracing::{info, warn};
+use tracing::warn;
 
 fn run_listener(tag: &str, proxy: LogProxy) -> impl Stream<Item = LogMessage> {
     let mut options = LogFilterOptions {
@@ -43,14 +44,14 @@ fn run_listener(tag: &str, proxy: LogProxy) -> impl Stream<Item = LogMessage> {
     recv_logs
 }
 
-#[fuchsia::test(logging = false)]
+#[fasync::run_singlethreaded(test)]
 async fn listen_for_syslog() {
     let random = rand::random::<u16>();
     let tag = "logger_integration_rust".to_string() + &random.to_string();
-    diagnostics_log::init!(&[&tag]);
+    syslog::init_with_tags(&[&tag]).expect("should not fail");
     let log_proxy = client::connect_to_protocol::<LogMarker>().unwrap();
     let incoming = run_listener(&tag, log_proxy);
-    info!("my msg: {}", 10);
+    fx_log_info!("my msg: {}", 10);
     warn!("log crate: {}", 20);
 
     let mut logs: Vec<LogMessage> = incoming.take(2).collect().await;
@@ -64,7 +65,7 @@ async fn listen_for_syslog() {
 
     assert_eq!(logs[1].tags[0], tag.clone());
     assert_eq!(logs[1].severity, LogLevelFilter::Warn as i32);
-    assert_eq!(logs[1].msg, "log crate: 20");
+    assert_eq!(logs[1].msg, "log crate: 20 ");
 }
 
 #[fuchsia::test]

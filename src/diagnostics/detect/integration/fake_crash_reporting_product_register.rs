@@ -7,11 +7,11 @@ use {
     anyhow::{bail, Error},
     fidl_fuchsia_feedback as fcrash, fuchsia_async as fasync,
     futures::StreamExt,
+    log::*,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    tracing::*,
 };
 
 const REPORT_PROGRAM_NAME: &str = "triage_detect";

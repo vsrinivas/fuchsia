@@ -6,8 +6,10 @@ use {
     anyhow::Error,
     argh,
     argh::FromArgs,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{component, health::Reporter},
+    fuchsia_syslog as syslog,
     futures::StreamExt,
     tracing::info,
 };
@@ -20,9 +22,10 @@ pub struct Args {
     with_logs: bool,
 }
 
-#[fuchsia::component(logging_tags = [ "iquery_basic_component" ])]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
+    syslog::init().unwrap();
     let inspector = component::inspector();
     inspector.root().record_string("iquery", "rocks");
     component::health().set_ok();

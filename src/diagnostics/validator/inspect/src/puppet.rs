@@ -246,8 +246,8 @@ pub(crate) mod tests {
         fuchsia_inspect::{Inspector, IntProperty, Node},
         fuchsia_zircon::HandleBased,
         futures::prelude::*,
+        log::*,
         std::collections::HashMap,
-        tracing::*,
     };
 
     #[test]

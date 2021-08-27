@@ -15,13 +15,13 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_diagnostics as diagnostics, fuchsia_async as fasync,
     futures::StreamExt,
+    log::*,
     parking_lot::Mutex,
     std::collections::BTreeSet,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    tracing::*,
 };
 
 /// EventSignaler supplies functions which FakeArchiveAccessor will call when events happen.

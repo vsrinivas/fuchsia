@@ -239,7 +239,7 @@ mod tests {
     use fidl_fuchsia_diagnostics::Severity;
     use futures::pin_mut;
 
-    #[fuchsia::test]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn nested_apps_with_diagnostics() {
         let mut test_realm = EnvWithDiagnostics::new().await;
         let logs = test_realm.listen_to_logs();
@@ -273,7 +273,7 @@ mod tests {
             expected: &'static str,
         ) {
             let next_message = logs.next().await.unwrap();
-            assert_eq!(next_message.tags, &["emitter-for-test.cmx"]);
+            assert_eq!(next_message.tags, &["emitter_bin"]);
             assert_eq!(next_message.severity, Severity::Info as i32);
             assert_eq!(next_message.msg, expected);
         }

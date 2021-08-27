@@ -49,8 +49,9 @@ struct Opt {
     ignored_tags: Vec<String>,
 }
 
-#[fuchsia::component]
+#[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&[]).unwrap();
     let Opt { puppet_url, new_file_line_rules, test_printf, test_stop_listener, ignored_tags } =
         argh::from_env();
     Puppet::launch(&puppet_url, new_file_line_rules, test_printf, test_stop_listener, ignored_tags)

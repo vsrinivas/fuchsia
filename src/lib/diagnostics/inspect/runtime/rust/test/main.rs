@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
+use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::*;
 use futures::prelude::*;
 
-#[fuchsia::component]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let root = component::inspector().root();
     root.record_int("int", 3);

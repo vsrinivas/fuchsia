@@ -19,8 +19,8 @@ use {
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_zircon::Duration,
     futures::{future::join, FutureExt, StreamExt},
+    log::*,
     persist_server::PersistServer,
-    tracing::*,
 };
 
 /// The name of the subcommand and the logs-tag.

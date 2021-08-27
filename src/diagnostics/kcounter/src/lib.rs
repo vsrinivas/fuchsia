@@ -11,8 +11,8 @@ use {
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_zircon as zx,
     futures::prelude::*,
+    log::*,
     std::sync::Arc,
-    tracing::*,
 };
 
 /// The name of the subcommand and the logs-tag.

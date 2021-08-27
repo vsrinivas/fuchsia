@@ -11,9 +11,8 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//src/lib/diagnostics/log/rust",
-    "//src/lib/fuchsia",
-    "//third_party/rust_crates:tracing",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:log",
   ]
 
   sources = [ "logging_component.rs" ]

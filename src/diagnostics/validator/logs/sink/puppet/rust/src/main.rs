@@ -14,8 +14,9 @@ use fuchsia_zircon::AsHandleRef;
 use futures::prelude::*;
 use tracing::*;
 
-#[fuchsia::component]
+#[fuchsia_async::run_singlethreaded]
 async fn main() {
+    diagnostics_log::init!();
     tracing::info!("Puppet started.");
     tracing::dispatcher::get_default(|dispatcher| {
         let publisher: &diagnostics_log::Publisher = dispatcher.downcast_ref().unwrap();

@@ -4,7 +4,7 @@
 
 // Triggers a snapshot via FIDL
 
-use tracing::{error, warn};
+use log::{error, warn};
 
 // Name of the crash-report product we're filing against.
 const CRASH_PRODUCT_NAME: &'static str = "FuchsiaDetect";
@@ -90,7 +90,7 @@ fn connect_proxy<T: fidl::endpoints::ProtocolMarker>(
 macro_rules! log_if_err {
     ($result:expr, $log_prefix:expr) => {
         if let Err(e) = $result.as_ref() {
-            tracing::error!("{}: {}", $log_prefix, e);
+            log::error!("{}: {}", $log_prefix, e);
         }
     };
 }

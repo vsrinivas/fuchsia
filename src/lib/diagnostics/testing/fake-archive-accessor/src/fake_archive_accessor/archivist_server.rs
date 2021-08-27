@@ -13,8 +13,8 @@ use {
     fuchsia_zircon as zx,
     fuchsia_zircon_status::Status as ZxStatus,
     futures::prelude::*,
+    log::warn,
     thiserror::Error,
-    tracing::warn,
 };
 
 pub struct AccessorServer {

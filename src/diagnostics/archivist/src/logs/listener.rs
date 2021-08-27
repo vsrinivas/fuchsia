@@ -208,7 +208,7 @@ mod tests {
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use libc::c_char;
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn normal_behavior_test() {
         let message_vec =
             provide_messages(fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize, 4);
@@ -216,7 +216,7 @@ mod tests {
         assert_eq!(run_and_consume_backfill(message_vec).await, 4);
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn packet_fits_but_converted_struct_would_cause_overflow_test() {
         let message_vec =
             provide_messages(fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize, 1);
@@ -224,7 +224,7 @@ mod tests {
         assert_eq!(run_and_consume_backfill(message_vec).await, 0);
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn one_packet_would_overflow_but_others_fit_test() {
         let mut message_vec =
             provide_messages(fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize, 1);

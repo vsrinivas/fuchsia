@@ -95,11 +95,11 @@ mod tests {
         },
         fidl_fuchsia_mem::Buffer,
         fuchsia_async as fasync,
+        fuchsia_syslog::macros::fx_log_err,
         fuchsia_zircon::{self as zx, HandleBased},
         futures::{TryFutureExt, TryStreamExt},
         std::convert::TryInto,
         std::sync::Arc,
-        tracing::error,
     };
 
     const MAX_TREE_NAME_LIST_SIZE: usize = 1;
@@ -158,7 +158,7 @@ mod tests {
         fasync::Task::spawn(async move {
             handle_request_stream(name, vmos, stream)
                 .await
-                .unwrap_or_else(|err: Error| error!(?err, "Couldn't run tree server"));
+                .unwrap_or_else(|e: Error| fx_log_err!("Couldn't run tree server: {:?}", e));
         })
         .detach();
     }
@@ -215,8 +215,8 @@ mod tests {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|err: Error| {
-                error!(?err, "Failed to running tree name iterator server");
+            .unwrap_or_else(|e: Error| {
+                fx_log_err!("Failed to running tree name iterator server: {:?}", e)
             }),
         )
         .detach()

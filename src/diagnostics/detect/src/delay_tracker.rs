@@ -7,8 +7,8 @@
 use {
     crate::{Mode, MINIMUM_SIGNATURE_INTERVAL_NANOS},
     injectable_time::TimeSource,
+    log::warn,
     std::collections::HashMap,
-    tracing::warn,
     triage::SnapshotTrigger,
 };
 

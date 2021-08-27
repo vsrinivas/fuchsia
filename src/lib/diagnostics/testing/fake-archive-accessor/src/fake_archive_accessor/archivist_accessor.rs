@@ -14,8 +14,8 @@ use {
     fidl_fuchsia_diagnostics::{
         self, ClientSelectorConfiguration, DataType, Format, Selector, SelectorArgument, StreamMode,
     },
+    log::warn,
     selectors,
-    tracing::warn,
 };
 
 /// ArchiveAccessor serves an incoming connection from a client to an Archivist

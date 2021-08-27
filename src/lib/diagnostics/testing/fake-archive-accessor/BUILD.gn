@@ -20,9 +20,9 @@ rustc_library("fake-archive-accessor") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:tracing",
   ]
   sources = [
     "src/fake_archive_accessor.rs",

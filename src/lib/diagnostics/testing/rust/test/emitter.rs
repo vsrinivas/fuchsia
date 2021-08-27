@@ -9,10 +9,11 @@ use fuchsia_component::{
 };
 use fuchsia_inspect::*;
 use futures::prelude::*;
-use tracing::info;
+use log::info;
 
-#[fuchsia::component]
+#[fuchsia_async::run_singlethreaded]
 async fn main() {
+    fuchsia_syslog::init().unwrap();
     info!("emitter started");
     let root = component::inspector().root();
     root.record_int("other_int", 7);

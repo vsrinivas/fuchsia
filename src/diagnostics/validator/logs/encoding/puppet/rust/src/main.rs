@@ -7,11 +7,12 @@ use {
     diagnostics_log_encoding::encode::{Encoder, EncodingError},
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_validate_logs::{EncodingPuppetRequest, EncodingPuppetRequestStream, PuppetError},
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::Vmo,
     futures::prelude::*,
+    log::*,
     std::io::Cursor,
-    tracing::*,
 };
 
 const BUFFER_SIZE: usize = 1024;
@@ -46,8 +47,9 @@ enum IncomingService {
     Encoding(EncodingPuppetRequestStream),
 }
 
-#[fuchsia::component]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&[]).unwrap();
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Encoding);
     fs.take_and_serve_directory_handle()?;

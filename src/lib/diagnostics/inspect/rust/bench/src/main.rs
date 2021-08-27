@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     argh::{FromArgValue, FromArgs},
+    fuchsia_async as fasync,
     fuchsia_inspect::{
         heap::Heap, reader::snapshot::Snapshot, ArrayProperty, ExponentialHistogramParams,
         HistogramProperty, Inspector, LinearHistogramParams, Node, NumericProperty, Property,
@@ -468,7 +469,7 @@ fn writer_benchmark(iterations: usize) {
     }
 }
 
-#[fuchsia::component]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     trace_provider_create_with_fdio();
     let args: Args = argh::from_env();

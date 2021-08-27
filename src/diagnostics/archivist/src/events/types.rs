@@ -501,7 +501,7 @@ mod tests {
         assert!(identifier.unique_key().is_empty());
     }
 
-    #[fuchsia::test] // we need an executor for the fidl types
+    #[fuchsia_async::run_singlethreaded(test)] // we need an executor for the fidl types
     async fn validate_logsink_requested_event() {
         let target_moniker = "./foo:0";
         let target_url = "http://foo.com".to_string();
