@@ -5,11 +5,11 @@
 use {
     crate::{
         client::{
-            scan::{self, ScanResultUpdate},
+            scan::{self, ScanReason::NetworkSelection as NetworkSelectionScan, ScanResultUpdate},
             types,
         },
         config_management::{
-            self, ConnectFailure, Credential, Disconnect, FailureReason, SavedNetworksManagerApi,
+            ConnectFailure, Credential, Disconnect, FailureReason, SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
         telemetry::{self, TelemetryEvent, TelemetrySender},
@@ -33,11 +33,9 @@ use {
     wlan_common::{channel::Channel, hasher::WlanHasher},
     wlan_inspect::wrappers::InspectWlanChan,
     wlan_metrics_registry::{
-        ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
         SavedNetworkInScanResultMetricDimensionBssCount,
         SavedNetworkInScanResultWithActiveScanMetricDimensionActiveScanSsidsObserved as ActiveScanSsidsObserved,
         ScanResultsReceivedMetricDimensionSavedNetworksCount,
-        ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
         LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID, SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID,
         SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID, SCAN_RESULTS_RECEIVED_METRIC_ID,
     },
@@ -280,12 +278,6 @@ impl NetworkSelector {
             scan_result_guard.results = vec![];
             drop(scan_result_guard);
 
-            let mut cobalt_api_clone = self.cobalt_api.lock().await.clone();
-            let potentially_hidden_saved_networks =
-                config_management::select_subset_potentially_hidden_networks(
-                    self.saved_network_manager.get_networks().await,
-                );
-
             let wpa3_supported =
                 iface_manager.lock().await.has_wpa3_capable_client().await.unwrap_or_else(|e| {
                     error!("Failed to determine WPA3 support. Assuming no WPA3 support. {}", e);
@@ -298,30 +290,8 @@ impl NetworkSelector {
                 None,
                 self.generate_scan_result_updater(),
                 scan::LocationSensorUpdater { wpa3_supported },
-                |_| {
-                    let active_scan_request_count_metric =
-                        match potentially_hidden_saved_networks.len() {
-                            0 => ActiveScanSsidsRequested::Zero,
-                            1 => ActiveScanSsidsRequested::One,
-                            2..=4 => ActiveScanSsidsRequested::TwoToFour,
-                            5..=10 => ActiveScanSsidsRequested::FiveToTen,
-                            11..=20 => ActiveScanSsidsRequested::ElevenToTwenty,
-                            21..=50 => ActiveScanSsidsRequested::TwentyOneToFifty,
-                            51..=100 => ActiveScanSsidsRequested::FiftyOneToOneHundred,
-                            101..=usize::MAX => ActiveScanSsidsRequested::OneHundredAndOneOrMore,
-                            _ => unreachable!(),
-                        };
-                    cobalt_api_clone.log_event(
-                        ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
-                        active_scan_request_count_metric,
-                    );
-
-                    if potentially_hidden_saved_networks.is_empty() {
-                        None
-                    } else {
-                        Some(potentially_hidden_saved_networks)
-                    }
-                },
+                NetworkSelectionScan,
+                Some(self.cobalt_api.clone()),
             )
             .await;
         } else {

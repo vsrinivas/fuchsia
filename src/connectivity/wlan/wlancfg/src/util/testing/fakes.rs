@@ -15,6 +15,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
+    log::info,
     std::{collections::HashMap, sync::Arc},
 };
 
@@ -68,6 +69,21 @@ impl FakeSavedNetworksManager {
             .expect("expect locking self.disconnects_recorded to succeed")
             .drain(..)
             .collect()
+    }
+
+    /// Manually change the hidden network probabiltiy of a saved network.
+    pub async fn update_hidden_prob(&self, id: NetworkIdentifier, hidden_prob: f32) {
+        let mut saved_networks = self.saved_networks.lock().await;
+        let networks = match saved_networks.get_mut(&id) {
+            Some(networks) => networks,
+            None => {
+                info!("Failed to find network to update");
+                return;
+            }
+        };
+        for network in networks.iter_mut() {
+            network.hidden_probability = hidden_prob;
+        }
     }
 }
 

@@ -39,7 +39,7 @@ pub fn validate_sme_scan_request_and_send_results(
             txn, req, control_handle: _
         }))) => {
             // Validate the request
-            assert_eq!(req, *expected_scan_request);
+            assert_eq_sme_scan_requests(&req, expected_scan_request);
             // Send all the APs
             let (_stream, ctrl) = txn
                 .into_stream_and_control_handle().expect("error accessing control handle");
@@ -51,6 +51,44 @@ pub fn validate_sme_scan_request_and_send_results(
                 .expect("failed to send scan data");
         }
     );
+}
+
+// Assert equality between two SME scan requests. Active scan requests containing
+// vectors of SSIDs and channels, but in a different order, should be considered
+// equal.
+fn assert_eq_sme_scan_requests(
+    request: &fidl_sme::ScanRequest,
+    expected_request: &fidl_sme::ScanRequest,
+) {
+    match (request, expected_request) {
+        (fidl_sme::ScanRequest::Passive(_), fidl_sme::ScanRequest::Passive(_)) => {
+            assert_eq!(request, expected_request);
+        }
+        (
+            fidl_sme::ScanRequest::Active(scan_request),
+            fidl_sme::ScanRequest::Active(expected_scan_request),
+        ) => {
+            assert_eq!(scan_request.ssids.len(), expected_scan_request.ssids.len());
+            assert!(scan_request
+                .ssids
+                .iter()
+                .all(|ssid| expected_scan_request.ssids.contains(ssid)));
+            assert!(expected_scan_request
+                .ssids
+                .iter()
+                .all(|ssid| scan_request.ssids.contains(ssid)));
+            assert_eq!(scan_request.channels.len(), expected_scan_request.channels.len());
+            assert!(scan_request
+                .channels
+                .iter()
+                .all(|channel| expected_scan_request.channels.contains(channel)));
+            assert!(expected_scan_request
+                .channels
+                .iter()
+                .all(|channel| scan_request.channels.contains(channel)));
+        }
+        _ => panic!("mismatch sme scan_result types"),
+    }
 }
 
 /// It takes an indeterminate amount of time for the scan module to either send the results

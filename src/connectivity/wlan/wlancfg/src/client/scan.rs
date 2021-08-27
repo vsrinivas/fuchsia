@@ -6,7 +6,9 @@
 use {
     crate::{
         client::types,
-        config_management::{SavedNetworksManagerApi, ScanResultType},
+        config_management::{
+            select_subset_potentially_hidden_networks, SavedNetworksManagerApi, ScanResultType,
+        },
         mode_management::iface_manager_api::IfaceManagerApi,
     },
     anyhow::{format_err, Error},
@@ -14,6 +16,7 @@ use {
     fidl_fuchsia_location_sensor as fidl_location_sensor, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},
+    fuchsia_cobalt::CobaltSender,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
@@ -22,6 +25,10 @@ use {
     std::{collections::HashMap, sync::Arc},
     stream::FuturesUnordered,
     wlan_common::channel::Channel,
+    wlan_metrics_registry::{
+        ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
+        ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
+    },
 };
 
 // TODO(fxbug.dev/80422): Remove this.
@@ -29,6 +36,12 @@ use {
 const FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE: usize = 56;
 // Delay between scanning retries when the firmware returns "ShouldWait" error code
 const SCAN_RETRY_DELAY_MS: i64 = 100;
+
+// Inidication of the scan caller, for use in logging caller specific metrics
+pub enum ScanReason {
+    ClientRequest,
+    NetworkSelection,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct SmeNetworkIdentifier {
@@ -122,16 +135,17 @@ async fn sme_scan(
 /// On successful scan, also provides scan results to:
 /// - Emergency Location Provider
 /// - Network Selection Module
-pub(crate) async fn perform_scan<F>(
+pub(crate) async fn perform_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
     mut output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
     mut network_selector: impl ScanResultUpdate,
     mut location_sensor_updater: impl ScanResultUpdate,
-    active_scan_decider: F,
-) where
-    F: FnOnce(&Vec<types::Ssid>) -> Option<Vec<types::NetworkIdentifier>>,
-{
+    scan_reason: ScanReason,
+    // TODO(fxbug.dev/73821): This should be removed when ScanManager struct is implemented,
+    // in favor of a field in the struct itself.
+    cobalt_api: Option<Arc<Mutex<CobaltSender>>>,
+) {
     let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
 
     let sme_proxy = match iface_manager.lock().await.get_sme_proxy_for_scan().await {
@@ -156,6 +170,7 @@ pub(crate) async fn perform_scan<F>(
     let sme_result = sme_scan(&sme_proxy, scan_request).await;
     match sme_result {
         Ok(results) => {
+            record_undirected_scan_results(&results, saved_networks_manager.clone()).await;
             insert_bss_to_network_bss_map(&mut bss_by_network, results, true);
         }
         Err(scan_err) => {
@@ -169,9 +184,38 @@ pub(crate) async fn perform_scan<F>(
         }
     };
 
-    // Determine which active scans to perform by asking the active_scan_decider()
-    let observed_ssid_list = bss_by_network.iter().map(|(id, _)| id.ssid.clone()).collect();
-    if let Some(requested_active_scan_ids) = active_scan_decider(&observed_ssid_list) {
+    let requested_active_scan_ids: Vec<types::NetworkIdentifier> =
+        select_subset_potentially_hidden_networks(saved_networks_manager.get_networks().await);
+
+    // Record active scan decisions to metrics. This is optional, based on
+    // the scan reason and if the caller would like metrics logged.
+    if let Some(cobalt_sender) = cobalt_api {
+        match scan_reason {
+            ScanReason::NetworkSelection => {
+                let active_scan_request_count_metric = match requested_active_scan_ids.len() {
+                    0 => ActiveScanSsidsRequested::Zero,
+                    1 => ActiveScanSsidsRequested::One,
+                    2..=4 => ActiveScanSsidsRequested::TwoToFour,
+                    5..=10 => ActiveScanSsidsRequested::FiveToTen,
+                    11..=20 => ActiveScanSsidsRequested::ElevenToTwenty,
+                    21..=50 => ActiveScanSsidsRequested::TwentyOneToFifty,
+                    51..=100 => ActiveScanSsidsRequested::FiftyOneToOneHundred,
+                    101..=usize::MAX => ActiveScanSsidsRequested::OneHundredAndOneOrMore,
+                    _ => unreachable!(),
+                };
+                let mut cobalt_sender_guard = cobalt_sender.lock().await;
+                let cobalt_lock = &mut *cobalt_sender_guard;
+                cobalt_lock.log_event(
+                    ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
+                    active_scan_request_count_metric,
+                );
+                drop(cobalt_sender_guard);
+            }
+            _ => {}
+        }
+    }
+
+    if requested_active_scan_ids.len() > 0 {
         let requested_active_scan_ssids =
             requested_active_scan_ids.iter().map(|id| id.ssid.clone()).collect();
         let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -223,6 +267,22 @@ pub(crate) async fn perform_scan<F>(
     while let Some(_) = scan_result_consumers.next().await {}
 }
 
+/// Update the hidden network probabilties of saved networks seen in a
+/// passive scan.
+async fn record_undirected_scan_results(
+    scan_results: &Vec<fidl_sme::ScanResult>,
+    saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
+) {
+    let ids = scan_results
+        .iter()
+        .map(|result| types::NetworkIdentifierDetailed {
+            ssid: result.ssid.clone(),
+            security_type: result.protection,
+        })
+        .collect();
+    saved_networks_manager.record_scan_result(ScanResultType::Undirected, ids).await;
+}
+
 /// Perform a directed active scan for a given network on given channels.
 pub(crate) async fn perform_directed_active_scan(
     sme_proxy: &fidl_sme::ClientSmeProxy,
@@ -260,7 +320,6 @@ async fn record_directed_scan_results(
             security_type: result.protection,
         })
         .collect();
-    // TODO(fxbug.dev/70965): modify this result to use the detailed security type
     saved_networks_manager.record_scan_result(ScanResultType::Directed(target_ids), ids).await;
 }
 
@@ -521,7 +580,7 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            config_management::network_config::{Credential, PROB_HIDDEN_DEFAULT},
+            config_management::network_config::Credential,
             util::testing::{
                 fakes::FakeSavedNetworksManager, generate_random_bss_description,
                 generate_random_sme_scan_result, validate_sme_scan_request_and_send_results,
@@ -1353,7 +1412,8 @@ mod tests {
             Some(iter_server),
             network_selector,
             location_sensor,
-            |_| None,
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut);
 
@@ -1416,64 +1476,58 @@ mod tests {
         );
     }
 
+    /// Verify that only a passive scan occurs if all saved networks have a 0
+    /// hidden network probability.
     #[fuchsia::test]
-    fn scan_with_active_scan_decider() {
+    fn passive_scan_only_with_zero_hidden_network_probabilities() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let (network_selector, network_selector_results) = MockScanResultConsumer::new();
-        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
+        let (network_selector, _) = MockScanResultConsumer::new();
+        let (location_sensor, _) = MockScanResultConsumer::new();
         let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
-        // Create the passive and active scan info
+        // Create passive scan info
         let MockScanData {
-            passive_input_aps,
-            passive_internal_aps,
-            passive_fidl_aps: _,
-            active_input_aps,
-            combined_internal_aps,
-            combined_fidl_aps,
+            passive_input_aps: input_aps,
+            passive_internal_aps: _,
+            passive_fidl_aps: fidl_aps,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
         } = create_scan_ap_data();
 
-        // Save the network that isn't seen in the scan so we can check its hidden probability.
-        let unseen_ssid = b"unseen_id".to_vec();
-        let unseen_active_id =
-            types::NetworkIdentifier { ssid: unseen_ssid.clone(), type_: types::SecurityType::Wpa };
-        let credential = Credential::Password(b"some-cred".to_vec());
+        // Save a network and set its hidden probability to 0
+        let network_id = types::NetworkIdentifier {
+            ssid: "some ssid".as_bytes().to_vec(),
+            type_: fidl_policy::SecurityType::Wpa3,
+        };
         assert!(exec
             .run_singlethreaded(
-                saved_networks_manager.store(unseen_active_id.clone().into(), credential),
+                saved_networks_manager
+                    .store(network_id.clone().into(), Credential::Password(b"randompass".to_vec()))
             )
             .expect("failed to store network")
             .is_none());
-
+        exec.run_singlethreaded(
+            saved_networks_manager.update_hidden_prob(network_id.clone().into(), 0.0),
+        );
         let config = exec
-            .run_singlethreaded(saved_networks_manager.lookup(unseen_active_id.clone().into()))
+            .run_singlethreaded(saved_networks_manager.lookup(network_id.clone().into()))
             .pop()
             .expect("failed to lookup");
-        assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
+        assert_eq!(config.hidden_probability, 0.0);
 
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let expected_passive_results: Vec<types::Ssid> =
-            passive_internal_aps.iter().map(|result| result.ssid.clone()).collect();
-        let active_ssid = b"foo active ssid".to_vec();
         let scan_fut = perform_scan(
             client,
             saved_networks_manager.clone(),
             Some(iter_server),
             network_selector,
             location_sensor,
-            |passive_results| {
-                assert_eq!(passive_results.clone().sort(), expected_passive_results.clone().sort());
-                Some(vec![
-                    types::NetworkIdentifier {
-                        ssid: active_ssid.clone(),
-                        type_: types::SecurityType::Wpa2,
-                    },
-                    unseen_active_id.clone(),
-                ])
-            },
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut);
 
@@ -1481,10 +1535,187 @@ mod tests {
         // the iterator.
         let mut output_iter_fut = iter.get_next();
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+
         // Progress scan handler forward so that it will respond to the iterator get next request.
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
-        // Respond to the first (passive) scan request
+        // Create mock scan data and send it via the SME
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            input_aps.clone(),
+        );
+
+        // Process response from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Check for results, verifying no active scan was requested.
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, fidl_aps);
+        });
+    }
+
+    /// Verify that saved networks seen in passive scans have their hidden network probabilities updated.
+    #[fuchsia::test]
+    fn passive_scan_updates_hidden_network_probabilities() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (network_selector, _) = MockScanResultConsumer::new();
+        let (location_sensor, _) = MockScanResultConsumer::new();
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
+
+        // Create the passive scan info
+        let MockScanData {
+            passive_input_aps: input_aps,
+            passive_internal_aps: _,
+            passive_fidl_aps,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
+
+        // Save a network that WILL be seen in the passive scan.
+        let seen_in_passive_network =
+            passive_fidl_aps[0].id.as_ref().expect("failed to get net id");
+        assert!(exec
+            .run_singlethreaded(saved_networks_manager.store(
+                seen_in_passive_network.clone().into(),
+                Credential::Password(b"randompass".to_vec())
+            ))
+            .expect("failed to store network")
+            .is_none());
+
+        // Save a network that will NOT be seen in the passive scan.
+        let not_seen_net_id = types::NetworkIdentifier {
+            ssid: b"not_seen_net_id".to_vec(),
+            type_: fidl_policy::SecurityType::Wpa,
+        };
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks_manager.store(
+                    not_seen_net_id.clone().into(),
+                    Credential::Password(b"foobarbaz".to_vec())
+                )
+            )
+            .expect("failed to store network")
+            .is_none());
+
+        // Issue request to scan.
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let scan_fut = perform_scan(
+            client,
+            saved_networks_manager.clone(),
+            Some(iter_server),
+            network_selector,
+            location_sensor,
+            ScanReason::NetworkSelection,
+            None,
+        );
+        pin_mut!(scan_fut);
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Create mock scan data and send it via the SME
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            input_aps.clone(),
+        );
+
+        // Process response from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Verify that the passive scan results were recorded.
+        assert!(
+            *exec.run_singlethreaded(saved_networks_manager.passive_scan_result_recorded.lock())
+        );
+
+        // Note: the decision to active scan is non-deterministic (using the hidden network probabilities),
+        // no need to continue and verify the results in this test case.
+    }
+
+    /// Verify that an active scan is occurs when there is a saved network with a 1.0
+    /// hidden network probability, and that the probability is decreased when it
+    /// goes unseen.
+    #[fuchsia::test]
+    fn active_scan_due_to_high_hidden_network_probabilities() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (network_selector, _) = MockScanResultConsumer::new();
+        let (location_sensor, _) = MockScanResultConsumer::new();
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
+
+        // Create the passive scan info
+        let MockScanData {
+            passive_input_aps,
+            passive_internal_aps: _,
+            passive_fidl_aps,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
+
+        // Save a network that will NOT be seen in the either scan and set
+        // its initial hidden network probability to 1.0
+        let unseen_ssid = b"some ssid".to_vec();
+        let unseen_network = types::NetworkIdentifier {
+            ssid: unseen_ssid.clone(),
+            type_: fidl_policy::SecurityType::Wpa3,
+        };
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks_manager.store(
+                    unseen_network.clone().into(),
+                    Credential::Password(b"randompass".to_vec())
+                )
+            )
+            .expect("failed to store network")
+            .is_none());
+
+        exec.run_singlethreaded(
+            saved_networks_manager.update_hidden_prob(unseen_network.clone().into(), 1.0),
+        );
+        let config = exec
+            .run_singlethreaded(saved_networks_manager.lookup(unseen_network.clone().into()))
+            .pop()
+            .expect("failed to lookup");
+        assert_eq!(config.hidden_probability, 1.0);
+
+        // Issue request to scan.
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let scan_fut = perform_scan(
+            client,
+            saved_networks_manager.clone(),
+            Some(iter_server),
+            network_selector,
+            location_sensor,
+            ScanReason::NetworkSelection,
+            None,
+        );
+        pin_mut!(scan_fut);
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Create mock scan data and send it via the SME
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
         validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -1496,53 +1727,38 @@ mod tests {
         // Process response from SME
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
-        // Respond to the second (active) scan request
+        // Check iterator is still waiting results, since there should be an
+        // active scan still to come.
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+
+        // Verify record passive scan result was called.
+        assert!(
+            *exec.run_singlethreaded(saved_networks_manager.passive_scan_result_recorded.lock())
+        );
+
+        // Create mock active scan data. This should verify that an active scan was
+        // issues based on the hidden network probabilties.
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![active_ssid.clone(), unseen_ssid.clone()],
+            ssids: vec![unseen_ssid],
             channels: vec![],
         });
         validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            active_input_aps.clone(),
+            vec![],
         );
 
-        // Process response from SME
+        // Process SME result
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
-        // Check for results
+        // Get results from scans. Results should just be the passive results.
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results, combined_fidl_aps);
+            let results = result.expect("failed to get scan results").unwrap();
+            assert_eq!(results, passive_fidl_aps);
         });
 
-        // Request the next chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-
-        // Process scan handler
-        // Note: this will be Poll::Ready because the scan handler will exit after sending the final
-        // scan results.
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
-
-        // Check for results
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results, vec![]);
-        });
-
-        // Check both successful scan consumers got results
-        assert_eq!(
-            *exec.run_singlethreaded(network_selector_results.lock()),
-            Some(combined_internal_aps.clone())
-        );
-        assert_eq!(
-            *exec.run_singlethreaded(location_sensor_results.lock()),
-            Some(combined_internal_aps.clone())
-        );
-
-        // Verify that the active scan results were recorded.
+        // Verify that active scan results were recorded.
         assert!(*exec.run_singlethreaded(saved_networks_manager.active_scan_result_recorded.lock()));
     }
 
@@ -1679,7 +1895,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn scan_with_active_scan_decider_and_active_scan_failure() {
+    fn scan_with_active_scan_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
@@ -1696,25 +1912,39 @@ mod tests {
             combined_fidl_aps: _,
         } = create_scan_ap_data();
 
+        // Save a network with hidden probability 1.0, which will guarantee an
+        // active scan takes place
+        let unseen_ssid = b"foobarbaz ssid".to_vec();
+        let unseen_network = types::NetworkIdentifier {
+            ssid: unseen_ssid.clone(),
+            type_: fidl_policy::SecurityType::Wpa3,
+        };
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks_manager.store(
+                    unseen_network.clone().into(),
+                    Credential::Password(b"randompass".to_vec())
+                )
+            )
+            .expect("failed to store network")
+            .is_none());
+
+        exec.run_singlethreaded(
+            saved_networks_manager.update_hidden_prob(unseen_network.clone().into(), 1.0),
+        );
+
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let expected_passive_results: Vec<types::Ssid> =
-            passive_internal_aps.iter().map(|result| result.ssid.clone()).collect();
-        let active_ssid = b"foo active ssid".to_vec();
+
         let scan_fut = perform_scan(
             client,
             saved_networks_manager,
             Some(iter_server),
             network_selector,
             location_sensor,
-            |passive_results| {
-                assert_eq!(passive_results.clone().sort(), expected_passive_results.clone().sort());
-                Some(vec![types::NetworkIdentifier {
-                    ssid: active_ssid.clone(),
-                    type_: types::SecurityType::Wpa,
-                }])
-            },
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut);
 
@@ -1739,7 +1969,7 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back an error
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![active_ssid.clone()],
+            ssids: vec![unseen_ssid.clone()],
             channels: vec![],
         });
         assert_variant!(
@@ -1800,7 +2030,8 @@ mod tests {
             Some(iter_server),
             network_selector1,
             location_sensor1,
-            |_| None,
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut);
 
@@ -1837,7 +2068,8 @@ mod tests {
             Some(iter_server2),
             network_selector2,
             location_sensor2,
-            |_| None,
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut2);
 
@@ -1901,7 +2133,8 @@ mod tests {
             Some(iter_server),
             network_selector,
             location_sensor,
-            |_| None,
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut);
 
@@ -1960,7 +2193,8 @@ mod tests {
             Some(iter_server),
             network_selector,
             location_sensor,
-            |_| None,
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut);
 
@@ -2011,7 +2245,28 @@ mod tests {
         let (location_sensor1, location_sensor_results1) = MockScanResultConsumer::new();
         let (network_selector2, network_selector_results2) = MockScanResultConsumer::new();
         let (location_sensor2, location_sensor_results2) = MockScanResultConsumer::new();
-        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
+
+        // Use separate saved network managers so only one expects an active scan
+        // based on saved networks.
+        let saved_networks_manager1 = Arc::new(FakeSavedNetworksManager::new());
+        let saved_networks_manager2 = Arc::new(FakeSavedNetworksManager::new());
+
+        // Save a network with 1.0 hidden network probability to guarantee an active scan for scan_fut1.
+        let active_ssid = b"foo active ssid".to_vec();
+        let active_id = types::NetworkIdentifier {
+            ssid: active_ssid.clone(),
+            type_: fidl_policy::SecurityType::Wpa3,
+        };
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks_manager2
+                    .store(active_id.clone().into(), Credential::Password(b"randompass".to_vec()))
+            )
+            .expect("failed to store network")
+            .is_none());
+        exec.run_singlethreaded(
+            saved_networks_manager2.update_hidden_prob(active_id.clone().into(), 1.0),
+        );
 
         let MockScanData {
             passive_input_aps,
@@ -2031,29 +2286,23 @@ mod tests {
         // Issue request to scan on both iterator.
         let scan_fut0 = perform_scan(
             client.clone(),
-            saved_networks_manager.clone(),
+            saved_networks_manager1.clone(),
             Some(iter_server0),
             network_selector1,
             location_sensor1,
-            |_| None,
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut0);
-        let active_ssid = b"foo active ssid".to_vec();
-        let expected_passive_results: Vec<types::Ssid> =
-            passive_internal_aps.iter().map(|result| result.ssid.clone()).collect();
+
         let scan_fut1 = perform_scan(
             client.clone(),
-            saved_networks_manager,
+            saved_networks_manager2,
             Some(iter_server1),
             network_selector2,
             location_sensor2,
-            |passive_results| {
-                assert_eq!(passive_results.clone().sort(), expected_passive_results.clone().sort());
-                Some(vec![types::NetworkIdentifier {
-                    ssid: active_ssid.clone(),
-                    type_: types::SecurityType::Wpa3,
-                }])
-            },
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut1);
 
@@ -2171,7 +2420,8 @@ mod tests {
             Some(iter_server),
             network_selector,
             location_sensor,
-            |_| None,
+            ScanReason::NetworkSelection,
+            None,
         );
         pin_mut!(scan_fut);
 

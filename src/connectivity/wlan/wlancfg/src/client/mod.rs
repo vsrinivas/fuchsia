@@ -7,8 +7,7 @@ use {
     crate::{
         client::types as client_types,
         config_management::{
-            self, Credential, NetworkConfigError, NetworkIdentifier, SaveError,
-            SavedNetworksManagerApi,
+            Credential, NetworkConfigError, NetworkIdentifier, SaveError, SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
         util::listener,
@@ -278,11 +277,6 @@ async fn handle_client_request_scan(
     network_selector: Arc<network_selection::NetworkSelector>,
     saved_networks: SavedNetworksPtr,
 ) {
-    let potentially_hidden_saved_networks =
-        config_management::select_subset_potentially_hidden_networks(
-            saved_networks.get_networks().await,
-        );
-
     let wpa3_supported =
         iface_manager.lock().await.has_wpa3_capable_client().await.unwrap_or_else(|e| {
             error!("Failed to determine WPA3 support. Assuming no WPA3 support. {}", e);
@@ -295,13 +289,8 @@ async fn handle_client_request_scan(
         Some(output_iterator),
         network_selector.generate_scan_result_updater(),
         scan::LocationSensorUpdater { wpa3_supported },
-        |_| {
-            if potentially_hidden_saved_networks.is_empty() {
-                None
-            } else {
-                Some(potentially_hidden_saved_networks)
-            }
-        },
+        scan::ScanReason::ClientRequest,
+        None,
     )
     .await
 }
