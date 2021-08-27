@@ -436,7 +436,7 @@ zx_status_t Session::FetchTx() {
         break;
       default:
         LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information",
-                  name(), buffer->meta.info_type);
+                   name(), buffer->meta.info_type);
         info_type = netdev::wire::InfoType::kNoInfo;
         break;
     }
@@ -1014,8 +1014,8 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
     case netdev::wire::InfoType::kNoInfo:
       break;
     default:
-      LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information", name(),
-                owner_desc.info_type);
+      LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information",
+                 name(), owner_desc.info_type);
       info_type = netdev::wire::InfoType::kNoInfo;
       break;
   }
@@ -1061,9 +1061,9 @@ zx_status_t Session::LoadRxInfo(const RxFrameInfo& info) {
     // NB: Update only the fields that we need to update here instead of using literals; we're
     // writing into shared memory and we don't want to write over all fields nor trust compiler
     // optimizations to elide "a = a" statements.
-    desc.head_length = buffer.offset;
+    desc.head_length = static_cast<uint16_t>(buffer.offset);
     desc.data_length = buffer.length;
-    desc.tail_length = available_len - consumed_part_length;
+    desc.tail_length = static_cast<uint16_t>(available_len - consumed_part_length);
     desc.chain_length = chain_len;
     desc.nxt = next_desc_index;
     chain_len++;
@@ -1078,7 +1078,7 @@ zx_status_t Session::LoadRxInfo(const RxFrameInfo& info) {
           break;
         default:
           LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information",
-                    name(), info.meta.info_type);
+                     name(), info.meta.info_type);
           info_type = netdev::wire::InfoType::kNoInfo;
           break;
       }
