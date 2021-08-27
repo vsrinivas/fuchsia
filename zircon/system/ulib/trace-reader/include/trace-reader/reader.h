@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -100,7 +101,7 @@ class TraceReader {
 
   RecordHeader pending_header_ = 0u;
 
-  struct StringTableEntry : public fbl::SinglyLinkedListable<std::unique_ptr<StringTableEntry>> {
+  struct StringTableEntry {
     StringTableEntry(trace_string_index_t index, fbl::String string)
         : index(index), string(std::move(string)) {}
 
@@ -112,7 +113,7 @@ class TraceReader {
     static size_t GetHash(trace_string_index_t key) { return key; }
   };
 
-  struct ThreadTableEntry : public fbl::SinglyLinkedListable<std::unique_ptr<ThreadTableEntry>> {
+  struct ThreadTableEntry {
     ThreadTableEntry(trace_thread_index_t index, const ProcessThread& process_thread)
         : index(index), process_thread(process_thread) {}
 
@@ -128,12 +129,8 @@ class TraceReader {
     ProviderId id;
     fbl::String name;
 
-    // TODO(https://fxbug.dev/30999): It would be more efficient to use something like
-    // std::unordered_map<> here.  In particular, the table entries are
-    // small enough that it doesn't make sense to heap allocate them
-    // individually.
-    fbl::HashTable<trace_string_index_t, std::unique_ptr<StringTableEntry>> string_table;
-    fbl::HashTable<trace_thread_index_t, std::unique_ptr<ThreadTableEntry>> thread_table;
+    std::unordered_map<trace_string_index_t, StringTableEntry> string_table;
+    std::unordered_map<trace_thread_index_t, ThreadTableEntry> thread_table;
 
     // Used by the hash table.
     ProviderId GetKey() const { return id; }

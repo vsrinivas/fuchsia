@@ -758,16 +758,16 @@ void TraceReader::RegisterString(trace_string_index_t index, const fbl::String& 
   ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
                   index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
 
-  auto entry = std::make_unique<StringTableEntry>(index, string);
-  current_provider_->string_table.insert_or_replace(std::move(entry));
+  StringTableEntry entry(index, string);
+  current_provider_->string_table.emplace(index, std::move(entry));
 }
 
 void TraceReader::RegisterThread(trace_thread_index_t index, const ProcessThread& process_thread) {
   ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
                   index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
 
-  auto entry = std::make_unique<ThreadTableEntry>(index, process_thread);
-  current_provider_->thread_table.insert_or_replace(std::move(entry));
+  ThreadTableEntry entry(index, process_thread);
+  current_provider_->thread_table.emplace(index, std::move(entry));
 }
 
 bool TraceReader::DecodeStringRef(Chunk& chunk, trace_encoded_string_ref_t string_ref,
@@ -798,7 +798,7 @@ bool TraceReader::DecodeStringRef(Chunk& chunk, trace_encoded_string_ref_t strin
     ReportError("String ref not in table");
     return false;
   }
-  *out_string = it->string;
+  *out_string = it->second.string;
   return true;
 }
 
@@ -824,7 +824,7 @@ bool TraceReader::DecodeThreadRef(Chunk& chunk, trace_encoded_thread_ref_t threa
     ReportError(fbl::StringPrintf("Thread ref 0x%x not in table", thread_ref));
     return false;
   }
-  *out_process_thread = it->process_thread;
+  *out_process_thread = it->second.process_thread;
   return true;
 }
 
