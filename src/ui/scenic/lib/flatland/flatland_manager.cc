@@ -21,6 +21,8 @@ FlatlandManager::FlatlandManager(
     const std::shared_ptr<LinkSystem>& link_system,
     std::shared_ptr<scenic_impl::display::Display> display,
     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
+        register_view_focuser,
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
         register_view_ref_focused,
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
@@ -33,6 +35,7 @@ FlatlandManager::FlatlandManager(
       buffer_collection_importers_(std::move(buffer_collection_importers)),
       executor_(dispatcher),
       primary_display_(std::move(display)),
+      register_view_focuser_(std::move(register_view_focuser)),
       register_view_ref_focused_(std::move(register_view_ref_focused)),
       register_touch_source_(std::move(register_touch_source)),
       register_mouse_source_(std::move(register_mouse_source)) {
@@ -40,6 +43,7 @@ FlatlandManager::FlatlandManager(
   FX_DCHECK(flatland_presenter_);
   FX_DCHECK(uber_struct_system_);
   FX_DCHECK(link_system_);
+  FX_DCHECK(register_view_focuser_);
   FX_DCHECK(register_view_ref_focused_);
   FX_DCHECK(register_touch_source_);
   FX_DCHECK(register_mouse_source_);
@@ -120,6 +124,14 @@ std::shared_ptr<Flatland> FlatlandManager::NewFlatland(
       std::move(uber_struct_queue), std::move(buffer_collection_importers),
       // All the register callbacks will be called on the instance thread, so we
       // must make sure to post the work back on the main thread.
+      /*register_view_focuser*/
+      [this](fidl::InterfaceRequest<fuchsia::ui::views::Focuser> focuser, zx_koid_t view_ref_koid) {
+        async::PostTask(executor_.dispatcher(),
+                        [this, focuser = std::move(focuser), view_ref_koid]() mutable {
+                          CheckIsOnMainThread();
+                          register_view_focuser_(std::move(focuser), view_ref_koid);
+                        });
+      },
       /*register_view_ref_focused*/
       [this](fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> view_ref_focused,
              zx_koid_t view_ref_koid) {

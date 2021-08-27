@@ -294,7 +294,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
         flatlands_.back().NewRequest(), session_id,
         /*destroy_instance_functon=*/[this, session_id]() { flatland_errors_.erase(session_id); },
         flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(session_id),
-        importers, [](auto...) {}, [](auto...) {}, [](auto...) {});
+        importers, [](auto...) {}, [](auto...) {}, [](auto...) {}, [](auto...) {});
 
     // Register OnNextFrameBegin() callback to capture errors.
     RegisterPresentError(flatlands_.back(), session_id);
@@ -1839,7 +1839,7 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
       parent_ptr.NewRequest(), session_id,
       /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
       uber_struct_system_->AllocateQueueForSession(session_id), importers, [](auto...) {},
-      [](auto...) {}, [](auto...) {});
+      [](auto...) {}, [](auto...) {}, [](auto...) {});
 
   // Create parent link.
   const ContentId kLinkId = {1};
@@ -1859,7 +1859,7 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
       child_ptr.NewRequest(), session_id,
       /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
       uber_struct_system_->AllocateQueueForSession(session_id), importers, [](auto...) {},
-      [](auto...) {}, [](auto...) {});
+      [](auto...) {}, [](auto...) {}, [](auto...) {});
   RegisterPresentError(child_ptr, session_id);
 
   // Create child link. Use another loop for ParentViewportWatcher channel.
@@ -3753,7 +3753,7 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
       session_id,
       /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
       uber_struct_system_->AllocateQueueForSession(session_id), importers, [](auto...) {},
-      [](auto...) {}, [](auto...) {});
+      [](auto...) {}, [](auto...) {}, [](auto...) {});
   EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(_, _, _))
       .WillOnce(Return(true));
 

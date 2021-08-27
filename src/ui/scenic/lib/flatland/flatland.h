@@ -70,6 +70,8 @@ class Flatland : public fuchsia::ui::composition::Flatland,
       std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
       const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
           buffer_collection_importers,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
+          register_view_focuser,
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
           register_view_ref_focused,
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
@@ -181,6 +183,8 @@ class Flatland : public fuchsia::ui::composition::Flatland,
       std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
       const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
           buffer_collection_importers,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
+          register_view_focuser,
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
           register_view_ref_focused,
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
@@ -348,6 +352,8 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   std::shared_ptr<scenic_impl::ErrorReporter> error_reporter_;
 
   // Callbacks for registering View-bound protocols.
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
+      register_view_focuser_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
       register_view_ref_focused_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>

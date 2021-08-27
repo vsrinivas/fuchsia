@@ -432,6 +432,11 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     flatland_manager_ = std::make_shared<flatland::FlatlandManager>(
         async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
         display, std::move(importers),
+        /*register_view_focuser*/
+        [this](fidl::InterfaceRequest<fuchsia::ui::views::Focuser> focuser,
+               zx_koid_t view_ref_koid) {
+          focus_manager_->RegisterViewFocuser(view_ref_koid, std::move(focuser));
+        },
         /*register_view_ref_focused*/
         [this](fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> vrf,
                zx_koid_t view_ref_koid) {

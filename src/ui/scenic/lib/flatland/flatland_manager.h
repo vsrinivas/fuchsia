@@ -38,6 +38,8 @@ class FlatlandManager : public scheduling::SessionUpdater {
       std::shared_ptr<scenic_impl::display::Display> display,
       std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>
           buffer_collection_importers,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
+          register_view_focuser,
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
           register_view_ref_focused,
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
@@ -166,6 +168,8 @@ class FlatlandManager : public scheduling::SessionUpdater {
   std::shared_ptr<scenic_impl::display::Display> primary_display_;
 
   // Callbacks for registering View-bound protocols.
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
+      register_view_focuser_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
       register_view_ref_focused_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>

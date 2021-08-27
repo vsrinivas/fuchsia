@@ -48,18 +48,28 @@ std::shared_ptr<Flatland> Flatland::New(
     std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
     const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
         buffer_collection_importers,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
+        register_view_focuser,
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
         register_view_ref_focused,
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
         register_touch_source,
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource>, zx_koid_t)>
         register_mouse_source) {
-  return std::shared_ptr<Flatland>(
-      new Flatland(std::move(dispatcher_holder), std::move(request), session_id,
-                   std::move(destroy_instance_function), std::move(flatland_presenter),
-                   std::move(link_system), std::move(uber_struct_queue),
-                   buffer_collection_importers, std::move(register_view_ref_focused),
-                   std::move(register_touch_source), std::move(register_mouse_source)));
+  // clang-format off
+  return std::shared_ptr<Flatland>(new Flatland(
+      std::move(dispatcher_holder),
+      std::move(request), session_id,
+      std::move(destroy_instance_function),
+      std::move(flatland_presenter),
+      std::move(link_system),
+      std::move(uber_struct_queue),
+      buffer_collection_importers,
+      std::move(register_view_focuser),
+      std::move(register_view_ref_focused),
+      std::move(register_touch_source),
+      std::move(register_mouse_source)));
+  // clang-format on
 }
 
 Flatland::Flatland(
@@ -70,6 +80,8 @@ Flatland::Flatland(
     std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
     const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
         buffer_collection_importers,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
+        register_view_focuser,
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>, zx_koid_t)>
         register_view_ref_focused,
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
@@ -93,6 +105,7 @@ Flatland::Flatland(
       transform_graph_(session_id_),
       local_root_(transform_graph_.CreateTransform()),
       error_reporter_(scenic_impl::ErrorReporter::Default()),
+      register_view_focuser_(std::move(register_view_focuser)),
       register_view_ref_focused_(std::move(register_view_ref_focused)),
       register_touch_source_(std::move(register_touch_source)),
       register_mouse_source_(std::move(register_mouse_source)) {
@@ -341,8 +354,7 @@ void Flatland::RegisterViewBoundProtocols(fuchsia::ui::composition::ViewBoundPro
   FX_DCHECK(register_mouse_source_);
 
   if (protocols.has_view_focuser()) {
-    // TODO(fxbug.dev/82643): Implement ViewFocuserRegistry independent of gfx.
-    FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
+    register_view_focuser_(std::move(*protocols.mutable_view_focuser()), view_ref_koid);
   }
 
   if (protocols.has_view_ref_focused()) {

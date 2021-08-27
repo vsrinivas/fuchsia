@@ -129,6 +129,7 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
         dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
         std::make_shared<scenic_impl::display::Display>(kDisplayId, kDisplayWidth, kDisplayHeight),
         importers,
+        /*register_view_focuser*/ [this](auto...) { view_focuser_registered_ = true; },
         /*register_view_ref_focused*/ [this](auto...) { view_ref_focused_registered_ = true; },
         /*register_touch_source*/ [this](auto...) { touch_source_registered_ = true; },
         /*register_mouse_source*/ [this](auto...) { mouse_source_registered_ = true; });
@@ -210,6 +211,7 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
 
   const std::shared_ptr<LinkSystem> link_system_;
 
+  bool view_focuser_registered_ = false;
   bool view_ref_focused_registered_ = false;
   bool touch_source_registered_ = false;
   bool mouse_source_registered_ = false;
@@ -667,20 +669,23 @@ TEST_F(FlatlandManagerTest, ViewBoundProtocolsAreRegistered) {
 
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> child = CreateFlatland();
 
+  fidl::InterfacePtr<fuchsia::ui::views::Focuser> view_focuser_ptr;
   fidl::InterfacePtr<fuchsia::ui::views::ViewRefFocused> view_ref_focused_ptr;
   fidl::InterfacePtr<fuchsia::ui::pointer::TouchSource> touch_source_ptr;
   fidl::InterfacePtr<fuchsia::ui::pointer::MouseSource> mouse_source_ptr;
 
   fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
   fuchsia::ui::composition::ViewBoundProtocols protocols;
-  protocols.set_view_ref_focused(view_ref_focused_ptr.NewRequest());
-  protocols.set_touch_source(touch_source_ptr.NewRequest());
-  protocols.set_mouse_source(mouse_source_ptr.NewRequest());
+  protocols.set_view_focuser(view_focuser_ptr.NewRequest())
+      .set_view_ref_focused(view_ref_focused_ptr.NewRequest())
+      .set_touch_source(touch_source_ptr.NewRequest())
+      .set_mouse_source(mouse_source_ptr.NewRequest());
   child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
                      std::move(protocols), parent_viewport_watcher.NewRequest());
 
   RunLoopUntil([this] {
-    return view_ref_focused_registered_ && touch_source_registered_ && mouse_source_registered_;
+    return view_focuser_registered_ && view_ref_focused_registered_ && touch_source_registered_ &&
+           mouse_source_registered_;
   });
 }
 
