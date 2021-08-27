@@ -68,7 +68,7 @@ typedef struct {
 // 1) The crash reason
 // 2) The uptime estimate
 // 3) An indication of the payload's integrity.
-// 4) A pointer/length to the memory mapped payload.
+// 4) A length of the memory mapped payload.
 typedef struct {
   zx_duration_t uptime;
   zircon_crash_reason_t reason;
@@ -88,6 +88,13 @@ typedef struct {
 // because of a watchdog timer), in addition to recording a more complete
 // crashlog in the case of a software induced crash (typically due to either
 // kernel panic, or a system-wide OOM condition)
+//
+// User supplied payload data may exist entirely outside of the user supplied
+// buffer (in which case it will be copied into the proper position during the
+// stow operation), or it may have been pre-rendered into the buffer by the user
+// before calling stow.  In the latter case, the payload pointer supplied must
+// be equal to `buf + sizeof(ram_crashlog_t)`.  Any other value supplied for
+// |payload| which exists in the buffer region will be rejected as invalid.
 //
 // Params:
 // |buf|         : A pointer to the location to actually stow the log

@@ -38,13 +38,23 @@ zx_status_t ram_crashlog_stow(void* buf, size_t buf_len, const void* payload, ui
     return ZX_ERR_INVALID_ARGS;
   }
 
+  // Is the payload pointer located within the crashlog buffer?  If so, it
+  // *must* be located immediately after the header, or we will consider it to
+  // be an error.
+  const uintptr_t payload_offset =
+      reinterpret_cast<uintptr_t>(payload) - reinterpret_cast<uintptr_t>(buf);
+  const bool payload_located_in_buffer = ((payload >= buf) && (payload_offset < buf_len));
+  if ((payload_located_in_buffer) && (payload_offset != sizeof(ram_crashlog_t))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // We cannot stow a crashlog if the buffer provided to us is too small.  It
   // has to be large enough to hold the common payload structure, at a minimum.
   if (buf_len < sizeof(ram_crashlog_t)) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  // Sanity check the reboot reason.  Invalid reasons must be rejected.
+  // Check the reboot reason to make sure it is valid.  Invalid reasons must be rejected.
   switch (sw_reason) {
     case ZirconCrashReason::Unknown:
     case ZirconCrashReason::NoCrash:
@@ -93,15 +103,18 @@ zx_status_t ram_crashlog_stow(void* buf, size_t buf_len, const void* payload, ui
                             offsetof(ram_crashlog_header_t, header_crc32));
   clean_cache_range(hdr, sizeof(*hdr));
 
-  // Copy the payload into place (if we have any) and make sure that it has been
-  // written all of the way out to physical RAM.  The old header is active at
-  // this point.  If we had a non-empty payload previously to this, we are
-  // almost certainly going to fail to recover the payload if we were to
-  // spontaneously reboot right at this instant.  That said, we will still
-  // attempt to recover whatever the old header said was there, so hopefully we
-  // will end up getting something out of this.
+  // If we have a payload, and it has not already been directly rendered into
+  // the crashlog buffer by the caller, copy the payload into place.  Then make
+  // sure that it has been written all of the way out to physical RAM.  The old
+  // header is active at this point.  If we had a non-empty payload previously
+  // to this, we are almost certainly going to fail to recover the payload if we
+  // were to spontaneously reboot right at this instant.  That said, we will
+  // still attempt to recover whatever the old header said was there, so
+  // hopefully we will end up getting something out of this.
   if (payload_len > 0) {
-    memcpy(tgt_payload, payload, payload_len);
+    if (!payload_located_in_buffer) {
+      memcpy(tgt_payload, payload, payload_len);
+    }
     clean_cache_range(tgt_payload, payload_len);
   }
 

@@ -258,8 +258,8 @@ TEST(RamCrashlogTestCase, Stow) {
   EXPECT_EQ(expected_magic,
             log.magic);  // Peek under the hood and validate this implementation detail.
 
-  // Finally, attempt to stash a log with a payload which does _not_ fit into
-  // our available space.  This should succeed, but the payload (once recovered)
+  // Attempt to stash a log with a payload which does _not_ fit into our
+  // available space.  This should succeed, but the payload (once recovered)
   // should be truncated.
   expected_magic =
       (log.magic == RAM_CRASHLOG_MAGIC_0) ? RAM_CRASHLOG_MAGIC_1 : RAM_CRASHLOG_MAGIC_0;
@@ -278,6 +278,42 @@ TEST(RamCrashlogTestCase, Stow) {
   EXPECT_BYTES_EQ(LONG_PAYLOAD, rlog.payload, rlog.payload_len);
   EXPECT_EQ(expected_magic,
             log.magic);  // Peek under the hood and validate this implementation detail.
+
+  // Attempt to stash a log with a payload which has been pre-rendered by the
+  // user to the location immediately following the crashlog headers.
+  expected_magic =
+      (log.magic == RAM_CRASHLOG_MAGIC_0) ? RAM_CRASHLOG_MAGIC_1 : RAM_CRASHLOG_MAGIC_0;
+
+  memset(payload, 0xFF, TEST_PAYLOAD_MAX);
+  memcpy(payload, LONG_PAYLOAD, std::min(TEST_PAYLOAD_MAX, LONG_PAYLOAD_LEN));
+
+  res = ram_crashlog_stow(crashlog_buffer, sizeof(crashlog_buffer), payload, LONG_PAYLOAD_LEN,
+                          ZirconCrashReason::SoftwareWatchdog, 877265);
+  ASSERT_OK(res);
+
+  res = ram_crashlog_recover(crashlog_buffer, sizeof(crashlog_buffer), &rlog);
+  ASSERT_OK(res);
+  EXPECT_EQ(877265, rlog.uptime);
+  EXPECT_EQ(ZirconCrashReason::SoftwareWatchdog, rlog.reason);
+  EXPECT_EQ(TEST_PAYLOAD_MAX, rlog.payload_len);
+  EXPECT_TRUE(rlog.payload_valid);
+  EXPECT_BYTES_EQ(LONG_PAYLOAD, rlog.payload, rlog.payload_len);
+  EXPECT_EQ(expected_magic,
+            log.magic);  // Peek under the hood and validate this implementation detail.
+
+  // Attempt to stow the crashlog, indicating that the payload is located at any
+  // of the other positions inside of the crashlog buffer.  This should always
+  // fail with INVALID_ARGS.  When we are finished, the contents of a recovered
+  // crashlog buffer should remain unchanged from the last successful attempt to
+  // stow it.
+  for (uint8_t* ptr = crashlog_buffer; ptr < crashlog_buffer + sizeof(crashlog_buffer); ++ptr) {
+    if (ptr == payload) {
+      continue;
+    }
+    res = ram_crashlog_stow(crashlog_buffer, sizeof(crashlog_buffer), ptr, LONG_PAYLOAD_LEN,
+                            ZirconCrashReason::SoftwareWatchdog, 877265);
+    ASSERT_STATUS(res, ZX_ERR_INVALID_ARGS);
+  }
 }
 
 }  // namespace
