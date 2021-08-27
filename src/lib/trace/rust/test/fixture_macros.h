@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_TRACE_RUST_TEST_FIXTURE_MACROS_H_
+#define SRC_LIB_TRACE_RUST_TEST_FIXTURE_MACROS_H_
 
 #include <trace-test-utils/fixture.h>
 #include <zxtest/zxtest.h>
@@ -17,13 +18,14 @@
 #define DEFAULT_BUFFER_SIZE_BYTES (1024u * 1024u)
 
 // This isn't a do-while because of the cleanup.
-#define BEGIN_TRACE_TEST_ETC(attach_to_thread, mode, buffer_size) \
-  __attribute__((cleanup(fixture_scope_cleanup))) bool __scope;   \
-  (void)__scope;                                                  \
+#define BEGIN_TRACE_TEST_ETC(attach_to_thread, mode, buffer_size)   \
+  __attribute__((cleanup(fixture_scope_cleanup))) bool __scope = 0; \
+  (void)__scope;                                                    \
   fixture_set_up((attach_to_thread), (mode), (buffer_size))
 
 #define BEGIN_TRACE_TEST \
   BEGIN_TRACE_TEST_ETC(kAttachToThread, TRACE_BUFFERING_MODE_ONESHOT, DEFAULT_BUFFER_SIZE_BYTES)
 
-#define ASSERT_RECORDS(expected) \
-  ASSERT_TRUE(fixture_compare_records(expected), "record mismatch")
+#define ASSERT_RECORDS(expected) ASSERT_TRUE(fixture_compare_records(expected), "record mismatch")
+
+#endif  // SRC_LIB_TRACE_RUST_TEST_FIXTURE_MACROS_H_

@@ -41,10 +41,6 @@ source_set("common") {
     # Otherwise they silently fail (output is dropped).
     "//sdk/lib/fdio",
   ]
-
-  # TODO(fxbug.dev/41900): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 # Version of test that uses libtrace-engine.so.
