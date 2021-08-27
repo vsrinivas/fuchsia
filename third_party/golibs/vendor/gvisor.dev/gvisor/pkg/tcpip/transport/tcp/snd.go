@@ -382,6 +382,9 @@ func (s *sender) updateRTO(rtt time.Duration) {
 	if s.RTO < s.minRTO {
 		s.RTO = s.minRTO
 	}
+	if s.RTO > s.maxRTO {
+		s.RTO = s.maxRTO
+	}
 }
 
 // resendSegment resends the first unacknowledged segment.
@@ -1342,10 +1345,7 @@ func (s *sender) handleRcvdSegment(rcvdSeg *segment) {
 		//    some new data, i.e., only if it advances the left edge of
 		//    the send window.
 		if s.ep.SendTSOk && rcvdSeg.parsedOptions.TSEcr != 0 {
-			// TSVal/Ecr values sent by Netstack are at a millisecond
-			// granularity.
-			elapsed := time.Duration(s.ep.timestamp()-rcvdSeg.parsedOptions.TSEcr) * time.Millisecond
-			s.updateRTO(elapsed)
+			s.updateRTO(s.ep.elapsed(s.ep.stack.Clock().NowMonotonic(), rcvdSeg.parsedOptions.TSEcr))
 		}
 
 		if s.shouldSchedulePTO() {
@@ -1415,9 +1415,6 @@ func (s *sender) handleRcvdSegment(rcvdSeg *segment) {
 			ackLeft -= datalen
 		}
 
-		// Update the send buffer usage and notify potential waiters.
-		s.ep.updateSndBufferUsage(int(acked))
-
 		// Clear SACK information for all acked data.
 		s.ep.scoreboard.Delete(s.SndUna)
 
@@ -1436,6 +1433,9 @@ func (s *sender) handleRcvdSegment(rcvdSeg *segment) {
 				s.reorderTimer.disable()
 			}
 		}
+
+		// Update the send buffer usage and notify potential waiters.
+		s.ep.updateSndBufferUsage(int(acked))
 
 		// It is possible for s.outstanding to drop below zero if we get
 		// a retransmit timeout, reset outstanding to zero but later

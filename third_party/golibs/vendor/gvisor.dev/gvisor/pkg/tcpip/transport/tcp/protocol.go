@@ -23,6 +23,7 @@ import (
 	"gvisor.dev/gvisor/pkg/sync"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/hash/jenkins"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/header/parse"
 	"gvisor.dev/gvisor/pkg/tcpip/seqnum"
@@ -48,10 +49,6 @@ const (
 
 	// MaxBufferSize is the largest size a receive/send buffer can grow to.
 	MaxBufferSize = 4 << 20 // 4MB
-
-	// MaxUnprocessedSegments is the maximum number of unprocessed segments
-	// that can be queued for a given endpoint.
-	MaxUnprocessedSegments = 300
 
 	// DefaultTCPLingerTimeout is the amount of time that sockets linger in
 	// FIN_WAIT_2 state before being marked closed.
@@ -96,6 +93,11 @@ type protocol struct {
 	maxRetries                 uint32
 	synRetries                 uint8
 	dispatcher                 dispatcher
+
+	// The following secrets are initialized once and stay unchanged after.
+	seqnumSecret     uint32
+	portOffsetSecret uint32
+	tsOffsetSecret   uint32
 }
 
 // Number returns the tcp protocol number.
@@ -105,7 +107,7 @@ func (*protocol) Number() tcpip.TransportProtocolNumber {
 
 // NewEndpoint creates a new tcp endpoint.
 func (p *protocol) NewEndpoint(netProto tcpip.NetworkProtocolNumber, waiterQueue *waiter.Queue) (tcpip.Endpoint, tcpip.Error) {
-	return newEndpoint(p.stack, netProto, waiterQueue), nil
+	return newEndpoint(p.stack, p, netProto, waiterQueue), nil
 }
 
 // NewRawEndpoint creates a new raw TCP endpoint. Raw TCP sockets are currently
@@ -154,6 +156,24 @@ func (p *protocol) HandleUnknownDestinationPacket(id stack.TransportEndpointID, 
 	}
 
 	return stack.UnknownDestinationPacketHandled
+}
+
+func (p *protocol) tsOffset(src, dst tcpip.Address) uint32 {
+	// Initialize a random tsOffset that will be added to the recentTS
+	// everytime the timestamp is sent when the Timestamp option is enabled.
+	//
+	// See https://tools.ietf.org/html/rfc7323#section-5.4 for details on
+	// why this is required.
+	//
+	// TODO(https://gvisor.dev/issues/6473): This is not really secure as
+	// it does not use the recommended algorithm linked above.
+	h := jenkins.Sum32(p.tsOffsetSecret)
+	// Per hash.Hash.Writer:
+	//
+	// It never returns an error.
+	_, _ = h.Write([]byte(src))
+	_, _ = h.Write([]byte(dst))
+	return h.Sum32()
 }
 
 // replyWithReset replies to the given segment with a reset segment.
@@ -292,22 +312,26 @@ func (p *protocol) SetOption(option tcpip.SettableTransportProtocolOption) tcpip
 
 	case *tcpip.TCPMinRTOOption:
 		p.mu.Lock()
+		defer p.mu.Unlock()
 		if *v < 0 {
 			p.minRTO = MinRTO
+		} else if minRTO := time.Duration(*v); minRTO <= p.maxRTO {
+			p.minRTO = minRTO
 		} else {
-			p.minRTO = time.Duration(*v)
+			return &tcpip.ErrInvalidOptionValue{}
 		}
-		p.mu.Unlock()
 		return nil
 
 	case *tcpip.TCPMaxRTOOption:
 		p.mu.Lock()
+		defer p.mu.Unlock()
 		if *v < 0 {
 			p.maxRTO = MaxRTO
+		} else if maxRTO := time.Duration(*v); maxRTO >= p.minRTO {
+			p.maxRTO = maxRTO
 		} else {
-			p.maxRTO = time.Duration(*v)
+			return &tcpip.ErrInvalidOptionValue{}
 		}
-		p.mu.Unlock()
 		return nil
 
 	case *tcpip.TCPMaxRetriesOption:
@@ -479,7 +503,15 @@ func NewProtocol(s *stack.Stack) stack.TransportProtocol {
 		maxRTO:                     MaxRTO,
 		maxRetries:                 MaxRetries,
 		recovery:                   tcpip.TCPRACKLossDetection,
+		seqnumSecret:               s.Rand().Uint32(),
+		portOffsetSecret:           s.Rand().Uint32(),
+		tsOffsetSecret:             s.Rand().Uint32(),
 	}
 	p.dispatcher.init(s.Rand(), runtime.GOMAXPROCS(0))
 	return &p
+}
+
+// protocolFromStack retrieves the tcp.protocol instance from stack s.
+func protocolFromStack(s *stack.Stack) *protocol {
+	return s.TransportProtocolInstance(ProtocolNumber).(*protocol)
 }

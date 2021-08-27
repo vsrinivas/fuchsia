@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -378,6 +377,7 @@ type endpoint struct {
 	// The following fields are initialized at creation time and do not
 	// change throughout the lifetime of the endpoint.
 	stack       *stack.Stack  `state:"manual"`
+	protocol    *protocol     `state:"manual"`
 	waiterQueue *waiter.Queue `state:"wait"`
 	uniqueID    uint64
 
@@ -803,9 +803,10 @@ type keepalive struct {
 	waker      sleep.Waker `state:"nosave"`
 }
 
-func newEndpoint(s *stack.Stack, netProto tcpip.NetworkProtocolNumber, waiterQueue *waiter.Queue) *endpoint {
+func newEndpoint(s *stack.Stack, protocol *protocol, netProto tcpip.NetworkProtocolNumber, waiterQueue *waiter.Queue) *endpoint {
 	e := &endpoint{
-		stack: s,
+		stack:    s,
+		protocol: protocol,
 		TransportEndpointInfo: stack.TransportEndpointInfo{
 			NetProto:   netProto,
 			TransProto: header.TCPProtocolNumber,
@@ -874,7 +875,7 @@ func newEndpoint(s *stack.Stack, netProto tcpip.NetworkProtocolNumber, waiterQue
 	}
 
 	e.segmentQueue.ep = e
-	e.TSOffset = timeStampOffset(e.stack.Rand())
+
 	e.acceptCond = sync.NewCond(&e.acceptMu)
 	e.keepalive.timer.init(e.stack.Clock(), &e.keepalive.waker)
 
@@ -1717,6 +1718,27 @@ func (e *endpoint) OnSetReceiveBufferSize(rcvBufSz, oldSz int64) (newSz int64) {
 	return rcvBufSz
 }
 
+// OnSetSendBufferSize implements tcpip.SocketOptionsHandler.OnSetSendBufferSize.
+func (e *endpoint) OnSetSendBufferSize(sz int64) int64 {
+	atomic.StoreUint32(&e.sndQueueInfo.TCPSndBufState.AutoTuneSndBufDisabled, 1)
+	return sz
+}
+
+// WakeupWriters implements tcpip.SocketOptionsHandler.WakeupWriters.
+func (e *endpoint) WakeupWriters() {
+	e.LockUser()
+	defer e.UnlockUser()
+
+	sendBufferSize := e.getSendBufferSize()
+	e.sndQueueInfo.sndQueueMu.Lock()
+	notify := (sendBufferSize - e.sndQueueInfo.SndBufUsed) >= e.sndQueueInfo.SndBufUsed>>1
+	e.sndQueueInfo.sndQueueMu.Unlock()
+
+	if notify {
+		e.waiterQueue.Notify(waiter.WritableEvents)
+	}
+}
+
 // SetSockOptInt sets a socket option.
 func (e *endpoint) SetSockOptInt(opt tcpip.SockOptInt, v int) tcpip.Error {
 	// Lower 2 bits represents ECN bits. RFC 3168, section 23.1
@@ -2177,7 +2199,7 @@ func (e *endpoint) connect(addr tcpip.FullAddress, handshake bool, run bool) tcp
 		portBuf := make([]byte, 2)
 		binary.LittleEndian.PutUint16(portBuf, e.ID.RemotePort)
 
-		h := jenkins.Sum32(e.stack.Seed())
+		h := jenkins.Sum32(e.protocol.portOffsetSecret)
 		for _, s := range [][]byte{
 			[]byte(e.ID.LocalAddress),
 			[]byte(e.ID.RemoteAddress),
@@ -2329,6 +2351,9 @@ func (e *endpoint) connect(addr tcpip.FullAddress, handshake bool, run bool) tcp
 		e.segmentQueue.mu.Unlock()
 		e.snd.updateMaxPayloadSize(int(e.route.MTU()), 0)
 		e.setEndpointState(StateEstablished)
+		// Set the new auto tuned send buffer size after entering
+		// established state.
+		e.ops.SetSendBufferSize(e.computeTCPSendBufferSize(), false /* notify */)
 	}
 
 	if run {
@@ -2763,13 +2788,20 @@ func (e *endpoint) updateSndBufferUsage(v int) {
 	e.sndQueueInfo.sndQueueMu.Lock()
 	notify := e.sndQueueInfo.SndBufUsed >= sendBufferSize>>1
 	e.sndQueueInfo.SndBufUsed -= v
+
+	// Get the new send buffer size with auto tuning, but do not set it
+	// unless we decide to notify the writers.
+	newSndBufSz := e.computeTCPSendBufferSize()
+
 	// We only notify when there is half the sendBufferSize available after
 	// a full buffer event occurs. This ensures that we don't wake up
 	// writers to queue just 1-2 segments and go back to sleep.
-	notify = notify && e.sndQueueInfo.SndBufUsed < sendBufferSize>>1
+	notify = notify && e.sndQueueInfo.SndBufUsed < int(newSndBufSz)>>1
 	e.sndQueueInfo.sndQueueMu.Unlock()
 
 	if notify {
+		// Set the new send buffer size calculated from auto tuning.
+		e.ops.SetSendBufferSize(newSndBufSz, false /* notify */)
 		e.waiterQueue.Notify(waiter.WritableEvents)
 	}
 }
@@ -2873,46 +2905,29 @@ func (e *endpoint) updateRecentTimestamp(tsVal uint32, maxSentAck seqnum.Value, 
 // maybeEnableTimestamp marks the timestamp option enabled for this endpoint if
 // the SYN options indicate that timestamp option was negotiated. It also
 // initializes the recentTS with the value provided in synOpts.TSval.
-func (e *endpoint) maybeEnableTimestamp(synOpts *header.TCPSynOptions) {
+func (e *endpoint) maybeEnableTimestamp(synOpts header.TCPSynOptions) {
 	if synOpts.TS {
 		e.SendTSOk = true
 		e.setRecentTimestamp(synOpts.TSVal)
 	}
 }
 
-// timestamp returns the timestamp value to be used in the TSVal field of the
-// timestamp option for outgoing TCP segments for a given endpoint.
-func (e *endpoint) timestamp() uint32 {
-	return tcpTimeStamp(e.stack.Clock().NowMonotonic(), e.TSOffset)
+func (e *endpoint) tsVal(now tcpip.MonotonicTime) uint32 {
+	return uint32(now.Sub(tcpip.MonotonicTime{}).Milliseconds()) + e.TSOffset
 }
 
-// tcpTimeStamp returns a timestamp offset by the provided offset. This is
-// not inlined above as it's used when SYN cookies are in use and endpoint
-// is not created at the time when the SYN cookie is sent.
-func tcpTimeStamp(curTime tcpip.MonotonicTime, offset uint32) uint32 {
-	d := curTime.Sub(tcpip.MonotonicTime{})
-	return uint32(d.Milliseconds()) + offset
+func (e *endpoint) tsValNow() uint32 {
+	return e.tsVal(e.stack.Clock().NowMonotonic())
 }
 
-// timeStampOffset returns a randomized timestamp offset to be used when sending
-// timestamp values in a timestamp option for a TCP segment.
-func timeStampOffset(rng *rand.Rand) uint32 {
-	// Initialize a random tsOffset that will be added to the recentTS
-	// everytime the timestamp is sent when the Timestamp option is enabled.
-	//
-	// See https://tools.ietf.org/html/rfc7323#section-5.4 for details on
-	// why this is required.
-	//
-	// NOTE: This is not completely to spec as normally this should be
-	// initialized in a manner analogous to how sequence numbers are
-	// randomized per connection basis. But for now this is sufficient.
-	return rng.Uint32()
+func (e *endpoint) elapsed(now tcpip.MonotonicTime, tsEcr uint32) time.Duration {
+	return time.Duration(e.tsVal(now)-tsEcr) * time.Millisecond
 }
 
 // maybeEnableSACKPermitted marks the SACKPermitted option enabled for this endpoint
 // if the SYN options indicate that the SACK option was negotiated and the TCP
 // stack is configured to enable TCP SACK option.
-func (e *endpoint) maybeEnableSACKPermitted(synOpts *header.TCPSynOptions) {
+func (e *endpoint) maybeEnableSACKPermitted(synOpts header.TCPSynOptions) {
 	var v tcpip.TCPSACKEnabled
 	if err := e.stack.TransportProtocolOption(ProtocolNumber, &v); err != nil {
 		// Stack doesn't support SACK. So just return.
@@ -3090,4 +3105,37 @@ func GetTCPReceiveBufferLimits(s tcpip.StackHandler) tcpip.ReceiveBufferSizeOpti
 		Default: ss.Default,
 		Max:     ss.Max,
 	}
+}
+
+// computeTCPSendBufferSize implements auto tuning of send buffer size and
+// returns the new send buffer size.
+func (e *endpoint) computeTCPSendBufferSize() int64 {
+	curSndBufSz := int64(e.getSendBufferSize())
+
+	// Auto tuning is disabled when the user explicitly sets the send
+	// buffer size with SO_SNDBUF option.
+	if disabled := atomic.LoadUint32(&e.sndQueueInfo.TCPSndBufState.AutoTuneSndBufDisabled); disabled == 1 {
+		return curSndBufSz
+	}
+
+	const packetOverheadFactor = 2
+	curMSS := e.snd.MaxPayloadSize
+	numSeg := InitialCwnd
+	if numSeg < e.snd.SndCwnd {
+		numSeg = e.snd.SndCwnd
+	}
+
+	// SndCwnd indicates the number of segments that can be sent. This means
+	// that the sender can send upto #SndCwnd segments and the send buffer
+	// size should be set to SndCwnd*MSS to accommodate sending of all the
+	// segments.
+	newSndBufSz := int64(numSeg * curMSS * packetOverheadFactor)
+	if newSndBufSz < curSndBufSz {
+		return curSndBufSz
+	}
+	if ss := GetTCPSendBufferLimits(e.stack); int64(ss.Max) < newSndBufSz {
+		newSndBufSz = int64(ss.Max)
+	}
+
+	return newSndBufSz
 }

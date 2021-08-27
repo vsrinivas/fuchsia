@@ -119,8 +119,7 @@ type Stack struct {
 	// by the stack.
 	icmpRateLimiter *ICMPRateLimiter
 
-	// seed is a one-time random value initialized at stack startup
-	// and is used to seed the TCP port picking on active connections
+	// seed is a one-time random value initialized at stack startup.
 	//
 	// TODO(gvisor.dev/issue/940): S/R this field.
 	seed uint32
@@ -161,6 +160,10 @@ type Stack struct {
 	// This is required to prevent potential ACK loops.
 	// Setting this to 0 will disable all rate limiting.
 	tcpInvalidRateLimit time.Duration
+
+	// tsOffsetSecret is the secret key for generating timestamp offsets
+	// initialized at stack startup.
+	tsOffsetSecret uint32
 }
 
 // UniqueID is an abstract generator of unique identifiers.
@@ -384,6 +387,7 @@ func New(opts Options) *Stack {
 			Max:     DefaultMaxBufferSize,
 		},
 		tcpInvalidRateLimit: defaultTCPInvalidRateLimit,
+		tsOffsetSecret:      randomGenerator.Uint32(),
 	}
 
 	// Add specified network protocols.
@@ -779,6 +783,9 @@ func (s *Stack) removeNICLocked(id tcpip.NICID) tcpip.Error {
 	nic, ok := s.nics[id]
 	if !ok {
 		return &tcpip.ErrUnknownNICID{}
+	}
+	if nic.IsLoopback() {
+		return &tcpip.ErrNotSupported{}
 	}
 	delete(s.nics, id)
 
@@ -1816,8 +1823,7 @@ func (s *Stack) SetNUDConfigurations(id tcpip.NICID, proto tcpip.NetworkProtocol
 	return nic.setNUDConfigs(proto, c)
 }
 
-// Seed returns a 32 bit value that can be used as a seed value for port
-// picking, ISN generation etc.
+// Seed returns a 32 bit value that can be used as a seed value.
 //
 // NOTE: The seed is generated once during stack initialization only.
 func (s *Stack) Seed() uint32 {

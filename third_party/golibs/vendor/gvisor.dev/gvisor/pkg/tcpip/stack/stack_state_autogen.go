@@ -100,7 +100,8 @@ func (cn *conn) beforeSave() {}
 // +checklocksignore
 func (cn *conn) StateSave(stateSinkObject state.Sink) {
 	cn.beforeSave()
-	var lastUsedValue unixTime = cn.saveLastUsed()
+	var lastUsedValue unixTime
+	lastUsedValue = cn.saveLastUsed()
 	stateSinkObject.SaveValue(5, lastUsedValue)
 	stateSinkObject.Save(0, &cn.original)
 	stateSinkObject.Save(1, &cn.reply)
@@ -1047,6 +1048,7 @@ func (t *TCPSndBufState) StateFields() []string {
 		"SndClosed",
 		"PacketTooBigCount",
 		"SndMTU",
+		"AutoTuneSndBufDisabled",
 	}
 }
 
@@ -1060,6 +1062,7 @@ func (t *TCPSndBufState) StateSave(stateSinkObject state.Sink) {
 	stateSinkObject.Save(2, &t.SndClosed)
 	stateSinkObject.Save(3, &t.PacketTooBigCount)
 	stateSinkObject.Save(4, &t.SndMTU)
+	stateSinkObject.Save(5, &t.AutoTuneSndBufDisabled)
 }
 
 func (t *TCPSndBufState) afterLoad() {}
@@ -1071,6 +1074,7 @@ func (t *TCPSndBufState) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(2, &t.SndClosed)
 	stateSourceObject.Load(3, &t.PacketTooBigCount)
 	stateSourceObject.Load(4, &t.SndMTU)
+	stateSourceObject.Load(5, &t.AutoTuneSndBufDisabled)
 }
 
 func (t *TCPEndpointStateInner) StateTypeName() string {
