@@ -27,7 +27,7 @@ use {
     std::sync::Arc,
 };
 
-/// Maximum number of concurrent connections to the protocols served by SessionManager.  
+/// Maximum number of concurrent connections to the protocols served by SessionManager.
 const MAX_CONCURRENT_CONNECTIONS: usize = 10_000;
 
 /// A request to connect to a protocol exposed by SessionManager.

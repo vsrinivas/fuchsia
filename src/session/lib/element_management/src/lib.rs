@@ -8,31 +8,34 @@
 //! Elements are instantiated as dynamic component instances in a component collection of the
 //! calling component.
 
+mod annotation;
+mod element;
+
 use {
-    async_trait::async_trait,
+    crate::annotation::{AnnotationError, AnnotationHolder},
+    crate::element::Element,
+    anyhow::{format_err, Error},
     fidl,
-    fidl::endpoints::{DiscoverableProtocolMarker, Proxy, ServiceMarker},
+    fidl::endpoints::{create_request_stream, ClientEnd, Proxy, ServerEnd},
+    fidl::AsHandleRef,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
-    fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
-    fuchsia_component,
-    fuchsia_syslog::fx_log_err,
-    fuchsia_syslog::fx_log_info,
+    fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fidl_fuchsia_ui_app as fuiapp,
+    fuchsia_async::{self as fasync, DurationExt},
+    fuchsia_component, fuchsia_scenic as scenic,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
-    futures::TryStreamExt,
+    futures::{lock::Mutex, select, FutureExt, StreamExt, TryStreamExt},
     rand::{distributions::Alphanumeric, thread_rng, Rng},
     realm_management,
-    std::fmt,
-    thiserror::Error,
+    std::sync::Arc,
 };
 
-/// Errors returned by calls to [`ElementManager`].
-#[derive(Debug, Error, Clone, PartialEq)]
-pub enum ElementManagerError {
-    /// Returned when the element manager fails to created the component instance associated with
-    /// a given element.
-    #[error("Element spec for \"{}/{}\" missing url.", name, collection)]
-    UrlMissing { name: String, collection: String },
+// Timeout duration for a ViewControllerProxy to close, in seconds.
+static VIEW_CONTROLLER_DISMISS_TIMEOUT: zx::Duration = zx::Duration::from_seconds(3_i64);
 
+/// Errors returned by calls to [`ElementManager`].
+#[derive(Debug, thiserror::Error, Clone, PartialEq)]
+pub enum ElementManagerError {
     /// Returned when the element manager fails to create an element with additional services for
     /// the given ServiceList. This may be because:
     ///   - `host_directory` is not set
@@ -73,13 +76,6 @@ pub enum ElementManagerError {
 }
 
 impl ElementManagerError {
-    pub fn url_missing(
-        name: impl Into<String>,
-        collection: impl Into<String>,
-    ) -> ElementManagerError {
-        ElementManagerError::UrlMissing { name: name.into(), collection: collection.into() }
-    }
-
     pub fn invalid_service_list(
         name: impl Into<String>,
         collection: impl Into<String>,
@@ -152,226 +148,6 @@ fn is_v2_component(component_url: &str) -> bool {
     component_url.ends_with(".cm")
 }
 
-/// Manages the elements associated with a session.
-#[async_trait]
-pub trait ElementManager {
-    /// Adds an element to the session.
-    ///
-    /// This method creates the component instance and binds to it, causing it to start running.
-    ///
-    /// # Parameters
-    /// - `spec`: The description of the element to add as a child.
-    /// - `child_name`: The name of the element, must be unique within a session. The name must be
-    ///                 non-empty, of the form [a-z0-9-_.].
-    ///
-    /// On success, the [`Element`] is returned back to the session.
-    ///
-    /// # Errors
-    /// If the child cannot be created or bound in the current [`fidl_fuchsia_sys2::Realm`]. In
-    /// particular, it is an error to call [`launch_element`] twice with the same `child_name`.
-    async fn launch_element(
-        &self,
-        spec: felement::Spec,
-        child_name: &str,
-    ) -> Result<Element, ElementManagerError>;
-
-    /// Handles requests to the [`Manager`] protocol.
-    ///
-    /// # Parameters
-    /// `stream`: The stream that receives [`Manager`] requests.
-    ///
-    /// # Returns
-    /// `Ok` if the request stream has been successfully handled once the client closes
-    /// its connection. `Error` if a FIDL IO error was encountered.
-    async fn handle_requests(
-        &mut self,
-        mut stream: felement::ManagerRequestStream,
-    ) -> Result<(), fidl::Error>;
-}
-
-enum ExposedCapabilities {
-    /// v1 component App
-    App(fuchsia_component::client::App),
-    /// v2 component exposed capabilities directory
-    Directory(zx::Channel),
-}
-
-impl fmt::Debug for ExposedCapabilities {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ExposedCapabilities::App(_) => write!(f, "CFv1 App"),
-            ExposedCapabilities::Directory(_) => write!(f, "CFv2 exposed capabilities Directory"),
-        }
-    }
-}
-
-/// Represents a component launched by an Element Manager.
-///
-/// The component can be either a v1 component launched by the fuchsia.sys.Launcher, or a v2
-/// component launched as a child of the Element Manager's realm.
-///
-/// The Element can be used to connect to services exposed by the underlying v1 or v2 component.
-#[derive(Debug)]
-pub struct Element {
-    /// CF v1 or v2 object that manages a `Directory` request channel for requesting services
-    /// exposed by the component.
-    exposed_capabilities: ExposedCapabilities,
-
-    /// The component URL used to launch the component. Private but printable via "{:?}".
-    url: String,
-
-    /// v2 component child name, or empty string if not a child of the realm (such as a CFv1
-    /// component). Private but printable via "{:?}"".
-    name: String,
-
-    /// v2 component child collection name or empty string if not a child of the realm (such as a
-    /// CFv1 component). Private but printable via "{:?}"".
-    collection: String,
-}
-
-/// A component launched in response to `ElementManager::ProposeElement()`.
-///
-/// A session uses `ElementManager` to launch and return the Element, and can then use the Element
-/// to connect to exposed capabilities.
-///
-/// An Element composes either a CFv2 component (launched as a child of the `ElementManager`'s
-/// realm) or a CFv1 component (launched via a fuchsia::sys::Launcher).
-impl Element {
-    /// Creates an Element from a `fuchsia_component::client::App`.
-    ///
-    /// # Parameters
-    /// - `url`: The launched component URL.
-    /// - `app`: The v1 component wrapped in an App, returned by the launch function.
-    pub fn from_app(app: fuchsia_component::client::App, url: &str) -> Element {
-        Element {
-            exposed_capabilities: ExposedCapabilities::App(app),
-            url: url.to_string(),
-            name: "".to_string(),
-            collection: "".to_string(),
-        }
-    }
-
-    /// Creates an Element from a component's exposed capabilities directory.
-    ///
-    /// # Parameters
-    /// - `directory_channel`: A channel to the component's `Directory` of exposed capabilities.
-    /// - `name`: The launched component's name.
-    /// - `url`: The launched component URL.
-    /// - `collection`: The launched component's collection name.
-    pub fn from_directory_channel(
-        directory_channel: zx::Channel,
-        name: &str,
-        url: &str,
-        collection: &str,
-    ) -> Element {
-        Element {
-            exposed_capabilities: ExposedCapabilities::Directory(directory_channel),
-            url: url.to_string(),
-            name: name.to_string(),
-            collection: collection.to_string(),
-        }
-    }
-
-    // # Note
-    //
-    // The methods below are copied from fuchsia_component::client::App in order to offer
-    // services in the same way, but from any `Element`, wrapping either a v1 `App` or a v2
-    // component's `Directory` of exposed services.
-
-    /// Returns a reference to the component's `Directory` of exposed capabilities. A session can
-    /// request services, and/or other capabilities, from the Element, using this channel.
-    ///
-    /// # Returns
-    /// A `channel` to the component's `Directory` of exposed capabilities.
-    #[inline]
-    pub fn directory_channel(&self) -> &zx::Channel {
-        match &self.exposed_capabilities {
-            ExposedCapabilities::App(app) => &app.directory_channel(),
-            ExposedCapabilities::Directory(directory_channel) => &directory_channel,
-        }
-    }
-
-    #[inline]
-    fn service_path_prefix(&self) -> &str {
-        match &self.exposed_capabilities {
-            ExposedCapabilities::App(..) => "",
-            ExposedCapabilities::Directory(..) => "svc/",
-        }
-    }
-
-    /// Connect to a service provided by the `Element`.
-    ///
-    /// # Type Parameters
-    /// - P: A FIDL service `Marker` type.
-    ///
-    /// # Returns
-    /// - A service `Proxy` matching the `Marker`, or an error if the service is not available from
-    /// the `Element`.
-    #[inline]
-    pub fn connect_to_service<P: DiscoverableProtocolMarker>(
-        &self,
-    ) -> Result<P::Proxy, anyhow::Error> {
-        let (client_channel, server_channel) = zx::Channel::create()?;
-        self.connect_to_service_with_channel::<P>(server_channel)?;
-        Ok(P::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
-    }
-
-    /// Connect to a FIDL service provided by the `Element`.
-    ///
-    /// # Type Parameters
-    /// - S: A FIDL service `Marker` type.
-    ///
-    /// # Returns
-    /// - A service `Proxy` matching the `Marker`, or an error if the service is not available from
-    /// the `Element`.
-    #[inline]
-    pub fn connect_to_unified_service<S: ServiceMarker>(&self) -> Result<S::Proxy, anyhow::Error> {
-        fuchsia_component::client::connect_to_service_at_dir::<S>(&self.directory_channel())
-    }
-
-    /// Connect to a service by passing a channel for the server.
-    ///
-    /// # Type Parameters
-    /// - P: A FIDL service `Marker` type.
-    ///
-    /// # Parameters
-    /// - server_channel: The server-side endpoint of a channel pair, to bind to the requested
-    /// service. The caller will interact with the service via the client-side endpoint.
-    ///
-    /// # Returns
-    /// - Result::Ok or an error if the service is not available from the `Element`.
-    #[inline]
-    pub fn connect_to_service_with_channel<P: DiscoverableProtocolMarker>(
-        &self,
-        server_channel: zx::Channel,
-    ) -> Result<(), anyhow::Error> {
-        self.connect_to_named_service_with_channel(P::PROTOCOL_NAME, server_channel)
-    }
-
-    /// Connect to a service by name.
-    ///
-    /// # Parameters
-    /// - service_name: A FIDL service by name.
-    /// - server_channel: The server-side endpoint of a channel pair, to bind to the requested
-    /// service. The caller will interact with the service via the client-side endpoint.
-    ///
-    /// # Returns
-    /// - Result::Ok or an error if the service is not available from the `Element`.
-    #[inline]
-    pub fn connect_to_named_service_with_channel(
-        &self,
-        service_name: &str,
-        server_channel: zx::Channel,
-    ) -> Result<(), anyhow::Error> {
-        fdio::service_connect_at(
-            &self.directory_channel(),
-            &(self.service_path_prefix().to_owned() + service_name),
-            server_channel,
-        )?;
-        Ok(())
-    }
-}
-
 /// A list of services passed to an Element created from a CFv1 component.
 ///
 /// This is a subset of fuchsia::sys::ServiceList that only supports a host
@@ -384,44 +160,43 @@ struct AdditionalServices {
     pub host_directory: zx::Channel,
 }
 
-/// A [`SimpleElementManager`] creates and binds elements.
-///
-/// The [`SimpleElementManager`] provides no additional functionality for managing elements (e.g.,
-/// tracking which elements are running, de-duplicating elements, etc.).
-pub struct SimpleElementManager {
+/// Manages the elements associated with a session.
+pub struct ElementManager {
     /// The realm which this element manager uses to create components.
     realm: fsys2::RealmProxy,
+
+    /// The presenter that will make launched elements visible to the user.
+    ///
+    /// This is typically provided by the system shell, or other similar configurable component.
+    graphical_presenter: Option<felement::GraphicalPresenterProxy>,
 
     /// The collection in which elements will be launched.
     ///
     /// This is only used for elements that have a CFv2 (*.cm) component URL, and has no meaning
     /// for CFv1 elementes.
     ///
-    /// The component that is running the `SimpleElementManager` must have a collection
+    /// The component that is running the `ElementManager` must have a collection
     /// with the same name in its CML file.
     collection: String,
 
     /// A proxy to the `fuchsia::sys::Launcher` protocol used to create CFv1 components, or an error
     /// that represents a failure to connect to the protocol.
     ///
-    /// If a launcher is not provided during intialization, it is requested from the environment.
-    sys_launcher: Result<fsys::LauncherProxy, anyhow::Error>,
-
-    /// Elements that were launched with no `Controller` provided by the client.
-    ///
-    /// Elements are added to this list to ensure they stay running when the
-    /// client disconnects from `Manager`.
-    uncontrolled_elements: Vec<Element>,
+    /// If a launcher is not provided during initialization, it is requested from the environment.
+    sys_launcher: Result<fsys::LauncherProxy, Error>,
 }
 
-/// An element manager that launches v1 and v2 components, returning them to the caller.
-impl SimpleElementManager {
-    pub fn new(realm: fsys2::RealmProxy, collection: &str) -> SimpleElementManager {
-        SimpleElementManager {
+impl ElementManager {
+    pub fn new(
+        realm: fsys2::RealmProxy,
+        graphical_presenter: Option<felement::GraphicalPresenterProxy>,
+        collection: &str,
+    ) -> ElementManager {
+        ElementManager {
             realm,
+            graphical_presenter,
             collection: collection.to_string(),
             sys_launcher: fuchsia_component::client::connect_to_protocol::<fsys::LauncherMarker>(),
-            uncontrolled_elements: vec![],
         }
     }
 
@@ -429,15 +204,89 @@ impl SimpleElementManager {
     /// launcher.
     pub fn new_with_sys_launcher(
         realm: fsys2::RealmProxy,
+        graphical_presenter: Option<felement::GraphicalPresenterProxy>,
         collection: &str,
         sys_launcher: fsys::LauncherProxy,
     ) -> Self {
-        SimpleElementManager {
+        ElementManager {
             realm,
+            graphical_presenter,
             collection: collection.to_string(),
             sys_launcher: Ok(sys_launcher),
-            uncontrolled_elements: vec![],
         }
+    }
+
+    /// Adds an element to the session.
+    ///
+    /// This method creates the component instance and binds to it, causing it to start running.
+    ///
+    /// # Parameters
+    /// - `url`: The component URL of the element to add as a child.
+    /// - `additional_services`: Additional services to add the new component's namespace under /svc,
+    ///                          in addition to those coming from the environment. Only applicable
+    ///                          for legacy (v1) components.
+    /// - `child_name`: The name of the element, must be unique within a session. The name must be
+    ///                 non-empty, of the form [a-z0-9-_.].
+    ///
+    /// On success, the [`Element`] is returned back to the session.
+    ///
+    /// # Errors
+    /// If the child cannot be created or bound in the current [`fidl_fuchsia_sys2::Realm`]. In
+    /// particular, it is an error to call [`launch_element`] twice with the same `child_name`.
+    pub async fn launch_element(
+        &self,
+        url: String,
+        additional_services: Option<fidl_fuchsia_sys::ServiceList>,
+        child_name: &str,
+    ) -> Result<Element, ElementManagerError> {
+        let additional_services =
+            additional_services.map_or(Ok(None), |services| match services {
+                fsys::ServiceList {
+                    names,
+                    host_directory: Some(service_host_directory),
+                    provider: None,
+                } => Ok(Some(AdditionalServices { names, host_directory: service_host_directory })),
+                _ => Err(ElementManagerError::invalid_service_list(child_name, &self.collection)),
+            })?;
+
+        let element = if is_v2_component(&url) {
+            // `additional_services` is only supported for CFv1 components.
+            if additional_services.is_some() {
+                return Err(ElementManagerError::additional_services_not_supported(
+                    child_name,
+                    &self.collection,
+                ));
+            }
+
+            self.launch_v2_element(&child_name, &url).await?
+        } else {
+            self.launch_v1_element(&url, additional_services).await?
+        };
+
+        Ok(element)
+    }
+
+    /// Handles requests to the [`Manager`] protocol.
+    ///
+    /// # Parameters
+    /// `stream`: The stream that receives [`Manager`] requests.
+    ///
+    /// # Returns
+    /// `Ok` if the request stream has been successfully handled once the client closes
+    /// its connection. `Error` if a FIDL IO error was encountered.
+    pub async fn handle_requests(
+        &self,
+        mut stream: felement::ManagerRequestStream,
+    ) -> Result<(), fidl::Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                felement::ManagerRequest::ProposeElement { spec, controller, responder } => {
+                    let mut result = self.handle_propose_element(spec, controller).await;
+                    let _ = responder.send(&mut result);
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Launches a CFv1 component as an element.
@@ -458,7 +307,7 @@ impl SimpleElementManager {
         child_url: &str,
         additional_services: Option<AdditionalServices>,
     ) -> Result<Element, ElementManagerError> {
-        let sys_launcher = (&self.sys_launcher).as_ref().map_err(|err: &anyhow::Error| {
+        let sys_launcher = (&self.sys_launcher).as_ref().map_err(|err: &Error| {
             ElementManagerError::not_launched(
                 child_url.clone(),
                 format!("Error connecting to fuchsia::sys::Launcher: {}", err.to_string()),
@@ -476,7 +325,7 @@ impl SimpleElementManager {
             None,
             launch_options,
         )
-        .map_err(|err: anyhow::Error| {
+        .map_err(|err: Error| {
             ElementManagerError::not_launched(child_url.clone(), err.to_string())
         })?;
 
@@ -554,151 +403,277 @@ impl SimpleElementManager {
             &self.collection,
         ))
     }
-}
 
-/// Handles Controller protocol requests.
-///
-/// # Parameters
-/// - `stream`: the input channel that receives [`Controller`] requests.
-/// - `element`: the [`Element`] that is being controlled.
-///
-/// # Returns
-/// () when there are no more valid requests.
-async fn handle_controller_requests(
-    mut stream: felement::ControllerRequestStream,
-    _element: Element,
-) {
-    while let Ok(Some(request)) = stream.try_next().await {
-        match request {
-            felement::ControllerRequest::UpdateAnnotations {
-                annotations_to_set: _,
-                annotations_to_delete: _,
-                responder,
-            } => {
-                fx_log_err!(
-                    "TODO(fxbug.dev/65759): Controller.UpdateAnnotations is not implemented",
-                );
-                responder.control_handle().shutdown_with_epitaph(zx::Status::UNAVAILABLE);
-            }
-            felement::ControllerRequest::GetAnnotations { responder } => {
-                fx_log_err!("TODO(fxbug.dev/65759): Controller.GetAnnotations is not implemented");
-                responder.control_handle().shutdown_with_epitaph(zx::Status::UNAVAILABLE);
-            }
-        }
-    }
-}
-
-#[async_trait]
-impl ElementManager for SimpleElementManager {
-    async fn launch_element(
+    /// Attempts to connect to the element's view provider and if it does
+    /// expose the view provider will tell the proxy to present the view.
+    async fn present_view_for_element(
         &self,
-        spec: felement::Spec,
-        child_name: &str,
-    ) -> Result<Element, ElementManagerError> {
-        let child_url = spec
-            .component_url
-            .ok_or_else(|| ElementManagerError::url_missing(child_name, &self.collection))?;
+        element: &mut Element,
+        initial_annotations: Vec<felement::Annotation>,
+        annotation_controller: Option<ClientEnd<felement::AnnotationControllerMarker>>,
+    ) -> Result<felement::ViewControllerProxy, Error> {
+        let view_provider = element.connect_to_service::<fuiapp::ViewProviderMarker>()?;
+        let token_pair = scenic::ViewTokenPair::new()?;
+        let scenic::ViewRefPair { mut control_ref, mut view_ref } = scenic::ViewRefPair::new()?;
+        let view_ref_dup = scenic::duplicate_view_ref(&view_ref)?;
 
-        let additional_services =
-            spec.additional_services.map_or(Ok(None), |services| match services {
-                fsys::ServiceList {
-                    names,
-                    host_directory: Some(service_host_directory),
-                    provider: None,
-                } => Ok(Some(AdditionalServices { names, host_directory: service_host_directory })),
-                _ => Err(ElementManagerError::invalid_service_list(child_name, &self.collection)),
-            })?;
+        // note: this call will never fail since connecting to a service is
+        // always successful and create_view doesn't have a return value.
+        // If there is no view provider, the view_holder_token will be invalidated
+        // and the presenter can choose to close the view controller if it
+        // only wants to allow graphical views.
+        view_provider.create_view_with_view_ref(
+            token_pair.view_token.value,
+            &mut control_ref,
+            &mut view_ref,
+        )?;
 
-        let element = if is_v2_component(&child_url) {
-            // `additional_services` is only supported for CFv1 components.
-            if additional_services.is_some() {
-                return Err(ElementManagerError::additional_services_not_supported(
-                    child_name,
-                    &self.collection,
-                ));
-            }
-
-            self.launch_v2_element(&child_name, &child_url).await?
-        } else {
-            self.launch_v1_element(&child_url, additional_services).await?
+        let view_spec = felement::ViewSpec {
+            view_holder_token: Some(token_pair.view_holder_token),
+            view_ref: Some(view_ref_dup),
+            annotations: Some(initial_annotations),
+            ..felement::ViewSpec::EMPTY
         };
 
-        Ok(element)
+        let (view_controller_proxy, server_end) =
+            fidl::endpoints::create_proxy::<felement::ViewControllerMarker>()?;
+
+        if let Some(graphical_presenter) = &self.graphical_presenter {
+            graphical_presenter
+                .present_view(view_spec, annotation_controller, Some(server_end))
+                .await?
+                .map_err(|err| format_err!("Failed to present element: {:?}", err))?;
+        }
+
+        Ok(view_controller_proxy)
     }
 
-    async fn handle_requests(
-        &mut self,
-        mut stream: felement::ManagerRequestStream,
-    ) -> Result<(), fidl::Error> {
-        while let Some(request) = stream.try_next().await? {
+    async fn handle_propose_element(
+        &self,
+        spec: felement::Spec,
+        element_controller: Option<ServerEnd<felement::ControllerMarker>>,
+    ) -> Result<(), felement::ProposeElementError> {
+        let mut child_name: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+        child_name.make_ascii_lowercase();
+
+        // Create AnnotationHolder and populate the initial annotations from the Spec.
+        let mut annotation_holder = AnnotationHolder::new();
+        if let Some(initial_annotations) = spec.annotations {
+            annotation_holder.update_annotations(initial_annotations, vec![]).map_err(|e| {
+                fx_log_err!("ProposeElement() failed to set initial annotations: {:?}", e);
+                felement::ProposeElementError::InvalidArgs
+            })?;
+        }
+
+        let component_url = spec.component_url.ok_or_else(|| {
+            fx_log_err!("ProposeElement() failed to launch element: spec.component_url is missing");
+            felement::ProposeElementError::InvalidArgs
+        })?;
+
+        let mut element = self
+            .launch_element(component_url, spec.additional_services, &child_name)
+            .await
+            .map_err(|err| match err {
+                ElementManagerError::NotCreated { .. } => felement::ProposeElementError::NotFound,
+                err => {
+                    fx_log_err!("ProposeElement() failed to launch element: {:?}", err);
+                    felement::ProposeElementError::InvalidArgs
+                }
+            })?;
+
+        let (annotation_controller_client_end, annotation_controller_stream) =
+            create_request_stream::<felement::AnnotationControllerMarker>().unwrap();
+        let initial_view_annotations = annotation_holder.get_annotations().unwrap();
+
+        let view_controller_proxy = self
+            .present_view_for_element(
+                &mut element,
+                initial_view_annotations,
+                Some(annotation_controller_client_end),
+            )
+            .await
+            .map_err(|err| {
+                // TODO(fxbug.dev/82894): ProposeElement should propagate GraphicalPresenter errors back to caller
+                fx_log_err!("ProposeElement() failed to present element: {:?}", err);
+                felement::ProposeElementError::InvalidArgs
+            })?;
+
+        let element_controller_stream = match element_controller {
+            Some(controller) => match controller.into_stream() {
+                Ok(stream) => Ok(Some(stream)),
+                Err(_) => Err(felement::ProposeElementError::InvalidArgs),
+            },
+            None => Ok(None),
+        }?;
+
+        fasync::Task::local(run_element_until_closed(
+            element,
+            annotation_holder,
+            element_controller_stream,
+            annotation_controller_stream,
+            Some(view_controller_proxy),
+        ))
+        .detach();
+
+        Ok(())
+    }
+}
+
+/// Runs the Element until it receives a signal to shutdown.
+///
+/// The Element can receive a signal to shut down from any of the
+/// following:
+///   - Element. The component represented by the element can close on its own.
+///   - ControllerRequestStream. The element controller can signal that the element should close.
+///   - ViewControllerProxy. The view controller can signal that the element can close.
+///
+/// The Element will shutdown when any of these signals are received.
+///
+/// The Element will also listen for any incoming events from the element controller and
+/// forward them to the view controller.
+async fn run_element_until_closed(
+    element: Element,
+    annotation_holder: AnnotationHolder,
+    controller_stream: Option<felement::ControllerRequestStream>,
+    annotation_controller_stream: felement::AnnotationControllerRequestStream,
+    view_controller_proxy: Option<felement::ViewControllerProxy>,
+) {
+    let annotation_holder = Arc::new(Mutex::new(annotation_holder));
+
+    // This task will fall out of scope when the select!() below returns.
+    let _annotation_task = fasync::Task::spawn(annotation::handle_annotation_controller_stream(
+        annotation_holder.clone(),
+        annotation_controller_stream,
+    ));
+
+    select!(
+        _ = await_element_close(element).fuse() => {
+            // signals that a element has died without being told to close.
+            // We could tell the view to dismiss here but we need to signal
+            // that there was a crash. The current contract is that if the
+            // view controller binding closes without a dismiss then the
+            // presenter should treat this as a crash and respond accordingly.
+            if let Some(proxy) = view_controller_proxy {
+                // We want to allow the presenter the ability to dismiss
+                // the view so we tell it to dismiss and then wait for
+                // the view controller stream to close.
+                let _ = proxy.dismiss();
+                let timeout = fuchsia_async::Timer::new(VIEW_CONTROLLER_DISMISS_TIMEOUT.after_now());
+                wait_for_view_controller_close_or_timeout(proxy, timeout).await;
+            }
+        },
+        _ = wait_for_optional_view_controller_close(view_controller_proxy.clone()).fuse() =>  {
+            // signals that the presenter would like to close the element.
+            // We do not need to do anything here but exit which will cause
+            // the element to be dropped and will kill the component.
+        },
+        _ = handle_element_controller_stream(annotation_holder.clone(), controller_stream).fuse() => {
+            // the proposer has decided they want to shut down the element.
+            if let Some(proxy) = view_controller_proxy {
+                // We want to allow the presenter the ability to dismiss
+                // the view so we tell it to dismiss and then wait for
+                // the view controller stream to close.
+                let _ = proxy.dismiss();
+                let timeout = fuchsia_async::Timer::new(VIEW_CONTROLLER_DISMISS_TIMEOUT.after_now());
+                wait_for_view_controller_close_or_timeout(proxy, timeout).await;
+            }
+        },
+    );
+}
+
+/// Waits for the element to signal that it closed
+async fn await_element_close(element: Element) {
+    let channel = element.directory_channel();
+    let _ =
+        fasync::OnSignals::new(&channel.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED).await;
+}
+
+/// Waits for the view controller to signal that it wants to close.
+///
+/// if the ViewControllerProxy is None then this future will never resolve.
+async fn wait_for_optional_view_controller_close(proxy: Option<felement::ViewControllerProxy>) {
+    if let Some(proxy) = proxy {
+        wait_for_view_controller_close(proxy).await;
+    } else {
+        // If the view controller is None then we never exit and rely
+        // on the other futures to signal the end of the element.
+        futures::future::pending::<()>().await;
+    }
+}
+
+/// Waits for this view controller to close.
+async fn wait_for_view_controller_close(proxy: felement::ViewControllerProxy) {
+    let stream = proxy.take_event_stream();
+    let _ = stream.collect::<Vec<_>>().await;
+}
+
+/// Waits for this view controller to close.
+async fn wait_for_view_controller_close_or_timeout(
+    proxy: felement::ViewControllerProxy,
+    timeout: fasync::Timer,
+) {
+    let _ = futures::future::select(timeout, Box::pin(wait_for_view_controller_close(proxy))).await;
+}
+
+/// Handles element Controller protocol requests.
+///
+/// If the `ControllerRequestStream` is None then this future will never resolve.
+///
+/// # Parameters
+/// - `annotation_holder`: The [`AnnotationHolder`] for the controlled element.
+/// - `stream`: The stream of [`Controller`] requests.
+async fn handle_element_controller_stream(
+    annotation_holder: Arc<Mutex<AnnotationHolder>>,
+    stream: Option<felement::ControllerRequestStream>,
+) {
+    // NOTE: Keep this in sync with any changes to handle_annotation_controller_stream().
+
+    // TODO(fxbug.dev/83326): Unify this with handle_annotation_controller_stream(), once FIDL
+    // provides a mechanism to do so.
+    if let Some(mut stream) = stream {
+        while let Ok(Some(request)) = stream.try_next().await {
             match request {
-                felement::ManagerRequest::ProposeElement { spec, controller, responder } => {
-                    let mut child_name: String =
-                        thread_rng().sample_iter(&Alphanumeric).take(16).collect();
-                    child_name.make_ascii_lowercase();
-
-                    let mut result = match self.launch_element(spec, &child_name).await {
-                        Ok(element) => {
-                            match controller {
-                                Some(controller) => match controller.into_stream() {
-                                    Ok(stream) => {
-                                        fasync::Task::spawn(handle_controller_requests(
-                                            stream, element,
-                                        ))
-                                        .detach();
-                                        Ok(())
-                                    }
-                                    Err(err) => {
-                                        fx_log_err!(
-                                            "Failed to convert Controller request to stream: {:?}",
-                                            err
-                                        );
-                                        Err(felement::ProposeElementError::InvalidArgs)
-                                    }
-                                },
-                                // If the element proposer did not provide a controller, add the
-                                // element to a vector to keep it alive:
-                                None => {
-                                    self.uncontrolled_elements.push(element);
-                                    Ok(())
-                                }
-                            }
-                        }
-                        Err(err) => {
-                            fx_log_err!("Failed to launch element: {:?}", err);
-
-                            match err {
-                                ElementManagerError::UrlMissing { .. } => {
-                                    Err(felement::ProposeElementError::NotFound)
-                                }
-                                ElementManagerError::InvalidServiceList { .. }
-                                | ElementManagerError::AdditionalServicesNotSupported { .. }
-                                | ElementManagerError::NotCreated { .. }
-                                | ElementManagerError::NotBound { .. }
-                                | ElementManagerError::ExposedDirNotOpened { .. }
-                                | ElementManagerError::NotLaunched { .. } => {
-                                    Err(felement::ProposeElementError::InvalidArgs)
-                                }
-                            }
-                        }
-                    };
-
-                    let _ = responder.send(&mut result);
+                felement::ControllerRequest::UpdateAnnotations {
+                    annotations_to_set,
+                    annotations_to_delete,
+                    responder,
+                } => {
+                    let result = annotation_holder
+                        .lock()
+                        .await
+                        .update_annotations(annotations_to_set, annotations_to_delete);
+                    match result {
+                        Ok(()) => responder.send(&mut Ok(())),
+                        Err(AnnotationError::Update(e)) => responder.send(&mut Err(e)),
+                        Err(_) => unreachable!(),
+                    }
+                    .ok();
+                }
+                felement::ControllerRequest::GetAnnotations { responder } => {
+                    let result = annotation_holder.lock().await.get_annotations();
+                    match result {
+                        Ok(annotation_vec) => responder.send(&mut Ok(annotation_vec)),
+                        Err(AnnotationError::Get(e)) => responder.send(&mut Err(e)),
+                        Err(_) => unreachable!(),
+                    }
+                    .ok();
                 }
             }
         }
-        Ok(())
+    } else {
+        // If the element controller is None then we never exit and rely
+        // on the other futures to signal the end of the element.
+        futures::future::pending::<()>().await;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::{ElementManager, ElementManagerError, SimpleElementManager},
+        super::{ElementManager, ElementManagerError},
         fidl::endpoints::{spawn_stream_handler, ProtocolMarker, ServerEnd},
-        fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
-        fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys,
+        fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::mpsc::channel, prelude::*},
         lazy_static::lazy_static,
         session_testing::{spawn_directory_server, spawn_noop_directory_server},
@@ -763,16 +738,9 @@ mod tests {
         .unwrap();
 
         let element_manager =
-            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
-        let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                child_name,
-            )
-            .await;
+            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
+        let result =
+            element_manager.launch_element(component_url.to_string(), None, child_name).await;
         let element = result.unwrap();
         assert!(format!("{:?}", element).contains(component_url));
 
@@ -833,25 +801,13 @@ mod tests {
         .unwrap();
 
         let element_manager =
-            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
+            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
         assert!(element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(a_component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                a_child_name,
-            )
+            .launch_element(a_component_url.to_string(), None, a_child_name,)
             .await
             .is_ok());
         assert!(element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(b_component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                b_child_name,
-            )
+            .launch_element(b_component_url.to_string(), None, b_child_name,)
             .await
             .is_ok());
 
@@ -942,16 +898,9 @@ mod tests {
         .unwrap();
 
         let element_manager =
-            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
+            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
         let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    additional_services: Some(additional_services),
-                    ..felement::Spec::EMPTY
-                },
-                child_name,
-            )
+            .launch_element(component_url.to_string(), Some(additional_services), child_name)
             .await;
         let element = result.unwrap();
         assert!(format!("{:?}", element).contains(component_url));
@@ -1014,17 +963,10 @@ mod tests {
         .unwrap();
 
         let element_manager =
-            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
+            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
 
-        let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                child_name,
-            )
-            .await;
+        let result =
+            element_manager.launch_element(component_url.to_string(), None, child_name).await;
         let element = result.unwrap();
 
         // Now use the element api to open a service in the element's outgoing dir. Verify
@@ -1067,40 +1009,12 @@ mod tests {
         .unwrap();
 
         let element_manager =
-            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
+            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
 
         assert!(element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                child_name,
-            )
+            .launch_element(component_url.to_string(), None, child_name,)
             .await
             .is_ok());
-    }
-
-    /// Tests that launching an element with no URL returns the appropriate error.
-    #[fasync::run_until_stalled(test)]
-    async fn launch_element_no_url() {
-        let realm = spawn_stream_handler(move |_realm_request| async move {
-            panic!("Realm should not receive any requests as there is no component to launch")
-        })
-        .unwrap();
-
-        let launcher = spawn_stream_handler(move |_launcher_request| async move {
-            panic!("Launcher should not receive any requests as there is no component to launch")
-        })
-        .unwrap();
-
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
-
-        let result = element_manager
-            .launch_element(felement::Spec { component_url: None, ..felement::Spec::EMPTY }, "")
-            .await;
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap(), ElementManagerError::url_missing("", ""));
     }
 
     /// Tests that launching a CFv1 element with a ServiceList that specifies a `provider`
@@ -1129,17 +1043,10 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
+        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
 
         let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    additional_services: Some(additional_services),
-                    ..felement::Spec::EMPTY
-                },
-                "",
-            )
+            .launch_element(component_url.to_string(), Some(additional_services), "")
             .await;
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), ElementManagerError::invalid_service_list("", ""));
@@ -1168,17 +1075,10 @@ mod tests {
             panic!("Realm should not receive any requests since the child won't be created")
         })
         .unwrap();
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
+        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
 
         let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    additional_services: Some(additional_services),
-                    ..felement::Spec::EMPTY
-                },
-                "",
-            )
+            .launch_element(component_url.to_string(), Some(additional_services), "")
             .await;
         assert!(result.is_err());
         assert_eq!(
@@ -1209,17 +1109,9 @@ mod tests {
             }
         })
         .unwrap();
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
+        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
 
-        let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                "",
-            )
-            .await;
+        let result = element_manager.launch_element(component_url.to_string(), None, "").await;
         assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),
@@ -1249,17 +1141,9 @@ mod tests {
             }
         })
         .unwrap();
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
+        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
 
-        let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                "",
-            )
-            .await;
+        let result = element_manager.launch_element(component_url.to_string(), None, "").await;
         assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),
@@ -1296,17 +1180,9 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
+        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
 
-        let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                "",
-            )
-            .await;
+        let result = element_manager.launch_element(component_url.to_string(), None, "").await;
         assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),
@@ -1345,17 +1221,9 @@ mod tests {
             }
         })
         .unwrap();
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, "", launcher);
+        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
 
-        let result = element_manager
-            .launch_element(
-                felement::Spec {
-                    component_url: Some(component_url.to_string()),
-                    ..felement::Spec::EMPTY
-                },
-                "",
-            )
-            .await;
+        let result = element_manager.launch_element(component_url.to_string(), None, "").await;
         assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),

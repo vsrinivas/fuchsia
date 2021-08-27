@@ -7,4 +7,10 @@
         runner: "elf",
         binary: "bin/reference-element",
     },
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

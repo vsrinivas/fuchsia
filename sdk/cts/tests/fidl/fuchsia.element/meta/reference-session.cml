@@ -13,6 +13,11 @@
             url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
             startup: "eager",
         },
+        {
+            name: "reference-graphical-presenter",
+            url: "fuchsia-pkg://fuchsia.com/fuchsia-element-reference#meta/reference-graphical-presenter.cm",
+            startup: "eager",
+        },
     ],
     capabilities: [
         { protocol: "fuchsia.element.Manager" },
@@ -24,6 +29,16 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
+            to: "#element_manager",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#reference-graphical-presenter",
+        },
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "#reference-graphical-presenter",
             to: "#element_manager",
         },
     ],

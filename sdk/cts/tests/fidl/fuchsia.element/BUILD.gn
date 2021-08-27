@@ -68,6 +68,26 @@ cts_fuchsia_component("reference-element") {
   deps = [ ":reference-element-bin" ]
 }
 
+cts_executable("reference-graphical-presenter-bin") {
+  output_name = "reference-graphical-presenter"
+  testonly = true
+
+  sources = [ "reference_graphical_presenter.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.element",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+cts_fuchsia_component("reference-graphical-presenter") {
+  manifest = "meta/reference-graphical-presenter.cml"
+  testonly = true
+  deps = [ ":reference-graphical-presenter-bin" ]
+}
+
 cts_executable("reference-session-bin") {
   output_name = "reference-session"
   testonly = true
@@ -91,6 +111,7 @@ cts_fuchsia_package("fuchsia-element-reference") {
   testonly = true
   deps = [
     ":reference-element",
+    ":reference-graphical-presenter",
     ":reference-session",
   ]
 }
@@ -127,6 +148,8 @@ sdk_molecule("test_sdks") {
     ":element-manager-test_sdk",
     ":reference-element-bin_sdk",
     ":reference-element_sdk",
+    ":reference-graphical-presenter-bin_sdk",
+    ":reference-graphical-presenter_sdk",
     ":reference-session-bin_sdk",
     ":reference-session-config_sdk",
     ":reference-session_sdk",

@@ -20,6 +20,7 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
+        { protocol: "fuchsia.element.GraphicalPresenter" },
         { protocol: "fuchsia.sys.Launcher" },
     ],
     offer: [

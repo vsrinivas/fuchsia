@@ -14,11 +14,11 @@
 
 use {
     anyhow::Error,
-    element_management::{ElementManager, SimpleElementManager},
+    element_management::ElementManager,
     fidl_fuchsia_element as felement, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::StreamExt,
-    std::cell::RefCell,
+    std::rc::Rc,
 };
 
 /// This enum allows the session to match on incoming messages.
@@ -39,7 +39,11 @@ async fn main() -> Result<(), Error> {
 
     let realm =
         connect_to_protocol::<fsys2::RealmMarker>().expect("Failed to connect to Realm service");
-    let element_manager = RefCell::new(SimpleElementManager::new(realm, ELEMENT_COLLECTION_NAME));
+    let graphical_presenter = connect_to_protocol::<felement::GraphicalPresenterMarker>()
+        .expect("Failed to connect to GraphicalPresenter service");
+
+    let element_manager =
+        Rc::new(ElementManager::new(realm, Some(graphical_presenter), ELEMENT_COLLECTION_NAME));
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(ExposedServices::Manager);
@@ -47,10 +51,10 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     fs.for_each_concurrent(NUM_CONCURRENT_REQUESTS, |service_request: ExposedServices| async {
+        let element_manager = element_manager.clone();
         match service_request {
             ExposedServices::Manager(request_stream) => {
                 element_manager
-                    .borrow_mut()
                     .handle_requests(request_stream)
                     .await
                     .expect("Failed to handle element manager requests");
@@ -65,7 +69,7 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use {
         super::ELEMENT_COLLECTION_NAME,
-        element_management::{ElementManager, SimpleElementManager},
+        element_management::ElementManager,
         fidl::endpoints::ProtocolMarker,
         fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
@@ -82,9 +86,7 @@ mod tests {
     ///
     /// # Returns
     /// A `ManagerProxy` to the spawned server.
-    fn spawn_manager_server(
-        mut element_manager: Box<dyn ElementManager + Send + Sync>,
-    ) -> felement::ManagerProxy {
+    fn spawn_manager_server(element_manager: Box<ElementManager>) -> felement::ManagerProxy {
         let (proxy, stream) = create_proxy_and_stream::<felement::ManagerMarker>()
             .expect("Failed to create Manager proxy and stream");
 
@@ -136,13 +138,29 @@ mod tests {
         })
         .unwrap();
 
+        let graphical_presenter =
+            spawn_stream_handler(move |graphical_presenter_request| async move {
+                match graphical_presenter_request {
+                    felement::GraphicalPresenterRequest::PresentView {
+                        view_spec: _,
+                        annotation_controller: _,
+                        view_controller_request: _,
+                        responder,
+                    } => {
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                }
+            })
+            .unwrap();
+
         let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components");
         })
         .unwrap();
 
-        let element_manager = Box::new(SimpleElementManager::new_with_sys_launcher(
+        let element_manager = Box::new(ElementManager::new_with_sys_launcher(
             realm,
+            Some(graphical_presenter),
             ELEMENT_COLLECTION_NAME,
             launcher,
         ));

@@ -1,0 +1,19 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/reference-graphical-presenter",
+    },
+    capabilities: [
+        { protocol: "fuchsia.element.GraphicalPresenter" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.element.GraphicalPresenter",
+            from: "self",
+        },
+    ],
+}
