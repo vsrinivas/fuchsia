@@ -1007,7 +1007,7 @@ bool X86PageTableBase::HarvestMapping(volatile pt_entry_t* table, NonTerminalAct
 
       cm->queue_free(page);
       unmapped = true;
-    } else if (pt_val & X86_MMU_PG_A) {
+    } else if ((pt_val & X86_MMU_PG_A) && action != NonTerminalAction::Retain) {
       // Since we didn't unmap, we need to unset the accessed flag.
       const IntermediatePtFlags flags = intermediate_flags();
       UpdateEntry(cm, level, new_cursor->vaddr(), e, ptable_phys, flags, /*was_terminal=*/false,

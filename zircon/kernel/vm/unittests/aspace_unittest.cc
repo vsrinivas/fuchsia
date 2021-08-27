@@ -301,6 +301,19 @@ static bool vmaspace_free_unaccessed_page_tables_test() {
   VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::FreeUnaccessed);
   EXPECT_OK(mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
+  // Touch the mapping to ensure its accessed.
+  mem->put<char>(42, kMiddleOffset);
+
+  // Harvest the page accessed information, but retain the non-terminals.
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
+  // We can do this a few times.
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
+  // Now if we attempt to free unaccessed the non-terminal should still be accessed and so nothing
+  // should get unmapped.
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::FreeUnaccessed);
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
+
   // If we are not requesting a free, then we should be able to harvest repeatedly.
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
   VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);

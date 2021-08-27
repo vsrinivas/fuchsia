@@ -998,9 +998,11 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
         // This was accessed so we don't necessarily want to unmap it, unless our recursive call
         // caused the page table to be empty, in which case we are obligated to.
         do_unmap = (unmapped && page_table_is_clear(next_page_table, page_size_shift));
-        // If we processed till the end of sub page table then we can clear the AF as we know we
-        // will not have to process entries from this one again.
-        if (!do_unmap && (vaddr_rel + chunk_size) >> index_shift != index) {
+        // If we processed till the end of sub page table, and we are not retaining page tables,
+        // then we can clear the AF as we know we will not have to process entries from this one
+        // again.
+        if (!do_unmap && (vaddr_rel + chunk_size) >> index_shift != index &&
+            action != NonTerminalAction::Retain) {
           pte &= ~MMU_PTE_ATTR_RES_SOFTWARE_AF;
           update_pte(&page_table[index], pte);
         }
