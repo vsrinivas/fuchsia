@@ -20,7 +20,7 @@ use {
 
 pub mod metrics;
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait Injector {
     async fn daemon_factory(&self) -> Result<DaemonProxy>;
     async fn remote_factory(&self) -> Result<RemoteControlProxy>;

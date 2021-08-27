@@ -68,7 +68,7 @@ impl Injection {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl Injector for Injection {
     // This could get called multiple times by the plugin system via multiple threads - so make sure
     // the spawning only happens one thread at a time.
