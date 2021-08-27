@@ -177,7 +177,7 @@ func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 		q.AddKernelArg("kernel.serial=legacy")
 		q.SetFlag("-machine", "q35")
 		if kvm {
-			q.SetFlag("-cpu", "host")
+			q.SetFlag("-cpu", "host,migratable=no,+invtsc")
 			q.SetFlag("-enable-kvm")
 		} else {
 			q.SetFlag("-cpu", "Haswell,+smap,-check,-fsgsbase")
