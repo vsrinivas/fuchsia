@@ -314,7 +314,7 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
 }
 
 int UsbXhci::InitThread() {
-  interrupters_.reset(new Interrupter[1]);
+  interrupters_ = fbl::MakeArray<Interrupter>(1);
   mmio_buffer_t invalid_mmio = {
       // Add a dummy vaddr to pass the check in the MmioBuffer constructor.
       .vaddr = FakeMmioPtr(this),
@@ -325,7 +325,7 @@ int UsbXhci::InitThread() {
   invalid_mmio.size = 4;
   interrupters_[0].Start(0, RuntimeRegisterOffset::Get().FromValue(0),
                          ddk::MmioView(invalid_mmio, 0, 1), this);
-  device_state_ = std::make_unique<DeviceState[]>(32);
+  device_state_ = fbl::MakeArray<DeviceState>(32);
   return 0;
 }
 

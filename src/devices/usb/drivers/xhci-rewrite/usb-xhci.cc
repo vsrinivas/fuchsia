@@ -1595,7 +1595,7 @@ zx_status_t UsbXhci::InitPci() {
   }
   irq_count_ = irq_count;
   fbl::AllocChecker ac;
-  interrupters_.reset(new (&ac) Interrupter[irq_count]);
+  interrupters_ = fbl::MakeArray<Interrupter>(&ac, irq_count);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -1624,7 +1624,7 @@ zx_status_t UsbXhci::InitMmio() {
   uint32_t irq_count = 1;
   irq_count_ = irq_count;
   fbl::AllocChecker ac;
-  interrupters_.reset(new (&ac) Interrupter[irq_count]);
+  interrupters_ = fbl::MakeArray<Interrupter>(&ac, irq_count);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -1768,7 +1768,10 @@ zx_status_t UsbXhci::HciFinalize() {
   runtime_offset_ = offset;
   uint32_t buffers = hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() |
                      ((hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1);
-  scratchpad_buffers_ = std::make_unique<std::unique_ptr<dma_buffer::ContiguousBuffer>[]>(buffers);
+  scratchpad_buffers_ = fbl::MakeArray<std::unique_ptr<dma_buffer::ContiguousBuffer>>(&ac, buffers);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
   if (fbl::round_up(buffers * sizeof(uint64_t), zx_system_get_page_size()) >
       zx_system_get_page_size()) {
     // We can't create multi-page contiguously physical uncached buffers.
@@ -1795,11 +1798,11 @@ zx_status_t UsbXhci::HciFinalize() {
   }
   static_cast<uint64_t*>(dcbaa_buffer_->virt())[0] = scratchpad_buffer_array_->phys()[0];
   max_slots_ = hcsparams1.MaxSlots();
-  device_state_.reset(new (&ac) DeviceState[max_slots_]);
+  device_state_ = fbl::MakeArray<DeviceState>(&ac, max_slots_);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  port_state_.reset(new (&ac) PortState[hcsparams1.MaxPorts()]);
+  port_state_ = fbl::MakeArray<PortState>(&ac, hcsparams1.MaxPorts());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

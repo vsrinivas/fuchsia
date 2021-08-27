@@ -247,12 +247,12 @@ zx_status_t UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
 
 zx_status_t UsbXhci::InitThread() {
   fbl::AllocChecker ac;
-  interrupters_.reset(new (&ac) Interrupter[1]);
+  interrupters_ = fbl::MakeArray<Interrupter>(&ac, 1);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
   max_slots_ = 32;
-  device_state_.reset(new (&ac) DeviceState[max_slots_]);
+  device_state_ = fbl::MakeArray<DeviceState>(&ac, max_slots_);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -263,7 +263,10 @@ zx_status_t UsbXhci::InitThread() {
                                                nullptr, *this);
     }
   }
-  port_state_ = std::make_unique<PortState[]>(32);
+  port_state_ = fbl::MakeArray<PortState>(&ac, 32);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
   return static_cast<EventRingHarness*>(get_test_harness())->InitRing(&interrupters_[0].ring());
 }
 

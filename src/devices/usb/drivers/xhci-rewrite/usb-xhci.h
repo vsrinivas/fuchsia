@@ -29,6 +29,7 @@
 #include <thread>
 
 #include <ddktl/device.h>
+#include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
@@ -331,7 +332,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   uint32_t irq_count_;
 
   // Array of interrupters, which service interrupts from the HCI
-  std::unique_ptr<Interrupter[]> interrupters_;
+  fbl::Array<Interrupter> interrupters_;
 
   // Pointer to the start of the device context base address array
   // See xHCI section 6.1 for more information.
@@ -344,7 +345,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   zx::bti bti_;
 
   // xHCI scratchpad buffers (see xHCI section 4.20)
-  std::unique_ptr<std::unique_ptr<dma_buffer::ContiguousBuffer>[]> scratchpad_buffers_;
+  fbl::Array<std::unique_ptr<dma_buffer::ContiguousBuffer>> scratchpad_buffers_;
 
   // IO buffer for the scratchpad buffer array
   std::unique_ptr<dma_buffer::PagedBuffer> scratchpad_buffer_array_;
@@ -379,10 +380,10 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   RuntimeRegisterOffset runtime_offset_;
 
   // Status information on connected devices
-  std::unique_ptr<DeviceState[]> device_state_;
+  fbl::Array<DeviceState> device_state_;
 
   // Status information for each port in the system
-  std::unique_ptr<PortState[]> port_state_;
+  fbl::Array<PortState> port_state_;
 
   // HCSPARAMS1 register (see xHCI section 5.3.3)
   HCSPARAMS1 params_;
