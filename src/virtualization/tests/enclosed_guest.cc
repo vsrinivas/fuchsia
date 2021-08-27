@@ -405,36 +405,41 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
   cfg->set_virtio_gpu(false);
 
   // Add the block device that contains the test binaries.
-  int fd = open("/pkg/data/linux_tests.img", O_RDONLY);
-  if (fd < 0) {
-    return ZX_ERR_BAD_STATE;
+  {
+    fbl::unique_fd fd(open("/pkg/data/linux_tests.img", O_RDONLY));
+    if (!fd.is_valid()) {
+      return ZX_ERR_BAD_STATE;
+    }
+    zx::channel channel;
+    zx_status_t status = fdio_get_service_handle(fd.get(), channel.reset_and_get_address());
+    if (status != ZX_OK) {
+      return status;
+    }
+    cfg->mutable_block_devices()->push_back({
+        "linux_tests",
+        fuchsia::virtualization::BlockMode::READ_ONLY,
+        fuchsia::virtualization::BlockFormat::RAW,
+        fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
+    });
   }
-  zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
+  {
+    // Add non-prebuilt test extras.
+    fbl::unique_fd fd(open("/pkg/data/extras.img", O_RDONLY));
+    if (!fd.is_valid()) {
+      return ZX_ERR_BAD_STATE;
+    }
+    zx::channel channel;
+    zx_status_t status = fdio_get_service_handle(fd.get(), channel.reset_and_get_address());
+    if (status != ZX_OK) {
+      return status;
+    }
+    cfg->mutable_block_devices()->push_back({
+        "extras",
+        fuchsia::virtualization::BlockMode::READ_ONLY,
+        fuchsia::virtualization::BlockFormat::RAW,
+        fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
+    });
   }
-  cfg->mutable_block_devices()->push_back({
-      "linux_tests",
-      fuchsia::virtualization::BlockMode::READ_ONLY,
-      fuchsia::virtualization::BlockFormat::RAW,
-      fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
-  });
-  // Add non-prebuilt test extras.
-  fd = open("/pkg/data/extras.img", O_RDONLY);
-  if (fd < 0) {
-    return ZX_ERR_BAD_STATE;
-  }
-  status = fdio_get_service_handle(fd, channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-  cfg->mutable_block_devices()->push_back({
-      "extras",
-      fuchsia::virtualization::BlockMode::READ_ONLY,
-      fuchsia::virtualization::BlockFormat::RAW,
-      fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
-  });
 
   // Enable kernel debugging serial output.
   for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
