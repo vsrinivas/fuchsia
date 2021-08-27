@@ -485,7 +485,7 @@ fn process_eapol_updates(
     bssid: Bssid,
     updates: rsna::UpdateSink,
 ) -> RsnaStatus {
-    let sta_addr = context.device_info.mac_addr;
+    let sta_addr = context.device_info.sta_addr;
     let mut new_resp_timeout = None;
     for update in updates {
         match update {

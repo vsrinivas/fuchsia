@@ -175,7 +175,7 @@ async fn create_iface(
     let mut phy_req = fidl_dev::CreateIfaceRequest {
         role: req.role,
         mlme_channel: mlme_server,
-        init_mac_addr: req.mac_addr,
+        init_sta_addr: req.sta_addr,
     };
     let r = phy.proxy.create_iface(&mut phy_req).await.map_err(move |e| {
         error!("Error sending 'CreateIface' request to phy #{}: {}", phy_id, e);
@@ -939,7 +939,7 @@ mod tests {
             fidl_svc::CreateIfaceRequest {
                 phy_id: 10,
                 role: fidl_dev::MacRole::Client,
-                mac_addr: if with_mac { [0, 1, 2, 3, 4, 5] } else { NULL_MAC_ADDR },
+                sta_addr: if with_mac { [0, 1, 2, 3, 4, 5] } else { NULL_MAC_ADDR },
             },
         );
         pin_mut!(create_fut);
@@ -951,7 +951,7 @@ mod tests {
                 assert_eq!(fidl_dev::MacRole::Client, req.role);
 
                 if with_mac {
-                    assert_eq!(req.init_mac_addr, [0, 1, 2, 3, 4, 5]);
+                    assert_eq!(req.init_sta_addr, [0, 1, 2, 3, 4, 5]);
                 }
 
                 let mut response = if create_iface_fails {
@@ -1020,7 +1020,7 @@ mod tests {
             fidl_svc::CreateIfaceRequest {
                 phy_id: 10,
                 role: fidl_dev::MacRole::Client,
-                mac_addr: NULL_MAC_ADDR,
+                sta_addr: NULL_MAC_ADDR,
             },
         );
         pin_mut!(fut);

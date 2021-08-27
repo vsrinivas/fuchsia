@@ -114,9 +114,9 @@ pub fn wpa1_cipher() -> Cipher {
     cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }
 }
 
-pub fn fake_device_info(mac_addr: MacAddr) -> fidl_mlme::DeviceInfo {
+pub fn fake_device_info(sta_addr: MacAddr) -> fidl_mlme::DeviceInfo {
     fidl_mlme::DeviceInfo {
-        mac_addr,
+        sta_addr,
         role: fidl_mlme::MacRole::Client,
         bands: vec![
             fake_2ghz_band_capabilities_vht(),

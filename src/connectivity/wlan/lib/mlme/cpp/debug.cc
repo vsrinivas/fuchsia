@@ -654,7 +654,7 @@ std::string Describe(const wlanmac_info& wi) {
   char buf[2048];
   size_t offset = 0;
 
-  BUFFER("mac:[%s]", common::MacAddr(wi.mac_addr).ToString().c_str());
+  BUFFER("mac:[%s]", common::MacAddr(wi.sta_addr).ToString().c_str());
   BUFFER("role:%u", wi.mac_role);
   BUFFER("phys:0x%04x", wi.supported_phys);
   BUFFER("feat:0x%08x", wi.driver_features);

@@ -67,12 +67,12 @@ pub async fn destroy_iface(wlan_svc: &DeviceMonitorProxy, iface_id: u16) -> Resu
     Ok(fx_log_info!("Destroyed iface {:?}", iface_id))
 }
 
-pub async fn get_wlan_mac_addr(
+pub async fn get_wlan_sta_addr(
     wlan_svc: &DeviceServiceProxy,
     iface_id: u16,
 ) -> Result<[u8; 6], Error> {
     let (_status, resp) = wlan_svc.query_iface(iface_id).await?;
-    Ok(resp.ok_or(format_err!("No valid iface response"))?.mac_addr)
+    Ok(resp.ok_or(format_err!("No valid iface response"))?.sta_addr)
 }
 
 #[cfg(test)]
@@ -98,7 +98,7 @@ mod tests {
     }
 
     fn fake_iface_query_response(
-        mac_addr: [u8; 6],
+        sta_addr: [u8; 6],
         role: fidl_fuchsia_wlan_device::MacRole,
     ) -> QueryIfaceResponse {
         QueryIfaceResponse {
@@ -106,7 +106,7 @@ mod tests {
             id: 0,
             phy_id: 0,
             phy_assigned_id: 0,
-            mac_addr,
+            sta_addr,
             driver_features: Vec::new(),
         }
     }
@@ -150,9 +150,9 @@ mod tests {
     }
 
     #[test]
-    fn test_get_wlan_mac_addr_ok() {
+    fn test_get_wlan_sta_addr_ok() {
         let (mut exec, proxy, mut req_stream) = setup_fake_service::<DeviceServiceMarker>();
-        let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
+        let mac_addr_fut = get_wlan_sta_addr(&proxy, 0);
         pin_mut!(mac_addr_fut);
 
         assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);
@@ -169,9 +169,9 @@ mod tests {
     }
 
     #[test]
-    fn test_get_wlan_mac_addr_not_found() {
+    fn test_get_wlan_sta_addr_not_found() {
         let (mut exec, proxy, mut req_stream) = setup_fake_service::<DeviceServiceMarker>();
-        let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
+        let mac_addr_fut = get_wlan_sta_addr(&proxy, 0);
         pin_mut!(mac_addr_fut);
 
         assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);
@@ -183,9 +183,9 @@ mod tests {
     }
 
     #[test]
-    fn test_get_wlan_mac_addr_service_interrupted() {
+    fn test_get_wlan_sta_addr_service_interrupted() {
         let (mut exec, proxy, req_stream) = setup_fake_service::<DeviceServiceMarker>();
-        let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
+        let mac_addr_fut = get_wlan_sta_addr(&proxy, 0);
         pin_mut!(mac_addr_fut);
 
         assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);

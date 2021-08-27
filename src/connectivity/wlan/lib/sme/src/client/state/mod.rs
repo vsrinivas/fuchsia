@@ -3058,7 +3058,7 @@ mod tests {
         MlmeEvent::EapolInd {
             ind: fidl_mlme::EapolIndication {
                 src_addr: bssid.0,
-                dst_addr: fake_device_info().mac_addr,
+                dst_addr: fake_device_info().sta_addr,
                 data,
             },
         }
@@ -3135,7 +3135,7 @@ mod tests {
     #[track_caller]
     fn expect_eapol_req(mlme_stream: &mut MlmeStream, bssid: Bssid) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Eapol(req))) => {
-            assert_eq!(req.src_addr, fake_device_info().mac_addr);
+            assert_eq!(req.src_addr, fake_device_info().sta_addr);
             assert_eq!(req.dst_addr, bssid.0);
             assert_eq!(req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
         });

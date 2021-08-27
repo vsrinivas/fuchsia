@@ -85,7 +85,7 @@ fn create_wlanintf() -> Result<(), Error> {
     let mut req = wlan::CreateIfaceRequest {
         role: wlan::MacRole::Client,
         mlme_channel: None,
-        init_mac_addr: NULL_MAC_ADDR,
+        init_sta_addr: NULL_MAC_ADDR,
     };
     let fut = proxy.create_iface(&mut req).map_ok(|resp| {
         println!("create results: {:?}", resp);

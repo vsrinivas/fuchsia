@@ -16,11 +16,11 @@ type WlanphyImplCreateIfaceReq = resource struct {
     /// A handle to the direct MLME channel, if supported by the driver.
     mlme_channel zx.handle:CHANNEL;
 
-    /// Whether this iface creation request come with an initial MAC address.
-    has_init_mac_addr bool;
+    /// Whether this iface creation request come with an initial station address.
+    has_init_sta_addr bool;
 
-    /// The initial mac address set from configuration layer.
-    init_mac_addr ieee80211.MacAddr;
+    /// The initial station address set from configuration layer.
+    init_sta_addr ieee80211.MacAddr;
 };
 
 /// Info about this WLAN PHY.

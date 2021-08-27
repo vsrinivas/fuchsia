@@ -229,7 +229,7 @@ impl Ap {
     fn handle_sme_list_minstrel_peers(&self, txid: fidl::client::Txid) -> Result<(), Error> {
         // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
         error!("ListMinstrelPeers is not supported.");
-        let peers = fidl_minstrel::Peers { peers: vec![] };
+        let peers = fidl_minstrel::Peers { addrs: vec![] };
         let mut resp = fidl_mlme::MinstrelListResponse { peers };
         self.ctx
             .device
@@ -262,7 +262,7 @@ impl Ap {
                 self.handle_sme_list_minstrel_peers(tx_id)
             }
             fidl_mlme::MlmeRequestMessage::GetMinstrelStats { tx_id, req } => {
-                self.handle_sme_get_minstrel_stats(tx_id, &req.mac_addr)
+                self.handle_sme_get_minstrel_stats(tx_id, &req.peer_addr)
             }
             fidl_mlme::MlmeRequestMessage::AuthenticateResp { resp } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_auth_resp(&mut self.ctx, resp)

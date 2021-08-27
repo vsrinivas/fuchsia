@@ -81,12 +81,12 @@ TEST_F(MinstrelTest, AddPeer) {
   wlan_minstrel::Peers peers;
   zx_status_t status = minstrel_.GetListToFidl(&peers);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(1ULL, peers.peers.size());
+  EXPECT_EQ(1ULL, peers.addrs.size());
 
   wlan_minstrel::Peer peer;
   status = minstrel_.GetStatsToFidl(kTestMacAddr, &peer);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(kTestMacAddr, common::MacAddr(peer.mac_addr.data()));
+  EXPECT_EQ(kTestMacAddr, common::MacAddr(peer.addr.data()));
   // TODO(eyw): size would be 40 if 40 MHz is supported, 72 if 40 MHz and SGI
   // are both supported.
   EXPECT_EQ(24ULL, peer.entries.size());
@@ -104,7 +104,7 @@ TEST_F(MinstrelTest, RemovePeer) {
   wlan_minstrel::Peers peers;
   zx_status_t status = minstrel_.GetListToFidl(&peers);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(1ULL, peers.peers.size());
+  EXPECT_EQ(1ULL, peers.addrs.size());
 
   // Remove the peer using its mac address.
   minstrel_.RemovePeer(kTestMacAddr);
@@ -112,7 +112,7 @@ TEST_F(MinstrelTest, RemovePeer) {
 
   status = minstrel_.GetListToFidl(&peers);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_TRUE(peers.peers.empty());
+  EXPECT_TRUE(peers.addrs.empty());
 
   wlan_minstrel::Peer peer;
   status = minstrel_.GetStatsToFidl(kTestMacAddr, &peer);

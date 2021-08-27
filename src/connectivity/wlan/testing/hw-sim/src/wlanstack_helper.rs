@@ -107,7 +107,7 @@ mod tests {
             id: 0,
             phy_id: 0,
             phy_assigned_id: 0,
-            mac_addr: [0; 6],
+            sta_addr: [0; 6],
             driver_features: Vec::new(),
         }
     }

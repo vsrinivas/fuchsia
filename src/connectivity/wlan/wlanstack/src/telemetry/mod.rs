@@ -1893,7 +1893,7 @@ mod tests {
         fidl_mlme::DeviceInfo {
             role: fidl_mlme::MacRole::Client,
             bands: vec![],
-            mac_addr: [0xAC; 6],
+            sta_addr: [0xAC; 6],
             driver_features: vec![],
             qos_capable: false,
         }

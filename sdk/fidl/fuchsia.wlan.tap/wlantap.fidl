@@ -12,7 +12,7 @@ using zx;
 /// Describes the capabilities of the fake wlantap-phy device to be created.
 type WlantapPhyConfig = struct {
     // TODO(fxbug.dev/64628): wlantap will configure all of its ifaces to use the same MAC address
-    iface_mac_addr ieee80211.MacAddr;
+    sta_addr ieee80211.MacAddr;
     mac_role fuchsia.wlan.device.MacRole;
     supported_phys vector<fuchsia.wlan.device.SupportedPhy>:8;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:8;

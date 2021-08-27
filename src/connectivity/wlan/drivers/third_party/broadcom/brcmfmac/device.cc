@@ -104,10 +104,10 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
                      : req->role == WLAN_INFO_MAC_ROLE_MESH ? "mesh"
                                                             : "unknown type";
 
-  if (req->has_init_mac_addr) {
+  if (req->has_init_sta_addr) {
     BRCMF_DBG(WLANPHY, "Creating %s interface", role);
 #if !defined(NDEBUG)
-    BRCMF_DBG(WLANPHY, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(req->init_mac_addr));
+    BRCMF_DBG(WLANPHY, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(req->init_sta_addr));
 #endif /* !defined(NDEBUG) */
   } else {
     BRCMF_DBG(WLANPHY, "Creating %s interface", role);

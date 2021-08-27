@@ -380,7 +380,7 @@ type WlanifFeature = strict enum : uint32 {
 };
 
 type WlanifQueryInfo = struct {
-    mac_addr ieee80211.MacAddr;
+    sta_addr ieee80211.MacAddr;
     /// WLAN_MAC_ROLE_*
     role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
     /// WLANIF_FEATURE_*

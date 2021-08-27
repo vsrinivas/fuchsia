@@ -3131,7 +3131,7 @@ void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* p
 void ath10k_pci_fill_wlanmac_info(struct ath10k* ar, wlanmac_info_t* mac_info) {
   // eth_info
   ZX_DEBUG_ASSERT(ETH_ALEN == ETH_MAC_SIZE);
-  memcpy(mac_info->mac_addr, ar->mac_addr, ETH_MAC_SIZE);
+  memcpy(mac_info->sta_addr, ar->mac_addr, ETH_MAC_SIZE);
 
   // mac_role
   mac_info->mac_role = ar->mac_role;

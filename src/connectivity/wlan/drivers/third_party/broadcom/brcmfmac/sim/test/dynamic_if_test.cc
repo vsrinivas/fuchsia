@@ -262,7 +262,7 @@ TEST_F(DynamicIfTest, EventHandlingOnSoftAPDel) {
   wlanphy_impl_create_iface_req_t req = {
       .role = ap_role,
       .mlme_channel = softap_ifc_.ch_mlme_,
-      .has_init_mac_addr = false,
+      .has_init_sta_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeApName, nullptr, &req, &wdev));
 
@@ -439,7 +439,7 @@ TEST_F(DynamicIfTest, CreateClientWithRandomMac) {
   wlanphy_impl_create_iface_req_t req = {
       .role = WLAN_INFO_MAC_ROLE_CLIENT,
       .mlme_channel = client_ifc_.ch_mlme_,
-      .has_init_mac_addr = false,
+      .has_init_sta_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeClientName, nullptr, &req, &wdev));
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
@@ -460,7 +460,7 @@ TEST_F(DynamicIfTest, CreateIfaceMustProvideWdevOut) {
   wlanphy_impl_create_iface_req_t req = {
       .role = client_role,
       .mlme_channel = client_ifc_.ch_mlme_,
-      .has_init_mac_addr = false,
+      .has_init_sta_addr = false,
   };
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             brcmf_cfg80211_add_iface(sim->drvr, kFakeClientName, nullptr, &req, nullptr));
@@ -477,7 +477,7 @@ void DynamicIfTest::CheckAddIfaceWritesWdev(wlan_info_mac_role_t role, const cha
   wlanphy_impl_create_iface_req_t req = {
       .role = role,
       .mlme_channel = ifc.ch_mlme_,
-      .has_init_mac_addr = false,
+      .has_init_sta_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, iface_name, nullptr, &req, &wdev));
   EXPECT_NE(nullptr, wdev);
@@ -517,7 +517,7 @@ TEST_F(DynamicIfTest, CreateClientWithCustomName) {
   wlanphy_impl_create_iface_req_t req = {
       .role = client_role,
       .mlme_channel = client_ifc_.ch_mlme_,
-      .has_init_mac_addr = false,
+      .has_init_sta_addr = false,
   };
   EXPECT_EQ(0, strcmp(brcmf_ifname(ifp), kPrimaryNetworkInterfaceName));
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeClientName, nullptr, &req, &wdev));
@@ -541,7 +541,7 @@ TEST_F(DynamicIfTest, CreateApWithCustomName) {
   wlanphy_impl_create_iface_req_t req = {
       .role = ap_role,
       .mlme_channel = softap_ifc_.ch_mlme_,
-      .has_init_mac_addr = false,
+      .has_init_sta_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeApName, nullptr, &req, &wdev));
   EXPECT_EQ(0, strcmp(wdev->netdev->name, kFakeApName));
@@ -576,7 +576,7 @@ TEST_F(DynamicIfTest, CreateClientWithLongName) {
   wlanphy_impl_create_iface_req_t req = {
       .role = client_role,
       .mlme_channel = client_ifc_.ch_mlme_,
-      .has_init_mac_addr = false,
+      .has_init_sta_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, really_long_name, nullptr, &req, &wdev));
   EXPECT_EQ(0, strcmp(wdev->netdev->name, truncated_name));

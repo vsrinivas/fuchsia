@@ -138,12 +138,12 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
 
     let phy_id = iface.phy_ownership.phy_id;
     let phy_assigned_id = iface.phy_ownership.phy_assigned_id;
-    let mac_addr = iface.device_info.mac_addr;
+    let sta_addr = iface.device_info.sta_addr;
     let driver_features = iface.device_info.driver_features.clone();
     Ok(fidl_svc::QueryIfaceResponse {
         role,
         id,
-        mac_addr,
+        sta_addr,
         phy_id,
         phy_assigned_id,
         driver_features,
@@ -217,7 +217,7 @@ async fn list_minstrel_peers(
     ifaces: &IfaceMap,
     iface_id: u16,
 ) -> (zx::Status, fidl_fuchsia_wlan_minstrel::Peers) {
-    let empty_peer_list = fidl_fuchsia_wlan_minstrel::Peers { peers: vec![] };
+    let empty_peer_list = fidl_fuchsia_wlan_minstrel::Peers { addrs: vec![] };
     let iface = match ifaces.get(&iface_id) {
         Some(iface) => iface,
         None => return (zx::Status::NOT_FOUND, empty_peer_list),
@@ -231,13 +231,13 @@ async fn list_minstrel_peers(
 async fn get_minstrel_stats(
     ifaces: &IfaceMap,
     iface_id: u16,
-    mac_addr: [u8; 6],
+    peer_addr: [u8; 6],
 ) -> (zx::Status, Option<Box<fidl_fuchsia_wlan_minstrel::Peer>>) {
     let iface = match ifaces.get(&iface_id) {
         Some(iface) => iface,
         None => return (zx::Status::NOT_FOUND, None),
     };
-    match iface.mlme_query.get_minstrel_peer(mac_addr).await {
+    match iface.mlme_query.get_minstrel_peer(peer_addr).await {
         Ok(MinstrelStatsResponse { peer }) => (zx::Status::OK, peer),
         Err(_) => (zx::Status::INTERNAL, None),
     }
@@ -396,7 +396,7 @@ mod tests {
         let response = super::query_iface(&iface_map, 10).expect("querying iface failed");
         let expected = fake_device_info();
         assert_eq!(response.role, fidl_dev::MacRole::Client);
-        assert_eq!(response.mac_addr, expected.mac_addr);
+        assert_eq!(response.sta_addr, expected.sta_addr);
         assert_eq!(response.id, 10);
         assert_eq!(response.driver_features, expected.driver_features);
     }
@@ -744,7 +744,7 @@ mod tests {
         fidl_mlme::DeviceInfo {
             role: fidl_mlme::MacRole::Client,
             bands: vec![],
-            mac_addr: [0xAC; 6],
+            sta_addr: [0xAC; 6],
             driver_features: vec![
                 fidl_fuchsia_wlan_common::DriverFeature::ScanOffload,
                 fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth,
