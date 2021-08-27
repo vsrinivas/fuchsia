@@ -13,9 +13,6 @@ sdk_source_set("fitx") {
     "include/lib/fitx/internal/type_traits.h",
     "include/lib/fitx/result.h",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 sdk_source_set("zx") {
@@ -53,7 +50,4 @@ zx_library("zxc") {
     sources += [ "status_string.cc" ]
     deps += [ "//src/zircon/lib/zircon" ]
   }
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

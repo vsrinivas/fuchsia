@@ -1089,7 +1089,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/zbitl:*",
     "//zircon/system/ulib/zbitl/test:*",
     "//zircon/system/ulib/zbitl/testing:*",
-    "//zircon/system/ulib/zxc:*",
     "//zircon/system/utest/msd:*",
     "//zircon/third_party/dev/ethernet/e1000:*",
     "//zircon/third_party/uapp/dash:*",
