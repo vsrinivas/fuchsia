@@ -18,6 +18,9 @@ group("vmm_tests") {
 
     # Mock cobalt component that is injected into device_tests_package.
     "//src/cobalt/bin/testing/mock_cobalt",
+
+    # Needed by tests that invoke scenic
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
   ]
 }
 
