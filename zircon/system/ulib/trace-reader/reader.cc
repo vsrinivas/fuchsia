@@ -22,8 +22,13 @@ TraceReader::TraceReader(RecordConsumer record_consumer, ErrorHandler error_hand
 
 bool TraceReader::ReadRecords(Chunk& chunk) {
   while (true) {
-    if (!pending_header_ && !chunk.ReadUint64(&pending_header_))
-      return true;  // need more data
+    if (pending_header_ == 0) {
+      std::optional next = chunk.ReadUint64();
+      if (!next.has_value()) {
+        return true;  // need more data
+      }
+      pending_header_ = next.value();
+    }
 
     auto type = RecordFields::Type::Get<RecordType>(pending_header_);
 
@@ -44,9 +49,11 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
 
     // TODO(fxbug.dev/23072): Here we assume that the entire blob payload can
     // fit into the read buffer.
-    Chunk record;
-    if (!chunk.ReadChunk(size - 1, &record))
+    std::optional record_opt = chunk.ReadChunk(size - 1);
+    if (!record_opt.has_value()) {
       return true;  // need more data to decode record
+    }
+    Chunk& record = record_opt.value();
 
     switch (type) {
       case RecordType::kMetadata: {
@@ -128,10 +135,11 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
     case MetadataType::kProviderInfo: {
       auto id = ProviderInfoMetadataRecordFields::Id::Get<ProviderId>(header);
       auto name_length = ProviderInfoMetadataRecordFields::NameLength::Get<size_t>(header);
-      std::string_view name_view;
-      if (!record.ReadString(name_length, &name_view))
+      std::optional name_view = record.ReadString(name_length);
+      if (!name_view.has_value()) {
         return false;
-      fbl::String name(name_view);
+      }
+      fbl::String name(name_view.value());
 
       RegisterProvider(id, name);
       record_consumer_(
@@ -191,9 +199,14 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
 }
 
 bool TraceReader::ReadInitializationRecord(Chunk& record, RecordHeader header) {
-  trace_ticks_t ticks_per_second;
-  if (!record.ReadUint64(&ticks_per_second) || !ticks_per_second)
+  std::optional ticks_per_second_opt = record.ReadUint64();
+  if (!ticks_per_second_opt.has_value()) {
     return false;
+  }
+  trace_ticks_t ticks_per_second = ticks_per_second_opt.value();
+  if (ticks_per_second == 0) {
+    return false;
+  }
 
   record_consumer_(Record(Record::Initialization{ticks_per_second}));
   return true;
@@ -207,10 +220,11 @@ bool TraceReader::ReadStringRecord(Chunk& record, RecordHeader header) {
   }
 
   auto length = StringRecordFields::StringLength::Get<size_t>(header);
-  std::string_view string_view;
-  if (!record.ReadString(length, &string_view))
+  std::optional string_view = record.ReadString(length);
+  if (!string_view.has_value()) {
     return false;
-  fbl::String string(string_view);
+  }
+  fbl::String string(string_view.value());
 
   RegisterString(index, string);
   record_consumer_(Record(Record::String{index, std::move(string)}));
@@ -224,11 +238,16 @@ bool TraceReader::ReadThreadRecord(Chunk& record, RecordHeader header) {
     return false;
   }
 
-  zx_koid_t process_koid, thread_koid;
-  if (!record.ReadUint64(&process_koid) || !record.ReadUint64(&thread_koid))
+  std::optional process_koid = record.ReadUint64();
+  if (!process_koid.has_value()) {
     return false;
+  }
+  std::optional thread_koid = record.ReadUint64();
+  if (!thread_koid.has_value()) {
+    return false;
+  }
 
-  ProcessThread process_thread(process_koid, thread_koid);
+  ProcessThread process_thread(process_koid.value(), thread_koid.value());
   RegisterThread(index, process_thread);
   record_consumer_(Record(Record::Thread{index, process_thread}));
   return true;
@@ -241,34 +260,47 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
   auto category_ref = EventRecordFields::CategoryStringRef::Get<trace_encoded_string_ref_t>(header);
   auto name_ref = EventRecordFields::NameStringRef::Get<trace_encoded_string_ref_t>(header);
 
-  trace_ticks_t timestamp;
-  ProcessThread process_thread;
-  fbl::String category;
-  fbl::String name;
-  fbl::Vector<Argument> arguments;
-  if (!record.ReadUint64(&timestamp) || !DecodeThreadRef(record, thread_ref, &process_thread) ||
-      !DecodeStringRef(record, category_ref, &category) ||
-      !DecodeStringRef(record, name_ref, &name) ||
-      !ReadArguments(record, argument_count, &arguments))
+  std::optional timestamp_opt = record.ReadUint64();
+  if (!timestamp_opt.has_value()) {
     return false;
+  }
+  const trace_ticks_t timestamp = timestamp_opt.value();
+  ProcessThread process_thread;
+  if (!DecodeThreadRef(record, thread_ref, &process_thread)) {
+    return false;
+  }
+  fbl::String category;
+  if (!DecodeStringRef(record, category_ref, &category)) {
+    return false;
+  }
+  fbl::String name;
+  if (!DecodeStringRef(record, name_ref, &name)) {
+    return false;
+  }
+  fbl::Vector<Argument> arguments;
+  if (!ReadArguments(record, argument_count, &arguments)) {
+    return false;
+  }
 
   switch (type) {
     case EventType::kInstant: {
-      uint64_t scope;
-      if (!record.ReadUint64(&scope))
+      std::optional scope = record.ReadUint64();
+      if (!scope.has_value()) {
         return false;
+      }
       record_consumer_(Record(Record::Event{
           timestamp, process_thread, std::move(category), std::move(name), std::move(arguments),
-          EventData(EventData::Instant{static_cast<EventScope>(scope)})}));
+          EventData(EventData::Instant{static_cast<EventScope>(scope.value())})}));
       break;
     }
     case EventType::kCounter: {
-      trace_counter_id_t id;
-      if (!record.ReadUint64(&id))
+      std::optional id = record.ReadUint64();
+      if (!id.has_value()) {
         return false;
+      }
       record_consumer_(
           Record(Record::Event{timestamp, process_thread, std::move(category), std::move(name),
-                               std::move(arguments), EventData(EventData::Counter{id})}));
+                               std::move(arguments), EventData(EventData::Counter{id.value()})}));
       break;
     }
     case EventType::kDurationBegin: {
@@ -284,66 +316,73 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
       break;
     }
     case EventType::kDurationComplete: {
-      trace_ticks_t end_time;
-      if (!record.ReadUint64(&end_time))
+      std::optional end_time = record.ReadUint64();
+      if (!end_time.has_value()) {
         return false;
-      record_consumer_(Record(Record::Event{timestamp, process_thread, std::move(category),
-                                            std::move(name), std::move(arguments),
-                                            EventData(EventData::DurationComplete{end_time})}));
+      }
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name), std::move(arguments),
+          EventData(EventData::DurationComplete{end_time.value()})}));
       break;
     }
     case EventType::kAsyncBegin: {
-      trace_async_id_t id;
-      if (!record.ReadUint64(&id))
+      std::optional id = record.ReadUint64();
+      if (!id.has_value()) {
         return false;
-      record_consumer_(
-          Record(Record::Event{timestamp, process_thread, std::move(category), std::move(name),
-                               std::move(arguments), EventData(EventData::AsyncBegin{id})}));
+      }
+      record_consumer_(Record(Record::Event{timestamp, process_thread, std::move(category),
+                                            std::move(name), std::move(arguments),
+                                            EventData(EventData::AsyncBegin{id.value()})}));
       break;
     }
     case EventType::kAsyncInstant: {
-      trace_async_id_t id;
-      if (!record.ReadUint64(&id))
+      std::optional id = record.ReadUint64();
+      if (!id.has_value()) {
         return false;
-      record_consumer_(
-          Record(Record::Event{timestamp, process_thread, std::move(category), std::move(name),
-                               std::move(arguments), EventData(EventData::AsyncInstant{id})}));
+      }
+      record_consumer_(Record(Record::Event{timestamp, process_thread, std::move(category),
+                                            std::move(name), std::move(arguments),
+                                            EventData(EventData::AsyncInstant{id.value()})}));
       break;
     }
     case EventType::kAsyncEnd: {
-      trace_async_id_t id;
-      if (!record.ReadUint64(&id))
+      std::optional id = record.ReadUint64();
+      if (!id.has_value()) {
         return false;
+      }
       record_consumer_(
           Record(Record::Event{timestamp, process_thread, std::move(category), std::move(name),
-                               std::move(arguments), EventData(EventData::AsyncEnd{id})}));
+                               std::move(arguments), EventData(EventData::AsyncEnd{id.value()})}));
       break;
     }
     case EventType::kFlowBegin: {
-      trace_flow_id_t id;
-      if (!record.ReadUint64(&id))
+      std::optional id = record.ReadUint64();
+      if (!id.has_value()) {
         return false;
+      }
       record_consumer_(
           Record(Record::Event{timestamp, process_thread, std::move(category), std::move(name),
-                               std::move(arguments), EventData(EventData::FlowBegin{id})}));
+                               std::move(arguments), EventData(EventData::FlowBegin{id.value()})}));
       break;
     }
     case EventType::kFlowStep: {
-      trace_flow_id_t id;
-      if (!record.ReadUint64(&id))
+      std::optional id = record.ReadUint64();
+      if (!id.has_value()) {
         return false;
+      }
       record_consumer_(
           Record(Record::Event{timestamp, process_thread, std::move(category), std::move(name),
-                               std::move(arguments), EventData(EventData::FlowStep{id})}));
+                               std::move(arguments), EventData(EventData::FlowStep{id.value()})}));
       break;
     }
     case EventType::kFlowEnd: {
-      trace_flow_id_t id;
-      if (!record.ReadUint64(&id))
+      std::optional id = record.ReadUint64();
+      if (!id.has_value()) {
         return false;
+      }
       record_consumer_(
           Record(Record::Event{timestamp, process_thread, std::move(category), std::move(name),
-                               std::move(arguments), EventData(EventData::FlowEnd{id})}));
+                               std::move(arguments), EventData(EventData::FlowEnd{id.value()})}));
       break;
     }
     default: {
@@ -363,12 +402,13 @@ bool TraceReader::ReadBlobRecord(Chunk& record, RecordHeader header, void** out_
   fbl::String name;
   if (!DecodeStringRef(record, name_ref, &name))
     return false;
-  const void* blob;
   auto blob_words = BytesToWords(blob_size);
-  if (!record.ReadInPlace(blob_words, &blob))
+  std::optional blob = record.ReadInPlace(blob_words);
+  if (!blob.has_value()) {
     return false;
+  }
 
-  record_consumer_(Record(Record::Blob{blob_type, name, blob, blob_size}));
+  record_consumer_(Record(Record::Blob{blob_type, name, blob.value(), blob_size}));
   return true;
 }
 
@@ -377,12 +417,19 @@ bool TraceReader::ReadKernelObjectRecord(Chunk& record, RecordHeader header) {
   auto name_ref = KernelObjectRecordFields::NameStringRef::Get<trace_encoded_string_ref_t>(header);
   auto argument_count = KernelObjectRecordFields::ArgumentCount::Get<size_t>(header);
 
-  zx_koid_t koid;
-  fbl::String name;
-  fbl::Vector<Argument> arguments;
-  if (!record.ReadUint64(&koid) || !DecodeStringRef(record, name_ref, &name) ||
-      !ReadArguments(record, argument_count, &arguments))
+  std::optional koid_opt = record.ReadUint64();
+  if (!koid_opt.has_value()) {
     return false;
+  }
+  zx_koid_t koid = koid_opt.value();
+  fbl::String name;
+  if (!DecodeStringRef(record, name_ref, &name)) {
+    return false;
+  }
+  fbl::Vector<Argument> arguments;
+  if (!ReadArguments(record, argument_count, &arguments)) {
+    return false;
+  }
 
   record_consumer_(Record(Record::KernelObject{koid, object_type, name, std::move(arguments)}));
   return true;
@@ -401,13 +448,19 @@ bool TraceReader::ReadContextSwitchRecord(Chunk& record, RecordHeader header) {
   auto incoming_thread_ref =
       ContextSwitchRecordFields::IncomingThreadRef::Get<trace_encoded_thread_ref_t>(header);
 
-  trace_ticks_t timestamp;
-  ProcessThread outgoing_thread;
-  ProcessThread incoming_thread;
-  if (!record.ReadUint64(&timestamp) ||
-      !DecodeThreadRef(record, outgoing_thread_ref, &outgoing_thread) ||
-      !DecodeThreadRef(record, incoming_thread_ref, &incoming_thread))
+  std::optional timestamp_opt = record.ReadUint64();
+  if (!timestamp_opt.has_value()) {
     return false;
+  }
+  trace_ticks_t timestamp = timestamp_opt.value();
+  ProcessThread outgoing_thread;
+  if (!DecodeThreadRef(record, outgoing_thread_ref, &outgoing_thread)) {
+    return false;
+  }
+  ProcessThread incoming_thread;
+  if (!DecodeThreadRef(record, incoming_thread_ref, &incoming_thread)) {
+    return false;
+  }
 
   record_consumer_(Record(
       Record::ContextSwitch{timestamp, cpu_number, outgoing_thread_state, outgoing_thread,
@@ -422,13 +475,21 @@ bool TraceReader::ReadLogRecord(Chunk& record, RecordHeader header) {
     return false;
 
   auto thread_ref = LogRecordFields::ThreadRef::Get<trace_encoded_thread_ref_t>(header);
-  trace_ticks_t timestamp;
-  ProcessThread process_thread;
-  std::string_view log_message;
-  if (!record.ReadUint64(&timestamp) || !DecodeThreadRef(record, thread_ref, &process_thread) ||
-      !record.ReadString(log_message_length, &log_message))
+  std::optional timestamp_opt = record.ReadUint64();
+  if (!timestamp_opt.has_value()) {
     return false;
-  record_consumer_(Record(Record::Log{timestamp, process_thread, fbl::String(log_message)}));
+  }
+  trace_ticks_t timestamp = timestamp_opt.value();
+  ProcessThread process_thread;
+  if (!DecodeThreadRef(record, thread_ref, &process_thread)) {
+    return false;
+  }
+  std::optional log_message = record.ReadString(log_message_length);
+  if (!log_message.has_value()) {
+    return false;
+  }
+  record_consumer_(
+      Record(Record::Log{timestamp, process_thread, fbl::String(log_message.value())}));
   return true;
 }
 
@@ -450,9 +511,11 @@ bool TraceReader::ReadLargeBlob(trace::Chunk& record, trace::RecordHeader header
 
   switch (format_type) {
     case TRACE_BLOB_FORMAT_EVENT: {
-      uint64_t format_header;
-      if (!record.ReadUint64(&format_header))
+      std::optional format_header_opt = record.ReadUint64();
+      if (!format_header_opt.has_value()) {
         return false;
+      }
+      uint64_t format_header = format_header_opt.value();
 
       using Format = BlobFormatEventFields;
       auto category_ref = Format::CategoryStringRef::Get<trace_encoded_string_ref_t>(format_header);
@@ -461,18 +524,34 @@ bool TraceReader::ReadLargeBlob(trace::Chunk& record, trace::RecordHeader header
       auto thread_ref = Format::ThreadRef::Get<trace_encoded_thread_ref_t>(format_header);
 
       fbl::String category;
-      fbl::String name;
-      trace_ticks_t timestamp;
-      ProcessThread process_thread;
-      fbl::Vector<Argument> arguments;
-      uint64_t blob_size;
-      const void* blob;
-      if (!DecodeStringRef(record, category_ref, &category) ||
-          !DecodeStringRef(record, name_ref, &name) || !record.ReadUint64(&timestamp) ||
-          !DecodeThreadRef(record, thread_ref, &process_thread) ||
-          !ReadArguments(record, argument_count, &arguments) || !record.ReadUint64(&blob_size) ||
-          !record.ReadInPlace(trace::BytesToWords(trace::Pad(blob_size)), &blob))
+      if (!DecodeStringRef(record, category_ref, &category)) {
         return false;
+      }
+      fbl::String name;
+      if (!DecodeStringRef(record, name_ref, &name)) {
+        return false;
+      }
+      std::optional timestamp_opt = record.ReadUint64();
+      if (!timestamp_opt.has_value()) {
+        return false;
+      }
+      trace_ticks_t timestamp = timestamp_opt.value();
+      ProcessThread process_thread;
+      if (!DecodeThreadRef(record, thread_ref, &process_thread)) {
+        return false;
+      }
+      fbl::Vector<Argument> arguments;
+      if (!ReadArguments(record, argument_count, &arguments)) {
+        return false;
+      }
+      std::optional blob_size = record.ReadUint64();
+      if (!blob_size.has_value()) {
+        return false;
+      }
+      std::optional blob = record.ReadInPlace(trace::BytesToWords(trace::Pad(blob_size.value())));
+      if (!blob.has_value()) {
+        return false;
+      }
 
       record_consumer_(Record(Record::Large(LargeRecordData::Blob(LargeRecordData::BlobEvent{
           std::move(category),
@@ -480,34 +559,44 @@ bool TraceReader::ReadLargeBlob(trace::Chunk& record, trace::RecordHeader header
           timestamp,
           process_thread,
           std::move(arguments),
-          blob,
-          blob_size,
+          blob.value(),
+          blob_size.value(),
       }))));
       break;
     }
     case TRACE_BLOB_FORMAT_ATTACHMENT: {
-      uint64_t format_header;
-      if (!record.ReadUint64(&format_header))
+      std::optional format_header_opt = record.ReadUint64();
+      if (!format_header_opt.has_value()) {
         return false;
+      }
+      uint64_t format_header = format_header_opt.value();
 
       using Format = BlobFormatAttachmentFields;
       auto category_ref = Format::CategoryStringRef::Get<trace_encoded_string_ref_t>(format_header);
       auto name_ref = Format::NameStringRef::Get<trace_encoded_string_ref_t>(format_header);
 
       fbl::String category;
-      fbl::String name;
-      uint64_t blob_size;
-      const void* blob;
-      if (!DecodeStringRef(record, category_ref, &category) ||
-          !DecodeStringRef(record, name_ref, &name) || !record.ReadUint64(&blob_size) ||
-          !record.ReadInPlace(trace::BytesToWords(trace::Pad(blob_size)), &blob))
+      if (!DecodeStringRef(record, category_ref, &category)) {
         return false;
+      }
+      fbl::String name;
+      if (!DecodeStringRef(record, name_ref, &name)) {
+        return false;
+      }
+      std::optional blob_size = record.ReadUint64();
+      if (!blob_size.has_value()) {
+        return false;
+      }
+      std::optional blob = record.ReadInPlace(trace::BytesToWords(trace::Pad(blob_size.value())));
+      if (!blob.has_value()) {
+        return false;
+      }
 
       record_consumer_(Record(Record::Large(LargeRecordData::Blob(LargeRecordData::BlobAttachment{
           std::move(category),
           std::move(name),
-          blob,
-          blob_size,
+          blob.value(),
+          blob_size.value(),
       }))));
       break;
     }
@@ -520,18 +609,25 @@ bool TraceReader::ReadLargeBlob(trace::Chunk& record, trace::RecordHeader header
 
 bool TraceReader::ReadArguments(Chunk& record, size_t count, fbl::Vector<Argument>* out_arguments) {
   while (count-- > 0) {
-    ArgumentHeader header;
-    if (!record.ReadUint64(&header)) {
+    std::optional header_opt = record.ReadUint64();
+    if (!header_opt.has_value()) {
       ReportError("Failed to read argument header");
       return false;
     }
+    ArgumentHeader header = header_opt.value();
 
     auto size = ArgumentFields::ArgumentSize::Get<size_t>(header);
-    Chunk arg;
-    if (!size || !record.ReadChunk(size - 1, &arg)) {
+    if (size == 0) {
       ReportError("Invalid argument size");
       return false;
     }
+
+    std::optional arg_opt = record.ReadChunk(size - 1);
+    if (!arg_opt.has_value()) {
+      ReportError("Failed to read argument");
+      return false;
+    }
+    Chunk& arg = arg_opt.value();
 
     auto name_ref = ArgumentFields::NameRef::Get<trace_encoded_string_ref_t>(header);
     fbl::String name;
@@ -562,30 +658,33 @@ bool TraceReader::ReadArguments(Chunk& record, size_t count, fbl::Vector<Argumen
         break;
       }
       case ArgumentType::kInt64: {
-        int64_t value;
-        if (!arg.ReadInt64(&value)) {
+        std::optional value = arg.ReadInt64();
+        if (!value.has_value()) {
           ReportError("Failed to read int64 argument value");
           return false;
         }
-        out_arguments->push_back(Argument{std::move(name), ArgumentValue::MakeInt64(value)});
+        out_arguments->push_back(
+            Argument{std::move(name), ArgumentValue::MakeInt64(value.value())});
         break;
       }
       case ArgumentType::kUint64: {
-        uint64_t value;
-        if (!arg.ReadUint64(&value)) {
+        std::optional value = arg.ReadUint64();
+        if (!value.has_value()) {
           ReportError("Failed to read uint64 argument value");
           return false;
         }
-        out_arguments->push_back(Argument{std::move(name), ArgumentValue::MakeUint64(value)});
+        out_arguments->push_back(
+            Argument{std::move(name), ArgumentValue::MakeUint64(value.value())});
         break;
       }
       case ArgumentType::kDouble: {
-        double value;
-        if (!arg.ReadDouble(&value)) {
+        std::optional value = arg.ReadDouble();
+        if (!value.has_value()) {
           ReportError("Failed to read double argument value");
           return false;
         }
-        out_arguments->push_back(Argument{std::move(name), ArgumentValue::MakeDouble(value)});
+        out_arguments->push_back(
+            Argument{std::move(name), ArgumentValue::MakeDouble(value.value())});
         break;
       }
       case ArgumentType::kString: {
@@ -600,21 +699,22 @@ bool TraceReader::ReadArguments(Chunk& record, size_t count, fbl::Vector<Argumen
         break;
       }
       case ArgumentType::kPointer: {
-        uint64_t value;
-        if (!arg.ReadUint64(&value)) {
+        std::optional value = arg.ReadUint64();
+        if (!value.has_value()) {
           ReportError("Failed to read pointer argument value");
           return false;
         }
-        out_arguments->push_back(Argument{std::move(name), ArgumentValue::MakePointer(value)});
+        out_arguments->push_back(
+            Argument{std::move(name), ArgumentValue::MakePointer(value.value())});
         break;
       }
       case ArgumentType::kKoid: {
-        zx_koid_t value;
-        if (!arg.ReadUint64(&value)) {
+        std::optional value = arg.ReadUint64();
+        if (!value.has_value()) {
           ReportError("Failed to read koid argument value");
           return false;
         }
-        out_arguments->push_back(Argument{std::move(name), ArgumentValue::MakeKoid(value)});
+        out_arguments->push_back(Argument{std::move(name), ArgumentValue::MakeKoid(value.value())});
         break;
       }
       default: {
@@ -648,13 +748,13 @@ void TraceReader::SetCurrentProvider(ProviderId id) {
 void TraceReader::RegisterProvider(ProviderId id, fbl::String name) {
   auto provider = std::make_unique<ProviderInfo>();
   provider->id = id;
-  provider->name = name;
+  provider->name = std::move(name);
   current_provider_ = provider.get();
 
   providers_.insert_or_replace(std::move(provider));
 }
 
-void TraceReader::RegisterString(trace_string_index_t index, fbl::String string) {
+void TraceReader::RegisterString(trace_string_index_t index, const fbl::String& string) {
   ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
                   index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
 
@@ -679,12 +779,17 @@ bool TraceReader::DecodeStringRef(Chunk& chunk, trace_encoded_string_ref_t strin
 
   if (string_ref & TRACE_ENCODED_STRING_REF_INLINE_FLAG) {
     size_t length = string_ref & TRACE_ENCODED_STRING_REF_LENGTH_MASK;
-    std::string_view string_view;
-    if (length > TRACE_ENCODED_STRING_REF_MAX_LENGTH || !chunk.ReadString(length, &string_view)) {
+    if (length > TRACE_ENCODED_STRING_REF_MAX_LENGTH) {
       ReportError("Could not read inline string");
       return false;
     }
-    *out_string = string_view;
+
+    std::optional string_view = chunk.ReadString(length);
+    if (!string_view.has_value()) {
+      ReportError("Could not read inline string");
+      return false;
+    }
+    *out_string = string_view.value();
     return true;
   }
 
@@ -700,12 +805,17 @@ bool TraceReader::DecodeStringRef(Chunk& chunk, trace_encoded_string_ref_t strin
 bool TraceReader::DecodeThreadRef(Chunk& chunk, trace_encoded_thread_ref_t thread_ref,
                                   ProcessThread* out_process_thread) const {
   if (thread_ref == TRACE_ENCODED_THREAD_REF_INLINE) {
-    zx_koid_t process_koid, thread_koid;
-    if (!chunk.ReadUint64(&process_koid) || !chunk.ReadUint64(&thread_koid)) {
-      ReportError("Could not read inline process and thread");
+    std::optional process_koid = chunk.ReadUint64();
+    if (!process_koid.has_value()) {
+      ReportError("Could not read inline process");
       return false;
     }
-    *out_process_thread = ProcessThread(process_koid, thread_koid);
+    std::optional thread_koid = chunk.ReadUint64();
+    if (!thread_koid.has_value()) {
+      ReportError("Could not read inline thread");
+      return false;
+    }
+    *out_process_thread = ProcessThread(process_koid.value(), thread_koid.value());
     return true;
   }
 
@@ -723,60 +833,55 @@ void TraceReader::ReportError(fbl::String error) const {
     error_handler_(std::move(error));
 }
 
-Chunk::Chunk() : begin_(nullptr), current_(nullptr), end_(nullptr) {}
-
 Chunk::Chunk(const uint64_t* begin, size_t num_words)
     : begin_(begin), current_(begin), end_(begin_ + num_words) {}
 
-bool Chunk::ReadUint64(uint64_t* out_value) {
+std::optional<uint64_t> Chunk::ReadUint64() {
   if (current_ < end_) {
-    *out_value = *current_++;
-    return true;
+    return *current_++;
   }
-  return false;
+  return std::nullopt;
 }
 
-bool Chunk::ReadInt64(int64_t* out_value) {
+std::optional<int64_t> Chunk::ReadInt64() {
   if (current_ < end_) {
-    *out_value = *reinterpret_cast<const int64_t*>(current_++);
-    return true;
+    return *reinterpret_cast<const int64_t*>(current_++);
   }
-  return false;
+  return std::nullopt;
 }
 
-bool Chunk::ReadDouble(double* out_value) {
+std::optional<double> Chunk::ReadDouble() {
   if (current_ < end_) {
-    *out_value = *reinterpret_cast<const double*>(current_++);
-    return true;
+    return *reinterpret_cast<const double*>(current_++);
   }
-  return false;
+  return std::nullopt;
 }
 
-bool Chunk::ReadChunk(size_t num_words, Chunk* out_chunk) {
+std::optional<Chunk> Chunk::ReadChunk(size_t num_words) {
   if (current_ + num_words > end_)
-    return false;
+    return std::nullopt;
 
-  *out_chunk = Chunk(current_, num_words);
+  Chunk chunk(current_, num_words);
   current_ += num_words;
-  return true;
+  return chunk;
 }
 
-bool Chunk::ReadString(size_t length, std::string_view* out_string) {
+std::optional<std::string_view> Chunk::ReadString(size_t length) {
   auto num_words = BytesToWords(length);
   if (current_ + num_words > end_)
-    return false;
+    return std::nullopt;
 
-  *out_string = std::string_view(reinterpret_cast<const char*>(current_), length);
+  std::string_view view(reinterpret_cast<const char*>(current_), length);
   current_ += num_words;
-  return true;
+  return view;
 }
 
-bool Chunk::ReadInPlace(size_t num_words, const void** out_ptr) {
+std::optional<void const*> Chunk::ReadInPlace(size_t num_words) {
   if (current_ + num_words > end_)
-    return false;
-  *out_ptr = current_;
+    return std::nullopt;
+  void const* current = current_;
   current_ += num_words;
-  return true;
+  return current;
 }
 
 }  // namespace trace

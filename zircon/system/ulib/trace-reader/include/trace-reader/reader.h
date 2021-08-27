@@ -8,6 +8,7 @@
 #include <zircon/assert.h>
 
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <utility>
 
@@ -47,7 +48,7 @@ class TraceReader {
   // Reads as many records as possible from the chunk, invoking the
   // record consumer for each one.  Returns true if the stream could possibly
   // contain more records if the chunk were extended with new data.
-  // Returns false if the trace stream is unrecoverably corrupt and no
+  // Returns false if the trace stream is irrecoverably corrupt and no
   // further decoding is possible.  May be called repeatedly with new
   // chunks as they become available to resume decoding.
   bool ReadRecords(Chunk& chunk);
@@ -86,7 +87,7 @@ class TraceReader {
 
   void SetCurrentProvider(ProviderId id);
   void RegisterProvider(ProviderId id, fbl::String name);
-  void RegisterString(trace_string_index_t index, fbl::String string);
+  void RegisterString(trace_string_index_t index, const fbl::String& string);
   void RegisterThread(trace_thread_index_t index, const ProcessThread& process_thread);
 
   bool DecodeStringRef(Chunk& chunk, trace_encoded_string_ref_t string_ref,
@@ -127,7 +128,7 @@ class TraceReader {
     ProviderId id;
     fbl::String name;
 
-    // TODO(fxbug.dev/30999): It would be more efficient to use something like
+    // TODO(https://fxbug.dev/30999): It would be more efficient to use something like
     // std::unordered_map<> here.  In particular, the table entries are
     // small enough that it doesn't make sense to heap allocate them
     // individually.
@@ -149,8 +150,7 @@ class TraceReader {
 // region of memory. The main use-case of this class is input to |TraceReader|.
 class Chunk final {
  public:
-  Chunk();
-  explicit Chunk(const uint64_t* begin, size_t num_words);
+  Chunk(const uint64_t* begin, size_t num_words);
 
   uint64_t current_byte_offset() const {
     return (reinterpret_cast<const uint8_t*>(current_) - reinterpret_cast<const uint8_t*>(begin_));
@@ -160,12 +160,12 @@ class Chunk final {
   // Reads from the chunk, maintaining proper alignment.
   // Returns true on success, false if the chunk has insufficient remaining
   // words to satisfy the request.
-  bool ReadUint64(uint64_t* out_value);
-  bool ReadInt64(int64_t* out_value);
-  bool ReadDouble(double* out_value);
-  bool ReadString(size_t length, std::string_view* out_string);
-  bool ReadChunk(size_t num_words, Chunk* out_chunk);
-  bool ReadInPlace(size_t num_words, const void** out_ptr);
+  std::optional<uint64_t> ReadUint64();
+  std::optional<int64_t> ReadInt64();
+  std::optional<double> ReadDouble();
+  std::optional<std::string_view> ReadString(size_t length);
+  std::optional<Chunk> ReadChunk(size_t num_words);
+  std::optional<void const*> ReadInPlace(size_t num_words);
 
  private:
   const uint64_t* begin_;
