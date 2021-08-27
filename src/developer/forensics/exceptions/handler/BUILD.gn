@@ -33,8 +33,8 @@ source_set("lib") {
     "//src/lib/fxl",
     "//third_party/crashpad/minidump",
     "//third_party/crashpad/snapshot",
-    "//third_party/mini_chromium/base",
     "//third_party/crashpad/util",
+    "//third_party/mini_chromium/base",
     "//zircon/public/lib/zx",
   ]
 

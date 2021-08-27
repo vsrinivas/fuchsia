@@ -164,8 +164,8 @@ static_library("client") {
     "//third_party/crashpad/client",
     "//third_party/crashpad/compat",
     "//third_party/crashpad/snapshot",
-    "//third_party/mini_chromium/base",
     "//third_party/crashpad/util",
+    "//third_party/mini_chromium/base",
     "//third_party/rapidjson",
   ]
 
@@ -304,8 +304,8 @@ source_set("tests") {
     "//third_party/crashpad/client",
     "//third_party/crashpad/compat",
     "//third_party/crashpad/snapshot",
-    "//third_party/mini_chromium/base",
     "//third_party/crashpad/util",
+    "//third_party/mini_chromium/base",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
