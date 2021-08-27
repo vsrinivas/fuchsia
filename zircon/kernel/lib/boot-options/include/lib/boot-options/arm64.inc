@@ -41,3 +41,7 @@ for a specific architecture.
 
 Note: The default value may vary for each architechture.
 )""")
+
+DEFINE_OPTION("kernel.arm64.phys.mmu", bool, phys_mmu, {true}, R"""(
+This enables use of the MMU and caches during the kernel's early boot phase.
+)""")

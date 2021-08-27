@@ -669,6 +669,11 @@ for a specific architecture.
 
 Note: The default value may vary for each architechture.
 
+### kernel.arm64.phys.mmu=\<bool>
+**Default:** `true`
+
+This enables use of the MMU and caches during the kernel's early boot phase.
+
 
 ## Options available only on x86 machines
 

@@ -19,6 +19,7 @@ if (toolchain_environment == "kernel.phys") {
     include_dirs = [ "//." ]
     deps = [
       "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/phys:allocation",
       "//zircon/kernel/phys:page-table",
       "//zircon/kernel/phys/lib/memalloc",

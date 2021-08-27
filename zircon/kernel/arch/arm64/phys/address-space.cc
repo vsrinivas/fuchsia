@@ -6,6 +6,7 @@
 
 #include <lib/arch/arm64/system.h>
 #include <lib/arch/cache.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
 #include <lib/page-table/arch/arm64/builder.h>
@@ -110,7 +111,7 @@ void EnablePaging(Paddr root) {
   }
 }
 
-void CreateBootstapPageTable() {
+void CreateBootstrapPageTable() {
   auto& pool = Allocation::GetPool();
   AllocationMemoryManager manager(pool);
   // Create a page table data structure.
@@ -168,6 +169,10 @@ void CreateBootstapPageTable() {
 
 }  // namespace
 
-void ArchSetUpAddressSpaceEarly() { CreateBootstapPageTable(); }
+void ArchSetUpAddressSpaceEarly() {
+  if (gBootOptions->phys_mmu) {
+    CreateBootstrapPageTable();
+  }
+}
 
 void ArchSetUpAddressSpaceLate() {}
