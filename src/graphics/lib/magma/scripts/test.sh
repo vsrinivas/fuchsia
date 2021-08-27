@@ -14,10 +14,6 @@ intel)
     magma_nonhardware_tests \
     msd_intel_gen_nonhardware_tests \
     mesa_unit_tests \
-    state_pool \
-    state_pool_free_list_only \
-    state_pool_no_free \
-    block_pool_no_free \
     magma-abi-conformance-tests \
     msd_intel_gen_integration_tests \
     icd_load \
