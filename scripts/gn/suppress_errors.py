@@ -5,9 +5,7 @@
 """
 Example usage:
 $ fx set ...
-$ scripts/gn/suppress_errors.py \
---issue=-Wconversion \
---config="//build/config:Wno-conversion"
+$ scripts/gn/suppress_errors.py --issue=-Wshorten-64-to-32 --issue=-Wimplicit-int-float-conversion --config="//build/config:Wno-conversion"
 """
 
 import argparse
@@ -141,7 +139,7 @@ def can_have_config(params):
             raise e
 
 
-included_from_regex = re.compile("In file included from (.*?\.(cc|cpp)):\d*")
+included_from_regex = re.compile("In file included from (.*?\.(c|cc|cpp)):\d*")
 
 
 def find_cc_file_using_included_from(prev_lines: str):
@@ -185,6 +183,7 @@ def main():
     )
     parser.add_argument(
         "--issue",
+        action='append',
         required=True,
         help="A regex matching the intended compiler error/warning. "
         "E.g. --issue='error:.*-Wconversion'."
@@ -196,7 +195,7 @@ def main():
     fx_build_log = args.fx_build_log
     confirm = args.confirm
     complete = args.complete
-    issue = args.issue
+    issue = '|'.join(args.issue)
     config = args.config
     comment = args.comment
 
