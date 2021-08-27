@@ -21,7 +21,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -34,7 +34,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_inheritance {
@@ -306,7 +306,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -319,7 +319,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_inheritance {

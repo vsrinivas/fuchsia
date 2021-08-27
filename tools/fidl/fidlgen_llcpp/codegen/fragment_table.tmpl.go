@@ -148,12 +148,12 @@ public:
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage({{ .Name }}* value)
-      : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+      : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point the input FIDL
     // object, which is not owned by it.
     explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned, {{ .Name }}* value)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(), backing_buffer_.size(), value) {}
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;

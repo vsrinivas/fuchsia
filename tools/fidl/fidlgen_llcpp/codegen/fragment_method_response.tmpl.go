@@ -124,15 +124,15 @@ struct {{ .WireResponse }} final {
   class OwnedEncodedMessage final {
    public:
   explicit OwnedEncodedMessage({{ RenderParams .ResponseArgs }})
-    : message_({{ RenderForwardParams "1u" "backing_buffer_.data()" "backing_buffer_.size()" .ResponseArgs }}) {}
+    : message_({{ RenderForwardParams "1u" "backing_buffer_.data()" "static_cast<uint32_t>(backing_buffer_.size())" .ResponseArgs }}) {}
   // Internal constructor.
   explicit OwnedEncodedMessage({{ RenderParams "::fidl::internal::AllowUnownedInputRef allow_unowned" .ResponseArgs }})
-    : message_({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "backing_buffer_.data()" "backing_buffer_.size()" .ResponseArgs }}) {}
+    : message_({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "backing_buffer_.data()" "static_cast<uint32_t>(backing_buffer_.size())" .ResponseArgs }}) {}
   explicit OwnedEncodedMessage({{ .WireResponse }}* response)
-    : message_(1u, backing_buffer_.data(), backing_buffer_.size(), response) {}
+    : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), response) {}
   // Internal constructor.
   explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned, {{ .WireResponse }}* response)
-    : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(), backing_buffer_.size(), response) {}
+    : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), response) {}
   OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
   OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
   OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;

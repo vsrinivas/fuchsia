@@ -52,13 +52,14 @@ inline bool DecodeSuccess(FidlWireFormatVersion wire_format_version, const fidl_
   zx_status_t status;
   switch (wire_format_version) {
     case FIDL_WIRE_FORMAT_VERSION_V1: {
-      status = fidl_decode_etc(type, bytes.data(), bytes.size(), handles.data(), handles.size(),
-                               &error_msg);
+      status = fidl_decode_etc(type, bytes.data(), static_cast<uint32_t>(bytes.size()),
+                               handles.data(), static_cast<uint32_t>(handles.size()), &error_msg);
       break;
     }
     case FIDL_WIRE_FORMAT_VERSION_V2: {
-      status = internal_fidl_decode_etc__v2__may_break(type, bytes.data(), bytes.size(),
-                                                       handles.data(), handles.size(), &error_msg);
+      status = internal_fidl_decode_etc__v2__may_break(
+          type, bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(),
+          static_cast<uint32_t>(handles.size()), &error_msg);
       break;
     }
     default:
@@ -85,13 +86,14 @@ inline bool DecodeFailure(FidlWireFormatVersion wire_format_version, const fidl_
   zx_status_t status;
   switch (wire_format_version) {
     case FIDL_WIRE_FORMAT_VERSION_V1: {
-      status = fidl_decode_etc(type, bytes.data(), bytes.size(), handles.data(), handles.size(),
-                               &error_msg);
+      status = fidl_decode_etc(type, bytes.data(), static_cast<uint32_t>(bytes.size()),
+                               handles.data(), static_cast<uint32_t>(handles.size()), &error_msg);
       break;
     }
     case FIDL_WIRE_FORMAT_VERSION_V2: {
-      status = internal_fidl_decode_etc__v2__may_break(type, bytes.data(), bytes.size(),
-                                                       handles.data(), handles.size(), &error_msg);
+      status = internal_fidl_decode_etc__v2__may_break(
+          type, bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(),
+          static_cast<uint32_t>(handles.size()), &error_msg);
       break;
     }
     default:

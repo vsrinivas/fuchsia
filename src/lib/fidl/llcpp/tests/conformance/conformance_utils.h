@@ -122,9 +122,9 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       for (uint32_t i = 0; i < outgoing_v1.handle_actual(); i++) {
         zx_handle_disposition_t handle_disposition = outgoing_v1.handles()[i];
         handle_infos.push_back({
-          .handle = handle_disposition.handle,
-          .type = handle_disposition.type,
-          .rights = handle_disposition.rights,
+            .handle = handle_disposition.handle,
+            .type = handle_disposition.type,
+            .rights = handle_disposition.rights,
         });
       }
 
@@ -132,17 +132,18 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       uint32_t num_transformer_bytes;
       const char* error;
       zx_status_t status = internal__fidl_transform__may_break(
-          FIDL_TRANSFORMATION_V1_TO_V2, FidlType::Type, copied_bytes.data(), copied_bytes.size(),
-          transformer_buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &num_transformer_bytes, &error);
+          FIDL_TRANSFORMATION_V1_TO_V2, FidlType::Type, copied_bytes.data(),
+          static_cast<uint32_t>(copied_bytes.size()), transformer_buffer.get(),
+          ZX_CHANNEL_MAX_MSG_BYTES, &num_transformer_bytes, &error);
       if (status != ZX_OK) {
         std::cout << "Transformer exited with status: " << status << " (error: " << error << ")"
                   << std::endl;
         return false;
       }
 
-      status = internal_fidl_decode_etc__v2__may_break(FidlType::Type, transformer_buffer.get(),
-                                                       num_transformer_bytes, handle_infos.data(),
-                                                       handle_infos.size(), &error);
+      status = internal_fidl_decode_etc__v2__may_break(
+          FidlType::Type, transformer_buffer.get(), num_transformer_bytes, handle_infos.data(),
+          static_cast<uint32_t>(handle_infos.size()), &error);
       if (status != ZX_OK) {
         std::cout << "V2 decoder exited with status: " << status << " (error: " << error << ")"
                   << std::endl;

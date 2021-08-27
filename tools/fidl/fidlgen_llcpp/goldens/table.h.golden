@@ -194,7 +194,7 @@ class SimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(SimpleTable* value)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -202,7 +202,7 @@ class SimpleTable final {
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         SimpleTable* value)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), value) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -491,7 +491,7 @@ class ReverseOrdinalTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(ReverseOrdinalTable* value)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -499,7 +499,7 @@ class ReverseOrdinalTable final {
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         ReverseOrdinalTable* value)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), value) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -721,7 +721,7 @@ class OlderSimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(OlderSimpleTable* value)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -729,7 +729,7 @@ class OlderSimpleTable final {
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         OlderSimpleTable* value)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), value) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -1011,7 +1011,7 @@ class NewerSimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(NewerSimpleTable* value)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -1019,7 +1019,7 @@ class NewerSimpleTable final {
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         NewerSimpleTable* value)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), value) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -3330,7 +3330,7 @@ class GreaterThan64OrdinalTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(GreaterThan64OrdinalTable* value)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -3338,7 +3338,7 @@ class GreaterThan64OrdinalTable final {
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         GreaterThan64OrdinalTable* value)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), value) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -3591,14 +3591,14 @@ class EmptyTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(EmptyTable* value)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned, EmptyTable* value)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), value) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;

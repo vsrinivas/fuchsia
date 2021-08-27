@@ -116,7 +116,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -133,7 +133,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -746,7 +746,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestEmptyResponse>>(_client, bytes_.data(), bytes_.size());
+          NoRequestEmptyResponse>>(_client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -764,7 +764,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestEmptyResponse>>(_client, bytes_.data(), bytes_.size(),
+          NoRequestEmptyResponse>>(_client, bytes_.data(), static_cast<uint32_t>(bytes_.size()),
                                    _deadline);
   SetResult(_outgoing);
 }
@@ -786,7 +786,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestWithResponse>>(_client, bytes_.data(), bytes_.size());
+          NoRequestWithResponse>>(_client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -804,7 +804,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestWithResponse>>(_client, bytes_.data(), bytes_.size(),
+          NoRequestWithResponse>>(_client, bytes_.data(), static_cast<uint32_t>(bytes_.size()),
                                   _deadline);
   SetResult(_outgoing);
 }
@@ -892,7 +892,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestEmptyResponse>>(_client, bytes_.data(), bytes_.size());
+          WithRequestEmptyResponse>>(_client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -910,7 +910,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestEmptyResponse>>(_client, bytes_.data(), bytes_.size(),
+          WithRequestEmptyResponse>>(_client, bytes_.data(), static_cast<uint32_t>(bytes_.size()),
                                      _deadline);
   SetResult(_outgoing);
 }
@@ -958,7 +958,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestWithResponse>>(_client, bytes_.data(), bytes_.size());
+          WithRequestWithResponse>>(_client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -976,7 +976,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestWithResponse>>(_client, bytes_.data(), bytes_.size(),
+          WithRequestWithResponse>>(_client, bytes_.data(), static_cast<uint32_t>(bytes_.size()),
                                     _deadline);
   SetResult(_outgoing);
 }
@@ -2225,7 +2225,7 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing
       .Call<::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>(
-          _client, bytes_.data(), bytes_.size());
+          _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -2239,7 +2239,7 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing
       .Call<::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
+          _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -2904,7 +2904,7 @@ extern "C" const fidl_type_t
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -2921,7 +2921,7 @@ extern "C" const fidl_type_t
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -2963,7 +2963,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -2980,7 +2980,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -3022,7 +3022,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -3039,7 +3039,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -4016,7 +4016,7 @@ extern "C" const fidl_type_t
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -4031,7 +4031,7 @@ extern "C" const fidl_type_t
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -4071,7 +4071,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -4086,7 +4086,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -4126,7 +4126,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -4141,7 +4141,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -4180,7 +4180,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -4195,7 +4195,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -5411,7 +5411,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -5425,7 +5425,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -5465,7 +5465,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -5480,7 +5480,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {
@@ -5521,7 +5521,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>>(
-      _client, bytes_.data(), bytes_.size());
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -5536,7 +5536,7 @@ namespace fidl_test_protocols {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocols {

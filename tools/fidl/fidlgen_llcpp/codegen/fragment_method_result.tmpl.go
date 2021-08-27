@@ -79,10 +79,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
       {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
   auto& _outgoing = _request.GetOutgoingMessage();
   {{- if .HasResponse }}
-  _outgoing.Call<{{ .WireResponse }}>(
-      _client,
-      bytes_.data(),
-      bytes_.size());
+  _outgoing.Call<{{ .WireResponse }}>( _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   {{- else }}
   _outgoing.Write(_client);
   {{- end }}
@@ -98,11 +95,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
 	  {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<{{ .WireResponse }}>(
-      _client,
-      bytes_.data(),
-      bytes_.size(),
-      _deadline);
+  _outgoing.Call<{{ .WireResponse }}>( _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
   SetResult(_outgoing);
 }
   {{- end }}

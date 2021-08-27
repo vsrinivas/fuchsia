@@ -191,7 +191,7 @@ struct ::fidl::WireRequest<
     explicit OwnedEncodedMessage(
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
                    std::move(request)) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
@@ -199,16 +199,16 @@ struct ::fidl::WireRequest<
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), std::move(request)) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), std::move(request)) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
                    request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         WireRequest* request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), request) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -665,7 +665,7 @@ struct ::fidl::WireRequest<
     explicit OwnedEncodedMessage(
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
                    std::move(request)) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
@@ -673,16 +673,16 @@ struct ::fidl::WireRequest<
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), std::move(request)) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), std::move(request)) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
                    request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         WireRequest* request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), request) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -861,7 +861,7 @@ struct ::fidl::WireRequest<
     explicit OwnedEncodedMessage(
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
                    std::move(request)) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
@@ -869,16 +869,16 @@ struct ::fidl::WireRequest<
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), std::move(request)) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), std::move(request)) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
+        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
                    request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         WireRequest* request)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   backing_buffer_.size(), request) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;

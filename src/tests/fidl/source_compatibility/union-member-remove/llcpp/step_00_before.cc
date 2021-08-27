@@ -28,7 +28,7 @@ std::optional<float> parse_as_float(const std::string& s) {
 fidl_test::wire::JsonValue writer(fidl::AnyArena& allocator, const std::string& s) {
   std::optional<float> maybe_float = parse_as_float(s);
   if (maybe_float) {
-    return fidl_test::wire::JsonValue::WithIntValue(allocator, *maybe_float);
+    return fidl_test::wire::JsonValue::WithIntValue(allocator, static_cast<int>(*maybe_float));
   }
   std::optional<int32_t> maybe_int = parse_as_int(s);
   if (maybe_int) {
