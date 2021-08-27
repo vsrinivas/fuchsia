@@ -1408,8 +1408,15 @@ mod tests {
         let bss_description = fake_fidl_bss_description!(
             Wpa2,
             ssid: Ssid::from("foo"),
-            capability_info: wlan_common::mac::CapabilityInfo(0).with_privacy(false).0,
         );
+        // Manually override the privacy bit since fake_fidl_bss_description!()
+        // does not allow setting it directly.
+        let bss_description = fidl_internal::BssDescription {
+            capability_info: wlan_common::mac::CapabilityInfo(bss_description.capability_info)
+                .with_privacy(false)
+                .0,
+            ..bss_description
+        };
         let mut connect_txn_stream =
             sme.on_connect_command(connect_req(Ssid::from("foo"), bss_description, credential));
 
