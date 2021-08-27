@@ -175,9 +175,7 @@ impl Plumber {
         Ok(Plumber { size, collection_id, frame_set, image_indexes, context })
     }
 
-    pub fn enter_retirement(&mut self, _flatland: &flatland::FlatlandProxy) {
-        todo!("enter_retirement");
-    }
+    pub fn enter_retirement(&mut self, _flatland: &flatland::FlatlandProxy) {}
 }
 
 const RENDER_BUFFER_COUNT: usize = 3;
