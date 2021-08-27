@@ -7,7 +7,8 @@ use crate::{
     geometry::IntSize,
     view::{
         strategies::{
-            base::{ScenicParams, ViewStrategyParams, ViewStrategyPtr},
+            base::{FlatlandParams, ScenicParams, ViewStrategyParams, ViewStrategyPtr},
+            flatland::FlatlandViewStrategy,
             scenic::ScenicViewStrategy,
         },
         ViewKey,
@@ -19,10 +20,11 @@ use euclid::size2;
 use fidl::endpoints::{create_endpoints, create_proxy};
 use fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_scenic::{ScenicProxy, SessionListenerRequest};
-use fidl_fuchsia_ui_views::ViewToken;
+use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_scenic::{Session, SessionPtr, ViewRefPair, ViewTokenPair};
+use fuchsia_zircon::EventPair;
 use futures::{channel::mpsc::UnboundedSender, TryFutureExt, TryStreamExt};
 
 pub(crate) struct ScenicAppStrategy {
@@ -97,6 +99,22 @@ impl ScenicAppStrategy {
 
         Ok(Session::new(session_proxy))
     }
+
+    fn create_scenic_view(
+        sender: &UnboundedSender<MessageInternal>,
+        token: EventPair,
+        control_ref: ViewRefControl,
+        view_ref: ViewRef,
+    ) {
+        let view_token = ViewToken { value: token };
+        sender
+            .unbounded_send(MessageInternal::CreateView(ViewStrategyParams::Scenic(ScenicParams {
+                view_token,
+                control_ref,
+                view_ref,
+            })))
+            .expect("send");
+    }
 }
 
 #[async_trait(?Send)]
@@ -108,19 +126,21 @@ impl AppStrategy for ScenicAppStrategy {
         strategy_params: ViewStrategyParams,
     ) -> Result<ViewStrategyPtr, Error> {
         let session = self.setup_session(key, &app_sender)?;
-        let strategy_params = match strategy_params {
-            ViewStrategyParams::Scenic(params) => params,
+        match strategy_params {
+            ViewStrategyParams::Scenic(strategy_params) => Ok(ScenicViewStrategy::new(
+                key,
+                &session,
+                strategy_params.view_token,
+                strategy_params.control_ref,
+                strategy_params.view_ref,
+                app_sender.clone(),
+            )
+            .await?),
+            ViewStrategyParams::Flatland(flatland_params) => {
+                Ok(FlatlandViewStrategy::new(key, flatland_params, app_sender.clone()).await?)
+            }
             _ => bail!("Incorrect ViewStrategyParams passed to create_view_strategy for scenic"),
-        };
-        Ok(ScenicViewStrategy::new(
-            key,
-            &session,
-            strategy_params.view_token,
-            strategy_params.control_ref,
-            strategy_params.view_ref,
-            app_sender.clone(),
-        )
-        .await?)
+        }
     }
 
     fn create_view_for_testing(
@@ -157,36 +177,35 @@ impl AppStrategy for ScenicAppStrategy {
             fasync::Task::local(
                 stream
                     .try_for_each(move |req| {
-                        let (token, control_ref, view_ref) = match req {
+                        match req {
                             ViewProviderRequest::CreateView { token, .. } => {
                                 // We do not get passed a view ref so create our own
                                 let ViewRefPair { control_ref, view_ref } =
                                     ViewRefPair::new().expect("unable to create view ref pair");
-                                (token, control_ref, view_ref)
+                                Self::create_scenic_view(&sender, token, control_ref, view_ref);
                             }
                             ViewProviderRequest::CreateViewWithViewRef {
                                 token,
                                 view_ref_control,
                                 view_ref,
                                 ..
-                            } => (token, view_ref_control, view_ref),
+                            } => {
+                                Self::create_scenic_view(
+                                    &sender,
+                                    token,
+                                    view_ref_control,
+                                    view_ref,
+                                );
+                            }
 
-                            ViewProviderRequest::CreateView2 { .. } => {
-                                // TODO(fxbug.dev/78617): CreateView2 indicates that Carnelian is to
-                                // be embedded as a child in a Flatland scene graph instead of Gfx.
-                                panic!("ViewProvider.CreateView2 not handled");
+                            ViewProviderRequest::CreateView2 { args, .. } => {
+                                sender
+                                    .unbounded_send(MessageInternal::CreateView(
+                                        ViewStrategyParams::Flatland(FlatlandParams { args }),
+                                    ))
+                                    .expect("unbounded_send");
                             }
                         };
-                        let view_token = ViewToken { value: token };
-                        sender
-                            .unbounded_send(MessageInternal::CreateView(
-                                ViewStrategyParams::Scenic(ScenicParams {
-                                    view_token,
-                                    control_ref,
-                                    view_ref,
-                                }),
-                            ))
-                            .expect("send");
                         futures::future::ready(Ok(()))
                     })
                     .unwrap_or_else(|e| eprintln!("error running ViewProvider server: {:?}", e)),

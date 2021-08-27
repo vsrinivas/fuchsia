@@ -275,6 +275,9 @@ pub(crate) enum MessageInternal {
     KeyboardAutoRepeat(DeviceId, ViewKey),
     OwnershipChanged(bool),
     DropDisplayResources,
+    FlatlandOnNextFrameBegin(ViewKey, fidl_fuchsia_ui_composition::OnNextFrameBeginValues),
+    FlatlandOnFramePresented(ViewKey, fidl_fuchsia_scenic_scheduling::FramePresentedInfo),
+    FlatlandOnError(ViewKey, fuchsia_scenic::flatland::FlatlandError),
 }
 
 /// Future that returns an application assistant.
@@ -404,6 +407,17 @@ impl App {
             }
             MessageInternal::DropDisplayResources => {
                 self.drop_display_resources();
+            }
+            MessageInternal::FlatlandOnNextFrameBegin(view_id, info) => {
+                let view = self.get_view(view_id);
+                view.handle_on_next_frame_begin(&info);
+            }
+            MessageInternal::FlatlandOnFramePresented(view_id, info) => {
+                let view = self.get_view(view_id);
+                view.present_done(info);
+            }
+            MessageInternal::FlatlandOnError(view_id, error) => {
+                eprintln!("flatland error view: {}, error: {:#?}", view_id, error);
             }
         }
         Ok(())

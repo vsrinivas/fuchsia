@@ -43,6 +43,7 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.scenic.scheduling:fuchsia.scenic.scheduling-rustc",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
@@ -52,6 +53,7 @@ rustc_library("carnelian") {
     "//src/graphics/lib/compute/mold",
     "//src/graphics/lib/compute/rive-rs",
     "//src/graphics/lib/compute/spinel-rs-sys",
+    "//src/lib/async-utils",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -139,6 +141,7 @@ rustc_library("carnelian") {
     "src/view.rs",
     "src/view/strategies.rs",
     "src/view/strategies/base.rs",
+    "src/view/strategies/flatland.rs",
     "src/view/strategies/framebuffer.rs",
     "src/view/strategies/scenic.rs",
   ]

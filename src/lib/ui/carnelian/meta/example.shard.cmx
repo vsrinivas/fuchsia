@@ -1,7 +1,7 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/vulkan/application.shard.cmx"
+        "//src/lib/vulkan/application.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "sandbox": {
         "dev": [
@@ -16,6 +16,8 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.composition.Allocator",
+            "fuchsia.ui.composition.Flatland",
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"

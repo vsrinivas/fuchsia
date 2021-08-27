@@ -541,4 +541,11 @@ impl ViewController {
     pub fn handle_vsync_cookie(&mut self, cookie: u64) {
         self.strategy.handle_vsync_cookie(cookie);
     }
+
+    pub fn handle_on_next_frame_begin(
+        &mut self,
+        info: &fidl_fuchsia_ui_composition::OnNextFrameBeginValues,
+    ) {
+        self.strategy.handle_on_next_frame_begin(info);
+    }
 }

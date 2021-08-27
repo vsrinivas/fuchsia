@@ -89,6 +89,12 @@ pub(crate) trait ViewStrategy {
 
     fn ownership_changed(&mut self, _owned: bool) {}
     fn drop_display_resources(&mut self) {}
+
+    fn handle_on_next_frame_begin(
+        &mut self,
+        _info: &fidl_fuchsia_ui_composition::OnNextFrameBeginValues,
+    ) {
+    }
 }
 
 pub(crate) type ViewStrategyPtr = Box<dyn ViewStrategy>;
@@ -107,7 +113,12 @@ pub(crate) struct ScenicParams {
     pub view_ref: ViewRef,
 }
 
+pub(crate) struct FlatlandParams {
+    pub args: fidl_fuchsia_ui_app::CreateView2Args,
+}
+
 pub(crate) enum ViewStrategyParams {
     Scenic(ScenicParams),
+    Flatland(FlatlandParams),
     FrameBuffer(FrameBufferParams),
 }
