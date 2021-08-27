@@ -20,7 +20,7 @@ class RamMappableCrashlog final : public PlatformCrashlog::Interface {
   RamMappableCrashlog() = delete;
   RamMappableCrashlog(paddr_t phys, size_t len);
 
-  ktl::span<char> GetRenderTarget() final { return {render_target_, sizeof(render_target_)}; }
+  ktl::span<char> GetRenderTarget() final { return render_target_; }
 
   void Finalize(zircon_crash_reason_t reason, size_t amt) final;
   size_t Recover(FILE* tgt) final;
@@ -36,8 +36,8 @@ class RamMappableCrashlog final : public PlatformCrashlog::Interface {
   void UpdateUptimeLocked() TA_REQ(uptime_updater_lock_);
 
   const ktl::span<char> crashlog_buffer_;
+  const ktl::span<char> render_target_;
 
-  char render_target_[4096];
   recovered_ram_crashlog_t recovered_log_;
   zx_status_t log_recovery_result_ = ZX_ERR_INTERNAL;
 

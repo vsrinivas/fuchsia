@@ -26,7 +26,10 @@ FILE NULL_FILE = FILE{[](void*, ktl::string_view str) -> int {
 RamMappableCrashlog::RamMappableCrashlog(paddr_t phys, size_t len)
     : crashlog_buffer_(phys && len
                            ? ktl::span<char>{static_cast<char*>(paddr_to_physmap(phys)), len}
-                           : ktl::span<char>{}) {
+                           : ktl::span<char>{}),
+      render_target_(crashlog_buffer_.size() > sizeof(ram_crashlog_t)
+                         ? crashlog_buffer_.subspan(sizeof(ram_crashlog_t))
+                         : ktl::span<char>{}) {
   if (!crashlog_buffer_.empty()) {
     // Go ahead and "recover" the log right now.  All this will do is verify the
     // various CRCs and extract the results if everything checks out.  We don't
@@ -42,13 +45,12 @@ void RamMappableCrashlog::Finalize(zircon_crash_reason_t reason, size_t amt) {
   // Whatever the user tells us, the amt of the crashlog render target which was
   // filled cannot exceed the amount that we originally reported, nor can it be
   // larger than what a u32 can hold.
-  ktl::span<char> render_tgt = GetRenderTarget();
-  amt = ktl::min(amt, render_tgt.size());
+  amt = ktl::min(amt, render_target_.size());
   amt = ktl::min<size_t>(amt, ktl::numeric_limits<uint32_t>::max());
 
   // The RAM crashlog library will gracefully handle a nullptr or 0 length here;
   // no need to explicitly check that they are valid.
-  ram_crashlog_stow(crashlog_buffer_.data(), crashlog_buffer_.size(), render_tgt.data(),
+  ram_crashlog_stow(crashlog_buffer_.data(), crashlog_buffer_.size(), render_target_.data(),
                     static_cast<uint32_t>(amt), reason, current_time());
 }
 
