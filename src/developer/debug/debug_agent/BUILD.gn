@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
-import("//build/testing/environments.gni")
 
 # Set manually to true to compile the zxdb_test_app.cc file for manual debugger
 # testing of various conditions.
@@ -279,19 +278,19 @@ fuchsia_unittest_package("debug_agent_unit_tests") {
 fuchsia_unittest_package("debug_agent_integration_tests") {
   manifest = "meta/debug_agent_integration_tests.cmx"
   deps = [
-    "//src/developer/debug/debug_agent/integration_tests",
-    "//src/developer/debug/debug_agent/test_data:debug_agent_test_loadable_module",
+    "integration_tests",
+    "test_data:debug_agent_test_loadable_module",
+
+    # These are executables that integration tests will need in order to test
+    # actual behaviour against zircon.
+    "test_data:test_executables",
   ]
 
-  # These are executables that integration tests will need in order to test
-  # actual behaviour against zircon.
-  deps += [ "//src/developer/debug/debug_agent/test_data:test_executables" ]
-
-  # Integration tests do not run on QEMU because some of the low-level
-  # functionality is not implemented correctly.
-  # TODO(fxbug.dev/47485): Make pass w/ ASan and switch to [ nuc_env ].
-  test_specs = {
-    environments = nuc_env_fails_on_asan
+  # TODO(https://fxbug.dev/47485): Get this test passing on arm64 and remove.
+  if (target_cpu == "arm64") {
+    test_specs = {
+      environments = []
+    }
   }
 }
 

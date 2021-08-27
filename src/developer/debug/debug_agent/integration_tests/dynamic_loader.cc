@@ -84,7 +84,22 @@ void DynamicLoaderStreamBackend::HandleNotifyModules(debug_ipc::NotifyModules mo
     stage_ = Stage::kWaitingForExit;
     ResumeAll();
   } else {
-    ADD_FAILURE() << "Unexpected NotifyModules call.";
+    ADD_FAILURE() << "Unexpected NotifyModules call in stage=" << [this]() {
+      switch (stage_) {
+        case Stage::kWaitingForThread:
+          return "kWaitingForThread";
+        case Stage::kWaitingForModules:
+          return "kWaitingForModules";
+        case Stage::kWaitingForLoad:
+          return "kWaitingForLoad";
+        case Stage::kWaitingForUnload:
+          return "kWaitingForUnload";
+        case Stage::kWaitingForExit:
+          return "kWaitingForExit";
+        case Stage::kDone:
+          return "kDone";
+      }
+    }();
     loop_->QuitNow();
   }
 }
