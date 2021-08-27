@@ -6,15 +6,11 @@ group("logs") {
   testonly = true
   deps = [
     ":tests",
-    "ansi-junk",
     "rust",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "ansi-junk:tests",
-    "rust:tests",
-  ]
+  deps = [ "rust:tests" ]
 }
