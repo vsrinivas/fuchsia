@@ -19,83 +19,102 @@ import 'package:pedantic/pedantic.dart';
 import 'package:zircon/zircon.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  const testViewId = 42;
 
-  test('FuchsiaViewConnection', () async {
-    bool? connectedCalled;
-    bool? disconnectedCalled;
+  Future<void> sendViewConnectedEvent(int viewId) {
+    return FuchsiaViewsService.instance.platformViewChannel.binaryMessenger
+        .handlePlatformMessage(
+            FuchsiaViewsService.instance.platformViewChannel.name,
+            FuchsiaViewsService.instance.platformViewChannel.codec
+                .encodeMethodCall(MethodCall(
+                    'View.viewConnected', <String, dynamic>{'viewId': viewId})),
+            null);
+  }
+
+  Future<void> sendViewDisconnectedEvent(int viewId) {
+    return FuchsiaViewsService.instance.platformViewChannel.binaryMessenger
+        .handlePlatformMessage(
+            FuchsiaViewsService.instance.platformViewChannel.name,
+            FuchsiaViewsService.instance.platformViewChannel.codec
+                .encodeMethodCall(MethodCall('View.viewDisconnected',
+                    <String, dynamic>{'viewId': viewId})),
+            null);
+  }
+
+  void expectPlatformViewChannelCall(
+      WidgetTester tester, String methodName, Map<String, dynamic> methodArgs,
+      {dynamic Function()? handler}) {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        FuchsiaViewsService.instance.platformViewChannel, (call) async {
+      expect(call.method, methodName);
+      expect(call.arguments, methodArgs);
+      if (handler != null) {
+        return handler.call();
+      }
+    });
+  }
+
+  testWidgets('FuchsiaViewConnection', (WidgetTester tester) async {
+    bool connectedCalled = false;
+    bool disconnectedCalled = false;
     final connection = TestFuchsiaViewConnection(
-      _mockViewHolderToken(),
+      _mockViewHolderToken(testViewId),
       onViewConnected: (_) => connectedCalled = true,
       onViewDisconnected: (_) => disconnectedCalled = true,
     );
 
+    expectPlatformViewChannelCall(tester, 'View.create', <String, dynamic>{
+      'viewId': testViewId,
+      'hitTestable': true,
+      'focusable': true,
+      'viewOcclusionHintLTRB': <double>[0, 0, 0, 0],
+    });
     await connection.connect();
-    verify(connection.fuchsiaViewsService.createView(
-      42,
-      hitTestable: true,
-      focusable: true,
-      viewOcclusionHint: Rect.zero,
-    ));
+    expect(connection.connected, false);
+    expect(connectedCalled, false);
+    expect(disconnectedCalled, false);
 
-    final methodCallback =
-        verify(connection.fuchsiaViewsService.register(42, captureAny))
-            .captured
-            .single;
-    expect(methodCallback, isNotNull);
+    // signal that the platform view has connected successfully.
+    await sendViewConnectedEvent(testViewId);
+    expect(connection.connected, true);
+    expect(connectedCalled, true);
 
-    methodCallback(MethodCall('View.viewConnected'));
-    methodCallback(MethodCall('View.viewDisconnected'));
-
-    expect(connectedCalled, isTrue);
-    expect(disconnectedCalled, isTrue);
+    // signal that the platform view has disconnected.
+    await sendViewDisconnectedEvent(testViewId);
+    expect(connection.connected, false);
+    expect(disconnectedCalled, true);
   });
 
-  test('FuchsiaViewConnection.usePointerInjection', () async {
-    bool? connectedCalled;
-    bool? disconnectedCalled;
-    bool? stateChangedCalled;
+  testWidgets('FuchsiaViewConnection.usePointerInjection',
+      (WidgetTester tester) async {
+    bool connectedCalled = false;
+    bool disconnectedCalled = false;
     final connection = TestFuchsiaViewConnection(
-      _mockViewHolderToken(),
+      _mockViewHolderToken(testViewId),
       viewRef: _mockViewRef(),
       onViewConnected: (_) => connectedCalled = true,
       onViewDisconnected: (_) => disconnectedCalled = true,
-      onViewStateChanged: (_, state) => stateChangedCalled = state,
       usePointerInjection: true,
     );
 
-    // Invoke connect to capture [MethodCall] callback.
+    expectPlatformViewChannelCall(tester, 'View.create', <String, dynamic>{
+      'viewId': testViewId,
+      'hitTestable': true,
+      'focusable': true,
+      'viewOcclusionHintLTRB': <double>[0, 0, 0, 0],
+    });
     await connection.connect();
-    verify(connection.fuchsiaViewsService.createView(
-      42,
-      hitTestable: true,
-      focusable: true,
-      viewOcclusionHint: Rect.zero,
-    ));
 
-    when(connection.pointerInjector.registered).thenReturn(false);
-
-    final methodCallback =
-        verify(connection.fuchsiaViewsService.register(42, captureAny))
-            .captured
-            .single;
-    expect(methodCallback, isNotNull);
-
-    // Invoke all View.view* callbacks.
-    methodCallback(MethodCall('View.viewConnected'));
-    methodCallback(MethodCall('View.viewDisconnected'));
-    methodCallback(MethodCall('View.viewStateChanged', {'state': true}));
-
-    expect(connectedCalled, isTrue);
-    expect(disconnectedCalled, isTrue);
-    expect(stateChangedCalled, isTrue);
+    // Invoke all View.view* callbacks; disconnect() should dispose the pointer injector.
+    await sendViewConnectedEvent(testViewId);
+    await sendViewDisconnectedEvent(testViewId);
+    expect(connectedCalled, true);
+    expect(disconnectedCalled, true);
     verify(connection.pointerInjector.dispose());
 
     // Test pointer dispatch works.
-    final downEvent = PointerDownEvent();
     when(connection.pointerInjector.registered).thenReturn(false);
-
-    await connection.dispatchPointerEvent(downEvent);
+    await connection.dispatchPointerEvent(PointerDownEvent());
     verify((connection.pointerInjector as MockPointerInjector).register(
       hostViewRef: anyNamed('hostViewRef'),
       viewRef: anyNamed('viewRef'),
@@ -103,14 +122,15 @@ void main() {
     ));
 
     when(connection.pointerInjector.registered).thenReturn(true);
-    await connection.dispatchPointerEvent(downEvent);
+    await connection.dispatchPointerEvent(PointerDownEvent());
     verify((connection.pointerInjector as MockPointerInjector).dispatchEvent(
         pointer: anyNamed('pointer'), viewport: anyNamed('viewport')));
   });
 
-  test('Recreate pointer injection on error', () async {
+  testWidgets('Recreate pointer injection on error',
+      (WidgetTester tester) async {
     final connection = TestFuchsiaViewConnection(
-      _mockViewHolderToken(),
+      _mockViewHolderToken(testViewId),
       viewRef: _mockViewRef(),
       usePointerInjection: true,
     );
@@ -142,7 +162,7 @@ void main() {
 
   test('Multiple pointer events only register injector once', () async {
     final FuchsiaViewConnection connection = TestFuchsiaViewConnection(
-      _mockViewHolderToken(),
+      _mockViewHolderToken(testViewId),
       viewRef: _mockViewRef(),
       usePointerInjection: true,
     );
@@ -177,7 +197,7 @@ void main() {
     // where the FIDL call to the PointerInjector Registry doesn't
     // complete immediately.
     final FuchsiaViewConnection connection = TestFuchsiaViewConnection(
-      _mockViewHolderToken(),
+      _mockViewHolderToken(testViewId),
       viewRef: _mockViewRef(),
       usePointerInjection: true,
     ).._pointerInjector = _hangingPointerInjector();
@@ -222,12 +242,14 @@ ViewRef _mockViewRef() {
   when(eventPair.isValid).thenReturn(true);
   final viewRef = MockViewRef();
   when(viewRef.reference).thenReturn(eventPair);
+
   return viewRef;
 }
 
-ViewHolderToken _mockViewHolderToken() {
+ViewHolderToken _mockViewHolderToken(int handleValue) {
   final handle = MockHandle();
-  when(handle.handle).thenReturn(42);
+  when(handle.handle).thenReturn(handleValue);
+  when(handle.isValid).thenReturn(true);
   final eventPair = MockEventPair();
   when(eventPair.handle).thenReturn(handle);
   when(eventPair.isValid).thenReturn(true);
@@ -238,7 +260,6 @@ ViewHolderToken _mockViewHolderToken() {
 }
 
 class TestFuchsiaViewConnection extends FuchsiaViewConnection {
-  final _fuchsiaViewsService = MockFuchsiaViewsService();
   // ignore: prefer_final_fields
   var _pointerInjector = MockPointerInjector();
 
@@ -259,9 +280,6 @@ class TestFuchsiaViewConnection extends FuchsiaViewConnection {
         );
 
   @override
-  FuchsiaViewsService get fuchsiaViewsService => _fuchsiaViewsService;
-
-  @override
   PointerInjector get pointerInjector => _pointerInjector;
 
   @override
@@ -270,8 +288,6 @@ class TestFuchsiaViewConnection extends FuchsiaViewConnection {
   @override
   Rect? get viewport => Rect.fromLTWH(0, 0, 100, 100);
 }
-
-class MockFuchsiaViewsService extends Mock implements FuchsiaViewsService {}
 
 class MockViewHolderToken extends Mock implements ViewHolderToken {
   @override

@@ -45,16 +45,18 @@ class FuchsiaViewController implements PlatformViewController {
   /// Callback when pointer events are dispatched on top of child view.
   final FuchsiaPointerEventsCallback? onPointerEvent;
 
-  /// Returns the [FuchsiaViewsService] used to communicated with the embedder.
-  @visibleForTesting
-  FuchsiaViewsService get fuchsiaViewsService => FuchsiaViewsService.instance;
+  // The [bool] that tracks whether the platform view was created or not yet.
+  // The [FuchsiaViewController] will only create its associated platform view
+  // once during the controller's lifetime.
+  bool _viewCreated = false;
 
-  /// Returns the [FocusState] used to communicated with the embedder.
-  @visibleForTesting
-  FocusState get focusState => FocusState.instance;
+  // The [bool] that tracks whether the platform view was destroyed or not yet.
+  // The [FuchsiaViewController] will only destroy its associated platform view
+  // once during the controller's lifetime.
+  bool _viewDestroyed = false;
 
   // The [Completer] that is completed when the platform view is connected.
-  var _whenConnected = Completer();
+  Completer _whenConnected = Completer();
 
   /// The future that completes when the platform view is connected.
   Future get whenConnected => _whenConnected.future;
@@ -80,10 +82,11 @@ class FuchsiaViewController implements PlatformViewController {
     bool focusable = true,
     Rect viewOcclusionHint = Rect.zero,
   }) async {
-    if (_whenConnected.isCompleted) return;
+    if (_viewCreated) return;
+    _viewCreated = true; // Only allow this to be called once
 
     // Setup callbacks for receiving view events.
-    fuchsiaViewsService.register(viewId, (call) async {
+    FuchsiaViewsService.instance.register(viewId, (call) async {
       switch (call.method) {
         case 'View.viewConnected':
           _whenConnected.complete();
@@ -104,24 +107,12 @@ class FuchsiaViewController implements PlatformViewController {
     });
 
     // Now send a create message to the platform view.
-    return fuchsiaViewsService.createView(
+    return FuchsiaViewsService.instance.createView(
       viewId,
       hitTestable: hitTestable,
       focusable: focusable,
       viewOcclusionHint: viewOcclusionHint,
     );
-  }
-
-  /// Disconnects the view from the [ViewHolderToken].
-  ///
-  /// This should not be called in [onViewDisconnected] callback. The need to
-  /// disconnect, without exiting the underlying component is rare. Most views
-  /// are closed by first exiting their component, in which case the callback
-  /// [onViewDisconnect] is invoked.  This MUST NOT be called directly.
-  Future<void> disconnect() async {
-    fuchsiaViewsService.deregister(viewId);
-    await fuchsiaViewsService.destroyView(viewId);
-    onViewDisconnected?.call(this);
   }
 
   /// Updates properties on the platform view given it's [viewId].
@@ -134,7 +125,7 @@ class FuchsiaViewController implements PlatformViewController {
     bool hitTestable = true,
     Rect viewOcclusionHint = Rect.zero,
   }) async {
-    return fuchsiaViewsService.updateView(
+    return FuchsiaViewsService.instance.updateView(
       viewId,
       hitTestable: hitTestable,
       focusable: focusable,
@@ -145,12 +136,21 @@ class FuchsiaViewController implements PlatformViewController {
   /// Requests that focus be transferred to the remote Scene represented by
   /// this connection.
   Future<void> requestFocus(int viewRef) async {
-    return focusState.requestFocus(viewRef);
+    return FocusState.instance.requestFocus(viewRef);
   }
 
   /// Dispose the underlying platform view controller.
+  ///
+  /// Destroys the underlying [ViewHolderToken] and cleans up view resources.
   @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    if (_viewCreated && !_viewDestroyed) {
+      _viewDestroyed = true;
+
+      FuchsiaViewsService.instance.deregister(viewId);
+      await FuchsiaViewsService.instance.destroyView(viewId);
+    }
+  }
 
   @override
   Future<void> clearFocus() async {}

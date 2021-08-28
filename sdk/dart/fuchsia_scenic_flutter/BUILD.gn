@@ -37,7 +37,9 @@ dart_library("fuchsia_scenic_flutter") {
   ]
 }
 
-# Runs these tests using:
+# Build these tests using:
+#   fx set ... --with-host //sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_unittests
+# Run these tests using:
 #   fx test --host fuchsia_scenic_flutter_unittests
 flutter_test("fuchsia_scenic_flutter_unittests") {
   sources = [
