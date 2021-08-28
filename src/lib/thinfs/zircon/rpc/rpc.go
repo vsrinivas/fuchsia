@@ -103,6 +103,7 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) {
 }
 
 type directoryWrapper struct {
+	io.DirectoryWithCtxTransitionalBase // TODO(fuchsia.io2): Remove once transitions are complete.
 	vfs     *ThinVFS
 	token   key
 	cancel  context.CancelFunc
@@ -450,6 +451,7 @@ func (d *directoryWrapper) NodeSetFlags(fidl.Context, uint32) (int32, error) {
 }
 
 type fileWrapper struct {
+	io.FileWithCtxTransitionalBase // TODO(fuchsia.io2): Remove once transitions are complete.
 	vfs    *ThinVFS
 	cancel context.CancelFunc
 	file   fs.File
