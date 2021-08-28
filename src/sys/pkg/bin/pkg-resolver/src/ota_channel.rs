@@ -206,7 +206,8 @@ mod test {
         );
     }
 
-    fn setup_repo_mgr() -> (RepositoryManager, ChannelInspectState, fuchsia_inspect::Inspector) {
+    async fn setup_repo_mgr() -> (RepositoryManager, ChannelInspectState, fuchsia_inspect::Inspector)
+    {
         // Set up inspect
         let inspector = fuchsia_inspect::Inspector::new();
         let channel_inspect_state =
@@ -222,10 +223,10 @@ mod test {
             RepositoryConfigs::Version1(vec![vbmeta_repo_config]),
         )]);
         let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
 
         // Build repo mgr with static configs
-        let repo_manager = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
+        let repo_manager = RepositoryManagerBuilder::new_test(&dynamic_dir, Some("config"))
+            .await
             .unwrap()
             .load_static_configs_dir(static_dir.path())
             .unwrap()
@@ -236,7 +237,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_create_default_rule_from_ota_channel_in_vbmeta() {
-        let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr();
+        let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr().await;
 
         // Set up Cobalt.
         let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);
@@ -274,7 +275,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_create_default_rule_no_ota_channel() {
-        let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr();
+        let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr().await;
 
         // Set up Cobalt.
         let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);

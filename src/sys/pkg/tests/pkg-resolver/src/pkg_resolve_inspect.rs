@@ -45,7 +45,7 @@ async fn initial_inspect_state() {
             },
             experiments: {},
             repository_manager: {
-                dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
+                dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("repositories.json"))),
                 dynamic_configs: {},
                 static_configs: {},
                 persisted_repos_dir: "None".to_string(),

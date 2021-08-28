@@ -621,12 +621,10 @@ async fn minfs_fails_write_to_repo_configs() {
     verify_pkg_resolution_succeeds_during_minfs_repo_config_failure(
         Arc::clone(&open_handler),
         || open_handler.get_write_fail_count(),
-        // The only time the test should hit the write failure path is when we add a
-        // repo config when should_fail = true, in which case we fail at writing
-        // repositories.json.new. This failure occurs twice because the BufWriter
-        // attempts the write again when flushing.
-        2,
-        2,
+        // The only time the test should hit the write failure path is when we add a repo config
+        // when should_fail = true, in which case we fail at writing repositories.json.new.
+        1,
+        1,
         || open_handler.make_write_succeed(),
     )
     .await;
@@ -644,13 +642,12 @@ async fn minfs_fails_write_to_repo_configs_and_rewrite_rules() {
     verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rule_failure(
         Arc::clone(&open_handler),
         || open_handler.get_write_fail_count(),
-        // The only time the test should hit the write failure path is when we add a
-        // repo config when should_fail = true, in which case we fail at writing both
-        // repositories.json.new and rewrites.json.new. Each write fails twice because
-        // each write goes through a std::io::BufWriter which attempts to write again
-        // on flush.
-        4,
-        4,
+        // The only time the test should hit the write failure path is when we add a repo config
+        // when should_fail = true, in which case we fail at writing both repositories.json.new and
+        // rewrites.json.new. rewrites.json.new fails twice because it goes through a
+        // std::io::BufWriter which attempts to write again on flush.
+        3,
+        3,
         || open_handler.make_write_succeed(),
     )
     .await;

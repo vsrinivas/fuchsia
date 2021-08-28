@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Context as _, Error},
+    async_lock::RwLock as AsyncRwLock,
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy, PackageCacheMarker},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
@@ -75,7 +77,8 @@ const MAX_CONCURRENT_PACKAGE_FETCHES: usize = 5;
 const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
 
 const STATIC_REPO_DIR: &str = "/config/data/repositories";
-const DYNAMIC_REPO_PATH: &str = "/data/repositories.json";
+// Relative to /data.
+const DYNAMIC_REPO_PATH: &str = "repositories.json";
 
 const STATIC_RULES_PATH: &str = "/config/data/rewrites.json";
 const DYNAMIC_RULES_PATH: &str = "/data/rewrites.json";
@@ -154,15 +157,30 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
             .serve(ConnectionType::project_id(metrics::PROJECT_ID));
     futures.push(cobalt_fut.boxed_local());
 
+    let data_proxy = match io_util::directory::open_in_namespace(
+        "/data",
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+    ) {
+        Ok(proxy) => Some(proxy),
+        Err(e) => {
+            fx_log_err!("failed to open /data: {:?}", anyhow!(e));
+            None
+        }
+    };
+
     let font_package_manager = Arc::new(load_font_package_manager(cobalt_sender.clone()));
-    let repo_manager = Arc::new(RwLock::new(load_repo_manager(
-        inspector.root().create_child("repository_manager"),
-        experiments,
-        &config,
-        cobalt_sender.clone(),
-        local_mirror.clone(),
-        args.tuf_metadata_timeout,
-    )));
+    let repo_manager = Arc::new(AsyncRwLock::new(
+        load_repo_manager(
+            inspector.root().create_child("repository_manager"),
+            experiments,
+            &config,
+            cobalt_sender.clone(),
+            local_mirror.clone(),
+            args.tuf_metadata_timeout,
+            data_proxy,
+        )
+        .await,
+    ));
     let rewrite_manager = Arc::new(RwLock::new(
         load_rewrite_manager(
             inspector.root().create_child("rewrite_manager"),
@@ -177,7 +195,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     let (blob_fetch_queue, blob_fetcher) = crate::cache::make_blob_fetch_queue(
         inspector.root().create_child("blob_fetcher"),
         MAX_CONCURRENT_BLOB_FETCHES,
-        repo_manager.read().stats(),
+        repo_manager.read().await.stats(),
         cobalt_sender.clone(),
         local_mirror,
         cache::BlobFetchParams::builder()
@@ -297,19 +315,21 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     Ok(())
 }
 
-fn load_repo_manager(
+async fn load_repo_manager(
     node: inspect::Node,
     experiments: Experiments,
     config: &Config,
     mut cobalt_sender: CobaltSender,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
+    data_proxy: Option<DirectoryProxy>,
 ) -> RepositoryManager {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
     let dynamic_repo_path =
         if config.enable_dynamic_configuration() { Some(DYNAMIC_REPO_PATH) } else { None };
-    let builder = match RepositoryManagerBuilder::new(dynamic_repo_path, experiments)
+    let builder = match RepositoryManagerBuilder::new(data_proxy, dynamic_repo_path, experiments)
+        .await
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {:#}", anyhow!(err));
             builder
@@ -362,7 +382,7 @@ fn load_repo_manager(
 
 async fn load_rewrite_manager(
     node: inspect::Node,
-    repo_manager: Arc<RwLock<RepositoryManager>>,
+    repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
     config: &Config,
     channel_inspect_state: &ChannelInspectState,
     cobalt_sender: CobaltSender,
@@ -392,7 +412,7 @@ async fn load_rewrite_manager(
     // construct a unique rule for that channel.
     match crate::ota_channel::create_rewrite_rule_for_ota_channel(
         &channel_inspect_state,
-        &repo_manager.read(),
+        &*&repo_manager.read().await,
         cobalt_sender.clone(),
     )
     .await

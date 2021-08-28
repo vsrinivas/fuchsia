@@ -53,7 +53,7 @@ async fn test_resolve_persisted_package_succeeds() {
             MountsBuilder::new()
                 .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
                 .persisted_repos_config(PersistedReposConfig {
-                    persisted_repos_dir: "/data/repos".to_string(),
+                    persisted_repos_dir: "repos".to_string(),
                 })
                 .build(),
         )
@@ -182,7 +182,7 @@ async fn test_resolve_dynamic_disabled_fails() {
             MountsBuilder::new()
                 .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: false })
                 .persisted_repos_config(PersistedReposConfig {
-                    persisted_repos_dir: "/data/repos".to_string(),
+                    persisted_repos_dir: "repos".to_string(),
                 })
                 .build(),
         )

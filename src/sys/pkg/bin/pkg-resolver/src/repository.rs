@@ -7,8 +7,9 @@ use {
         cache::MerkleForError, clock, error, inspect_util,
         metrics_util::tuf_error_as_create_tuf_client_event_code, TCP_KEEPALIVE_TIMEOUT,
     },
-    anyhow::{anyhow, format_err},
+    anyhow::{anyhow, format_err, Context as _},
     cobalt_sw_delivery_registry as metrics,
+    fidl_fuchsia_io::{DirectoryProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{
         BlobId, MirrorConfig, RepositoryConfig, RepositoryKey, RepositoryStorageType,
@@ -20,7 +21,7 @@ use {
     fuchsia_zircon as zx,
     futures::{future::TryFutureExt as _, lock::Mutex as AsyncMutex},
     serde::{Deserialize, Serialize},
-    std::{path::Path, sync::Arc, time::Duration},
+    std::{sync::Arc, time::Duration},
     tuf::{
         client::Config,
         crypto::PublicKey,
@@ -82,7 +83,8 @@ struct RepositoryInspectState {
 
 impl Repository {
     pub async fn new(
-        persisted_repos_dir: Option<&Path>,
+        data_proxy: Option<DirectoryProxy>,
+        persisted_repos_dir: Option<&str>,
         config: &RepositoryConfig,
         mut cobalt_sender: CobaltSender,
         node: inspect::Node,
@@ -90,7 +92,7 @@ impl Repository {
         tuf_metadata_timeout: Duration,
     ) -> Result<Self, anyhow::Error> {
         let mirror_config = config.mirrors().get(0);
-        let local = get_local_repo(persisted_repos_dir, config).await?;
+        let local = get_local_repo(data_proxy, persisted_repos_dir, config).await?;
         let local = Arc::new(RWRepository::new(local));
         let local_clone = Arc::clone(&local);
         let remote = get_remote_repo(config, mirror_config, local_mirror)?;
@@ -199,7 +201,8 @@ impl Repository {
 }
 
 async fn get_local_repo(
-    persisted_repos_dir: Option<&Path>,
+    data_proxy: Option<DirectoryProxy>,
+    persisted_repos_dir: Option<&str>,
     config: &RepositoryConfig,
 ) -> Result<Box<dyn RepositoryStorageProvider<Json> + Sync + Send>, anyhow::Error> {
     match config.repo_storage_type() {
@@ -220,22 +223,29 @@ async fn get_local_repo(
                 ));
             };
 
-            let proxy = io_util::directory::open_in_namespace(
-                persisted_repos_dir
-                    .to_str()
-                    .ok_or(anyhow!("path is not valid UTF-8: '{:?}'", persisted_repos_dir))?,
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                    | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-                    | fidl_fuchsia_io::OPEN_FLAG_CREATE,
-            )?;
-            let proxy = io_util::directory::open_directory(
-                &proxy,
-                config.repo_url().host(),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                    | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-                    | fidl_fuchsia_io::OPEN_FLAG_CREATE,
+            let data_proxy = if let Some(data_proxy) = data_proxy {
+                data_proxy
+            } else {
+                return Err(format_err!(
+                    "/data proxy is not available, cannot create repo with persistent storage"
+                ));
+            };
+
+            let repos_proxy = io_util::directory::open_directory(
+                &data_proxy,
+                persisted_repos_dir,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
             )
-            .await?;
+            .await
+            .with_context(|| format!("opening {}", persisted_repos_dir))?;
+            let host = config.repo_url().host();
+            let proxy = io_util::directory::open_directory(
+                &repos_proxy,
+                host,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+            )
+            .await
+            .with_context(|| format!("opening {}", host))?;
             let local = FuchsiaFileSystemRepository::new(proxy);
             Ok(Box::new(local))
         }
@@ -324,7 +334,10 @@ mod tests {
         futures::{channel::mpsc, stream::StreamExt},
         http_sse::Event,
         matches::assert_matches,
-        std::sync::Arc,
+        std::{
+            path::{Path, PathBuf},
+            sync::Arc,
+        },
         updating_tuf_client::METADATA_CACHE_STALE_TIMEOUT,
     };
 
@@ -348,17 +361,19 @@ mod tests {
         }
 
         async fn build(self) -> TestEnv {
+            let data_dir = tempfile::tempdir().unwrap();
             let persisted_repos_dir =
-                if self.persisted_repos { Some(tempfile::tempdir().unwrap()) } else { None };
+                if self.persisted_repos { Some("repos".to_string()) } else { None };
             let repo = self.server_repo_builder.build().await.expect("created repo");
 
-            TestEnv { persisted_repos_dir, repo: Arc::new(repo) }
+            TestEnv { persisted_repos_dir, repo: Arc::new(repo), data_dir }
         }
     }
 
     struct TestEnv {
         repo: Arc<TestRepository>,
-        persisted_repos_dir: Option<tempfile::TempDir>,
+        persisted_repos_dir: Option<String>,
+        data_dir: tempfile::TempDir,
     }
 
     impl TestEnv {
@@ -369,8 +384,8 @@ mod tests {
             }
         }
 
-        fn persisted_repos_dir(&self) -> Option<&Path> {
-            self.persisted_repos_dir.as_ref().map(|p| p.path())
+        fn persisted_repos_dir(&self) -> Option<PathBuf> {
+            self.persisted_repos_dir.as_ref().map(|p| self.data_dir.path().join(p))
         }
 
         async fn new() -> Self {
@@ -384,8 +399,14 @@ mod tests {
         async fn repo(&self, config: &RepositoryConfig) -> Result<Repository, anyhow::Error> {
             let (sender, _) = futures::channel::mpsc::channel(0);
             let cobalt_sender = CobaltSender::new(sender);
+            let proxy = io_util::directory::open_in_namespace(
+                self.data_dir.path().to_str().unwrap(),
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            )
+            .unwrap();
             Repository::new(
-                self.persisted_repos_dir.as_ref().map(|d| d.path()),
+                Some(proxy),
+                self.persisted_repos_dir.as_ref().map(|s| s.as_str()),
                 config,
                 cobalt_sender,
                 inspect::Inspector::new().root().create_child("inner-node"),
@@ -729,6 +750,7 @@ mod inspect_tests {
 
         let repo = Repository::new(
             None,
+            None,
             &repo_config,
             dummy_sender(),
             inspector.root().create_child("repo-node"),
@@ -780,7 +802,9 @@ mod inspect_tests {
         let served_repository = repo.server().start().expect("create served repo");
         let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
+
         let mut repo = Repository::new(
+            None,
             None,
             &repo_config,
             dummy_sender(),
@@ -839,7 +863,9 @@ mod inspect_tests {
             .expect("create served repo");
         let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config_with_subscribe(repo_url);
+
         let repo = Repository::new(
+            None,
             None,
             &repo_config,
             dummy_sender(),

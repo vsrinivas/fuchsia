@@ -12,6 +12,7 @@ use {
     },
     anyhow::{anyhow, Context as _},
     cobalt_sw_delivery_registry as metrics,
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{self as pkg, cache, BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_cobalt::CobaltSender,
@@ -24,8 +25,7 @@ use {
     parking_lot::{Mutex, RwLock},
     std::{
         collections::{btree_set, hash_map::Entry, BTreeSet, HashMap},
-        fs,
-        io::{self, Write as _},
+        fs, io,
         ops::Deref,
         path::{Path, PathBuf},
         sync::Arc,
@@ -37,15 +37,16 @@ use {
 /// [RepositoryManager] controls access to all the repository configs used by the package resolver.
 pub struct RepositoryManager {
     _experiments: Experiments,
-    dynamic_configs_path: Option<PathBuf>,
+    dynamic_configs_path: Option<String>,
     static_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     dynamic_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
-    persisted_repos_dir: Arc<Option<PathBuf>>,
+    persisted_repos_dir: Arc<Option<String>>,
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     cobalt_sender: CobaltSender,
     inspect: RepositoryManagerInspectState,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
+    data_proxy: Option<DirectoryProxy>,
 }
 
 #[derive(Debug)]
@@ -145,7 +146,7 @@ impl RepositoryManager {
     /// If the manager did have this repository present as a dynamic config, the value is replaced
     /// and the old [RepositoryConfig] is returned. If this repository is a static config, the
     /// static config is shadowed by the dynamic config until it is removed.
-    pub fn insert(
+    pub async fn insert(
         &mut self,
         config: impl Into<Arc<RepositoryConfig>>,
     ) -> Result<Option<Arc<RepositoryConfig>>, InsertError> {
@@ -166,7 +167,7 @@ impl RepositoryManager {
         );
         let result = self.dynamic_configs.insert(config.repo_url().clone(), inspectable_config);
 
-        Self::save(dynamic_configs_path, &mut self.dynamic_configs);
+        Self::save(&self.data_proxy, dynamic_configs_path, &mut self.dynamic_configs).await;
         Ok(result.map(|a| Arc::clone(&*a)))
     }
 
@@ -174,7 +175,7 @@ impl RepositoryManager {
     ///
     /// If dynamic configuration is disabled (if the manager does not have a dynamic config path)
     /// `Err(RemoveError)` is returned.
-    pub fn remove(
+    pub async fn remove(
         &mut self,
         repo_url: &RepoUrl,
     ) -> Result<Option<Arc<RepositoryConfig>>, RemoveError> {
@@ -187,7 +188,7 @@ impl RepositoryManager {
                 fx_log_info!("closing {}", config.repo_url());
             }
 
-            Self::save(&dynamic_configs_path, &mut self.dynamic_configs);
+            Self::save(&self.data_proxy, &dynamic_configs_path, &mut self.dynamic_configs).await;
             return Ok(Some(Arc::clone(&*config)));
         }
         if self.static_configs.get(repo_url).is_some() {
@@ -211,28 +212,61 @@ impl RepositoryManager {
 
     /// If persistent dynamic configs are enabled, save the current configs to disk. Log, and
     /// ultimately ignore, any errors that occur to make sure forward progress can always be made.
-    fn save(
-        dynamic_configs_path: &Path,
+    async fn save(
+        data_proxy: &Option<DirectoryProxy>,
+        dynamic_configs_path: &str,
         dynamic_configs: &mut HashMap<RepoUrl, InspectableRepositoryConfig>,
     ) {
-        let configs = dynamic_configs.iter().map(|(_, c)| (***c).clone()).collect::<Vec<_>>();
-
-        let result = (|| {
-            let mut temp_path = dynamic_configs_path.as_os_str().to_owned();
-            temp_path.push(".new");
-            let temp_path = PathBuf::from(temp_path);
-            {
-                let mut f = io::BufWriter::new(
-                    fs::File::create(&temp_path)
-                        .with_context(|| format!("create temp file {:?}", temp_path))?,
-                );
-                serde_json::to_writer(&mut f, &RepositoryConfigs::Version1(configs))
-                    .context("serialize config")?;
-                f.flush().context("flush config")?;
+        let data_proxy = match data_proxy.as_ref() {
+            Some(proxy) => proxy,
+            None => {
+                fx_log_err!("unable to save repositories because /data proxy is not available");
+                return;
             }
-            fs::rename(&temp_path, dynamic_configs_path)
-                .with_context(|| format!("rename {:?} to {:?}", temp_path, dynamic_configs_path))
-        })();
+        };
+        let configs = dynamic_configs.values().map(|c| (***c).clone()).collect::<Vec<_>>();
+
+        let result = async {
+            let data = serde_json::to_vec(&RepositoryConfigs::Version1(configs))
+                .context("serialize config")?;
+
+            // TODO(fxbug.dev/83342): We need to reopen because `resolve_succeeds_with_broken_minfs`
+            // expects it, this should be removed once the test is fixed.
+            let data_proxy = io_util::directory::open_directory(
+                &data_proxy,
+                ".",
+                fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            )
+            .await
+            .context("reopen /data")?;
+
+            let path = format!("{}.new", dynamic_configs_path);
+            let proxy = io_util::directory::open_file(
+                &data_proxy,
+                &path,
+                fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
+                    | fidl_fuchsia_io::OPEN_FLAG_CREATE
+                    | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE,
+            )
+            .await
+            .with_context(|| format!("creating file: {}", path))?;
+
+            io_util::file::write(&proxy, &data)
+                .await
+                .with_context(|| format!("writing file: {}", path))?;
+
+            let status = proxy.sync().await.context("sending sync request")?;
+            Status::ok(status).with_context(|| format!("syncing file: {}", path))?;
+            io_util::file::close(proxy).await.with_context(|| format!("closing file: {}", path))?;
+
+            io_util::directory::rename(&data_proxy, &path, dynamic_configs_path)
+                .await
+                .with_context(|| format!("rename {:?} to {:?}", path, dynamic_configs_path))?;
+
+            let status = data_proxy.sync().await.context("sending sync request")?;
+            Status::ok(status).context("syncing /data")
+        }
+        .await;
 
         match result {
             Ok(()) => {}
@@ -256,6 +290,7 @@ impl RepositoryManager {
         };
 
         let fut = open_cached_or_new_repository(
+            Clone::clone(&self.data_proxy),
             Arc::clone(&self.persisted_repos_dir),
             Arc::clone(&self.repositories),
             Arc::clone(&config),
@@ -290,6 +325,7 @@ impl RepositoryManager {
         };
 
         let repo = open_cached_or_new_repository(
+            Clone::clone(&self.data_proxy),
             Arc::clone(&self.persisted_repos_dir),
             Arc::clone(&self.repositories),
             Arc::clone(&config),
@@ -314,7 +350,8 @@ impl RepositoryManager {
 }
 
 async fn open_cached_or_new_repository(
-    persisted_repos_dir: Arc<Option<PathBuf>>,
+    data_proxy: Option<DirectoryProxy>,
+    persisted_repos_dir: Arc<Option<String>>,
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     config: Arc<RepositoryConfig>,
     url: &RepoUrl,
@@ -327,13 +364,14 @@ async fn open_cached_or_new_repository(
         return Ok(conn.clone());
     }
 
-    let persisted_repos_dir = (*persisted_repos_dir).as_ref().map(|p| p.as_path());
+    let persisted_repos_dir = (*persisted_repos_dir).as_ref().map(|p| p.as_str());
 
     // Create the rust tuf client. In order to minimize our time with the lock held, we'll
     // create the client first, even if it proves to be redundant because we lost the race with
     // another thread.
     let mut repo = Arc::new(futures::lock::Mutex::new(
         Repository::new(
+            data_proxy,
             persisted_repos_dir,
             &config,
             cobalt_sender,
@@ -361,8 +399,8 @@ pub struct UnsetCobaltSender;
 /// with [RepositoryConfig]s passed in directly or loaded out of the filesystem.
 #[derive(Clone, Debug)]
 pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode> {
-    dynamic_configs_path: Option<PathBuf>,
-    persisted_repos_dir: Option<PathBuf>,
+    dynamic_configs_path: Option<String>,
+    persisted_repos_dir: Option<String>,
     static_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     dynamic_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     experiments: Experiments,
@@ -370,6 +408,7 @@ pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode>
     inspect_node: N,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
+    data_proxy: Option<DirectoryProxy>,
 }
 
 impl<S, N> RepositoryManagerBuilder<S, N> {
@@ -400,7 +439,7 @@ impl<S, N> RepositoryManagerBuilder<S, N> {
     /// Customize the repository manager with the persisted repository directory.
     pub fn with_persisted_repos_dir<P>(mut self, path: P) -> Self
     where
-        P: Into<PathBuf>,
+        P: Into<String>,
     {
         self.persisted_repos_dir = Some(path.into());
         self
@@ -423,18 +462,19 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
     /// [RepositoryConfigs](RepositoryConfig) from this path if it exists, and add it to the
     /// [RepositoryManager], or error out if we encounter errors during the load. The
     /// [RepositoryManagerBuilder] is also returned on error in case the errors should be ignored.
-    pub fn new<P>(
+    pub async fn new<P>(
+        data_proxy: Option<DirectoryProxy>,
         dynamic_configs_path: Option<P>,
         experiments: Experiments,
     ) -> Result<Self, (Self, LoadError)>
     where
-        P: Into<PathBuf>,
+        P: Into<String>,
     {
         let dynamic_configs_path = dynamic_configs_path.map(|p| p.into());
 
-        let (dynamic_configs, err) = match dynamic_configs_path {
-            Some(ref dynamic_configs_path) if dynamic_configs_path.exists() => {
-                match load_configs_file(dynamic_configs_path) {
+        let (dynamic_configs, err) = match (data_proxy.as_ref(), dynamic_configs_path.as_ref()) {
+            (Some(data_proxy), Some(dynamic_configs_path)) => {
+                match load_configs_file_from_proxy(&data_proxy, &dynamic_configs_path).await {
                     Ok(dynamic_configs) => (dynamic_configs, None),
                     Err(err) => (vec![], Some(err)),
                 }
@@ -455,6 +495,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
             inspect_node: UnsetInspectNode,
             local_mirror: None,
             tuf_metadata_timeout: DEFAULT_TUF_METADATA_TIMEOUT,
+            data_proxy,
         };
 
         if let Some(err) = err {
@@ -466,11 +507,19 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
 
     /// Create a new builder with no enabled experiments.
     #[cfg(test)]
-    pub fn new_test<P>(dynamic_configs_path: Option<P>) -> Result<Self, (Self, LoadError)>
+    pub async fn new_test<P>(
+        data_dir: &tempfile::TempDir,
+        dynamic_configs_path: Option<P>,
+    ) -> Result<Self, (Self, LoadError)>
     where
-        P: Into<PathBuf>,
+        P: Into<String>,
     {
-        Self::new(dynamic_configs_path, Experiments::none())
+        let proxy = io_util::directory::open_in_namespace(
+            data_dir.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+        Self::new(Some(proxy), dynamic_configs_path, Experiments::none()).await
     }
 
     /// Adds these static [RepoConfigs](RepoConfig) to the [RepositoryManager].
@@ -503,6 +552,7 @@ impl<S> RepositoryManagerBuilder<S, UnsetInspectNode> {
             inspect_node,
             local_mirror: self.local_mirror,
             tuf_metadata_timeout: self.tuf_metadata_timeout,
+            data_proxy: self.data_proxy,
         }
     }
 }
@@ -523,6 +573,7 @@ impl<N> RepositoryManagerBuilder<UnsetCobaltSender, N> {
             inspect_node: self.inspect_node,
             local_mirror: self.local_mirror,
             tuf_metadata_timeout: self.tuf_metadata_timeout,
+            data_proxy: self.data_proxy,
         }
     }
 }
@@ -597,6 +648,7 @@ impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
             inspect,
             local_mirror: self.local_mirror,
             tuf_metadata_timeout: self.tuf_metadata_timeout,
+            data_proxy: self.data_proxy,
         }
     }
 }
@@ -695,6 +747,26 @@ fn load_configs_file<T: AsRef<Path>>(path: T) -> Result<Vec<RepositoryConfig>, L
     }
 }
 
+async fn load_configs_file_from_proxy(
+    proxy: &DirectoryProxy,
+    path: &str,
+) -> Result<Vec<RepositoryConfig>, LoadError> {
+    let file = match io_util::directory::open_file(proxy, path, io_util::OPEN_RIGHT_READABLE).await
+    {
+        Ok(file) => file,
+        Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(vec![]),
+        Err(error) => return Err(LoadError::Open { path: path.into(), error }),
+    };
+    let buf = io_util::file::read(&file)
+        .await
+        .map_err(|error| LoadError::Read { path: path.into(), error })?;
+
+    match serde_json::from_slice(&buf) {
+        Ok(RepositoryConfigs::Version1(configs)) => Ok(configs),
+        Err(err) => Err(LoadError::Parse { path: path.into(), error: err }),
+    }
+}
+
 /// [LoadError] describes all the recoverable error conditions that can be encountered when
 /// parsing a [RepositoryConfigs] struct from a directory.
 #[derive(Debug, Error)]
@@ -705,6 +777,22 @@ pub enum LoadError {
         path: PathBuf,
         #[source]
         error: io::Error,
+    },
+
+    /// This [io_util::node::OpenError] error occurred while opening the file.
+    #[error("file {path} open error")]
+    Open {
+        path: String,
+        #[source]
+        error: io_util::node::OpenError,
+    },
+
+    /// This [io_util::node::ReadError] error occurred while reading the file.
+    #[error("file {path} read error")]
+    Read {
+        path: String,
+        #[source]
+        error: io_util::file::ReadError,
     },
 
     /// This file failed to parse into a valid [RepositoryConfigs].
@@ -723,7 +811,7 @@ pub enum LoadError {
 impl From<&LoadError> for metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult {
     fn from(error: &LoadError) -> Self {
         match error {
-            LoadError::Io { .. } => {
+            LoadError::Io { .. } | LoadError::Open { .. } | LoadError::Read { .. } => {
                 metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io
             }
             LoadError::Parse { .. } => {
@@ -843,6 +931,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
+        fuchsia_async as fasync,
         fuchsia_inspect::assert_data_tree,
         fuchsia_url::pkg_url::RepoUrl,
         http::Uri,
@@ -896,9 +985,10 @@ mod tests {
                 dir
             });
 
-            let dynamic_configs = self.dynamic_configs.map(|dynamic_configs| {
-                let dir = tempfile::tempdir().unwrap();
-                let path = dir.path().join(DYNAMIC_CONFIG_NAME);
+            let data_dir = tempfile::tempdir().unwrap();
+
+            let dynamic_configs_path = self.dynamic_configs.map(|dynamic_configs| {
+                let path = data_dir.path().join(DYNAMIC_CONFIG_NAME);
 
                 if let Some(configs) = dynamic_configs {
                     let mut f = io::BufWriter::new(File::create(&path).unwrap());
@@ -906,20 +996,21 @@ mod tests {
                     f.flush().unwrap();
                 }
 
-                (dir, path)
+                DYNAMIC_CONFIG_NAME.to_string()
             });
 
             let persisted_repos_dir =
-                if self.persisted_repos { Some(tempfile::tempdir().unwrap()) } else { None };
+                if self.persisted_repos { Some("repos".to_string()) } else { None };
 
-            TestEnv { static_configs, dynamic_configs, persisted_repos_dir }
+            TestEnv { static_configs, dynamic_configs_path, persisted_repos_dir, data_dir }
         }
     }
 
     struct TestEnv {
         static_configs: Option<tempfile::TempDir>,
-        dynamic_configs: Option<(tempfile::TempDir, PathBuf)>,
-        persisted_repos_dir: Option<tempfile::TempDir>,
+        dynamic_configs_path: Option<String>,
+        persisted_repos_dir: Option<String>,
+        data_dir: tempfile::TempDir,
     }
 
     impl TestEnv {
@@ -931,24 +1022,20 @@ mod tests {
             Self::builder().build()
         }
 
-        fn dynamic_configs_path(&self) -> Option<&Path> {
-            self.dynamic_configs.as_ref().map(|(_, p)| p.as_path())
-        }
-
-        fn persisted_repos_dir(&self) -> Option<&Path> {
-            self.persisted_repos_dir.as_ref().map(|p| p.path())
-        }
-
-        fn repo_manager(&self) -> Result<RepositoryManager, TestError> {
-            let builder = self.repo_manager_builder().map_err(|(_, err)| err)?;
+        async fn repo_manager(&self) -> Result<RepositoryManager, TestError> {
+            let builder = self.repo_manager_builder().await.map_err(|(_, err)| err)?;
             Ok(builder.build())
         }
 
-        fn repo_manager_builder(
+        async fn repo_manager_builder(
             &self,
         ) -> Result<RepositoryManagerBuilder, (RepositoryManagerBuilder, TestError)> {
-            let mut builder = RepositoryManagerBuilder::new_test(self.dynamic_configs_path())
-                .map_err(|(builder, err)| (builder, TestError::Constructor(err)))?;
+            let mut builder = RepositoryManagerBuilder::new_test(
+                &self.data_dir,
+                self.dynamic_configs_path.as_ref(),
+            )
+            .await
+            .map_err(|(builder, err)| (builder, TestError::Constructor(err)))?;
 
             if let Some(ref dir) = self.static_configs {
                 builder = builder
@@ -956,8 +1043,8 @@ mod tests {
                     .map_err(|(builder, errs)| (builder, TestError::LoadStaticConfigs(errs)))?;
             }
 
-            if let Some(ref persisted_repos_dir) = self.persisted_repos_dir {
-                builder = builder.with_persisted_repos_dir(persisted_repos_dir.path());
+            if let Some(persisted_repos_dir) = self.persisted_repos_dir.as_ref() {
+                builder = builder.with_persisted_repos_dir(persisted_repos_dir);
             }
 
             Ok(builder)
@@ -982,10 +1069,10 @@ mod tests {
         }
     }
 
-    fn assert_parse_error(err: &LoadError, invalid_path: &Path) {
+    fn assert_parse_error(err: &LoadError, invalid_path: impl Into<PathBuf>) {
         match err {
             LoadError::Parse { path, .. } => {
-                assert_eq!(path, invalid_path);
+                assert_eq!(path, &invalid_path.into());
             }
             err => {
                 panic!("unexpected error: {}", err);
@@ -1011,14 +1098,11 @@ mod tests {
         to_inspectable_map_with_node(from, inspector.root())
     }
 
-    #[test]
-    fn test_insert_get_remove() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_insert_get_remove() {
         let env = TestEnv::builder().with_empty_dynamic_configs().build();
-        let mut repomgr = env.repo_manager().unwrap();
-        assert_eq!(
-            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
-            env.dynamic_configs_path()
-        );
+        let mut repomgr = env.repo_manager().await.unwrap();
+        assert_eq!(repomgr.dynamic_configs_path, env.dynamic_configs_path);
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
 
@@ -1036,22 +1120,16 @@ mod tests {
                 .build(),
         );
 
-        assert_eq!(repomgr.insert(Arc::clone(&config1)), Ok(None));
-        assert_eq!(
-            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
-            env.dynamic_configs_path()
-        );
+        assert_eq!(repomgr.insert(Arc::clone(&config1)).await, Ok(None));
+        assert_eq!(repomgr.dynamic_configs_path, env.dynamic_configs_path);
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(
             repomgr.dynamic_configs,
             to_inspectable_map(hashmap! { fuchsia_url.clone() => Arc::clone(&config1) })
         );
 
-        assert_eq!(repomgr.insert(Arc::clone(&config2)), Ok(Some(config1)));
-        assert_eq!(
-            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
-            env.dynamic_configs_path()
-        );
+        assert_eq!(repomgr.insert(Arc::clone(&config2)).await, Ok(Some(config1)));
+        assert_eq!(repomgr.dynamic_configs_path, env.dynamic_configs_path);
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(
             repomgr.dynamic_configs,
@@ -1059,14 +1137,14 @@ mod tests {
         );
 
         assert_eq!(repomgr.get(&fuchsia_url), Some(&config2));
-        assert_eq!(repomgr.remove(&fuchsia_url), Ok(Some(config2)));
+        assert_eq!(repomgr.remove(&fuchsia_url).await, Ok(Some(config2)));
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
-        assert_eq!(repomgr.remove(&fuchsia_url), Ok(None));
+        assert_eq!(repomgr.remove(&fuchsia_url).await, Ok(None));
     }
 
-    #[test]
-    fn shadowing_static_config() {
+    #[fasync::run_singlethreaded(test)]
+    async fn shadowing_static_config() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = Arc::new(
@@ -1086,17 +1164,17 @@ mod tests {
             .with_empty_dynamic_configs()
             .build();
 
-        let mut repomgr = env.repo_manager().unwrap();
+        let mut repomgr = env.repo_manager().await.unwrap();
 
         assert_eq!(repomgr.get(&fuchsia_url), Some(&fuchsia_config1));
-        assert_eq!(repomgr.insert(Arc::clone(&fuchsia_config2)), Ok(None));
+        assert_eq!(repomgr.insert(Arc::clone(&fuchsia_config2)).await, Ok(None));
         assert_eq!(repomgr.get(&fuchsia_url), Some(&fuchsia_config2));
-        assert_eq!(repomgr.remove(&fuchsia_url), Ok(Some(fuchsia_config2)));
+        assert_eq!(repomgr.remove(&fuchsia_url).await, Ok(Some(fuchsia_config2)));
         assert_eq!(repomgr.get(&fuchsia_url), Some(&fuchsia_config1));
     }
 
-    #[test]
-    fn cannot_remove_static_config() {
+    #[fasync::run_singlethreaded(test)]
+    async fn cannot_remove_static_config() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = Arc::new(
@@ -1110,22 +1188,25 @@ mod tests {
             .with_empty_dynamic_configs()
             .build();
 
-        let mut repomgr = env.repo_manager().unwrap();
+        let mut repomgr = env.repo_manager().await.unwrap();
 
         assert_eq!(repomgr.get(&fuchsia_url), Some(&fuchsia_config1));
-        assert_eq!(repomgr.remove(&fuchsia_url), Err(RemoveError::CannotRemoveStaticRepositories));
+        assert_eq!(
+            repomgr.remove(&fuchsia_url).await,
+            Err(RemoveError::CannotRemoveStaticRepositories)
+        );
         assert_eq!(repomgr.get(&fuchsia_url), Some(&fuchsia_config1));
     }
 
-    #[test]
-    fn test_builder_static_configs_dir_not_exists() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_builder_static_configs_dir_not_exists() {
         let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
 
         let static_dir = tempfile::tempdir().unwrap();
         let does_not_exist_dir = static_dir.path().join("not-exists");
 
-        let (_, errors) = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
+        let (_, errors) = RepositoryManagerBuilder::new_test(&dynamic_dir, Some("config"))
+            .await
             .unwrap()
             .load_static_configs_dir(&does_not_exist_dir)
             .unwrap_err();
@@ -1133,8 +1214,8 @@ mod tests {
         assert_does_not_exist_error(&errors[0], &does_not_exist_dir);
     }
 
-    #[test]
-    fn test_builder_static_configs_dir_invalid_config() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_builder_static_configs_dir_invalid_config() {
         let dir = tempfile::tempdir().unwrap();
         let invalid_path = dir.path().join("invalid");
 
@@ -1170,12 +1251,14 @@ mod tests {
         }
 
         let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let dynamic_configs_path = "config".to_string();
 
-        let (builder, errors) = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(dir.path())
-            .unwrap_err();
+        let (builder, errors) =
+            RepositoryManagerBuilder::new_test(&dynamic_dir, Some(&dynamic_configs_path))
+                .await
+                .unwrap()
+                .load_static_configs_dir(dir.path())
+                .unwrap_err();
         assert_eq!(errors.len(), 1, "{:?}", errors);
         assert_parse_error(&errors[0], &invalid_path);
         let repomgr = builder.build();
@@ -1191,8 +1274,8 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
-    #[test]
-    fn test_builder_static_configs_dir() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_builder_static_configs_dir() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url.clone()).build();
 
@@ -1204,12 +1287,9 @@ mod tests {
             .add_static_config("fuchsia.com.json", fuchsia_config.clone())
             .build();
 
-        let repomgr = env.repo_manager_builder().unwrap().build();
+        let repomgr = env.repo_manager_builder().await.unwrap().build();
 
-        assert_eq!(
-            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
-            env.dynamic_configs_path()
-        );
+        assert_eq!(repomgr.dynamic_configs_path, env.dynamic_configs_path);
         assert_eq!(
             repomgr.static_configs,
             to_inspectable_map(hashmap! {
@@ -1220,8 +1300,8 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
-    #[test]
-    fn test_builder_static_configs_dir_overlapping_filename_wins() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_builder_static_configs_dir_overlapping_filename_wins() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1259,7 +1339,7 @@ mod tests {
             )
             .build();
 
-        let builder = match env.repo_manager_builder() {
+        let builder = match env.repo_manager_builder().await {
             Err((builder, TestError::LoadStaticConfigs(errors))) => {
                 assert_eq!(errors.len(), 4);
                 assert_overridden_error(&errors[0], &fuchsia_config);
@@ -1273,10 +1353,7 @@ mod tests {
 
         let repomgr = builder.build();
 
-        assert_eq!(
-            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
-            env.dynamic_configs_path()
-        );
+        assert_eq!(repomgr.dynamic_configs_path, env.dynamic_configs_path);
         assert_eq!(
             repomgr.static_configs,
             to_inspectable_map(hashmap! { fuchsia_url => fuchsia_com_json_config.into() })
@@ -1284,8 +1361,8 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
-    #[test]
-    fn test_builder_static_configs_dir_overlapping_first_wins() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_builder_static_configs_dir_overlapping_first_wins() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = Arc::new(
@@ -1307,7 +1384,7 @@ mod tests {
             .add_static_config("2", (*fuchsia_config2).clone())
             .build();
 
-        let builder = match env.repo_manager_builder() {
+        let builder = match env.repo_manager_builder().await {
             Err((builder, TestError::LoadStaticConfigs(errors))) => {
                 assert_eq!(errors.len(), 1);
                 assert_overridden_error(&errors[0], &fuchsia_config2);
@@ -1320,10 +1397,7 @@ mod tests {
 
         let repomgr = builder.build();
 
-        assert_eq!(
-            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
-            env.dynamic_configs_path()
-        );
+        assert_eq!(repomgr.dynamic_configs_path, env.dynamic_configs_path);
         assert_eq!(
             repomgr.static_configs,
             to_inspectable_map(hashmap! { fuchsia_url => fuchsia_config1 })
@@ -1331,29 +1405,32 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
-    #[test]
-    fn test_builder_dynamic_configs_path_ignores_if_not_exists() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_builder_dynamic_configs_path_ignores_if_not_exists() {
         let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
-        let repomgr =
-            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path)).unwrap().build();
+        let dynamic_configs_path = "config".to_string();
+        let repomgr = RepositoryManagerBuilder::new_test(&dynamic_dir, Some(&dynamic_configs_path))
+            .await
+            .unwrap()
+            .build();
 
         assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
-    #[test]
-    fn test_builder_dynamic_configs_path_invalid_config() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_builder_dynamic_configs_path_invalid_config() {
         let dir = tempfile::tempdir().unwrap();
-        let invalid_path = dir.path().join("invalid");
+        let invalid_path = "invalid".to_string();
 
         {
-            let mut f = File::create(&invalid_path).unwrap();
+            let mut f = File::create(&dir.path().join(&invalid_path)).unwrap();
             f.write(b"hello world").unwrap();
         }
 
-        let (builder, err) = RepositoryManagerBuilder::new_test(Some(&invalid_path)).unwrap_err();
+        let (builder, err) =
+            RepositoryManagerBuilder::new_test(&dir, Some(&invalid_path)).await.unwrap_err();
         assert_parse_error(&err, &invalid_path);
         let repomgr = builder.build();
 
@@ -1362,8 +1439,8 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
-    #[test]
-    fn test_builder_dynamic_configs_path() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_builder_dynamic_configs_path() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let config = Arc::new(
@@ -1375,18 +1452,15 @@ mod tests {
         let env = TestEnv::builder()
             .add_dynamic_configs(RepositoryConfigs::Version1(vec![(*config).clone()]))
             .build();
-        let repomgr = env.repo_manager().unwrap();
+        let repomgr = env.repo_manager().await.unwrap();
 
-        assert_eq!(
-            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
-            env.dynamic_configs_path()
-        );
+        assert_eq!(repomgr.dynamic_configs_path, env.dynamic_configs_path);
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(repomgr.dynamic_configs, to_inspectable_map(hashmap! { fuchsia_url => config }));
     }
 
-    #[test]
-    fn test_persistence() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_persistence() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let static_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1404,9 +1478,10 @@ mod tests {
             .add_static_config("config", static_config.clone())
             .add_dynamic_configs(old_dynamic_configs.clone())
             .build();
-        let dynamic_configs_path = env.dynamic_configs_path().unwrap();
+        let dynamic_configs_path =
+            env.data_dir.path().join(env.dynamic_configs_path.as_ref().unwrap());
 
-        let mut repomgr = env.repo_manager().unwrap();
+        let mut repomgr = env.repo_manager().await.unwrap();
 
         // make sure the dynamic config file didn't change just from opening it.
         let f = File::open(&dynamic_configs_path).unwrap();
@@ -1421,32 +1496,38 @@ mod tests {
         let new_dynamic_configs = RepositoryConfigs::Version1(vec![(*new_dynamic_config).clone()]);
 
         // Inserting a new repo should update the config file.
-        assert_eq!(repomgr.insert(Arc::clone(&new_dynamic_config)), Ok(Some(old_dynamic_config)));
+        assert_eq!(
+            repomgr.insert(Arc::clone(&new_dynamic_config)).await,
+            Ok(Some(old_dynamic_config))
+        );
         let f = File::open(&dynamic_configs_path).unwrap();
         let actual: RepositoryConfigs = serde_json::from_reader(io::BufReader::new(f)).unwrap();
         assert_eq!(actual, new_dynamic_configs);
 
         // Removing the repo should empty out the file.
-        assert_eq!(repomgr.remove(&fuchsia_url), Ok(Some(new_dynamic_config)));
+        assert_eq!(repomgr.remove(&fuchsia_url).await, Ok(Some(new_dynamic_config)));
         let f = File::open(&dynamic_configs_path).unwrap();
         let actual: RepositoryConfigs = serde_json::from_reader(io::BufReader::new(f)).unwrap();
         assert_eq!(actual, RepositoryConfigs::Version1(vec![]));
 
         // We should now be back to the static config.
         assert_eq!(repomgr.get(&fuchsia_url), Some(&static_config.into()));
-        assert_eq!(repomgr.remove(&fuchsia_url), Err(RemoveError::CannotRemoveStaticRepositories));
+        assert_eq!(
+            repomgr.remove(&fuchsia_url).await,
+            Err(RemoveError::CannotRemoveStaticRepositories)
+        );
     }
 
-    #[test]
-    fn test_list_empty() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_empty() {
         let env = TestEnv::new();
-        let repomgr = env.repo_manager().unwrap();
+        let repomgr = env.repo_manager().await.unwrap();
 
         assert_eq!(repomgr.list().collect::<Vec<_>>(), Vec::<&RepositoryConfig>::new());
     }
 
-    #[test]
-    fn test_list() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list() {
         let example_url = RepoUrl::parse("fuchsia-pkg://example.com").unwrap();
         let example_config = RepositoryConfigBuilder::new(example_url).build();
 
@@ -1458,13 +1539,13 @@ mod tests {
             .add_static_config("fuchsia.com", fuchsia_config.clone())
             .build();
 
-        let repomgr = env.repo_manager().unwrap();
+        let repomgr = env.repo_manager().await.unwrap();
 
         assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![&example_config, &fuchsia_config,]);
     }
 
-    #[test]
-    fn test_get_repo_for_channel() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_repo_for_channel() {
         let valid_static1_url = RepoUrl::parse("fuchsia-pkg://a.valid1.fuchsia.com").unwrap();
         let valid_static1_config = RepositoryConfigBuilder::new(valid_static1_url).build();
 
@@ -1509,7 +1590,7 @@ mod tests {
             ]))
             .build();
 
-        let repomgr = env.repo_manager().unwrap();
+        let repomgr = env.repo_manager().await.unwrap();
 
         assert_eq!(
             repomgr.get_repo_for_channel("valid1").map(|r| &**r),
@@ -1535,9 +1616,13 @@ mod tests {
         assert_eq!(repomgr.get_repo_for_channel("invalid-dynamic"), None);
     }
 
-    #[test]
-    fn test_no_dynamic_repos_if_no_dynamic_repo_path() {
-        let repomgr = RepositoryManagerBuilder::new_test(Option::<&Path>::None).unwrap().build();
+    #[fasync::run_singlethreaded(test)]
+    async fn test_no_dynamic_repos_if_no_dynamic_repo_path() {
+        let repomgr =
+            RepositoryManagerBuilder::new_test(&tempfile::tempdir().unwrap(), Option::<&str>::None)
+                .await
+                .unwrap()
+                .build();
 
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(repomgr.dynamic_configs_path, None);
@@ -1545,10 +1630,13 @@ mod tests {
         assert_eq!(repomgr.list().collect::<Vec<_>>(), Vec::<&RepositoryConfig>::new());
     }
 
-    #[test]
-    fn test_insert_fails_with_no_change_if_no_dynamic_config_path() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_insert_fails_with_no_change_if_no_dynamic_config_path() {
         let mut repomgr =
-            RepositoryManagerBuilder::new_test(Option::<&Path>::None).unwrap().build();
+            RepositoryManagerBuilder::new_test(&tempfile::tempdir().unwrap(), Option::<&str>::None)
+                .await
+                .unwrap()
+                .build();
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1556,17 +1644,20 @@ mod tests {
                 .build(),
         );
 
-        let res = repomgr.insert(config);
+        let res = repomgr.insert(config).await;
 
         assert_eq!(res, Err(InsertError::DynamicConfigurationDisabled));
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
         assert_eq!(repomgr.list().collect::<Vec<_>>(), Vec::<&RepositoryConfig>::new());
     }
 
-    #[test]
-    fn test_remove_fails_with_no_change_if_no_dynamic_config_path() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_remove_fails_with_no_change_if_no_dynamic_config_path() {
         let mut repomgr =
-            RepositoryManagerBuilder::new_test(Option::<&Path>::None).unwrap().build();
+            RepositoryManagerBuilder::new_test(&tempfile::tempdir().unwrap(), Option::<&str>::None)
+                .await
+                .unwrap()
+                .build();
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1581,7 +1672,7 @@ mod tests {
         );
         assert_eq!(repomgr.dynamic_configs.insert(fuchsia_url.clone(), insp_config), None);
 
-        let res = repomgr.remove(&fuchsia_url);
+        let res = repomgr.remove(&fuchsia_url).await;
 
         assert_eq!(res, Err(RemoveError::DynamicConfigurationDisabled));
         assert_eq!(
@@ -1591,8 +1682,8 @@ mod tests {
         assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![config.borrow()]);
     }
 
-    #[test]
-    fn test_building_repo_manager_with_static_configs_populates_inspect() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_building_repo_manager_with_static_configs_populates_inspect() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let mirror_config =
             MirrorConfigBuilder::new("http://fake-mirror.com".parse::<Uri>().unwrap())
@@ -1613,6 +1704,7 @@ mod tests {
 
         let _repomgr = env
             .repo_manager_builder()
+            .await
             .unwrap()
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
@@ -1621,7 +1713,7 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                    dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
+                    dynamic_configs_path: format!("{:?}", env.dynamic_configs_path),
                     dynamic_configs: {},
                     static_configs: {
                         "fuchsia.com": {
@@ -1642,21 +1734,22 @@ mod tests {
                         mirrors: {},
                     },
                     repos: {},
-                    persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
+                    persisted_repos_dir: format!("{:?}", env.persisted_repos_dir),
                     tuf_metadata_timeout_seconds: DEFAULT_TUF_METADATA_TIMEOUT.as_secs(),
                 }
             }
         );
     }
 
-    #[test]
-    fn test_building_repo_manager_with_no_static_configs_populates_inspect() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_building_repo_manager_with_no_static_configs_populates_inspect() {
         let env = TestEnv::builder().with_empty_dynamic_configs().with_persisted_repos().build();
 
         let inspector = fuchsia_inspect::Inspector::new();
 
         let _repomgr = env
             .repo_manager_builder()
+            .await
             .unwrap()
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
@@ -1665,28 +1758,29 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                    dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
+                    dynamic_configs_path: format!("{:?}", env.dynamic_configs_path),
                     dynamic_configs: {},
                     static_configs: {},
                     stats: {
                         mirrors: {},
                     },
                     repos: {},
-                    persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
+                    persisted_repos_dir: format!("{:?}", env.persisted_repos_dir),
                     tuf_metadata_timeout_seconds: DEFAULT_TUF_METADATA_TIMEOUT.as_secs(),
                 }
             }
         );
     }
 
-    #[test]
-    fn test_insert_remove_updates_inspect() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_insert_remove_updates_inspect() {
         let env = TestEnv::builder().with_empty_dynamic_configs().with_persisted_repos().build();
 
         let inspector = fuchsia_inspect::Inspector::new();
 
         let mut repomgr = env
             .repo_manager_builder()
+            .await
             .unwrap()
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
@@ -1713,7 +1807,7 @@ mod tests {
         );
 
         // Insert and make sure inspect state is updated
-        repomgr.insert(Arc::clone(&config)).expect("insert worked");
+        repomgr.insert(Arc::clone(&config)).await.expect("insert worked");
 
         assert_data_tree!(
             inspector,
@@ -1739,7 +1833,7 @@ mod tests {
         );
 
         // Remove and make sure inspect state is updated
-        repomgr.remove(&fuchsia_url).expect("remove worked");
+        repomgr.remove(&fuchsia_url).await.expect("remove worked");
         assert_data_tree!(
             inspector,
             root: {

@@ -15,6 +15,7 @@ use {
         rewrite_manager::RewriteManager,
     },
     anyhow::{anyhow, Context as _, Error},
+    async_lock::RwLock as AsyncRwLock,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self, DirectoryMarker},
@@ -46,7 +47,7 @@ pub fn make_package_fetch_queue(
     cache: pkg::cache::Client,
     base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
-    repo_manager: Arc<RwLock<RepositoryManager>>,
+    repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
     rewriter: Arc<RwLock<RewriteManager>>,
     blob_fetcher: BlobFetcher,
     max_concurrency: usize,
@@ -79,7 +80,7 @@ pub fn make_package_fetch_queue(
 }
 
 pub async fn run_resolver_service(
-    repo_manager: Arc<RwLock<RepositoryManager>>,
+    repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
     rewriter: Arc<RwLock<RewriteManager>>,
     package_fetcher: Arc<PackageFetcher>,
     base_package_index: Arc<BasePackageIndex>,
@@ -209,7 +210,7 @@ enum HashSource<TufError> {
 }
 
 async fn hash_from_base_or_repo_or_cache(
-    repo_manager: &RwLock<RepositoryManager>,
+    repo_manager: &AsyncRwLock<RepositoryManager>,
     rewriter: &RwLock<RewriteManager>,
     base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
@@ -247,7 +248,7 @@ async fn hash_from_base_or_repo_or_cache(
         })
 }
 async fn hash_from_repo_or_cache(
-    repo_manager: &RwLock<RepositoryManager>,
+    repo_manager: &AsyncRwLock<RepositoryManager>,
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
     rewritten_url: &PkgUrl,
@@ -256,7 +257,7 @@ async fn hash_from_repo_or_cache(
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
     // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
     // statement, so the following two lines should not be combined.
-    let fut = repo_manager.read().get_package_hash(&rewritten_url);
+    let fut = repo_manager.read().await.get_package_hash(&rewritten_url);
     match fut.await {
         Ok(b) => Ok(HashSource::Tuf(b)),
         Err(e @ GetPackageHashError::MerkleFor(MerkleForError::NotFound)) => {
@@ -286,7 +287,7 @@ async fn hash_from_repo_or_cache(
 }
 
 async fn package_from_base_or_repo_or_cache(
-    repo_manager: &RwLock<RepositoryManager>,
+    repo_manager: &AsyncRwLock<RepositoryManager>,
     rewriter: &RwLock<RewriteManager>,
     base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
@@ -342,7 +343,7 @@ async fn package_from_base_or_repo_or_cache(
 }
 
 async fn package_from_repo_or_cache(
-    repo_manager: &RwLock<RepositoryManager>,
+    repo_manager: &AsyncRwLock<RepositoryManager>,
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
     rewritten_url: &PkgUrl,
@@ -353,7 +354,7 @@ async fn package_from_repo_or_cache(
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
     // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
     // statement, so the following two lines should not be combined.
-    let fut = repo_manager.read().get_package(&rewritten_url, &cache, &blob_fetcher);
+    let fut = repo_manager.read().await.get_package(&rewritten_url, &cache, &blob_fetcher);
     match fut.await {
         Ok((b, dir)) => Ok(PackageSource::Tuf(b, dir)),
         Err(e @ Cache(MerkleFor(NotFound))) => {
@@ -452,7 +453,7 @@ fn hash_from_cache_packages_manifest<'a>(
 
 async fn get_hash(
     rewriter: &RwLock<RewriteManager>,
-    repo_manager: &RwLock<RepositoryManager>,
+    repo_manager: &AsyncRwLock<RepositoryManager>,
     base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
     url: &str,

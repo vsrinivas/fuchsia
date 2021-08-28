@@ -52,7 +52,8 @@ template("pkg_resolver_config") {
 # --------------------+---------------------------------+---------------
 #
 #   persisted_repos_dir
-#     [string] directory in which to persist TUF metadata for a repo.
+#     [string] directory in which to persist TUF metadata for a repo, relative
+#     path in /data.
 #
 template("resolver_persisted_repos_config") {
   cfg = {
