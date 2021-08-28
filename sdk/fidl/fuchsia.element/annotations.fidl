@@ -73,7 +73,9 @@ protocol AnnotationController {
     /// * If a key in `annotations_to_set` already exists, the annotation value is updated
     /// * If a key in `annotations_to_delete` does not exist, it is ignored
     ///
-    /// Annotations with the same key cannot be set and deleted in the same operation.
+    /// The same key cannot appear twice in a call to UpdateAnnotations().  In other words,
+    /// to set two Annotations with matching keys is illegal, as is an attempt to set an
+    /// Annotation and also delete it.
     ///
     /// If the operation results in an error, the annotations remain unchanged,
     /// and will not be partially updated.
