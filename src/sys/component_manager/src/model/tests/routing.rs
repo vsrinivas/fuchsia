@@ -1307,7 +1307,7 @@ async fn use_from_destroyed_but_not_removed() {
         vec!["c:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+            expected_res: ExpectedResult::Err(zx::Status::NOT_FOUND),
         },
     )
     .await;

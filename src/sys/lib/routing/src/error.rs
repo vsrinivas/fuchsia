@@ -32,7 +32,11 @@ pub enum ComponentInstanceError {
 
 impl ComponentInstanceError {
     pub fn as_zx_status(&self) -> zx::Status {
-        zx::Status::UNAVAILABLE
+        match self {
+            ComponentInstanceError::ResolveFailed { .. }
+            | ComponentInstanceError::InstanceNotFound { .. } => zx::Status::NOT_FOUND,
+            _ => zx::Status::UNAVAILABLE,
+        }
     }
 
     pub fn instance_not_found(moniker: PartialAbsoluteMoniker) -> ComponentInstanceError {
