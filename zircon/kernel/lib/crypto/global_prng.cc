@@ -235,7 +235,9 @@ static void StartReseedThread(uint level) {
 
 }  // namespace crypto
 
-LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_PLATFORM_EARLY + 1)
+// intel hw_rng init hook is at PLATFORM_EARLY+1
+// make sure we start after that so we can use it for the early seed.
+LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_PLATFORM_EARLY + 2)
 
 LK_INIT_HOOK(global_prng_thread_safe, crypto::GlobalPRNG::BecomeThreadSafe,
              LK_INIT_LEVEL_THREADING - 1)
