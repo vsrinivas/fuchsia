@@ -21,7 +21,6 @@ pub struct AssemblyCommand {
 #[argh(subcommand)]
 pub enum OperationClass {
     Image(ImageArgs),
-    Extract(ExtractArgs),
     ConfigData(ConfigDataArgs),
 }
 
@@ -51,19 +50,6 @@ pub struct ImageArgs {
     /// This is a temporary argument.
     #[argh(switch)]
     pub full: bool,
-}
-
-/// extract information from an image.
-#[derive(Debug, FromArgs, PartialEq)]
-#[argh(subcommand, name = "extract")]
-pub struct ExtractArgs {
-    /// the directory to write extracted artifacts to.
-    #[argh(option)]
-    pub outdir: PathBuf,
-
-    /// the zircon boot image in ZBI format, usually named fuchsia.zbi.
-    #[argh(option)]
-    pub zbi: PathBuf,
 }
 
 /// Arguments for creating a new config data package based off an existing one.

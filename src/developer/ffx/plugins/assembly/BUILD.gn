@@ -19,7 +19,6 @@ ffx_plugin("ffx_assembly") {
     "src/lib.rs",
     "src/operations.rs",
     "src/operations/config_data.rs",
-    "src/operations/extract.rs",
     "src/operations/image.rs",
     "src/update_package.rs",
     "src/util.rs",

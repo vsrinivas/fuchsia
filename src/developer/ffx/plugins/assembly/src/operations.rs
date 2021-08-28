@@ -3,5 +3,4 @@
 // found in the LICENSE file.
 
 pub mod config_data;
-pub mod extract;
 pub mod image;
