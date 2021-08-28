@@ -25,6 +25,7 @@ base_package_labels += [
   "//src/identity/bin:tier_2",
   "//src/media/audio/bundles:services",
   "//src/power:battery",
+  "//src/proc/bundles:starsh",
   "//src/session/bundles:session_manager",
   "//src/sys/activity",
   "//src/ui/bin/brightness_manager",
