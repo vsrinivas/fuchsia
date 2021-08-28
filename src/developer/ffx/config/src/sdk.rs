@@ -16,23 +16,6 @@ use {
     },
 };
 
-enum RealPaths {
-    Map(HashMap<String, String>),
-    Prefix(PathBuf),
-}
-
-impl RealPaths {
-    fn produce(&self, path: &str) -> Result<PathBuf> {
-        match self {
-            RealPaths::Map(m) => m
-                .get(path)
-                .map(PathBuf::from)
-                .ok_or(anyhow!("SDK File '{}' has no source in the build directory", path)),
-            RealPaths::Prefix(p) => Ok(p.join(path)),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum SdkVersion {
     Version(String),
@@ -43,7 +26,7 @@ pub enum SdkVersion {
 pub struct Sdk {
     path_prefix: PathBuf,
     metas: Vec<Value>,
-    real_paths: RealPaths,
+    real_paths: Option<HashMap<String, String>>,
     version: SdkVersion,
 }
 
@@ -143,7 +126,6 @@ impl Sdk {
         let manifest_path = path_prefix.join("meta/manifest.json");
         let mut version = SdkVersion::Unknown;
 
-        let real_paths = RealPaths::Prefix(path_prefix.clone());
         Self::metas_from_sdk_manifest(
             BufReader::new(
                 fs::File::open(manifest_path.clone())
@@ -158,7 +140,7 @@ impl Sdk {
                     .map(BufReader::new)
             },
         )
-        .map(|metas| Sdk { path_prefix, metas, real_paths, version })
+        .map(|metas| Sdk { path_prefix, metas, real_paths: None, version })
     }
 
     fn metas_from_sdk_manifest<M, T>(
@@ -199,7 +181,7 @@ impl Sdk {
     }
 
     fn get_host_tool_relative_path(&self, name: &str) -> Result<PathBuf> {
-        self.real_paths.produce(
+        self.get_real_path(
             self.metas
                 .iter()
                 .filter(|x| {
@@ -243,6 +225,16 @@ impl Sdk {
         )
     }
 
+    fn get_real_path(&self, path: impl AsRef<str>) -> Result<PathBuf> {
+        match &self.real_paths {
+            Some(map) => map.get(path.as_ref()).map(PathBuf::from).ok_or(anyhow!(
+                "SDK File '{}' has no source in the build directory",
+                path.as_ref()
+            )),
+            _ => Ok(PathBuf::from(path.as_ref())),
+        }
+    }
+
     pub fn get_path_prefix(&self) -> &PathBuf {
         &self.path_prefix
     }
@@ -254,12 +246,7 @@ impl Sdk {
     /// For tests only
     #[doc(hidden)]
     pub fn get_empty_sdk_with_version(version: SdkVersion) -> Self {
-        Sdk {
-            path_prefix: PathBuf::new(),
-            metas: Vec::new(),
-            real_paths: RealPaths::Prefix(PathBuf::new()),
-            version,
-        }
+        Sdk { path_prefix: PathBuf::new(), metas: Vec::new(), real_paths: None, version }
     }
 
     /// Opens a meta file with the given path. Returns a buffered reader.
@@ -309,7 +296,7 @@ impl Sdk {
             }
         }
 
-        Ok(Sdk { path_prefix, metas, real_paths: RealPaths::Map(real_paths), version })
+        Ok(Sdk { path_prefix, metas, real_paths: Some(real_paths), version })
     }
 }
 
@@ -482,25 +469,25 @@ mod test {
     }
 
     const SDK_MANIFEST: &str = r#"{
-	  "arch": {
-		"host": "x86_64-linux-gnu",
-		"target": [
-		  "arm64",
-		  "x64"
-		]
-	  },
-	  "id": "0.20201005.4.1",
-	  "parts": [
-		{
-		  "meta": "fidl/fuchsia.data/meta.json",
-		  "type": "fidl_library"
-		},
-		{
-		  "meta": "tools/zxdb-meta.json",
-		  "type": "host_tool"
-		}
-	  ],
-	  "schema_version": "1"
+        "arch": {
+            "host": "x86_64-linux-gnu",
+            "target": [
+                "arm64",
+                "x64"
+            ]
+        },
+        "id": "0.20201005.4.1",
+        "parts": [
+            {
+              "meta": "fidl/fuchsia.data/meta.json",
+              "type": "fidl_library"
+            },
+            {
+              "meta": "tools/zxdb-meta.json",
+              "type": "host_tool"
+            }
+        ],
+        "schema_version": "1"
     }"#;
 
     fn get_sdk_manifest_meta(name: &str) -> Option<BufReader<&'static [u8]>> {
@@ -640,9 +627,9 @@ mod test {
         .unwrap();
 
         let sdk = Sdk {
-            path_prefix: PathBuf::new(),
+            path_prefix: "/foo/bar".into(),
             metas,
-            real_paths: RealPaths::Prefix(PathBuf::from("/foo/bar")),
+            real_paths: None,
             version: SdkVersion::Unknown,
         };
         let zxdb = sdk.get_host_tool("zxdb").unwrap();
