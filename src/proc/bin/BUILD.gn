@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 group("bin") {
-  deps = [ "starnix" ]
+  deps = [
+    "starnix",
+    "starsh",
+  ]
 }
 
 group("tests") {

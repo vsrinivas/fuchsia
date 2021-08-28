@@ -74,9 +74,9 @@ pub async fn shell_starnix(
     });
 
     let params = ShellParams {
-        stdin: Some(sin.into()),
-        stdout: Some(sout.into()),
-        stderr: Some(serr.into()),
+        standard_in: Some(sin.into()),
+        standard_out: Some(sout.into()),
+        standard_err: Some(serr.into()),
         ..ShellParams::EMPTY
     };
 

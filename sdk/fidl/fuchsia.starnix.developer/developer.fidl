@@ -7,9 +7,9 @@ using fuchsia.url;
 using zx;
 
 type ShellParams = resource table {
-    1: stdin zx.handle:SOCKET;
-    2: stdout zx.handle:SOCKET;
-    3: stderr zx.handle:SOCKET;
+    1: standard_in zx.handle:SOCKET;
+    2: standard_out zx.handle:SOCKET;
+    3: standard_err zx.handle:SOCKET;
 };
 
 protocol ShellController {

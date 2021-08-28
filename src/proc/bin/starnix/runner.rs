@@ -183,15 +183,24 @@ pub fn spawn_task<F>(
     });
 }
 
-/// Creates a `FdTable` from the provided handles.
+struct StartupHandles {
+    files: Arc<FdTable>,
+    shell_controller: Option<ServerEnd<fstardev::ShellControllerMarker>>,
+}
+
+/// Creates a `StartupHandles` from the provided handles.
 ///
-/// Only `numbered_handles` that are of type `HandleInfo::FileDescriptor` are used to create files,
-/// and the handles are required to be of type `zx::Socket`.
-fn files_from_numbered_handles(
+/// The `numbered_handles` of type `HandleType::FileDescriptor` are used to
+/// create files, and the handles are required to be of type `zx::Socket`.
+///
+/// If there is a `numbered_handles` of type `HandleType::User0`, that is
+/// interpreted as the server end of the ShellController protocol.
+fn parse_numbered_handles(
     numbered_handles: Option<Vec<fprocess::HandleInfo>>,
     kernel: &Kernel,
-) -> Result<Arc<FdTable>, Error> {
+) -> Result<StartupHandles, Error> {
     let files = FdTable::new();
+    let mut shell_controller = None;
     if let Some(numbered_handles) = numbered_handles {
         for numbered_handle in numbered_handles {
             let info = HandleInfo::try_from(numbered_handle.id)?;
@@ -200,10 +209,14 @@ fn files_from_numbered_handles(
                     FdNumber::from_raw(info.arg().into()),
                     create_file_from_handle(kernel, numbered_handle.handle)?,
                 );
+            } else if info.handle_type() == HandleType::User0 {
+                shell_controller = Some(ServerEnd::<fstardev::ShellControllerMarker>::from(
+                    numbered_handle.handle,
+                ));
             }
         }
     }
-    Ok(files)
+    Ok(StartupHandles { files, shell_controller })
 }
 
 fn create_filesystem_from_spec<'a>(
@@ -308,7 +321,10 @@ fn start_component(
     };
 
     let fs = FsContext::new(root_fs);
-    let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
+    let startup_handles = parse_numbered_handles(start_info.numbered_handles, &kernel)?;
+    let files = startup_handles.files;
+    let shell_controller = startup_handles.shell_controller;
+
     let task_owner =
         Task::create_process(&kernel, &binary_path, 0, files, fs.clone(), credentials, None)?;
 
@@ -348,6 +364,9 @@ fn start_component(
         // being unstable, and chose to terminate starnix as a result.
         // Errors when closing the controller with an epitaph are disregarded, since there are
         // legitimate reasons for this to fail (like the client having closed the channel).
+        if let Some(shell_controller) = shell_controller {
+            let _ = shell_controller.close_with_epitaph(zx::Status::OK);
+        }
         let _ = match result {
             Ok(0) => controller.close_with_epitaph(zx::Status::OK),
             _ => controller.close_with_epitaph(zx::Status::from_raw(
@@ -419,7 +438,7 @@ fn handle_info_from_socket(
         let info = HandleInfo::new(HandleType::FileDescriptor, file_descriptor);
         Ok(fprocess::HandleInfo { handle: socket.into_handle(), id: info.as_raw() })
     } else {
-        Err(anyhow!("Failed to create HandleInfo"))
+        Err(anyhow!("Failed to create HandleInfo for {}", file_descriptor))
     }
 }
 
@@ -438,11 +457,16 @@ pub async fn start_manager(
                 }
                 responder.send()?;
             }
-            fstardev::ManagerRequest::StartShell { params, controller: _, .. } => {
+            fstardev::ManagerRequest::StartShell { params, controller, .. } => {
+                let controller_handle_info = fprocess::HandleInfo {
+                    handle: controller.into_channel().into_handle(),
+                    id: HandleInfo::new(HandleType::User0, 0).as_raw(),
+                };
                 let numbered_handles = vec![
-                    handle_info_from_socket(params.stdin, 0)?,
-                    handle_info_from_socket(params.stdout, 1)?,
-                    handle_info_from_socket(params.stderr, 2)?,
+                    handle_info_from_socket(params.standard_in, 0)?,
+                    handle_info_from_socket(params.standard_out, 1)?,
+                    handle_info_from_socket(params.standard_err, 2)?,
+                    controller_handle_info,
                 ];
                 let args = fsys::CreateChildArgs {
                     numbered_handles: Some(numbered_handles),
