@@ -9,20 +9,13 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect::{self as inspect, Property as _, StringProperty},
-    fuchsia_syslog::{self, fx_log_info},
+    fuchsia_syslog::fx_log_info,
     fuchsia_url::pkg_url::RepoUrl,
     futures::{future::BoxFuture, prelude::*},
 };
 
-#[cfg(not(test))]
-use sysconfig_client::channel::read_channel_config;
-
-#[cfg(test)]
-use sysconfig_mock::read_channel_config;
-
 #[derive(Debug)]
 pub enum ChannelSource {
-    SysConfig,
     VbMeta,
 }
 
@@ -95,33 +88,17 @@ where
 {
     // First check if channel info is in vbmeta
     match vbmeta_fn().await {
-        Ok(tuf_config_name) => {
-            return create_rewrite_rule_for_tuf_config_name(
-                repo_manager,
-                &channel_inspect_state,
-                &tuf_config_name,
-                ChannelSource::VbMeta,
-            );
-        }
+        Ok(tuf_config_name) => create_rewrite_rule_for_tuf_config_name(
+            repo_manager,
+            &channel_inspect_state,
+            &tuf_config_name,
+            ChannelSource::VbMeta,
+        ),
         Err(e) => {
             fx_log_info!("Unable to load channel from vbmeta: {:#}", anyhow!(e));
+            Ok(None)
         }
-    };
-
-    // If we don't find channel info in vbmeta, try looking sysconfig
-    let channel_config = match read_channel_config().await {
-        Ok(channel_config) => channel_config,
-        Err(e) => {
-            fx_log_info!("Unable to load channel from sysconfig: {:#}", anyhow!(e));
-            return Ok(None);
-        }
-    };
-    create_rewrite_rule_for_tuf_config_name(
-        repo_manager,
-        &channel_inspect_state,
-        channel_config.tuf_config_name(),
-        ChannelSource::SysConfig,
-    )
+    }
 }
 
 fn create_rewrite_rule_for_tuf_config_name(
@@ -168,38 +145,6 @@ async fn get_tuf_config_name_from_vbmeta_impl(
 }
 
 #[cfg(test)]
-mod sysconfig_mock {
-    use {
-        std::{
-            cell::RefCell,
-            sync::atomic::{AtomicU8, Ordering},
-        },
-        sysconfig_client::channel::{ChannelConfigError, OtaUpdateChannelConfig},
-    };
-
-    thread_local! {
-        static MOCK_RESULT: RefCell<Result<OtaUpdateChannelConfig, ChannelConfigError>> =
-            RefCell::new(Err(ChannelConfigError::Magic(0)));
-        static READ_COUNT: AtomicU8 = AtomicU8::new(0);
-    }
-
-    pub(super) async fn read_channel_config() -> Result<OtaUpdateChannelConfig, ChannelConfigError>
-    {
-        if READ_COUNT.with(|i| i.fetch_add(1, Ordering::SeqCst)) > 0 {
-            panic!("Should only call read_channel_config once");
-        }
-        MOCK_RESULT.with(|result| result.replace(Err(ChannelConfigError::Magic(0))))
-    }
-
-    pub(super) fn set_read_channel_config_result(
-        new_result: Result<OtaUpdateChannelConfig, ChannelConfigError>,
-    ) {
-        READ_COUNT.with(|i| i.store(0, Ordering::SeqCst));
-        MOCK_RESULT.with(|result| *result.borrow_mut() = new_result);
-    }
-}
-
-#[cfg(test)]
 mod test {
     use {
         super::*,
@@ -212,7 +157,6 @@ mod test {
         fuchsia_async as fasync,
         fuchsia_inspect::assert_data_tree,
         futures::channel::mpsc,
-        sysconfig_client::channel::OtaUpdateChannelConfig,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -269,18 +213,13 @@ mod test {
             ChannelInspectState::new(inspector.root().create_child("omaha_channel"));
 
         // Set up static configs
-        let sysconfig_repo_config = RepositoryConfigBuilder::new(
-            RepoUrl::parse("fuchsia-pkg://a.channel-from-sysconfig.bcde.fuchsia.com").unwrap(),
-        )
-        .add_root_key(RepositoryKey::Ed25519(vec![0]))
-        .build();
         let vbmeta_repo_config =
             RepositoryConfigBuilder::new(RepoUrl::parse("fuchsia-pkg://repo-from-vbmeta").unwrap())
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))
                 .build();
         let static_dir = crate::test_util::create_dir(vec![(
             "config",
-            RepositoryConfigs::Version1(vec![sysconfig_repo_config, vbmeta_repo_config]),
+            RepositoryConfigs::Version1(vec![vbmeta_repo_config]),
         )]);
         let dynamic_dir = tempfile::tempdir().unwrap();
         let dynamic_configs_path = dynamic_dir.path().join("config");
@@ -298,10 +237,6 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_create_default_rule_from_ota_channel_in_vbmeta() {
         let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr();
-        sysconfig_mock::set_read_channel_config_result(OtaUpdateChannelConfig::new(
-            "channel-from-sysconfig-ignore",
-            "channel-from-sysconfig",
-        ));
 
         // Set up Cobalt.
         let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);
@@ -338,49 +273,6 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_create_default_rule_from_ota_channel_in_sysconfig() {
-        let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr();
-        sysconfig_mock::set_read_channel_config_result(OtaUpdateChannelConfig::new(
-            "channel-from-sysconfig-ignore",
-            "channel-from-sysconfig",
-        ));
-
-        // Set up Cobalt.
-        let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
-
-        let res = create_rewrite_rule_for_ota_channel_impl_cobalt(
-            failing_vbmeta_fn,
-            &channel_inspect_state,
-            &repo_manager,
-            cobalt_sender,
-        )
-        .await;
-
-        assert_eq!(
-            res.unwrap().unwrap(),
-            Rule::new("fuchsia.com", "a.channel-from-sysconfig.bcde.fuchsia.com", "/", "/")
-                .unwrap()
-        );
-        assert_data_tree!(
-            inspector,
-            root: contains {
-              omaha_channel: {
-                tuf_config_name: "channel-from-sysconfig",
-                source: format!("{:?}", Some(ChannelSource::SysConfig))
-              }
-            }
-        );
-
-        verify_cobalt_emits_event(
-            cobalt_receiver,
-            metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_METRIC_ID,
-            vec![metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Success
-                .as_event_code()],
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn test_create_default_rule_no_ota_channel() {
         let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr();
 
@@ -388,8 +280,6 @@ mod test {
         let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(sender);
 
-        // Since we didn't do sysconfig_mock::set_read_channel_config_result, the result
-        // defaults to an error state
         let res = create_rewrite_rule_for_ota_channel_impl_cobalt(
             failing_vbmeta_fn,
             &channel_inspect_state,

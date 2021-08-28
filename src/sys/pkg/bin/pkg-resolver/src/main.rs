@@ -388,8 +388,8 @@ async fn load_rewrite_manager(
             builder
         });
 
-    // If we have a channel in vbmeta or sysconfig, we don't want to load the dynamic
-    // configs. Instead, we'll construct a unique rule for that channel.
+    // If we have a channel in vbmeta, we don't want to load the dynamic configs. Instead, we'll
+    // construct a unique rule for that channel.
     match crate::ota_channel::create_rewrite_rule_for_ota_channel(
         &channel_inspect_state,
         &repo_manager.read(),
