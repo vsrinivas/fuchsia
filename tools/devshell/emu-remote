@@ -132,7 +132,7 @@ if [[ -z "${dir}" ]]; then
   fi
 fi
 
-emu_targets=(multiboot.bin fuchsia.zbi obj/build/images/fvm.blk)
+emu_targets=(multiboot.bin fuchsia.zbi obj/build/images/fuchsia/fuchsia/fvm.blk)
 
 if "${build}"; then
   ssh "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/fx build ${emu_targets[@]}" || exit $?

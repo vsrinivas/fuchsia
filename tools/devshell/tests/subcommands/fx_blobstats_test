@@ -45,9 +45,9 @@ BT_SET_UP() {
   DATA_DIR="${BT_TEMP_DIR}/tools/devshell/tests/subcommands/data/fx_blobstats_test"
   cp "${DATA_DIR}/blobs.json" "${BT_TEMP_DIR}/out/default/blobs.json"
 
-  IMAGES_DIR="${BT_TEMP_DIR}/out/default/obj/build/images"
+  IMAGES_DIR="${BT_TEMP_DIR}/out/default/obj/build/images/fuchsia/fuchsia"
   mkdir -p ${IMAGES_DIR}
-  cp "${DATA_DIR}/blob.manifest" "${IMAGES_DIR}/blob.manifest"
+  cp "${DATA_DIR}/blob.manifest" "${IMAGES_DIR}/gen/blob.manifest"
 
   SNAPSHOT_DIR="${BT_TEMP_DIR}/out/default/obj/src/developer/forensics/snapshot/snapshot"
   mkdir -p ${SNAPSHOT_DIR}

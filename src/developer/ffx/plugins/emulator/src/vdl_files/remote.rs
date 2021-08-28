@@ -174,7 +174,7 @@ impl VDLFiles {
             );
         }
 
-        let emu_targets = "multiboot.bin fuchsia.zbi obj/build/images/fvm.blk";
+        let emu_targets = "multiboot.bin fuchsia.zbi obj/build/images/fuchsia/fuchsia/fvm.blk";
 
         // The ffx tool currently does not support compilation or determining the build directory
         // for a local source tree. We have to use fx subcommands for these tasks.

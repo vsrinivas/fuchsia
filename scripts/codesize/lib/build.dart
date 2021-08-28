@@ -55,7 +55,8 @@ class Build {
 
   /// Returns the blob manifest listing.
   File blobManifestFile() =>
-      openDirectory('obj/build/images') / File('blob.manifest');
+      openDirectory('obj/build/images/fuchsia/fuchsia/gen') /
+      File('blob.manifest');
 }
 
 extension SubDir on Directory {
