@@ -125,7 +125,11 @@ def generate_generic_method(method, is_internal):
 
 # Generate the main command switch method
 def generate_handle_command(magma):
-    ret = '''  zx_status_t HandleCommand(VirtioChain chain) {
+    ret = '''  virtual zx_status_t HandleCommandDescriptors(VirtioDescriptor* request, VirtioDescriptor* response, uint32_t* used_out) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  virtual zx_status_t HandleCommand(VirtioChain chain) {
     TRACE_DURATION("machina", "VirtioMagma::HandleCommand");
     VirtioDescriptor request_desc{};
     if (!chain.NextDescriptor(&request_desc)) {
@@ -176,7 +180,14 @@ def generate_handle_command(magma):
         ret += '          chain.Return();\n'
         ret += '          return ZX_ERR_INVALID_ARGS;\n'
         ret += '        }\n'
-        ret += '        zx_status_t status = Handle_' + name + '(request, &response);\n'
+        ret += '        uint32_t used;\n'
+        ret += '        zx_status_t status = HandleCommandDescriptors(&request_desc, &response_desc, &used);\n'
+        ret += '        if (status != ZX_ERR_NOT_SUPPORTED) {\n'
+        ret += '          *chain.Used() = used;\n'
+        ret += '          chain.Return();\n'
+        ret += '          return status;\n'
+        ret += '        }\n'
+        ret += '        status = Handle_' + name + '(request, &response);\n'
         ret += '        if (status != ZX_OK) {\n'
         ret += '          FX_LOGS(ERROR) << "Handle_' + name + ' failed (" << zx_status_get_string(status) << ")";\n'
         ret += '          chain.Return();\n'

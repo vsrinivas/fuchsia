@@ -46,6 +46,10 @@ class VirtioMagma : public VirtioMagmaGeneric,
              StartCallback callback) override;
 
  private:
+  zx_status_t HandleCommandDescriptors(VirtioDescriptor* request_desc,
+                                       VirtioDescriptor* response_desc,
+                                       uint32_t* used_out) override;
+
   zx_status_t Handle_device_import(const virtio_magma_device_import_ctrl_t* request,
                                    virtio_magma_device_import_resp_t* response) override;
   zx_status_t Handle_release_connection(const virtio_magma_release_connection_ctrl_t* request,
@@ -58,9 +62,6 @@ class VirtioMagma : public VirtioMagmaGeneric,
                                     virtio_magma_internal_unmap_resp_t* response) override;
   zx_status_t Handle_poll(const virtio_magma_poll_ctrl_t* request,
                           virtio_magma_poll_resp_t* response) override;
-  zx_status_t Handle_read_notification_channel2(
-      const virtio_magma_read_notification_channel2_ctrl_t* request,
-      virtio_magma_read_notification_channel2_resp_t* response) override;
   zx_status_t Handle_export(const virtio_magma_export_ctrl_t* request,
                             virtio_magma_export_resp_t* response) override;
   zx_status_t Handle_import(const virtio_magma_import_ctrl_t* request,

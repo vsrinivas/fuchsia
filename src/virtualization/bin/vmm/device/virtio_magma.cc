@@ -129,6 +129,57 @@ void VirtioMagma::NotifyQueue(uint16_t queue) {
   }
 }
 
+// Handle special commands here - notably, those that send back bytes beyond
+// what is contained in the response struct.
+zx_status_t VirtioMagma::HandleCommandDescriptors(VirtioDescriptor* request_desc,
+                                                  VirtioDescriptor* response_desc,
+                                                  uint32_t* used_out) {
+  auto header = reinterpret_cast<virtio_magma_ctrl_hdr*>(request_desc->addr);
+
+  switch (header->type) {
+    case VIRTIO_MAGMA_CMD_READ_NOTIFICATION_CHANNEL2: {
+      auto request_copy =
+          *reinterpret_cast<virtio_magma_read_notification_channel2_ctrl_t*>(request_desc->addr);
+      virtio_magma_read_notification_channel2_resp_t response{};
+
+      // TODO(fxbug.dev/83668) - check for sizeof(response) + request_copy.buffer_size
+      if (response_desc->len < sizeof(response)) {
+        FX_LOGS(ERROR)
+            << "VIRTIO_MAGMA_CMD_READ_NOTIFICATION_CHANNEL2: response descriptor too small";
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+      // The notification data immediately follows the response struct.
+      auto notification_buffer =
+          reinterpret_cast<virtio_magma_read_notification_channel2_resp_t*>(response_desc->addr) +
+          1;
+      request_copy.buffer = reinterpret_cast<uint64_t>(notification_buffer);
+
+      zx_status_t status =
+          VirtioMagmaGeneric::Handle_read_notification_channel2(&request_copy, &response);
+      if (status != ZX_OK)
+        return status;
+
+      if (response.result_return == MAGMA_STATUS_OK) {
+        // For testing
+        constexpr uint32_t kMagicFlags = 0xabcd1234;
+        if (header->flags == kMagicFlags && request_copy.buffer_size >= sizeof(kMagicFlags) &&
+            response.buffer_size_out == 0) {
+          memcpy(notification_buffer, &kMagicFlags, sizeof(kMagicFlags));
+          response.buffer_size_out = sizeof(kMagicFlags);
+        }
+      }
+
+      memcpy(response_desc->addr, &response, sizeof(response));
+      *used_out = sizeof(response) + response.buffer_size_out;
+
+      return ZX_OK;
+    }
+  }
+
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t VirtioMagma::Handle_device_import(const virtio_magma_device_import_ctrl_t* request,
                                               virtio_magma_device_import_resp_t* response) {
   zx::channel server_handle, client_handle;
@@ -246,15 +297,6 @@ zx_status_t VirtioMagma::Handle_poll(const virtio_magma_poll_ctrl_t* request,
   // Transform byte count back to item count
   request_mod.count /= sizeof(magma_poll_item_t);
   return VirtioMagmaGeneric::Handle_poll(&request_mod, response);
-}
-
-zx_status_t VirtioMagma::Handle_read_notification_channel2(
-    const virtio_magma_read_notification_channel2_ctrl_t* request,
-    virtio_magma_read_notification_channel2_resp_t* response) {
-  auto request_mod = *request;
-  // The notification data immediately follows the response struct.
-  request_mod.buffer = reinterpret_cast<uint64_t>(&response[1]);
-  return VirtioMagmaGeneric::Handle_read_notification_channel2(&request_mod, response);
 }
 
 zx_status_t VirtioMagma::Handle_export(const virtio_magma_export_ctrl_t* request,

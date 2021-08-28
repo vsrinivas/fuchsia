@@ -454,6 +454,54 @@ TEST_F(VirtioMagmaTest, HandleConnectionMethod) {
   ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
 }
 
+TEST_F(VirtioMagmaTest, HandleReadNotificationChannel2) {
+  magma_device_t device{};
+  ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
+  uint64_t connection{};
+  ASSERT_NO_FATAL_FAILURE(CreateConnection(device, &connection));
+
+  {
+    virtio_magma_read_notification_channel2_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_READ_NOTIFICATION_CHANNEL2;
+    constexpr uint32_t kMagicFlags = 0xabcd1234;
+    request.hdr.flags =
+        kMagicFlags;  // VirtioMagma will put these magic flags in the returned buffer
+    request.connection = connection;
+    request.buffer_size = sizeof(uint32_t);
+    request.buffer = 0;  // not used
+    virtio_magma_read_notification_channel2_resp_t response{};
+    uint16_t descriptor_id{};
+    void* response_ptr;
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(&request, sizeof(request))
+                  .AppendWritableDescriptor(&response_ptr, sizeof(response) + request.buffer_size)
+                  .Build(&descriptor_id),
+              ZX_OK);
+    magma_->NotifyQueue(0);
+
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(response) + request.buffer_size);
+
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_READ_NOTIFICATION_CHANNEL2);
+    EXPECT_EQ(response.hdr.flags, 0u);
+    ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
+    EXPECT_EQ(response.buffer_size_out, sizeof(uint32_t));
+    EXPECT_EQ(response.more_data_out, 0u);
+
+    uint32_t buffer;
+    memcpy(&buffer,
+           reinterpret_cast<virtio_magma_read_notification_channel2_resp_t*>(response_ptr) + 1,
+           sizeof(buffer));
+    EXPECT_EQ(buffer, kMagicFlags);
+  }
+
+  ASSERT_NO_FATAL_FAILURE(ReleaseConnection(connection));
+  ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
+}
+
 TEST_F(VirtioMagmaTest, HandleImportExport) {
   magma_device_t device{};
   ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
