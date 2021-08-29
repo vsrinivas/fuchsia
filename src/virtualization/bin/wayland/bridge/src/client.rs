@@ -2,26 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::any::Any;
-use std::cell::Cell;
-use std::rc::Rc;
-
-use anyhow::Error;
-use fuchsia_async as fasync;
-use fuchsia_trace as ftrace;
-use fuchsia_wayland_core as wl;
-use fuchsia_zircon as zx;
-use futures::channel::mpsc;
-use futures::prelude::*;
-use futures::select;
-use wayland::WlDisplayEvent;
-
-use crate::display::{Display, DISPLAY_SINGLETON_OBJECT_ID};
-use crate::object::{
-    MessageReceiver, ObjectLookupError, ObjectMap, ObjectRef, ObjectRefSet, RequestReceiver,
+use {
+    crate::display::{Display, DISPLAY_SINGLETON_OBJECT_ID},
+    crate::object::{
+        MessageReceiver, ObjectLookupError, ObjectMap, ObjectRef, ObjectRefSet, RequestReceiver,
+    },
+    crate::seat::InputDispatcher,
+    crate::xdg_shell::XdgToplevel,
+    anyhow::Error,
+    fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
+    fuchsia_zircon as zx,
+    futures::channel::mpsc,
+    futures::prelude::*,
+    futures::select,
+    std::{any::Any, cell::Cell, rc::Rc},
+    wayland::WlDisplayEvent,
 };
-use crate::seat::InputDispatcher;
-use crate::xdg_shell::XdgToplevel;
 
 type Task = Box<dyn FnMut(&mut Client) -> Result<(), Error> + 'static>;
 

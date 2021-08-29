@@ -2,23 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::sync::Arc;
+use {
+    crate::client::Client,
+    crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    crate::registry::Registry,
+    anyhow::{format_err, Error},
+    fidl::endpoints::{ClientEnd, RequestStream},
+    fidl_fuchsia_ui_app::ViewProviderMarker,
+    fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy},
+    fidl_fuchsia_wayland::ViewProducerRequestStream,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol,
+    parking_lot::Mutex,
+    std::sync::Arc,
+    wayland::*,
+};
 
-use anyhow::{format_err, Error};
-use fidl::endpoints::{create_proxy, ClientEnd, RequestStream};
-use fidl_fuchsia_ui_app::ViewProviderMarker;
-use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy, SessionListenerMarker};
-use fidl_fuchsia_wayland::ViewProducerRequestStream;
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_protocol;
-use fuchsia_scenic as scenic;
-use parking_lot::Mutex;
-use wayland::*;
-
-use crate::client::Client;
-use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
-use crate::registry::Registry;
-use crate::scenic::ScenicSession;
+#[cfg(not(feature = "flatland"))]
+use {
+    crate::scenic::ScenicSession, fidl::endpoints::create_proxy,
+    fidl_fuchsia_ui_scenic::SessionListenerMarker, fuchsia_scenic as scenic,
+};
 
 /// When the connection is created it is initialized with a 'wl_display' object
 /// that the client can immediately interact with.
@@ -68,15 +72,6 @@ impl Display {
     /// Provides access to the Scenic connection for this display.
     pub fn scenic(&self) -> &Arc<ScenicProxy> {
         &self.scenic
-    }
-
-    pub fn create_session(
-        &self,
-        listener: Option<ClientEnd<SessionListenerMarker>>,
-    ) -> Result<ScenicSession, Error> {
-        let (session_proxy, session_request) = create_proxy().unwrap();
-        self.scenic.create_session(session_request, listener).unwrap();
-        Ok(ScenicSession::new(scenic::Session::new(session_proxy)))
     }
 
     /// Provides access to the global registry for this display.
@@ -132,6 +127,18 @@ impl Display {
 
         // Start polling the channel for messages.
         client.start();
+    }
+}
+
+#[cfg(not(feature = "flatland"))]
+impl Display {
+    pub fn create_session(
+        &self,
+        listener: Option<ClientEnd<SessionListenerMarker>>,
+    ) -> Result<ScenicSession, Error> {
+        let (session_proxy, session_request) = create_proxy().unwrap();
+        self.scenic.create_session(session_request, listener).unwrap();
+        Ok(ScenicSession::new(scenic::Session::new(session_proxy)))
     }
 }
 

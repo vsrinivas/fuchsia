@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use wp_viewporter::{WpViewport, WpViewportRequest, WpViewporter, WpViewporterRequest};
-
-use crate::client::Client;
-use crate::compositor::{Surface, SurfaceCommand, ViewportCropParams, ViewportScaleParams};
-use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
+use {
+    crate::client::Client,
+    crate::compositor::{Surface, SurfaceCommand, ViewportCropParams, ViewportScaleParams},
+    crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    anyhow::Error,
+    wp_viewporter::{WpViewport, WpViewportRequest, WpViewporter, WpViewporterRequest},
+};
 
 /// An implementation of the wp_viewporter global.
 pub struct Viewporter;

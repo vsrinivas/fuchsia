@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use fuchsia_wayland_core as wl;
-use zaura_shell::{
-    ZauraOutput, ZauraOutputRequest, ZauraShell, ZauraShellRequest, ZauraSurface,
-    ZauraSurfaceRequest,
+use {
+    crate::client::Client,
+    crate::compositor::Surface,
+    crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    anyhow::Error,
+    fuchsia_wayland_core as wl,
+    zaura_shell::{
+        ZauraOutput, ZauraOutputRequest, ZauraShell, ZauraShellRequest, ZauraSurface,
+        ZauraSurfaceRequest,
+    },
 };
-
-use crate::client::Client;
-use crate::compositor::Surface;
-use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
 
 /// An implementation of the zaura_shell global.
 pub struct AuraShell;

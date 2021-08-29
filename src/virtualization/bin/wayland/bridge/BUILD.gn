@@ -8,6 +8,11 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
+declare_args() {
+  # Set this to false to enable new wayland bridge code with Flatland API support
+  use_legacy_wayland_bridge = true
+}
+
 rustc_binary("bin") {
   output_name = "wayland_bridge"
   edition = "2018"
@@ -25,6 +30,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
     "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
+    "//src/lib/async-utils",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -69,6 +75,9 @@ rustc_binary("bin") {
     "src/viewporter.rs",
     "src/xdg_shell.rs",
   ]
+  if (!use_legacy_wayland_bridge) {
+    features = [ "flatland" ]
+  }
 }
 
 resource("keymap") {

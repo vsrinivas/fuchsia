@@ -2,28 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::mem;
-
-use anyhow::{format_err, Error};
-use fidl_fuchsia_math::{Rect, Size};
-use fuchsia_async as fasync;
-use fuchsia_scenic as scenic;
-use fuchsia_trace as ftrace;
-use fuchsia_wayland_core as wl;
-use fuchsia_zircon::{self as zx, HandleBased};
-use futures::prelude::*;
-use wayland::{
-    WlBufferEvent, WlCompositor, WlCompositorRequest, WlRegion, WlRegionRequest, WlSurface,
-    WlSurfaceRequest,
+use {
+    crate::buffer::Buffer,
+    crate::client::{Client, TaskQueue},
+    crate::display::Callback,
+    crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    crate::subcompositor::Subsurface,
+    crate::xdg_shell::XdgSurface,
+    anyhow::{format_err, Error},
+    fidl_fuchsia_math::{Rect, Size},
+    fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
+    fuchsia_zircon::{self as zx, HandleBased},
+    std::mem,
+    wayland::{
+        WlBufferEvent, WlCompositor, WlCompositorRequest, WlRegion, WlRegionRequest, WlSurface,
+        WlSurfaceRequest,
+    },
 };
 
-use crate::buffer::Buffer;
-use crate::client::{Client, TaskQueue};
-use crate::display::Callback;
-use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
-use crate::scenic::ScenicSession;
-use crate::subcompositor::Subsurface;
-use crate::xdg_shell::XdgSurface;
+#[cfg(feature = "flatland")]
+use {
+    crate::scenic::Flatland, fidl_fuchsia_ui_composition::TransformId, std::collections::VecDeque,
+};
+
+#[cfg(not(feature = "flatland"))]
+use {crate::scenic::ScenicSession, fuchsia_scenic as scenic, futures::prelude::*};
 
 /// An implementation of the wl_compositor global.
 pub struct Compositor;
@@ -54,8 +57,29 @@ impl RequestReceiver<WlCompositor> for Compositor {
     }
 }
 
+/// A `SurfaceNode` manages the set of flatland resources associated with a
+/// surface.
+#[cfg(feature = "flatland")]
+struct SurfaceNode {
+    /// The flatland instance that can be used to create flatland entities.
+    pub flatland: Flatland,
+    /// The flatland transform that represents this surface. Views can present this
+    /// surface by placeing this transform in their view hierarchy.
+    pub transform_id: TransformId,
+}
+
+#[cfg(feature = "flatland")]
+impl SurfaceNode {
+    pub fn new(flatland: Flatland) -> Self {
+        let transform_id = flatland.alloc_transform_id();
+        flatland.proxy().create_transform(&mut transform_id.clone()).expect("fidl error");
+        Self { flatland, transform_id }
+    }
+}
+
 /// A `SurfaceNode` manages the set of scenic resources associated with a
 /// surface.
+#[cfg(not(feature = "flatland"))]
 struct SurfaceNode {
     /// The scenic session that can be used to create scenic entities.
     pub scenic: ScenicSession,
@@ -69,6 +93,7 @@ struct SurfaceNode {
     pub entity_node: scenic::EntityNode,
 }
 
+#[cfg(not(feature = "flatland"))]
 impl SurfaceNode {
     pub fn new(session: ScenicSession) -> Self {
         // To support wp_viewport, we'll build an entity node that contains a
@@ -226,8 +251,331 @@ pub struct Surface {
     /// ref, which enables this vector to track the current subsurface ordering
     /// of all subsurfaces and the parent.
     subsurfaces: Vec<(ObjectRef<Surface>, Option<ObjectRef<Subsurface>>)>,
+
+    /// Queue of frame callbacks.
+    ///
+    /// The client can request multiple frame callbacks for each frame. The inner
+    /// vector is the callbacks requested for a frame. The outer deque is the
+    /// queue of frames.
+    #[cfg(feature = "flatland")]
+    callbacks: VecDeque<Vec<ObjectRef<Callback>>>,
 }
 
+impl Surface {
+    /// Enqueues a command for this surface to take effect on the next call to
+    /// wl_surface::commit.
+    pub fn enqueue(&mut self, command: SurfaceCommand) {
+        self.pending_commands.push(command);
+    }
+
+    pub fn detach_subsurface(&mut self, subsurface_ref: ObjectRef<Subsurface>) {
+        if let Some(index) = self.subsurfaces.iter().position(|x| x.1 == Some(subsurface_ref)) {
+            self.subsurfaces.remove(index);
+        }
+    }
+
+    /// Assigns a role to this surface.
+    ///
+    /// Once a role has been assigned to a surface, it is an error to set a
+    /// different role for that same surface.
+    pub fn set_role(&mut self, role: SurfaceRole) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::set_role");
+        if let Some(current_role) = self.role {
+            Err(format_err!(
+                "Attemping to reassign surface role from {:?} to {:?}",
+                current_role,
+                role
+            ))
+        } else {
+            self.role = Some(role);
+            Ok(())
+        }
+    }
+
+    pub fn pixel_scale(&self) -> (f32, f32) {
+        self.pixel_scale
+    }
+
+    // TODO: Determine correct error handling.
+    fn commit_subsurfaces(
+        client: &mut Client,
+        callbacks: &mut Vec<ObjectRef<Callback>>,
+        subsurfaces: &[(ObjectRef<Surface>, Option<ObjectRef<Subsurface>>)],
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::commit_subsurfaces");
+        for (index, entry) in subsurfaces.iter().enumerate() {
+            entry.0.get_mut(client)?.z_order = index;
+            if let Some(subsurface_ref) = entry.1 {
+                if subsurface_ref.get(client)?.is_sync() {
+                    // Get pending commands from subsurface
+                    let mut pending_state = subsurface_ref.get_mut(client)?.take_pending_state();
+                    let task_queue = client.task_queue();
+                    let surface_ref = subsurface_ref.get(client)?.surface();
+                    let surface = surface_ref.get_mut(client)?;
+                    surface.pending_commands.append(&mut pending_state.0);
+                    callbacks.append(&mut pending_state.1);
+                    surface.commit_self(task_queue, callbacks)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(feature = "flatland")]
+impl Surface {
+    /// Creates a new `Surface`.
+    pub fn new(id: wl::ObjectId) -> Self {
+        Surface {
+            size: Size { width: 0, height: 0 },
+            position: (0, 0),
+            z_order: 0,
+            role: None,
+            crop_params: None,
+            scale_params: None,
+            frame: None,
+            node: None,
+            window_geometry: None,
+            pixel_scale: (1.0, 1.0),
+            pending_commands: Vec::new(),
+            subsurfaces: vec![(id.into(), None)],
+            callbacks: VecDeque::new(),
+        }
+    }
+
+    /// Assigns the Flatland instance for this surface.
+    ///
+    /// When a surface is initially created, it has no Flatland instance. Since
+    /// the instance is used to create the Flatland resources backing the surface,
+    /// a wl_surface _must_ have an assigned an instance before it is committed.
+    ///
+    /// Ex: for xdg_toplevel surfaces, the a new instance will be created for
+    /// each toplevel.
+    ///
+    /// It is an error to call `set_flatland` multiple times for the same
+    /// surface.
+    pub fn set_flatland(&mut self, flatland: Flatland) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::set_flatland");
+        if self.node.is_some() {
+            Err(format_err!("Changing the Flatland instance for a surface is not supported"))
+        } else {
+            self.node = Some(SurfaceNode::new(flatland));
+            Ok(())
+        }
+    }
+
+    pub fn clear_flatland(&mut self) {
+        self.node = None;
+    }
+
+    pub fn flatland(&self) -> Option<Flatland> {
+        self.node.as_ref().map(|n| n.flatland.clone())
+    }
+
+    /// Returns a reference to the `TransformId` for this surface.
+    pub fn transform(&self) -> Option<&TransformId> {
+        self.node.as_ref().map(|n| &n.transform_id)
+    }
+
+    pub fn next_callbacks(&mut self) -> Option<Vec<ObjectRef<Callback>>> {
+        self.callbacks.pop_front()
+    }
+
+    /// Updates the current surface state by applying a single `SurfaceCommand`.
+    ///
+    /// Returns `true` if the application of the command requires relayout of
+    /// the surfaces view hierarchy. Ex: changing the size of the attached
+    /// buffer or the associated viewport parameters requires updates to the
+    /// scenic nodes, while just replacing the attached buffer requires no such
+    /// update.
+    fn apply(&mut self, command: SurfaceCommand, task_queue: &TaskQueue) -> Result<bool, Error> {
+        let node = match self.node.as_ref() {
+            Some(node) => node,
+            None => {
+                // This is expected for some surfaces that aren't implemented
+                // yet, like wl_pointer cursor surfaces.
+                println!(
+                    "No flatland instance associated with surface role {:?}; skipping commit",
+                    self.role
+                );
+                return Ok(false);
+            }
+        };
+        let needs_relayout = match command {
+            SurfaceCommand::AttachBuffer(attachment) => {
+                let buffer = attachment.buffer.clone();
+                let image_id = buffer.image_id(&node.flatland);
+                node.flatland
+                    .proxy()
+                    .set_content(&mut node.transform_id.clone(), &mut image_id.clone())
+                    .expect("fidl error");
+                let previous_size = mem::replace(&mut self.size, buffer.image_size());
+
+                // Create and register a release fence to release this buffer when
+                // scenic is done with it.
+                let release_fence = zx::Event::create().unwrap();
+                node.flatland.add_release_fence(
+                    release_fence.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap(),
+                );
+                let task_queue = task_queue.clone();
+                fasync::Task::local(async move {
+                    let _signals =
+                        fasync::OnSignals::new(&release_fence, zx::Signals::EVENT_SIGNALED)
+                            .await
+                            .unwrap();
+                    // Safe to ignore result as EVENT_SIGNALED must have
+                    // been observed if we reached this.
+                    task_queue.post(move |client| {
+                        client.event_queue().post(attachment.id(), WlBufferEvent::Release)
+                    });
+                })
+                .detach();
+                previous_size != self.size
+            }
+            SurfaceCommand::ClearBuffer => true,
+            SurfaceCommand::Frame(callback) => {
+                if self.frame.is_some() {
+                    return Err(format_err!("Multiple frame requests posted between commits"));
+                }
+                self.frame = Some(callback);
+                false
+            }
+            SurfaceCommand::SetViewportCropParams(params) => {
+                if self.crop_params != Some(params) {
+                    self.crop_params = Some(params);
+                    true
+                } else {
+                    false
+                }
+            }
+            SurfaceCommand::ClearViewportCropParams => {
+                if self.crop_params != None {
+                    self.crop_params = None;
+                    true
+                } else {
+                    false
+                }
+            }
+            SurfaceCommand::SetViewportScaleParams(params) => {
+                if self.scale_params != Some(params) {
+                    self.scale_params = Some(params);
+                    true
+                } else {
+                    false
+                }
+            }
+            SurfaceCommand::ClearViewportScaleParams => {
+                if self.scale_params != None {
+                    self.scale_params = None;
+                    true
+                } else {
+                    false
+                }
+            }
+            SurfaceCommand::SetWindowGeometry(geometry) => {
+                if self.window_geometry.as_ref() != Some(&geometry) {
+                    self.window_geometry = Some(geometry);
+                    true
+                } else {
+                    false
+                }
+            }
+            SurfaceCommand::SetPosition(x, y) => {
+                self.position = (x, y);
+                true
+            }
+            SurfaceCommand::AddSubsurface(surface_ref, subsurface_ref) => {
+                self.subsurfaces.push((surface_ref, Some(subsurface_ref)));
+                false
+            }
+            SurfaceCommand::PlaceSubsurface(params) => {
+                let sibling_index = if let Some(index) =
+                    self.subsurfaces.iter().position(|x| x.0 == params.sibling)
+                {
+                    index
+                } else {
+                    return Err(format_err!("Invalid sibling id {}", params.sibling.id()));
+                };
+                let sibling_entry = self.subsurfaces.remove(sibling_index);
+                let anchor_index = if let Some(index) =
+                    self.subsurfaces.iter().position(|x| x.1 == Some(params.subsurface))
+                {
+                    index
+                } else {
+                    return Err(format_err!("Invalid subsurface id {}", params.subsurface.id()));
+                };
+
+                let new_index = match params.relation {
+                    SurfaceRelation::Below => anchor_index,
+                    SurfaceRelation::Above => anchor_index + 1,
+                };
+                self.subsurfaces.insert(new_index, sibling_entry);
+                true
+            }
+        };
+        Ok(needs_relayout)
+    }
+
+    /// Performs the logic to commit the local state of this surface.
+    ///
+    /// This will update the scenic Node for this surface.
+    fn commit_self(
+        &mut self,
+        task_queue: TaskQueue,
+        callbacks: &mut Vec<ObjectRef<Callback>>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::commit_self");
+        let commands = mem::replace(&mut self.pending_commands, Vec::new());
+        for command in commands {
+            self.apply(command, &task_queue)?;
+        }
+
+        if let Some(crop) = self.crop_params.as_ref() {
+            // TODO(fxb/83657): implement cropping.
+            if crop.x != 0.0
+                || crop.y != 0.0
+                || crop.width != self.size.width as f32
+                || crop.height != self.size.height as f32
+            {
+                panic!("missing support for cropping");
+            }
+        }
+
+        if let Some(scale) = self.scale_params.as_ref() {
+            // TODO(fxb/83657): implement scaling.
+            if scale.width != self.size.width || scale.height != self.size.height {
+                panic!("missing support for scaling");
+            }
+        }
+
+        if let Some(callback) = self.frame.take() {
+            callbacks.push(callback);
+        }
+
+        Ok(())
+    }
+
+    pub fn present(
+        this: ObjectRef<Self>,
+        client: &mut Client,
+        callbacks: Vec<ObjectRef<Callback>>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::present");
+        let flatland = this
+            .get(client)?
+            .flatland()
+            .ok_or(format_err!("Unable to present surface without a flatland instance."))?;
+        // Wayland protocol doesn't provide a mechanism to control presentation time
+        // so we ask Flatland to present contents immediately by specifying a presentation
+        // time of 0.
+        flatland.present(0);
+        this.get_mut(client)?.callbacks.push_back(callbacks);
+        Ok(())
+    }
+}
+
+#[cfg(not(feature = "flatland"))]
 impl Surface {
     /// Creates a new `Surface`.
     pub fn new(id: wl::ObjectId) -> Self {
@@ -247,10 +595,16 @@ impl Surface {
         }
     }
 
-    /// Enqueues a command for this surface to take effect on the next call to
-    /// wl_surface::commit.
-    pub fn enqueue(&mut self, command: SurfaceCommand) {
-        self.pending_commands.push(command);
+    pub fn set_pixel_scale(&mut self, scale_x: f32, scale_y: f32) {
+        self.pixel_scale = (scale_x, scale_y);
+    }
+
+    pub fn window_geometry(&self) -> Rect {
+        if let Some(window_geometry) = self.window_geometry.as_ref() {
+            Rect { ..*window_geometry }
+        } else {
+            Rect { x: 0, y: 0, width: self.size.width, height: self.size.height }
+        }
     }
 
     /// Assigns the scenic session for this surface.
@@ -282,49 +636,9 @@ impl Surface {
         self.node.as_ref().map(|n| n.scenic.clone())
     }
 
-    pub fn detach_subsurface(&mut self, subsurface_ref: ObjectRef<Subsurface>) {
-        if let Some(index) = self.subsurfaces.iter().position(|x| x.1 == Some(subsurface_ref)) {
-            self.subsurfaces.remove(index);
-        }
-    }
-
     /// Returns a reference to the `scenic::ShapeNode` for this surface.
     pub fn node(&self) -> Option<&scenic::EntityNode> {
         self.node.as_ref().map(|n| &n.entity_node)
-    }
-
-    /// Assigns a role to this surface.
-    ///
-    /// Once a role has been assigned to a surface, it is an error to set a
-    /// different role for that same surface.
-    pub fn set_role(&mut self, role: SurfaceRole) -> Result<(), Error> {
-        ftrace::duration!("wayland", "Surface::set_role");
-        if let Some(current_role) = self.role {
-            Err(format_err!(
-                "Attemping to reassign surface role from {:?} to {:?}",
-                current_role,
-                role
-            ))
-        } else {
-            self.role = Some(role);
-            Ok(())
-        }
-    }
-
-    pub fn window_geometry(&self) -> Rect {
-        if let Some(window_geometry) = self.window_geometry.as_ref() {
-            Rect { ..*window_geometry }
-        } else {
-            Rect { x: 0, y: 0, width: self.size.width, height: self.size.height }
-        }
-    }
-
-    pub fn set_pixel_scale(&mut self, scale_x: f32, scale_y: f32) {
-        self.pixel_scale = (scale_x, scale_y);
-    }
-
-    pub fn pixel_scale(&self) -> (f32, f32) {
-        self.pixel_scale
     }
 
     /// Updates the current surface state by applying a single `SurfaceCommand`.
@@ -570,31 +884,6 @@ impl Surface {
         Ok(())
     }
 
-    fn commit_subsurfaces(
-        client: &mut Client,
-        callbacks: &mut Vec<ObjectRef<Callback>>,
-        subsurfaces: &[(ObjectRef<Surface>, Option<ObjectRef<Subsurface>>)],
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "Surface::commit_subsurfaces");
-        for (index, entry) in subsurfaces.iter().enumerate() {
-            entry.0.get_mut(client)?.z_order = index;
-            if let Some(subsurface_ref) = entry.1 {
-                if subsurface_ref.get(client)?.is_sync() {
-                    // Get pending commands from subsurface
-                    let mut pending_state = subsurface_ref.get_mut(client)?.take_pending_state();
-                    let task_queue = client.task_queue();
-                    let surface_ref = subsurface_ref.get(client)?.surface();
-                    let surface = surface_ref.get_mut(client)?;
-                    surface.pending_commands.append(&mut pending_state.0);
-                    callbacks.append(&mut pending_state.1);
-                    surface.commit_self(task_queue, callbacks)?;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     pub fn present(
         this: ObjectRef<Self>,
         client: &mut Client,
@@ -757,7 +1046,7 @@ impl SurfaceRole {
         ftrace::duration!("wayland", "SurfaceRole::commit");
         match self {
             SurfaceRole::XdgSurface(xdg_surface_ref) => {
-                Ok(xdg_surface_ref.get(client)?.finalize_commit())
+                XdgSurface::finalize_commit(xdg_surface_ref, client)
             }
             SurfaceRole::Subsurface(subsurface_ref) => {
                 Ok(subsurface_ref.get_mut(client)?.finalize_commit(callbacks))

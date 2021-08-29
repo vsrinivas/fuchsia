@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
-use fuchsia_trace as ftrace;
-use fuchsia_wayland_core as wl;
-use wayland::*;
-
-use crate::client::Client;
-use crate::object::{ObjectRef, RequestReceiver};
+use {
+    crate::client::Client,
+    crate::object::{ObjectRef, RequestReceiver},
+    anyhow::{format_err, Error},
+    fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
+    wayland::*,
+};
 
 /// The set of pixel formats that will be announced to clients.
 /// Note: We don't actually support any shm formats but not reporting these as

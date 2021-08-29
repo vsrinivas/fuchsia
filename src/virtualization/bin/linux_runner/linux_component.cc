@@ -71,4 +71,9 @@ void LinuxComponent::CreateViewWithViewRef(zx::eventpair token,
                                                std::move(view_ref));
 }
 
+// |fuchsia::ui::app::ViewProvider|
+void LinuxComponent::CreateView2(fuchsia::ui::app::CreateView2Args args) {
+  remote_view_provider_->CreateView2(std::move(args));
+}
+
 }  // namespace linux_runner

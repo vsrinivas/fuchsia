@@ -2,18 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::mem;
-
-use anyhow::{format_err, Error};
-use fuchsia_wayland_core as wl;
-use wayland::{WlSubcompositor, WlSubcompositorRequest, WlSubsurface, WlSubsurfaceRequest};
-
-use crate::client::Client;
-use crate::compositor::{
-    PlaceSubsurfaceParams, Surface, SurfaceCommand, SurfaceRelation, SurfaceRole,
+use {
+    crate::client::Client,
+    crate::compositor::{
+        PlaceSubsurfaceParams, Surface, SurfaceCommand, SurfaceRelation, SurfaceRole,
+    },
+    crate::display::Callback,
+    crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    anyhow::Error,
+    fuchsia_wayland_core as wl,
+    std::mem,
+    wayland::{WlSubcompositor, WlSubcompositorRequest, WlSubsurface, WlSubsurfaceRequest},
 };
-use crate::display::Callback;
-use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
+
+#[cfg(not(feature = "flatland"))]
+use anyhow::format_err;
 
 /// An implementation of the wl_subcompositor global.
 ///
@@ -155,7 +158,23 @@ impl Subsurface {
             true
         }
     }
+}
 
+#[cfg(feature = "flatland")]
+impl Subsurface {
+    fn attach_to_parent(&self, _client: &mut Client) -> Result<(), Error> {
+        // TODO(fxb/83658): Implement Flatland subsurface support.
+        Ok(())
+    }
+
+    fn detach_from_parent(&self, _client: &Client) -> Result<(), Error> {
+        // TODO(fxb/83658): Implement Flatland subsurface support.
+        Ok(())
+    }
+}
+
+#[cfg(not(feature = "flatland"))]
+impl Subsurface {
     fn attach_to_parent(&self, client: &mut Client) -> Result<(), Error> {
         let session = match self.parent_ref.get(client)?.session() {
             Some(s) => s.clone(),

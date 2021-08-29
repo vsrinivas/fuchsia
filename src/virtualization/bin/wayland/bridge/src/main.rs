@@ -4,23 +4,24 @@
 
 #![recursion_limit = "128"]
 
-use std::io::Read;
-
-use anyhow::Error;
-use fidl_fuchsia_virtualization::{WaylandDispatcherRequest, WaylandDispatcherRequestStream};
-use fidl_fuchsia_wayland::ViewProducerRequestStream;
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_trace_provider::trace_provider_create_with_fdio;
-use fuchsia_zircon::{self as zx, HandleBased};
-use futures::prelude::*;
-use wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor};
-use wp_viewporter::WpViewporter;
-use zaura_shell::ZauraShell;
-use zcr_alpha_compositing_v1::ZcrAlphaCompositingV1;
-use zcr_secure_output_v1::ZcrSecureOutputV1;
-use zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1;
-use zxdg_shell_v6::ZxdgShellV6;
+use {
+    anyhow::Error,
+    fidl_fuchsia_virtualization::{WaylandDispatcherRequest, WaylandDispatcherRequestStream},
+    fidl_fuchsia_wayland::ViewProducerRequestStream,
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_trace_provider::trace_provider_create_with_fdio,
+    fuchsia_zircon::{self as zx, HandleBased},
+    futures::prelude::*,
+    std::io::Read,
+    wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor},
+    wp_viewporter::WpViewporter,
+    zaura_shell::ZauraShell,
+    zcr_alpha_compositing_v1::ZcrAlphaCompositingV1,
+    zcr_secure_output_v1::ZcrSecureOutputV1,
+    zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1,
+    zxdg_shell_v6::ZxdgShellV6,
+};
 
 mod client;
 mod object;

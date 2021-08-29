@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use fuchsia_wayland_core as wl;
-
-use crate::client::Client;
-use crate::object::{ObjectRef, RequestReceiver};
+use {
+    crate::client::Client,
+    crate::object::{ObjectRef, RequestReceiver},
+    anyhow::Error,
+    fuchsia_wayland_core as wl,
+};
 
 ///! An example of a simple wayland interface that uses the primitives in this
 ///! crate.

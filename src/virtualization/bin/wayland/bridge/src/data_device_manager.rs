@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use wayland::{
-    WlDataDevice, WlDataDeviceManager, WlDataDeviceManagerRequest, WlDataDeviceRequest,
-    WlDataSource, WlDataSourceRequest,
+use {
+    crate::client::Client,
+    crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    crate::seat::Seat,
+    anyhow::Error,
+    wayland::{
+        WlDataDevice, WlDataDeviceManager, WlDataDeviceManagerRequest, WlDataDeviceRequest,
+        WlDataSource, WlDataSourceRequest,
+    },
 };
-
-use crate::client::Client;
-use crate::object::{NewObjectExt, ObjectRef, RequestReceiver};
-use crate::seat::Seat;
 
 /// An implementation of the wl_data_device_manager global.
 pub struct DataDeviceManager;

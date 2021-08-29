@@ -2,23 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use fidl_fuchsia_ui_input::{
-    FocusEvent, InputEvent, PointerEvent, PointerEventPhase, PointerEventType,
-};
-use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType};
-use fuchsia_trace as ftrace;
-use fuchsia_wayland_core as wl;
-use fuchsia_zircon::{self as zx, HandleBased};
-use std::collections::HashSet;
-use wayland::{
-    wl_keyboard, wl_pointer, wl_seat, wl_touch, WlKeyboard, WlKeyboardEvent, WlKeyboardRequest,
-    WlPointer, WlPointerRequest, WlSeat, WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest,
+use {
+    crate::client::{Client, EventQueue},
+    crate::compositor::Surface,
+    crate::object::{NewObjectExt, ObjectRef, ObjectRefSet, RequestReceiver},
+    anyhow::Error,
+    fuchsia_wayland_core as wl,
+    fuchsia_zircon::{self as zx, HandleBased},
+    wayland::{
+        wl_keyboard, wl_seat, WlKeyboard, WlKeyboardEvent, WlKeyboardRequest, WlPointer,
+        WlPointerRequest, WlSeat, WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest,
+    },
 };
 
-use crate::client::{Client, EventQueue};
-use crate::compositor::Surface;
-use crate::object::{NewObjectExt, ObjectRef, ObjectRefSet, RequestReceiver};
+#[cfg(not(feature = "flatland"))]
+use {
+    fidl_fuchsia_ui_input::{
+        FocusEvent, InputEvent, PointerEvent, PointerEventPhase, PointerEventType,
+    },
+    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType},
+    fuchsia_trace as ftrace,
+    std::collections::HashSet,
+    wayland::{wl_pointer, wl_touch},
+};
 
 /// An implementation of the wl_seat global.
 pub struct Seat {
@@ -51,8 +57,13 @@ impl Seat {
 }
 
 pub struct InputDispatcher {
+    // TODO(fxb/72068): Enable the 3 fields below for Flatland when we have proper
+    // input upport.
+    #[cfg(not(feature = "flatland"))]
     event_queue: EventQueue,
+    #[cfg(not(feature = "flatland"))]
     pressed_keys: HashSet<fidl_fuchsia_input::Key>,
+    #[cfg(not(feature = "flatland"))]
     modifiers: u32,
     /// The set of bound wl_pointer objects for this client.
     ///
@@ -77,6 +88,7 @@ pub struct InputDispatcher {
     pub keyboard_focus: Option<ObjectRef<Surface>>,
 }
 
+#[cfg(not(feature = "flatland"))]
 fn modifiers_from_pressed_keys(pressed_keys: &HashSet<fidl_fuchsia_input::Key>) -> u32 {
     // XKB mod masks for the default keymap.
     const SHIFT_MASK: u32 = 1 << 0;
@@ -103,6 +115,7 @@ fn modifiers_from_pressed_keys(pressed_keys: &HashSet<fidl_fuchsia_input::Key>) 
     modifiers
 }
 
+#[cfg(not(feature = "flatland"))]
 fn pointer_trace_hack(fa: f32, fb: f32) -> u64 {
     let ia: u64 = fa.to_bits().into();
     let ib: u64 = fb.to_bits().into();
@@ -110,19 +123,6 @@ fn pointer_trace_hack(fa: f32, fb: f32) -> u64 {
 }
 
 impl InputDispatcher {
-    pub fn new(event_queue: EventQueue) -> Self {
-        Self {
-            event_queue,
-            pressed_keys: HashSet::new(),
-            modifiers: 0,
-            pointers: ObjectRefSet::new(),
-            keyboards: ObjectRefSet::new(),
-            touches: ObjectRefSet::new(),
-            pointer_focus: None,
-            keyboard_focus: None,
-        }
-    }
-
     /// Returns true iff the given surface currently has keyboard focus.
     pub fn has_focus(&self, surface_ref: ObjectRef<Surface>) -> bool {
         self.keyboard_focus == Some(surface_ref)
@@ -142,6 +142,35 @@ impl InputDispatcher {
         }
         if Some(surface) == self.keyboard_focus {
             self.keyboard_focus = None;
+        }
+    }
+}
+
+#[cfg(feature = "flatland")]
+impl InputDispatcher {
+    pub fn new(_event_queue: EventQueue) -> Self {
+        Self {
+            pointers: ObjectRefSet::new(),
+            keyboards: ObjectRefSet::new(),
+            touches: ObjectRefSet::new(),
+            pointer_focus: None,
+            keyboard_focus: None,
+        }
+    }
+}
+
+#[cfg(not(feature = "flatland"))]
+impl InputDispatcher {
+    pub fn new(event_queue: EventQueue) -> Self {
+        Self {
+            event_queue,
+            pressed_keys: HashSet::new(),
+            modifiers: 0,
+            pointers: ObjectRefSet::new(),
+            keyboards: ObjectRefSet::new(),
+            touches: ObjectRefSet::new(),
+            pointer_focus: None,
+            keyboard_focus: None,
         }
     }
 

@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 ///! This module provides types for managing the set of wayland objects for a
 ///! connection. The |ObjectMap| associates a numeric object id with a
 ///! |MessageReceiver| that can interpret the message and provide the logic to
@@ -15,18 +16,22 @@
 ///! Consumers should mostly have to only concern themselves with the
 ///! |RequestReceiver<I:Interface>| trait, with the other types being mostly the
 ///! glue and dispatch logic.
-use std::any::Any;
-use std::collections::hash_map::{Entry, HashMap};
-use std::collections::HashSet;
-use std::fmt::{self, Debug};
-use std::marker::PhantomData;
-
-use anyhow::{format_err, Error};
-use fuchsia_trace as ftrace;
-use fuchsia_wayland_core::{self as wl, FromArgs, MessageType};
-use thiserror::Error;
-
-use crate::client::Client;
+use {
+    crate::client::Client,
+    anyhow::{format_err, Error},
+    fuchsia_trace as ftrace,
+    fuchsia_wayland_core::{self as wl, FromArgs, MessageType},
+    std::{
+        any::Any,
+        collections::{
+            hash_map::{Entry, HashMap},
+            HashSet,
+        },
+        fmt::{self, Debug},
+        marker::PhantomData,
+    },
+    thiserror::Error,
+};
 
 /// The |ObjectMap| holds the state of active objects for a single connection.
 ///

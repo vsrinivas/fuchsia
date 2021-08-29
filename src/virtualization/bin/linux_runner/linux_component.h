@@ -54,6 +54,7 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   void CreateViewWithViewRef(zx::eventpair token,
                              fuchsia::ui::views::ViewRefControl view_ref_control,
                              fuchsia::ui::views::ViewRef view_ref) override;
+  void CreateView2(fuchsia::ui::app::CreateView2Args args) override;
 };
 
 }  // namespace linux_runner
