@@ -221,21 +221,59 @@ static_library("libFraunhoferAAC") {
     "-Wno-extra",
     "-Wno-#warnings",
     "-Wno-constant-logical-operand",
+    "-Wno-conversion",
     "-Wno-self-assign",
+    "-Wno-unused-but-set-variable",
     "-Wno-unused-const-variable",
-    "-Wno-unused-variable",
     "-Wno-unused-label",
+    "-Wno-unused-variable",
   ]
   deps = [
     "//src/media/codec/codecs/sw/low_layer/codec_android_pal:codec_android_pal",
   ]
 
-  # TODO(fxbug.dev/46738): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  public_configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-    "//build/config:Wno-unused-but-set-variable",
-  ]
+  # TODO(https://fxbug.dev/46738): Report this UB upstream.
+  #
+  # ../../third_party/android/platform/external/aac/libFDK/include/fixmadd.h:134:28: runtime error: left shift of negative value -32768
+  #    #0.2  0x000042cb30bc2f24 in fixmadddiv2_SD(FIXP_DBL, FIXP_DBL const, FIXP_SGL const) ../../third_party/android/platform/external/aac/libFDK/include/fixmadd.h:134 <<application>>+0x457f24
+  #    #0.1  0x000042cb30bc2f24 in fMultAddDiv2(FIXP_DBL, FIXP_DBL, FIXP_SGL) ../../third_party/android/platform/external/aac/libFDK/include/common_fix.h:318 <<application>>+0x457f24
+  #    #0    0x000042cb30bc2f24 in fLog2(FIXP_DBL, INT, INT*) ../../third_party/android/platform/external/aac/libFDK/include/fixpoint_math.h:839 <<application>>+0x457f24
+  #    #1.2  0x000043cfbc0603c0 in ubsan_GetStackTrace() compiler-rt/lib/ubsan/ubsan_diag.cpp:43 <libclang_rt.asan.so>+0x363c0
+  #    #1.1  0x000043cfbc0603c0 in MaybePrintStackTrace() compiler-rt/lib/ubsan/ubsan_diag.cpp:53 <libclang_rt.asan.so>+0x363c0
+  #    #1    0x000043cfbc0603c0 in ~ScopedReport() compiler-rt/lib/ubsan/ubsan_diag.cpp:389 <libclang_rt.asan.so>+0x363c0
+  #    #2    0x000043cfbc061dc8 in handleShiftOutOfBoundsImpl() compiler-rt/lib/ubsan/ubsan_handlers.cpp:364 <libclang_rt.asan.so>+0x37dc8
+  #    #3    0x000043cfbc061b5c in compiler-rt/lib/ubsan/ubsan_handlers.cpp:370 <libclang_rt.asan.so>+0x37b5c
+  #    #4.2  0x000042cb30bc2f24 in fixmadddiv2_SD(FIXP_DBL, FIXP_DBL const, FIXP_SGL const) ../../third_party/android/platform/external/aac/libFDK/include/fixmadd.h:134 <<application>>+0x457f24
+  #    #4.1  0x000042cb30bc2f24 in fMultAddDiv2(FIXP_DBL, FIXP_DBL, FIXP_SGL) ../../third_party/android/platform/external/aac/libFDK/include/common_fix.h:318 <<application>>+0x457f24
+  #    #4    0x000042cb30bc2f24 in fLog2(FIXP_DBL, INT, INT*) ../../third_party/android/platform/external/aac/libFDK/include/fixpoint_math.h:839 <<application>>+0x457f24
+  #    #5    0x000042cb30bc2c44 in fPow(FIXP_DBL, INT, FIXP_DBL, INT, INT*) ../../third_party/android/platform/external/aac/libFDK/src/fixpoint_math.cpp:660 <<application>>+0x457c44
+  #    #7.2  0x000042cb30a6d968 in fixmul_DD(INT const, INT const) ../../third_party/android/platform/external/aac/libAACenc/src/psy_configuration.cpp:385 <<application>>+0x302968
+  #    #7.1  0x000042cb30a6d968 in fMult(INT, INT) ../../third_party/android/platform/external/aac/libFDK/include/common_fix.h:241 <<application>>+0x302968
+  #    #7    0x000042cb30a6d968 in FDKaacEnc_initSpreading(INT, FIXP_DBL*, FIXP_DBL*, FIXP_DBL*, FIXP_DBL*, FIXP_DBL*, INT const, INT const) ../../third_party/android/platform/external/aac/libAACenc/src/psy_configuration.cpp:386 <<application>>+0x302968
+  #    #8    0x000042cb30a6aae0 in FDKaacEnc_InitPsyConfiguration(INT, INT, INT, INT, INT, INT, INT, PSY_CONFIGURATION*, FB_TYPE) ../../third_party/android/platform/external/aac/libAACenc/src/psy_configuration.cpp:584 <<application>>+0x2ffae0
+  #    #9    0x000042cb30a35524 in FDKaacEnc_psyMainInit(PSY_INTERNAL*, AUDIO_OBJECT_TYPE, CHANNEL_MAPPING*, INT, INT, INT, INT, INT, INT, INT, INT, UINT, UINT) ../../third_party/android/platform/external/aac/libAACenc/src/psy_main.cpp:336 <<application>>+0x2ca524
+  #    #10   0x000042cb3099f0ec in FDKaacEnc_Initialize(HANDLE_AAC_ENC, AACENC_CONFIG*, HANDLE_TRANSPORTENC, UINT) ../../third_party/android/platform/external/aac/libAACenc/src/aacenc.cpp:569 <<application>>+0x2340ec
+  #    #11   0x000042cb3098ac54 in aacEncInit(HANDLE_AACENCODER, UINT, USER_PARAM*) ../../third_party/android/platform/external/aac/libAACenc/src/aacenc_lib.cpp:1418 <<application>>+0x21fc54
+  #    #12   0x000042cb3097fe50 in aacEncEncode(HANDLE_AACENCODER const, AACENC_BufDesc const*, AACENC_BufDesc const*, AACENC_InArgs const*, AACENC_OutArgs*) ../../third_party/android/platform/external/aac/libAACenc/src/aacenc_lib.cpp:1732 <<application>>+0x214e50
+  #    #13   0x000042cb30823b58 in CodecAdapterAacEncoder::CreateEncoder(CodecAdapterAacEncoder*, const fuchsia::media::PcmFormat&, const fuchsia::media::AacEncoderSettings&) ../../src/media/codec/codecs/sw/aac/codec_adapter_aac_encoder.cc:514 <<application>>+0xb8b58
+  #    #14   0x000042cb30821f2c in CodecAdapterAacEncoder::BuildStreamFromFormatDetails(CodecAdapterAacEncoder*, const fuchsia::media::FormatDetails&) ../../src/media/codec/codecs/sw/aac/codec_adapter_aac_encoder.cc:334 <<application>>+0xb6f2c
+  #    #15   0x000042cb308214b8 in CodecAdapterAacEncoder::ProcessInput(CodecAdapterAacEncoder*, CodecInputItem) ../../src/media/codec/codecs/sw/aac/codec_adapter_aac_encoder.cc:283 <<application>>+0xb64b8
+  #    #16.1 0x000042cb3082a7c8 in λ(const CodecAdapterAacEncoder::CoreCodecQueueInputFormatDetails::(anon class)*) ../../src/media/codec/codecs/sw/aac/codec_adapter_aac_encoder.cc:118 <<application>>+0xbf7c8
+  #    #16   0x000042cb3082a7c8 in fit::internal::target<(lambda at../../src/media/codec/codecs/sw/aac/codec_adapter_aac_encoder.cc:117:12), false, false, void>::invoke(void*) ../../sdk/lib/fit/include/lib/fit/function_internal.h:106 <<application>>+0xbf7c8
+  #    #17   0x000042cb30845680 in fit::internal::function_base<16, false, void()>::invoke(const fit::internal::function_base<16, false, void ()>*) ../../sdk/lib/fit/include/lib/fit/function_internal.h:280 <<application>>+0xda680
+  #    #18.1 0x000042cb30d9ddd8 in fit::function_impl<16, false, void()>::operator()(const fit::function_impl<16, false, void ()>*) ../../sdk/lib/fit/include/lib/fit/function.h:287 <<application>>+0x632dd8
+  #    #18   0x000042cb30d9ddd8 in async::internal::RetainedTask::Handler(async_dispatcher_t*, async_task_t*, zx_status_t) ../../zircon/system/ulib/async/task.cc:25 <<application>>+0x632dd8
+  #    #19.3 0x000042cb30da0410 in async_loop_dispatch_task(async_loop_t*, async_task_t*, zx_status_t) ../../zircon/system/ulib/async-loop/loop.c:425 <<application>>+0x635410
+  #    #19.2 0x000042cb30da0410 in async_loop_dispatch_tasks(async_loop_t*) ../../zircon/system/ulib/async-loop/loop.c:406 <<application>>+0x635410
+  #    #19.1 0x000042cb30da0410 in async_loop_run_once(async_loop_t*, zx_time_t) ../../zircon/system/ulib/async-loop/loop.c:293 <<application>>+0x635410
+  #    #19   0x000042cb30da0410 in async_loop_run(async_loop_t*, zx_time_t, _Bool) ../../zircon/system/ulib/async-loop/loop.c:260 <<application>>+0x635410
+  #    #20   0x000042cb30da135c in async_loop_run_thread(void*) ../../zircon/system/ulib/async-loop/loop.c:812 <<application>>+0x63635c
+  #    #21   0x0000807d37469e08 in start_c11(void*) ../../zircon/third_party/ulib/musl/pthread/pthread_create.c:45 <libc.so>+0xb8e08
+  #    #22   0x0000807d375717dc in thread_trampoline(uintptr_t, uintptr_t) ../../zircon/system/ulib/runtime/thread.c:94 <libc.so>+0x1c07dc
+  # SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior    #0    0x0000000000000000 is not covered by any module
+  configs += [ ":undefined_behavior_left_shift_negative_number" ]
+}
+
+config("undefined_behavior_left_shift_negative_number") {
+  cflags = [ "-fno-sanitize=shift" ]
 }
