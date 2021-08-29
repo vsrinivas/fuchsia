@@ -38,7 +38,7 @@ class VirtioBalloonTest : public TestWithDevice {
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&inflate_queue_, &deflate_queue_, &stats_queue_};
-    for (size_t i = 0; i < kNumQueues; i++) {
+    for (uint16_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
       status = balloon_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());

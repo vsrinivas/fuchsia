@@ -78,7 +78,7 @@ class VirtioNetTest : public TestWithDevice,
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&rx_queue_, &tx_queue_};
-    for (size_t i = 0; i < kNumQueues; i++) {
+    for (uint16_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
       net_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used(), [] {});

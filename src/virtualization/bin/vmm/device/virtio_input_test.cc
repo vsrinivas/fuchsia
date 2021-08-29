@@ -34,7 +34,7 @@ class VirtioInputTest : public TestWithDevice {
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&event_queue_};
-    for (size_t i = 0; i < kNumQueues; i++) {
+    for (uint16_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
       status = input_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
@@ -106,10 +106,10 @@ TEST_F(VirtioInputTest, PointerMove) {
 
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_1->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_X, event_1->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxX * pointer.x), event_1->value);
+  EXPECT_EQ(static_cast<uint32_t>(std::ceil(kInputAbsMaxX * pointer.x)), event_1->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_2->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_Y, event_2->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxY * pointer.y), event_2->value);
+  EXPECT_EQ(static_cast<uint32_t>(std::ceil(kInputAbsMaxY * pointer.y)), event_2->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_SYN, event_3->type);
 }
 
@@ -141,10 +141,10 @@ TEST_F(VirtioInputTest, PointerUp) {
 
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_1->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_X, event_1->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxX * pointer.x), event_1->value);
+  EXPECT_EQ(static_cast<uint32_t>(std::ceil(kInputAbsMaxX * pointer.x)), event_1->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_2->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_Y, event_2->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxY * pointer.y), event_2->value);
+  EXPECT_EQ(static_cast<uint32_t>(std::ceil(kInputAbsMaxY * pointer.y)), event_2->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_KEY, event_3->type);
   EXPECT_EQ(kButtonTouchCode, event_3->code);
   EXPECT_EQ(VIRTIO_INPUT_EV_KEY_RELEASED, event_3->value);

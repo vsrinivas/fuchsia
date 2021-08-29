@@ -64,7 +64,7 @@ class VirtioBlockTest : public TestWithDevice {
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&request_queue_};
-    for (size_t i = 0; i < kNumQueues; i++) {
+    for (uint16_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(kQueueDataSize * i, kQueueDataSize);
       status = block_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
@@ -257,11 +257,12 @@ TEST_F(VirtioBlockTest, Write) {
   };
   std::vector<uint8_t> sector(kBlockSectorSize, UINT8_MAX);
   uint8_t* blk_status;
-  zx_status_t status = DescriptorChainBuilder(request_queue_)
-                           .AppendReadableDescriptor(&header, sizeof(header))
-                           .AppendReadableDescriptor(sector.data(), sector.size())
-                           .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
-                           .Build();
+  zx_status_t status =
+      DescriptorChainBuilder(request_queue_)
+          .AppendReadableDescriptor(&header, sizeof(header))
+          .AppendReadableDescriptor(sector.data(), static_cast<uint32_t>(sector.size()))
+          .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
+          .Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = block_->NotifyQueue(0);
@@ -281,12 +282,13 @@ TEST_F(VirtioBlockTest, WriteMultipleDescriptors) {
   std::vector<uint8_t> block_1(kBlockSectorSize, 0xff);
   std::vector<uint8_t> block_2(kBlockSectorSize, 0xab);
   uint8_t* blk_status;
-  zx_status_t status = DescriptorChainBuilder(request_queue_)
-                           .AppendReadableDescriptor(&header, sizeof(header))
-                           .AppendReadableDescriptor(block_1.data(), block_1.size())
-                           .AppendReadableDescriptor(block_2.data(), block_2.size())
-                           .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
-                           .Build();
+  zx_status_t status =
+      DescriptorChainBuilder(request_queue_)
+          .AppendReadableDescriptor(&header, sizeof(header))
+          .AppendReadableDescriptor(block_1.data(), static_cast<uint32_t>(block_1.size()))
+          .AppendReadableDescriptor(block_2.data(), static_cast<uint32_t>(block_2.size()))
+          .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
+          .Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = block_->NotifyQueue(0);
@@ -327,11 +329,12 @@ TEST_F(VirtioBlockTest, SyncWithData) {
   };
   std::vector<uint8_t> sector(kBlockSectorSize);
   uint8_t* blk_status;
-  zx_status_t status = DescriptorChainBuilder(request_queue_)
-                           .AppendReadableDescriptor(&header, sizeof(header))
-                           .AppendReadableDescriptor(sector.data(), sector.size())
-                           .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
-                           .Build();
+  zx_status_t status =
+      DescriptorChainBuilder(request_queue_)
+          .AppendReadableDescriptor(&header, sizeof(header))
+          .AppendReadableDescriptor(sector.data(), static_cast<uint32_t>(sector.size()))
+          .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
+          .Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = block_->NotifyQueue(0);

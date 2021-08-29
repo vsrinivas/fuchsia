@@ -218,7 +218,7 @@ class Pipe : public VirtioWl::Vfd {
       return status;
     }
     if (bytes) {
-      *bytes = info.rx_buf_available;
+      *bytes = static_cast<uint32_t>(info.rx_buf_available);
     }
     if (handles) {
       *handles = 0;
@@ -235,7 +235,7 @@ class Pipe : public VirtioWl::Vfd {
       return status;
     }
     if (actual_bytes) {
-      *actual_bytes = actual;
+      *actual_bytes = static_cast<uint32_t>(actual);
     }
     if (actual_handles) {
       *actual_handles = 0;
@@ -521,7 +521,7 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
   response->vfd_id = request->vfd_id;
   response->flags = VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE;
   response->pfn = addr / PAGE_SIZE;
-  response->size = size;
+  response->size = static_cast<uint32_t>(size);
 }
 
 void VirtioWl::HandleClose(const virtio_wl_ctrl_vfd_t* request, virtio_wl_ctrl_hdr_t* response) {
@@ -870,7 +870,7 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   response->vfd_id = request->vfd_id;
   response->flags = VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE;
   response->pfn = addr / PAGE_SIZE;
-  response->size = size;
+  response->size = static_cast<uint32_t>(size);
   response->dmabuf.stride0 = bytes_per_row;
   response->dmabuf.stride1 = 0;
   response->dmabuf.stride2 = 0;
@@ -1001,7 +1001,7 @@ void VirtioWl::DispatchPendingEvents() {
       }
       // Total message size is NEW commands for each handle, the RECV header,
       // the ID of each VFD and the data.
-      size_t message_size =
+      uint32_t message_size =
           sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(uint32_t) * actual_handles + actual_bytes;
       if (desc.len < message_size) {
         FX_LOGS(ERROR) << "Descriptor is too small for message";
@@ -1106,7 +1106,7 @@ bool VirtioWl::CreatePendingVfds() {
         new_vfd_cmd->hdr.type = VIRTIO_WL_CMD_VFD_NEW;
         new_vfd_cmd->hdr.flags = 0;
         new_vfd_cmd->pfn = vfd->addr() / PAGE_SIZE;
-        new_vfd_cmd->size = vfd->size();
+        new_vfd_cmd->size = static_cast<uint32_t>(vfd->size());
         vfds_[vfd_id] = std::move(vfd);
       } break;
       case ZX_OBJ_TYPE_SOCKET: {

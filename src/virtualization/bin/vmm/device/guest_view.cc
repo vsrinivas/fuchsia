@@ -38,8 +38,8 @@ void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentatio
   }
   if (static_cast<uint32_t>(physical_size().x) != image_info_.width ||
       static_cast<uint32_t>(physical_size().y) != image_info_.height) {
-    image_info_.width = physical_size().x;
-    image_info_.height = physical_size().y;
+    image_info_.width = static_cast<uint32_t>(physical_size().x);
+    image_info_.height = static_cast<uint32_t>(physical_size().y);
     image_info_.stride = image_info_.width * 4;
     image_info_.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
 
@@ -74,8 +74,10 @@ void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentatio
     // matches the image size. Ideally, this would just be a scale transform of
     // the material itself.
     // TODO(fxbug.dev/24174): Materials should support transforms
-    const float scale_x = static_cast<float>(image_info_.width) / scanout_source_width_;
-    const float scale_y = static_cast<float>(image_info_.height) / scanout_source_height_;
+    const auto scale_x =
+        static_cast<float>(image_info_.width) / static_cast<float>(scanout_source_width_);
+    const auto scale_y =
+        static_cast<float>(image_info_.height) / static_cast<float>(scanout_source_height_);
     background_.SetScale(scale_x, scale_y, 1.0f);
 
     scenic::Image image(*memory_, 0u, image_info_);

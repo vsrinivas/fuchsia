@@ -100,9 +100,6 @@ executable("virtio_block_bin") {
     ":block",
     ":virtio",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("virtio_block") {
@@ -158,9 +155,6 @@ executable("virtio_gpu_bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/ui/base_view",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("virtio_gpu") {
@@ -188,9 +182,6 @@ source_set("magma_image") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/syslog",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("virtio_magma_lib") {
@@ -213,9 +204,6 @@ source_set("virtio_magma_lib") {
   if (virtmagma_debug) {
     defines = [ "VIRTMAGMA_DEBUG=1" ]
   }
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("virtio_magma_bin") {
@@ -277,9 +265,6 @@ executable("virtio_net_bin") {
     "//src/connectivity/network/lib/net_interfaces/cpp",
     "//zircon/public/lib/async-cpp",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("virtio_net") {
@@ -304,9 +289,6 @@ executable("virtio_wl_bin") {
     "//src/lib/fsl",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("virtio_wl") {
@@ -355,9 +337,6 @@ executable("device_tests") {
   ]
 
   configs += [ "//build/config:all_source" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("qcow_test_data") {

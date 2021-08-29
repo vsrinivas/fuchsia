@@ -171,7 +171,7 @@ zx_status_t VirtioMagma::HandleCommandDescriptors(VirtioDescriptor* request_desc
       }
 
       memcpy(response_desc->addr, &response, sizeof(response));
-      *used_out = sizeof(response) + response.buffer_size_out;
+      *used_out = static_cast<uint32_t>(sizeof(response) + response.buffer_size_out);
 
       return ZX_OK;
     }

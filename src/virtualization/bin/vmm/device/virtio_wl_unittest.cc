@@ -189,7 +189,7 @@ class VirtioWlTest : public TestWithDevice {
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&in_queue_, &out_queue_};
-    for (size_t i = 0; i < kNumQueues; i++) {
+    for (uint16_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
       status = wl_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
@@ -505,7 +505,7 @@ TEST_F(VirtioWlTest, HandleSend) {
   size_t buffer_size = sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(data);
   uint8_t* buffer;
   ASSERT_EQ(DescriptorChainBuilder(in_queue_)
-                .AppendWritableDescriptor(&buffer, buffer_size)
+                .AppendWritableDescriptor(&buffer, static_cast<uint32_t>(buffer_size))
                 .Build(&descriptor_id),
             ZX_OK);
   virtio_wl_ctrl_vfd_recv_t* recv_header = reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
@@ -554,7 +554,7 @@ TEST_F(VirtioWlTest, Recv) {
   uint8_t* buffer;
   uint16_t descriptor_id[3];
   ASSERT_EQ(DescriptorChainBuilder(in_queue_)
-                .AppendWritableDescriptor(&buffer, buffer_size)
+                .AppendWritableDescriptor(&buffer, static_cast<uint32_t>(buffer_size))
                 .Build(&descriptor_id[0]),
             ZX_OK);
   ASSERT_EQ(DescriptorChainBuilder(in_queue_)

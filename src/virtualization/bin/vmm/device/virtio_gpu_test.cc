@@ -43,7 +43,7 @@ class VirtioGpuTest : public TestWithDevice, public fuchsia::ui::scenic::testing
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&control_queue_, &cursor_queue_};
-    for (size_t i = 0; i < kNumQueues; i++) {
+    for (uint16_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
       status = gpu_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());

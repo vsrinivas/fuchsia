@@ -10,7 +10,7 @@
 
 static constexpr uint32_t kMtu = 1500;
 
-zx_status_t GuestEthernet::Send(void* data, size_t length) {
+zx_status_t GuestEthernet::Send(void* data, uint16_t length) {
   if (!io_vmo_) {
     FX_LOGS(ERROR) << "Send called before IO buffer was set up";
     return ZX_ERR_BAD_STATE;

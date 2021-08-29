@@ -27,7 +27,7 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
 
   // Interface for the virtio-net device to send a received packet to the host
   // netstack.
-  zx_status_t Send(void* offset, size_t length);
+  zx_status_t Send(void* offset, uint16_t length);
 
   // Interface for the virtio-net device to inform the netstack that a packet
   // has finished being transmitted.

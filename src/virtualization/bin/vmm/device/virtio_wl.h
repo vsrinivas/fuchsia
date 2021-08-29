@@ -139,7 +139,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   fuchsia::ui::composition::AllocatorPtr scenic_allocator_;
   VirtioChain out_chain_;
-  size_t bytes_written_for_send_request_ = 0;
+  uint32_t bytes_written_for_send_request_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;
   uint32_t next_vfd_id_ = VIRTWL_NEXT_VFD_ID_BASE;

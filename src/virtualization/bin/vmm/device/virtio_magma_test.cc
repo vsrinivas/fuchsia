@@ -360,7 +360,8 @@ class VirtioMagmaTest : public TestWithDevice {
     uint16_t descriptor_id{};
     void* response_ptr;
     ASSERT_EQ(DescriptorChainBuilder(out_queue_)
-                  .AppendReadableDescriptor(request_buffer.data(), request_buffer.size())
+                  .AppendReadableDescriptor(request_buffer.data(),
+                                            static_cast<uint32_t>(request_buffer.size()))
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
@@ -474,7 +475,8 @@ TEST_F(VirtioMagmaTest, HandleReadNotificationChannel2) {
     void* response_ptr;
     ASSERT_EQ(DescriptorChainBuilder(out_queue_)
                   .AppendReadableDescriptor(&request, sizeof(request))
-                  .AppendWritableDescriptor(&response_ptr, sizeof(response) + request.buffer_size)
+                  .AppendWritableDescriptor(
+                      &response_ptr, static_cast<uint32_t>(sizeof(response) + request.buffer_size))
                   .Build(&descriptor_id),
               ZX_OK);
     magma_->NotifyQueue(0);

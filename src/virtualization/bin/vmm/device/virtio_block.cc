@@ -200,9 +200,9 @@ class RequestStream : public StreamBase {
         continue;
       }
       TRACE_DURATION("machina", "block:id");
-      auto size = std::min<uint32_t>(id_.size() + 1, desc_.len);
+      auto size = std::min<size_t>(id_.size() + 1, desc_.len);
       memcpy(desc_.addr, id_.c_str(), size);
-      request->AddUsed(size);
+      request->AddUsed(static_cast<uint32_t>(size));
     }
   }
 

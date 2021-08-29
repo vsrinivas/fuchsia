@@ -144,8 +144,7 @@ vk::Result VulkanImageCreator::InitVulkan(uint32_t physical_device_index) {
     }
 
     if (queue_family_index == queue_families.size()) {
-      LOG_VERBOSE("Failed to find queue family with flags 0x%x",
-                  static_cast<uint32_t>(queue_flags));
+      LOG_VERBOSE("Failed to find queue family with flags %#x", static_cast<uint32_t>(queue_flags));
       return vk::Result::eErrorInitializationFailed;
     }
 
@@ -506,7 +505,7 @@ static magma_status_t MagmaStatus(vk::Result result) {
   }
 }
 
-static vk::Format DrmFormatToVulkanFormat(uint32_t drm_format) {
+static vk::Format DrmFormatToVulkanFormat(uint64_t drm_format) {
   switch (drm_format) {
     case DRM_FORMAT_ARGB8888:
     case DRM_FORMAT_XRGB8888:
@@ -515,11 +514,11 @@ static vk::Format DrmFormatToVulkanFormat(uint32_t drm_format) {
     case DRM_FORMAT_XBGR8888:
       return vk::Format::eR8G8B8A8Unorm;
   }
-  LOG_VERBOSE("Unhandle DRM format: 0x%x", drm_format);
+  LOG_VERBOSE("Unhandle DRM format: %#lx", drm_format);
   return vk::Format::eUndefined;
 }
 
-static fuchsia_sysmem::wire::PixelFormatType DrmFormatToSysmemFormat(uint32_t drm_format) {
+static fuchsia_sysmem::wire::PixelFormatType DrmFormatToSysmemFormat(uint64_t drm_format) {
   switch (drm_format) {
     case DRM_FORMAT_ARGB8888:
     case DRM_FORMAT_XRGB8888:
@@ -528,7 +527,7 @@ static fuchsia_sysmem::wire::PixelFormatType DrmFormatToSysmemFormat(uint32_t dr
     case DRM_FORMAT_XBGR8888:
       return fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8;
   }
-  LOG_VERBOSE("Unhandle DRM format: 0x%x", drm_format);
+  LOG_VERBOSE("Unhandle DRM format: %#lx", drm_format);
   return fuchsia_sysmem::wire::PixelFormatType::kInvalid;
 }
 
@@ -543,7 +542,7 @@ static uint64_t DrmModifierToSysmemModifier(uint64_t modifier) {
     case I915_FORMAT_MOD_Yf_TILED:
       return fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled;
   }
-  LOG_VERBOSE("Unhandle DRM modifier: 0x%lx", modifier);
+  LOG_VERBOSE("Unhandle DRM modifier: %#lx", modifier);
   return fuchsia_sysmem::wire::kFormatModifierInvalid;
 }
 
@@ -560,19 +559,19 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
   assert(vmo_out);
 
   if (create_info->flags & ~MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE) {
-    LOG_VERBOSE("Invalid flags: 0x%lx", create_info->flags);
+    LOG_VERBOSE("Invalid flags: %#lx", create_info->flags);
     return MAGMA_STATUS_INVALID_ARGS;
   }
 
   vk::Format vk_format = DrmFormatToVulkanFormat(create_info->drm_format);
   if (vk_format == vk::Format::eUndefined) {
-    LOG_VERBOSE("Invalid format: 0x%lx", create_info->drm_format);
+    LOG_VERBOSE("Invalid format: %#lx", create_info->drm_format);
     return MAGMA_STATUS_INVALID_ARGS;
   }
 
   auto sysmem_format = DrmFormatToSysmemFormat(create_info->drm_format);
   if (sysmem_format == fuchsia_sysmem::wire::PixelFormatType::kInvalid) {
-    LOG_VERBOSE("Invalid format: 0x%lx", create_info->drm_format);
+    LOG_VERBOSE("Invalid format: %#lx", create_info->drm_format);
     return MAGMA_STATUS_INVALID_ARGS;
   }
 
@@ -589,7 +588,7 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
 
       uint64_t modifier = DrmModifierToSysmemModifier(create_info->drm_format_modifiers[i]);
       if (modifier == fuchsia_sysmem::wire::kFormatModifierInvalid) {
-        LOG_VERBOSE("Invalid modifier: 0x%lx", create_info->drm_format_modifiers[i]);
+        LOG_VERBOSE("Invalid modifier: %#lx", create_info->drm_format_modifiers[i]);
         return MAGMA_STATUS_INVALID_ARGS;
       }
 
