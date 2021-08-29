@@ -22,20 +22,20 @@ class RtcMc146818 {
   virtual ~RtcMc146818() = default;
 
   enum class Register : uint8_t {
-    kSeconds      = 0,
+    kSeconds = 0,
     kSecondsAlarm = 1,
-    kMinutes      = 2,
+    kMinutes = 2,
     kMinutesAlarm = 3,
-    kHours        = 4,
-    kHoursAlarm   = 5,
-    kDayOfWeek    = 6,
-    kDayOfMonth   = 7,
-    kMonth        = 8,
-    kYear         = 9,
-    kA            = 0xa,
-    kB            = 0xb,
-    kC            = 0xc,
-    kCentury      = 0x32,
+    kHours = 4,
+    kHoursAlarm = 5,
+    kDayOfWeek = 6,
+    kDayOfMonth = 7,
+    kMonth = 8,
+    kYear = 9,
+    kA = 0xa,
+    kB = 0xb,
+    kC = 0xc,
+    kCentury = 0x32,
   };
   constexpr static bool IsValidRegister(uint8_t reg) {
     return reg <= static_cast<uint8_t>(Register::kC) ||

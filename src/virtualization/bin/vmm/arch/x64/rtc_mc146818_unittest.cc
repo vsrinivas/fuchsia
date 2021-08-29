@@ -32,20 +32,21 @@ TEST(RtcMc146818Test, RegistersOnReset) {
   TestRtcMc146818 dut;
   dut.now = 1626889889;
 
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kSeconds),      0x29);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kSeconds), 0x29);
   EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kSecondsAlarm), 0x00);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMinutes),      0x51);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMinutes), 0x51);
   EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMinutesAlarm), 0x00);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kHours),        0x17);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kHoursAlarm),   0x00);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kDayOfWeek),    0x04);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kDayOfMonth),   0x21);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMonth),        0x07);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kYear),         0x21);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kCentury),      0x20);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kHours), 0x17);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kHoursAlarm), 0x00);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kDayOfWeek), 0x04);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kDayOfMonth), 0x21);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMonth), 0x07);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kYear), 0x21);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kCentury), 0x20);
 
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kA), 0b00100000); // Tick rate: 1 second per second
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kB), 0b00000010); // 24 hour clock
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kA),
+            0b00100000);  // Tick rate: 1 second per second
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kB), 0b00000010);  // 24 hour clock
   EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kC), 0b00000000);
 }
 
@@ -83,34 +84,35 @@ TEST(RtcMc146818Test, UpdateTime) {
   // 808522787 == 1995-08-15T21:39:47Z (Tuesday)
   uint8_t value;
   EXPECT_EQ(dut.ReadRegister(RtcMc146818::Register::kB, &value), ZX_OK);
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kB, value | (1 << 7)), ZX_OK); // B = B | SET
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kSeconds,    0x47), ZX_OK);
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kMinutes,    0x39), ZX_OK);
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kHours,      0x21), ZX_OK);
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kDayOfWeek,  0x03), ZX_OK);
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kB, value | (1 << 7)), ZX_OK);  // B = B | SET
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kSeconds, 0x47), ZX_OK);
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kMinutes, 0x39), ZX_OK);
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kHours, 0x21), ZX_OK);
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kDayOfWeek, 0x03), ZX_OK);
 
   // Time passing during a time change should not cause incorrect results
   ++dut.now;
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kSeconds),   0x47);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMinutes),   0x39);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kHours),     0x21);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kSeconds), 0x47);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMinutes), 0x39);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kHours), 0x21);
   EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kDayOfWeek), 0x03);
 
   EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kDayOfMonth, 0x15), ZX_OK);
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kMonth,      0x08), ZX_OK);
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kYear,       0x95), ZX_OK);
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kCentury,    0x19), ZX_OK);
-  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kB, value & ~(1 << 7)), ZX_OK); // B = B & ~SET
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kMonth, 0x08), ZX_OK);
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kYear, 0x95), ZX_OK);
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kCentury, 0x19), ZX_OK);
+  EXPECT_EQ(dut.WriteRegister(RtcMc146818::Register::kB, value & ~(1 << 7)),
+            ZX_OK);  // B = B & ~SET
 
   dut.now += 20;
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kSeconds),    0x07);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMinutes),    0x40);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kHours),      0x21);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kDayOfWeek),  0x03);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kSeconds), 0x07);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMinutes), 0x40);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kHours), 0x21);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kDayOfWeek), 0x03);
   EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kDayOfMonth), 0x15);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMonth),      0x08);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kYear),       0x95);
-  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kCentury),    0x19);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kMonth), 0x08);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kYear), 0x95);
+  EXPECT_EQ(ReadRegister(dut, RtcMc146818::Register::kCentury), 0x19);
 }
 
 }  // namespace
