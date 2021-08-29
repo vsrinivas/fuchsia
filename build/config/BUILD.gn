@@ -1000,7 +1000,6 @@ config("Wno-conversion") {
     "//src/ui/tools/tiles_ctl:*",
     "//src/virtualization/bin/guest:*",
     "//src/virtualization/bin/guest_manager:*",
-    "//src/virtualization/bin/vmm:*",
     "//src/virtualization/bin/vmm/device:*",
     "//src/virtualization/third_party/fdt:*",
     "//third_party/acpica/*",

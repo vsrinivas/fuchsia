@@ -173,7 +173,8 @@ static uint32_t typer(uint32_t num_interrupts, uint8_t num_cpus,
   typer |= set_bits(num_cpus - 1, 7, 5);
   if (type == fuchsia::sysinfo::InterruptControllerType::GIC_V3) {
     // Take log2 of num_interrupts
-    uint8_t num_bits = (sizeof(num_interrupts) * CHAR_BIT) - __builtin_clz(num_interrupts - 1);
+    const auto num_bits =
+        static_cast<uint8_t>(sizeof(num_interrupts) * CHAR_BIT - __builtin_clz(num_interrupts - 1));
     typer |= set_bits(num_bits - 1, 23, 19);
   }
   return typer;
@@ -317,7 +318,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) {
   switch (static_cast<GicdRegister>(addr)) {
     case GicdRegister::TYPE: {
       std::lock_guard<std::mutex> lock(mutex_);
-      value->u32 = typer(kNumInterrupts, redistributors_.size(), type_);
+      value->u32 = typer(kNumInterrupts, static_cast<uint8_t>(redistributors_.size()), type_);
       return ZX_OK;
     }
     case GicdRegister::ICFG0:
@@ -344,7 +345,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) {
     case GicdRegister::ITARGETS0... GicdRegister::ITARGETS7: {
       // GIC Architecture Spec 4.3.12: Each field of ITARGETS0 to ITARGETS7
       // returns a mask that corresponds only to the current processor.
-      const uint8_t mask = 1u << Vcpu::GetCurrent()->id();
+      const auto mask = static_cast<uint8_t>(1 << Vcpu::GetCurrent()->id());
       for (uint8_t i = 0; i < value->access_size; i++) {
         value->data[i] = mask;
       }
@@ -368,7 +369,8 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) {
         value->u32 = 0;
         return ZX_OK;
       }
-      uint32_t vector = (addr - static_cast<uint64_t>(GicdRegister::IROUTE32)) / value->access_size;
+      const auto vector = static_cast<uint32_t>(
+          (addr - static_cast<uint64_t>(GicdRegister::IROUTE32)) / value->access_size);
       value->u64 = cpu_masks_[vector - kSpiBase];
       if (value->u64 == UINT8_MAX) {
         value->u64 |= kGicdIrouteIRMMask;
@@ -436,7 +438,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       if (affinity_routing_) {
         return ZX_OK;
       }
-      uint32_t spi = addr - static_cast<uint64_t>(GicdRegister::ITARGETS8);
+      auto spi = static_cast<uint32_t>(addr - static_cast<uint64_t>(GicdRegister::ITARGETS8));
       for (uint8_t i = 0; i < value.access_size; i++) {
         const uint8_t cpu_mask = value.data[i];
         cpu_masks_[spi + i] = cpu_mask;
@@ -458,10 +460,10 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
           cpu_mask = sgi.cpu_mask;
           break;
         case InterruptTarget::ALL_BUT_LOCAL:
-          cpu_mask = ~(1u << Vcpu::GetCurrent()->id());
+          cpu_mask = ~static_cast<uint8_t>(1 << Vcpu::GetCurrent()->id());
           break;
         case InterruptTarget::LOCAL:
-          cpu_mask = 1u << Vcpu::GetCurrent()->id();
+          cpu_mask = static_cast<uint8_t>(1 << Vcpu::GetCurrent()->id());
           break;
         default:
           return ZX_ERR_NOT_SUPPORTED;
@@ -501,7 +503,8 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       if (!affinity_routing_) {
         return ZX_OK;
       }
-      uint32_t vector = (addr - static_cast<uint64_t>(GicdRegister::IROUTE32)) / value.access_size;
+      auto vector = static_cast<uint32_t>((addr - static_cast<uint64_t>(GicdRegister::IROUTE32)) /
+                                          value.access_size);
       uint8_t cpu_mask = UINT8_MAX;
       if (!(value.u64 & kGicdIrouteIRMMask)) {
         cpu_mask &= value.u64;
@@ -617,7 +620,8 @@ zx_status_t GicDistributor::ConfigureDtb(void* dtb) const {
     std::lock_guard<std::mutex> lock(mutex_);
     reg_prop[3] = kGicv3RedistributorStride * redistributors_.size();
   }
-  int ret = fdt_setprop_string(dtb, gic_off, "compatible", compatible);
+  int ret =
+      fdt_setprop(dtb, gic_off, "compatible", compatible, static_cast<int>(strlen(compatible) + 1));
   if (ret != 0) {
     gic_dtb_error("compatible");
     return ZX_ERR_BAD_STATE;

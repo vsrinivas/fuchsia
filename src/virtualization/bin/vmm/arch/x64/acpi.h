@@ -17,7 +17,7 @@ struct AcpiConfig {
   const char* dsdt_path;
   const char* mcfg_path;
   zx_vaddr_t io_apic_addr;
-  size_t cpus;
+  uint8_t cpus;
 };
 
 zx_status_t create_acpi_table(const struct AcpiConfig& cfg, const PhysMem& phys_mem);

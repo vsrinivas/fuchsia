@@ -273,8 +273,8 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
     FX_LOGS(ERROR) << "Command line is too long";
     return ZX_ERR_OUT_OF_RANGE;
   }
-  uint32_t cmdline_off = phys_mem.size() - PAGE_SIZE;
-  memcpy(phys_mem.ptr(cmdline_off, cmdline_len), cmdline.c_str(), cmdline_len);
+  auto cmdline_off = static_cast<uint32_t>(phys_mem.size() - PAGE_SIZE);
+  memcpy(phys_mem.ptr(cmdline_off, cmdline_len), cmdline.data(), cmdline_len);
   write_bp(phys_mem, COMMAND_LINE, cmdline_off);
 
   // If specified, load a device tree overlay.
@@ -289,7 +289,7 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
     }
     auto setup_data = phys_mem.read<SetupData>(kDtbOffset);
     setup_data.type = SetupData::Dtb;
-    setup_data.len = dtb_size;
+    setup_data.len = static_cast<uint32_t>(dtb_size);
     phys_mem.write<SetupData>(kDtbOffset, setup_data);
     write_bp(phys_mem, SETUP_DATA, kDtbOffset);
   }
@@ -380,7 +380,7 @@ static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
   }
 
   // Add command line to device tree.
-  int ret = fdt_setprop_string(dtb, off, "bootargs", cmdline.c_str());
+  int ret = fdt_setprop(dtb, off, "bootargs", cmdline.data(), static_cast<int>(cmdline.size() + 1));
   if (ret != 0) {
     device_tree_error_msg("bootargs");
     return ZX_ERR_BAD_STATE;
@@ -408,7 +408,7 @@ static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
   }
   for (int cpu = cfg.cpus() - 1; cpu >= 0; --cpu) {
     std::string name = fxl::StringPrintf("cpu@%d", cpu);
-    int cpu_off = fdt_add_subnode(dtb, cpus_off, name.c_str());
+    int cpu_off = fdt_add_subnode(dtb, cpus_off, name.data());
     if (cpu_off < 0) {
       device_tree_error_msg("cpu");
       return ZX_ERR_BAD_STATE;
@@ -446,7 +446,7 @@ static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
       return;
     }
     std::string name = fxl::StringPrintf("memory@%lx", addr);
-    int memory_off = fdt_add_subnode(dtb, root_off, name.c_str());
+    int memory_off = fdt_add_subnode(dtb, root_off, name.data());
     if (memory_off < 0) {
       status = ZX_ERR_BAD_STATE;
       return;
@@ -481,7 +481,7 @@ static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
 
 static std::string linux_cmdline(std::string cmdline) {
 #if __x86_64__
-  return fxl::StringPrintf("acpi_rsdp=%#lx %s", kAcpiOffset, cmdline.c_str());
+  return fxl::StringPrintf("acpi_rsdp=%#lx %s", kAcpiOffset, cmdline.data());
 #else
   return cmdline;
 #endif

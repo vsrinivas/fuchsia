@@ -45,7 +45,7 @@ zx_status_t Pl031::Read(uint64_t addr, IoValue* value) {
 
   switch (static_cast<Pl031Register>(addr)) {
     case Pl031Register::DR:
-      value->u32 = time(nullptr);
+      value->u32 = static_cast<uint32_t>(time(nullptr));
       return ZX_OK;
 
     case Pl031Register::CR:

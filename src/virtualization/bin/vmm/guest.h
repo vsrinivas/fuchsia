@@ -52,7 +52,7 @@ class Guest {
   zx_status_t StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop);
 
   // Signals an interrupt to the VCPUs indicated by |mask|.
-  zx_status_t Interrupt(uint64_t mask, uint8_t vector);
+  zx_status_t Interrupt(uint64_t mask, uint32_t vector);
 
   const IoMappingList& mappings() const { return mappings_; }
   const VcpuArray& vcpus() const { return vcpus_; }

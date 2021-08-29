@@ -21,13 +21,21 @@ __END_CDECLS;
 namespace {
 
 // PCI ECAM address manipulation.
-constexpr uint8_t pci_ecam_bus(uint64_t addr) { return bits_shift(addr, 27, 20); }
+constexpr uint8_t pci_ecam_bus(uint64_t addr) {
+  return static_cast<uint8_t>(bits_shift(addr, 27, 20));
+}
 
-constexpr uint8_t pci_ecam_device(uint64_t addr) { return bits_shift(addr, 19, 15); }
+constexpr uint8_t pci_ecam_device(uint64_t addr) {
+  return static_cast<uint8_t>(bits_shift(addr, 19, 15));
+}
 
-constexpr uint8_t pci_ecam_function(uint64_t addr) { return bits_shift(addr, 14, 12); }
+constexpr uint8_t pci_ecam_function(uint64_t addr) {
+  return static_cast<uint8_t>(bits_shift(addr, 14, 12));
+}
 
-constexpr uint16_t pci_ecam_register_etc(uint64_t addr) { return bits_shift(addr, 11, 0); }
+constexpr uint16_t pci_ecam_register_etc(uint64_t addr) {
+  return static_cast<uint16_t>(bits_shift(addr, 11, 0));
+}
 
 // The size of an ECAM region depends on values in the MCFG ACPI table. For
 // each ECAM region there is a defined physical base address as well as a bus
@@ -431,7 +439,7 @@ zx_status_t PciDevice::AddCapability(fbl::Span<const uint8_t> payload) {
   }
 
   // Copy the payload and padding into the buffer.
-  size_t cap_start = capabilities_.size();
+  auto cap_start = static_cast<uint8_t>(capabilities_.size());
   capabilities_.insert(capabilities_.end(), payload.begin(), payload.end());
   capabilities_.insert(capabilities_.end(), padding, 0);
 

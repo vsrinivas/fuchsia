@@ -25,6 +25,7 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/dev_mem.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/memory.h"
@@ -72,11 +73,11 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
   // Alias for clarity.
   using complete_zbi_t = zircon_kernel_t;
 
-  if (ZBI_ALIGN(kernel_zbi_off) != kernel_zbi_off) {
+  if (align(kernel_zbi_off, ZBI_ALIGNMENT) != kernel_zbi_off) {
     FX_LOGS(ERROR) << "Kernel ZBI offset has invalid alignment";
     return ZX_ERR_INVALID_ARGS;
   }
-  if (ZBI_ALIGN(data_zbi_off) != data_zbi_off) {
+  if (align(data_zbi_off, ZBI_ALIGNMENT) != data_zbi_off) {
     FX_LOGS(ERROR) << "Data ZBI offset has invalid alignment";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -109,8 +110,9 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
     kernel_payload_header =
         phys_mem.read<zbi_kernel_t>(kernel_zbi_off + offsetof(complete_zbi_t, data_kernel));
   }
-  const uint32_t reserved_size = offsetof(complete_zbi_t, data_kernel) + kernel_item_header.length +
-                                 kernel_payload_header.reserve_memory_size;
+  const uintptr_t reserved_size = offsetof(complete_zbi_t, data_kernel) +
+                                  kernel_item_header.length +
+                                  kernel_payload_header.reserve_memory_size;
   if (kernel_zbi_off + reserved_size > phys_mem.size()) {
     FX_LOGS(ERROR) << "Zircon kernel memory reservation exceeds guest physical memory";
     return ZX_ERR_OUT_OF_RANGE;

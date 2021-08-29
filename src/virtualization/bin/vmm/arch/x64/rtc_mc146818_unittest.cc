@@ -22,8 +22,9 @@ class TestRtcMc146818 : public RtcMc146818 {
 
 std::optional<uint8_t> ReadRegister(RtcMc146818& dut, RtcMc146818::Register reg) {
   uint8_t value;
-  if (dut.ReadRegister(reg, &value) != ZX_OK)
+  if (dut.ReadRegister(reg, &value) != ZX_OK) {
     return std::nullopt;
+  }
   return value;
 }
 
@@ -67,9 +68,10 @@ TEST(RtcMc146818Test, UnwritableRegisters) {
 
 TEST(RtcMc146818Test, InvalidRegisters) {
   RtcMc146818 dut;
-  for (uint16_t r = 0; r <= 255; ++r) {
-    if (RtcMc146818::IsValidRegister(r))
+  for (uint8_t r = 0; r < UINT8_MAX; ++r) {
+    if (RtcMc146818::IsValidRegister(r)) {
       continue;
+    }
     auto reg = static_cast<RtcMc146818::Register>(r);
     uint8_t value;
     EXPECT_EQ(dut.ReadRegister(reg, &value), ZX_ERR_NOT_SUPPORTED);

@@ -96,11 +96,11 @@ struct TestSocketConnection : public TestConnectionBase<zx::socket> {
     FX_CHECK(zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket) == ZX_OK);
   }
 
-  zx_status_t write(const uint8_t* data, size_t size, size_t* actual) {
+  zx_status_t write(const uint8_t* data, uint32_t size, size_t* actual) {
     return socket.write(0, data, size, actual);
   }
 
-  zx_status_t read(uint8_t* data, size_t size, size_t* actual) {
+  zx_status_t read(uint8_t* data, uint32_t size, size_t* actual) {
     return socket.read(0, data, size, actual);
   }
 };
@@ -113,7 +113,7 @@ struct TestChannelConnection : public TestConnectionBase<zx::channel> {
     FX_CHECK(zx::channel::create(0, &channel, &remote_channel) == ZX_OK);
   }
 
-  zx_status_t write(const uint8_t* data, size_t size, size_t* actual) {
+  zx_status_t write(const uint8_t* data, uint32_t size, size_t* actual) {
     zx_status_t status = channel.write(0, data, size, nullptr, 0);
     if (status == ZX_OK) {
       *actual = size;
@@ -121,7 +121,7 @@ struct TestChannelConnection : public TestConnectionBase<zx::channel> {
     return status;
   }
 
-  zx_status_t read(uint8_t* data, size_t size, size_t* actual) {
+  zx_status_t read(uint8_t* data, uint32_t size, size_t* actual) {
     uint32_t actual_bytes;
     zx_status_t status = channel.read(0, data, nullptr, size, 0, &actual_bytes, nullptr);
     if (status == ZX_OK) {
@@ -190,7 +190,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
         ConnectionRequest{src_cid, src_port, cid, port, std::move(callback)});
   }
 
-  void VerifyHeader(RxBuffer* buffer, uint32_t host_port, uint32_t guest_port, uint32_t len,
+  void VerifyHeader(RxBuffer* buffer, uint32_t host_port, uint32_t guest_port, size_t len,
                     uint16_t op, uint32_t flags) {
     virtio_vsock_hdr_t* header = &buffer->header;
     EXPECT_EQ(header->src_cid, fuchsia::virtualization::HOST_CID);
@@ -265,7 +265,8 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   void HostReadOnPort(uint32_t host_port, Connection* connection,
                       std::vector<uint8_t> expected = kDefaultData) {
     size_t actual;
-    ASSERT_EQ(ZX_OK, connection->write(expected.data(), expected.size(), &actual));
+    ASSERT_EQ(ZX_OK,
+              connection->write(expected.data(), static_cast<uint32_t>(expected.size()), &actual));
     EXPECT_EQ(expected.size(), actual);
 
     RxBuffer* rx_buffer = DoReceive();
@@ -431,7 +432,9 @@ TEST_F(VirtioVsockTest, ConnectEarlyData) {
 
   // Put some initial data on the connection
   size_t actual;
-  ASSERT_EQ(connection.write(kDefaultData.data(), kDefaultData.size(), &actual), ZX_OK);
+  ASSERT_EQ(
+      connection.write(kDefaultData.data(), static_cast<uint32_t>(kDefaultData.size()), &actual),
+      ZX_OK);
 
   HostConnectOnPort(kVirtioVsockHostPort, &connection);
 }

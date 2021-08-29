@@ -266,8 +266,8 @@ zx_status_t VirtioVsock::SocketConnection::WriteCredit(virtio_vsock_hdr_t* heade
     return status;
   }
 
-  header->buf_alloc = info.tx_buf_max;
-  header->fwd_cnt = rx_cnt_ - info.tx_buf_size;
+  header->buf_alloc = static_cast<uint32_t>(info.tx_buf_max);
+  header->fwd_cnt = static_cast<uint32_t>(rx_cnt_ - info.tx_buf_size);
   reported_buf_avail_ = info.tx_buf_max - info.tx_buf_size;
   return reported_buf_avail_ != 0 ? ZX_OK : ZX_ERR_UNAVAILABLE;
 }
@@ -416,7 +416,7 @@ zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue, virtio_vsoc
                                                  VirtioDescriptor* desc, uint32_t* used) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
-    size_t len = std::min(desc->len, PeerFree());
+    uint32_t len = std::min(desc->len, PeerFree());
     uint32_t actual;
     status = channel_.read(0, desc->addr, nullptr, len, 0, &actual, nullptr);
     if (status != ZX_OK) {
@@ -499,7 +499,7 @@ VirtioVsock::VirtioVsock(sys::ComponentContext* context, const PhysMem& phys_mem
 
 uint32_t VirtioVsock::guest_cid() const {
   std::lock_guard<std::mutex> lock(device_config_.mutex);
-  return config_.guest_cid;
+  return static_cast<uint32_t>(config_.guest_cid);
 }
 
 bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port, uint32_t dst_port) const {
@@ -844,7 +844,8 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         // If we don't have a connector then implicitly just refuse any outbound
         // connections. Otherwise send out a request for a connection to the
         // remote CID.
-        connector_->Connect(header->src_cid, header->src_port, header->dst_cid, header->dst_port,
+        connector_->Connect(static_cast<uint32_t>(header->src_cid), header->src_port,
+                            static_cast<uint32_t>(header->dst_cid), header->dst_port,
                             [this, key, buf_alloc = header->buf_alloc, fwd_cnt = header->fwd_cnt](
                                 zx_status_t status, zx::handle handle) {
                               ConnectCallback(key, status, std::move(handle), buf_alloc, fwd_cnt);

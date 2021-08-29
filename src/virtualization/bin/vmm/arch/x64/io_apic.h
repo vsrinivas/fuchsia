@@ -20,8 +20,8 @@ class Guest;
 class IoApic : public IoHandler, public PlatformDevice {
  public:
   static constexpr uint64_t kPhysBase = 0xf8000000;
-  static constexpr size_t kNumRedirects = 48u;
-  static constexpr size_t kNumRedirectOffsets = kNumRedirects * 2;
+  static constexpr uint8_t kNumRedirects = 48u;
+  static constexpr uint8_t kNumRedirectOffsets = kNumRedirects * 2;
 
   // An entry in the redirect table.
   struct RedirectEntry {

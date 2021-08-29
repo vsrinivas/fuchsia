@@ -23,7 +23,7 @@ TEST(IoApic, IndirectRegisterSelect) {
   constexpr uint32_t kMultiplier = 0x04030201;
 
   // Write to all the redirection registers.
-  for (uint32_t i = kFirstRedirectOffset; i <= kLastRedirectOffset; i++) {
+  for (uint8_t i = kFirstRedirectOffset; i <= kLastRedirectOffset; i++) {
     // Select the register.
     ASSERT_EQ(io_apic.Write(kIoApicIoRegSel, IoValue::FromU8(i)), ZX_OK);
 
@@ -38,7 +38,7 @@ TEST(IoApic, IndirectRegisterSelect) {
   }
 
   // Verify the values were retained.
-  for (uint32_t i = kFirstRedirectOffset; i <= kLastRedirectOffset; i++) {
+  for (uint8_t i = kFirstRedirectOffset; i <= kLastRedirectOffset; i++) {
     // Select the register.
     ASSERT_EQ(io_apic.Write(kIoApicIoRegSel, IoValue::FromU8(i)), ZX_OK);
 

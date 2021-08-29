@@ -165,7 +165,7 @@ zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_pt
   return vcpus_[id]->Start();
 }
 
-zx_status_t Guest::Interrupt(uint64_t mask, uint8_t vector) {
+zx_status_t Guest::Interrupt(uint64_t mask, uint32_t vector) {
   std::shared_lock<std::shared_mutex> lock(mutex_);
   for (size_t id = 0; id != kMaxVcpus; ++id) {
     if (!(mask & (1ul << id)) || !vcpus_[id]) {

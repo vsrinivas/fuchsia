@@ -8,7 +8,7 @@
 #include "src/virtualization/bin/vmm/arch/x64/io_apic.h"
 
 // IO APIC register offsets.
-enum IoApicOffset : size_t {
+enum IoApicOffset : uint8_t {
   kIoApicIoRegSel = 0x00,  // I/O register select.
   kIoApicIoWin = 0x10,     // I/O window.
   kIoApicEOIR = 0x40,      // End of interrupt register.
@@ -23,8 +23,8 @@ enum IoApicRegister : uint8_t {
 
 // IO APIC configuration constants.
 constexpr uint8_t kIoApicVersion = 0x20;
-constexpr size_t kFirstRedirectOffset = 0x10;
-constexpr size_t kLastRedirectOffset = kFirstRedirectOffset + IoApic::kNumRedirectOffsets - 1;
+constexpr uint8_t kFirstRedirectOffset = 0x10;
+constexpr uint8_t kLastRedirectOffset = kFirstRedirectOffset + IoApic::kNumRedirectOffsets - 1;
 
 // DESTMOD register.
 constexpr uint8_t kIoApicDestmodPhysical = 0x00;

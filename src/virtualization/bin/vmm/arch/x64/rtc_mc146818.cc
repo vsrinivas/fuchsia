@@ -35,7 +35,7 @@ enum RegisterCFlags : uint8_t {
 
 // Linux expects the RTC to be in BCD mode regardless of the binary mode flag
 // on x86, so we have to convert registers back and forth
-constexpr uint8_t ToBcd(uint8_t binary) {
+constexpr uint8_t ToBcd(int binary) {
   return static_cast<uint8_t>(((binary / 10 % 10) << 4) | (binary % 10));
 }
 constexpr uint8_t FromBcd(uint8_t bcd) { return ((bcd & 0xf0) >> 4) * 10 + (bcd & 0x0f); }

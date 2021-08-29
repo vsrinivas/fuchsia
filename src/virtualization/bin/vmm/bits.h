@@ -10,9 +10,9 @@
 template <typename T>
 static inline constexpr T bit_mask(size_t bits) {
   if (bits >= sizeof(T) * 8) {
-    return static_cast<T>(0) - 1;
+    return static_cast<T>(-1ull);
   }
-  return (static_cast<T>(1) << bits) - 1;
+  return static_cast<T>((1ull << bits) - 1ull);
 }
 
 template <typename T>

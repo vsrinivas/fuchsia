@@ -68,7 +68,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   //
   // Note we're not currently respecting the DELMODE field and instead are only
   // delivering to the fist local APIC that is targeted.
-  uint16_t dest = bits_shift(entry.upper, 31, 24);
+  uint32_t dest = bits_shift(entry.upper, 31, 24);
   return guest_->Interrupt(dest, vector);
 }
 
@@ -80,7 +80,7 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) {
       return ZX_OK;
     }
     case kIoApicIoWin: {
-      uint32_t select_register;
+      uint8_t select_register;
       {
         std::lock_guard<std::mutex> lock(mutex_);
         select_register = select_;
@@ -105,7 +105,7 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     }
     case kIoApicIoWin: {
-      uint32_t select_register;
+      uint8_t select_register;
       {
         std::lock_guard<std::mutex> lock(mutex_);
         select_register = select_;
