@@ -113,7 +113,7 @@ void HostVsockEndpoint::OnShutdown(uint32_t port) {
 }
 
 zx_status_t HostVsockEndpoint::AllocEphemeralPort(uint32_t* port) {
-  size_t value;
+  uint32_t value;
   zx_status_t status = port_bitmap_.Find(false, kFirstEphemeralPort, kLastEphemeralPort, 1, &value);
   if (status != ZX_OK) {
     return ZX_ERR_NO_RESOURCES;

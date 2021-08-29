@@ -5,12 +5,13 @@
 #ifndef SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_
 #define SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_
 
-#include <bitmap/rle-bitmap.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <unordered_map>
+
+#include <bitmap/rle-bitmap.h>
 
 // Per:
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
@@ -51,7 +52,7 @@ class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
   void FreeEphemeralPort(uint32_t port);
 
   AcceptorProvider acceptor_provider_;
-  bitmap::RleBitmap port_bitmap_;
+  bitmap::RleBitmapBase<uint32_t> port_bitmap_;
   fidl::BindingSet<fuchsia::virtualization::HostVsockEndpoint> bindings_;
   std::unordered_map<uint32_t, fuchsia::virtualization::HostVsockAcceptorPtr> listeners_;
 };

@@ -204,8 +204,8 @@ class ConsoleOut {
 
   uint8_t buf_[vsh::kMaxMessageSize];
   bool reading_size_;
-  size_t msg_size_;
-  size_t bytes_left_;
+  uint32_t msg_size_;
+  uint32_t bytes_left_;
 };
 
 }  // namespace

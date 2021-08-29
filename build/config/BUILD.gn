@@ -998,8 +998,6 @@ config("Wno-conversion") {
     "//src/ui/tools/scenic_snapshot_viewer:*",
     "//src/ui/tools/simple-touch:*",
     "//src/ui/tools/tiles_ctl:*",
-    "//src/virtualization/bin/guest:*",
-    "//src/virtualization/bin/guest_manager:*",
     "//src/virtualization/third_party/fdt:*",
     "//third_party/acpica/*",
     "//third_party/cobalt/*",
