@@ -236,11 +236,6 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
   return ZX_OK;
 }
 
-AutoPin::AutoPin(uint16_t vpid)
-    : thread_(Thread::Current::Get()), prev_affinity_(thread_->scheduler_state().hard_affinity()) {}
-
-AutoPin::~AutoPin() { thread_->SetCpuAffinity(prev_affinity_); }
-
 static uint64_t ept_pointer(paddr_t pml4_address) {
   return
       // Physical address of the PML4 page, page aligned.
@@ -775,12 +770,19 @@ Vcpu::~Vcpu() {
     }
   }
 
-  if (vmcs_page_.IsAllocated()) {
+  if (vmcs_page_.IsAllocated() && last_cpu_ != INVALID_CPU) {
+    // Clear VMCS state from the CPU.
+    //
     // The destructor may be called from a different thread, therefore we must
-    // pin the current thread to the same CPU as the VCPU thread.
-    AutoPin pin(vpid_);
-    __UNUSED zx_status_t status = vmclear(vmcs_page_.PhysicalAddress());
-    DEBUG_ASSERT(status == ZX_OK);
+    // IPI the CPU that last run the thread.
+    paddr_t paddr = vmcs_page_.PhysicalAddress();
+    mp_sync_exec(
+        MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_),
+        [](void* paddr) {
+          zx_status_t status = vmclear(reinterpret_cast<paddr_t>(paddr));
+          DEBUG_ASSERT(status == ZX_OK);
+        },
+        reinterpret_cast<void*>(paddr));
   }
 
   __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);

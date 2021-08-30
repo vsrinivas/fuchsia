@@ -241,17 +241,6 @@ class AutoVmcs : public hypervisor::StateInvalidator {
   interrupt_saved_state_t int_state_;
 };
 
-// Pins execution to a CPU within a given scope.
-class AutoPin {
- public:
-  AutoPin(uint16_t vpid);
-  ~AutoPin();
-
- private:
-  Thread* thread_;
-  cpu_mask_t prev_affinity_;
-};
-
 bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VCPU_PRIV_H_

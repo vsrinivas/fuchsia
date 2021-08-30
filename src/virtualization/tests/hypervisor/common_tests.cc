@@ -22,6 +22,7 @@ DECLARE_TEST_FUNCTION(vcpu_resume)
 DECLARE_TEST_FUNCTION(vcpu_read_write_state)
 DECLARE_TEST_FUNCTION(vcpu_interrupt)
 DECLARE_TEST_FUNCTION(guest_set_trap)
+DECLARE_TEST_FUNCTION(exiting_guest)
 
 TEST(Guest, VcpuResume) {
   TestCase test;
@@ -157,6 +158,46 @@ TEST(Guest, VcpuUseAfterThreadExits) {
   test.vcpu.interrupt(kInterruptVector);
   // Shutdown the VCPU after the thread has been shutdown.
   test.vcpu.reset();
+}
+
+// Delete a VCPU from a thread different to the one it last ran on.
+TEST(Guest, VcpuDeleteFromOtherThread) {
+  std::atomic<bool> child_ready = false;
+  std::atomic<bool> child_should_exit = false;
+
+  TestCase test;
+
+  // Create and run a VCPU on a different thread.
+  std::thread t([&]() {
+    // Start the guest.
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, exiting_guest_start, exiting_guest_end));
+    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_MEM, TRAP_ADDR, PAGE_SIZE, zx::port(), kTrapKey),
+              ZX_OK);
+
+    // Run the guest a few times to ensure all kernel state relating to
+    // the guest has been fully initialized (and hence must be torn down
+    // when we delete the VCPU below).
+    for (int i = 0; i < 3; i++) {
+      zx_port_packet_t packet;
+      test.vcpu.resume(&packet);
+    }
+    child_ready.store(true);
+
+    // Don't exit until the main thread has completed its test.
+    while (!child_should_exit.load()) {
+    }
+  });
+
+  // Wait for the child thread to start running its guest.
+  while (!child_ready.load()) {
+  }
+
+  // Delete the VCPU.
+  test.vcpu.reset();
+
+  // Stop the child thread.
+  child_should_exit.store(true);
+  t.join();
 }
 
 }  // namespace

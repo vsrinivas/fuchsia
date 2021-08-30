@@ -451,3 +451,11 @@ FUNCTION vcpu_enable_disable_mmu
 .Lfailure:
     test_failure
 END_FUNCTION
+
+// A guest that just exits each time it is resumed.
+FUNCTION exiting_guest
+    1:
+    mov x0, TRAP_ADDR
+    str xzr, [x0]
+    b  1b
+END_FUNCTION

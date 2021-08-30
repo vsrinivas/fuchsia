@@ -470,3 +470,10 @@ FUNCTION guest_set_trap_with_io_start
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION guest_set_trap_with_io_end
 
+// A guest that just exits each time it is resumed.
+FUNCTION exiting_guest_start
+    1:
+    movq $0, (TRAP_ADDR)
+    jmp  1b
+FUNCTION exiting_guest_end
+
