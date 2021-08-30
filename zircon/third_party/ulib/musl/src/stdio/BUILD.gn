@@ -122,7 +122,26 @@ source_set("stdio") {
 
   configs -= [ "//build/config:symbol_visibility_hidden" ]
 
-  # TODO(42500): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "//build/config/zircon:temporarily_disable_ubsan_do_not_use" ]
+  # TODO(https://fxbug.dev/42500): Update this after the UB is fixed in musl;
+  # see https://www.openwall.com/lists/musl/2021/08/30/1.
+  #
+  # ../../zircon/third_party/ulib/musl/src/stdio/getdelim.c:61:13: runtime error: applying zero offset to null pointer
+  #    #0    0x000042a879acb17f in getdelim(char** restrict, size_t* restrict, int, FILE* restrict) ../../zircon/third_party/ulib/musl/src/stdio/getdelim.c:61 <libc.so>+0x15617f
+  #    #1.2  0x000020d4abc46e37 in ubsan_GetStackTrace() compiler-rt/lib/ubsan/ubsan_diag.cpp:55 <libclang_rt.asan.so>+0x3be37
+  #    #1.1  0x000020d4abc46e37 in MaybePrintStackTrace() compiler-rt/lib/ubsan/ubsan_diag.cpp:53 <libclang_rt.asan.so>+0x3be37
+  #    #1    0x000020d4abc46e37 in ~ScopedReport() compiler-rt/lib/ubsan/ubsan_diag.cpp:389 <libclang_rt.asan.so>+0x3be37
+  #    #2    0x000020d4abc4b1fb in handlePointerOverflowImpl() compiler-rt/lib/ubsan/ubsan_handlers.cpp:809 <libclang_rt.asan.so>+0x401fb
+  #    #3    0x000020d4abc4ad6d in compiler-rt/lib/ubsan/ubsan_handlers.cpp:815 <libclang_rt.asan.so>+0x3fd6d
+  #    #4    0x000042a879acb17f in getdelim(char** restrict, size_t* restrict, int, FILE* restrict) ../../zircon/third_party/ulib/musl/src/stdio/getdelim.c:61 <libc.so>+0x15617f
+  #    #5    0x000042a879acbcc0 in getline(char** restrict, size_t* restrict, FILE* restrict) ../../zircon/third_party/ulib/musl/src/stdio/getline.c:4 <libc.so>+0x156cc0
+  #    #6    0x0000226df262caee in load_server_config(const char*, sshbuf*) ../../third_party/openssh-portable/servconf.c:2397 <<application>>+0xeeaee
+  #    #7    0x0000226df265a9d7 in main(int, char**) ../../third_party/openssh-portable/sshd.c:1714 <<application>>+0x11c9d7
+  #    #8    0x000042a879a371d9 in start_main(const start_params*) ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:139 <libc.so>+0xc21d9
+  #    #9    0x000042a879a37be1 in __libc_start_main(zx_handle_t, int (*)(int, char**, char**)) ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:214 <libc.so>+0xc2be1
+  #    #10   0x0000226df2738500 in _start(zx_handle_t) ../../zircon/system/ulib/c/Scrt1.cc:7 <<application>>+0x1fa500
+  configs += [ ":undefined_behavior_null_pointer_arithmetic" ]
+}
+
+config("undefined_behavior_null_pointer_arithmetic") {
+  cflags = [ "-fno-sanitize=pointer-overflow" ]
 }
