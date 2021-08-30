@@ -1,4 +1,10 @@
+# WLAN drivers team maintains ethernet drivers as well.
+include /src/connectivity/wlan/drivers/OWNERS
+
+# For network-device changes.
 brunodalbo@google.com
-joshconner@google.com
+
 # Driver Framework Team for refactoring.
 include /src/devices/OWNERS
+
+# COMPONENT: Zircon>drivers

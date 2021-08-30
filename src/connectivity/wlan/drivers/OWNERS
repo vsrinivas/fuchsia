@@ -1,11 +1,12 @@
-eyw@google.com
+bjoernj@google.com
+joshconner@google.com
+karlward@google.com
+karthikrish@google.com
 kiettran@google.com
+rsakthi@google.com
 sheu@google.com
 yjlou@google.com
-joshconner@google.com
-karthikrish@google.com
 zhiyichen@google.com
-bjoernj@google.com
 
 # Driver Framework Team for refactoring.
 include /src/devices/OWNERS

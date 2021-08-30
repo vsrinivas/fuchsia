@@ -1,3 +1,3 @@
-include /src/connectivity/ethernet/drivers/OWNERS
+include /src/connectivity/ethernet/OWNERS
 
-# COMPONENT: NetworkStack>drivers
+# COMPONENT: Zircon>drivers
