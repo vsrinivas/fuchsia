@@ -7,7 +7,7 @@ The GCS library provides download support for data from Google Cloud Storage.
 When working on GCS lib, consider using:
 
 ```
-$ fx set [...] --with //src/developer/ffx/lib/gcs:tests
+$ fx set [...] --with //src/lib/gcs:tests
 ```
 
 ### Unit Tests

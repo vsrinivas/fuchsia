@@ -12,9 +12,9 @@ if (is_host) {
     sources = [ "src/main.rs" ]
 
     deps = [
-      "//src/developer/ffx/lib/gcs",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-hyper:fuchsia-hyper",
+      "//src/lib/gcs",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:hyper",
     ]
