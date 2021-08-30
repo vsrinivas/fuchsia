@@ -24,6 +24,7 @@
 #include "../../include/dev.h"
 #include "../../include/errors.h"
 #include "motion.h"
+#include "usb-pd.h"
 
 namespace cros_ec {
 
@@ -144,6 +145,17 @@ zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t*
       zxlogf(INFO, "acpi-cros-ec-motion: failed to initialize: %s", zx_status_get_string(status));
     } else {
       zxlogf(INFO, "acpi-cros-ec-motion: initialized.");
+    }
+  }
+
+  if (controller->SupportsFeature(EC_FEATURE_USB_PD)) {
+    zxlogf(DEBUG, "Supports USB PD");
+    zx_status_t status =
+        AcpiCrOsEcUsbPdDevice::Bind(parent, controller, CreateAcpiHandle(acpi_handle), nullptr);
+    if (status != ZX_OK) {
+      zxlogf(INFO, "acpi-cros-ec-usb-pd: failed to initialize: %s", zx_status_get_string(status));
+    } else {
+      zxlogf(INFO, "acpi-cros-ec-usb-pd: initialized.");
     }
   }
 

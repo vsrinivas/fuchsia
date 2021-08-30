@@ -72,6 +72,9 @@ driver_module("platform-bus-x86-driver") {
     "acpi-dev/dev-cros-ec/acpi.cc",
     "acpi-dev/dev-cros-ec/dev.cc",
     "acpi-dev/dev-cros-ec/motion.cc",
+    "acpi-dev/dev-cros-ec/motion.h",
+    "acpi-dev/dev-cros-ec/usb-pd.cc",
+    "acpi-dev/dev-cros-ec/usb-pd.h",
     "acpi-dev/dev-ec.cc",
     "acpi-dev/dev-lid.cc",
     "acpi-dev/dev-lid.h",
@@ -120,6 +123,7 @@ driver_module("platform-bus-x86-driver") {
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
@@ -289,11 +293,16 @@ test("x86-cros-ec-test") {
     "acpi-dev/dev-cros-ec/dev.h",
     "acpi-dev/dev-cros-ec/motion-test.cc",
     "acpi-dev/dev-cros-ec/motion.cc",
+    "acpi-dev/dev-cros-ec/motion.h",
+    "acpi-dev/dev-cros-ec/usb-pd-test.cc",
+    "acpi-dev/dev-cros-ec/usb-pd.cc",
+    "acpi-dev/dev-cros-ec/usb-pd.h",
   ]
   configs += [ ":config" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -303,8 +312,11 @@ test("x86-cros-ec-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
 }
