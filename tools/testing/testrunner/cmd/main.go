@@ -212,7 +212,6 @@ type tester interface {
 func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, addr net.IPAddr, sshKeyFile, serialSocketPath, outDir string) error {
 	var fuchsiaSinks, localSinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester tester
-	var finalError error
 
 	for _, test := range tests {
 		var t tester
@@ -225,26 +224,22 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 					fuchsiaTester, err = newFuchsiaSSHTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
 				} else {
 					if serialSocketPath == "" {
-						finalError = fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
-						break
+						return fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
 					}
 					fuchsiaTester, err = newFuchsiaSerialTester(ctx, serialSocketPath, perTestTimeout)
 				}
 				if err != nil {
-					finalError = fmt.Errorf("failed to initialize fuchsia tester: %w", err)
-					break
+					return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
 				}
 			}
 			t = fuchsiaTester
 			sinks = &fuchsiaSinks
 		case "linux", "mac":
 			if test.OS == "linux" && runtime.GOOS != "linux" {
-				finalError = fmt.Errorf("cannot run linux tests when GOOS = %q", runtime.GOOS)
-				break
+				return fmt.Errorf("cannot run linux tests when GOOS = %q", runtime.GOOS)
 			}
 			if test.OS == "mac" && runtime.GOOS != "darwin" {
-				finalError = fmt.Errorf("cannot run mac tests when GOOS = %q", runtime.GOOS)
-				break
+				return fmt.Errorf("cannot run mac tests when GOOS = %q", runtime.GOOS)
 			}
 			// Initialize the fuchsia SSH tester to run the snapshot at the end in case
 			// we ran any host-target interaction tests.
@@ -265,14 +260,12 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			t = localTester
 			sinks = &localSinks
 		default:
-			finalError = fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
-			break
+			return fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
 		}
 
 		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr, outDir)
 		if err != nil {
-			finalError = err
-			break
+			return err
 		}
 		for _, result := range results {
 			*sinks = append(*sinks, result.DataSinks)
@@ -299,13 +292,10 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 		return nil
 	}
 
-	if err := finalize(localTester, localSinks); err != nil && finalError == nil {
-		finalError = err
+	if err := finalize(localTester, localSinks); err != nil {
+		return err
 	}
-	if err := finalize(fuchsiaTester, fuchsiaSinks); err != nil && finalError == nil {
-		finalError = err
-	}
-	return finalError
+	return finalize(fuchsiaTester, fuchsiaSinks)
 }
 
 // stdioBuffer is a simple thread-safe wrapper around bytes.Buffer. It
