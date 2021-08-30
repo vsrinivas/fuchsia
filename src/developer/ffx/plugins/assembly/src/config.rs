@@ -329,7 +329,7 @@ where
 {
     let mut data = String::default();
     reader.read_to_string(&mut data).context("Cannot read the config")?;
-    serde_json::from_str(&data).context("Cannot parse the config")
+    serde_json5::from_str(&data).context("Cannot parse the config")
 }
 
 #[cfg(test)]
@@ -356,6 +356,36 @@ mod tests {
               ],
               "update_package_name": "update",
               "base_package_name": "system_image"
+            }
+        "#;
+
+        let mut cursor = std::io::Cursor::new(json);
+        let config: ProductConfig = from_reader(&mut cursor).expect("parse config");
+        assert_eq!(config.version_file, Some(PathBuf::from("path/to/version")));
+    }
+
+    #[test]
+    fn product_from_json5_file() {
+        let json = r#"
+            {
+              // json5 files can have comments in them.
+              version_file: "path/to/version",
+              epoch_file: "path/to/epoch",
+              extra_packages_for_base_package: ["package0"],
+              base_packages: ["package1", "package2"],
+              cache_packages: ["package3", "package4"],
+              kernel_image: "path/to/kernel",
+              kernel_cmdline: ["arg1", "arg2"],
+              // and lists can have trailing commas
+              boot_args: ["arg1", "arg2", ],
+              bootfs_files: [
+                {
+                    source: "path/to/source",
+                    destination: "path/to/destination",
+                }
+              ],
+              update_package_name: "update",
+              base_package_name: "system_image",
             }
         "#;
 
