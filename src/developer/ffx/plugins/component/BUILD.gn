@@ -18,7 +18,6 @@ ffx_plugin("ffx_component") {
     "select:ffx_component_select",
     "show:ffx_component_show",
     "stop:ffx_component_stop",
-    "//src/sys/run_test_suite/ffx/component_test:ffx_component_test",
   ]
 
   sources = [ "src/args.rs" ]
