@@ -73,7 +73,7 @@ static_library("libunwindstack") {
     "//zircon/public/lib/fbl",
   ]
   if (is_mac) {
-    deps += [ "//src/developer/debug/shared:elf_h_on_mac" ]
+    public_deps = [ "//src/developer/debug/shared:elf_h_on_mac" ]
   }
 
   configs += [ "//build/config:Wno-conversion" ]
