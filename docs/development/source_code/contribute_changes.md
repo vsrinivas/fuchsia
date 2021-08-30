@@ -192,66 +192,8 @@ git branch -d <branch_name>
 
 ## Write a change message {#write-a-change-message}
 
-When writing a change message, follow these guidelines:
-
-*   [Add commit message tags](#add-commit-message-tags)
-*   [Add test instructions](#add-test-instructions)
-
-### Add commit message tags {#add-commit-message-tags}
-
-Include `[tags]` in the subject of a commit message to indicate which module,
-library, and app are affected by your change. For instance, use `[docs]` for
-documentation, `[zircon]` for zircon, and `[fidl]` for FIDL.
-
-The following example of a commit message shows the tags in the subject:
-
-<pre>
-<b>[parent][component]</b> Update component in Topaz.
-
-Write the details of a commit message here.
-
-Test: Added test X.
-</pre>
-
-You can view the commit history of the files you've edited to check for the tags
-used previously. See these examples:
-
-*   [https://fuchsia-review.googlesource.com/c/fuchsia/+/441776](https://fuchsia-review.googlesource.com/c/fuchsia/+/441776){:.external}
-*   [https://fuchsia-review.googlesource.com/c/topaz/+/114013](https://fuchsia-review.googlesource.com/c/topaz/+/114013){:.external}
-
-Commit message tags are required. If the subject of a commit message
-doesn't include tags, Gerrit flags your
-change with `Needs Label: Commit-Message-has-tags`.
-
-### Add test instructions {#add-test-instructions}
-
-If a change requires non-obvious manual testing for validation, describe those
-testing steps in the change description beginning with `Test:`, for example:
-
-```none
-Test: Write the test instructions here.
-```
-
-If the instructions are complex, create a bug and provide a link to that bug in
-the change description. If the change doesn't intend to change behavior,
-indicate that fact in the commit message.
-
-In some cases, certain behavior changes cannot be tested because Fuchsia lacks
-some particular piece of infrastructure. If so, create an issue in the tracker
-about the necessary infrastructure support and provide the bug number in the
-change description, in addition to describing how the change is tested manually,
-for example:
-
-```none
-Test: Manually tested that [...]. Automated testing needs US-XXXX.
-```
-
-Developers are responsible for high-quality automated testing of their code.
-Reviewers are responsible for pushing back on changes that do not include
-sufficient tests. See
-[Fuchsia testability rubrics](/docs/concepts/testing/testability_rubric.md) for
-more information on how to introduce testable and tested code in the Fuchsia
-project.
+When writing a change message, follow the [Commit message style
+guide](/docs/contribute/commit-message-style-guide.md).
 
 ## Contribute a change to the API
 

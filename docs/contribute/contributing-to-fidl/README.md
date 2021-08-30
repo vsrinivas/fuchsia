@@ -156,42 +156,8 @@ really well for doing remote work from your laptop.
 
 ### Commit message style guide
 
-#### References to other CLs
-
-To reference another Gerrit change in a commit message, always use
-the `Change-ID`.
-
-Using the `Change-ID` is preferred since:
-
-* The git SHA is only known after a change is merged, and while guidance
-  could be given to use the `Change-Id` in one case, and the git SHA in the
-  other, we prefer a uniform guidance. Furthermore, you cannot reference other
-  repositories using the git SHA.
-* The link to the change is assigned by Gerrit, and is not part of the
-  persistent history of the repository. Should we change the review mechanism,
-  the `Change-Id` will continue to be part of the recorded history, whereas
-  change's number will not. There are also rare occurrences where change
-  numbers may be lost, e.g. due to re-indexing issues.
-
-For instance, to refer to the change that added [RFC-0042] we should use
-`I32b966810d21a249647887fa45b61720ad01714c`, and not the git SHA
-`5d40ee8c42d1b0e4d8b690786da12a0a947c1aaa` or the link to the
-change, https://fuchsia-review.googlesource.com/c/fuchsia/+/284569.
-
-#### Multi-step change
-
-When executing a change that requires multiple steps across various
-repositories, for instance to soft transition APIs defined in one repository and
-used in others, it is preferred to reference the last step taken, and the next
-step to be taken so that reviewers and those looking at the log can understand
-and navigate the totality of the change. When possible, it is encouraged to
-provide all steps to complete the migration in each commit log (but that may be
-impractical in some cases).
-
-For instance:
-
-* [Align Go union unknown data APIs](https://fuchsia-review.googlesource.com/q/Ia6d4ddeaf980e6599c8becbf9339df5b1910be89)
-* [Support for flexible enums](https://fuchsia-review.googlesource.com/q/Id71eb879e4d7dfabe228cc7b4e2fedb7f52db7b7)
+When writing a change message, follow the [Commit message style
+guide][commit-message].
 
 ### C++ style guide
 
@@ -786,6 +752,7 @@ fidl fmt --library my_library.fidl -i
 [fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidldev
 [RFC-0042]: /docs/contribute/governance/rfcs/0042_non_nullable_types.md
 [pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
+[commit-message]: /docs/contribute/commit-message-style-guide.md
 
 [/tools/fidl/fidlc/lib/c_generator.cc]: /tools/fidl/fidlc/lib/c_generator.cc
 [/tools/fidl/fidlc/lib/tables_generator.cc]: /tools/fidl/fidlc/lib/tables_generator.cc
