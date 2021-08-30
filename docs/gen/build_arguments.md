@@ -3874,6 +3874,13 @@ Set to use legacy virtcon implementation.
 
 From //src/bringup/bundles/BUILD.gn:7
 
+### use_legacy_wayland_bridge
+Set this to false to enable new wayland bridge code with Flatland API support
+
+**Current value (from the default):** `true`
+
+From //src/virtualization/bin/wayland/bridge/BUILD.gn:13
+
 ### use_lto
 Use link time optimization (LTO).
 
