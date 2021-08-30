@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/virtualization/tests/hypervisor/constants.h"
+#include "src/virtualization/tests/hypervisor/asm.h"
 
 #define IA32_GS_BASE              0xc0000101
 #define X86_MSR_IA32_STAR         0xc0000081
@@ -23,13 +24,10 @@
 
 .text
 
-// Define new function 'name'.
-// Local label '1:' used by other macros to compute offsets.
-.macro FUNCTION name
-    .global \name
-    .type \name, STT_FUNC
-    \name:
-    1:
+// Architecture-specific callbacks called by the FUNCTION macro.
+.macro arch_function_start name start end
+.endm
+.macro arch_function_end name start end
 .endm
 
 .macro init_gdt start
@@ -145,7 +143,7 @@ end_of_\start:
 .endm
 
 // Test vcpu_resume.
-FUNCTION vcpu_resume_start
+FUNCTION vcpu_resume
     // Test that we do not exit on load/store of CR3.
     mov %cr3, %rax
     mov %rax, %cr3
@@ -161,10 +159,10 @@ FUNCTION vcpu_resume_start
     cpuid
 
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_resume_end
+END_FUNCTION
 
 // Test vcpu_read_state and vcpu_write_state.
-FUNCTION vcpu_read_write_state_start
+FUNCTION vcpu_read_write_state
     add $1, %rax
     add $2, %rcx
     add $3, %rdx
@@ -186,37 +184,37 @@ FUNCTION vcpu_read_write_state_start
     stac // Set AC flag (bit 18)
 
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_read_write_state_end
+END_FUNCTION
 
 // Test vcpu_interrupt.
-FUNCTION vcpu_interrupt_start
+FUNCTION vcpu_interrupt
     init_interrupt_handling vcpu_interrupt_start
     sti
     movq $0, (EXIT_TEST_ADDR)
     jmp .
-FUNCTION vcpu_interrupt_end
+END_FUNCTION
 
 // Test guest_set_trap using a memory-based trap.
-FUNCTION guest_set_trap_start
+FUNCTION guest_set_trap
     movq $0, (TRAP_ADDR)
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION guest_set_trap_end
+END_FUNCTION
 
 // Test guest HLT instruction handling.
-FUNCTION vcpu_hlt_start
+FUNCTION vcpu_hlt
     init_interrupt_handling vcpu_hlt_start
     sti
     hlt
-FUNCTION vcpu_hlt_end
+END_FUNCTION
 
 // Test that pause exiting works correctly.
-FUNCTION vcpu_pause_start
+FUNCTION vcpu_pause
     pause
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_pause_end
+END_FUNCTION
 
 // Test that reading and writing cr0 works correctly.
-FUNCTION vcpu_write_cr0_start
+FUNCTION vcpu_write_cr0
     // Read cr0.
     mov %cr0, %rax
 
@@ -234,10 +232,10 @@ FUNCTION vcpu_write_cr0_start
     mov %cr0, %rax
 
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_write_cr0_end
+END_FUNCTION
 
 // Test writing an invalid value to CR0.
-FUNCTION vcpu_write_invalid_cr0_start
+FUNCTION vcpu_write_invalid_cr0
     init_interrupt_handling vcpu_write_invalid_cr0_start
 
     // Read cr0.
@@ -250,10 +248,10 @@ FUNCTION vcpu_write_invalid_cr0_start
 
     // The previous instruction should generate a GP.
     jmp .
-FUNCTION vcpu_write_invalid_cr0_end
+END_FUNCTION
 
 // Test 32 bit compatibility mode (long mode disabled).
-FUNCTION vcpu_compat_mode_start
+FUNCTION vcpu_compat_mode
     init_gdt vcpu_compat_mode_start
     movq $0, %rbx
     movq $0, %rcx
@@ -321,9 +319,9 @@ vcpu_compat_mode_done:
 
 vcpu_compat_mode_exit:
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_compat_mode_end
+END_FUNCTION
 
-FUNCTION vcpu_syscall_start
+FUNCTION vcpu_syscall
     init_interrupt_handling vcpu_syscall_start
 
     xor %eax, %eax
@@ -346,9 +344,9 @@ vcpu_syscall_ring3:
 
 vcpu_syscall_done:
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_syscall_end
+END_FUNCTION
 
-FUNCTION vcpu_sysenter_start
+FUNCTION vcpu_sysenter
     init_interrupt_handling vcpu_sysenter_start
 
     xor %edx, %edx
@@ -374,9 +372,9 @@ vcpu_sysenter_ring3:
 
 vcpu_sysenter_done:
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_sysenter_end
+END_FUNCTION
 
-FUNCTION vcpu_sysenter_compat_start
+FUNCTION vcpu_sysenter_compat
     init_interrupt_handling vcpu_sysenter_compat_start
 
     xor %edx, %edx
@@ -403,15 +401,15 @@ vcpu_sysenter_compat_ring3:
 
 vcpu_sysenter_compat_done:
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_sysenter_compat_end
+END_FUNCTION
 
-FUNCTION vcpu_vmcall_invalid_number_start
+FUNCTION vcpu_vmcall_invalid_number
     movq $(INVALID_HYPERCALL), %rax
     vmcall
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_vmcall_invalid_number_end
+END_FUNCTION
 
-FUNCTION vcpu_vmcall_invalid_cpl_start
+FUNCTION vcpu_vmcall_invalid_cpl
     init_interrupt_handling vcpu_vmcall_invalid_cpl_start
 
     xor %eax, %eax
@@ -427,9 +425,9 @@ vcpu_vmcall_invalid_cpl_ring3:
     movq $(INVALID_HYPERCALL), %rax
     vmcall
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_vmcall_invalid_cpl_end
+END_FUNCTION
 
-FUNCTION vcpu_extended_registers_start
+FUNCTION vcpu_extended_registers
     // Enable SSE instructions.
     mov %cr4, %rax
     or $(X86_CR4_OSFXSR), %rax
@@ -462,18 +460,18 @@ xmm_data:
     .4byte 0x89abcdef
     .4byte 0xfedcba98
     .4byte 0x76543210
-FUNCTION vcpu_extended_registers_end
+END_FUNCTION
 
 // Test guest_set_trap using an IO-based trap.
-FUNCTION guest_set_trap_with_io_start
+FUNCTION guest_set_trap_with_io
     out %al, $TRAP_PORT
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION guest_set_trap_with_io_end
+END_FUNCTION
 
 // A guest that just exits each time it is resumed.
-FUNCTION exiting_guest_start
+FUNCTION exiting_guest
     1:
     movq $0, (TRAP_ADDR)
     jmp  1b
-FUNCTION exiting_guest_end
+END_FUNCTION
 

@@ -4,6 +4,7 @@
 
 #include <lib/arch/cache.h>
 
+#include "src/virtualization/tests/hypervisor/asm.h"
 #include "src/virtualization/tests/hypervisor/constants.h"
 
 .set ICC_IAR1_EL1,              S3_0_C12_C12_0
@@ -68,48 +69,19 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 .endif
 .endm
 
-// Define new function 'name'.
-//
-// The function should be terminated by a call to the END_FUNCTION macro:
-//
-//   FUNCTION foo
-//       mov x0, #1
-//       add x0, x1, x2
-//   END_FUNCTION
-//
-// Two symbols '<name>_start' and '<name>_end' are defined surrounding the
-// function.
-//
-// Additionally, a macro "exception_vector" is defined within the scope
-// that will skip to default location for the ARM64 exception vectors,
-// when this block of code is copied to location 0 in memory.
-.macro FUNCTION name
-    .align 5
-
-    // Define the symbol "${name}_start".
-    .global \name\()_start
-    .type \name\()_start, STT_FUNC
-    \name\()_start:
-
-    // Define the symbol "name".
-    .global \name
-    .type \name, STT_FUNC
-    \name:
-
-    // Adjusts current text location to position at a specific exception handler.
+// Architecture-specific callbacks called by the FUNCTION macro.
+.macro arch_function_start name start end
+    // Each time we create a function, define a macro that adjusts the current
+    // text location to position at a specific exception handler.
+    //
+    // We need to reset the macro each function, because the offset needs
+    // to be at a fixed location after the function's start.
     .macro exception_vector base offset
         .skip (\base + \offset) - (. - \name)
     .endm
-
-    // Define the end of the current function.
-    .macro END_FUNCTION
-      .purgem exception_vector
-      .purgem END_FUNCTION
-
-      // Define the symbol "${name}_end".
-      .global \name\()_end
-      \name\()_end:
-    .endm
+.endm
+.macro arch_function_end name start end
+    .purgem exception_vector
 .endm
 
 // Signals test completion by writing 0 to EXIT_TEST_ADDR.
