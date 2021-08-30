@@ -702,11 +702,11 @@ static uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t se
     case InterruptDestinationShorthand::NO_SHORTHAND:
       return 1u << icr.destination;
     case InterruptDestinationShorthand::SELF:
-      return 1u << (self - 1);
+      return 1u << self;
     case InterruptDestinationShorthand::ALL_INCLUDING_SELF:
       return UINT64_MAX;
     case InterruptDestinationShorthand::ALL_EXCLUDING_SELF:
-      return ~(1u << (self - 1));
+      return ~(1u << self);
   }
   return 0;
 }

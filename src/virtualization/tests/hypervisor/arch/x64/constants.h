@@ -14,4 +14,9 @@
 // Entry point for the guest.
 #define GUEST_ENTRY 0x2000
 
+// Interrupt vector used for testing IPI.
+//
+// Values less than 32 are reserved by the system: any other vector is fine.
+#define INT_IPI_VECTOR 0x66
+
 #endif  // SRC_VIRTUALIZATION_TESTS_HYPERVISOR_ARCH_X64_CONSTANTS_H_

@@ -22,6 +22,24 @@
 #define CODE_16_SELECTOR          (8<<3)
 #define INVALID_HYPERCALL         0xffffffff
 
+// x2APIC constants
+//
+// See Intel Volume 3, Section 10.12.9: ICR Operation in x2APIC Mode
+
+#define X2APIC_ICR_MSR 0x830                       // Interrupt Command Register MSR
+
+#define X2APIC_ICR_SHORTHAND_NONE 0                // Use destination field
+#define X2APIC_ICR_SHORTHAND_SELF 1                // Send IPI to self
+#define X2APIC_ICR_SHORTHAND_ALL_INCLUDING_SELF 2  // Send IPI to all
+#define X2APIC_ICR_SHORTHAND_ALL_EXCLUDING_SELF 3  // Send IPI to all but self
+
+#define X2APIC_ICR_DEST_MODE_PHYSICAL 0
+#define X2APIC_ICR_DELIVERY_MODE_FIXED 0
+
+#define X2APIC_ICR_FIXED(shorthand, vector)                        \
+  (((shorthand) << 18) | ((X2APIC_ICR_DEST_MODE_PHYSICAL) << 11) | \
+   ((X2APIC_ICR_DELIVERY_MODE_FIXED) << 8) | (vector))
+
 .text
 
 // Architecture-specific callbacks called by the FUNCTION macro.
@@ -473,5 +491,36 @@ FUNCTION exiting_guest
     1:
     movq $0, (TRAP_ADDR)
     jmp  1b
+END_FUNCTION
+
+// A guest that sends a series of IPIs.
+//
+// The test Guest_VcpuIpi ensures that IPIs are send in the following order.
+//
+// Changes here will require the test to be updated too.
+FUNCTION vcpu_ipi
+    mov $X2APIC_ICR_MSR, %ecx
+
+    // Send IPI to all
+    xor %edx, %edx
+    mov $X2APIC_ICR_FIXED(X2APIC_ICR_SHORTHAND_ALL_INCLUDING_SELF, INT_IPI_VECTOR), %eax
+    wrmsr
+
+    // Send IPI to self
+    xor %edx, %edx
+    mov $X2APIC_ICR_FIXED(X2APIC_ICR_SHORTHAND_SELF, INT_IPI_VECTOR), %eax
+    wrmsr
+
+    // Send IPI to others
+    xor %edx, %edx
+    mov $X2APIC_ICR_FIXED(X2APIC_ICR_SHORTHAND_ALL_EXCLUDING_SELF, INT_IPI_VECTOR), %eax
+    wrmsr
+
+    // Send IPI to CPU 2.
+    mov $2, %edx
+    mov $X2APIC_ICR_FIXED(X2APIC_ICR_SHORTHAND_NONE, INT_IPI_VECTOR), %eax
+    wrmsr
+
+    movq $0, (EXIT_TEST_ADDR)
 END_FUNCTION
 

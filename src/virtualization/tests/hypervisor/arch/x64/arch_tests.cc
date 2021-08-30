@@ -8,7 +8,10 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
+#include <array>
+#include <future>
 #include <string>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -20,8 +23,15 @@ constexpr uint32_t kNmiVector = 2u;
 constexpr uint32_t kGpFaultVector = 13u;
 constexpr uint32_t kExceptionVector = 16u;
 
+// Generate an n-bit mask.
+constexpr uint64_t Mask(uint64_t n) { return n >= 64 ? ~0 : (1 << n) - 1; }
+static_assert(Mask(0) == 0);
+static_assert(Mask(4) == 0xf);
+static_assert(Mask(64) == 0xffff'ffff'ffff'ffff);
+
 DECLARE_TEST_FUNCTION(vcpu_read_write_state)
 DECLARE_TEST_FUNCTION(vcpu_interrupt)
+DECLARE_TEST_FUNCTION(vcpu_ipi)
 DECLARE_TEST_FUNCTION(vcpu_hlt)
 DECLARE_TEST_FUNCTION(vcpu_pause)
 DECLARE_TEST_FUNCTION(vcpu_write_cr0)
@@ -192,6 +202,62 @@ TEST(Guest, VcpuException) {
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
   EXPECT_EQ(vcpu_state.rax, kExceptionVector);
+}
+
+TEST(Guest, VcpuIpi) {
+  constexpr size_t kNumCpus = 4;
+  std::promise<void> done;
+  std::future<void> is_done = done.get_future();
+  std::vector<std::thread> threads;
+
+  // Create guest.
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_ipi_start, vcpu_ipi_end));
+
+  // Create 3 more Vcpus, meaning the guest will have 4 in total.
+  threads.reserve(kNumCpus - 1);
+  for (size_t i = 0; i < kNumCpus; i++) {
+    threads.emplace_back([&is_done, guest = test.guest.borrow()]() {
+      // Create a CPU, and then wait until the test is over.
+      zx::vcpu vcpu;
+      ASSERT_EQ(zx::vcpu::create(*guest, /*options=*/0, /*entry=*/0, &vcpu), ZX_OK);
+      is_done.wait();
+    });
+  }
+
+  // The guest will attempt to send IPIs to sets of CPUs in the following order.
+  //
+  // Changes here will need to be synchronised with `vcpu_ipi`.
+  std::array<uint64_t, 4> expected_masks = {
+      0b1111,  // Shorthand all (including self)
+      0b0001,  // Shorthand self
+      0b1110,  // Shorthand all (excluding self)
+      0b0100,  // CPU #2
+  };
+
+  // Each time an IPI is sent the hypervisor will return control to the VMM,
+  // which is responsible for forwarding it to the correct Vcpu. We don't
+  // bother forwarding it, but just allow the guest to keep sending new IPIs.
+  for (uint64_t expected_mask : expected_masks) {
+    // Run the guest.
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+
+    // Exepct an exit indicating an IPI was sent to ourselves.
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_VCPU);
+    EXPECT_EQ(packet.guest_vcpu.type, ZX_PKT_GUEST_VCPU_INTERRUPT);
+    EXPECT_EQ(packet.guest_vcpu.interrupt.vector, INT_IPI_VECTOR);
+    EXPECT_EQ(packet.guest_vcpu.interrupt.mask & Mask(kNumCpus), expected_mask);
+  }
+
+  // Resume once and wait for the guest to send an IPI.
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+
+  // Allow threads to exit.
+  done.set_value();
+  for (std::thread& t : threads) {
+    t.join();
+  }
 }
 
 TEST(Guest, VcpuHlt) {
