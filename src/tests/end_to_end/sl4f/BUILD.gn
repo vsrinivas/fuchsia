@@ -68,7 +68,7 @@ dart_test("sl4f_test_astro_only") {
   ]
 }
 
-dart_test("sl4f_astro_test") {
+dart_test("sl4f_astro_performance_test") {
   sources = [ "performance_astro_test.dart" ]
 
   deps = [
@@ -108,7 +108,7 @@ group("test") {
   testonly = true
 
   deps = [
-    ":sl4f_astro_test($host_toolchain)",
+    ":sl4f_astro_performance_test($host_toolchain)",
     ":sl4f_test($host_toolchain)",
     ":sl4f_test_astro_only($host_toolchain)",
   ]
