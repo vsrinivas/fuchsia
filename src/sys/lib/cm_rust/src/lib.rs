@@ -598,7 +598,7 @@ impl CapabilityDeclCommon for CapabilityDecl {
 #[fidl_decl(fidl_table = "fsys::ServiceDecl")]
 pub struct ServiceDecl {
     pub name: CapabilityName,
-    pub source_path: CapabilityPath,
+    pub source_path: Option<CapabilityPath>,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -606,7 +606,7 @@ pub struct ServiceDecl {
 #[fidl_decl(fidl_table = "fsys::ProtocolDecl")]
 pub struct ProtocolDecl {
     pub name: CapabilityName,
-    pub source_path: CapabilityPath,
+    pub source_path: Option<CapabilityPath>,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -614,7 +614,7 @@ pub struct ProtocolDecl {
 #[fidl_decl(fidl_table = "fsys::DirectoryDecl")]
 pub struct DirectoryDecl {
     pub name: CapabilityName,
-    pub source_path: CapabilityPath,
+    pub source_path: Option<CapabilityPath>,
 
     #[cfg_attr(
         feature = "serde",
@@ -643,7 +643,7 @@ pub struct StorageDecl {
 #[fidl_decl(fidl_table = "fsys::RunnerDecl")]
 pub struct RunnerDecl {
     pub name: CapabilityName,
-    pub source_path: CapabilityPath,
+    pub source_path: Option<CapabilityPath>,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -651,7 +651,7 @@ pub struct RunnerDecl {
 #[fidl_decl(fidl_table = "fsys::ResolverDecl")]
 pub struct ResolverDecl {
     pub name: CapabilityName,
-    pub source_path: CapabilityPath,
+    pub source_path: Option<CapabilityPath>,
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -2072,15 +2072,15 @@ mod tests {
                     capabilities: vec![
                         CapabilityDecl::Service(ServiceDecl {
                             name: "netstack".into(),
-                            source_path: "/netstack".try_into().unwrap(),
+                            source_path: Some("/netstack".try_into().unwrap()),
                         }),
                         CapabilityDecl::Protocol(ProtocolDecl {
                             name: "netstack2".into(),
-                            source_path: "/netstack2".try_into().unwrap(),
+                            source_path: Some("/netstack2".try_into().unwrap()),
                         }),
                         CapabilityDecl::Directory(DirectoryDecl {
                             name: "data".into(),
-                            source_path: "/data".try_into().unwrap(),
+                            source_path: Some("/data".try_into().unwrap()),
                             rights: fio2::Operations::Connect,
                         }),
                         CapabilityDecl::Storage(StorageDecl {
@@ -2092,11 +2092,11 @@ mod tests {
                         }),
                         CapabilityDecl::Runner(RunnerDecl {
                             name: "elf".into(),
-                            source_path: "/elf".try_into().unwrap(),
+                            source_path: Some("/elf".try_into().unwrap()),
                         }),
                         CapabilityDecl::Resolver(ResolverDecl {
                             name: "pkg".into(),
-                            source_path: "/pkg_resolver".try_into().unwrap(),
+                            source_path: Some("/pkg_resolver".try_into().unwrap()),
                         }),
                     ],
                     children: vec![
@@ -2274,6 +2274,23 @@ mod tests {
                 OfferSource::Collection("foo".to_string()),
             ],
             result_type = OfferSource,
+        },
+        fidl_into_and_from_capability_without_path => {
+            input = vec![
+                fsys::ProtocolDecl {
+                    name: Some("foo_protocol".to_string()),
+                    source_path: None,
+                    ..fsys::ProtocolDecl::EMPTY
+                },
+            ],
+            input_type = fsys::ProtocolDecl,
+            result = vec![
+                ProtocolDecl {
+                    name: "foo_protocol".into(),
+                    source_path: None,
+                }
+            ],
+            result_type = ProtocolDecl,
         },
         fidl_into_and_from_storage_capability => {
             input = vec![

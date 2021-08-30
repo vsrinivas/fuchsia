@@ -492,8 +492,10 @@ impl RoutingTest {
         let mut out_dir = OutDir::new();
         for capability in decl.capabilities.iter() {
             let path = match capability {
-                CapabilityDecl::Protocol(ProtocolDecl { source_path, .. }) => Some(source_path),
-                CapabilityDecl::Directory(DirectoryDecl { source_path, .. }) => Some(source_path),
+                CapabilityDecl::Protocol(ProtocolDecl { source_path, .. }) => source_path.as_ref(),
+                CapabilityDecl::Directory(DirectoryDecl { source_path, .. }) => {
+                    source_path.as_ref()
+                }
                 _ => None,
             };
             if let Some(path) = path {

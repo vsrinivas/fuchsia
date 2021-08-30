@@ -33,10 +33,10 @@ lazy_static! {
     pub static ref BINDER_CAPABILITY: ComponentCapability =
         ComponentCapability::Protocol(ProtocolDecl {
             name: BINDER_SERVICE.clone(),
-            source_path: CapabilityPath {
+            source_path: Some(CapabilityPath {
                 basename: "fuchsia.component.Binder".into(),
                 dirname: "svc".into()
-            },
+            }),
         });
 }
 

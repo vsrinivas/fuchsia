@@ -614,7 +614,7 @@ async fn use_runner_from_parent_environment() {
                 )
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                    source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                 })
                 .build(),
         ),
@@ -682,7 +682,7 @@ async fn use_runner_from_environment_in_collection() {
                 }))
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                    source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                 })
                 .build(),
         ),
@@ -751,7 +751,7 @@ async fn use_runner_from_grandparent_environment() {
                 }))
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                    source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                 })
                 .build(),
         ),
@@ -838,7 +838,7 @@ async fn use_runner_from_sibling_environment() {
                 }))
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                    source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                 })
                 .build(),
         ),
@@ -899,7 +899,7 @@ async fn use_runner_from_inherited_environment() {
                 )
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                    source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                 })
                 .build(),
         ),
@@ -970,7 +970,7 @@ async fn use_runner_from_environment_failed() {
                 )
                 .runner(RunnerDecl {
                     name: "runner".into(),
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                    source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                 })
                 // For Stopped event
                 .use_(UseDecl::Event(UseEventDecl {
@@ -1116,7 +1116,7 @@ async fn use_runner_from_environment_not_found() {
                 )
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                    source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                 })
                 .build(),
         ),
@@ -1352,7 +1352,7 @@ async fn use_resolver_from_parent_environment() {
                 }))
                 .resolver(ResolverDecl {
                     name: "base".into(),
-                    source_path: "/svc/fuchsia.sys2.ComponentResolver".parse().unwrap(),
+                    source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
                 })
                 .build(),
         ),
@@ -1431,7 +1431,7 @@ async fn use_resolver_from_grandparent_environment() {
                 )
                 .resolver(ResolverDecl {
                     name: "base".into(),
-                    source_path: "/svc/fuchsia.sys2.ComponentResolver".parse().unwrap(),
+                    source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
                 })
                 .build(),
         ),
@@ -1514,7 +1514,7 @@ async fn resolver_is_not_available() {
             )
             .resolver(ResolverDecl {
                 name: "base".into(),
-                source_path: "/svc/fuchsia.sys2.ComponentResolver".parse().unwrap(),
+                source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
             })
             .build(),
     )];
@@ -1597,7 +1597,7 @@ async fn resolver_component_decl_is_validated() {
             )
             .resolver(ResolverDecl {
                 name: "base".into(),
-                source_path: "/svc/fuchsia.sys2.ComponentResolver".parse().unwrap(),
+                source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
             })
             .build(),
     )];
@@ -1793,7 +1793,7 @@ async fn route_protocol_from_expose() {
         target: ExposeTarget::Parent,
     };
     let expected_protocol_decl =
-        ProtocolDecl { name: "foo".into(), source_path: "/svc/foo".parse().unwrap() };
+        ProtocolDecl { name: "foo".into(), source_path: Some("/svc/foo".parse().unwrap()) };
 
     let components = vec![
         (
@@ -1918,7 +1918,7 @@ async fn list_service_instances_from_collection() {
                 }))
                 .service(ServiceDecl {
                     name: "foo".into(),
-                    source_path: "/svc/foo".try_into().unwrap(),
+                    source_path: Some("/svc/foo".try_into().unwrap()),
                 })
                 .build(),
         ),
@@ -1933,7 +1933,7 @@ async fn list_service_instances_from_collection() {
                 }))
                 .service(ServiceDecl {
                     name: "foo".into(),
-                    source_path: "/svc/foo".try_into().unwrap(),
+                    source_path: Some("/svc/foo".try_into().unwrap()),
                 })
                 .build(),
         ),
@@ -1991,7 +1991,10 @@ async fn list_service_instances_from_collection() {
             component,
         } => {
             assert_eq!(name, CapabilityName("foo".into()));
-            assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
+            assert_eq!(
+                source_path.expect("source path"),
+                "/svc/foo".parse::<CapabilityPath>().unwrap()
+            );
             assert_eq!(component.moniker, vec!["coll:service_child_a:1"].into());
         }
         _ => panic!("bad child capability source"),
@@ -2062,7 +2065,7 @@ async fn use_service_from_sibling_collection() {
                 }))
                 .service(ServiceDecl {
                     name: "my.service.Service".into(),
-                    source_path: "/svc/my.service.Service".try_into().unwrap(),
+                    source_path: Some("/svc/my.service.Service".try_into().unwrap()),
                 })
                 .build(),
         ),
@@ -2078,7 +2081,7 @@ async fn use_service_from_sibling_collection() {
                 }))
                 .service(ServiceDecl {
                     name: "my.service.Service".into(),
-                    source_path: "/svc/my.service.Service".try_into().unwrap(),
+                    source_path: Some("/svc/my.service.Service".try_into().unwrap()),
                 })
                 .build(),
         ),

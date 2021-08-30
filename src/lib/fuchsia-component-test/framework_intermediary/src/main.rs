@@ -993,7 +993,9 @@ impl RealmNode {
             frealmbuilder::Capability::Protocol(_) => {
                 Some(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
                     name: capability_name.as_str().try_into().unwrap(),
-                    source_path: format!("/svc/{}", capability_name).as_str().try_into().unwrap(),
+                    source_path: Some(
+                        format!("/svc/{}", capability_name).as_str().try_into().unwrap(),
+                    ),
                 }))
             }
             frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
@@ -1002,7 +1004,7 @@ impl RealmNode {
                 ..
             }) => Some(cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
                 name: capability_name.as_str().try_into().unwrap(),
-                source_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
+                source_path: Some(path.as_ref().unwrap().as_str().try_into().unwrap()),
                 rights: rights.as_ref().unwrap().clone(),
             })),
             frealmbuilder::Capability::Storage(_) => {
@@ -2099,9 +2101,9 @@ mod tests {
                         capabilities: vec![cm_rust::CapabilityDecl::Protocol(
                             cm_rust::ProtocolDecl {
                                 name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                source_path: "/svc/fidl.examples.routing.echo.Echo"
-                                    .try_into()
-                                    .unwrap(),
+                                source_path: Some(
+                                    "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                ),
                             },
                         )],
                         exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
@@ -2184,9 +2186,9 @@ mod tests {
                         capabilities: vec![cm_rust::CapabilityDecl::Protocol(
                             cm_rust::ProtocolDecl {
                                 name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                source_path: "/svc/fidl.examples.routing.echo.Echo"
-                                    .try_into()
-                                    .unwrap(),
+                                source_path: Some(
+                                    "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                ),
                             },
                         )],
                         offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
@@ -2327,7 +2329,7 @@ mod tests {
                         capabilities: vec![cm_rust::CapabilityDecl::Directory(
                             cm_rust::DirectoryDecl {
                                 name: "example-dir".try_into().unwrap(),
-                                source_path: "/example".try_into().unwrap(),
+                                source_path: Some("/example".try_into().unwrap()),
                                 rights: fio2::RW_STAR_DIR,
                             },
                         )],
@@ -2791,9 +2793,9 @@ mod tests {
                         capabilities: vec![cm_rust::CapabilityDecl::Protocol(
                             cm_rust::ProtocolDecl {
                                 name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                source_path: "/svc/fidl.examples.routing.echo.Echo"
-                                    .try_into()
-                                    .unwrap(),
+                                source_path: Some(
+                                    "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                ),
                             },
                         )],
                         exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
@@ -2891,9 +2893,9 @@ mod tests {
                         capabilities: vec![cm_rust::CapabilityDecl::Protocol(
                             cm_rust::ProtocolDecl {
                                 name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                source_path: "/svc/fidl.examples.routing.echo.Echo"
-                                    .try_into()
-                                    .unwrap(),
+                                source_path: Some(
+                                    "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                ),
                             },
                         )],
                         exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {

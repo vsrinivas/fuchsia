@@ -2113,7 +2113,7 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .directory(cm_rust::DirectoryDecl {
                         name: "diagnostics".into(),
-                        source_path: "/diagnostics".try_into().unwrap(),
+                        source_path: Some("/diagnostics".try_into().unwrap()),
                         rights: *rights::READ_RIGHTS,
                     })
                     .expose(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {

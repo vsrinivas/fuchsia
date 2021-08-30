@@ -316,7 +316,7 @@ mod tests {
             Ok(CapabilitySource::Component {
                 capability: ComponentCapability::Service(ServiceDecl {
                     name: "my.service.Service".into(),
-                    source_path: "/svc/my.service.Service".try_into().unwrap(),
+                    source_path: Some("/svc/my.service.Service".try_into().unwrap()),
                 }),
                 component: self
                     .instances
@@ -372,7 +372,7 @@ mod tests {
                     }))
                     .service(ServiceDecl {
                         name: "my.service.Service".into(),
-                        source_path: "/svc/my.service.Service".try_into().unwrap(),
+                        source_path: Some("/svc/my.service.Service".try_into().unwrap()),
                     })
                     .build(),
             ),
@@ -388,7 +388,7 @@ mod tests {
                     }))
                     .service(ServiceDecl {
                         name: "my.service.Service".into(),
-                        source_path: "/svc/my.service.Service".try_into().unwrap(),
+                        source_path: Some("/svc/my.service.Service".try_into().unwrap()),
                     })
                     .build(),
             ),

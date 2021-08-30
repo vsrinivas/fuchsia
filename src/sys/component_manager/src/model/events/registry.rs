@@ -508,7 +508,7 @@ mod tests {
         );
         let capability = ComponentCapability::Protocol(ProtocolDecl {
             name: "foo".into(),
-            source_path: "/svc/foo".parse().unwrap(),
+            source_path: Some("/svc/foo".parse().unwrap()),
         });
         let source = CapabilitySource::Component {
             capability: capability.clone(),

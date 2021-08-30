@@ -412,7 +412,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .directory(DirectoryDecl {
                         name: "data".into(),
-                        source_path: "/data".try_into().unwrap(),
+                        source_path: Some("/data".try_into().unwrap()),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                     })
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
@@ -499,7 +499,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .directory(DirectoryDecl {
                         name: "data".into(),
-                        source_path: "/data".try_into().unwrap(),
+                        source_path: Some("/data".try_into().unwrap()),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                     })
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
@@ -621,7 +621,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .directory(DirectoryDecl {
                         name: "data".into(),
-                        source_path: "/data".try_into().unwrap(),
+                        source_path: Some("/data".try_into().unwrap()),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                     })
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
@@ -747,7 +747,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .directory(DirectoryDecl {
                         name: "data".into(),
-                        source_path: "/data".try_into().unwrap(),
+                        source_path: Some("/data".try_into().unwrap()),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                     })
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {

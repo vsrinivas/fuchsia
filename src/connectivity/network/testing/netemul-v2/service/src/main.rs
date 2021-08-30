@@ -434,10 +434,10 @@ async fn create_realm_instance(
     }));
     let () = capabilities.push(cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
         name: cm_rust::CapabilityName(DEVFS.to_string()),
-        source_path: cm_rust::CapabilityPath {
+        source_path: Some(cm_rust::CapabilityPath {
             dirname: "/".to_string(),
             basename: DEVFS.to_string(),
-        },
+        }),
         rights: fio2::RW_STAR_DIR,
     }));
     let () = realm.set_component(&netemul_services_moniker, netemul_services).await?;

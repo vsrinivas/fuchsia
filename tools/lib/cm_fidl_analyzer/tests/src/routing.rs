@@ -397,7 +397,7 @@ mod tests {
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".try_into().unwrap(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
                     })
                     .add_lazy_child("b")
                     .build(),
@@ -445,7 +445,7 @@ mod tests {
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".try_into().unwrap(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
                     })
                     .add_lazy_child("b")
                     .build(),
@@ -493,7 +493,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .service(ServiceDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".try_into().unwrap(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
                     })
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
                         source: ExposeSource::Self_,
@@ -559,7 +559,7 @@ mod tests {
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".try_into().unwrap(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
                     })
                     .build(),
             ),

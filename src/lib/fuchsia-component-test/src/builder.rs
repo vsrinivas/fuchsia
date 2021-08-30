@@ -1469,7 +1469,9 @@ mod tests {
                         }),
                         capabilities: vec![CapabilityDecl::Protocol(ProtocolDecl {
                             name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                            source_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            source_path: Some(
+                                "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            ),
                         })],
                         exposes: vec![ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Self_,
@@ -1562,7 +1564,9 @@ mod tests {
                         }),
                         capabilities: vec![CapabilityDecl::Protocol(ProtocolDecl {
                             name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                            source_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            source_path: Some(
+                                "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            ),
                         })],
                         offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                             source: cm_rust::OfferSource::Self_,
@@ -1686,7 +1690,7 @@ mod tests {
                         })],
                         capabilities: vec![CapabilityDecl::Directory(DirectoryDecl {
                             name: "example-dir".try_into().unwrap(),
-                            source_path: "/example".try_into().unwrap(),
+                            source_path: Some("/example".try_into().unwrap()),
                             rights: fio2::RW_STAR_DIR,
                         })],
                         exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {

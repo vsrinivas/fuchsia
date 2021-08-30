@@ -3960,7 +3960,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".try_into().unwrap(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
                     })
                     .add_lazy_child("b")
                     .build(),
@@ -3982,7 +3982,10 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 component,
             }) => {
                 assert_eq!(name, CapabilityName("foo".into()));
-                assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
+                assert_eq!(
+                    source_path.expect("source path"),
+                    "/svc/foo".parse::<CapabilityPath>().unwrap()
+                );
                 assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &a_component));
             }
             _ => panic!("bad capability source"),
@@ -4015,7 +4018,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 ComponentDeclBuilder::new()
                     .service(ServiceDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".try_into().unwrap(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
                     })
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
                         source: ExposeSource::Self_,
@@ -4041,7 +4044,10 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 component,
             }) => {
                 assert_eq!(name, CapabilityName("foo".into()));
-                assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
+                assert_eq!(
+                    source_path.expect("source path"),
+                    "/svc/foo".parse::<CapabilityPath>().unwrap()
+                );
                 assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &b_component));
             }
             _ => panic!("bad capability source"),
@@ -4088,7 +4094,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".try_into().unwrap(),
+                        source_path: Some("/svc/foo".try_into().unwrap()),
                     })
                     .build(),
             ),
@@ -4109,7 +4115,10 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 component,
             }) => {
                 assert_eq!(name, CapabilityName("foo".into()));
-                assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
+                assert_eq!(
+                    source_path.expect("source path"),
+                    "/svc/foo".parse::<CapabilityPath>().unwrap()
+                );
                 assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &c_component));
             }
             _ => panic!("bad capability source"),

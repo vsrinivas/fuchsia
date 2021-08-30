@@ -352,11 +352,11 @@ impl ComponentCapability {
     pub fn source_path(&self) -> Option<&CapabilityPath> {
         match self {
             ComponentCapability::Storage(_) => None,
-            ComponentCapability::Protocol(protocol) => Some(&protocol.source_path),
-            ComponentCapability::Directory(directory) => Some(&directory.source_path),
-            ComponentCapability::Runner(runner) => Some(&runner.source_path),
-            ComponentCapability::Resolver(resolver) => Some(&resolver.source_path),
-            ComponentCapability::Service(service) => Some(&service.source_path),
+            ComponentCapability::Protocol(protocol) => protocol.source_path.as_ref(),
+            ComponentCapability::Directory(directory) => directory.source_path.as_ref(),
+            ComponentCapability::Runner(runner) => runner.source_path.as_ref(),
+            ComponentCapability::Resolver(resolver) => resolver.source_path.as_ref(),
+            ComponentCapability::Service(service) => service.source_path.as_ref(),
             _ => None,
         }
     }

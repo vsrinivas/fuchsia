@@ -1022,11 +1022,11 @@ mod tests {
                     .add_lazy_child("a")
                     .protocol(ProtocolDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".parse().unwrap(),
+                        source_path: Some("/svc/foo".parse().unwrap()),
                     })
                     .directory(DirectoryDecl {
                         name: "baz".into(),
-                        source_path: "/data".parse().unwrap(),
+                        source_path: Some("/data".parse().unwrap()),
                         rights: *rights::READ_RIGHTS,
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -1168,11 +1168,11 @@ mod tests {
                     .add_lazy_child("a")
                     .protocol(ProtocolDecl {
                         name: "foo".into(),
-                        source_path: "/svc/foo".parse().unwrap(),
+                        source_path: Some("/svc/foo".parse().unwrap()),
                     })
                     .directory(DirectoryDecl {
                         name: "baz".into(),
-                        source_path: "/data".parse().unwrap(),
+                        source_path: Some("/data".parse().unwrap()),
                         rights: *rights::READ_RIGHTS,
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {

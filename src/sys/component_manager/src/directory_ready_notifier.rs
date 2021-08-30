@@ -157,7 +157,13 @@ impl DirectoryReadyNotifier {
                 ExposeDecl::Directory(ExposeDirectoryDecl { source_name, target_name, .. }) => {
                     let (source_path, rights) = {
                         if let Some(directory_decl) = decl.find_directory_source(source_name) {
-                            (&directory_decl.source_path, directory_decl.rights)
+                            (
+                                directory_decl
+                                    .source_path
+                                    .as_ref()
+                                    .expect("missing directory source path"),
+                                directory_decl.rights,
+                            )
                         } else {
                             panic!("Missing directory declaration for expose: {:?}", decl);
                         }

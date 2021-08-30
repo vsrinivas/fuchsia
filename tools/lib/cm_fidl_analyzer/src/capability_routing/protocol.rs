@@ -250,7 +250,7 @@ mod tests {
     fn new_protocol_decl(name: CapabilityName) -> ProtocolDecl {
         ProtocolDecl {
             name,
-            source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            source_path: Some(CapabilityPath { dirname: "".to_string(), basename: "".to_string() }),
         }
     }
 

@@ -333,13 +333,13 @@ impl ProtocolDeclBuilder {
     pub fn new(name: &str) -> Self {
         Self(cm_rust::ProtocolDecl {
             name: name.into(),
-            source_path: format!("/svc/foo").parse().unwrap(),
+            source_path: Some(format!("/svc/foo").parse().unwrap()),
         })
     }
 
     /// Sets the source path.
     pub fn path(mut self, path: &str) -> Self {
-        self.0.source_path = path.parse().unwrap();
+        self.0.source_path = Some(path.parse().unwrap());
         self
     }
 
@@ -364,14 +364,14 @@ impl DirectoryDeclBuilder {
     pub fn new(name: &str) -> Self {
         Self(cm_rust::DirectoryDecl {
             name: name.into(),
-            source_path: format!("/data/foo").parse().unwrap(),
+            source_path: Some(format!("/data/foo").parse().unwrap()),
             rights: *READ_RIGHTS,
         })
     }
 
     /// Sets the source path.
     pub fn path(mut self, path: &str) -> Self {
-        self.0.source_path = path.parse().unwrap();
+        self.0.source_path = Some(path.parse().unwrap());
         self
     }
 

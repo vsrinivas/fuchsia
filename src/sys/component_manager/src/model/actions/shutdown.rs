@@ -2234,7 +2234,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceD".into(),
-                        source_path: "/svc/serviceD".parse().unwrap(),
+                        source_path: Some("/svc/serviceD".parse().unwrap()),
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -2385,7 +2385,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceD".into(),
-                        source_path: "/svc/serviceD".parse().unwrap(),
+                        source_path: Some("/svc/serviceD".parse().unwrap()),
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -2400,7 +2400,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceE".into(),
-                        source_path: "/svc/serviceE".parse().unwrap(),
+                        source_path: Some("/svc/serviceE".parse().unwrap()),
                     })
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
@@ -2593,7 +2593,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceD".into(),
-                        source_path: "/svc/serviceD".parse().unwrap(),
+                        source_path: Some("/svc/serviceD".parse().unwrap()),
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -2608,7 +2608,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceE".into(),
-                        source_path: "/svc/serviceE".parse().unwrap(),
+                        source_path: Some("/svc/serviceE".parse().unwrap()),
                     })
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
@@ -2766,7 +2766,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceC".into(),
-                        source_path: "/svc/serviceC".parse().unwrap(),
+                        source_path: Some("/svc/serviceC".parse().unwrap()),
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -2862,7 +2862,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceC".into(),
-                        source_path: "/svc/serviceC".parse().unwrap(),
+                        source_path: Some("/svc/serviceC".parse().unwrap()),
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -2951,7 +2951,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceB".into(),
-                        source_path: "/svc/serviceB".parse().unwrap(),
+                        source_path: Some("/svc/serviceB".parse().unwrap()),
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -2972,7 +2972,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceC".into(),
-                        source_path: "/svc/serviceC".parse().unwrap(),
+                        source_path: Some("/svc/serviceC".parse().unwrap()),
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -3053,7 +3053,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .protocol(ProtocolDecl {
                         name: "serviceC".into(),
-                        source_path: "/svc/serviceC".parse().unwrap(),
+                        source_path: Some("/svc/serviceC".parse().unwrap()),
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,

@@ -335,7 +335,7 @@ async fn bind_eager_children_reentrant() {
                     )
                     .runner(RunnerDecl {
                         name: "foo".into(),
-                        source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                        source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                     })
                     .add_environment(
                         EnvironmentDeclBuilder::new()

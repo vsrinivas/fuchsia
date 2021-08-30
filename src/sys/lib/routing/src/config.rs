@@ -824,11 +824,11 @@ mod tests {
                 namespace_capabilities: vec![
                     cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
                         name: "foo_svc".into(),
-                        source_path: "/svc/foo".parse().unwrap(),
+                        source_path: Some("/svc/foo".parse().unwrap()),
                     }),
                     cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
                         name: "bar_dir".into(),
-                        source_path: "/bar".parse().unwrap(),
+                        source_path: Some("/bar".parse().unwrap()),
                         rights: fio2::Operations::Connect,
                     }),
                 ],

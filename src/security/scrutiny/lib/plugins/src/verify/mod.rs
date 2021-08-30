@@ -130,7 +130,7 @@ mod tests {
     fn new_directory_decl(name: CapabilityName, rights: Operations) -> DirectoryDecl {
         DirectoryDecl {
             name,
-            source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            source_path: Some(CapabilityPath { dirname: "".to_string(), basename: "".to_string() }),
             rights,
         }
     }

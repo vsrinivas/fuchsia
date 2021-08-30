@@ -135,7 +135,7 @@ where
         let protocol_capability = CapabilitySourceInterface::<C>::Namespace {
             capability: ComponentCapability::Protocol(ProtocolDecl {
                 name: "fuchsia.kernel.RootResource".into(),
-                source_path: "/svc/fuchsia.kernel.RootResource".parse().unwrap(),
+                source_path: Some("/svc/fuchsia.kernel.RootResource".parse().unwrap()),
             }),
             top_instance: Weak::new(),
         };
@@ -192,7 +192,7 @@ where
         let protocol_capability = CapabilitySourceInterface::<C>::Component {
             capability: ComponentCapability::Protocol(ProtocolDecl {
                 name: "fuchsia.foo.FooBar".into(),
-                source_path: "/svc/fuchsia.foo.FooBar".parse().unwrap(),
+                source_path: Some("/svc/fuchsia.foo.FooBar".parse().unwrap()),
             }),
             component: component.as_weak(),
         };
@@ -298,7 +298,7 @@ where
         let protocol_capability = CapabilitySourceInterface::<C>::Component {
             capability: ComponentCapability::Protocol(ProtocolDecl {
                 name: "debug_service1".into(),
-                source_path: "/svc/debug_service1".parse().unwrap(),
+                source_path: Some("/svc/debug_service1".parse().unwrap()),
             }),
             component: component.as_weak(),
         };
@@ -463,7 +463,7 @@ where
         let protocol_capability = CapabilitySourceInterface::<C>::Namespace {
             capability: ComponentCapability::Protocol(ProtocolDecl {
                 name: "fuchsia.kernel.RootResource".into(),
-                source_path: "/svc/fuchsia.kernel.RootResource".parse().unwrap(),
+                source_path: Some("/svc/fuchsia.kernel.RootResource".parse().unwrap()),
             }),
             top_instance: Weak::new(),
         };
@@ -511,7 +511,7 @@ where
         let protocol_capability = CapabilitySourceInterface::<C>::Namespace {
             capability: ComponentCapability::Protocol(ProtocolDecl {
                 name: "fuchsia.kernel.RootResource".into(),
-                source_path: "/svc/fuchsia.kernel.RootResource".parse().unwrap(),
+                source_path: Some("/svc/fuchsia.kernel.RootResource".parse().unwrap()),
             }),
             top_instance: Weak::new(),
         };
