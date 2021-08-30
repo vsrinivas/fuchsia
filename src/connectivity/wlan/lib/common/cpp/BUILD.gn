@@ -73,12 +73,33 @@ source_set("common") {
 
   deps = [ "//garnet/lib/wlan/protocol" ]
 
-  # TODO(fxbug.dev/46688): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  public_configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+  # TODO(fxbug.dev/46688): This library contains public interfaces that spread
+  # undefined behavior to its callers. At the time of writing, all are caused
+  # by the use of non-trivial data members in packed structures. This causes at
+  # least the following undefined behaviors:
+  #
+  # - "member call on misaligned address" occurs when a method is called on a
+  # misaligned data member.
+  #
+  # - "upcast of misaligned address" occurs when a base class method is called
+  # on a misaligned data member. This is commonly the case with types that
+  # inherit from `BitField`.
+  #
+  # - "constructor call on misaligned address" occurs when a misaligned data
+  # member of a type with a defined constructor (even an explicitly defined
+  # default constructor) is constructed.
+  #
+  # - "reference binding to misaligned address" occurs when a misaligned data
+  # member is read by reference. This is common in test assertions which take
+  # their operands by const-ref.
+  public_configs += [ ":undefined_behavior_misaligned_memory" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+config("undefined_behavior_misaligned_memory") {
+  cflags = [ "-fno-sanitize=alignment" ]
 }
 
 executable("ieee80211_codes_test") {

@@ -26,8 +26,15 @@ std::vector<uint8_t> SimNvm::HandleChunkRead(uint8_t target, uint16_t type, uint
       continue;
     }
 
-    // Handle the boundry cases.
+    // Handle the boundary cases.
     size_t size = iter.data.size();
+    // Offsetting a null pointer is undefined behavior, even if the offset is zero. Passing a null
+    // pointer to memcpy (or any similar function) is also undefined behavior.
+    if (iter.data.data() == nullptr) {
+      // It is not clear that breaking here rather than continuing is correct. We do so to preserve
+      // preexisting behavior while avoiding undefined behavior.
+      break;
+    }
     if (offset > size) {
       offset = size;
     }
@@ -35,8 +42,9 @@ std::vector<uint8_t> SimNvm::HandleChunkRead(uint8_t target, uint16_t type, uint
       length = size - offset;
     }
 
-    std::vector<uint8_t> ret(length);
-    memcpy(ret.data(), &iter.data[offset], ret.size());
+    std::vector<uint8_t> ret;
+    ret.reserve(length);
+    std::copy_n(iter.data.begin() + offset, length, std::back_inserter(ret));
     return ret;
   }
 
