@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/device.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <threads.h>
 #include <zircon/types.h>
 
@@ -86,6 +87,8 @@ class Sherlock : public SherlockType {
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Sherlock);
 
+  uint8_t GetBoardRev();
+  uint8_t GetBoardOption();
   uint8_t GetDisplayVendor();
   uint8_t GetDdicVersion();
 
@@ -143,8 +146,16 @@ class Sherlock : public SherlockType {
 
   const uint32_t pid_;
 
+  std::optional<uint8_t> board_rev_;
+  std::optional<uint8_t> board_option_;
   std::optional<uint8_t> display_vendor_;
   std::optional<uint8_t> ddic_version_;
+
+  inspect::Inspector inspector_;
+  inspect::Node root_;
+  inspect::UintProperty board_rev_property_;
+  inspect::UintProperty board_option_property_;
+  inspect::UintProperty display_id_property_;
 };
 
 }  // namespace sherlock

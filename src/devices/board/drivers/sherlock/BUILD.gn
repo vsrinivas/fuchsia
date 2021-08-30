@@ -130,6 +130,7 @@ template("sherlock_driver") {
       "//zircon/public/lib/hwreg",
       "//zircon/public/lib/zircon-internal",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/inspect",
     ]
 
     # We need both headers to build but we can only depend on one bindfile at a time.

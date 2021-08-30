@@ -56,7 +56,9 @@ zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = board->DdkAdd("sherlock", DEVICE_ADD_NON_BINDABLE);
+  status = board->DdkAdd(ddk::DeviceAddArgs("sherlock")
+                             .set_flags(DEVICE_ADD_NON_BINDABLE)
+                             .set_inspect_vmo(board->inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     return status;
   }
@@ -68,6 +70,38 @@ zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
     __UNUSED auto* dummy = board.release();
   }
   return status;
+}
+
+uint8_t Sherlock::GetBoardRev() {
+  if (!board_rev_) {
+    uint8_t id0, id1, id2;
+
+    gpio_impl_.ConfigIn(GPIO_HW_ID0, GPIO_NO_PULL);
+    gpio_impl_.ConfigIn(GPIO_HW_ID1, GPIO_NO_PULL);
+    gpio_impl_.ConfigIn(GPIO_HW_ID2, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_HW_ID0, &id0);
+    gpio_impl_.Read(GPIO_HW_ID1, &id1);
+    gpio_impl_.Read(GPIO_HW_ID2, &id2);
+
+    board_rev_.emplace(id0 | (id1 << 1) | (id2 << 2));
+  }
+
+  return *board_rev_;
+}
+
+uint8_t Sherlock::GetBoardOption() {
+  if (!board_option_) {
+    uint8_t id3, id4;
+
+    gpio_impl_.ConfigIn(GPIO_HW_ID3, GPIO_NO_PULL);
+    gpio_impl_.ConfigIn(GPIO_HW_ID4, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_HW_ID3, &id3);
+    gpio_impl_.Read(GPIO_HW_ID4, &id4);
+
+    board_option_.emplace(id3 | (id4 << 1));
+  }
+
+  return *board_option_;
 }
 
 uint8_t Sherlock::GetDisplayVendor() {
@@ -238,6 +272,14 @@ int Sherlock::Thread() {
   if (ThermistorInit() != ZX_OK) {
     zxlogf(ERROR, "ThermistorInit failed");
   }
+
+  root_ = inspector_.GetRoot().CreateChild("sherlock_board_driver");
+  board_rev_property_ = root_.CreateUint("board_build", GetBoardRev());
+  board_option_property_ = root_.CreateUint("board_option", GetBoardOption());
+  // PANEL_DETECT -> DISP_SOC_ID1
+  // DDIC_DETECT -> DISP_SOC_ID2
+  display_id_property_ =
+      root_.CreateUint("display_id", GetDisplayVendor() | (GetDdicVersion() << 1));
 
   return 0;
 }
