@@ -135,6 +135,8 @@ class MessageDecoder {
 
   uint64_t next_object_offset() const { return next_object_offset_; }
 
+  WireVersion version() const { return version_; }
+
   bool HasError() const { return error_count_ > 0; }
 
   // Add an error.
@@ -196,7 +198,7 @@ class MessageDecoder {
   std::unique_ptr<StructValue> DecodeMessage(const Struct& message_format);
 
   // Decodes a field. Used by envelopes.
-  std::unique_ptr<Value> DecodeValue(const Type* type);
+  std::unique_ptr<Value> DecodeValue(const Type* type, bool is_inline);
 
   std::unique_ptr<StructValue> DecodeStruct(const Struct& struct_definition, uint64_t offset);
 
@@ -237,6 +239,9 @@ class MessageDecoder {
 
   // Stream for the errors.
   std::ostream& error_stream_;
+
+  // Wire format version.
+  WireVersion version_ = WireVersion::kWireV1;
 };
 
 // Used by numeric types to retrieve a numeric value. If there is not enough

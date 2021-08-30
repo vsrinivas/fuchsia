@@ -57,7 +57,7 @@ class Type {
   };
 
   // Returns the size of this type when embedded in another object.
-  virtual size_t InlineSize() const = 0;
+  virtual size_t InlineSize(WireVersion version) const = 0;
 
   // Whether this is a nullable type.
   virtual bool Nullable() const { return false; }
@@ -108,7 +108,7 @@ class InvalidType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -121,7 +121,7 @@ class BoolType : public Type {
 
   std::string Name() const override { return "bool"; }
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -138,7 +138,7 @@ class IntegralType : public Type {
  public:
   IntegralType() = default;
 
-  size_t InlineSize() const override { return sizeof(T); }
+  size_t InlineSize(WireVersion version) const override { return sizeof(T); }
 
   std::string CppName() const override { return this->Name() + "_t"; }
 
@@ -320,7 +320,7 @@ class ActualAndRequestedType : public Type {
  public:
   ActualAndRequestedType() = default;
 
-  size_t InlineSize() const override { return 2 * sizeof(size_t); }
+  size_t InlineSize(WireVersion version) const override { return 2 * sizeof(size_t); }
 
   std::string Name() const override { return "size"; }
 
@@ -343,7 +343,7 @@ class NumericType : public Type {
                 "NumericType can only be used for numerics");
 
  public:
-  size_t InlineSize() const override { return sizeof(T); }
+  size_t InlineSize(WireVersion version) const override { return sizeof(T); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
     auto got = decoder->GetAddress(offset, sizeof(T));
@@ -397,7 +397,7 @@ class StringType : public Type {
   std::string Name() const override;
   std::string CppName() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   bool Nullable() const override;
 
@@ -413,7 +413,7 @@ class HandleType : public Type {
   std::string Name() const override;
   std::string CppName() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -429,7 +429,7 @@ class EnumType : public Type {
   std::string Name() const override;
   std::string CppName() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -450,7 +450,7 @@ class BitsType : public Type {
   std::string Name() const override;
   std::string CppName() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -474,7 +474,7 @@ class UnionType : public Type {
   std::string Name() const override;
   std::string CppName() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   bool Nullable() const override;
 
@@ -499,7 +499,7 @@ class StructType : public Type {
   std::string Name() const override;
   std::string CppName() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   bool Nullable() const override;
 
@@ -543,7 +543,7 @@ class ArrayType : public ElementSequenceType {
 
   void PrettyPrint(PrettyPrinter& printer) const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -563,7 +563,7 @@ class VectorType : public ElementSequenceType {
 
   void PrettyPrint(PrettyPrinter& printer) const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   bool Nullable() const override;
 
@@ -583,7 +583,7 @@ class TableType : public Type {
   std::string Name() const override;
   std::string CppName() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -599,7 +599,7 @@ class FidlMessageType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize() const override;
+  size_t InlineSize(WireVersion version) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 

@@ -21,6 +21,8 @@ class Encoder : public Visitor {
     std::vector<zx_handle_info_t> handles;
   };
 
+  WireVersion version() const { return version_; }
+
   static Result EncodeMessage(uint32_t tx_id, uint64_t ordinal, const uint8_t flags[3],
                               uint8_t magic, const StructValue& object);
 
@@ -31,7 +33,7 @@ class Encoder : public Visitor {
   }
 
  private:
-  Encoder() = default;
+  explicit Encoder(WireVersion version) : version_(version) {}
 
   // Reserve space in the buffer for one object.
   size_t AllocateObject(size_t object_size);
@@ -67,6 +69,8 @@ class Encoder : public Visitor {
   std::vector<zx_handle_info_t> handles_;
   // Offset we are currently using to write into the buffer.
   size_t current_offset_ = 0;
+  // The version used to encode.
+  WireVersion version_;
 };
 
 }  // namespace fidl_codec

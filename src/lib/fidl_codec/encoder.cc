@@ -53,9 +53,11 @@ class NullVisitor : public TypeVisitor {
 
 Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, const uint8_t flags[3],
                                        uint8_t magic, const StructValue& object) {
-  Encoder encoder;
+  Encoder encoder(((flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0)
+                      ? WireVersion::kWireV2
+                      : WireVersion::kWireV1);
 
-  size_t object_size = object.struct_definition().size();
+  size_t object_size = object.struct_definition().Size(encoder.version());
   encoder.AllocateObject(object_size);
   encoder.WriteValue(tx_id);
   encoder.WriteValue(flags[0]);
@@ -86,14 +88,29 @@ void Encoder::WriteData(const uint8_t* data, size_t size) {
 }
 
 void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
-  Encoder envelope_encoder;
-  envelope_encoder.AllocateObject(for_type->InlineSize());
+  Encoder envelope_encoder(version_);
+  envelope_encoder.AllocateObject(for_type->InlineSize(version_));
   value->Visit(&envelope_encoder, for_type);
-  WriteValue<uint32_t>(static_cast<uint32_t>(envelope_encoder.bytes_.size()));
-  WriteValue<uint32_t>(static_cast<uint32_t>(envelope_encoder.handles_.size()));
-  WriteValue<uint64_t>(UINTPTR_MAX);
-  current_offset_ = AllocateObject(envelope_encoder.bytes_.size());
-  WriteData(envelope_encoder.bytes_);
+  if (version_ == WireVersion::kWireV1) {
+    WriteValue<uint32_t>(static_cast<uint32_t>(envelope_encoder.bytes_.size()));
+    WriteValue<uint32_t>(static_cast<uint32_t>(envelope_encoder.handles_.size()));
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    current_offset_ = AllocateObject(envelope_encoder.bytes_.size());
+    WriteData(envelope_encoder.bytes_);
+  } else {
+    if ((for_type->InlineSize(version_) <= 4) && !envelope_encoder.bytes_.empty()) {
+      // Inline version.
+      WriteData(envelope_encoder.bytes_.data(), 4);
+      WriteValue<uint16_t>(static_cast<uint16_t>(envelope_encoder.handles_.size()));
+      WriteValue<uint16_t>(1);
+    } else {
+      WriteValue<uint32_t>(static_cast<uint32_t>(envelope_encoder.bytes_.size()));
+      WriteValue<uint16_t>(static_cast<uint16_t>(envelope_encoder.handles_.size()));
+      WriteValue<uint16_t>(0);
+      current_offset_ = AllocateObject(envelope_encoder.bytes_.size());
+      WriteData(envelope_encoder.bytes_);
+    }
+  }
   for (const auto handle : envelope_encoder.handles_) {
     handles_.push_back(handle);
   }
@@ -103,7 +120,7 @@ void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
   for (const auto& member : node->struct_definition().members()) {
     auto it = node->fields().find(member.get());
     FX_DCHECK(it != node->fields().end());
-    current_offset_ = offset + member->offset();
+    current_offset_ = offset + member->Offset(version_);
     it->second->Visit(this, member->type());
   }
 }
@@ -126,7 +143,7 @@ void Encoder::VisitBoolValue(const BoolValue* node, const Type* for_type) {
 
 void Encoder::VisitIntegerValue(const IntegerValue* node, const Type* for_type) {
   FX_DCHECK(for_type != nullptr);
-  size_t size = for_type->InlineSize();
+  size_t size = for_type->InlineSize(version_);
   uint64_t value = node->absolute_value();
   if (node->negative()) {
     value = -value;
@@ -136,7 +153,7 @@ void Encoder::VisitIntegerValue(const IntegerValue* node, const Type* for_type) 
 
 void Encoder::VisitDoubleValue(const DoubleValue* node, const Type* for_type) {
   FX_DCHECK(for_type != nullptr);
-  size_t size = for_type->InlineSize();
+  size_t size = for_type->InlineSize(version_);
   if (size == sizeof(float)) {
     float value = static_cast<float>(node->value());
     WriteData(reinterpret_cast<const uint8_t*>(&value), size);
@@ -175,7 +192,7 @@ void Encoder::VisitStructValue(const StructValue* node, const Type* for_type) {
   FX_DCHECK(for_type != nullptr);
   if (for_type->Nullable()) {
     WriteValue<uint64_t>(UINTPTR_MAX);
-    size_t object_size = node->struct_definition().size();
+    size_t object_size = node->struct_definition().Size(version_);
     VisitStructValueBody(AllocateObject(object_size), node);
   } else {
     VisitStructValueBody(current_offset_, node);
@@ -186,7 +203,7 @@ void Encoder::VisitVectorValue(const VectorValue* node, const Type* for_type) {
   FX_DCHECK(for_type != nullptr);
   const Type* component_type = for_type->GetComponentType();
   FX_DCHECK(component_type != nullptr);
-  size_t component_size = component_type->InlineSize();
+  size_t component_size = component_type->InlineSize(version_);
   size_t offset;
   if (for_type->IsArray()) {
     offset = current_offset_;
@@ -206,16 +223,24 @@ void Encoder::VisitTableValue(const TableValue* node, const Type* for_type) {
   WriteValue<uint64_t>(node->highest_member());
   WriteValue<uint64_t>(UINTPTR_MAX);
 
-  constexpr size_t kEnvelopeSize = 2 * sizeof(uint32_t) + sizeof(uint64_t);
+  size_t kEnvelopeSize = (version_ == WireVersion::kWireV1)
+                             ? (2 * sizeof(uint32_t) + sizeof(uint64_t))
+                             : (sizeof(uint32_t) + 2 * sizeof(uint16_t));
   size_t offset = AllocateObject(node->highest_member() * kEnvelopeSize);
 
   for (Ordinal32 i = 1; i <= node->highest_member(); ++i) {
     current_offset_ = offset;
     auto it = node->members().find(node->table_definition().members()[i].get());
     if ((it == node->members().end()) || it->second->IsNull()) {
-      WriteValue<uint32_t>(0);
-      WriteValue<uint32_t>(0);
-      WriteValue<uint64_t>(0);
+      if (version_ == WireVersion::kWireV1) {
+        WriteValue<uint32_t>(0);
+        WriteValue<uint32_t>(0);
+        WriteValue<uint64_t>(0);
+      } else {
+        WriteValue<uint32_t>(0);
+        WriteValue<uint16_t>(0);
+        WriteValue<uint16_t>(0);
+      }
     } else {
       EncodeEnvelope(it->second.get(), it->first->type());
     }

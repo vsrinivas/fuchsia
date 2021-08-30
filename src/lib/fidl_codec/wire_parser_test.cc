@@ -260,9 +260,14 @@ TEST_F(WireParserTest, ParseSingleString) {
 // |_pretty_print| is the expected pretty print of the message.
 // The remaining parameters are the parameters to |_iface| to generate the
 // message.
-#define TEST_DECODE_WIRE(_testname, _iface, _json_value, _pretty_print, ...) \
-  TEST_F(WireParserTest, Parse##_testname) {                                 \
-    TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__);  \
+// Checks each test for v1 and v2.
+#define TEST_DECODE_WIRE(_testname, _iface, _json_value, _pretty_print, ...)  \
+  TEST_F(WireParserTest, Parse##_testname) {                                  \
+    TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__);   \
+    {                                                                         \
+      fidl::internal::HLCPPWireFormatV2Enabler enabler;                       \
+      TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__); \
+    }                                                                         \
   }
 
 #define TEST_DECODE_WIRE_PATCHED(_testname, _iface, patched_offset, patched_value, _json_value, \
@@ -1040,6 +1045,10 @@ TEST_DECODE_WIRE(ShortUnion8, ShortUnion, R"({"u":{"variant_u8":"16"}, "i":"1"})
                  ShortUnionPretty("U8U16Union", "variant_u8", "uint8", 16, 1),
                  GetUInt8Union<uuu>(16), 1);
 
+TEST_DECODE_WIRE(ShortUnionInlinedZero, ShortUnion, R"({"u":{"variant_u8":"0"}, "i":"1"})",
+                 ShortUnionPretty("U8U16Union", "variant_u8", "uint8", 0, 1),
+                 GetUInt8Union<uuu>(0), 1);
+
 TEST_DECODE_WIRE(ShortUnion16, ShortUnion, R"({"u":{"variant_u16":"1024"}, "i":"1"})",
                  ShortUnionPretty("U8U16Union", "variant_u16", "uint16", 1024, 1),
                  GetUInt16Union<uuu>(1024), 1);
@@ -1540,19 +1549,19 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
               "alignment": 4,
               "offset": 16,
               "max_handles": 0,
-              "field_shape_old": {
-                "offset": 16,
-                "padding": 0
-              },
               "field_shape_v1": {
                 "offset": 16,
-                "padding": 0
+                "padding": 4
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 4
               }
             }
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
-          "maybe_request_type_shape_old": {
+          "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -1561,7 +1570,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "maybe_request_type_shape_v1": {
+          "maybe_request_type_shape_v2": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -1638,7 +1647,7 @@ TEST_F(WireParserTest, DecodeNullTypeValue) {
   fidl_message_header_t header;
   MessageDecoder decoder(reinterpret_cast<uint8_t*>(&header), sizeof(header), nullptr, 0,
                          error_stream);
-  decoder.DecodeValue(nullptr);
+  decoder.DecodeValue(nullptr, /*is_inline=*/false);
 }
 
 }  // namespace fidl_codec
