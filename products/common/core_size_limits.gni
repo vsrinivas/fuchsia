@@ -1,0 +1,83 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# These are the size limits for core products.
+#
+# NOTE: The limits are set arbitrarily high at the moment to ensure size_checker
+# passes. We will gradually tune the set of components and sizes tracked here.
+
+size_checker_input = {
+  icu_data = [ "icudtl.dat" ]
+  icu_data_limit = 104857600  # 100 MiB
+  core_limit = 104857600
+  components = [
+    {
+      component = "/system (drivers and early boot)"
+      src = [ "build/images/fuchsia/fuchsia" ]
+      limit = 104857600
+    },
+    {
+      component = "Software Delivery"
+      src = [ "src/sys/pkg" ]
+      limit = 104857600
+    },
+    {
+      component = "Connectivity"
+      src = [ "src/connectivity" ]
+      limit = 104857600
+    },
+    {
+      component = "Time"
+      src = [ "src/sys/time" ]
+      limit = 104857600
+    },
+    {
+      component = "Diagnostics"
+      src = [
+        "garnet/bin/log_listener",
+        "src/diagnostics",
+      ]
+      limit = 104857600
+    },
+    {
+      component = "Component Framework"
+      src = [
+        "src/sys/sysmgr",
+        "src/sys/appmgr",
+        "src/sys/device_settings",
+        "src/sys/stash",
+        "src/sys/component_index",
+      ]
+      limit = 104857600
+    },
+    {
+      component = "Graphics"
+      src = [ "src/graphics" ]
+      limit = 104857600
+    },
+    {
+      component = "I18N"
+      src = [
+        "src/intl",
+        "garnet/bin/timezone",
+      ]
+      limit = 104857600
+    },
+    {
+      component = "Cobalt"
+      src = [ "src/cobalt" ]
+      limit = 104857600
+    },
+    {
+      component = "Config Data"
+      src = [ "build/images/fuchsia/fuchsia_config-data" ]
+      limit = 104857600
+    },
+    {
+      component = "SetUI"
+      src = [ "garnet/bin/setui" ]
+      limit = 104857600
+    },
+  ]
+}

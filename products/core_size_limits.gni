@@ -1,0 +1,9 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This product configuration is "core" with size limits defined. The limits can
+# be enforced by running size_checker.
+
+import("//products/common/core_size_limits.gni")
+import("//products/core.gni")
