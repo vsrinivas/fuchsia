@@ -2,15 +2,23 @@
     include: [
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
     ],
     program: {
         runner: "elf",
         binary: "bin/reference-element",
     },
+    capabilities: [
+        { protocol: "fuchsia.ui.app.ViewProvider" },
+    ],
     expose: [
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",
+        },
+        {
+            protocol: "fuchsia.ui.app.ViewProvider",
+            from: "self",
         },
     ],
 }
