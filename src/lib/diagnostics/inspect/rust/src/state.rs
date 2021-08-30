@@ -308,6 +308,9 @@ pub struct Stats {
 
     /// Total number of deallocated blocks.
     pub deallocated_blocks: usize,
+
+    /// Total number of failed allocations.
+    pub failed_allocations: usize,
 }
 
 pub struct LockedStateGuard<'a> {
@@ -334,6 +337,7 @@ impl<'a> LockedStateGuard<'a> {
             maximum_size: self.inner_lock.heap.maximum_size(),
             allocated_blocks: self.inner_lock.heap.total_allocated_blocks(),
             deallocated_blocks: self.inner_lock.heap.total_deallocated_blocks(),
+            failed_allocations: self.inner_lock.heap.failed_allocations(),
         }
     }
 
@@ -1747,7 +1751,8 @@ mod tests {
                 current_size: 4096,
                 allocated_blocks: 6, /* HEADER, state_guard, _block1 (and content),
                                      // "link-name", _block2, "test" */
-                deallocated_blocks: 0
+                deallocated_blocks: 0,
+                failed_allocations: 0,
             }
         )
     }

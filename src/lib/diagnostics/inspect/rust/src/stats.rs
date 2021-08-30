@@ -33,6 +33,7 @@ const MAXIMUM_SIZE_KEY: &str = "maximum_size";
 const TOTAL_DYNAMIC_CHILDREN_KEY: &str = "total_dynamic_children";
 const ALLOCATED_BLOCKS_KEY: &str = "allocated_blocks";
 const DEALLOCATED_BLOCKS_KEY: &str = "deallocated_blocks";
+const FAILED_ALLOCATIONS_KEY: &str = "failed_allocations";
 
 impl<T: InspectType> Node<T> {
     /// Unwraps the underlying lazy node and returns it.
@@ -79,6 +80,7 @@ fn write_stats(state: &State, node: &super::Node) {
         node.record_uint(TOTAL_DYNAMIC_CHILDREN_KEY, stats.total_dynamic_children as u64);
         node.record_uint(ALLOCATED_BLOCKS_KEY, stats.allocated_blocks as u64);
         node.record_uint(DEALLOCATED_BLOCKS_KEY, stats.deallocated_blocks as u64);
+        node.record_uint(FAILED_ALLOCATIONS_KEY, stats.failed_allocations as u64);
     }
 }
 
@@ -113,14 +115,16 @@ mod tests {
                     total_dynamic_children: 0u64,  // snapshot was taken before adding any lazy node.
                     allocated_blocks: 5u64,
                     deallocated_blocks: 0u64,
+                    failed_allocations: 0u64,
                 },
             },
             "fuchsia.inspect.Stats": {
                 current_size: 4096u64,
                 maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
                 total_dynamic_children: 2u64,
-                allocated_blocks: 21u64,
+                allocated_blocks: 23u64,
                 deallocated_blocks: 0u64,
+                failed_allocations: 0u64,
             }
         });
 
@@ -137,10 +141,27 @@ mod tests {
                 current_size: 61440u64,
                 maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
                 total_dynamic_children: 2u64,
-                allocated_blocks: 323u64,
+                allocated_blocks: 325u64,
                 // 2 blocks are deallocated because of the "drop" int block and its
                 // STRING_REFERENCE
                 deallocated_blocks: 2u64,
+                failed_allocations: 0u64,
+            }
+        });
+
+        for i in 101..220 {
+            inspector.root().record_string(format!("testing-{}", i), "testing".repeat(i + 1));
+        }
+
+        assert_data_tree!(inspector, root: contains {
+            "fuchsia.inspect.Stats": {
+                current_size: 262144u64,
+                maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
+                total_dynamic_children: 2u64,
+                allocated_blocks: 681u64,
+                // 2 additional blocks are deallocated because of the failed allocation
+                deallocated_blocks: 4u64,
+                failed_allocations: 1u64,
             }
         });
     }

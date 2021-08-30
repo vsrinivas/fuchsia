@@ -214,6 +214,7 @@ mod tests {
                 total_dynamic_children: 2u64,
                 allocated_blocks: 7u64,
                 deallocated_blocks: 0u64,
+                failed_allocations: 0u64,
             }
         });
     }

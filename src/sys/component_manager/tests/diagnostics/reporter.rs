@@ -52,6 +52,7 @@ async fn main() {
                     total_dynamic_children: 0u64,
                     allocated_blocks: 39u64,
                     deallocated_blocks: 0u64,
+                    failed_allocations: 0u64,
                 },
                 components: {
                     "<component_manager>": contains {},
@@ -86,6 +87,7 @@ async fn main() {
             total_dynamic_children: 3u64,
             allocated_blocks: 40u64,
             deallocated_blocks: 1u64,
+            failed_allocations: 0u64,
         }
     });
 }
