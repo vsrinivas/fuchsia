@@ -274,7 +274,9 @@ class BasicRenderer extends Renderer {
   @override
   void render(StringSink output, Iterable<Query> queries) {
     for (final query in queries) {
-      output..writeln('${query.name}:')..writeln(query.toString());
+      output
+        ..writeln('${query.name}:')
+        ..writeln(query.toString());
     }
   }
 }

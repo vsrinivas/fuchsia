@@ -34,8 +34,11 @@ class QueryRunner {
         concurrency = numConcurrency != null
             ? numConcurrency
             // Up to 12 isolates if inferring from `numberOfProcessors`.
-            : ((v) =>
-                v < 2 ? 2 : v > 12 ? 12 : v)(Platform.numberOfProcessors ~/ 2) {
+            : ((v) => v < 2
+                ? 2
+                : v > 12
+                    ? 12
+                    : v)(Platform.numberOfProcessors ~/ 2) {
     for (var i = 0; i < concurrency; i++) {
       final rx = ReceivePort();
       final isolateTx = rx.sendPort;

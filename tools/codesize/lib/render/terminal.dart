@@ -34,7 +34,9 @@ class TerminalRenderer extends Renderer {
       if (indent == 0) {
         output.write('└─ ');
       } else if (indent > 0) {
-        output..write('│')..write('  ' * indent);
+        output
+          ..write('│')
+          ..write('  ' * indent);
       }
       _renderTitle(output, node.title);
       output.writeln();

@@ -9,15 +9,7 @@
 set -eo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/dart_utils.sh || exit $?
 fx-config-read
 
-# Merge our package config with the one in third_party/dart-pkg/pub
-fx-command-run merge-package-config \
-  --first "$FUCHSIA_DIR/third_party/dart-pkg/pub/package_config.json" \
-  --second "${FUCHSIA_DIR}/scripts/codesize/.dart_tool/package_config.json" \
-  --out "${FUCHSIA_BUILD_DIR}/codesize.package_config.json"
-
-exec "${PREBUILT_DART_DIR}/bin/dart" \
---enable-experiment=non-nullable --no-sound-null-safety \
---packages="${FUCHSIA_BUILD_DIR}/codesize.package_config.json" \
-"${FUCHSIA_DIR}/scripts/codesize/bin/main.dart" "$@"
+run-dart-tool codesize "$@"

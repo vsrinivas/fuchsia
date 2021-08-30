@@ -327,7 +327,7 @@ class CodeCategoryReport implements QueryReport {
               final difference = binariesWithNonFidl
                   .difference(binariesWithFidl)
                   .toList()
-                    ..sort();
+                ..sort();
               return <AnyNode>[
                 for (final bin in difference.take(numProgramsToShow))
                   Node.plain(bin),

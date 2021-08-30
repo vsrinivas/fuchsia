@@ -14,12 +14,11 @@ import 'package:codesize/cli.dart' as cli;
 import 'package:codesize/codesize.dart';
 import 'package:codesize/crash_handling.dart' as crash_handling;
 import 'package:codesize/io.dart' as io;
+import 'package:codesize/progress_bar.dart' as progress_bar;
 import 'package:crypto/crypto.dart' show sha256;
 import 'package:googleapis/discovery/v1.dart' as discovery;
 import 'package:path/path.dart' as path;
 import 'package:pool/pool.dart';
-
-import 'progress_bar.dart';
 
 /// The common location for storing Fuchsia debug symbols. See fxbug.dev/41031.
 const _fxSymbolCache = '.fuchsia/debug/symbol-cache';
@@ -574,9 +573,10 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
   await cs.computePackagesInParallel(manifest, Platform.numberOfProcessors);
   cs.computeStats(blobsByHash);
 
-  ProgressBar progress;
+  progress_bar.ProgressBar progress;
   cs
-    ..jobInitCallback = ((max) => progress = ProgressBar(complete: max))
+    ..jobInitCallback =
+        ((max) => progress = progress_bar.ProgressBar(complete: max))
     ..jobIterationCallback = (() => progress.update(progress.current + 1))
     ..jobCompleteCallback = (() => progress.done());
 

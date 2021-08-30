@@ -118,9 +118,16 @@ class Symbol extends $pb.GeneratedMessage {
             ? ''
             : 'sizes',
         subBuilder: SizeInfo.create)
-    ..aOS(2,
-        const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'name')
-    ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'maybeRustCrate')
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'name')
+    ..aOS(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'maybeRustCrate')
     ..hasRequiredFields = false;
 
   Symbol._() : super();
@@ -218,14 +225,23 @@ class CompileUnit extends $pb.GeneratedMessage {
               : 'bloaty_report'),
       createEmptyInstance: create)
     ..aOM<SizeInfo>(
-        1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'sizes',
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'sizes',
         subBuilder: SizeInfo.create)
     ..pc<Symbol>(
         2,
-        const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'symbols',
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'symbols',
         $pb.PbFieldType.PM,
         subBuilder: Symbol.create)
-    ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'name')
+    ..aOS(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'name')
     ..hasRequiredFields = false;
 
   CompileUnit._() : super();
@@ -322,9 +338,16 @@ class Report extends $pb.GeneratedMessage {
         subBuilder: CompileUnit.create)
     ..a<$core.int>(
         2,
-        const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'fileTotal',
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'fileTotal',
         $pb.PbFieldType.OU3)
-    ..a<$core.int>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'vmTotal', $pb.PbFieldType.OU3)
+    ..a<$core.int>(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'vmTotal',
+        $pb.PbFieldType.OU3)
     ..hasRequiredFields = false;
 
   Report._() : super();

@@ -4,10 +4,10 @@
 
 import 'dart:io';
 
-/// Returns the run-time location of `//scripts/codesize/testdata`, regardless
+/// Returns the run-time location of `//tools/codesize/testdata`, regardless
 /// of environment (dev, infra, etc.).
 Directory locateTestData() {
-  // See the `//scripts/codesize:bloaty_reports` target in `BUILD.gn`.
+  // See the `//tools/codesize:bloaty_reports` target in `BUILD.gn`.
   final buildDirTestData =
       Directory('${Directory(Platform.environment['PWD']).absolute.path}/'
           'host_x64/test_data/codesize');
@@ -21,7 +21,7 @@ Directory locateTestData() {
     if (sourceDir == null)
       throw Exception('Missing the FUCHSIA_DIR environment variable.');
     testData = Directory(
-        '${Directory(sourceDir).absolute.path}/scripts/codesize/testdata');
+        '${Directory(sourceDir).absolute.path}/tools/codesize/testdata');
   }
   if (!testData.existsSync()) {
     throw Exception('Cannot find the $testData folder.');

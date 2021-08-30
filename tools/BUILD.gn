@@ -49,6 +49,7 @@ group("build_infra") {
     "//tools/blobstats($host_toolchain)",
     "//tools/build/ninjago/buildstats($host_toolchain)",
     "//tools/build/ninjago/ninjatrace($host_toolchain)",
+    "//tools/codesize($host_toolchain)",
 
     # The infrastructure uses a version of fint built using the Go toolchain,
     # rather than Ninja, so we technically don't need to include fint here. But
@@ -148,6 +149,7 @@ group("tests_no_e2e") {
     "//tools/check-licenses:tests",
     "//tools/clidoc:tests",
     "//tools/cmc:tests",
+    "//tools/codesize:tests",
     "//tools/component_id_index:tests($host_toolchain)",
     "//tools/component_manager_config:tests($host_toolchain)",
     "//tools/create:tests",

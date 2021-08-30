@@ -19,11 +19,11 @@ query.
 
 ## Development Tips
 
-When using VSCode, install the Dart plugin, and add `//scripts/codesize` as a
+When using VSCode, install the Dart plugin, and add `//tools/codesize` as a
 top-level folder in the workspace. IDE features such as autocomplete, Dart
 analysis etc. should start working after an initial initialization period.
 
-Add `--with //scripts:tests` to the `fx set` line. Afterwards,
-use `fx test //scripts/codesize` to run the unit tests. Additionally,
-`fx test //scripts/codesize -vo` will print out all the tests as they are
-being run.
+Add `--with //tools:tests` to the `fx set` line. Afterwards,
+use `fx test //tools/codesize:codesize_tests` to run the unit tests.
+Additionally, `fx test //tools/codesize:codesize_tests -vo` will print out all
+the tests as they are being run.

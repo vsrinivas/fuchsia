@@ -38,7 +38,7 @@ class SimpleQuery extends MockQuery {
 }
 
 void main() {
-  // See the `//scripts/codesize:bloaty_reports` target in `BUILD.gn`.
+  // See the `//tools/codesize:bloaty_reports` target in `BUILD.gn`.
   Directory testData = locateTestData();
   Query mock() => SimpleQuery([]);
   group('QueryRunner', () {
