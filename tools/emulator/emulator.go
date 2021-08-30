@@ -724,3 +724,21 @@ func (i *Instance) checkForLogMessages(b *bufio.Reader, msgs []string) error {
 		}
 	}
 }
+
+// CaptureLinesContaining returns all the lines that contain the given msg, up until a line containing stop is found.
+func (i *Instance) CaptureLinesContaining(msg string, stop string) ([]string, error) {
+	res := []string{}
+	for {
+		line, err := i.stdout.ReadString('\n')
+		if err != nil {
+			i.printStderr()
+			return nil, err
+		}
+		if strings.Contains(line, msg) {
+			res = append(res, line)
+		}
+		if strings.Contains(line, stop) {
+			return res, nil
+		}
+	}
+}

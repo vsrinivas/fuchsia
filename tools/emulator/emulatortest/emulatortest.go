@@ -145,3 +145,12 @@ func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout 
 		i.t.Fatal(err)
 	}
 }
+
+// CaptureLinesContaining reimplements emulator.Instance
+func (i *Instance) CaptureLinesContaining(msg string, stop string) []string {
+	res, err := i.i.CaptureLinesContaining(msg, stop)
+	if err != nil {
+		i.t.Fatal(err)
+	}
+	return res
+}

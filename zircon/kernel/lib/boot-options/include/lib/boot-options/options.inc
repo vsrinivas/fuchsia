@@ -38,9 +38,17 @@ DEFINE_OPTION("kernel.cprng-seed-require.hw-rng", bool, cprng_seed_require_hw_rn
 When enabled and if HW RNG fails at initial seeding, CPRNG panics.
 )""")
 
+DEFINE_OPTION("kernel.cprng-disable.jitterentropy", bool, cprng_disable_jitterentropy, {false}, R"""(
+Determines whether jitterentropy will be used as an entropy source (used for testing)
+)""")
+
+DEFINE_OPTION("kernel.cprng-disable.hw-rng", bool, cprng_disable_hw_rng, {false},R"""(
+Determines whether HW RNG will be used as an entropy source (used for testing)
+)""")
+
 DEFINE_OPTION("kernel.cprng-seed-require.jitterentropy", bool, cprng_seed_require_jitterentropy,
               {false}, R"""(
-When enabled and if jitterentrop fails initial seeding, CPRNG panics.
+When enabled and if jitterentropy fails initial seeding, CPRNG panics.
 )""")
 
 DEFINE_OPTION("kernel.cprng-seed-require.cmdline", bool, cprng_seed_require_cmdline, {false}, R"""(

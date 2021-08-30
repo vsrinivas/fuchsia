@@ -5,6 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
+import("//build/testing/zbi_test.gni")
 
 group("tests") {
   testonly = true
@@ -18,6 +19,24 @@ group("tests") {
   }
 }
 
+executable("cprng-draw") {
+  testonly = true
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [ "cprng-draw.cc" ]
+  deps = [ "//src/zircon/lib/zircon" ]
+}
+
+zbi_test("cprng-draw-zbi") {
+  assert(current_cpu != "")
+  args = [ "userboot=bin/cprng-draw" ]
+  deps = [
+    ":cprng-draw",
+    "//zircon/kernel",
+  ]
+}
+
 if (is_linux) {
   go_library("lib") {
     testonly = true
@@ -28,7 +47,13 @@ if (is_linux) {
   }
 
   host_test_data("main_zbi") {
-    sources = [ "$root_build_dir/fuchsia.zbi" ]
+    path =
+        get_label_info(":cprng-draw-zbi($default_toolchain)", "target_out_dir")
+    sources = [
+      "$path/cprng-draw-zbi.zbi",
+      "$root_build_dir/fuchsia.zbi",
+    ]
+    deps = [ ":cprng-draw-zbi($default_toolchain)" ]
   }
 
   go_test("kernel_cprng_tests") {

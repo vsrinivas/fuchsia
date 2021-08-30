@@ -156,12 +156,14 @@ static void EarlyBootSeed(uint level) {
 
   unsigned int successful = 0;  // number of successful entropy sources
   entropy::Collector* collector = nullptr;
-  if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
+  if (!gBootOptions->cprng_disable_hw_rng &&
+      entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
   } else if (gBootOptions->cprng_seed_require_hw_rng) {
     panic("Failed to seed PRNG from required entropy source: hw-rng\n");
   }
-  if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
+  if (!gBootOptions->cprng_disable_jitterentropy &&
+      entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
   } else if (gBootOptions->cprng_seed_require_jitterentropy) {
     panic("Failed to seed PRNG from required entropy source: jitterentropy\n");
@@ -204,12 +206,14 @@ static int ReseedPRNG(void* arg) {
     unsigned int successful = 0;  // number of successful entropy sources
     entropy::Collector* collector = nullptr;
     // Reseed using HW RNG and jitterentropy;
-    if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
+    if (!gBootOptions->cprng_disable_hw_rng &&
+        entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
     } else if (gBootOptions->cprng_reseed_require_hw_rng) {
       panic("Failed to reseed PRNG from required entropy source: hw-rng\n");
     }
-    if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
+    if (!gBootOptions->cprng_disable_jitterentropy &&
+        entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
     } else if (gBootOptions->cprng_reseed_require_jitterentropy) {
       panic("Failed to reseed PRNG from required entropy source: jitterentropy\n");

@@ -32,10 +32,20 @@ When enabled and if jitterentropy fails at reseeding, CPRNG panics.
 
 When enabled and if HW RNG fails at initial seeding, CPRNG panics.
 
+### kernel.cprng-disable.jitterentropy=\<bool>
+**Default:** `false`
+
+Determines whether jitterentropy will be used as an entropy source (used for testing)
+
+### kernel.cprng-disable.hw-rng=\<bool>
+**Default:** `false`
+
+Determines whether HW RNG will be used as an entropy source (used for testing)
+
 ### kernel.cprng-seed-require.jitterentropy=\<bool>
 **Default:** `false`
 
-When enabled and if jitterentrop fails initial seeding, CPRNG panics.
+When enabled and if jitterentropy fails initial seeding, CPRNG panics.
 
 ### kernel.cprng-seed-require.cmdline=\<bool>
 **Default:** `false`
