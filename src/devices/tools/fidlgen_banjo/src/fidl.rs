@@ -11,6 +11,7 @@ use {
     regex::Regex,
     serde::{Deserialize, Deserializer, Serialize},
     std::collections::BTreeMap,
+    std::string::ToString,
 };
 
 lazy_static! {
@@ -287,6 +288,16 @@ pub enum Constant {
     BinaryOperator { value: String, expression: String },
 }
 
+impl Constant {
+    pub fn value_string(&self) -> &str {
+        match self {
+            Constant::Identifier { value, .. } => value,
+            Constant::Literal { value, .. } => value,
+            Constant::BinaryOperator { value, .. } => value,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bits {
     pub maybe_attributes: Option<Vec<Attribute>>,
@@ -355,9 +366,48 @@ pub struct Resource {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AttributeArg {
+    pub name: String,
+    pub value: Constant,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Attribute {
     pub name: String,
-    pub value: String,
+    pub arguments: Vec<AttributeArg>,
+}
+
+impl Attribute {
+    /// Count the number of attribute arguments.
+    pub fn count(&self) -> usize {
+        self.arguments.len()
+    }
+
+    /// Check if an argument of a certain name exists on this attribute.
+    pub fn has(&self, name: &str) -> bool {
+        self.get(name).is_ok()
+    }
+
+    /// Get the value of a specific argument on the attribute.
+    pub fn get(&self, name: &str) -> Result<&Constant, Error> {
+        let lower_name = to_lower_snake_case(name);
+        Ok(&self
+            .arguments
+            .iter()
+            .find(|arg| to_lower_snake_case(arg.name.as_str()) == lower_name)
+            .ok_or(anyhow!("argument not found"))?
+            .value)
+    }
+
+    /// For attributes that only have one argument, retrieve the value of that argument without
+    /// naming it.
+    pub fn get_standalone(&self) -> Result<&Constant, Error> {
+        match self.count() {
+            0 => Err(anyhow!("attribute {} has no arguments", self.name)),
+            1 => Ok(&self.arguments[0].value),
+            _ => Err(anyhow!("attribute {} has multiple arguments", self.name)),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -717,7 +767,7 @@ pub fn to_lower_snake_case(str: &str) -> String {
 
 pub trait AttributeContainer {
     fn has(&self, name: &str) -> bool;
-    fn get(&self, name: &str) -> Option<&String>;
+    fn get(&self, name: &str) -> Option<&Attribute>;
 }
 
 impl AttributeContainer for Option<Vec<Attribute>> {
@@ -730,13 +780,13 @@ impl AttributeContainer for Option<Vec<Attribute>> {
         }
     }
 
-    fn get(&self, name: &str) -> Option<&String> {
+    fn get(&self, name: &str) -> Option<&Attribute> {
         match self {
             Some(attrs) => attrs
                 .iter()
                 .filter_map(|a| {
                     if to_lower_snake_case(&a.name) == to_lower_snake_case(name) {
-                        Some(&a.value)
+                        Some(a)
                     } else {
                         None
                     }

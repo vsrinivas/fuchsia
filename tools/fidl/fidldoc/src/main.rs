@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{bail, Context, Error};
+use anyhow::{anyhow, bail, Context, Error};
 use argh::FromArgs;
 use log::{error, info, LevelFilter};
 use std::collections::HashMap;
@@ -331,6 +331,33 @@ fn check_documentation(package_fidl_json: &FidlJson) -> Result<(), String> {
     }
 }
 
+/// If an attribute only has one argument, returns that argument's value.  If the number of
+/// arguments is not equal to 1, or the argument's value could not be resolved, error instead.
+// TODO(fxbug.dev/81390): Attribute values may only be string literals for now. Make sure to fix
+//  this API once that changes to resolve the constant value for all constant types.
+fn get_attribute_standalone_arg_value(attribute: &Value) -> Result<String, Error> {
+    let args = attribute["arguments"].as_array().expect("Arguments invalid");
+    match args.len() {
+        0 => Err(anyhow!("attribute {} has no arguments", attribute["name"])),
+        1 => {
+            let value = &args[0]["value"];
+            if value["kind"] != "literal" {
+                Err(anyhow!(
+                    "attribute {} argument is {} not a string literal",
+                    attribute["name"],
+                    value["kind"]
+                ))
+            } else {
+                Ok(value["value"]
+                    .as_str()
+                    .expect("Unable to retrieve string value for this attribute")
+                    .to_string())
+            }
+        }
+        _ => Err(anyhow!("attribute {} has multiple arguments", attribute["name"])),
+    }
+}
+
 /// Checks some documentation associated to a declaration.
 fn check_declaration_documentation(
     compiler: &mut DocCompiler,
@@ -342,17 +369,17 @@ fn check_declaration_documentation(
         for attributes in attributes_value.as_array().iter() {
             for attribute in attributes.iter() {
                 if to_lower_snake_case(attribute["name"].as_str().unwrap_or("")) == ATTR_NAME_DOC {
-                    if let serde_json::Value::String(text) = &attribute["value"] {
-                        compiler.parse_doc(
-                            location["filename"].to_string(),
-                            infer_doc_line(
-                                location["line"].to_string().parse::<u32>().unwrap_or(0),
-                                &text,
-                            ),
-                            column,
-                            clean_doc(&text),
-                        );
-                    }
+                    let text =
+                        get_attribute_standalone_arg_value(attribute).unwrap_or("".to_string());
+                    compiler.parse_doc(
+                        location["filename"].to_string(),
+                        infer_doc_line(
+                            location["line"].to_string().parse::<u32>().unwrap_or(0),
+                            &text,
+                        ),
+                        column,
+                        clean_doc(&text),
+                    );
                 }
             }
         }
@@ -513,8 +540,7 @@ fn create_toc(fidl_json_map: &HashMap<String, FidlJson>) -> Vec<TableOfContentsI
 fn get_library_description(maybe_attributes: &Vec<Value>) -> String {
     for attribute in maybe_attributes {
         if to_lower_snake_case(attribute["name"].as_str().unwrap_or("")) == ATTR_NAME_DOC {
-            return attribute["value"]
-                .as_str()
+            return get_attribute_standalone_arg_value(attribute)
                 .expect("Unable to retrieve string value for library description")
                 .to_string();
         }
@@ -594,7 +620,21 @@ mod test {
                 name: "fuchsia.auth".to_string(),
                 // Note that this ATTR_NAME_DOC is UpperCamelCased - this should still
                 // pass.
-                maybe_attributes: vec![json!({"name": ATTR_NAME_DOC, "value": "Fuchsia Auth API"})],
+                maybe_attributes: vec![json!({"name": ATTR_NAME_DOC, "arguments": [
+                  {
+                    "name": "value",
+                    "value": {
+                      "expression": "Fuchsia Auth API",
+                      "kind": "literal",
+                      "literal": {
+                        "expression":"Fuchsia Auth API",
+                        "kind": "string",
+                        "value": "Fuchsia Auth API"
+                      },
+                      "value": "Fuchsia Auth API"
+                    }
+                  },
+                ]})],
                 library_dependencies: Vec::new(),
                 bits_declarations: Vec::new(),
                 const_declarations: Vec::new(),
@@ -650,7 +690,21 @@ mod test {
     fn get_library_description_test() {
         let maybe_attributes = vec![
             json!({"name": "not doc", "value": "Not the description"}),
-            json!({"name": ATTR_NAME_DOC, "value": "Fuchsia Auth API"}),
+            json!({"name": ATTR_NAME_DOC, "arguments": [
+              {
+                "name": "value",
+                "value": {
+                  "expression": "Fuchsia Auth API",
+                  "kind": "literal",
+                  "literal": {
+                    "expression":"Fuchsia Auth API",
+                    "kind": "string",
+                    "value": "Fuchsia Auth API"
+                  },
+                  "value": "Fuchsia Auth API"
+                }
+              },
+            ]}),
         ];
         let description = get_library_description(&maybe_attributes);
         assert_eq!(description, "Fuchsia Auth API".to_string());
@@ -776,7 +830,27 @@ mod test {
             "maybe_attributes": [
               {
                 "name": ATTR_NAME_DOC,
-                "value": "Device specific types should have bit 60 set.\n"
+                "arguments": [
+                  {
+                    "location": {
+                      "filename": "../../sdk/fidl/fuchsia.sysmem/constraints.fidl",
+                      "line": 215,
+                      "column": 0,
+                      "length": 0
+                    },
+                    "name": "value",
+                    "value": {
+                      "expression": "Device specific types should have bit 60 set.",
+                      "kind": "literal",
+                      "literal": {
+                        "expression":"Device specific types should have bit 60 set.",
+                        "kind": "string",
+                        "value": "Device specific types should have bit 60 set.\n"
+                      },
+                      "value": "Device specific types should have bit 60 set.\n"
+                    }
+                  },
+                ],
               }
             ]})],
             interface_declarations: Vec::new(),
@@ -809,7 +883,27 @@ mod test {
             "maybe_attributes": [
               {
                 "name": ATTR_NAME_DOC,
-                "value": "Device specific types should have bit '60 set.\n"
+                "arguments": [
+                  {
+                    "location": {
+                      "filename": "../../sdk/fidl/fuchsia.sysmem/constraints.fidl",
+                      "line": 215,
+                      "column": 0,
+                      "length": 0
+                    },
+                    "name": "value",
+                    "value": {
+                      "expression": "Device specific types should have bit '60 set.",
+                      "kind": "literal",
+                      "literal": {
+                        "expression":"Device specific types should have bit '60 set.",
+                        "kind": "string",
+                        "value": "Device specific types should have bit '60 set.\n"
+                      },
+                      "value": "Device specific types should have bit '60 set.\n"
+                    }
+                  },
+                ],
               }
             ]})],
             interface_declarations: Vec::new(),

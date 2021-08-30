@@ -337,8 +337,12 @@ func docString(node Annotated) Documented {
 	if !ok {
 		return Documented{nil}
 	}
+	value, ok := attribute.LookupArg("value")
+	if !ok {
+		return Documented{nil}
+	}
 	var docs []string
-	lines := strings.Split(attribute.Value, "\n")
+	lines := strings.Split(value.ValueString(), "\n")
 	if len(lines[len(lines)-1]) == 0 {
 		// Remove the blank line at the end
 		lines = lines[:len(lines)-1]

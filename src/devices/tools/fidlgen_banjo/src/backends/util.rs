@@ -60,18 +60,17 @@ pub enum ProtocolType {
 impl From<&Option<Vec<Attribute>>> for ProtocolType {
     fn from(maybe_attributes: &Option<Vec<Attribute>>) -> Self {
         if let Some(layout) = maybe_attributes.get("BanjoLayout") {
-            if layout == "ddk-callback" {
-                ProtocolType::Callback
-            } else if layout == "ddk-interface" {
-                ProtocolType::Interface
-            } else if layout == "ddk-protocol" {
-                ProtocolType::Protocol
-            } else {
-                panic!("Unknown layout attribute: {}", layout)
-            }
-        } else {
-            ProtocolType::Protocol
+            return match layout.get_standalone() {
+                Ok(constant) => match constant.value_string() {
+                    "ddk-callback" => ProtocolType::Callback,
+                    "ddk-interface" => ProtocolType::Interface,
+                    "ddk-protocol" => ProtocolType::Protocol,
+                    value => panic!("Unknown layout attribute: {}", value),
+                },
+                Err(_) => ProtocolType::Protocol,
+            };
         }
+        ProtocolType::Protocol
     }
 }
 
@@ -109,16 +108,22 @@ pub fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> Str
     if let Some(attrs) = maybe_attrs {
         for attr in attrs.iter() {
             if to_lower_snake_case(&attr.name) == ATTR_NAME_DOC {
-                if attr.value.is_empty() {
-                    continue;
-                }
-                let tabs: String = iter::repeat(' ').take(tabs * 4).collect();
-                return attr
-                    .value
-                    .trim_end()
-                    .split("\n")
-                    .map(|line| format!("{}//{}\n", tabs, line))
-                    .collect();
+                return match attr.get_standalone() {
+                    Ok(constant) => {
+                        let value = constant.value_string();
+                        if value.is_empty() {
+                            "".to_string()
+                        } else {
+                            let tabs: String = iter::repeat(' ').take(tabs * 4).collect();
+                            value
+                                .trim_end()
+                                .split("\n")
+                                .map(|line| format!("{}//{}\n", tabs, line))
+                                .collect()
+                        }
+                    }
+                    Err(_) => "".to_string(),
+                };
             }
         }
     }
@@ -159,7 +164,16 @@ where
     if let Some(attrs) = maybe_attrs {
         for attr in attrs.iter() {
             if to_lower_snake_case(&attr.name) == attr_name {
-                return Some(func(&attr.name, &attr.value));
+                return Some(match &attr.count() {
+                    0 => func(&attr.name, ""),
+                    _ => func(
+                        &attr.name,
+                        &match attr.get_standalone() {
+                            Ok(constant) => constant.value_string(),
+                            Err(_) => "",
+                        },
+                    ),
+                });
             }
         }
     }
@@ -251,7 +265,7 @@ pub fn not_callback(id: &CompoundIdentifier, ir: &FidlIr) -> Result<bool, Error>
         }
     } else {
         if let Some(layout) = ir.get_protocol_attributes(id)?.get("BanjoLayout") {
-            if layout == "ddk-callback" {
+            if layout.get_standalone()?.value_string() == "ddk-callback" {
                 return Ok(false);
             }
         }
@@ -564,10 +578,32 @@ pub fn get_out_params(
 mod tests {
     use super::*;
 
+    // A helper function that creates a string literal attribute arg, given t args name and value.
+    fn string_literal_attribute_arg(name: &str, value: &str) -> AttributeArg {
+        AttributeArg {
+            name: String::from(name),
+            value: Constant::Literal {
+                literal: Literal::Str {
+                    value: String::from(value),
+                    expression: format!("\"{}\"", value.to_string()),
+                },
+                value: String::from(value),
+                expression: format!("\"{}\"", value.to_string()),
+            },
+        }
+    }
+
+    // A helper function that creates an attribute with a single string literal argument.
+    fn string_literal_attribute(name: &str, arg_name: &str, arg_value: &str) -> Attribute {
+        Attribute {
+            name: String::from(name),
+            arguments: vec![string_literal_attribute_arg(arg_name, arg_value)],
+        }
+    }
+
     #[test]
     fn apply_to_attr_with_name() {
-        let maybe_attrs_simple =
-            Some(vec![Attribute { name: String::from("foo"), value: String::from("value") }]);
+        let maybe_attrs_simple = Some(vec![string_literal_attribute("foo", "foo", "value")]);
         let test = apply_to_attr(&maybe_attrs_simple, "foo", |attr_name, attr_value| {
             format!("{}: {}", attr_name, attr_value)
         });
@@ -576,8 +612,7 @@ mod tests {
 
     #[test]
     fn apply_to_attr_without_name() {
-        let maybe_attrs_simple =
-            Some(vec![Attribute { name: String::from("foo"), value: String::from("value") }]);
+        let maybe_attrs_simple = Some(vec![string_literal_attribute("foo", "foo", "value")]);
         let test = apply_to_attr(&maybe_attrs_simple, "bar", |attr_name, attr_value| {
             format!("{}: {}", attr_name, attr_value)
         });
@@ -587,8 +622,8 @@ mod tests {
     #[test]
     fn apply_to_attr_with_duplicate_name() {
         let maybe_attrs_duplicate_name = Some(vec![
-            Attribute { name: String::from("foo"), value: String::from("value") },
-            Attribute { name: String::from("foo"), value: String::from("eulav") },
+            string_literal_attribute("foo", "value", "value"),
+            string_literal_attribute("foo", "value", "eulav"),
         ]);
         let test = apply_to_attr(&maybe_attrs_duplicate_name, "foo", |attr_name, attr_value| {
             format!("{}: {}", attr_name, attr_value)
@@ -597,15 +632,25 @@ mod tests {
     }
 
     #[test]
+    fn apply_to_attr_with_arg_not_named_value() {
+        let maybe_attrs_duplicate_name =
+            Some(vec![string_literal_attribute("foo", "other_name", "bar")]);
+        let test = apply_to_attr(&maybe_attrs_duplicate_name, "foo", |attr_name, attr_value| {
+            format!("{}: {}", attr_name, attr_value)
+        });
+        assert_eq!(test, Some("foo: bar".to_string()));
+    }
+
+    #[test]
     fn is_namespaced_ok_true() {
         let maybe_attrs_with_namespaced =
-            Some(vec![Attribute { name: String::from("Namespaced"), value: String::from("") }]);
+            Some(vec![string_literal_attribute("Namespaced", "value", "")]);
         assert!(is_namespaced(&maybe_attrs_with_namespaced).expect("is_namespaced should not fail"));
     }
     #[test]
     fn is_namespaced_ok_false() {
         let maybe_attrs_without_namespaced =
-            Some(vec![Attribute { name: String::from("NotNamespaced"), value: String::from("") }]);
+            Some(vec![string_literal_attribute("NotNamespaced", "value", "")]);
         assert!(
             !is_namespaced(&maybe_attrs_without_namespaced).expect("is_namespaced should not fail")
         );
@@ -614,7 +659,7 @@ mod tests {
     #[test]
     fn is_namespaced_err() {
         let maybe_attrs_with_namespaced =
-            Some(vec![Attribute { name: String::from("Namespaced"), value: String::from("foo") }]);
+            Some(vec![string_literal_attribute("Namespaced", "value", "foo")]);
         is_namespaced(&maybe_attrs_with_namespaced).expect_err("is_namespaced should fail");
     }
 }

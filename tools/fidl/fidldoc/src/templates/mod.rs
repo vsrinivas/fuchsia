@@ -152,6 +152,24 @@ fn pl(name: &str, base: &str) -> String {
     }
 }
 
+fn len(
+    h: &Helper<'_, '_>,
+    _: &Handlebars<'_>,
+    _: &Context,
+    _: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> Result<(), RenderError> {
+    // get parameter from helper or throw an error
+    let vector =
+        h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for len helper"))?;
+    if let &Value::Array(ref array) = vector.value() {
+        out.write(array.len().to_string().as_str())?;
+        Ok(())
+    } else {
+        Err(RenderError::new("Param 0 is not an array"))
+    }
+}
+
 fn doc_link(
     h: &Helper<'_, '_>,
     _: &Handlebars<'_>,

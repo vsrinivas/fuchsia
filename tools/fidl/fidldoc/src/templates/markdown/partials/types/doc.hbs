@@ -10,7 +10,9 @@
             </p>
         {{~ /if ~}}
         {{~ #if (eq (lower_snake_case name) "doc") ~}}
-            {{~ pulldown (docLink value @root.name) ~}}
+            {{~ #if (eq (len arguments) "1") ~}}
+                {{~ pulldown (docLink arguments.[0].value.value arguments.[0].name) ~}}
+            {{~ /if ~}}
         {{~ /if ~}}
     {{~ /each ~}}
 {{~ /if}}

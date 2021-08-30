@@ -93,6 +93,7 @@ impl MarkdownTemplate<'_> {
             ("getLink", crate::templates::get_link_helper),
             ("rpn", crate::templates::remove_package_name),
             ("eq", crate::templates::eq),
+            ("len", crate::templates::len),
             ("pl", crate::templates::package_link),
             ("rpf", crate::templates::remove_parent_folders),
             ("sl", crate::templates::source_link),

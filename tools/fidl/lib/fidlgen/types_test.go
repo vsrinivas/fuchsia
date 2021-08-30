@@ -58,8 +58,13 @@ func TestCanUnmarshalAttributeValue(t *testing.T) {
 	if len(unionAttrs.Attributes) != 4 {
 		t.Errorf("got %d attributes on '%s', want %d", len(unionAttrs.Attributes), unionName, 4)
 	}
-	if val, found := unionAttrs.LookupAttribute("Doc"); !found || val.Value != wantUnionName {
-		t.Errorf("'%s' 'doc' attribute: got '%s', want '%s'", unionName, val.Value, wantUnionName)
+
+	attr, found := unionAttrs.LookupAttribute("doc")
+	if !found {
+		t.Errorf("'%s' 'doc' attribute: not found", unionName)
+	}
+	if arg, found := attr.LookupArgStandalone(); !found || arg.ValueString() != wantUnionName {
+		t.Errorf("'%s' 'doc' attribute: got '%s', want '%s'", unionName, arg.ValueString(), wantUnionName)
 	}
 	if _, found := unionAttrs.LookupAttribute("UpperCamelCase"); !found {
 		t.Errorf("'%s' 'UpperCamelCase' attribute: not found (using UpperCamelCase search)", unionName)
@@ -93,8 +98,13 @@ func TestCanUnmarshalAttributeValue(t *testing.T) {
 	if len(unionMemAttrs.Attributes) != 2 {
 		t.Errorf("got %d attributes on '%s', want %d", len(unionMemAttrs.Attributes), unionMemName, 2)
 	}
-	if val, found := unionMemAttrs.LookupAttribute("Doc"); !found || val.Value != toDocComment(wantUnionMemName) {
-		t.Errorf("'%s' 'doc' attribute: got '%s', want '%s'", unionMemName, val.Value, toDocComment(wantUnionMemName))
+
+	attr, found = unionMemAttrs.LookupAttribute("doc")
+	if !found {
+		t.Errorf("'%s' 'doc' attribute: not found", unionMemName)
+	}
+	if arg, found := attr.LookupArgStandalone(); !found || arg.ValueString() != toDocComment(wantUnionMemName) {
+		t.Errorf("'%s' 'doc' attribute: got '%s', want '%s'", unionMemName, arg.ValueString(), toDocComment(wantUnionMemName))
 	}
 	if _, found := unionMemAttrs.LookupAttribute("Unknown"); !found {
 		t.Errorf("'%s' 'unknown' attribute: not found", unionMemName)

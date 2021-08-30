@@ -517,9 +517,43 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type Attribute struct {
+type AttributeArg struct {
 	Name  Identifier `json:"name"`
-	Value string     `json:"value"`
+	Value Constant   `json:"value"`
+}
+
+// ValueString returns the attribute arg's value in string form.
+// TODO(fxbug.dev/81390): Attribute values may only be string literals for now.
+//  Make sure to fix this API once that changes to resolve the constant value
+//  for all constant types.
+func (el AttributeArg) ValueString() string {
+	return el.Value.Value
+}
+
+type Attribute struct {
+	Name Identifier     `json:"name"`
+	Args []AttributeArg `json:"arguments,omitempty"`
+}
+
+func (el Attribute) LookupArg(name Identifier) (AttributeArg, bool) {
+	for _, a := range el.Args {
+		if a.Name == name {
+			return a, true
+		}
+	}
+	return AttributeArg{}, false
+}
+
+func (el Attribute) LookupArgStandalone() (AttributeArg, bool) {
+	if len(el.Args) != 1 {
+		return AttributeArg{}, false
+	}
+	return el.Args[0], true
+}
+
+func (el Attribute) HasArg(name Identifier) bool {
+	_, ok := el.LookupArg(name)
+	return ok
 }
 
 // Attributes represents a list of attributes. It conveniently implements the
@@ -543,25 +577,28 @@ func (el Attributes) HasAttribute(name Identifier) bool {
 	return ok
 }
 
-func (el Attributes) GetAttribute(name Identifier) Attribute {
-	attr, _ := el.LookupAttribute(name)
-	return attr
-}
-
 func (el Attributes) DocComments() []string {
-	doc, ok := el.LookupAttribute("doc")
-	if !ok || doc.Value == "" {
+	attr, ok := el.LookupAttribute("doc")
+	if !ok {
 		return nil
 	}
-	return strings.Split(doc.Value[0:len(doc.Value)-1], "\n")
+	doc, ok := attr.LookupArgStandalone()
+	docVal := doc.ValueString()
+	if !ok || docVal == "" {
+		return nil
+	}
+	return strings.Split(docVal[0:len(docVal)-1], "\n")
 }
 
 func (el Attributes) Transports() map[string]struct{} {
 	transports := make(map[string]struct{})
-	raw, ok := el.LookupAttribute("transport")
-	if ok && raw.Value != "" {
-		for _, transport := range strings.Split(raw.Value, ",") {
-			transports[strings.TrimSpace(transport)] = struct{}{}
+	attr, ok := el.LookupAttribute("transport")
+	if ok {
+		raw, ok := attr.LookupArgStandalone()
+		if ok && raw.ValueString() != "" {
+			for _, transport := range strings.Split(raw.ValueString(), ",") {
+				transports[strings.TrimSpace(transport)] = struct{}{}
+			}
 		}
 	}
 	// No transport attribute => just Channel
@@ -575,9 +612,13 @@ func (el Attributes) Transports() map[string]struct{} {
 // bindings_denylist attribute includes targetLanguage (meaning the bindings for
 // targetLanguage should not emit this declaration).
 func (el Attributes) BindingsDenylistIncludes(targetLanguage string) bool {
-	raw, ok := el.LookupAttribute("bindings_denylist")
-	if ok && raw.Value != "" {
-		for _, language := range strings.Split(raw.Value, ",") {
+	attr, ok := el.LookupAttribute("bindings_denylist")
+	if !ok {
+		return false
+	}
+	raw, ok := attr.LookupArgStandalone()
+	if ok && raw.ValueString() != "" {
+		for _, language := range strings.Split(raw.ValueString(), ",") {
 			if strings.TrimSpace(language) == targetLanguage {
 				return true
 			}
@@ -770,8 +811,7 @@ type Protocol struct {
 }
 
 func (d *Protocol) GetServiceName() string {
-	_, found := d.LookupAttribute("discoverable")
-	if found {
+	if found := d.HasAttribute("discoverable"); found {
 		ci := ParseCompoundIdentifier(d.Name)
 		var parts []string
 		for _, i := range ci.Library {
@@ -831,8 +871,7 @@ type Method struct {
 
 // IsTransitional returns whether this method has the `Transitional` attribute.
 func (m *Method) IsTransitional() bool {
-	_, transitional := m.LookupAttribute("transitional")
-	return transitional
+	return m.HasAttribute("transitional")
 }
 
 // MethodResult represents how FIDL methods that use the error syntax are manifested in the IR.

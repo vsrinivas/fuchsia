@@ -16,18 +16,54 @@
 
 namespace {
 
-bool ValidateTransport(const rapidjson::Value& interface) {
-  if (!interface.HasMember("maybe_attributes")) {
+using MaybeValue = std::optional<std::reference_wrapper<const rapidjson::Value>>;
+
+// TODO(fxbug.dev/81390): Attribute values may only be string literals for now. Make sure to fix
+//  this API once that changes to resolve the constant value for all constant types.
+MaybeValue GetConstantValueAsString(const rapidjson::Value& constant) {
+  if (constant["kind"] == "literal") {
+    return constant["value"];
+  }
+  return std::nullopt;
+}
+
+// Check that an attribute exists, and return true if it has no arguments.
+bool HasAttributeWithNoArgs(const rapidjson::Value& element, const std::string& attribute_name) {
+  if (!element.HasMember("maybe_attributes")) {
     return false;
   }
-  for (const auto& attrib : interface["maybe_attributes"].GetArray()) {
-    if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == "transport") {
-      if (attrib.GetObject()["value"].Get<std::string>() == "Syscall") {
+  for (const auto& attrib : element["maybe_attributes"].GetArray()) {
+    if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == attribute_name) {
+      const auto& args = attrib.GetObject()["arguments"];
+      if (args.GetArray().Empty()) {
         return true;
       }
     }
   }
   return false;
+}
+
+// Check that an attribute exists. If the attribute only has one argument, retrieve that argument's
+// value.
+MaybeValue GetAttributeStandaloneArgValue(const rapidjson::Value& element,
+                                          const std::string& attribute_name) {
+  if (!element.HasMember("maybe_attributes")) {
+    return std::nullopt;
+  }
+  for (const auto& attrib : element["maybe_attributes"].GetArray()) {
+    if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == attribute_name) {
+      const auto& args = attrib.GetObject()["arguments"];
+      if (args.Size() == 1) {
+        return GetConstantValueAsString(args.GetArray()[0].GetObject()["value"]);
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+bool ValidateTransport(const rapidjson::Value& interface) {
+  const MaybeValue maybe_value = GetAttributeStandaloneArgValue(interface, "transport");
+  return maybe_value.has_value() && maybe_value.value().get().Get<std::string>() == "Syscall";
 }
 
 std::string StripLibraryName(const std::string& full_name) {
@@ -50,28 +86,15 @@ std::string GetCategory(const rapidjson::Value& interface, const std::string& in
 }
 
 std::string GetDocAttribute(const rapidjson::Value& method) {
-  if (!method.HasMember("maybe_attributes")) {
-    return std::string();
-  }
-  for (const auto& attrib : method["maybe_attributes"].GetArray()) {
-    if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == "doc") {
-      return attrib.GetObject()["value"].GetString();
-    }
+  const MaybeValue maybe_value = GetAttributeStandaloneArgValue(method, "doc");
+  if (maybe_value.has_value()) {
+    return maybe_value.value().get().GetString();
   }
   return std::string();
 }
 
 Required GetRequiredAttribute(const rapidjson::Value& field) {
-  if (!field.HasMember("maybe_attributes")) {
-    return Required::kNo;
-  }
-  for (const auto& attrib : field["maybe_attributes"].GetArray()) {
-    if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == "required") {
-      ZX_ASSERT(attrib.GetObject()["value"].Get<std::string>() == "");
-      return Required::kYes;
-    }
-  }
-  return Required::kNo;
+  return HasAttributeWithNoArgs(field, "required") ? Required::kYes : Required::kNo;
 }
 
 constexpr char kRightsPrefix[] = " Rights: ";
@@ -586,8 +609,12 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
       syscall->rights_specs_ = GetRightsSpecsFromDocAttribute(doc_attribute);
       if (method.HasMember("maybe_attributes")) {
         for (const auto& attrib : method["maybe_attributes"].GetArray()) {
-          syscall->attributes_[CamelToSnake(attrib["name"].GetString())] =
-              attrib["value"].GetString();
+          const auto attrib_name = attrib["name"].GetString();
+          const MaybeValue maybe_value = GetAttributeStandaloneArgValue(method, attrib_name);
+          syscall->attributes_[CamelToSnake(attrib_name)] =
+              maybe_value.has_value() && maybe_value.value().get().IsString()
+                  ? maybe_value.value().get().GetString()
+                  : "";
         }
       }
 
@@ -602,8 +629,12 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
                                       std::map<std::string, std::string>{});
         if (arg.HasMember("maybe_attributes")) {
           for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
-            strukt->members_.back().attributes_[CamelToSnake(attrib["name"].GetString())] =
-                attrib["value"].GetString();
+            const auto attrib_name = attrib["name"].GetString();
+            const MaybeValue maybe_value = GetAttributeStandaloneArgValue(arg, attrib_name);
+            strukt->members_.back().attributes_[CamelToSnake(attrib_name)] =
+                maybe_value.has_value() && maybe_value.value().get().IsString()
+                    ? maybe_value.value().get().GetString()
+                    : "";
           }
         }
       };
