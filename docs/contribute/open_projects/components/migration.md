@@ -7,9 +7,16 @@ runtime environment. The original incarnation of components dates back to the
 inception of the Fuchsia OS and the initial commits in 2016. The framework has
 steadily evolved since then.
 
-## Technical background
+## What's been migrated?
 
-Last updated: **August 2021**
+Last updated: **September 2021**
+
+The migration is underway, but broadly speaking:
+
+*   Over a third of production components have been migrated.
+*   All usermode tests have been migrated to run as v2 components.
+
+## Technical background
 
 A high-level diagram of the system's component topology is shown below:
 
@@ -90,8 +97,6 @@ Specifically, ..."
 "setui_service was _prototyped_ to v2 and it exposed some missing dependencies."
 
 ## How to help
-
-Last updated: **August 2021**
 
 ### Picking a task
 
