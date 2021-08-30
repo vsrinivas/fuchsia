@@ -37,3 +37,49 @@ function check-for-package-server {
 
   return 0
 }
+
+function ffx-default-repository-name {
+    # Use the build directory's name by default. Note that package URLs are not
+    # allowed to have underscores, so replace them with hyphens.
+    basename "${FUCHSIA_BUILD_DIR}" | tr '_' '-'
+}
+
+function ffx-add-repository {
+  local repo_name="$1"
+  shift
+
+  if [[ -z "$repo_name" ]]; then
+    fx-error "The repository name was not specified"
+    return 1
+  fi
+
+  fx-command-run ffx --config ffx_repository=true repository add-from-pm \
+    "$repo_name" \
+    "${FUCHSIA_BUILD_DIR}/amber-files"
+  err=$?
+  if [[ $err -ne 0 ]]; then
+    fx-error "The repository was not able to be added to ffx"
+    return $err
+  fi
+
+  return 0
+}
+
+function ffx-register-repository {
+  local repo_name="$1"
+  shift
+
+  ffx-add-repository "$repo_name" || return $?
+
+  fx-command-run ffx --config ffx_repository=true repository target register \
+    --repository "$repo_name" \
+    --alias "fuchsia.com" \
+    "$@"
+  err=$?
+  if [[ $err -ne 0 ]]; then
+    fx-error "The repository was unable to be added to the target device"
+    return $err
+  fi
+
+  return 0
+}

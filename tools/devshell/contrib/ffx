@@ -8,6 +8,7 @@
 ## See fx ffx help for more information.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/updates.sh || exit $?
 fx-config-read
 
 if is-remote-workflow-device; then
@@ -20,7 +21,12 @@ fi
 # accept the concession that something other than the global --target flag
 # being spelled exactly --target as an argument is highly unlikely.
 found_target=false
-args=()
+args=(
+  --config "sdk.root=${FUCHSIA_BUILD_DIR}"
+  --config sdk.type=in-tree
+  --config "repository.default=$(ffx-default-repository-name)"
+)
+
 while [[ $# -gt 0 ]]; do
   arg="$1"
   args+=("$1")
@@ -74,6 +80,4 @@ if [[ "${args[*]}" =~ "target default" ]]; then
   fx-warn "   fx unset-device"
 fi
 
-config="{ \"sdk\": { \"root\": \"${FUCHSIA_BUILD_DIR}\", \"type\": \"in-tree\" } }"
-
-fx-command-exec host-tool ffx "--config" "${config}" "${args[@]}"
+fx-command-exec host-tool ffx "${args[@]}"

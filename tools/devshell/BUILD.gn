@@ -183,6 +183,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/lib/metrics.sh",
         "//tools/devshell/lib/platform.sh",
         "//tools/devshell/lib/style.sh",
+        "//tools/devshell/lib/updates.sh",
         "//tools/devshell/lib/vars.sh",
         "//tools/devshell/lib/verify-default-keys.sh",
         "//tools/devshell/list-build-artifacts",
