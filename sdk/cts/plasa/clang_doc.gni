@@ -1,0 +1,88 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+
+# Runs clang-doc for the requested target.  Requires compdb access.
+#
+# Parameters
+#
+#   stub_file (required)
+#     The name of the stub file to look for in the compilation database
+
+template("clang_doc") {
+  assert(defined(invoker.stub_file))
+  forward_variables_from(invoker, [ "testonly" ])
+
+  _main_target_name = target_name
+
+  # Creates a compile_commands.json file with just the command line used to
+  # compile the API stub file.
+  _filter_compdb_target_name = "${_main_target_name}_filter_compdb"
+  _stamp_file_filter = "${target_gen_dir}/${_filter_compdb_target_name}.stamp"
+  _jq = "//prebuilt/third_party/jq/${host_platform}/bin/jq"
+  _input_compdb = "${root_gen_dir}/compdb/compile_commands.json"
+
+  # Output must be a directory because clang-doc can only take a directory
+  # name as compdb input.
+  _output_compdb_dir =
+      "${target_gen_dir}/${_filter_compdb_target_name}.compdb.d"
+  _output_compdb = "${_output_compdb_dir}/compile_commands.json"
+  action(_filter_compdb_target_name) {
+    script = "//sdk/cts/plasa/run_jq_on_compdb.sh"
+    inputs = [
+      #"${clang_prefix}/clang-doc",
+      _input_compdb,
+      invoker.stub_file,
+    ]
+    outputs = [
+      _output_compdb,
+      _stamp_file_filter,
+    ]
+    args = [
+      rebase_path(_stamp_file_filter, root_build_dir),
+      rebase_path(_jq, root_build_dir),
+      rebase_path(_input_compdb, root_build_dir),
+      rebase_path(_output_compdb, root_build_dir),
+      rebase_path(invoker.stub_file, target_gen_dir),
+    ]
+    deps = [ "//sdk/cts/plasa:filter_compdb" ]
+  }
+
+  # Invokes clang-doc only on the API stub file.
+  _clang_doc_invocation_target = "${_main_target_name}_clang_doc_invoke"
+  _stamp_file = "${target_gen_dir}/${_clang_doc_invocation_target}.stamp"
+  action(_clang_doc_invocation_target) {
+    script = "//sdk/cts/plasa/run_clang_doc.sh"
+    inputs = [
+      "${clang_prefix}/clang-doc",
+      _output_compdb,
+      invoker.stub_file,
+    ]
+    outputs = [ _stamp_file ]
+    _out_dir =
+        rebase_path("${target_gen_dir}/${_filter_compdb_target_name}.api.d",
+                    root_build_dir)
+    _compdb_dir = rebase_path(_output_compdb_dir, root_build_dir)
+    args = [
+      rebase_path(_stamp_file, root_build_dir),
+      "${rebased_clang_prefix}/clang-doc",
+      "--public",
+      "--format=yaml",
+      "-p=${_compdb_dir}",
+      "--output=${_out_dir}",
+
+      # these should be files in the compdb.
+      rebase_path(invoker.stub_file, root_build_dir),
+    ]
+    deps = [ ":${_filter_compdb_target_name}" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+  }
+
+  group(_main_target_name) {
+    deps = [ ":${_clang_doc_invocation_target}" ]
+  }
+}

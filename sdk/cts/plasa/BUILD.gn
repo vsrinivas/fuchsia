@@ -1,0 +1,45 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file
+
+group("plasa") {
+  testonly = true
+  deps = [
+    ":compdb",
+    ":filter_compdb",
+  ]
+}
+
+action("compdb") {
+  _compdb_file = "${root_build_dir}/compile_commands.json"
+  _stamp_file = "${target_gen_dir}/${target_name}.stamp"
+  outputs = [
+    _compdb_file,
+    _stamp_file,
+  ]
+  script = "//sdk/cts/plasa/run.sh"
+  args = [ rebase_path(_stamp_file, root_build_dir) ]
+}
+
+action("filter_compdb") {
+  script = "//sdk/cts/plasa/run_jq_on_compdb.sh"
+  _stamp_file = "${target_gen_dir}/${target_name}.stamp"
+  _jq = "//prebuilt/third_party/jq/${host_platform}/bin/jq"
+  _output = "${root_gen_dir}/compdb/compile_commands.json"
+  sources = [
+    "${root_build_dir}/compile_commands.json",
+    script,
+  ]
+  outputs = [
+    _stamp_file,
+    _output,
+  ]
+  args = [
+    rebase_path(_stamp_file, root_build_dir),
+    rebase_path(_jq, root_build_dir),
+    rebase_path("${root_build_dir}/compile_commands.json", root_build_dir),
+    rebase_path(_output, root_build_dir),
+    "api_stub.cc",
+  ]
+  deps = [ ":compdb" ]
+}

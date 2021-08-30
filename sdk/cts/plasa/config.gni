@@ -1,0 +1,9 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file
+
+declare_args() {
+  # If set, causes the plasa artifacts to be generated.  Not all builds need to
+  # use the plasa artifacts, so we set the default to skip the generation.
+  generate_plasa_artifacts = false
+}

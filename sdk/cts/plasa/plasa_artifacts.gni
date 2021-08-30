@@ -1,0 +1,74 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//sdk/cts/plasa/clang_doc.gni")
+
+# Generates Plasa artifacts for a SDK target.
+#
+# Parameters
+#
+#   source_dir (optional)
+#     If set, path to the base directory of the sources.
+#     This is useful if the sources are generated and therefore not hosted
+#     directly under the directory where the GN rules are declared.
+#
+#   include_base (optional)
+#     Path to the root directory for includes.
+#     Defaults to "include".
+#
+#   testonly (optional)
+#     Set to true if the artifacts are generated for a test-only target.
+#
+#   all_deps
+#     All dependencies to be used in generating the build artifact.
+#
+
+template("plasa_artifacts") {
+  forward_variables_from(invoker,
+                         [
+                           "source_dir",
+                           "testonly",
+                           "all_headers",
+                           "main_target_name",
+                           "all_deps",
+                           "include_base",
+                         ])
+
+  _cc_stub_file = "$target_gen_dir/${main_target_name}.api_stub.cc"
+
+  # Build a stub file that demonstrates the use of the library. This file is
+  # an input into API extraction.
+  _stub_cc_target_name = "${main_target_name}_cc_stub"
+  source_set(_stub_cc_target_name) {
+    # Write out the stub file that will be compiled thereafter.
+    _contents = []
+    foreach(_header, all_headers) {
+      _src_dir = rebase_path(".", target_gen_dir)
+      _contents += [ "#include \"${_src_dir}/${_header}\"" ]
+    }
+    _contents += [ "namespace {}" ]
+    write_file(_cc_stub_file, _contents, "list lines")
+
+    if (defined(include_base)) {
+      _src_dir = rebase_path(".")
+      include_dirs = [ "${_src_dir}/${include_base}" ]
+    }
+    sources = [ _cc_stub_file ]
+    deps = all_deps + [
+             # The library dependencies.
+             ":${main_target_name}",
+           ]
+  }
+
+  # Currently we use clang-doc to extract the C++ API.
+  _clang_doc_target_name = "${main_target_name}_api"
+  clang_doc(_clang_doc_target_name) {
+    stub_file = _cc_stub_file
+    deps = [ ":${_stub_cc_target_name}" ]
+  }
+
+  group("${target_name}") {
+    deps = [ ":$_clang_doc_target_name" ]
+  }
+}
