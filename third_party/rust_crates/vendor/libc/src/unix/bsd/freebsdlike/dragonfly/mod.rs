@@ -171,6 +171,14 @@ s! {
         pub sdl_route: [::c_ushort; 16],
     }
 
+    pub struct xucred {
+        pub cr_version: ::c_uint,
+        pub cr_uid: ::uid_t,
+        pub cr_ngroups: ::c_short,
+        pub cr_groups: [::gid_t; 16],
+        __cr_unused1: *mut ::c_void,
+    }
+
     pub struct stack_t {
         pub ss_sp: *mut ::c_char,
         pub ss_size: ::size_t,
@@ -238,7 +246,6 @@ s_no_extra_traits! {
         pub sigev_value: ::sigval,
         __unused3: *mut ::c_void        //actually a function pointer
     }
-
 }
 
 cfg_if! {
@@ -1013,8 +1020,10 @@ pub const SF_XLINK: ::c_ulong = 0x01000000;
 pub const UTIME_OMIT: c_long = -2;
 pub const UTIME_NOW: c_long = -1;
 
-fn _CMSG_ALIGN(n: usize) -> usize {
-    (n + 3) & !3
+const_fn! {
+    {const} fn _CMSG_ALIGN(n: usize) -> usize {
+        (n + 3) & !3
+    }
 }
 
 f! {
@@ -1043,7 +1052,7 @@ f! {
         }
     }
 
-    pub fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
+    pub {const} fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
         (_CMSG_ALIGN(::mem::size_of::<::cmsghdr>()) +
             _CMSG_ALIGN(length as usize)) as ::c_uint
     }

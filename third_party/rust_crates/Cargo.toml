@@ -80,7 +80,7 @@ itertools = "0.8"
 itoa = "0.4"
 json5format = "0.2.0"
 lazy_static = "1.4"
-libc = "0.2.84"
+libc = "=0.2.92"
 libm = "0.2.1"
 linked-hash-map = "0.5.3"
 log = { version = "0.4.11", features = ["std"] }
@@ -389,13 +389,13 @@ rustflags = []
 [gn.package.httparse."1.3.3"]
 rustflags = ["--cfg=httparse_simd"]
 
-[gn.package.libc."0.2.88"]
+[gn.package.libc."0.2.92"]
 rustflags = ["--cfg=libc_priv_mod_use", "--cfg=libc_union", "--cfg=libc_const_size_of", "--cfg=libc_align", "--cfg=libc_core_cvoid", "--cfg=libc_packedN", "--cfg=libc_cfg_target_vendor"]
 
-[gn.package.libc."0.2.88".platform."cfg(target_vendor = \"apple\")"]
+[gn.package.libc."0.2.92".platform."cfg(target_vendor = \"apple\")"]
 rustflags = ["-liconv"]
 
-[gn.package.libc."0.2.88".platform."cfg(target_os = \"freebsd\")"]
+[gn.package.libc."0.2.92".platform."cfg(target_os = \"freebsd\")"]
 rustflags = ["--cfg=freebsd11"]
 
 [gn.package.log."0.4.11"]
