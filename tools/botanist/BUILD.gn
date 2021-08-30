@@ -71,7 +71,6 @@ go_library("main") {
     "//third_party/golibs:github.com/google/subcommands",
     "//third_party/golibs:golang.org/x/sync",
     "//tools/lib/color",
-    "//tools/lib/command",
     "//tools/lib/environment",
     "//tools/lib/flagmisc",
     "//tools/testing/runtests",

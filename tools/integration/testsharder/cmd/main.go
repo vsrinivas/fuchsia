@@ -10,13 +10,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"syscall"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
-	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
@@ -70,12 +70,13 @@ func init() {
 
 func main() {
 	flag.Parse()
-	ctx := command.CancelOnSignals(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	l := logger.NewLogger(logger.ErrorLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "")
 	// testsharder is expected to complete quite quickly, so it's generally not
 	// useful to include timestamps in logs. File names can be helpful though.
 	l.SetFlags(logger.Lshortfile)
-	ctx = logger.WithLogger(ctx, l)
+	ctx := logger.WithLogger(context.Background(), l)
+	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 	if err := execute(ctx); err != nil {
 		logger.Fatalf(ctx, err.Error())
 	}

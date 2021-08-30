@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -20,7 +21,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/integration/fint"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
-	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
@@ -71,13 +71,13 @@ func (r *fxRunner) runWithNoStdio(ctx context.Context, command string, args ...s
 }
 
 func main() {
-	ctx := command.CancelOnSignals(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-
 	l := logger.NewLogger(logger.ErrorLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "")
 	// Don't include timestamps or other metadata in logs, since this tool is
 	// only intended to be run on developer workstations.
 	l.SetFlags(0)
-	ctx = logger.WithLogger(ctx, l)
+	ctx := logger.WithLogger(context.Background(), l)
+	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	if err := mainImpl(ctx); err != nil {
 		if ctx.Err() == nil {

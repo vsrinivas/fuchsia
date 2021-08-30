@@ -22,7 +22,6 @@ if (is_host) {
       "//tools/integration/fint:fint_lib",
       "//tools/integration/fint:proto_lib",
       "//tools/lib/color",
-      "//tools/lib/command",
       "//tools/lib/logger",
       "//tools/lib/osmisc",
       "//tools/lib/subprocess",

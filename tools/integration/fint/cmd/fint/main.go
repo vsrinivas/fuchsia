@@ -8,12 +8,12 @@ import (
 	"context"
 	"flag"
 	"os"
+	"os/signal"
 	"syscall"
 
 	"github.com/google/subcommands"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
-	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
@@ -39,7 +39,7 @@ func main() {
 	l := logger.NewLogger(logLevel, color.NewColor(colors), os.Stdout, os.Stderr, "fint ")
 	l.SetFlags(logger.Ltime | logger.Lmicroseconds | logger.Lshortfile)
 	ctx := logger.WithLogger(context.Background(), l)
-
-	ctx = command.CancelOnSignals(ctx, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM)
+	defer cancel()
 	os.Exit(int(subcommands.Execute(ctx)))
 }

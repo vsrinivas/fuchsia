@@ -25,7 +25,6 @@ go_library("testsharder_lib") {
   deps = [
     "//tools/build",
     "//tools/lib/color",
-    "//tools/lib/command",
     "//tools/lib/logger",
   ]
 }
@@ -35,7 +34,6 @@ go_library("main") {
   sources = [ "main.go" ]
   deps = [
     ":testsharder_lib",
-    "//tools/lib/command",
     "//tools/lib/flagmisc",
   ]
 }
