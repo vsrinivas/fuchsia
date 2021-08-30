@@ -541,18 +541,6 @@ variant("tiny") {
   ldflags = cflags
 }
 
-# TODO(fxbug.dev/42305): We will temporarily disable UBSan for a specified number of
-# instances where UBSan triggers runtime errors. This config will go away once
-# the asan-ubsan variant is in CI/CQ and we remove all instances of caught
-# undefined behavior in fuchsia. THIS CONFIG SHOULD NOT BE USED.
-config("temporarily_disable_ubsan_do_not_use") {
-  visibility = []
-
-  if (!is_gcc) {
-    cflags = [ "-fno-sanitize=undefined" ]
-  }
-}
-
 # TODO(fxbug.dev/54322): Move this to //zircon/kernel/BUILD.gn once the kernel has been
 # migrated to the Fuchsia build.
 # For any standalone static binary.
