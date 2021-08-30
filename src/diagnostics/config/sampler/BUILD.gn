@@ -8,6 +8,7 @@ import("//build/config.gni")
 # are used to configure data to be sent to Cobalt. Files that are not listed
 # in this variable will be ignored.
 sampler_files = [
+  "audio-drivers.json",
   "archivist.json",
   "avrcp.json",
   "bthost.json",

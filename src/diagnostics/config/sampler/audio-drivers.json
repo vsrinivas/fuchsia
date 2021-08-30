@@ -1,0 +1,18 @@
+{
+  "project_id" : 14,
+  "poll_rate_sec" : 1800,
+  "metrics": [
+    {
+      "selector": "bootstrap/driver_manager:root/tas27xx:seconds_until_error",
+      "metric_id": 1,
+      "metric_type": "Integer",
+      "event_codes": []
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/tas27xx:seconds_until_interrupt",
+      "metric_id": 2,
+      "metric_type": "Integer",
+      "event_codes": []
+    },
+  ]
+}
