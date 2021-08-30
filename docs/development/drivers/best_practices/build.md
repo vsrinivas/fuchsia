@@ -68,7 +68,7 @@ the following
 ```
 {
     program: {
-        runner: driver,
+        runner: 'driver',
         binary: driver/my_driver.so,
         bind: meta/bind/my_driver_bind.bindbc
     }
