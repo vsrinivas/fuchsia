@@ -121,6 +121,7 @@ driver_module("nelson-module-driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/inspect",
   ]
   if (internal_access) {
     include_dirs = [ "//prebuilt" ]

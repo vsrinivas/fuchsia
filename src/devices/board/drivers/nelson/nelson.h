@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/device.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <threads.h>
 
 #include <optional>
@@ -83,6 +84,8 @@ enum {
 constexpr uint32_t GPIO_HW_ID0 = (S905D2_GPIOZ(7));
 constexpr uint32_t GPIO_HW_ID1 = (S905D2_GPIOZ(8));
 constexpr uint32_t GPIO_HW_ID2 = (S905D2_GPIOZ(3));
+constexpr uint32_t GPIO_HW_ID3 = (S905D2_GPIOZ(0));
+constexpr uint32_t GPIO_HW_ID4 = (S905D2_GPIOAO(4));
 
 /* Nelson I2C Devices */
 constexpr uint8_t I2C_BACKLIGHT_ADDR = (0x2C);
@@ -147,6 +150,7 @@ class Nelson : public NelsonType {
   int Thread();
 
   uint32_t GetBoardRev(void);
+  uint32_t GetBoardOption(void);
   uint32_t GetDisplayId(void);
   bool Is9365Ddic();
   zx_status_t EnableWifi32K(void);
@@ -159,7 +163,14 @@ class Nelson : public NelsonType {
 
   thrd_t thread_;
   std::optional<uint32_t> board_rev_;
+  std::optional<uint32_t> board_option_;
   std::optional<uint32_t> display_id_;
+
+  inspect::Inspector inspector_;
+  inspect::Node root_;
+  inspect::UintProperty board_rev_property_;
+  inspect::UintProperty board_option_property_;
+  inspect::UintProperty display_id_property_;
 };
 
 }  // namespace nelson

@@ -59,6 +59,21 @@ uint32_t Nelson::GetBoardRev() {
   return *board_rev_;
 }
 
+uint32_t Nelson::GetBoardOption() {
+  if (!board_option_) {
+    uint8_t id3, id4;
+
+    gpio_impl_.ConfigIn(GPIO_HW_ID3, GPIO_NO_PULL);
+    gpio_impl_.ConfigIn(GPIO_HW_ID4, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_HW_ID3, &id3);
+    gpio_impl_.Read(GPIO_HW_ID4, &id4);
+
+    board_option_.emplace(id3 + (id4 << 1));
+  }
+
+  return *board_option_;
+}
+
 uint32_t Nelson::GetDisplayId() {
   if (!display_id_) {
     uint8_t id0, id1;
@@ -229,6 +244,11 @@ int Nelson::Thread() {
     zxlogf(ERROR, "BluetoothInit failed: %d", status);
   }
 
+  root_ = inspector_.GetRoot().CreateChild("nelson_board_driver");
+  board_rev_property_ = root_.CreateUint("board_build", GetBoardRev());
+  board_option_property_ = root_.CreateUint("board_option", GetBoardOption());
+  display_id_property_ = root_.CreateUint("display_id", GetDisplayId());
+
   return ZX_OK;
 }
 
@@ -264,7 +284,9 @@ zx_status_t Nelson::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = board->DdkAdd("nelson", DEVICE_ADD_NON_BINDABLE);
+  status = board->DdkAdd(ddk::DeviceAddArgs("nelson")
+                             .set_flags(DEVICE_ADD_NON_BINDABLE)
+                             .set_inspect_vmo(board->inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     return status;
   }
