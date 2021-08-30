@@ -8,14 +8,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 )
 
@@ -35,25 +33,29 @@ func withSetChildren(n *Node, children map[string]*Node) *Node {
 func Test_processBlobsJSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		file     io.Reader
+		data     string
 		expected map[string]int64
 	}{
 		{
-			"One Line", strings.NewReader(`[{"source_path":"","merkle": "foo","bytes":0,"size":0}]`), map[string]int64{"foo": 0},
+			"One Line", `[{"source_path":"","merkle": "foo","bytes":0,"size":0}]`, map[string]int64{"foo": 0},
 		},
 		{
-			"Two Lines", strings.NewReader(`[{"source_path":"","merkle": "foo","bytes":0,"size":1},{"source_path":"","merkle": "bar","bytes":0,"size":2}]`), map[string]int64{"foo": 1, "bar": 2},
+			"Two Lines", `[{"source_path":"","merkle": "foo","bytes":0,"size":1},{"source_path":"","merkle": "bar","bytes":0,"size":2}]`, map[string]int64{"foo": 1, "bar": 2},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			m, err := processBlobsJSON(test.file)
+			filename := path.Join(t.TempDir(), "input.json")
+			if err := ioutil.WriteFile(filename, []byte(test.data), 0600); err != nil {
+				t.Fatal(err)
+			}
+			m, err := processBlobsJSON(filename)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(m, test.expected) {
-				t.Fatalf("processBlobsJSON(%s) = %+v; expect %+v", test.file, m, test.expected)
+				t.Fatalf("processBlobsJSON() = %+v; expect %+v", m, test.expected)
 			}
 		})
 	}
@@ -492,7 +494,10 @@ func Test_processInput(t *testing.T) {
 	blobfsCompression.Close()
 
 	// Run the function under test.
-	sizes := parseSizeLimits(&input, buildDir, blobManifestRelPath, basePackageManifestRelPath, blobSizeRelPath)
+	sizes, err := parseSizeLimits(&input, buildDir, blobManifestRelPath, basePackageManifestRelPath, blobSizeRelPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	fooSize, ok := sizes["foo"]
 	if !ok {
 		t.Fatalf("Failed to find foo in sizes: %v", sizes)

@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -84,6 +83,8 @@ type ComponentSize struct {
 	IncludedInBlobFS bool
 	nodes            []*Node
 }
+
+type OutputReport map[string]*ComponentSize
 
 type Blob struct {
 	dep  []string
@@ -219,7 +220,7 @@ func (node *Node) getOnlyChild() (*Node, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("this node does not contain a single child.")
+	return nil, fmt.Errorf("node does not contain a single child")
 }
 
 // displayAsDefault returns a human-readable representation of the supplied
@@ -337,8 +338,7 @@ func formatSize(sizeInBytes int64) string {
 func extractPackages(buildDir string, blobManifestFileName string) (packages []string, err error) {
 	blobsManifestFile, err := os.Open(filepath.Join(buildDir, blobManifestFileName))
 	if err != nil {
-		log.Fatalf("Failed to open the file: %s\n", blobManifestFileName)
-		return nil, err
+		return nil, readError(blobManifestFileName, err)
 	}
 	defer blobsManifestFile.Close()
 
@@ -370,20 +370,16 @@ type processingState struct {
 
 // Translates blobs.json into a map, with the key as the merkle root and the value as the size of
 // that blob.
-func openAndProcessBlobsJSON(blobsJSONFilePath string) (map[string]int64, error) {
+func processBlobsJSON(blobsJSONFilePath string) (map[string]int64, error) {
 	blobsJSONFile, err := os.Open(blobsJSONFilePath)
 	if err != nil {
-		return nil, err
+		return nil, readError(blobsJSONFilePath, err)
 	}
 	defer blobsJSONFile.Close()
 
-	return processBlobsJSON(blobsJSONFile)
-}
-
-func processBlobsJSON(blobsJSONFile io.Reader) (map[string]int64, error) {
 	blobs := []BlobFromSizes{}
 	if err := json.NewDecoder(blobsJSONFile).Decode(&blobs); err != nil {
-		return nil, err
+		return nil, unmarshalError(blobsJSONFilePath, err)
 	}
 
 	m := map[string]int64{}
@@ -406,18 +402,16 @@ func calculateBlobSizes(
 
 	// Find the compressed size of the blobs from the blobs.json produced by blobfs.
 	var merkleRootToSizeMap map[string]int64
-	merkleRootToSizeMap, err := openAndProcessBlobsJSON(filepath.Join(buildDir, rootBlobsJSON))
+	merkleRootToSizeMap, err := processBlobsJSON(filepath.Join(buildDir, rootBlobsJSON))
 	if err != nil {
-		log.Fatalf("Failed to parse the root blobs.json\n")
-		return err
+		return fmt.Errorf("failed to parse the root blobs.json: %s", err)
 	}
 
 	var packageManifestFiles []string
 	for _, metafar := range packages {
 		packageManifestFile, err := getPackageManifestFileFromMetaFar(buildDir, blobManifest, metafar)
 		if err != nil {
-			log.Fatalf("Failed to get the path of the package's blobs.json from the meta.far: %s\n", metafar)
-			return err
+			return fmt.Errorf("failed to get the path of the package's blobs.json from %s: %s", metafar, err)
 		}
 		packageManifestFiles = append(packageManifestFiles, packageManifestFile)
 	}
@@ -431,7 +425,6 @@ func calculateBlobSizes(
 	for _, packageManifestFile := range packageManifestFiles {
 		blobs, err := readBlobsFromPackageManifest(filepath.Join(buildDir, packageManifestFile))
 		if err != nil {
-			log.Fatalf("Failed to read the blobs from: %s\n", packageManifestFile)
 			return err
 		}
 
@@ -457,7 +450,6 @@ func calculateBlobSizes(
 	for _, packageManifestFile := range packageManifestFiles {
 		blobs, err := readBlobsFromPackageManifest(filepath.Join(buildDir, packageManifestFile))
 		if err != nil {
-			log.Fatalf("Failed to read the blobs from: %s\n", packageManifestFile)
 			return err
 		}
 
@@ -484,8 +476,7 @@ func getPackageManifestFileFromMetaFar(buildDir string, blobManifest string, met
 		blobManifestDir := filepath.Dir(blobManifest)
 		absoluteDir, err := filepath.Abs(filepath.Join(buildDir, blobManifestDir, dir))
 		if err != nil {
-			log.Fatalf("Failed to find the absolute path of the package directory: %s\n", dir)
-			return "", fmt.Errorf(readError(dir, err))
+			return "", fmt.Errorf("failed to find the absolute path of the package directory %s: %s", dir, err)
 		}
 		dir = absoluteDir
 	}
@@ -494,7 +485,7 @@ func getPackageManifestFileFromMetaFar(buildDir string, blobManifest string, met
 	if !filepath.IsAbs(buildDir) {
 		absBuildDir, err := filepath.Abs(buildDir)
 		if err != nil {
-			log.Fatalf("Failed to find absolute build dir path: %+v", err)
+			return "", fmt.Errorf("failed to find the absolute path of the build directory %s: %s", buildDir, err)
 		}
 		buildDir = absBuildDir
 	}
@@ -502,8 +493,7 @@ func getPackageManifestFileFromMetaFar(buildDir string, blobManifest string, met
 	// Rebase onto the buildDir.
 	relDir, err := filepath.Rel(buildDir, dir)
 	if err != nil {
-		log.Fatalf("Failed to find the relative path: %s\n", err)
-		return "", fmt.Errorf(readError(relDir, err))
+		return "", fmt.Errorf("failed to make path %s relative to %s: %s", dir, buildDir, err)
 	}
 
 	return filepath.Join(relDir, PackageManifest), nil
@@ -601,11 +591,11 @@ func calculateCompressedBlobSize(blobfsCompressionToolPath string, blobFilePath 
 func calculateCompressedBlobSizeFromToolOutput(out bytes.Buffer) (int64, error) {
 	out_parts := bytes.Split(out.Bytes(), []byte(" "))
 	if len(out_parts) < 2 {
-		return 0, fmt.Errorf("Output of blobfs-compression has an invalid format: %s\n", out.String())
+		return 0, fmt.Errorf("output of blobfs-compression has an invalid format: %s", out.String())
 	}
 	size, err := strconv.Atoi(string(out_parts[1]))
 	if err != nil {
-		return 0, fmt.Errorf("Failed to parse the blob size from blobfs-compression output: %s\n", out.String())
+		return 0, fmt.Errorf("failed to parse the blob size from blobfs-compression output: %s", out.String())
 	}
 
 	return int64(size), nil
@@ -617,10 +607,10 @@ func readBlobsFromPackageManifest(packageManifestFile string) ([]BlobFromJSON, e
 	var packageManifest PackageManifestJSON
 	data, err := ioutil.ReadFile(packageManifestFile)
 	if err != nil {
-		return nil, fmt.Errorf(readError(packageManifestFile, err))
+		return nil, readError(packageManifestFile, err)
 	}
 	if err := json.Unmarshal(data, &packageManifest); err != nil {
-		return nil, fmt.Errorf(unmarshalError(packageManifestFile, err))
+		return nil, unmarshalError(packageManifestFile, err)
 	}
 	return packageManifest.Blobs, nil
 }
@@ -648,15 +638,13 @@ func getBlobPathsFromBlobsJSON(blobsJSON []BlobFromJSON) []string {
 // Logic for checking size budgets
 ////////////////////////////////////////////
 
-// Processes the given sizeLimits and throws an error if any component in the sizeLimits is above its
-// allocated space limit.
-func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest string, basePackageManifest string, rootBlobsJSON string) map[string]*ComponentSize {
-	outputSizes := map[string]*ComponentSize{}
-
+// Processes the given sizeLimits and populates an output report.
+func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest string, basePackageManifest string, rootBlobsJSON string) (OutputReport, error) {
+	outputSizes := make(OutputReport)
 	// 1. Collect the list of packages.
 	packages, err := extractPackages(buildDir, blobManifest)
 	if err != nil {
-		return outputSizes
+		return nil, err
 	}
 
 	// We create a set of ICU data filenames.
@@ -683,8 +671,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		newDummyNode(),
 	}
 	if err := calculateBlobSizes(&st, buildDir, blobManifest, basePackageManifest, rootBlobsJSON, packages); err != nil {
-		log.Fatalf("Failed to calculate the blob sizes: %s\n", err)
-		return outputSizes
+		return nil, fmt.Errorf("failed to calculate the blob sizes: %s", err)
 	}
 
 	var distributedShlibsNodes []*Node
@@ -704,8 +691,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 	var total int64
 	root, err := st.root.getOnlyChild()
 	if err != nil {
-		log.Fatalf("Could not find the root node (typically obj): %s\n", err)
-		return outputSizes
+		return nil, fmt.Errorf("failed to find the root node (typically obj): %s", err)
 	}
 
 	// 3. Iterate over every component, and detach the sizes at each mentioned
@@ -721,13 +707,13 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 			} else {
 				// TODO: Make this fatal when all paths are accounted for.
 				// Currently this is printed, because a couple paths are missing:
-				log.Printf("Failed to find blobs at the path: %s\n", src)
+				log.Printf("WARN: failed to find blobs at the path: %s\n", src)
 			}
 		}
 		total += size
 		budget, err := component.Limit.Int64()
 		if err != nil {
-			log.Fatalf("Failed to parse %s as an int64: %s\n", component.Limit, err)
+			return nil, parseError("component.Limit", err)
 		}
 
 		// There is only ever one copy of Update ZBIs.
@@ -751,7 +737,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		packageManifestPath := filepath.Join(buildDir, component.PackageManifestPath)
 		var blobPaths, err = getBlobPathsFromPackageManifest(packageManifestPath)
 		if err != nil {
-			log.Fatalf("Failed to read the blob paths from the package manifest: %s\n", err)
+			return nil, fmt.Errorf("failed to read the blob paths from the package manifest: %s", err)
 		}
 
 		// Sum all the individual blob sizes.
@@ -761,7 +747,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 			var fullBlobPath = filepath.Join(buildDir, blobPath)
 			var blobSize, err = calculateCompressedBlobSize(blobfsCompressionToolPath, fullBlobPath)
 			if err != nil {
-				log.Fatalf("Failed to calculate the blob size: %s\n", err)
+				return nil, fmt.Errorf("failed to calculate the blob size: %s", err)
 			}
 			node := newNode(blobPath)
 			node.size = blobSize
@@ -772,7 +758,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		var budget int64
 		budget, err = component.Limit.Int64()
 		if err != nil {
-			log.Fatalf("Failed to parse %s as an int64: %s\n", component.Limit, err)
+			return nil, parseError("component.Limit", err)
 		}
 
 		// Add the sizes and budgets to the output.
@@ -786,7 +772,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 
 	ICUDataLimit, err := sizeLimits.ICUDataLimit.Int64()
 	if err != nil {
-		log.Fatalf("Failed to parse %s as an int64: %s\n", sizeLimits.ICUDataLimit, err)
+		return nil, parseError("ICUDataLimit", err)
 	}
 	const icuDataName = "ICU Data"
 	outputSizes[icuDataName] = &ComponentSize{
@@ -798,7 +784,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 
 	CoreSizeLimit, err := sizeLimits.CoreLimit.Int64()
 	if err != nil {
-		log.Fatalf("Failed to parse %s as an int64: %s\n", sizeLimits.CoreLimit, err)
+		return nil, parseError("CoreLimit", err)
 	}
 	const coreName = "Core system+services"
 	coreNodes := make([]*Node, 0)
@@ -815,7 +801,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 	if sizeLimits.DistributedShlibsLimit.String() != "" {
 		DistributedShlibsSizeLimit, err := sizeLimits.DistributedShlibsLimit.Int64()
 		if err != nil {
-			log.Fatalf("Failed to parse %s as an int64: %s\n", sizeLimits.DistributedShlibsLimit, err)
+			return nil, parseError("DistributedShlibsLimit", err)
 		}
 
 		const distributedShlibsName = "Distributed shared libraries"
@@ -827,19 +813,18 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		}
 	}
 
-	return outputSizes
+	return outputSizes, nil
 }
 
 //////////////////////////////////
 // Generate the report
 //////////////////////////////////
 
-func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
+func writeOutputSizes(sizes OutputReport, outPath string) error {
 	f, err := os.Create(outPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create %s: %s", outPath, err)
 	}
-	defer f.Close()
 
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
@@ -853,12 +838,13 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 		simpleSizes[name+ownerSuffix] = "http://go/fuchsia-size-stats/single_component/?f=component:in:" + url.QueryEscape(name)
 	}
 	if err := encoder.Encode(&simpleSizes); err != nil {
-		log.Fatal("failed to encode simpleSizes: ", err)
+		_ = f.Close()
+		return fmt.Errorf("failed to encode simpleSizes: %s", err)
 	}
-	return nil
+	return f.Close()
 }
 
-func generateComponentListOutput(outputSizes map[string]*ComponentSize, showBudgetOnly bool, ignorePerComponentBudget bool, includedInBlobFS bool) ComponentListReport {
+func generateComponentListOutput(outputSizes OutputReport, showBudgetOnly bool, ignorePerComponentBudget bool, includedInBlobFS bool) ComponentListReport {
 	var overBudget = false
 	var totalConsumed int64 = 0
 	var totalBudget int64 = 0
@@ -929,7 +915,7 @@ func generateComponentListOutput(outputSizes map[string]*ComponentSize, showBudg
 	}
 }
 
-func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, ignorePerComponentBudget bool, blobFsCapacity int64) (bool, string) {
+func generateReport(outputSizes OutputReport, showBudgetOnly bool, ignorePerComponentBudget bool, blobFsCapacity int64) (bool, string) {
 
 	var report strings.Builder
 	var componentListReport = generateComponentListOutput(
@@ -1008,42 +994,46 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	return overBudget, report.String()
 }
 
-func parseBlobfsCapacity(buildDir, fileSystemSizesJSONFilename string) int64 {
+func parseBlobfsCapacity(buildDir, fileSystemSizesJSONFilename string) (int64, error) {
 	fileSystemSizesJSON := filepath.Join(buildDir, fileSystemSizesJSONFilename)
 	fileSystemSizesJSONData, err := ioutil.ReadFile(fileSystemSizesJSON)
 	if err != nil {
-		log.Fatal(readError(fileSystemSizesJSON, err))
+		return 0, readError(fileSystemSizesJSON, err)
 	}
 	var fileSystemSizes = new(FileSystemSizes)
 	if err := json.Unmarshal(fileSystemSizesJSONData, &fileSystemSizes); err != nil {
-		log.Fatal(unmarshalError(fileSystemSizesJSON, err))
+		return 0, unmarshalError(fileSystemSizesJSON, err)
 	}
 	for _, fileSystemSize := range *fileSystemSizes {
 		if fileSystemSize.Name == "blob/capacity" {
 			blobFsContentsSize, err := fileSystemSize.Limit.Int64()
 			if err != nil {
-				log.Fatalf("Failed to parse %s as an int64: %s\n", fileSystemSize.Limit, err)
+				return 0, parseError("fileSystemSize.Limit", err)
 			}
-			return blobFsContentsSize
+			return blobFsContentsSize, nil
 		}
 	}
-	return 0
+	return 0, nil
 }
 
 //////////////////////////////////
 // Common Errors
 //////////////////////////////////
 
-func readError(file string, err error) string {
+func readError(file string, err error) error {
 	return verbError("read", file, err)
 }
 
-func unmarshalError(file string, err error) string {
+func unmarshalError(file string, err error) error {
 	return verbError("unmarshal", file, err)
 }
 
-func verbError(verb, file string, err error) string {
-	return fmt.Sprintf("Failed to %s %s: %s", verb, file, err)
+func parseError(field string, err error) error {
+	return verbError("parse", field, err)
+}
+
+func verbError(verb, file string, err error) error {
+	return fmt.Errorf("failed to %s %s: %s", verb, file, err)
 }
 
 //////////////////////////////////
@@ -1090,14 +1080,20 @@ See //tools/size_checker for more details.`)
 		os.Exit(0)
 	}
 
-	outputSizes := parseSizeLimits(&sizeLimits, buildDir, BlobManifest, BasePackageManifest, RootBlobsJSON)
+	outputSizes, err := parseSizeLimits(&sizeLimits, buildDir, BlobManifest, BasePackageManifest, RootBlobsJSON)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if len(fileSizeOutPath) > 0 {
 		if err := writeOutputSizes(outputSizes, fileSizeOutPath); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	blobFsCapacity := parseBlobfsCapacity(buildDir, FileSystemSizesJSON)
+	blobFsCapacity, err := parseBlobfsCapacity(buildDir, FileSystemSizesJSON)
+	if err != nil {
+		log.Fatal(err)
+	}
 	overBudget, report := generateReport(outputSizes, showBudgetOnly, ignorePerComponentBudget, blobFsCapacity)
 
 	if overBudget {
