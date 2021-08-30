@@ -25,7 +25,10 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.ui.scenic.Scenic",
+            ],
             from: "parent",
             to: "#elements",
         },
