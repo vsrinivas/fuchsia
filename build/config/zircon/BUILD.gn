@@ -547,10 +547,6 @@ variant("tiny") {
 # undefined behavior in fuchsia. THIS CONFIG SHOULD NOT BE USED.
 config("temporarily_disable_ubsan_do_not_use") {
   visibility = [
-    # TODO(fxbug.dev/41766): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/third_party/ulib/lz4:*",
-
     # TODO(fxbug.dev/42500): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "//zircon/third_party/ulib/musl/src/stdio:*",

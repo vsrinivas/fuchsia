@@ -7,10 +7,6 @@ import("//build/zircon/migrated_targets.gni")
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 lz4_lib = "//third_party/lz4/lib"
 
-config("lz4_warnings") {
-  configs = [ "//build/config:Wno-implicit-fallthrough" ]
-}
-
 zx_library("lz4") {
   host = true
   sdk = "source"
@@ -38,11 +34,14 @@ zx_library("lz4") {
     "__declspec(x)=",
   ]
 
-  configs += [ ":lz4_warnings" ]
+  configs += [ "//build/config:Wno-implicit-fallthrough" ]
 
-  # TODO(41766): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "//build/config/zircon:temporarily_disable_ubsan_do_not_use" ]
+  # TODO(https://fxbug.dev/41766): Update past https://github.com/lz4/lz4/pull/989 and remove this.
+  configs += [ ":undefined_behavior_null_pointer_arithmetic" ]
+}
+
+config("undefined_behavior_null_pointer_arithmetic") {
+  cflags = [ "-fno-sanitize=pointer-overflow" ]
 }
 
 group("tests") {
