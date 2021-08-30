@@ -2,46 +2,42 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::base::SettingType,
-    crate::handler::base::{Payload as HandlerPayload, Request},
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::ingress::fidl::Interface,
-    crate::input::common::MediaButtonsEventBuilder,
-    crate::input::input_device_configuration::{
-        InputConfiguration, InputDeviceConfiguration, SourceState,
-    },
-    crate::input::monitor_media_buttons,
-    crate::input::types::{
-        DeviceState, DeviceStateSource, InputCategory, InputDeviceType, InputInfoSources,
-        InputState,
-    },
-    crate::message::base::{filter, Attribution, Message, MessageType, MessengerType},
-    crate::message::receptor::Receptor,
-    crate::service::message::Delegate,
-    crate::service::{Address, Payload, Role},
-    crate::service_context::ServiceContext,
-    crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::tests::input_test_environment::{TestInputEnvironment, TestInputEnvironmentBuilder},
-    crate::tests::test_failure_utils::create_test_env_with_failures,
-    fidl::Error::ClientChannelClosed,
-    fidl_fuchsia_settings::{
-        DeviceState as FidlDeviceState, DeviceType, InputDeviceSettings, InputMarker, InputProxy,
-        InputSettings, InputState as FidlInputState, Microphone as FidlMicrophone,
-        ToggleStateFlags,
-    },
-    fidl_fuchsia_ui_input::MediaButtonsEvent,
-    fuchsia_async::TestExecutor,
-    fuchsia_zircon::Status,
-    futures::lock::Mutex,
-    futures::pin_mut,
-    futures::stream::StreamExt,
-    futures::task::Poll,
-    matches::assert_matches,
-    std::collections::HashMap,
-    std::sync::Arc,
+use crate::base::SettingType;
+use crate::handler::base::{Payload as HandlerPayload, Request};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::Interface;
+use crate::input::common::MediaButtonsEventBuilder;
+use crate::input::input_device_configuration::{
+    InputConfiguration, InputDeviceConfiguration, SourceState,
 };
+use crate::input::monitor_media_buttons;
+use crate::input::types::{
+    DeviceState, DeviceStateSource, InputCategory, InputDeviceType, InputInfoSources, InputState,
+};
+use crate::message::base::{filter, Attribution, Message, MessageType, MessengerType};
+use crate::message::receptor::Receptor;
+use crate::service::message::Delegate;
+use crate::service::{Address, Payload, Role};
+use crate::service_context::ServiceContext;
+use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::tests::input_test_environment::{TestInputEnvironment, TestInputEnvironmentBuilder};
+use crate::tests::test_failure_utils::create_test_env_with_failures;
+use fidl::Error::ClientChannelClosed;
+use fidl_fuchsia_settings::{
+    DeviceState as FidlDeviceState, DeviceType, InputDeviceSettings, InputMarker, InputProxy,
+    InputSettings, InputState as FidlInputState, Microphone as FidlMicrophone, ToggleStateFlags,
+};
+use fidl_fuchsia_ui_input::MediaButtonsEvent;
+use fuchsia_async::TestExecutor;
+use fuchsia_zircon::Status;
+use futures::lock::Mutex;
+use futures::pin_mut;
+use futures::stream::StreamExt;
+use futures::task::Poll;
+use matches::assert_matches;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 const DEFAULT_MIC_STATE: bool = false;
 const DEFAULT_CAMERA_STATE: bool = false;

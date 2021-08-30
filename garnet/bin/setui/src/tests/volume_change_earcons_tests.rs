@@ -2,33 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::audio::default_audio_info,
-    crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType},
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::handler::device_storage::DeviceStorage,
-    crate::ingress::fidl::Interface,
-    crate::input::common::MediaButtonsEventBuilder,
-    crate::message::base::MessengerType,
-    crate::service,
-    crate::tests::fakes::audio_core_service,
-    crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
-    crate::tests::scaffold,
-    crate::AgentType,
-    crate::EnvironmentBuilder,
-    fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_settings::{
-        AudioMarker, AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings,
-        Volume,
-    },
-    fuchsia_component::server::NestedEnvironment,
-    futures::future::BoxFuture,
-    futures::lock::Mutex,
-    futures::StreamExt,
-    std::sync::Arc,
+use crate::audio::default_audio_info;
+use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::handler::device_storage::DeviceStorage;
+use crate::ingress::fidl::Interface;
+use crate::input::common::MediaButtonsEventBuilder;
+use crate::message::base::MessengerType;
+use crate::service;
+use crate::tests::fakes::audio_core_service;
+use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService};
+use crate::tests::scaffold;
+use crate::AgentType;
+use crate::EnvironmentBuilder;
+use fidl_fuchsia_media::AudioRenderUsage;
+use fidl_fuchsia_settings::{
+    AudioMarker, AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings, Volume,
 };
+use fuchsia_component::server::NestedEnvironment;
+use futures::future::BoxFuture;
+use futures::lock::Mutex;
+use futures::StreamExt;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "volume_change_earcons_test_environment";
 const INITIAL_VOLUME_LEVEL: f32 = 0.5;

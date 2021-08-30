@@ -2,25 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::base::{SettingInfo, SettingType},
-    crate::fidl_common::FidlResponseErrorLogger,
-    crate::fidl_hanging_get_responder,
-    crate::fidl_process_custom,
-    crate::fidl_processor::settings::RequestContext,
-    crate::handler::base::Request,
-    crate::input::input_controller::DEFAULT_MIC_NAME,
-    crate::input::types::{DeviceState, DeviceStateSource, InputDevice, InputDeviceType},
-    crate::request_respond,
-    fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_settings::{
-        Error, InputDeviceSettings, InputMarker, InputRequest, InputSettings,
-        InputState as FidlInputState, InputWatch2Responder, InputWatchResponder, Microphone,
-    },
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
-    std::collections::HashMap,
+use crate::base::{SettingInfo, SettingType};
+use crate::fidl_common::FidlResponseErrorLogger;
+use crate::fidl_hanging_get_responder;
+use crate::fidl_process_custom;
+use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
+use crate::input::input_controller::DEFAULT_MIC_NAME;
+use crate::input::types::{DeviceState, DeviceStateSource, InputDevice, InputDeviceType};
+use crate::request_respond;
+use fidl::endpoints::ProtocolMarker;
+use fidl_fuchsia_settings::{
+    Error, InputDeviceSettings, InputMarker, InputRequest, InputSettings,
+    InputState as FidlInputState, InputWatch2Responder, InputWatchResponder, Microphone,
 };
+use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_err;
+use std::collections::HashMap;
 
 fidl_hanging_get_responder!(InputMarker, InputSettings, InputWatch2Responder);
 fidl_hanging_get_responder!(InputMarker, InputDeviceSettings, InputWatchResponder);

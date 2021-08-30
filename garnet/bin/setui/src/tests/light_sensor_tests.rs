@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME},
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::ingress::fidl::{display, Interface},
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::EnvironmentBuilder,
-    anyhow::format_err,
-    fidl::endpoints::ServerEnd,
-    fidl::Error::ClientChannelClosed,
-    fidl_fuchsia_settings::*,
-    fuchsia_zircon as zx,
-    futures::future::{self, BoxFuture},
-    std::sync::Arc,
-};
+use crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::{display, Interface};
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::EnvironmentBuilder;
+use anyhow::format_err;
+use fidl::endpoints::ServerEnd;
+use fidl::Error::ClientChannelClosed;
+use fidl_fuchsia_settings::*;
+use fuchsia_zircon as zx;
+use futures::future::{self, BoxFuture};
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
 const TEST_DELTA: f32 = 0.2;

@@ -2,24 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::base::{SettingInfo, SettingType},
-    crate::handler::base::{Error, Payload, Request},
-    crate::message::base::Audience,
-    crate::service,
-    crate::service::TryFromWithClient,
-    crate::trace,
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_warn,
-    futures::channel::mpsc::UnboundedSender,
-    futures::lock::Mutex,
-    futures::stream::StreamExt,
-    std::collections::HashMap,
-    std::convert::TryFrom,
-    std::hash::Hash,
-    std::marker::PhantomData,
-    std::sync::Arc,
-};
+use crate::base::{SettingInfo, SettingType};
+use crate::handler::base::{Error, Payload, Request};
+use crate::message::base::Audience;
+use crate::service;
+use crate::service::TryFromWithClient;
+use crate::trace;
+use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_warn;
+use futures::channel::mpsc::UnboundedSender;
+use futures::lock::Mutex;
+use futures::stream::StreamExt;
+use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::hash::Hash;
+use std::marker::PhantomData;
+use std::sync::Arc;
 
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 

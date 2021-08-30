@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::do_not_disturb::types::DoNotDisturbInfo,
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::ingress::fidl::Interface,
-    crate::EnvironmentBuilder,
-    fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbProxy, DoNotDisturbSettings},
-    std::sync::Arc,
-};
+use crate::do_not_disturb::types::DoNotDisturbInfo;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::Interface;
+use crate::EnvironmentBuilder;
+use fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbProxy, DoNotDisturbSettings};
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";
 

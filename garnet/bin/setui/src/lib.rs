@@ -5,58 +5,56 @@
 // This declaration is required to support the `select!`.
 #![recursion_limit = "256"]
 
-use {
-    crate::accessibility::accessibility_controller::AccessibilityController,
-    crate::account::account_controller::AccountController,
-    crate::agent::authority::Authority,
-    crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan},
-    crate::audio::audio_controller::AudioController,
-    crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
-    crate::base::{Dependency, Entity, SettingType},
-    crate::config::base::{AgentType, ControllerFlag},
-    crate::device::device_controller::DeviceController,
-    crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
-    crate::display::light_sensor_controller::LightSensorController,
-    crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
-    crate::factory_reset::factory_reset_controller::FactoryResetController,
-    crate::handler::base::GenerateHandler,
-    crate::handler::device_storage::DeviceStorageFactory,
-    crate::handler::setting_handler::persist::Handler as DataHandler,
-    crate::handler::setting_handler_factory_impl::SettingHandlerFactoryImpl,
-    crate::handler::setting_proxy::SettingProxy,
-    crate::ingress::fidl,
-    crate::ingress::registration::Registrant,
-    crate::input::input_controller::InputController,
-    crate::intl::intl_controller::IntlController,
-    crate::job::manager::Manager,
-    crate::job::source::Seeder,
-    crate::light::light_controller::LightController,
-    crate::message::MessageHubUtil,
-    crate::monitor::base as monitor_base,
-    crate::night_mode::night_mode_controller::NightModeController,
-    crate::policy::policy_handler,
-    crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl,
-    crate::policy::policy_proxy::PolicyProxy,
-    crate::policy::PolicyType,
-    crate::privacy::privacy_controller::PrivacyController,
-    crate::service::message::Delegate,
-    crate::service_context::GenerateService,
-    crate::service_context::ServiceContext,
-    crate::setup::setup_controller::SetupController,
-    anyhow::{format_err, Context, Error},
-    fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream,
-    fuchsia_async as fasync,
-    fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
-    fuchsia_inspect::component,
-    fuchsia_zircon::{Duration, DurationNum},
-    futures::lock::Mutex,
-    futures::StreamExt,
-    handler::setting_handler::Handler,
-    serde::Deserialize,
-    std::collections::{HashMap, HashSet},
-    std::sync::atomic::AtomicU64,
-    std::sync::Arc,
-};
+use crate::accessibility::accessibility_controller::AccessibilityController;
+use crate::account::account_controller::AccountController;
+use crate::agent::authority::Authority;
+use crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan};
+use crate::audio::audio_controller::AudioController;
+use crate::audio::policy::audio_policy_handler::AudioPolicyHandler;
+use crate::base::{Dependency, Entity, SettingType};
+use crate::config::base::{AgentType, ControllerFlag};
+use crate::device::device_controller::DeviceController;
+use crate::display::display_controller::{DisplayController, ExternalBrightnessControl};
+use crate::display::light_sensor_controller::LightSensorController;
+use crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController;
+use crate::factory_reset::factory_reset_controller::FactoryResetController;
+use crate::handler::base::GenerateHandler;
+use crate::handler::device_storage::DeviceStorageFactory;
+use crate::handler::setting_handler::persist::Handler as DataHandler;
+use crate::handler::setting_handler_factory_impl::SettingHandlerFactoryImpl;
+use crate::handler::setting_proxy::SettingProxy;
+use crate::ingress::fidl;
+use crate::ingress::registration::Registrant;
+use crate::input::input_controller::InputController;
+use crate::intl::intl_controller::IntlController;
+use crate::job::manager::Manager;
+use crate::job::source::Seeder;
+use crate::light::light_controller::LightController;
+use crate::message::MessageHubUtil;
+use crate::monitor::base as monitor_base;
+use crate::night_mode::night_mode_controller::NightModeController;
+use crate::policy::policy_handler;
+use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
+use crate::policy::policy_proxy::PolicyProxy;
+use crate::policy::PolicyType;
+use crate::privacy::privacy_controller::PrivacyController;
+use crate::service::message::Delegate;
+use crate::service_context::GenerateService;
+use crate::service_context::ServiceContext;
+use crate::setup::setup_controller::SetupController;
+use anyhow::{format_err, Context, Error};
+use fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream;
+use fuchsia_async as fasync;
+use fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj};
+use fuchsia_inspect::component;
+use fuchsia_zircon::{Duration, DurationNum};
+use futures::lock::Mutex;
+use futures::StreamExt;
+use handler::setting_handler::Handler;
+use serde::Deserialize;
+use std::collections::{HashMap, HashSet};
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
 
 mod accessibility;
 mod account;

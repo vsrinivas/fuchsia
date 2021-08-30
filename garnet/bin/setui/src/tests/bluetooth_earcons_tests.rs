@@ -2,25 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::agent::earcons,
-    crate::agent::earcons::bluetooth_handler::BLUETOOTH_DOMAIN,
-    crate::agent::earcons::sound_ids::{
-        BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
-    },
-    crate::agent::restore_agent,
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::tests::fakes::discovery_service::{DiscoveryService, SessionId},
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
-    crate::EnvironmentBuilder,
-    anyhow::{format_err, Error},
-    fidl_fuchsia_media::AudioRenderUsage,
-    fuchsia_component::server::NestedEnvironment,
-    futures::lock::Mutex,
-    futures::StreamExt,
-    std::sync::Arc,
+use crate::agent::earcons;
+use crate::agent::earcons::bluetooth_handler::BLUETOOTH_DOMAIN;
+use crate::agent::earcons::sound_ids::{
+    BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
 };
+use crate::agent::restore_agent;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::tests::fakes::discovery_service::{DiscoveryService, SessionId};
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService};
+use crate::EnvironmentBuilder;
+use anyhow::{format_err, Error};
+use fidl_fuchsia_media::AudioRenderUsage;
+use fuchsia_component::server::NestedEnvironment;
+use futures::lock::Mutex;
+use futures::StreamExt;
+use std::sync::Arc;
 
 const ID_1: SessionId = 1;
 const ID_2: SessionId = 2;

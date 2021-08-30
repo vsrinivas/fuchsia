@@ -2,24 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::base::SettingType,
-    crate::config::default_settings::DefaultSetting,
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::policy::PolicyType,
-    crate::tests::fakes::audio_core_service,
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::AgentConfiguration,
-    crate::EnabledPoliciesConfiguration,
-    crate::EnabledServicesConfiguration,
-    crate::EnvironmentBuilder,
-    crate::ServiceConfiguration,
-    crate::ServiceFlags,
-    fidl_fuchsia_settings::{AccessibilityMarker, PrivacyMarker},
-    fidl_fuchsia_settings_policy::VolumePolicyControllerMarker,
-    std::collections::HashSet,
-    std::sync::Arc,
-};
+use crate::base::SettingType;
+use crate::config::default_settings::DefaultSetting;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::policy::PolicyType;
+use crate::tests::fakes::audio_core_service;
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::AgentConfiguration;
+use crate::EnabledPoliciesConfiguration;
+use crate::EnabledServicesConfiguration;
+use crate::EnvironmentBuilder;
+use crate::ServiceConfiguration;
+use crate::ServiceFlags;
+use fidl_fuchsia_settings::{AccessibilityMarker, PrivacyMarker};
+use fidl_fuchsia_settings_policy::VolumePolicyControllerMarker;
+use std::collections::HashSet;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_configuration_test_environment";
 

@@ -2,35 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::agent::{
-        AgentError, Context, Invocation, InvocationResult, Lifespan, Payload as AgentPayload,
-    },
-    crate::base::{Dependency, Entity, SettingType},
-    crate::blueprint_definition,
-    crate::event::{Event, Payload as EventPayload},
-    crate::handler::base::Payload as HandlerPayload,
-    crate::handler::base::Request,
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::ingress::fidl,
-    crate::ingress::registration,
-    crate::job::source::Error,
-    crate::job::{self, Job},
-    crate::message::base::{filter, Audience, MessengerType},
-    crate::service::Payload,
-    crate::service_context::ServiceContext,
-    crate::tests::fakes::base::create_setting_handler,
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::tests::message_utils::verify_payload,
-    crate::tests::scaffold::workload::channel,
-    crate::{service, Environment, EnvironmentBuilder},
-    fuchsia_async as fasync,
-    futures::future::BoxFuture,
-    futures::FutureExt,
-    futures::StreamExt,
-    matches::assert_matches,
-    std::sync::Arc,
+use crate::agent::{
+    AgentError, Context, Invocation, InvocationResult, Lifespan, Payload as AgentPayload,
 };
+use crate::base::{Dependency, Entity, SettingType};
+use crate::blueprint_definition;
+use crate::event::{Event, Payload as EventPayload};
+use crate::handler::base::Payload as HandlerPayload;
+use crate::handler::base::Request;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl;
+use crate::ingress::registration;
+use crate::job::source::Error;
+use crate::job::{self, Job};
+use crate::message::base::{filter, Audience, MessengerType};
+use crate::service::Payload;
+use crate::service_context::ServiceContext;
+use crate::tests::fakes::base::create_setting_handler;
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::tests::message_utils::verify_payload;
+use crate::tests::scaffold::workload::channel;
+use crate::{service, Environment, EnvironmentBuilder};
+use fuchsia_async as fasync;
+use futures::future::BoxFuture;
+use futures::FutureExt;
+use futures::StreamExt;
+use matches::assert_matches;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_environment_test";
 const TEST_PAYLOAD: &str = "test_payload";

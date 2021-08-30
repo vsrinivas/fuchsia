@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::ingress::fidl::Interface,
-    crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo},
-    crate::tests::fakes::hardware_power_statecontrol_service::{
-        Action, HardwarePowerStatecontrolService,
-    },
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::EnvironmentBuilder,
-    fidl_fuchsia_settings::*,
-    futures::lock::Mutex,
-    std::sync::Arc,
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::Interface;
+use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
+use crate::tests::fakes::hardware_power_statecontrol_service::{
+    Action, HardwarePowerStatecontrolService,
 };
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::EnvironmentBuilder;
+use fidl_fuchsia_settings::*;
+use futures::lock::Mutex;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_setup_test_environment";
 

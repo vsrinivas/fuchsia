@@ -1,23 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    crate::base::{SettingInfo, SettingType},
-    crate::display::types::{LowLightMode, SetDisplayInfo, Theme, ThemeMode, ThemeType},
-    crate::fidl_common::FidlResponseErrorLogger,
-    crate::fidl_hanging_get_responder,
-    crate::fidl_process,
-    crate::fidl_processor::settings::RequestContext,
-    crate::handler::base::Request,
-    crate::request_respond,
-    fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_settings::{
-        DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatchLightSensorResponder,
-        DisplayWatchResponder, Error, LightSensorData, LowLightMode as FidlLowLightMode,
-        Theme as FidlTheme, ThemeMode as FidlThemeMode, ThemeType as FidlThemeType,
-    },
-    fuchsia_async as fasync,
+use crate::base::{SettingInfo, SettingType};
+use crate::display::types::{LowLightMode, SetDisplayInfo, Theme, ThemeMode, ThemeType};
+use crate::fidl_common::FidlResponseErrorLogger;
+use crate::fidl_hanging_get_responder;
+use crate::fidl_process;
+use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
+use crate::request_respond;
+use fidl::endpoints::ProtocolMarker;
+use fidl_fuchsia_settings::{
+    DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatchLightSensorResponder,
+    DisplayWatchResponder, Error, LightSensorData, LowLightMode as FidlLowLightMode,
+    Theme as FidlTheme, ThemeMode as FidlThemeMode, ThemeType as FidlThemeType,
 };
+use fuchsia_async as fasync;
 
 fidl_hanging_get_responder!(
     DisplayMarker,

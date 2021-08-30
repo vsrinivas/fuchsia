@@ -1,28 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    crate::handler::base::Request,
-    crate::service_context::{ExternalServiceProxy, ServiceContext},
-    crate::{call, call_async},
-    anyhow::{format_err, Error},
-    fidl::endpoints::{create_proxy, create_request_stream},
-    fidl_fuchsia_camera3::{
-        DeviceMarker, DeviceProxy as Camera3DeviceProxy, DeviceWatcherMarker,
-        DeviceWatcherProxy as Camera3DeviceWatcherProxy, WatchDevicesEvent,
-    },
-    fidl_fuchsia_ui_input::MediaButtonsEvent,
-    fidl_fuchsia_ui_policy::{
-        DeviceListenerRegistryMarker, MediaButtonsListenerMarker, MediaButtonsListenerRequest,
-    },
-    fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_syslog::fx_log_err,
-    fuchsia_zircon::Duration,
-    futures::future::Fuse,
-    futures::{self, FutureExt, StreamExt},
-    serde::{Deserialize, Serialize},
-    std::sync::Arc,
+use crate::handler::base::Request;
+use crate::service_context::{ExternalServiceProxy, ServiceContext};
+use crate::{call, call_async};
+use anyhow::{format_err, Error};
+use fidl::endpoints::{create_proxy, create_request_stream};
+use fidl_fuchsia_camera3::{
+    DeviceMarker, DeviceProxy as Camera3DeviceProxy, DeviceWatcherMarker,
+    DeviceWatcherProxy as Camera3DeviceWatcherProxy, WatchDevicesEvent,
 };
+use fidl_fuchsia_ui_input::MediaButtonsEvent;
+use fidl_fuchsia_ui_policy::{
+    DeviceListenerRegistryMarker, MediaButtonsListenerMarker, MediaButtonsListenerRequest,
+};
+use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_syslog::fx_log_err;
+use fuchsia_zircon::Duration;
+use futures::future::Fuse;
+use futures::{self, FutureExt, StreamExt};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// The amount of time in milliseconds to wait for a camera device to be detected.
 pub const CAMERA_WATCHER_TIMEOUT: i64 = 3000;

@@ -2,34 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::agent::restore_agent,
-    crate::audio::types::{
-        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
-    },
-    crate::audio::{create_default_modified_counters, default_audio_info},
-    crate::base::SettingType,
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::handler::device_storage::DeviceStorage,
-    crate::ingress::fidl::Interface,
-    crate::input::common::MediaButtonsEventBuilder,
-    crate::tests::fakes::audio_core_service::{self, AudioCoreService},
-    crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::tests::fakes::sound_player_service::SoundPlayerService,
-    crate::tests::test_failure_utils::create_test_env_with_failures,
-    crate::AgentType,
-    crate::EnvironmentBuilder,
-    fidl::Error::ClientChannelClosed,
-    fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_settings::*,
-    fuchsia_component::server::NestedEnvironment,
-    fuchsia_zircon::Status,
-    futures::lock::Mutex,
-    matches::assert_matches,
-    std::collections::HashMap,
-    std::sync::Arc,
+use crate::agent::restore_agent;
+use crate::audio::types::{
+    AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
 };
+use crate::audio::{create_default_modified_counters, default_audio_info};
+use crate::base::SettingType;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::handler::device_storage::DeviceStorage;
+use crate::ingress::fidl::Interface;
+use crate::input::common::MediaButtonsEventBuilder;
+use crate::tests::fakes::audio_core_service::{self, AudioCoreService};
+use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::tests::fakes::sound_player_service::SoundPlayerService;
+use crate::tests::test_failure_utils::create_test_env_with_failures;
+use crate::AgentType;
+use crate::EnvironmentBuilder;
+use fidl::Error::ClientChannelClosed;
+use fidl_fuchsia_media::AudioRenderUsage;
+use fidl_fuchsia_settings::*;
+use fuchsia_component::server::NestedEnvironment;
+use fuchsia_zircon::Status;
+use futures::lock::Mutex;
+use matches::assert_matches;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_audio_test_environment";
 

@@ -2,26 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType, SetAudioStream},
-    crate::base::{SettingInfo, SettingType},
-    crate::fidl_common::FidlResponseErrorLogger,
-    crate::fidl_hanging_get_responder,
-    crate::fidl_process,
-    crate::fidl_processor::settings::RequestContext,
-    crate::handler::base::Request,
-    crate::request_respond,
-    crate::trace::TracingNonce,
-    crate::{trace, trace_guard},
-    fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_settings::{
-        AudioInput, AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource,
-        AudioStreamSettings, AudioWatchResponder, Volume,
-    },
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
+use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType, SetAudioStream};
+use crate::base::{SettingInfo, SettingType};
+use crate::fidl_common::FidlResponseErrorLogger;
+use crate::fidl_hanging_get_responder;
+use crate::fidl_process;
+use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
+use crate::request_respond;
+use crate::trace::TracingNonce;
+use crate::{trace, trace_guard};
+use fidl::endpoints::ProtocolMarker;
+use fidl_fuchsia_media::AudioRenderUsage;
+use fidl_fuchsia_settings::{
+    AudioInput, AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource,
+    AudioStreamSettings, AudioWatchResponder, Volume,
 };
+use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_err;
 
 fidl_hanging_get_responder!(AudioMarker, AudioSettings, AudioWatchResponder,);
 

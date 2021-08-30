@@ -2,23 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::base::SettingType,
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::ingress::fidl::Interface,
-    crate::tests::test_failure_utils::create_test_env_with_failures,
-    crate::EnvironmentBuilder,
-    anyhow::format_err,
-    fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fidl::Error::ClientChannelClosed,
-    fidl_fuchsia_settings::*,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    fuchsia_zircon::Status,
-    futures::future::BoxFuture,
-    futures::prelude::*,
-    matches::assert_matches,
-    std::sync::Arc,
-};
+use crate::base::SettingType;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::Interface;
+use crate::tests::test_failure_utils::create_test_env_with_failures;
+use crate::EnvironmentBuilder;
+use anyhow::format_err;
+use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::Error::ClientChannelClosed;
+use fidl_fuchsia_settings::*;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
+use fuchsia_zircon::Status;
+use futures::future::BoxFuture;
+use futures::prelude::*;
+use matches::assert_matches;
+use std::sync::Arc;
 
 use crate::intl::types::IntlInfo;
 

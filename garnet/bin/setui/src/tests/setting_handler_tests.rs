@@ -1,31 +1,29 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    crate::accessibility::types::AccessibilityInfo,
-    crate::agent::{restore_agent, Blueprint},
-    crate::base::{get_all_setting_types, SettingInfo, SettingType, UnknownInfo},
-    crate::handler::base::{ContextBuilder, Request},
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::handler::device_storage::DeviceStorageCompatible,
-    crate::handler::setting_handler::persist::WriteResult,
-    crate::handler::setting_handler::{
-        controller, persist, persist::controller as data_controller,
-        persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, BoxedController,
-        ClientImpl, Command, ControllerError, ControllerStateResult, Event, GenerateController,
-        Handler, IntoHandlerResult, Payload, SettingHandlerResult, State,
-    },
-    crate::message::base::{Audience, MessengerType},
-    crate::message::MessageHubUtil,
-    crate::service,
-    crate::tests::message_utils::verify_payload,
-    crate::EnvironmentBuilder,
-    async_trait::async_trait,
-    futures::channel::mpsc::{unbounded, UnboundedSender},
-    futures::StreamExt,
-    std::collections::{HashMap, HashSet},
-    std::sync::Arc,
+use crate::accessibility::types::AccessibilityInfo;
+use crate::agent::{restore_agent, Blueprint};
+use crate::base::{get_all_setting_types, SettingInfo, SettingType, UnknownInfo};
+use crate::handler::base::{ContextBuilder, Request};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::setting_handler::persist::WriteResult;
+use crate::handler::setting_handler::{
+    controller, persist, persist::controller as data_controller,
+    persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, BoxedController,
+    ClientImpl, Command, ControllerError, ControllerStateResult, Event, GenerateController,
+    Handler, IntoHandlerResult, Payload, SettingHandlerResult, State,
 };
+use crate::message::base::{Audience, MessengerType};
+use crate::message::MessageHubUtil;
+use crate::service;
+use crate::tests::message_utils::verify_payload;
+use crate::EnvironmentBuilder;
+use async_trait::async_trait;
+use futures::channel::mpsc::{unbounded, UnboundedSender};
+use futures::StreamExt;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_setting_handler_test_environment";
 const CONTEXT_ID: u64 = 0;

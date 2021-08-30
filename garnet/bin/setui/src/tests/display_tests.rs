@@ -2,33 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::agent::restore_agent,
-    crate::base::SettingType,
-    crate::config::base::ControllerFlag,
-    crate::display::types::{DisplayInfo, LowLightMode, Theme},
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::ingress::fidl::{display, Interface},
-    crate::tests::fakes::brightness_service::BrightnessService,
-    crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::tests::test_failure_utils::create_test_env_with_failures,
-    crate::EnvironmentBuilder,
-    anyhow::format_err,
-    fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fidl::Error::ClientChannelClosed,
-    fidl_fuchsia_settings::{
-        DisplayMarker, DisplayProxy, DisplaySettings, Error as FidlError, IntlMarker,
-        LowLightMode as FidlLowLightMode, Theme as FidlTheme, ThemeMode as FidlThemeMode,
-        ThemeType as FidlThemeType,
-    },
-    fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, Status},
-    futures::future::BoxFuture,
-    futures::lock::Mutex,
-    futures::prelude::*,
-    matches::assert_matches,
-    std::sync::Arc,
+use crate::agent::restore_agent;
+use crate::base::SettingType;
+use crate::config::base::ControllerFlag;
+use crate::display::types::{DisplayInfo, LowLightMode, Theme};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::{display, Interface};
+use crate::tests::fakes::brightness_service::BrightnessService;
+use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::tests::test_failure_utils::create_test_env_with_failures;
+use crate::EnvironmentBuilder;
+use anyhow::format_err;
+use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::Error::ClientChannelClosed;
+use fidl_fuchsia_settings::{
+    DisplayMarker, DisplayProxy, DisplaySettings, Error as FidlError, IntlMarker,
+    LowLightMode as FidlLowLightMode, Theme as FidlTheme, ThemeMode as FidlThemeMode,
+    ThemeType as FidlThemeType,
 };
+use fuchsia_async as fasync;
+use fuchsia_zircon::{self as zx, Status};
+use futures::future::BoxFuture;
+use futures::lock::Mutex;
+use futures::prelude::*;
+use matches::assert_matches;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_display_test_environment";
 const STARTING_BRIGHTNESS: f32 = 0.5;

@@ -2,25 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::audio::types::AudioStream,
-    crate::audio::utils::round_volume_level,
-    crate::base::SettingType,
-    crate::event::{Event, Publisher},
-    crate::handler::setting_handler::ControllerError,
-    crate::service_context::ExternalServiceProxy,
-    crate::trace::TracingNonce,
-    crate::{call, trace, trace_guard},
-    fidl::{self, endpoints::create_proxy},
-    fidl_fuchsia_media::{AudioRenderUsage, Usage},
-    fidl_fuchsia_media_audio::VolumeControlProxy,
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_warn,
-    futures::channel::mpsc::UnboundedSender,
-    futures::stream::StreamExt,
-    futures::TryStreamExt,
-    std::sync::Arc,
-};
+use crate::audio::types::AudioStream;
+use crate::audio::utils::round_volume_level;
+use crate::base::SettingType;
+use crate::event::{Event, Publisher};
+use crate::handler::setting_handler::ControllerError;
+use crate::service_context::ExternalServiceProxy;
+use crate::trace::TracingNonce;
+use crate::{call, trace, trace_guard};
+use fidl::{self, endpoints::create_proxy};
+use fidl_fuchsia_media::{AudioRenderUsage, Usage};
+use fidl_fuchsia_media_audio::VolumeControlProxy;
+use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_warn;
+use futures::channel::mpsc::UnboundedSender;
+use futures::stream::StreamExt;
+use futures::TryStreamExt;
+use std::sync::Arc;
 
 const PUBLISHER_EVENT_NAME: &str = "volume_control_events";
 const CONTROLLER_ERROR_DEPENDENCY: &str = "fuchsia.media.audio";

@@ -2,26 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{Context, Error},
-    fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog::{self as syslog, fx_log_info},
-    settings::agent::BlueprintHandle as AgentBlueprintHandle,
-    settings::base::get_default_setting_types,
-    settings::config::base::{get_default_agent_types, AgentType},
-    settings::config::default_settings::DefaultSetting,
-    settings::handler::device_storage::StashDeviceStorageFactory,
-    settings::AgentConfiguration,
-    settings::EnabledPoliciesConfiguration,
-    settings::EnabledServicesConfiguration,
-    settings::EnvironmentBuilder,
-    settings::ServiceConfiguration,
-    settings::ServiceFlags,
-    std::collections::HashSet,
-    std::path::Path,
-    std::sync::Arc,
-};
+use anyhow::{Context, Error};
+use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_protocol;
+use fuchsia_syslog::{self as syslog, fx_log_info};
+use settings::agent::BlueprintHandle as AgentBlueprintHandle;
+use settings::base::get_default_setting_types;
+use settings::config::base::{get_default_agent_types, AgentType};
+use settings::config::default_settings::DefaultSetting;
+use settings::handler::device_storage::StashDeviceStorageFactory;
+use settings::AgentConfiguration;
+use settings::EnabledPoliciesConfiguration;
+use settings::EnabledServicesConfiguration;
+use settings::EnvironmentBuilder;
+use settings::ServiceConfiguration;
+use settings::ServiceFlags;
+use std::collections::HashSet;
+use std::path::Path;
+use std::sync::Arc;
 
 const STASH_IDENTITY: &str = "settings_service";
 

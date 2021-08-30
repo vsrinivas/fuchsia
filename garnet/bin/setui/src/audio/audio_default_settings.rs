@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::audio::types::{
-        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
-    },
-    crate::base::SettingInfo,
-    crate::config::default_settings::DefaultSetting,
-    crate::handler::device_storage::DeviceStorageCompatible,
-    lazy_static::lazy_static,
-    serde::{Deserialize, Serialize},
-    std::collections::HashMap,
-    std::sync::Mutex,
+use crate::audio::types::{
+    AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
 };
+use crate::base::SettingInfo;
+use crate::config::default_settings::DefaultSetting;
+use crate::handler::device_storage::DeviceStorageCompatible;
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 const DEFAULT_MIC_MUTE: bool = false;
 const DEFAULT_VOLUME_LEVEL: f32 = 0.5;

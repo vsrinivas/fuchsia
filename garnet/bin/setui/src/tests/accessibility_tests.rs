@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::accessibility::types::{AccessibilityInfo, ColorBlindnessType},
-    crate::base::SettingType,
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::ingress::fidl::Interface,
-    crate::tests::test_failure_utils::create_test_env_with_failures,
-    crate::EnvironmentBuilder,
-    fidl::Error::ClientChannelClosed,
-    fidl_fuchsia_settings::*,
-    fidl_fuchsia_ui_types::ColorRgba,
-    fuchsia_zircon::Status,
-    matches::assert_matches,
-    std::sync::Arc,
-};
+use crate::accessibility::types::{AccessibilityInfo, ColorBlindnessType};
+use crate::base::SettingType;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::Interface;
+use crate::tests::test_failure_utils::create_test_env_with_failures;
+use crate::EnvironmentBuilder;
+use fidl::Error::ClientChannelClosed;
+use fidl_fuchsia_settings::*;
+use fidl_fuchsia_ui_types::ColorRgba;
+use fuchsia_zircon::Status;
+use matches::assert_matches;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_accessibility_test_environment";
 

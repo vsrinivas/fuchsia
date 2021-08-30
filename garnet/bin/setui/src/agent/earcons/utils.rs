@@ -1,21 +1,19 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    crate::call_async,
-    crate::event::Publisher,
-    crate::service_context::{ExternalServiceProxy, ServiceContext},
-    anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_debug, fx_log_err},
-    fuchsia_zircon as zx,
-    futures::lock::Mutex,
-    std::collections::HashSet,
-    std::fs::File,
-    std::sync::Arc,
-};
+use crate::call_async;
+use crate::event::Publisher;
+use crate::service_context::{ExternalServiceProxy, ServiceContext};
+use anyhow::{format_err, Context as _, Error};
+use fidl_fuchsia_media::AudioRenderUsage;
+use fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy};
+use fuchsia_async as fasync;
+use fuchsia_syslog::{fx_log_debug, fx_log_err};
+use fuchsia_zircon as zx;
+use futures::lock::Mutex;
+use std::collections::HashSet;
+use std::fs::File;
+use std::sync::Arc;
 
 /// Creates a file-based sound from a resource file.
 fn resource_file(

@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::base::{SettingInfo, SettingType},
-    crate::fidl_hanging_get_responder,
-    crate::fidl_process,
-    crate::fidl_processor::settings::RequestContext,
-    fidl_fuchsia_settings::{DeviceMarker, DeviceRequest, DeviceSettings, DeviceWatchResponder},
-};
+use crate::base::{SettingInfo, SettingType};
+use crate::fidl_hanging_get_responder;
+use crate::fidl_process;
+use crate::fidl_processor::settings::RequestContext;
+use fidl_fuchsia_settings::{DeviceMarker, DeviceRequest, DeviceSettings, DeviceWatchResponder};
 
 fidl_hanging_get_responder!(DeviceMarker, DeviceSettings, DeviceWatchResponder);
 

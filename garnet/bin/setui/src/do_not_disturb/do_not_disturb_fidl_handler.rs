@@ -2,22 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::base::{SettingInfo, SettingType},
-    crate::do_not_disturb::types::DoNotDisturbInfo,
-    crate::fidl_common::FidlResponseErrorLogger,
-    crate::fidl_hanging_get_responder,
-    crate::fidl_process,
-    crate::fidl_processor::settings::RequestContext,
-    crate::handler::base::Request,
-    crate::request_respond,
-    fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_settings::{
-        DoNotDisturbMarker, DoNotDisturbRequest, DoNotDisturbSettings, DoNotDisturbWatchResponder,
-        Error,
-    },
-    fuchsia_async as fasync,
+use crate::base::{SettingInfo, SettingType};
+use crate::do_not_disturb::types::DoNotDisturbInfo;
+use crate::fidl_common::FidlResponseErrorLogger;
+use crate::fidl_hanging_get_responder;
+use crate::fidl_process;
+use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
+use crate::request_respond;
+use fidl::endpoints::ProtocolMarker;
+use fidl_fuchsia_settings::{
+    DoNotDisturbMarker, DoNotDisturbRequest, DoNotDisturbSettings, DoNotDisturbWatchResponder,
+    Error,
 };
+use fuchsia_async as fasync;
 
 fidl_hanging_get_responder!(DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder,);
 

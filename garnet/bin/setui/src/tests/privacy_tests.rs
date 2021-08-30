@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::base::SettingType,
-    crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::handler::device_storage::DeviceStorage,
-    crate::ingress::fidl::Interface,
-    crate::privacy::types::PrivacyInfo,
-    crate::tests::test_failure_utils::create_test_env_with_failures,
-    crate::EnvironmentBuilder,
-    fidl::Error::ClientChannelClosed,
-    fidl_fuchsia_settings::{PrivacyMarker, PrivacyProxy},
-    fuchsia_zircon::Status,
-    matches::assert_matches,
-    std::sync::Arc,
-};
+use crate::base::SettingType;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::handler::device_storage::DeviceStorage;
+use crate::ingress::fidl::Interface;
+use crate::privacy::types::PrivacyInfo;
+use crate::tests::test_failure_utils::create_test_env_with_failures;
+use crate::EnvironmentBuilder;
+use fidl::Error::ClientChannelClosed;
+use fidl_fuchsia_settings::{PrivacyMarker, PrivacyProxy};
+use fuchsia_zircon::Status;
+use matches::assert_matches;
+use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_privacy_test_environment";
 
