@@ -78,9 +78,9 @@ CrashReportBuilder& CrashReportBuilder::SetMinidump(zx::vmo minidump) {
   return *this;
 }
 
-CrashReportBuilder& CrashReportBuilder::SetPolicyError(
-    const std::optional<PolicyError>& policy_error) {
-  policy_error_ = policy_error;
+CrashReportBuilder& CrashReportBuilder::SetExceptionReason(
+    const std::optional<ExceptionReason>& exception_reason) {
+  exception_reason_ = exception_reason;
   return *this;
 }
 
@@ -142,15 +142,24 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   }
 
   // Crash signature overwrite on channel/port overflow.
-  if (policy_error_.has_value()) {
-    switch (policy_error_.value()) {
-      case PolicyError::kChannelOverflow:
+  if (exception_reason_.has_value()) {
+    switch (exception_reason_.value()) {
+      case ExceptionReason::kChannelOverflow:
         crash_report.set_crash_signature(fxl::StringPrintf(
             "fuchsia-%s-channel-overflow", Sanitize(process_name_.value()).c_str()));
         break;
-      case PolicyError::kPortOverflow:
+      case ExceptionReason::kPortOverflow:
         crash_report.set_crash_signature(
             fxl::StringPrintf("fuchsia-%s-port-overflow", Sanitize(process_name_.value()).c_str()));
+        break;
+      case ExceptionReason::kPageFaultIo:
+        crash_report.set_crash_signature("fuchsia-page_fault-io");
+        break;
+      case ExceptionReason::kPageFaultIoDataIntegrity:
+        crash_report.set_crash_signature("fuchsia-page_fault-io_data_integrity");
+        break;
+      case ExceptionReason::kPageFaultBadState:
+        crash_report.set_crash_signature("fuchsia-page_fault-bad_state");
         break;
     }
   }

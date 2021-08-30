@@ -65,24 +65,38 @@ zx::thread GetThread(const zx::exception& exception) {
   return thread;
 }
 
-std::optional<PolicyError> DetectPolicyError(const zx_exception_report_t& exception_report) {
-  if (exception_report.header.type != ZX_EXCP_POLICY_ERROR) {
-    return std::nullopt;
+std::optional<ExceptionReason> DetectExceptionReason(
+    const zx_exception_report_t& exception_report) {
+  if (exception_report.header.type == ZX_EXCP_POLICY_ERROR) {
+    switch (exception_report.context.synth_code) {
+      case ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE:
+        return ExceptionReason::kChannelOverflow;
+      case ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS:
+        return ExceptionReason::kPortOverflow;
+      default:
+        return std::nullopt;
+    }
+  } else if (exception_report.header.type == ZX_EXCP_FATAL_PAGE_FAULT) {
+    const zx_status_t status = static_cast<zx_status_t>(exception_report.context.synth_code);
+    switch (status) {
+      case ZX_ERR_IO:
+        return ExceptionReason::kPageFaultIo;
+      case ZX_ERR_IO_DATA_INTEGRITY:
+        return ExceptionReason::kPageFaultIoDataIntegrity;
+      case ZX_ERR_BAD_STATE:
+        return ExceptionReason::kPageFaultBadState;
+      default:
+        return std::nullopt;
+    }
   }
 
-  switch (exception_report.context.synth_code) {
-    case ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE:
-      return PolicyError::kChannelOverflow;
-    case ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS:
-      return PolicyError::kPortOverflow;
-    default:
-      return std::nullopt;
-  }
+  return std::nullopt;
 }
 
 }  // namespace
 
-zx::vmo GenerateMinidump(const zx::exception& exception, std::optional<PolicyError>* policy_error) {
+zx::vmo GenerateMinidump(const zx::exception& exception,
+                         std::optional<ExceptionReason>* exception_reason) {
   zx::process process = GetProcess(exception);
   if (!process.is_valid())
     return {};
@@ -108,8 +122,8 @@ zx::vmo GenerateMinidump(const zx::exception& exception, std::optional<PolicyErr
     return {};
   }
 
-  // Set the policy error.
-  *policy_error = DetectPolicyError(report);
+  // Set the exception reason.
+  *exception_reason = DetectExceptionReason(report);
 
   // Create a process snapshot form the process and the exception thread.
   crashpad::ProcessSnapshotFuchsia process_snapshot;

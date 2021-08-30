@@ -72,8 +72,8 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
   builder.SetProcess(crashed_process).SetThread(crashed_thread);
 
   if (exception.is_valid()) {
-    std::optional<PolicyError> policy_error{std::nullopt};
-    zx::vmo minidump = GenerateMinidump(exception, &policy_error);
+    std::optional<ExceptionReason> exception_reason{std::nullopt};
+    zx::vmo minidump = GenerateMinidump(exception, &exception_reason);
     ResetException(dispatcher_, std::move(exception), crashed_process);
 
     if (minidump.is_valid()) {
@@ -81,7 +81,7 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
     } else {
       builder.SetProcessTerminated();
     }
-    builder.SetPolicyError(policy_error);
+    builder.SetExceptionReason(exception_reason);
   } else {
     builder.SetExceptionExpired();
   }

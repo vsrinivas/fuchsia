@@ -16,10 +16,13 @@ namespace forensics {
 namespace exceptions {
 namespace handler {
 
-// Policy error exceptions that should be used to better form crash reports.
-enum class PolicyError {
+// Exception reasons that should be used to better form crash reports.
+enum class ExceptionReason {
   kChannelOverflow,
   kPortOverflow,
+  kPageFaultIo,
+  kPageFaultIoDataIntegrity,
+  kPageFaultBadState,
 };
 
 // If |string_file| is empty, this function will error out.
@@ -27,7 +30,8 @@ enum class PolicyError {
 // Mostly exposed for testing purposes, but valid as a standalone function.
 zx::vmo GenerateVMOFromStringFile(const crashpad::StringFile& string_file);
 
-zx::vmo GenerateMinidump(const zx::exception& exception, std::optional<PolicyError>* policy_error);
+zx::vmo GenerateMinidump(const zx::exception& exception,
+                         std::optional<ExceptionReason>* exception_reason);
 
 }  // namespace handler
 }  // namespace exceptions

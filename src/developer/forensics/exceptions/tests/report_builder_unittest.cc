@@ -37,26 +37,64 @@ TEST_F(CrashReportBuilderTest, SetsMinidump) {
   EXPECT_STREQ(minidump_content.c_str(), "minidump");
 }
 
-TEST_F(CrashReportBuilderTest, PolicyError_ChannelOverflow) {
+TEST_F(CrashReportBuilderTest, ExceptionReason_ChannelOverflow) {
   fsl::SizedVmo minidump_vmo;
   ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
 
-  builder_.SetMinidump(std::move(minidump_vmo.vmo())).SetPolicyError(PolicyError::kChannelOverflow);
+  builder_.SetMinidump(std::move(minidump_vmo.vmo()))
+      .SetExceptionReason(ExceptionReason::kChannelOverflow);
 
   auto crash_report = builder_.Consume();
   ASSERT_TRUE(crash_report.has_crash_signature());
   EXPECT_EQ(crash_report.crash_signature(), "fuchsia-unknown_process-channel-overflow");
 }
 
-TEST_F(CrashReportBuilderTest, PolicyError_PortOverflow) {
+TEST_F(CrashReportBuilderTest, ExceptionReason_PortOverflow) {
   fsl::SizedVmo minidump_vmo;
   ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
 
-  builder_.SetMinidump(std::move(minidump_vmo.vmo())).SetPolicyError(PolicyError::kPortOverflow);
+  builder_.SetMinidump(std::move(minidump_vmo.vmo()))
+      .SetExceptionReason(ExceptionReason::kPortOverflow);
 
   auto crash_report = builder_.Consume();
   ASSERT_TRUE(crash_report.has_crash_signature());
   EXPECT_EQ(crash_report.crash_signature(), "fuchsia-unknown_process-port-overflow");
+}
+
+TEST_F(CrashReportBuilderTest, ExceptionReason_PageFaultIo) {
+  fsl::SizedVmo minidump_vmo;
+  ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
+
+  builder_.SetMinidump(std::move(minidump_vmo.vmo()))
+      .SetExceptionReason(ExceptionReason::kPageFaultIo);
+
+  auto crash_report = builder_.Consume();
+  ASSERT_TRUE(crash_report.has_crash_signature());
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-page_fault-io");
+}
+
+TEST_F(CrashReportBuilderTest, ExceptionReason_PageFaultIoDataIntegrity) {
+  fsl::SizedVmo minidump_vmo;
+  ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
+
+  builder_.SetMinidump(std::move(minidump_vmo.vmo()))
+      .SetExceptionReason(ExceptionReason::kPageFaultIoDataIntegrity);
+
+  auto crash_report = builder_.Consume();
+  ASSERT_TRUE(crash_report.has_crash_signature());
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-page_fault-io_data_integrity");
+}
+
+TEST_F(CrashReportBuilderTest, ExceptionReason_PageFaultBadState) {
+  fsl::SizedVmo minidump_vmo;
+  ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
+
+  builder_.SetMinidump(std::move(minidump_vmo.vmo()))
+      .SetExceptionReason(ExceptionReason::kPageFaultBadState);
+
+  auto crash_report = builder_.Consume();
+  ASSERT_TRUE(crash_report.has_crash_signature());
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-page_fault-bad_state");
 }
 
 TEST_F(CrashReportBuilderTest, ProcessTerminated) {

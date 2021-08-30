@@ -25,7 +25,7 @@ class CrashReportBuilder {
   CrashReportBuilder& SetProcess(const zx::process& process);
   CrashReportBuilder& SetThread(const zx::thread& thread);
   CrashReportBuilder& SetMinidump(zx::vmo minidump);
-  CrashReportBuilder& SetPolicyError(const std::optional<PolicyError>& policy_error);
+  CrashReportBuilder& SetExceptionReason(const std::optional<ExceptionReason>& exception_reason);
   CrashReportBuilder& SetComponentInfo(const ComponentInfo& component_info);
   CrashReportBuilder& SetExceptionExpired();
   CrashReportBuilder& SetProcessTerminated();
@@ -41,7 +41,7 @@ class CrashReportBuilder {
   std::optional<std::string> thread_name_;
   std::optional<zx_koid_t> thread_koid_;
   std::optional<zx::vmo> minidump_{std::nullopt};
-  std::optional<PolicyError> policy_error_{std::nullopt};
+  std::optional<ExceptionReason> exception_reason_{std::nullopt};
   std::optional<std::string> component_url_{std::nullopt};
   std::optional<std::string> realm_path_{std::nullopt};
   bool exception_expired_{false};
