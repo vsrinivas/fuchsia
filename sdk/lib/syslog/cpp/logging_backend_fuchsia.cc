@@ -438,7 +438,7 @@ void LogState::Connect() {
   if (fx_log_compat_no_interest_listener()) {
     serve_interest_listener_ = false;
   }
-  if (this->serve_interest_listener_) {
+  if (serve_interest_listener_) {
     if (!interest_listener_dispatcher_) {
       loop_.StartThread("log-interest-listener-thread");
     } else {
