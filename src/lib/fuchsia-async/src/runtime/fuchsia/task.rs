@@ -73,6 +73,31 @@ impl<T: Send> Task<T> {
         super::executor::spawn(future);
         Task { remote_handle }
     }
+
+    /// Spawn a new task on the specified executor.
+    ///
+    /// The task may be executed on any thread(s) owned by the current executor.
+    /// See [`Task::local`] for an equivalent that ensures locality.
+    ///
+    /// The passed future will live until either (a) the future completes,
+    /// (b) the returned [`Task`] is dropped while the executor is running, or
+    /// (c) the executor is destroyed; whichever comes first.
+    #[cfg_attr(trace_level_logging, track_caller)]
+    pub fn spawn_on(
+        executor: &crate::EHandle,
+        future: impl Future<Output = T> + Send + 'static,
+    ) -> Task<T> {
+        // Fuse is a combinator that will drop the underlying future as soon as it has been
+        // completed to ensure resources are reclaimed as soon as possible. That gives callers that
+        // await on the Task the guarantee that the future has been dropped.
+        //
+        // Note that it is safe to pass in a future that has already been fused. Double fusing
+        // a future does not change the expected behavior.
+        let future = future.fuse();
+        let (future, remote_handle) = future.remote_handle();
+        super::executor::spawn_on(executor, future);
+        Task { remote_handle }
+    }
 }
 
 impl<T> Task<T> {
@@ -161,9 +186,13 @@ pub fn unblock<T: 'static + Send>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::executor::{LocalExecutor, SendExecutor};
+    use super::super::executor::{EHandle, LocalExecutor, SendExecutor};
     use super::*;
-    use std::sync::{Arc, Mutex};
+    use futures::channel::oneshot;
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    };
 
     /// This struct holds a thread-safe mutable boolean and
     /// sets its value to true when dropped.
@@ -217,5 +246,55 @@ mod tests {
             let lock = value.lock().unwrap();
             assert_eq!(*lock, true);
         });
+    }
+
+    #[test]
+    fn test_spawn_on() {
+        SendExecutor::new(2).unwrap().run(async move {
+            let executor = EHandle::local();
+            let done = Arc::new(AtomicBool::new(false));
+            let done_clone = done.clone();
+            // unblock spawns a thread so Task::spawn fails because it is unable to determine the
+            // executor, but spawn_on should work if we provide an executor.
+            unblock(move || {
+                Task::spawn_on(&executor, async move {
+                    done_clone.store(true, Ordering::Relaxed);
+                })
+            })
+            .await
+            .await;
+            assert!(done.load(Ordering::Relaxed));
+        });
+    }
+
+    #[test]
+    fn test_spawn_on_with_two_executors() {
+        let (ehandle_sender, ehandle_receiver) = oneshot::channel();
+        let (finish_sender, finish_receiver) = oneshot::channel();
+
+        let executor_thread = std::thread::spawn(move || {
+            SendExecutor::new(2).unwrap().run(async move {
+                ehandle_sender.send(EHandle::local()).unwrap();
+                finish_receiver.await.unwrap();
+            })
+        });
+
+        SendExecutor::new(2).unwrap().run(async move {
+            // Get the handle for the other executor.
+            let ehandle = ehandle_receiver.await.unwrap();
+
+            // Spawn a task on the other executor.
+            Task::spawn_on(&ehandle.clone(), async move {
+                // Make sure this task is running on the other executor; we can do this by comparing
+                // the ports which should be the same.
+                assert_eq!(EHandle::local().port(), ehandle.port());
+            })
+            .await;
+
+            // Tell the other executor to stop.
+            finish_sender.send(()).unwrap();
+        });
+
+        executor_thread.join().unwrap();
     }
 }

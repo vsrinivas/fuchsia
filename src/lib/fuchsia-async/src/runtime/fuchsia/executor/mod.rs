@@ -45,3 +45,15 @@ where
 {
     Inner::spawn_local(&EHandle::local().inner, LocalFutureObj::new(Box::new(future)));
 }
+
+/// Spawn a new task to be run on the given executor.
+///
+/// Tasks spawned using this method must be threadsafe (implement the `Send` trait),
+/// as they may be run on either a singlethreaded or multithreaded executor.
+#[cfg_attr(trace_level_logging, track_caller)]
+pub(crate) fn spawn_on<F>(executor: &EHandle, future: F)
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    Inner::spawn(&executor.inner, FutureObj::new(Box::new(future)));
+}
