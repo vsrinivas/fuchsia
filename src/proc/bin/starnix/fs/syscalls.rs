@@ -569,14 +569,14 @@ pub fn sys_renameat(
 
 pub fn sys_fchmod(
     ctx: &SyscallContext<'_>,
-    dir_fd: FdNumber,
+    fd: FdNumber,
     mode: FileMode,
 ) -> Result<SyscallResult, Errno> {
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return error!(EINVAL);
     }
-    let file = ctx.task.files.get(dir_fd)?;
-    file.name.entry.node.info_write().mode = mode;
+    let file = ctx.task.files.get(fd)?;
+    file.name.entry.node.chmod(mode);
     Ok(SUCCESS)
 }
 
