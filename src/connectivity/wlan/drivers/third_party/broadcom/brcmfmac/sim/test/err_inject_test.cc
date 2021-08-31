@@ -53,6 +53,8 @@ void ErrInjTest::RunCountryTest(const std::vector<uint8_t>& input,
   device_->WlanphyImplGetCountry(&actual_cc);
   EXPECT_EQ(actual_cc.alpha2[0], expected_output[0]);
   EXPECT_EQ(actual_cc.alpha2[1], expected_output[1]);
+
+  sim->sim_fw->err_inj_.DelErrInjIovar("country");
 }
 
 TEST_F(ErrInjTest, ErrInjectorReplacementValues) {

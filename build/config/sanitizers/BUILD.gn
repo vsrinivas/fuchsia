@@ -136,19 +136,10 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   tags = [ "lsan" ]
 }
 
-# TODO(fxbug.dev/59214): Temporary while bugs are fixed.  As stack-use-after-return bugs
-# are found, file a bug #nnnnn for the buggy test/component, and then add:
-# ```
-#   # TODO(nnnnn): Fix the bugs and remove this.
-#   deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
-# ```
 sanitizer_extra_options("suppress-asan-stack-use-after-return") {
   visibility = [
     # These tests need to check actual stack behavior, not fake stack.
     "//zircon/system/ulib/c/test/sanitizer:memory-snapshot-test",
-
-    # TODO(fxbug.dev/62982): fix brcmfmac-sim-test
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test:err_inject_test",
   ]
 
   args = [ "detect_stack_use_after_return=0" ]

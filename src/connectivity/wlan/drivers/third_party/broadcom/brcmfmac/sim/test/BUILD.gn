@@ -368,9 +368,6 @@ executable("err_inject_test") {
     "//zircon/system/public",
   ]
 
-  # TODO(fxbug.dev/62982): fix stack-use-after-return and delete
-  deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
-
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
