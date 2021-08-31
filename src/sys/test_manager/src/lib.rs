@@ -342,7 +342,10 @@ async fn run_suite(
         let invocations = match enumerate_tests(&suite, matcher).await {
             Ok(i) => i,
             Err(e) => {
-                sender.send(Err(LaunchError::CaseEnumeration)).await.unwrap();
+                sender
+                    .send(Err(map_suite_error_epitaph(suite, LaunchError::CaseEnumeration)))
+                    .await
+                    .unwrap();
                 return Err(e);
             }
         };
@@ -1032,7 +1035,10 @@ pub async fn run_test_manager_query_server(
                             }
                             Err(e) => {
                                 warn!("cannot enumerate tests for {}: {:?}", test_url, e);
-                                let _ = responder.send(&mut Err(LaunchError::CaseEnumeration));
+                                let _ = responder.send(&mut Err(map_suite_error_epitaph(
+                                    suite,
+                                    LaunchError::CaseEnumeration,
+                                )));
                             }
                         }
                         t.await;
@@ -1315,6 +1321,24 @@ async fn serve_mocks(
     fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
+}
+
+// Maps failures to call to fuchsia.test.Suite to a LaunchError value. This
+// function should only be called iff an error was encountered when invoking a
+// method on the `suite` object. Otherwise, `default_value` is returned.
+fn map_suite_error_epitaph(suite: ftest::SuiteProxy, default_value: LaunchError) -> LaunchError {
+    // Call now_or_never() so that test_manager isn't blocked on event not being ready.
+    let next_evt_peek = suite.take_event_stream().next().now_or_never();
+    match next_evt_peek {
+        Some(Some(Err(fidl::Error::ClientChannelClosed {
+            status: zx::Status::NOT_FOUND, ..
+        }))) => LaunchError::InstanceCannotResolve,
+        Some(Some(Err(fidl::Error::ClientChannelClosed { .. }))) => default_value,
+        _ => {
+            warn!("empty epitaph read from Suite: {:?}", next_evt_peek);
+            LaunchError::InternalError
+        }
+    }
 }
 
 pub struct AboveRootCapabilitiesForTest {

@@ -8,4 +8,10 @@
         binary: "bin/publisher",
         lifecycle: { stop_event: "notify" },
     },
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

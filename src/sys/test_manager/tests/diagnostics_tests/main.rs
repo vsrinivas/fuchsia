@@ -4,7 +4,7 @@
 
 use {
     diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect, Logs},
-    fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fuchsia_async as fasync,
     fuchsia_component_test::ScopedInstance,
     futures::StreamExt,
 };
@@ -16,6 +16,10 @@ const URL: &'static str =
 async fn test_isolated_diagnostics_can_be_read_by_the_test() {
     let mut instance =
         ScopedInstance::new("coll".into(), URL.into()).await.expect("Created instance");
+
+    let _ = instance
+        .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+        .expect("failed to connect fuchsia.component.Binder");
 
     // Read inspect
     let data = ArchiveReader::new()

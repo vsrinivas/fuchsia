@@ -32,6 +32,7 @@ rustc_test("diagnostics_test_bin") {
   source_root = "main.rs"
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
