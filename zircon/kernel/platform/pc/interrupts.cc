@@ -8,6 +8,8 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/acpi_lite/apic.h>
+#include <lib/acpi_lite/structures.h>
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/types.h>
@@ -17,21 +19,25 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
 #include <arch/x86/pv.h>
+#include <dev/interrupt.h>
 #include <fbl/algorithm.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
+#include <ktl/optional.h>
 #include <lk/init.h>
+#include <object/resource_dispatcher.h>
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
 #include <platform/pic.h>
 
-#include "dev/interrupt.h"
 #include "interrupt_manager.h"
-#include "lib/acpi_lite/apic.h"
-#include "lib/acpi_lite/structures.h"
 #include "platform_p.h"
 
 namespace {
+
+// Values from ioapic to cache for calls to interrupt_get_base_vector / interrupt_get_max_vector
+ktl::optional<uint32_t> x64_min_gsi;
+ktl::optional<uint32_t> x64_max_gsi;
 
 // Interface passed to InterruptManager to construct the real system interrupt
 // manager.
@@ -147,6 +153,7 @@ static void platform_init_apic(uint level) {
   apic_vm_init();
   apic_local_init();
   apic_io_init(descriptors.data(), descriptors.size(), overrides.data(), overrides.size());
+  std::tie(x64_min_gsi, x64_max_gsi) = apic_io_get_gsi_range();
 
   ASSERT(arch_ints_disabled());
 
@@ -167,6 +174,8 @@ static void platform_init_apic(uint level) {
   }
 
   status = kInterruptManager.Init();
+  ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, interrupt_get_base_vector(),
+                                          interrupt_get_max_vector());
   ASSERT(status == ZX_OK);
 }
 LK_INIT_HOOK(apic, &platform_init_apic, LK_INIT_LEVEL_VM + 2)
@@ -208,17 +217,16 @@ zx_status_t register_permanent_int_handler(unsigned int vector, int_handler hand
   return kInterruptManager.RegisterInterruptHandler(vector, handler, arg, true /* Permanent */);
 }
 
+// On x64 these methods return the base and max Global System Interrupts as
+// defined by ACPI and described by MADT tables.
+// ACPI Spec 6.1, section 5.2.12 & section 5.2.13.
 uint32_t interrupt_get_base_vector(void) {
-  // Intel Software Developer's Manual v3 chapter 6.2
-  // Vectors 0-31 are reserved for architecture defined interrupts & exceptions.
-  // Of that, 16-31 can be allocated to the PCI bus by ACPI and are valid for
-  // interrupt objects.
-  return 16;
+  ZX_DEBUG_ASSERT(x64_min_gsi.has_value());
+  return x64_min_gsi.value();
 }
-
 uint32_t interrupt_get_max_vector(void) {
-  // x64 APIC supports 256 total vectors
-  return 255;
+  ZX_DEBUG_ASSERT(x64_max_gsi.has_value());
+  return InterruptManager<IoApic>::kNumCpuVectors;
 }
 
 bool is_valid_interrupt(unsigned int vector, uint32_t flags) {

@@ -420,6 +420,26 @@ void apic_io_restore(void) {
   }
 }
 
+// Returns the [min, max) range representing the (assumed) contiguous range of
+// global system interrupts provided to us by ACPI. If we could be certain the
+// MADT tables were always in increasing order this could be a constant time
+// operation, but since no such guarantee exists we need to walk the
+// descriptors.
+std::pair<uint32_t, uint32_t> apic_io_get_gsi_range() {
+  ZX_ASSERT(num_io_apics);
+  Guard<SpinLock, NoIrqSave> guard{io_apic_lock::Get()};
+  uint32_t min = std::numeric_limits<uint32_t>::max();
+  uint32_t max = 0;
+
+  for (auto& io_apic : io_apics) {
+    min = std::min(min, io_apic.desc.global_irq_base);
+    // max_redirection_entry is the offset of the last entry, not the number of entries.
+    max = std::max(max, io_apic.desc.global_irq_base + io_apic.max_redirection_entry + 1u);
+  }
+
+  return std::pair(min, max);
+}
+
 static void apic_io_debug_nolock(void) {
   for (uint32_t i = 0; i < num_io_apics; ++i) {
     struct io_apic* apic = &io_apics[i];
