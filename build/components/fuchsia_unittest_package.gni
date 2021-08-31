@@ -80,7 +80,7 @@ import("fuchsia_unittest_component.gni")
 #     will become:
 #       fuchsia-pkg://fuchsia.com/package#meta/test_component.cm
 #     Type: bool
-#     Default: false
+#     Default: true
 #
 #   deps
 #   visibility

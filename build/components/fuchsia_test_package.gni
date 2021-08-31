@@ -68,7 +68,7 @@ import("fuchsia_test_component_manifest.gni")
 #     will become:
 #       fuchsia-pkg://fuchsia.com/package#meta/test_component.cm
 #     Type: bool
-#     Default: false
+#     Default: true
 #
 #   deps
 #   visibility
@@ -88,9 +88,7 @@ template("fuchsia_test_package") {
     test_specs = invoker.test_specs
   }
 
-  # TODO(fxbug.dev/83553): The issue affects infra negatively. Make
-  # `wrap_cmx_test_with_cml_test` true by default once the issue is fixed.
-  wrap_cmx_test_with_cml_test = false
+  wrap_cmx_test_with_cml_test = true
   if (defined(invoker.wrap_cmx_test_with_cml_test)) {
     wrap_cmx_test_with_cml_test = invoker.wrap_cmx_test_with_cml_test
   }
