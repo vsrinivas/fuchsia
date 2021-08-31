@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/open_test",
-        args: [ "--gunit_filter=*.OTrunc:*.OTruncAndReadOnlyDir:*.OTruncAndReadOnlyFile:*.MustCreateExisting:*.ReadOnly:*.WriteOnly:*.CreateWithAppend:*.ReadWrite:*.RelPath:*.AbsPath:*.AtRelPath:*.AtAbsPath:*.OpenNoFollowSymlink:*.OpenNoFollowStillFollowsLinksInPath:*.Fault:*.AppendOnly:*.AppendConcurrentWrite:*.Truncate:*.NameTooLong:*.DotsFromRoot:*.DirectoryWritableFails:*.FileNotDirectory:*.SymlinkDirectory:*.CanTruncateReadOnly" ],
+        args: [ "--gunit_filter=-*.OCreateDirectory:*.Null:*.CanTruncateReadOnlyNoWritePermission:*.CanTruncateWithStrangePermissions:*.OpenWithOpath" ],
     },
 }
