@@ -62,9 +62,10 @@
   pci {
     device_type = "pci";
     compatible = "pci-host-ecam-generic";
-    reg = <0x8 0x08100000 0 0x100000>;
+    reg = <0x8 0x08100000 0 0x100000>; // ECAM range [0x8'0810'0000, 0x8'0820'0000).
     bus-range = <0 0>;
-    ranges = <0x2000000 0x8 0x08201000 0x8 0x08201000 0 0xff000>;
+    // PCI MMIO Bar Range [0x8'0820'0000, 0x8'0830'0000).
+    ranges = <0x2000000 0x8 0x08200000 0x8 0x08200000 0 0x100000>;
     interrupt-map-mask = <0xf800 0 0 1>;
     interrupt-map = <0x0000 0 0 1 &gic 0 0 4>,  // HIGH MID LOW WIRE GIC SPI 32 HIGH/CPU-0
                     <0x0800 0 0 1 &gic 0 1 4>,  // HIGH MID LOW WIRE GIC SPI 33 HIGH/CPU-0
