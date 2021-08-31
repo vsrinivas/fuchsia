@@ -974,7 +974,7 @@ mod tests {
         let (_client_channel, server_channel) = zx::Channel::create().unwrap();
         let _ = element.connect_to_named_protocol_with_channel("myProtocol", server_channel);
         let open_paths = directory_open_receiver.take(2).collect::<Vec<_>>().await;
-        assert_eq!(vec![fcomponent::BinderMarker::DEBUG_NAME, "svc/myProtocol"], open_paths);
+        assert_eq!(vec![fcomponent::BinderMarker::DEBUG_NAME, "myProtocol"], open_paths);
     }
 
     /// Tests that adding a .cm element does not use fuchsia.sys.Launcher.

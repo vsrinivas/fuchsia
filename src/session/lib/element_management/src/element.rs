@@ -111,14 +111,6 @@ impl Element {
         }
     }
 
-    #[inline]
-    fn service_path_prefix(&self) -> &str {
-        match &self.exposed_capabilities {
-            ExposedCapabilities::App(..) => "",
-            ExposedCapabilities::Directory(..) => "svc/",
-        }
-    }
-
     /// Connect to a protocol provided by the `Element`.
     ///
     /// # Type Parameters
@@ -181,11 +173,7 @@ impl Element {
         protocol_name: &str,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        fdio::service_connect_at(
-            &self.directory_channel(),
-            &(self.service_path_prefix().to_owned() + protocol_name),
-            server_channel,
-        )?;
+        fdio::service_connect_at(&self.directory_channel(), protocol_name, server_channel)?;
         Ok(())
     }
 }
