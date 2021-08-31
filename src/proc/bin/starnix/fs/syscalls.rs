@@ -160,21 +160,25 @@ pub fn sys_writev(
 
 pub fn sys_fstatfs(
     ctx: &SyscallContext<'_>,
-    _fd: FdNumber,
+    fd: FdNumber,
     user_buf: UserRef<statfs>,
 ) -> Result<SyscallResult, Errno> {
-    let result = statfs::default();
-    ctx.task.mm.write_object(user_buf, &result)?;
+    let file = ctx.task.files.get(fd)?;
+    let stat = file.fs.stat()?;
+    ctx.task.mm.write_object(user_buf, &stat)?;
     Ok(SUCCESS)
 }
 
 pub fn sys_statfs(
     ctx: &SyscallContext<'_>,
-    _user_path: UserCString,
+    user_path: UserCString,
     user_buf: UserRef<statfs>,
 ) -> Result<SyscallResult, Errno> {
-    let result = statfs::default();
-    ctx.task.mm.write_object(user_buf, &result)?;
+    let node = lookup_at(ctx.task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
+    let file_system = node.entry.node.fs();
+    let stat = file_system.stat()?;
+    ctx.task.mm.write_object(user_buf, &stat)?;
+
     Ok(SUCCESS)
 }
 
@@ -1024,5 +1028,31 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_fstat_tmp_file() {
+        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
+        let ctx = SyscallContext::new(&task_owner.task);
+
+        // Create the file that will be used to stat.
+        let file_path = b"data/testfile.txt";
+        let _file_handle = task_owner.task.open_file(file_path, OpenFlags::RDONLY).unwrap();
+
+        // Write the path to user memory.
+        let path_addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        ctx.task.mm.write_memory(path_addr, file_path).expect("failed to clear struct");
+
+        let stat = statfs::default();
+        let user_stat = UserRef::new(path_addr + file_path.len());
+        ctx.task.mm.write_object(user_stat, &stat).expect("failed to clear struct");
+
+        let user_path = UserCString::new(path_addr);
+
+        assert_eq!(sys_statfs(&ctx, user_path, user_stat), Ok(SUCCESS));
+
+        let mut returned_stat = statfs::default();
+        ctx.task.mm.read_object(user_stat, &mut returned_stat).expect("failed to read struct");
+        assert_eq!(returned_stat, statfs::default());
     }
 }

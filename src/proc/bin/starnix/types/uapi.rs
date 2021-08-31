@@ -52,7 +52,7 @@ pub struct stat_t {
     pub _pad3: [i64; 3],
 }
 
-#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes)]
+#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes, PartialEq)]
 #[repr(C)]
 pub struct statfs {
     f_type: i64,
