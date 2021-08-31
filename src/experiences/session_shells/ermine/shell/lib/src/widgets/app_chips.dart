@@ -34,7 +34,7 @@ class AppChips extends StatelessWidget {
                     padding: EdgeInsets.only(right: 4),
                     width: 8,
                     height: 54,
-                    color: _app.topView.value == view
+                    color: _app.topView == view
                         ? Theme.of(context).colorScheme.onSurface
                         : null,
                   ),
@@ -59,7 +59,7 @@ class AppChips extends StatelessWidget {
                           padding: EdgeInsets.fromLTRB(0, 16, 0, 16),
                           splashRadius: 1,
                           tooltip: view.title,
-                          onPressed: () => _app.switchView([view]),
+                          onPressed: () => _app.switchView(view),
                         ),
                         // Close button
                         Focus(
@@ -85,7 +85,7 @@ class AppChips extends StatelessWidget {
                     ),
                   ],
                 ),
-                onTap: () => _app.switchView([view]),
+                onTap: () => _app.switchView(view),
               );
             },
             separatorBuilder: (context, index) => const SizedBox(height: 24),

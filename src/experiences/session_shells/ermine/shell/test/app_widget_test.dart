@@ -29,7 +29,7 @@ void main() async {
     state = MockAppState();
     app = App(state);
 
-    when(state.theme).thenAnswer((_) => AppTheme.darkTheme.asObservable());
+    when(state.theme).thenAnswer((_) => AppTheme.darkTheme);
     WidgetFactory.mockFactory = (type) => Container(key: ValueKey(type));
   });
 
@@ -40,9 +40,9 @@ void main() async {
   testWidgets('Test locale change', (tester) async {
     final controller = StreamController<Locale>();
     final stream = controller.stream.asObservable();
-    when(state.localeStream).thenAnswer((_) => stream);
+    when(state.locale).thenAnswer((_) => stream.value);
     when(state.views).thenAnswer((_) => <ViewState>[].asObservable());
-    when(state.overlaysVisible).thenAnswer((_) => false.asObservable());
+    when(state.overlaysVisible).thenAnswer((_) => false);
 
     await tester.pumpWidget(app);
     // app should be OffStage until locale is pushed.
@@ -68,12 +68,12 @@ void main() async {
     final controller = StreamController<Locale>();
     final stream =
         controller.stream.asObservable(initialValue: Locale('en', 'US'));
-    when(state.localeStream).thenAnswer((_) => stream);
+    when(state.locale).thenAnswer((_) => stream.value);
 
     // Create one view.
     when(state.views).thenAnswer((_) => [MockViewState()].asObservable());
     // Show overlays.
-    when(state.overlaysVisible).thenAnswer((_) => true.asObservable());
+    when(state.overlaysVisible).thenAnswer((_) => true);
 
     await tester.pumpWidget(app);
     await tester.pumpAndSettle();

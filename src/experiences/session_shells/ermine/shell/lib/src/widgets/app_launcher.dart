@@ -58,7 +58,7 @@ class AppLauncher extends StatelessWidget {
               enabled: _isEnabled(item),
               onTap: () {
                 if (!_isLoading(item)) {
-                  app.launch([item['title']!, item['url']!]);
+                  app.launch(item['title']!, item['url']!);
                 }
               },
             );

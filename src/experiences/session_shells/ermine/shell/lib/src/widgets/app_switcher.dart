@@ -40,7 +40,7 @@ class AppSwitcher extends StatelessWidget {
                       Container(
                         width: 54,
                         height: 8,
-                        color: view == _app.switchTarget.value
+                        color: view == _app.switchTarget
                             ? foregroundColor
                             : Colors.transparent,
                       ),
@@ -51,7 +51,7 @@ class AppSwitcher extends StatelessWidget {
                         height: 72,
                         color: foregroundColor,
                       ),
-                      if (view == _app.switchTarget.value) ...[
+                      if (view == _app.switchTarget) ...[
                         SizedBox(height: 24),
                         // App title
                         Text(

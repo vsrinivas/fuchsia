@@ -17,7 +17,7 @@ class AppView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      final view = state.topView.value;
+      final view = state.topView;
       return Stack(
         children: [
           FuchsiaView(

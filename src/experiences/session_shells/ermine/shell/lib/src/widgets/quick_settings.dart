@@ -113,8 +113,8 @@ class _ListSettings extends StatelessWidget {
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   secondary: Icon(Icons.dark_mode),
                   title: Text(Strings.darkMode),
-                  value: appState.hasDarkTheme.value,
-                  onChanged: (value) => appState.setTheme([value]),
+                  value: appState.hasDarkTheme,
+                  onChanged: (value) => appState.setTheme(darkTheme: value),
                 ),
                 // Keyboard shortcuts
                 ListTile(

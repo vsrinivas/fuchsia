@@ -50,7 +50,7 @@ class AppStateImpl with Disposable implements AppState {
     required this.shortcutsService,
     required this.preferencesService,
     required this.pointerEventsService,
-  }) : localeStream = startupService.stream.asObservable() {
+  }) : _localeStream = startupService.stream.asObservable() {
     launchService.onControllerClosed = _onElementClosed;
     focusService.onFocusMoved = _onFocusMoved;
     presenterService
@@ -85,7 +85,7 @@ class AppStateImpl with Disposable implements AppState {
           overlayVisibility.value = true;
         }
       }))
-      ..add(when((_) => oobeVisible.value, () async {
+      ..add(when((_) => oobeVisible, () async {
         // Start oobe component.
         try {
           final elementController = await launchService.launch(
@@ -99,7 +99,7 @@ class AppStateImpl with Disposable implements AppState {
         }
         oobeFinished();
       }))
-      ..add(reaction<bool>((_) => isIdle.value, (idle) async {
+      ..add(reaction<bool>((_) => isIdle, (idle) async {
         if (idle) {
           // Start screenSaver.
           await launchService.launch('Screen Saver', kScreenSaverUrl);
@@ -126,17 +126,20 @@ class AppStateImpl with Disposable implements AppState {
   late final SettingsState settingsState;
 
   @override
-  final Observable<bool> isIdle = false.asObservable();
+  bool get isIdle => _isIdle.value;
+  set isIdle(bool idle) => _isIdle.value = idle;
+  final Observable<bool> _isIdle = false.asObservable();
 
   @override
-  late final theme = (() {
+  ThemeData get theme => _theme.value;
+  late final _theme = (() {
     return preferencesService.darkMode.value
         ? AppTheme.darkTheme
         : AppTheme.lightTheme;
   }).asComputed();
 
   @override
-  ObservableValue<bool> get hasDarkTheme => preferencesService.darkMode;
+  bool get hasDarkTheme => preferencesService.darkMode.value;
 
   /// Defines the visible status of overlays visible in 'overview' state. At the
   /// moment this is the [AppBar] and the [SideBar].
@@ -152,38 +155,40 @@ class AppStateImpl with Disposable implements AppState {
   final appIsLaunching = false.asObservable();
 
   @override
-  late final alertsVisible = (() {
+  bool get alertsVisible => _alertsVisible.value;
+  late final _alertsVisible = (() {
     return alerts.isNotEmpty;
   }).asComputed();
 
   /// Returns true if shell has focus and any side bars are visible.
   @override
-  late final overlaysVisible = (() {
-    return !oobeVisible.value &&
-        !isIdle.value &&
+  bool get overlaysVisible => _overlaysVisible.value;
+  late final _overlaysVisible = (() {
+    return !oobeVisible &&
+        !isIdle &&
         !appIsLaunching.value &&
         shellHasFocus.value &&
-        (appBarVisible.value ||
-            sideBarVisible.value ||
-            switcherVisible.value ||
-            alertsVisible.value);
+        (appBarVisible || sideBarVisible || switcherVisible || alertsVisible);
   }).asComputed();
 
   @override
-  late final oobeVisible = () {
+  bool get oobeVisible => _oobeVisible.value;
+  late final _oobeVisible = () {
     return preferencesService.launchOobe.value;
   }.asComputed();
 
   @override
-  late final appBarVisible = (() {
+  bool get appBarVisible => _appBarVisible.value;
+  late final _appBarVisible = (() {
     return shellHasFocus.value &&
         views.isNotEmpty &&
-        topView.value.loading &&
+        topView.loading &&
         (appBarPeeking.value || overlayVisibility.value);
   }).asComputed();
 
   @override
-  late final sideBarVisible = (() {
+  bool get sideBarVisible => _sideBarVisible.value;
+  late final _sideBarVisible = (() {
     return shellHasFocus.value &&
         (sideBarPeeking.value || overlayVisibility.value);
   }).asComputed();
@@ -198,25 +203,34 @@ class AppStateImpl with Disposable implements AppState {
   final views = <ViewState>[].asObservable();
 
   @override
-  final Observable<bool> switcherVisible = false.asObservable();
+  bool get switcherVisible => _switcherVisible.value;
+  set switcherVisible(bool visible) => _switcherVisible.value = visible;
+  final Observable<bool> _switcherVisible = false.asObservable();
 
   @override
-  late final viewsVisible = () {
-    return views.isNotEmpty && !isIdle.value;
+  bool get viewsVisible => _viewsVisible.value;
+  late final _viewsVisible = () {
+    return views.isNotEmpty && !isIdle;
   }.asComputed();
 
   @override
-  final ObservableStream<Locale> localeStream;
+  Locale? get locale => _localeStream.value;
+  final ObservableStream<Locale> _localeStream;
 
   late final shellHasFocus = (() {
     return startupService.hostView == _focusedView.value;
   }).asComputed();
 
   @override
-  late final Observable<ViewState> topView = Observable<ViewState>(views.first);
+  ViewState get topView => _topView.value;
+  set topView(ViewState view) => _topView.value = view;
+  late final Observable<ViewState> _topView =
+      Observable<ViewState>(views.first);
 
   @override
-  final Observable<ViewState?> switchTarget = Observable<ViewState?>(null);
+  ViewState? get switchTarget => _switchTarget.value;
+  set switchTarget(ViewState? view) => _switchTarget.value = view;
+  final Observable<ViewState?> _switchTarget = Observable<ViewState?>(null);
 
   @override
   String get buildVersion => startupService.buildVersion;
@@ -231,91 +245,97 @@ class AppStateImpl with Disposable implements AppState {
 
   void setFocusToChildView() {
     if (views.isNotEmpty) {
-      focusService.setFocusOnView(topView.value);
+      focusService.setFocusOnView(topView);
     }
   }
 
   @override
-  late final showOverlay = () {
+  void showOverlay() => _showOverlay();
+  late final _showOverlay = () {
     overlayVisibility.value = true;
     setFocusToShellView();
   }.asAction();
 
   @override
-  late final Action hideOverlay = setFocusToChildView.asAction();
+  void hideOverlay() => _hideOverlay();
+  late final Action _hideOverlay = setFocusToChildView.asAction();
 
   @override
-  late final Action showAppBar = showOverlay;
+  void showAppBar() => showOverlay();
 
   @override
-  late final Action showSideBar = showOverlay;
+  void showSideBar() => showOverlay();
 
   @override
-  late final switchView = (ViewState view) {
-    topView.value = view;
+  void switchView(ViewState view) => _switchView([view]);
+  late final _switchView = (ViewState view) {
+    topView = view;
     setFocusToChildView();
   }.asAction();
 
   @override
-  late final switchNext = () {
+  void switchNext() => _switchNext();
+  late final _switchNext = () {
     if (views.length > 1) {
       // Initialize [switchTarget] with the top view, if not already set.
-      switchTarget.value ??= topView.value;
+      switchTarget ??= topView;
 
       // Get next view from top view. Wrap to first view in list, if it is last.
-      switchTarget.value = switchTarget.value == views.last
+      switchTarget = switchTarget == views.last
           ? views.first
-          : views[views.indexOf(switchTarget.value) + 1];
+          : views[views.indexOf(switchTarget!) + 1];
 
       // Set focus to shell view so that we can receive the final Alt key press.
       setFocusToShellView();
 
       // Display the app switcher.
-      switcherVisible.value = true;
+      switcherVisible = true;
     }
   }.asAction();
 
   @override
-  late final switchPrev = () {
+  void switchPrev() => _switchPrev();
+  late final _switchPrev = () {
     if (views.length > 1) {
       // Initialize [switchTarget] with the top view, if not already set.
-      switchTarget.value ??= topView.value;
+      switchTarget ??= topView;
 
-      switchTarget.value = switchTarget.value == views.first
+      switchTarget = switchTarget == views.first
           ? views.last
-          : views[views.indexOf(switchTarget.value) - 1];
+          : views[views.indexOf(switchTarget!) - 1];
 
       // Set focus to shell view so that we can receive the final Alt key press.
       setFocusToShellView();
 
       // Display the app switcher.
-      switcherVisible.value = true;
+      switcherVisible = true;
     }
   }.asAction();
 
   void _triggerSwitch() {
-    if (switchTarget.value != null) {
+    if (switchTarget != null) {
       runInAction(() {
-        if (switchTarget.value != topView.value) {
-          topView.value = switchTarget.value!;
+        if (switchTarget != topView) {
+          topView = switchTarget!;
           setFocusToChildView();
         }
 
-        switcherVisible.value = false;
-        switchTarget.value = null;
+        switcherVisible = false;
+        switchTarget = null;
       });
     }
   }
 
   @override
-  late final cancel = hideOverlay;
+  void cancel() => hideOverlay();
 
   @override
-  late final Action closeView = () {
-    if (views.isEmpty || oobeVisible.value) {
+  void closeView() => _closeView();
+  late final Action _closeView = () {
+    if (views.isEmpty || oobeVisible) {
       return;
     }
-    topView.value.close();
+    topView.close();
   }.asAction();
 
   late final Action closeAll = () {
@@ -326,7 +346,8 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   @override
-  late final launch = (String title, String url) async {
+  void launch(String title, String url) => _launch([title, url]);
+  late final _launch = (String title, String url) async {
     try {
       _clearError(url, 'ProposeElementError');
       await launchService.launch(title, url);
@@ -344,30 +365,26 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   @override
-  late final Action launchFeedback = () async {
-    launch([Strings.feedback, kFeedbackUrl]);
-  }.asAction();
+  void launchFeedback() => launch(Strings.feedback, kFeedbackUrl);
 
   @override
-  late final Action launchLicense = () async {
-    launch([Strings.license, kLicenseUrl]);
-  }.asAction();
+  void launchLicense() => launch(Strings.license, kLicenseUrl);
 
   @override
-  late final Action setTheme = (bool darkTheme) {
+  void setTheme({bool darkTheme = true}) => _setTheme([darkTheme]);
+  late final Action _setTheme = (bool darkTheme) {
     preferencesService.darkMode.value = darkTheme;
   }.asAction();
 
   @override
-  late final restart = startupService.restartDevice.asAction();
+  void restart() => runInAction(startupService.restartDevice);
 
   @override
-  late final shutdown = startupService.shutdownDevice.asAction();
+  void shutdown() => runInAction(startupService.shutdownDevice);
 
   @override
-  late final oobeFinished = () {
-    preferencesService.launchOobe.value = false;
-  }.asAction();
+  void oobeFinished() =>
+      runInAction(() => preferencesService.launchOobe.value = false);
 
   late final showScreenSaver = () {
     _onIdle(idle: true);
@@ -409,7 +426,7 @@ class AppStateImpl with Disposable implements AppState {
         // If an app view has focus, bring it to the top.
         for (final view in views) {
           if (viewHandle == view.view) {
-            topView.value = view;
+            topView = view;
             break;
           }
         }
@@ -426,16 +443,16 @@ class AppStateImpl with Disposable implements AppState {
     // the overlays.
     if (views.isNotEmpty) {
       FuchsiaViewsService.instance
-          .updateView(topView.value.viewConnection.viewId)
+          .updateView(topView.viewConnection.viewId)
           .catchError((e) {
-        log.warning('Error calling updateView on ${topView.value.title}: $e');
+        log.warning('Error calling updateView on ${topView.title}: $e');
       });
     }
 
     runInAction(() {
       // Make this view the top view.
       views.add(view);
-      topView.value = view;
+      topView = view;
 
       // If the child view is the screen saver, make it non-focusable in order
       // for keyboard input to get routed to the shell and dismiss it.
@@ -449,16 +466,16 @@ class AppStateImpl with Disposable implements AppState {
 
     // Focus on view when it is loading.
     view.reactions.add(reaction<bool>((_) => view.loading, (loading) {
-      if (loading && view == topView.value && view.focusable.value) {
+      if (loading && view == topView && view.focusable.value) {
         setFocusToChildView();
       }
     }));
 
     // Update view hittestability based on overlay visibility.
-    view.reactions.add(reaction<bool>((_) => overlaysVisible.value, (overlay) {
+    view.reactions.add(reaction<bool>((_) => overlaysVisible, (overlay) {
       // Don't reset hittest flag when showing app switcher, because the
       // app switcher does not react to pointer events.
-      view.hitTestable.value = !overlay || switcherVisible.value;
+      view.hitTestable.value = !overlay || switcherVisible;
     }));
 
     // Remove view from views when it is closed.
@@ -474,11 +491,11 @@ class AppStateImpl with Disposable implements AppState {
       final view = viewState as ViewStateImpl;
       // Switch to next view before closing this view if it was the top view
       // and there are other views.
-      if (view == topView.value && views.length > 1) {
-        final nextView = topView.value == views.last
+      if (view == topView && views.length > 1) {
+        final nextView = topView == views.last
             ? views.first
-            : views[views.indexOf(topView.value) + 1];
-        topView.value = nextView;
+            : views[views.indexOf(topView) + 1];
+        topView = nextView;
         setFocusToChildView();
       }
 
@@ -566,15 +583,15 @@ class AppStateImpl with Disposable implements AppState {
   void _onIdle({required bool idle}) => runInAction(() {
         if (preferencesService.showScreensaver) {
           if (idle) {
-            isIdle.value = idle;
+            isIdle = idle;
           } else {
             // Wait for the screen saver to be visible and running before closing
             // it.
             if (views.isNotEmpty &&
-                topView.value.url == kScreenSaverUrl &&
-                topView.value.loading) {
+                topView.url == kScreenSaverUrl &&
+                topView.loading) {
               closeView();
-              isIdle.value = false;
+              isIdle = false;
             }
           }
         }
@@ -616,9 +633,9 @@ class AppStateImpl with Disposable implements AppState {
   Map<String, dynamic> _getInspectData() {
     final data = <String, dynamic>{};
     // Overlays currently visible.
-    data['appBarVisible'] = appBarVisible.value;
-    data['sideBarVisible'] = sideBarVisible.value;
-    data['overlaysVisible'] = overlaysVisible.value;
+    data['appBarVisible'] = appBarVisible;
+    data['sideBarVisible'] = sideBarVisible;
+    data['overlaysVisible'] = overlaysVisible;
 
     // Number of running component views.
     data['numViews'] = views.length;
@@ -629,7 +646,7 @@ class AppStateImpl with Disposable implements AppState {
         final view = views[i];
 
         // Active (focused) view.
-        if (view == topView.value) {
+        if (view == topView) {
           data['activeView'] = i;
         }
 
@@ -638,7 +655,7 @@ class AppStateImpl with Disposable implements AppState {
         final viewData = data['view-$i'];
         viewData['title'] = view.title;
         viewData['url'] = view.url;
-        viewData['focused'] = view == topView.value;
+        viewData['focused'] = view == topView;
 
         final viewport = view.viewport;
         if (viewport != null) {

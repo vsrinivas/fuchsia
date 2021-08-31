@@ -27,7 +27,7 @@ class Overlays extends StatelessWidget {
             Scrim(state),
 
             // App Bar.
-            if (state.appBarVisible.value)
+            if (state.appBarVisible)
               Positioned(
                 top: 0,
                 bottom: 0,
@@ -36,7 +36,7 @@ class Overlays extends StatelessWidget {
               ),
 
             // Side Bar.
-            if (state.sideBarVisible.value)
+            if (state.sideBarVisible)
               Positioned(
                 top: 0,
                 bottom: 0,
@@ -45,10 +45,10 @@ class Overlays extends StatelessWidget {
               ),
 
             // App Switcher.
-            if (state.switcherVisible.value) AppSwitcher(state),
+            if (state.switcherVisible) AppSwitcher(state),
 
             // Alerts.
-            if (state.alertsVisible.value) AlertDialogs(state),
+            if (state.alertsVisible) AlertDialogs(state),
           ],
         ),
       );

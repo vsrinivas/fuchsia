@@ -26,14 +26,14 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      final locale = app.localeStream.value;
+      final locale = app.locale;
       if (locale == null) {
         return Offstage();
       }
       Intl.defaultLocale = locale.toString();
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: app.theme.value,
+        theme: app.theme,
         locale: locale,
         localizationsDelegates: [
           localizations.delegate(),
@@ -59,7 +59,7 @@ class App extends StatelessWidget {
                     WidgetFactory.create(() => AppView(app)),
 
                   // Show scrim and overlay layers if an overlay is visible.
-                  if (app.overlaysVisible.value)
+                  if (app.overlaysVisible)
                     WidgetFactory.create(() => Overlays(app)),
                 ],
               );

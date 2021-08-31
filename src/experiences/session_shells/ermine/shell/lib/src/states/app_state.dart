@@ -18,7 +18,6 @@ import 'package:ermine/src/widgets/app_bar.dart';
 import 'package:ermine/src/widgets/side_bar.dart';
 import 'package:flutter/material.dart' hide Action, AppBar;
 import 'package:fuchsia_scenic/views.dart';
-import 'package:mobx/mobx.dart';
 
 /// Defines the state of the entire application.
 ///
@@ -27,44 +26,44 @@ import 'package:mobx/mobx.dart';
 /// - Read-only state data.
 /// - Child states reachable from this state.
 /// - Actions that can be invoked on this state.
-abstract class AppState with Store {
-  ObservableValue<ThemeData> get theme;
-  ObservableValue<bool> get hasDarkTheme;
-  ObservableValue<bool> get alertsVisible;
-  ObservableValue<bool> get appBarVisible;
-  ObservableValue<bool> get sideBarVisible;
-  ObservableValue<bool> get overlaysVisible;
-  ObservableValue<bool> get oobeVisible;
-  ObservableValue<bool> get isIdle;
-  ObservableValue<bool> get switcherVisible;
-  ObservableValue<bool> get viewsVisible;
-  ObservableValue<ViewState> get topView;
-  ObservableValue<ViewState?> get switchTarget;
-  ObservableList<AlertInfo> get alerts;
-  ObservableList<ViewState> get views;
-  ObservableMap<String, List<String>> get errors;
-  ObservableStream<Locale> get localeStream;
+abstract class AppState {
+  ThemeData get theme;
+  bool get hasDarkTheme;
+  bool get alertsVisible;
+  bool get appBarVisible;
+  bool get sideBarVisible;
+  bool get overlaysVisible;
+  bool get oobeVisible;
+  bool get isIdle;
+  bool get switcherVisible;
+  bool get viewsVisible;
+  ViewState get topView;
+  ViewState? get switchTarget;
+  List<AlertInfo> get alerts;
+  List<ViewState> get views;
+  Map<String, List<String>> get errors;
+  Locale? get locale;
   String get buildVersion;
   List<Map<String, String>> get appLaunchEntries;
 
   SettingsState get settingsState;
 
-  Action get showOverlay;
-  Action get hideOverlay;
-  Action get showAppBar;
-  Action get showSideBar;
-  Action get switchNext;
-  Action get switchPrev;
-  Action get switchView;
-  Action get cancel;
-  Action get closeView;
-  Action get launch;
-  Action get setTheme;
-  Action get restart;
-  Action get shutdown;
-  Action get launchFeedback;
-  Action get launchLicense;
-  Action get oobeFinished;
+  void showOverlay();
+  void hideOverlay();
+  void showAppBar();
+  void showSideBar();
+  void switchNext();
+  void switchPrev();
+  void switchView(ViewState view);
+  void cancel();
+  void closeView();
+  void launch(String title, String url);
+  void setTheme({bool darkTheme});
+  void restart();
+  void shutdown();
+  void launchFeedback();
+  void launchLicense();
+  void oobeFinished();
 
   factory AppState.fromEnv() {
     return AppStateImpl(
