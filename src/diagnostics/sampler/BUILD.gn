@@ -72,6 +72,7 @@ fuchsia_unittest_package("sampler-tests") {
 sampler_configuration("production_sampler") {
   configs = [
     "config/archivist.json",
+    "config/audio-drivers.json",
     "config/avrcp.json",
     "config/bthost.json",
     "config/display.json",
