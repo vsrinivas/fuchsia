@@ -9,11 +9,14 @@ import("//src/developer/ffx/build/ffx_action.gni")
 declare_args() {
   # If true, vboot() image builds print out the exact "futility" command line.
   vboot_verbose = false
+
+  # vboot signing key directory. Must contain `kernel.keyblock` and
+  # `kernel_data_key.vbprivk`. Defaults to the public ChromeOS test keys.
+  vboot_keys = "//third_party/vboot_reference/tests/devkeys"
 }
 
-_vboot_dir = "//third_party/vboot_reference"
-_kernel_keyblock = "$_vboot_dir/tests/devkeys/kernel.keyblock"
-_private_keyblock = "$_vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
+_kernel_keyblock = "${vboot_keys}/kernel.keyblock"
+_private_keyblock = "${vboot_keys}/kernel_data_key.vbprivk"
 _futility_tool = "//prebuilt/tools/futility/${host_platform}/futility"
 
 # These are details specific to the exact boot shim being used.  Different
