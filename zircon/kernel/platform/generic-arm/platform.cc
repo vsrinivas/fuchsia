@@ -171,7 +171,7 @@ static zx_status_t platform_start_cpu(cpu_num_t cpu_id, uint64_t mpid) {
   arch::ThreadMemoryBarrier();
 
   uint32_t ret = psci_cpu_on(mpid, kernel_entry_paddr);
-  dprintf(INFO, "Trying to start cpu %u, mpid %lu returned: %d\n", cpu_id, mpid, (int)ret);
+  dprintf(INFO, "Trying to start cpu %u, mpid %#" PRIx64 " returned: %d\n", cpu_id, mpid, (int)ret);
   if (ret != 0) {
     return ZX_ERR_INTERNAL;
   }
