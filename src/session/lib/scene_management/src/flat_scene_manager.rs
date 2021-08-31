@@ -46,9 +46,11 @@ pub struct FlatSceneManager {
     views: Vec<scenic::EntityNode>,
 
     /// The proxy View/ViewHolder pair exists so that the a11y manager can insert its view into the
-    /// scene after SetRootView() has already been called. Note that the a11y manager will own the
-    /// proxy view holder.
-    a11y_proxy_view: Option<scenic::View>,
+    /// scene after SetRootView() has already been called.
+    a11y_proxy_view_holder: scenic::ViewHolder,
+
+    /// See comment for a11y_proxy_view_holder.
+    a11y_proxy_view: scenic::View,
 
     /// Proxy session. The proxy view must exist in a separate session from the root view since
     /// its parent is in a different session.
@@ -120,6 +122,24 @@ impl SceneManager for FlatSceneManager {
         let root_node = scenic::EntityNode::new(session.clone());
         scene.add_child(&root_node);
 
+        // Create proxy view/viewholder and add to the scene.
+        let proxy_token_pair = scenic::ViewTokenPair::new()?;
+        let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
+        let a11y_proxy_view_holder = FlatSceneManager::create_view_holder(
+            &session,
+            proxy_token_pair.view_holder_token,
+            display_metrics,
+            Some(String::from("a11y proxy view holder")),
+        );
+        let a11y_proxy_view = scenic::View::new3(
+            a11y_proxy_session.clone(),
+            proxy_token_pair.view_token,
+            a11y_proxy_viewref_pair.control_ref,
+            a11y_proxy_viewref_pair.view_ref,
+            Some(String::from("a11y proxy view")),
+        );
+        root_node.add_child(&a11y_proxy_view_holder);
+
         let compositor_id = compositor.id();
 
         let resources = ScenicResources {
@@ -152,7 +172,8 @@ impl SceneManager for FlatSceneManager {
             compositor_id,
             _resources: resources,
             views: vec![],
-            a11y_proxy_view: None,
+            a11y_proxy_view_holder,
+            a11y_proxy_view,
             a11y_proxy_session,
             display_metrics,
             cursor_node: None,
@@ -220,10 +241,16 @@ impl SceneManager for FlatSceneManager {
         );
         self.root_node.add_child(&a11y_view_holder);
 
+        // Disconnect the old proxy view/viewholder from the scene graph.
+        self.a11y_proxy_view_holder.detach();
+        for view_holder_node in self.views.iter_mut() {
+            self.a11y_proxy_view.detach_child(&*view_holder_node);
+        }
+
         // Generate a new proxy view/viewholder token pair, and create a new proxy view.
         let proxy_token_pair = scenic::ViewTokenPair::new()?;
         let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
-        let a11y_proxy_view = scenic::View::new3(
+        self.a11y_proxy_view = scenic::View::new3(
             self.a11y_proxy_session.clone(),
             proxy_token_pair.view_token,
             a11y_proxy_viewref_pair.control_ref,
@@ -233,10 +260,8 @@ impl SceneManager for FlatSceneManager {
 
         // Reconnect existing view holders to the new a11y proxy view.
         for view_holder_node in self.views.iter_mut() {
-            a11y_proxy_view.add_child(&*view_holder_node);
+            self.a11y_proxy_view.add_child(&*view_holder_node);
         }
-
-        self.a11y_proxy_view = Some(a11y_proxy_view);
 
         FlatSceneManager::request_present(&self.presentation_sender);
         FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
@@ -440,12 +465,7 @@ impl FlatSceneManager {
         view_holder_node.attach(&view_holder);
         view_holder_node.set_translation(0.0, 0.0, 0.0);
 
-        // The a11y view may not be attached to the scene yet. If that's the case, then we can let
-        // [`insert_a11y_view()`] add the new view as a child of the a11y proxy view.
-        if let Some(ref a11y_proxy_view) = self.a11y_proxy_view {
-            a11y_proxy_view.add_child(&view_holder_node);
-        }
-
+        self.a11y_proxy_view.add_child(&view_holder_node);
         self.views.push(view_holder_node);
     }
 

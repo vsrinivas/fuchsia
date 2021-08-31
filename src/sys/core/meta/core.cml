@@ -744,12 +744,6 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: "fuchsia.ui.accessibility.view.Registry",
-            from: "#session-manager",
-            to: "#appmgr",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: "fuchsia.net.http.Loader",
             from: "#http-client",
             to: [
