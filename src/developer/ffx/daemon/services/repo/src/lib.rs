@@ -947,7 +947,7 @@ mod tests {
     fn test_repo_config() -> RepositoryConfig {
         RepositoryConfig {
             mirrors: Some(vec![MirrorConfig {
-                mirror_url: Some(format!("http://[::1]:8085/{}", REPO_NAME)),
+                mirror_url: Some(format!("http://[::1]:8083/{}", REPO_NAME)),
                 subscribe: Some(true),
                 ..MirrorConfig::EMPTY
             }]),
