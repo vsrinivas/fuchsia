@@ -537,6 +537,10 @@ impl Task {
         let symlink_mode =
             if nofollow || must_create { SymlinkMode::NoFollow } else { SymlinkMode::Follow };
 
+        if path.is_empty() {
+            return error!(ENOENT);
+        }
+
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
         let mut context = LookupContext::new(symlink_mode);
         let name = self.resolve_open_path(&mut context, dir, path.to_vec(), mode, flags)?;
