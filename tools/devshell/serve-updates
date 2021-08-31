@@ -211,9 +211,9 @@ else
   fi
 
   # FIXME(http://fxbug.dev/77146): The tunnel is currently hardcoded to port
-  # 8083.
+  # 8085.
   if [[ -z "${port}" ]]; then
-    port=8083
+    port=8085
   fi
 fi
 
