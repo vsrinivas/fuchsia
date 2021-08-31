@@ -339,24 +339,19 @@ impl<'a> DefaultLogFormatter<'a> {
         };
 
         let severity_str = &format!("{}", data.metadata.severity)[..1];
-        msg.lines()
-            .map(|l| {
-                format!(
-                    "[{}]{}[{}]{}[{}{}{}] {}{}{}",
-                    ts,
-                    process_info_str,
-                    data.moniker,
-                    tags_str,
-                    color_str,
-                    severity_str,
-                    style::Reset,
-                    color_str,
-                    l,
-                    style::Reset
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
+        format!(
+            "[{}]{}[{}]{}[{}{}{}] {}{}{}",
+            ts,
+            process_info_str,
+            data.moniker,
+            tags_str,
+            color_str,
+            severity_str,
+            style::Reset,
+            color_str,
+            msg,
+            style::Reset
+        )
     }
 }
 
@@ -692,12 +687,12 @@ mod test {
             severity: diagnostics_data::Severity::Warn,
             size_bytes: 1,
         })
-        .set_message("message")
         .set_pid(1)
         .set_tid(2)
     }
+
     fn logs_data() -> LogsData {
-        logs_data_builder().add_tag("tag1").add_tag("tag2").build()
+        logs_data_builder().add_tag("tag1").add_tag("tag2").set_message("message").build()
     }
 
     fn default_log_formatter_options() -> LogFormatterOptions {
@@ -1637,7 +1632,25 @@ mod test {
 
         assert_eq!(
             formatter.format_target_log_data(logs_data_builder().build(), None),
-            "[1615535969.000][some/moniker][][W\u{1b}[m] message\u{1b}[m"
+            "[1615535969.000][some/moniker][][W\u{1b}[m] <missing message>\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_multiline_message() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions { show_tags: true, ..default_log_formatter_options() },
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(
+                logs_data_builder().set_message("multi\nline\nmessage").build(),
+                None
+            ),
+            "[1615535969.000][some/moniker][][W\u{1b}[m] multi\nline\nmessage\u{1b}[m"
         );
     }
 }
