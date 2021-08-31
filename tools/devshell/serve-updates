@@ -118,7 +118,12 @@ log() {
 serve_updates_target_addr=""
 target-addr() {
   if [[ -z "${serve_updates_target_addr}" ]]; then
-    serve_updates_target_addr="$(get-device-addr-resource)"
+    if is_feature_enabled "legacy_serve"; then
+      serve_updates_target_addr="$(get-device-addr-resource)"
+    else
+      serve_updates_target_addr="$(get-device-raw)"
+    fi
+
     if [[ -n "${serve_updates_target_addr}" && -n "$(get-device-ssh-port)" ]]; then
       serve_updates_target_addr="${serve_updates_target_addr}:$(get-device-ssh-port)"
     fi
