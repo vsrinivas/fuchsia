@@ -191,6 +191,9 @@ enum Error {
     #[error("a route's target cannot be equal to its source: {0:?}")]
     RouteSourceAndTargetMatch(frealmbuilder::RouteEndpoint),
 
+    #[error("can only use protocols from debug: {0:?}")]
+    InvalidCapabilityFromDebug(Moniker),
+
     #[error("the component decl for {0} failed validation: {1:?}")]
     ValidationError(Moniker, cm_fidl_validator::ErrorList),
 
@@ -241,6 +244,9 @@ impl Error {
             Error::PkgDirIoError(_) => frealmbuilder::RealmBuilderError::PkgDirIoError,
             Error::FailedToLoadComponentDecl(_) => {
                 frealmbuilder::RealmBuilderError::FailedToLoadComponentDecl
+            }
+            Error::InvalidCapabilityFromDebug(_) => {
+                frealmbuilder::RealmBuilderError::InvalidCapabilityFromDebug
             }
         }
     }
@@ -600,6 +606,9 @@ impl RealmNode {
                     target.try_into()?,
                     force_route,
                 )?;
+            } else if let frealmbuilder::RouteEndpoint::Debug(_) = &source {
+                // We're routing a capability from the debug section of the component's environment.
+                self.route_capability_from_debug(&capability, target.try_into()?, force_route)?;
             } else {
                 // We're routing a capability from one component within our constructed realm to
                 // another
@@ -694,6 +703,32 @@ impl RealmNode {
             target_node.add_use_for_capability(
                 &capability,
                 cm_rust::UseSource::Parent,
+                force_route,
+            )?;
+            // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
+            //target_node.validate(&target_moniker)?;
+        } else {
+            // `get_node_mut` only returns `Ok` for mutable nodes. If this node is immutable
+            // (located behind a ChildDecl) we have to presume that the component already uses
+            // the capability.
+        }
+        Ok(())
+    }
+
+    fn route_capability_from_debug(
+        &mut self,
+        capability: &frealmbuilder::Capability,
+        target_moniker: Moniker,
+        force_route: bool,
+    ) -> Result<(), Error> {
+        match &capability {
+            frealmbuilder::Capability::Protocol(_) => { /*only this is supported */ }
+            _ => return Err(Error::InvalidCapabilityFromDebug(target_moniker)),
+        }
+        if let Ok(target_node) = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing) {
+            target_node.add_use_for_capability(
+                &capability,
+                cm_rust::UseSource::Debug,
                 force_route,
             )?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported

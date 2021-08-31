@@ -71,6 +71,12 @@ type RealmBuilderError = strict enum : uint32 {
 
     /// Failed to load the component decl.
     FAILED_TO_LOAD_COMPONENT_DECL = 17;
+
+    /// An invalid capability was requested from the "debug" route endpoint.
+    ///
+    /// Only protocols may be requested from the "debug" route endpoint in
+    /// RealmBuilder.
+    INVALID_CAPABILITY_FROM_DEBUG = 18;
 };
 
 const MAX_MOCK_ID_LENGTH uint32 = 1000;
@@ -141,12 +147,17 @@ type StorageCapability = table {
 type RouteEndpoint = flexible union {
     1: component string:fuchsia.component.MAX_PATH_LENGTH;
     2: above_root AboveRoot;
+    3: debug Debug;
 };
 
 /// The capability route's endpoint exists above the constructed realm, and is
 /// offered to the realm's collection or will be accessed by the parent using
 /// `fuchsia.sys2#Realm`.
 type AboveRoot = struct {};
+
+/// The capability route's endpoint exists in the environment and is offered as
+/// "debug".
+type Debug = struct {};
 
 /// This stateful protocol can be used to construct a new component realm at
 /// runtime. This new realm is built iteratively by calling the methods on this

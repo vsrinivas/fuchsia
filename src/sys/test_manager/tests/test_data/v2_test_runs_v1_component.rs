@@ -88,6 +88,41 @@ async fn launch_v1_logging_component() {
 }
 
 #[fuchsia::test]
+async fn test_debug_data_for_v1_component() {
+    let launcher_proxy = connect_to_protocol::<fsys::LauncherMarker>().expect("failed to connect");
+    let url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_test_v1.cmx";
+
+    let mut launch_info = fsys::LaunchInfo {
+        url: url.to_string(),
+        arguments: None,
+        out: None,
+        err: None,
+        directory_request: None,
+        flat_namespace: None,
+        additional_services: None,
+    };
+
+    let (component_controller, component_controller_server) =
+        create_proxy::<fsys::ComponentControllerMarker>().expect("create component controller");
+
+    launcher_proxy
+        .create_component(&mut launch_info, Some(component_controller_server))
+        .expect("create component");
+
+    let mut events = component_controller.take_event_stream();
+
+    while let Some(event) = events.try_next().await.expect("get event") {
+        match event {
+            fsys::ComponentControllerEvent::OnTerminated { return_code, .. } => {
+                // the launched test will fail if it doesn't have access to debug data.
+                assert_eq!(return_code, 0);
+            }
+            _ => {}
+        }
+    }
+}
+
+#[fuchsia::test]
 async fn enclosing_env_services() {
     let env_proxy = connect_to_protocol::<fsys::EnvironmentMarker>().expect("failed to connect");
     let (dir_proxy, directory_request) =
@@ -105,6 +140,7 @@ async fn enclosing_env_services() {
     assert_eq!(
         protocols,
         vec![
+            "fuchsia.debugdata.DebugData".to_string(),
             "fuchsia.logger.LogSink".to_string(),
             "fuchsia.process.Launcher".to_string(),
             "fuchsia.process.Resolver".to_string(),

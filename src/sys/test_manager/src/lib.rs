@@ -9,9 +9,10 @@ use {
     diagnostics_bridge::ArchiveReaderManager,
     fdiagnostics::ArchiveAccessorProxy,
     fidl::endpoints::{ProtocolMarker, Proxy, ServerEnd},
-    fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
-    fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_test as ftest, fidl_fuchsia_test_internal as ftest_internal,
+    fidl_fuchsia_test_manager as ftest_manager,
     ftest::{Invocation, SuiteMarker},
     ftest_manager::{
         CaseStatus, LaunchError, RunControllerRequest, RunControllerRequestStream,
@@ -1283,6 +1284,11 @@ async fn get_realm(
             capability: Capability::protocol(fv1sys::LoaderMarker::NAME),
             source: RouteEndpoint::component(ENCLOSING_ENV),
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol(fdebugdata::DebugDataMarker::NAME),
+            source: RouteEndpoint::Debug,
+            targets: vec![RouteEndpoint::component(ENCLOSING_ENV)],
         })?;
 
     above_root_capabilities_for_test.apply(&mut builder)?;
@@ -1432,11 +1438,22 @@ impl EnclosingEnvironment {
     fn new(incoming_svc: fio::DirectoryProxy) -> Result<Arc<Self>, Error> {
         let sys_env = connect_to_protocol::<fv1sys::EnvironmentMarker>()?;
         let (additional_svc, additional_directory_request) = zx::Channel::create()?;
-
+        let incoming_svc = Arc::new(incoming_svc);
+        let incoming_svc_clone = incoming_svc.clone();
         let mut fs = ServiceFs::new();
         fs.add_service_at(fv1sys::LoaderMarker::NAME, move |chan: fuchsia_zircon::Channel| {
             if let Err(e) = connect_channel_to_protocol::<fv1sys::LoaderMarker>(chan) {
                 warn!("Cannot connect to loader: {}", e);
+            }
+            None
+        })
+        .add_service_at(fdebugdata::DebugDataMarker::NAME, move |chan: fuchsia_zircon::Channel| {
+            if let Err(e) = fdio::service_connect_at(
+                incoming_svc_clone.as_channel().as_ref(),
+                fdebugdata::DebugDataMarker::NAME,
+                chan,
+            ) {
+                warn!("cannot connect to DebugData: {}", e);
             }
             None
         })
@@ -1457,7 +1474,11 @@ impl EnclosingEnvironment {
         });
 
         let mut service_list = fv1sys::ServiceList {
-            names: vec![fv1sys::LoaderMarker::NAME.to_string(), "fuchsia.logger.LogSink".into()],
+            names: vec![
+                fv1sys::LoaderMarker::NAME.to_string(),
+                fdebugdata::DebugDataMarker::NAME.to_string(),
+                "fuchsia.logger.LogSink".into(),
+            ],
             provider: None,
             host_directory: Some(additional_directory_request),
         };

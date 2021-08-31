@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/debug_data_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.debugdata.DebugData"
+        ]
+    }
+}

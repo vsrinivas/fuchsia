@@ -502,7 +502,7 @@ impl RealmBuilder {
         target: RouteEndpoint,
     ) -> Result<(), Error> {
         // We're routing a capability from above our constructed realm to a component
-        // eithin it
+        // within it
         let target_moniker = target.unwrap_component_moniker();
 
         if realm.contains(&target_moniker).await? {

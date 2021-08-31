@@ -135,6 +135,9 @@ pub enum RouteEndpoint {
 
     /// One end of this capability route is above the root component in the generated realms
     AboveRoot,
+
+    /// One end of this capability is routed from the debug section of the component's environment.
+    Debug,
 }
 
 impl Into<frealmbuilder::RouteEndpoint> for RouteEndpoint {
@@ -143,6 +146,7 @@ impl Into<frealmbuilder::RouteEndpoint> for RouteEndpoint {
             RouteEndpoint::AboveRoot => {
                 frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {})
             }
+            RouteEndpoint::Debug => frealmbuilder::RouteEndpoint::Debug(frealmbuilder::Debug {}),
             RouteEndpoint::Component(moniker) => frealmbuilder::RouteEndpoint::Component(moniker),
         }
     }
@@ -154,6 +158,7 @@ impl From<frealmbuilder::RouteEndpoint> for RouteEndpoint {
             frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {}) => {
                 RouteEndpoint::AboveRoot
             }
+            frealmbuilder::RouteEndpoint::Debug(frealmbuilder::Debug {}) => RouteEndpoint::Debug,
             frealmbuilder::RouteEndpoint::Component(moniker) => RouteEndpoint::Component(moniker),
             _ => panic!("unexpected input"),
         }
@@ -167,6 +172,10 @@ impl RouteEndpoint {
 
     pub fn above_root() -> Self {
         Self::AboveRoot
+    }
+
+    pub fn debug() -> Self {
+        Self::Debug
     }
 
     fn unwrap_component_moniker(&self) -> Moniker {

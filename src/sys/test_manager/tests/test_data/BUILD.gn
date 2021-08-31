@@ -72,9 +72,48 @@ fuchsia_component("v2_test_runs_v1_component") {
   manifest = "meta/v2_test_runs_v1_component.cml"
 }
 
+rustc_test("debug_data_test_bin") {
+  testonly = true
+  name = "debug_data_test"
+  source_root = "debug_data_test.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [ "debug_data_test.rs" ]
+}
+
+fuchsia_component("debug_data_test") {
+  testonly = true
+  manifest = "meta/debug_data_test.cml"
+  deps = [ ":debug_data_test_bin" ]
+}
+
+fuchsia_component("debug_data_test_v1") {
+  testonly = true
+  manifest = "meta/debug_data_test.cmx"
+  deps = [ ":debug_data_test_bin" ]
+}
+
+fuchsia_test_package("debug-data-test") {
+  test_components = [ ":debug_data_test" ]
+}
+
 group("test_data") {
   testonly = true
   public_deps = [
+    ":debug-data-test",
+    ":debug_data_test_v1",
     ":hanging_test",
     ":no_suite_service",
     ":v2_test_runs_v1_component",

@@ -44,6 +44,7 @@ rustc_library("lib") {
 
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata-rustc",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
