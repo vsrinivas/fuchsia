@@ -144,7 +144,7 @@ LK_INIT_HOOK_FLAGS(arm_gic_resume_cpu, arm_gic_resume_cpu,
                    LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_RESUME);
 #endif
 
-static int arm_gic_max_cpu() { return (GICREG(0, GICD_TYPER) >> 5) & 0x7; }
+static unsigned int arm_gic_max_cpu() { return (GICREG(0, GICD_TYPER) >> 5) & 0x7; }
 
 static zx_status_t arm_gic_init() {
   uint i;
@@ -152,7 +152,8 @@ static zx_status_t arm_gic_init() {
   uint32_t typer = GICREG(0, GICD_TYPER);
   uint32_t it_lines_number = BITS_SHIFT(typer, 4, 0);
   max_irqs = (it_lines_number + 1) * 32;
-  printf("GICv2 detected: max interrupts %u, TYPER %#x\n", max_irqs, typer);
+  printf("GICv2 detected: max interrupts %u, max_cpus %u, TYPER %#x\n", max_irqs, arm_gic_max_cpu(),
+         typer);
   DEBUG_ASSERT(max_irqs <= MAX_INT);
 
   for (i = 0; i < max_irqs; i += 32) {
@@ -195,6 +196,7 @@ static zx_status_t arm_gic_sgi(unsigned int irq, unsigned int flags, unsigned in
 }
 
 static zx_status_t gic_mask_interrupt(unsigned int vector) {
+  LTRACEF("vector %u\n", vector);
   if (vector >= max_irqs) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -205,6 +207,7 @@ static zx_status_t gic_mask_interrupt(unsigned int vector) {
 }
 
 static zx_status_t gic_unmask_interrupt(unsigned int vector) {
+  LTRACEF("vector %u\n", vector);
   if (vector >= max_irqs) {
     return ZX_ERR_INVALID_ARGS;
   }

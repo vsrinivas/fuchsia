@@ -58,6 +58,8 @@ extern uint64_t arm_gicv2_gicv_offset;
 #define GICD_IPRIORITYR(n) (GICD_OFFSET + 0x400 + (n)*4)
 #define GICD_ITARGETSR(n) (GICD_OFFSET + 0x800 + (n)*4)
 #define GICD_ICFGR(n) (GICD_OFFSET + 0xc00 + (n)*4)
+#define GICD_PPISR (GICD_OFFSET + 0xd00)
+#define GICD_SPISR(n) (GICD_OFFSET + 0xd04 + (n)*4)
 #define GICD_NSACR(n) (GICD_OFFSET + 0xe00 + (n)*4)
 #define GICD_SGIR (GICD_OFFSET + 0xf00)
 #define GICD_CPENDSGIR(n) (GICD_OFFSET + 0xf10 + (n)*4)
