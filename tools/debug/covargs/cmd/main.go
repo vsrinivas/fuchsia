@@ -311,7 +311,10 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	for _, entry := range entries {
 		version, err := getVersion(entry.Profile)
 		if err != nil {
-			return fmt.Errorf("cannot get version from profile %q: %w", entry.Profile, err)
+			// TODO(fxbug.dev/83504): This should be rare enough that we should
+			// return an error, but that's not the case at the moment on host.
+			logger.Warningf(ctx, "cannot read version from profile %q: %w", entry.Profile, err)
+			continue
 		}
 		partition, ok := partitions[version]
 		if !ok {
