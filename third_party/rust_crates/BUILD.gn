@@ -283,7 +283,7 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("http") {
-  deps = [ ":http-v0_2_1" ]
+  deps = [ ":http-v0_2_4" ]
 }
 
 group("humansize") {
@@ -4097,7 +4097,7 @@ rust_library("h2-v0_2_5") {
   deps += [ ":futures-core-v0_3_15" ]
   deps += [ ":futures-sink-v0_3_15" ]
   deps += [ ":futures-util-v0_3_15" ]
-  deps += [ ":http-v0_2_1" ]
+  deps += [ ":http-v0_2_4" ]
   deps += [ ":indexmap-v1_0_2" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":slab-v0_4_2" ]
@@ -4254,17 +4254,17 @@ rust_library("home-v0_5_3") {
   ]
 }
 
-rust_library("http-v0_2_1") {
+rust_library("http-v0_2_4") {
   crate_name = "http"
   crate_root = "//third_party/rust_crates/vendor/http/src/lib.rs"
-  output_name = "http-369d781893ae7aaa"
+  output_name = "http-6a6e000f40845eef"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":bytes-v0_5_4" ]
+  deps += [ ":bytes-v1_0_1" ]
   deps += [ ":fnv-v1_0_6" ]
   deps += [ ":itoa-v0_4_3" ]
 
@@ -4273,8 +4273,8 @@ rust_library("http-v0_2_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=369d781893ae7aaa",
-    "-Cextra-filename=-369d781893ae7aaa",
+    "-Cmetadata=6a6e000f40845eef",
+    "-Cextra-filename=-6a6e000f40845eef",
   ]
 }
 
@@ -4289,7 +4289,7 @@ rust_library("http-body-v0_3_1") {
 
   deps = []
   deps += [ ":bytes-v0_5_4" ]
-  deps += [ ":http-v0_2_1" ]
+  deps += [ ":http-v0_2_4" ]
 
   rustenv = []
 
@@ -4361,7 +4361,7 @@ rust_library("hyper-v0_13_6") {
   deps += [ ":futures-core-v0_3_15" ]
   deps += [ ":futures-util-v0_3_15" ]
   deps += [ ":h2-v0_2_5" ]
-  deps += [ ":http-v0_2_1" ]
+  deps += [ ":http-v0_2_4" ]
   deps += [ ":http-body-v0_3_1" ]
   deps += [ ":httparse-v1_3_3" ]
   deps += [ ":itoa-v0_4_3" ]
