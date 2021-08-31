@@ -598,9 +598,9 @@ config("Wno-range-loop-construct") {
 config("Wno-conversion") {
   cflags = [ "-Wno-conversion" ]
 
-  # NOTE: The Zircon build does something funky which causes the default
-  # warnings to appear _before_ cflags, so use cflags_c{,c} to also make the
-  # flag appear after the defaults.
+  # NOTE: //build/config/zircon:default_warnings's `cflags` appear after this
+  # config's for some reason; add ours to cflags_c{,c} so that they also appear
+  # at the end.
   #
   # TODO(https://fxbug.dev/60410): After build unification completes, remove
   # these.
@@ -773,6 +773,8 @@ config("Wno-conversion") {
     "//src/devices/usb/drivers/usb-hub:*",
     "//src/devices/usb/drivers/xhci-rewrite:*",
     "//src/diagnostics/validator/inspect/lib/cpp:*",
+    "//src/firmware/gigaboot/lib",
+    "//src/firmware/gigaboot/src",
     "//src/graphics/display/drivers/aml-hdmi:*",
     "//src/graphics/display/drivers/amlogic-display:*",
     "//src/graphics/display/drivers/display:*",
@@ -1016,6 +1018,8 @@ config("Wno-conversion") {
     "//zircon/kernel/lib/crypto:*",
     "//zircon/kernel/lib/jtrace:*",
     "//zircon/kernel/lib/jtrace/tests:*",
+    "//zircon/kernel/lib/libc/string",
+    "//zircon/kernel/lib/libc/string/arch/arm64:*",
     "//zircon/kernel/lib/libc/string/arch/x86:*",
     "//zircon/kernel/lib/persistent-debuglog/tests:*",
     "//zircon/kernel/lib/syscalls:*",
@@ -1027,6 +1031,7 @@ config("Wno-conversion") {
     "//zircon/kernel/phys/test:*",
     "//zircon/kernel/platform/generic-arm:*",
     "//zircon/kernel/platform/pc:*",
+    "//zircon/kernel/target/arm64/boot-shim:*",
     "//zircon/kernel/tests:*",
     "//zircon/kernel/vm:*",
     "//zircon/system/ulib/audio-utils:*",
@@ -1061,6 +1066,7 @@ config("Wno-conversion") {
     "//zircon/system/ulib/zbitl/testing:*",
     "//zircon/system/utest/msd:*",
     "//zircon/third_party/dev/ethernet/e1000:*",
+    "//zircon/third_party/lib/jitterentropy",
     "//zircon/third_party/uapp/dash:*",
     "//zircon/third_party/uapp/fsck-msdosfs:*",
     "//zircon/third_party/uapp/kilo:*",
@@ -1068,6 +1074,31 @@ config("Wno-conversion") {
     "//zircon/third_party/ulib/cksum:*",
     "//zircon/third_party/ulib/linenoise:*",
     "//zircon/third_party/ulib/musl:*",
+    "//zircon/third_party/ulib/musl/ldso",
+    "//zircon/third_party/ulib/musl/src/complex",
+    "//zircon/third_party/ulib/musl/src/dirent",
+    "//zircon/third_party/ulib/musl/src/env",
+    "//zircon/third_party/ulib/musl/src/fenv",
+    "//zircon/third_party/ulib/musl/src/internal",
+    "//zircon/third_party/ulib/musl/src/ipc",
+    "//zircon/third_party/ulib/musl/src/legacy",
+    "//zircon/third_party/ulib/musl/src/locale",
+    "//zircon/third_party/ulib/musl/src/math",
+    "//zircon/third_party/ulib/musl/src/multibyte",
+    "//zircon/third_party/ulib/musl/src/network",
+    "//zircon/third_party/ulib/musl/src/passwd",
+    "//zircon/third_party/ulib/musl/src/prng",
+    "//zircon/third_party/ulib/musl/src/process",
+    "//zircon/third_party/ulib/musl/src/regex",
+    "//zircon/third_party/ulib/musl/src/sched",
+    "//zircon/third_party/ulib/musl/src/stdio",
+    "//zircon/third_party/ulib/musl/src/stdlib",
+    "//zircon/third_party/ulib/musl/src/string:*",
+    "//zircon/third_party/ulib/musl/src/time",
+    "//zircon/third_party/ulib/musl/src/unistd",
+    "//zircon/third_party/ulib/musl/third_party/complex",
+    "//zircon/third_party/ulib/musl/third_party/math",
+    "//zircon/third_party/ulib/musl/third_party/tre",
     "//zircon/third_party/ulib/ngunwind:*",
     "//zircon/tools/blobfs:*",
     "//zircon/tools/kazoo:*",

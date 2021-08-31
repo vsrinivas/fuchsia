@@ -104,9 +104,18 @@ zx_library("boringssl") {
 config("warnings") {
   visibility = [ ":*" ]
 
+  # ../../third_party/boringssl/src/crypto/chacha/chacha.c: In function 'chacha_core':
+  # ../../third_party/boringssl/src/crypto/chacha/chacha.c:107:14: error: conversion from 'uint32_t' {aka 'unsigned int'} to 'uint8_t' {aka 'unsigned char'} may change value [-Werror=conversion]
+  #   107 |     (p)[3] = (v >> 24) & 0xff; \
+  #       |              ^
+  # ../../third_party/boringssl/src/crypto/chacha/chacha.c:132:5: note: in expansion of macro 'U32TO8_LITTLE'
+  #   132 |     U32TO8_LITTLE(output + 4 * i, x[i]);
+  #       |     ^~~~~~~~~~~~~
+  cflags = [ "-Wno-conversion" ]
+
   if (is_gcc) {
     # The SHA implementation does some dynamic funny business that runs afoul
     # of GCC's strict checking against stated buffer sizes.
-    cflags = [ "-Wno-stringop-overflow" ]
+    cflags += [ "-Wno-stringop-overflow" ]
   }
 }

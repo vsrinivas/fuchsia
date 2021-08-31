@@ -85,6 +85,9 @@ source_set("extmem") {
   }
 
   configs -= [ "//build/config:symbol_visibility_hidden" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("minimal_str") {
@@ -142,6 +145,9 @@ source_set("stdstr") {
   }
 
   configs -= [ "//build/config:symbol_visibility_hidden" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("extstr") {

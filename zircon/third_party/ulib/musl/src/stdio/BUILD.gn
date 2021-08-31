@@ -122,6 +122,9 @@ source_set("stdio") {
 
   configs -= [ "//build/config:symbol_visibility_hidden" ]
 
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
   # TODO(https://fxbug.dev/42500): Update this after the UB is fixed in musl;
   # see https://www.openwall.com/lists/musl/2021/08/30/1.
   #

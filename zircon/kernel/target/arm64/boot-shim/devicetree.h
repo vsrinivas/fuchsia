@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct dt_slice {
   uint8_t *data;
@@ -47,6 +47,6 @@ int dt_walk(devicetree_t *dt, dt_node_cb ncb, dt_prop_cb pcb, void *cookie);
 uint32_t dt_rd32(uint8_t *data);
 void dt_wr32(uint32_t n, uint8_t *data);
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_TARGET_ARM64_BOOT_SHIM_DEVICETREE_H_

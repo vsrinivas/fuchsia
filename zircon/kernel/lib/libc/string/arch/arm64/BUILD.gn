@@ -14,6 +14,9 @@ source_set("arm64") {
       "//zircon/kernel/lib/libc/string/memset.c",
     ]
     deps = [ "//zircon/kernel/lib/libc:headers" ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   } else {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
     # and '#include "third_party/lib/cortex-strings/no-neon/src/aarch64/..."'.

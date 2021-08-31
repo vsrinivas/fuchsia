@@ -36,6 +36,9 @@ if (toolchain_environment == "physmem") {
       "zbi.c",
     ]
     deps = [ "//zircon/kernel/lib/libc/string" ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   config("boot_shim_config") {
@@ -71,6 +74,9 @@ template("boot_shim") {
 
       # TODO(mcgrathr): Move these to ./$board-config.h and use a -D.
       include_dirs = [ "//zircon/kernel/target/arm64/board/$board" ]
+
+      # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+      configs += [ "//build/config:Wno-conversion" ]
     }
 
     shim_rspfile = "$target_gen_dir/$shim_name.elf.rsp"

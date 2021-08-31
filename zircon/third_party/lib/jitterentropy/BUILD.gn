@@ -23,6 +23,7 @@ zx_library("jitterentropy") {
     ":config",
     "//build/config:optimize_none",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 config("config") {

@@ -36,4 +36,7 @@ source_set("string") {
     "//zircon/kernel/lib/libc:ctype",
     "//zircon/kernel/lib/libc:headers",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

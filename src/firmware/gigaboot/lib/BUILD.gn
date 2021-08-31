@@ -24,6 +24,9 @@ if (is_efi_toolchain) {
       # This only actually adds anything to the profile build.
       "//zircon/kernel/lib/instrumentation:profile",
     ]
+
+    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 

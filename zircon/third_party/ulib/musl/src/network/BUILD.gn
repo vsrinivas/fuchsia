@@ -68,6 +68,9 @@ source_set("network") {
 
   configs -= [ "//build/config:symbol_visibility_hidden" ]
 
-  # TODO(fxb/58161): delete the below and fix compiler warnings
+  # TODO(https://fxbug.dev/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

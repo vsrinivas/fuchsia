@@ -311,28 +311,14 @@ config("default_warnings") {
   cflags = [
     "-Wall",
     "-Wextra",
-    "-Wimplicit-fallthrough",
-    "-Wno-unused-parameter",
-  ]
-  cflags_c = [
-    "-Wstrict-prototypes",
-    "-Wwrite-strings",
-  ]
-  cflags_cc = [
     "-Wconversion",
+    "-Wimplicit-fallthrough",
+    "-Wwrite-strings",
     "-Wno-sign-conversion",
-    "-Wextra-semi",
-
-    # TODO(fxbug.dev/38640): Temporarily disable this warning to unblock the GCC roll.
-    "-Wno-deprecated-copy",
+    "-Wno-unused-parameter",
   ]
   if (is_gcc) {
     cflags += [
-      "-Wno-nonnull-compare",
-      "-Wno-format-truncation",
-    ]
-
-    cflags_cc += [
       # TODO(https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90036): Re-enable
       # once the bug is fixed.
       "-Wno-format-overflow",
@@ -340,11 +326,27 @@ config("default_warnings") {
       # TODO(fxbug.dev/64272): Disable "-Wmissing-field-initializers" which
       # warns when designated initializers are used on some (but not all)
       # fields in C++, contrary to its documentation (and Clang).
+      #
+      # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=39589.
       "-Wno-missing-field-initializers",
+    ]
+
+    # GCC is pedantic about which flags apply to which language.
+    cflags_c = [ "-Wstrict-prototypes" ]
+    cflags_cc = [
+      "-Wextra-semi",
+
+      # TODO(fxbug.dev/38640): Temporarily disable this warning to unblock the GCC roll.
+      "-Wno-deprecated-copy",
     ]
   } else {
     cflags += [
+      "-Wextra-semi",
       "-Wnewline-eof",
+      "-Wstrict-prototypes",
+
+      # TODO(fxbug.dev/38640): Temporarily disable this warning to unblock the GCC roll.
+      "-Wno-deprecated-copy",
 
       # TODO(fxbug.dev/35965): Temporarily disable C99 designator warnings introduced in
       # https://reviews.llvm.org/D59754. After the new Clang toolchain lands

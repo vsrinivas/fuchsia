@@ -13,4 +13,7 @@ source_set("dirent") {
   if (zircon_toolchain != false) {
     configs -= [ "//build/config:symbol_visibility_hidden" ]
   }
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

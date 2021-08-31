@@ -44,6 +44,9 @@ source_set("src") {
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/lz4",
   ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # MacOS is missing <endian.h>, so we don't build the tests for it.
