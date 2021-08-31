@@ -124,10 +124,11 @@ bool AreValidExtents(const std::array<std::array<float, 2>, 2>& extents) {
   return std::isless(min_x, max_x) && std::isless(min_y, max_y);
 }
 
-void ChattyLog(const fuchsia::ui::pointerinjector::Event& event) {
+void ChattyLog(const fuchsia::ui::pointerinjector::Event& event, zx_koid_t target) {
   static uint32_t chatty = 0;
   if (chatty++ < ChattyMax()) {
-    FX_LOGS(INFO) << "Injector[" << chatty << "/" << ChattyMax() << "]: " << event;
+    FX_LOGS(INFO) << "Injector[" << chatty << "/" << ChattyMax() << "]: "
+                  << "target: " << target << event;
   }
 }
 
@@ -213,7 +214,7 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
       if (event.has_trace_flow_id()) {
         TRACE_FLOW_END("input", "dispatch_event_to_scenic", event.trace_flow_id());
       }
-      ChattyLog(event);  // Scenic accepts the event, put it on chatty log.
+      ChattyLog(event, settings_.target_koid);  // Scenic accepts the event, put it on chatty log.
       ForwardEvent(event, stream_id);
       continue;
     } else {
