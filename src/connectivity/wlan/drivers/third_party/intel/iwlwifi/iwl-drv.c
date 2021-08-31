@@ -463,7 +463,17 @@ static zx_status_t iwl_load_firmware(struct iwl_drv* drv, bool first) {
 
   IWL_DEBUG_INFO(drv, "attempting to load firmware '%s'\n", drv->firmware_name);
 
-  return iwl_firmware_request_nowait(drv->trans->dev, drv->firmware_name, iwl_req_fw_callback, drv);
+  // If we cannot load the firmware file (e.g. the specified version is not included on the system),
+  // try the next (lower version) firmware file.
+  zx_status_t ret =
+      iwl_firmware_request_nowait(drv->trans->dev, drv->firmware_name, iwl_req_fw_callback, drv);
+  if (ret == ZX_ERR_NOT_FOUND) {
+    IWL_DEBUG_FW(drv, "cannot load the firmware file '%s'. Try next firmware version.\n",
+                 drv->firmware_name);
+    return iwl_load_firmware(drv, false);
+  } else {
+    return ret;
+  }
 }
 
 struct fw_img_parsing {
