@@ -329,22 +329,20 @@ pub fn sys_getdents64(
 }
 
 pub fn sys_chdir(ctx: &SyscallContext<'_>, user_path: UserCString) -> Result<SyscallResult, Errno> {
-    // TODO: This should probably use lookup_node.
-    let file = open_file_at(
-        &ctx.task,
-        FdNumber::AT_FDCWD,
-        user_path,
-        O_RDONLY | O_DIRECTORY,
-        FileMode::default(),
-    )?;
-    ctx.task.fs.chdir(&file);
+    let name = lookup_at(ctx.task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
+    if !name.entry.node.is_dir() {
+        return error!(ENOTDIR);
+    }
+    ctx.task.fs.chdir(name);
     Ok(SUCCESS)
 }
 
 pub fn sys_fchdir(ctx: &SyscallContext<'_>, fd: FdNumber) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    // TODO: Check isdir and return ENOTDIR.
-    ctx.task.fs.chdir(&file);
+    if !file.name.entry.node.is_dir() {
+        return error!(ENOTDIR);
+    }
+    ctx.task.fs.chdir(file.name.clone());
     Ok(SUCCESS)
 }
 
