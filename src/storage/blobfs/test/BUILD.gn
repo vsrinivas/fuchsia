@@ -5,11 +5,12 @@
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//src/storage/testing/decompressor_wrapper.gni")
 
 group("test") {
   testonly = true
   deps = [
-    ":blobfs-unittest",
+    ":blobfs-unittest-package",
     ":blobfs_host($host_toolchain)",
     "integration:tests",
     "load_generator",
@@ -118,14 +119,36 @@ test("blobfs_unittest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_unittest_package("blobfs-unittest") {
+fuchsia_unittest_component("blobfs-unittest-worker") {
+  manifest = "meta/blobfs_unittest_worker.cml"
+  deps = [
+    ":blobfs_unittest",
+    ":test_binary_resource",
+  ]
+}
+
+wrap_with_decompressor("blobfs-unittest") {
+  test_url =
+      "fuchsia-pkg://fuchsia.com/blobfs-unittest#meta/blobfs-unittest-worker.cm"
+  forwarded_protocols = [
+    "fuchsia.logger.LogSink",
+    "fuchsia.process.Launcher",
+  ]
+}
+
+fuchsia_test_package("blobfs-unittest-package") {
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
     }
   }
-  manifest = "meta/blobfs_unittest.cml"
-  deps = [ ":blobfs_unittest" ]
+  package_name = "blobfs-unittest"
+  test_components = [ ":blobfs-unittest" ]
+
+  deps = [
+    ":blobfs-unittest-worker",
+    "//src/storage/blobfs:decompressor-sandbox",
+  ]
 }
 
 test("blobfs_host") {
