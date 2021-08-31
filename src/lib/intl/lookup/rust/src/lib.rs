@@ -154,8 +154,10 @@ pub unsafe extern "C" fn intl_lookup_new(
     for raw in input.iter() {
         let cstr = ffi::CStr::from_ptr(*raw).to_str();
         match cstr {
-            Err(_) => {
-                *status = LookupStatus::Unavailable as i8;
+            Err(e) => {
+                fx_log_err!("intl::intl_lookup_new::c_str: {:?}", &e);
+                let ls: LookupStatus = e.into();
+                *status = ls as i8;
                 return std::ptr::null::<Lookup>();
             }
             Ok(s) => {
@@ -167,8 +169,10 @@ pub unsafe extern "C" fn intl_lookup_new(
     let lookup_or = Lookup::new(data, &locales[..]);
     match lookup_or {
         Ok(lookup) => Box::into_raw(Box::new(lookup)),
-        Err(_) => {
-            *status = LookupStatus::Unavailable as i8;
+        Err(e) => {
+            fx_log_err!("intl::intl_lookup_new: {:?}", &e);
+            let ls: LookupStatus = e.into();
+            *status = ls as i8;
             std::ptr::null::<Lookup>()
         }
     }
@@ -350,16 +354,13 @@ impl Lookup {
             )?;
             match accept_result {
                 usys::UAcceptResult::ULOC_ACCEPT_FAILED => {
-                    return Err(anyhow::anyhow!(
-                        "no matching locale found for: requested={:?}, supported: {:?}",
-                        &locale,
-                        &supported_locales
-                    ));
+                    // This may happen if the locale is not at all part of the
+                    // set of supported locales.
                 }
                 _ => match maybe_accepted_locale {
                     None => {
                         return Err(anyhow::anyhow!(
-                            "no matching locale found for: requested={:?}, supported: {:?}",
+                            "no matching locale found for: requested: {:?}, supported: {:?}",
                             &locale,
                             &supported_locales
                         ));
@@ -369,6 +370,14 @@ impl Lookup {
                     }
                 },
             }
+        }
+        // We failed to find locales to request from the list of supported locales.
+        if requested_locales.is_empty() {
+            return Err(anyhow::anyhow!(
+                "no matching locale found for: requested: {:?}, supported: {:?}",
+                &requested,
+                &supported_locales
+            ));
         }
         Ok(Lookup { requested: requested_locales, catalog, icu_data })
     }
@@ -538,5 +547,25 @@ mod tests {
         let expected: HashSet<String> = ["es", "en", "fr"].iter().map(|s| s.to_string()).collect();
         assert_eq!(expected, Lookup::get_available_locales_for_test()?.into_iter().collect());
         Ok(())
+    }
+
+    /// If an unsupported locale has been requested, ignore it in the list and
+    /// fall back to something else.
+    #[test]
+    fn ignore_unavailable_locales() {
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        let l = Lookup::new(icu_data, &vec!["sr", "es"]).expect("Lookup::new success");
+        assert_eq!(
+            "el stringo",
+            l.str(ftest::MessageIds::StringName as u64).expect("Lookup::str success")
+        );
+    }
+
+    /// If there is nothing to fall back to, report an error.
+    #[test]
+    fn report_unavailable_locales_without_alternative() {
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        let l = Lookup::new(icu_data, &vec!["sr"]);
+        assert!(l.is_err());
     }
 }
