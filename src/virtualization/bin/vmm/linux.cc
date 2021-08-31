@@ -39,8 +39,7 @@ __UNUSED static constexpr uintptr_t kE820MapOffset = 0x02d0;
 __UNUSED static constexpr size_t kMaxE820Entries = 128;
 __UNUSED static constexpr size_t kSectorSize = 512;
 
-static constexpr uint16_t kMzSignature = 0x5a4d;  // MZ
-static constexpr uint32_t kMzMagic = 0x644d5241;  // ARM\x64
+static constexpr uint32_t kArm64ImageMagic = 0x644d5241;  // ARM\x64
 
 struct SetupData {
   enum Type : uint32_t {
@@ -142,10 +141,10 @@ static bool is_boot_params(const PhysMem& phys_mem) {
   return read_bp(phys_mem, BOOTFLAG) == kBootFlagMagic && read_bp(phys_mem, HEADER) == kHeaderMagic;
 }
 
-// MZ header used to boot ARM64 kernels.
+// Header used to boot ARM64 kernels.
 //
 // See: https://www.kernel.org/doc/Documentation/arm64/booting.txt.
-struct MzHeader {
+struct Arm64ImageHeader {
   uint32_t code0;
   uint32_t code1;
   uint64_t kernel_off;
@@ -157,11 +156,10 @@ struct MzHeader {
   uint32_t magic;
   uint32_t pe_off;
 } __PACKED;
-static_assert(sizeof(MzHeader) == 64, "");
+static_assert(sizeof(Arm64ImageHeader) == 64, "");
 
-static bool is_mz(const MzHeader* header) {
-  return (header->code0 & UINT16_MAX) == kMzSignature && header->kernel_len > sizeof(MzHeader) &&
-         header->magic == kMzMagic && header->pe_off >= sizeof(MzHeader);
+static bool is_arm64_image(const Arm64ImageHeader* header) {
+  return header->kernel_len > sizeof(Arm64ImageHeader) && header->magic == kArm64ImageMagic;
 }
 
 static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
@@ -315,9 +313,10 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
   return ZX_OK;
 }
 
-static zx_status_t read_mz(const PhysMem& phys_mem, uintptr_t* guest_ip) {
-  MzHeader mz_header = phys_mem.read<MzHeader>(kKernelOffset);
-  if (!is_mz(&mz_header)) {
+static zx_status_t read_image_header(const PhysMem& phys_mem, uintptr_t* guest_ip) {
+  Arm64ImageHeader image_header = phys_mem.read<Arm64ImageHeader>(kKernelOffset);
+  if (!is_arm64_image(&image_header)) {
+    FX_LOGS(ERROR) << "Kernel does not have a valid header";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -541,7 +540,7 @@ zx_status_t setup_linux(fuchsia::virtualization::GuestConfig* cfg, const PhysMem
     }
     *boot_ptr = kKernelOffset;
   } else {
-    status = read_mz(phys_mem, guest_ip);
+    status = read_image_header(phys_mem, guest_ip);
     if (status != ZX_OK) {
       return status;
     }
