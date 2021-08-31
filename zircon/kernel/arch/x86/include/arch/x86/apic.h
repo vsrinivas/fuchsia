@@ -129,7 +129,6 @@ void apic_io_configure_isa_irq(uint8_t isa_irq, enum apic_interrupt_delivery_mod
                                uint8_t vector);
 void apic_io_issue_eoi(uint32_t global_irq, uint8_t vec);
 uint32_t apic_io_isa_to_global(uint8_t isa_irq);
-std::pair<uint32_t, uint32_t> apic_io_get_gsi_range();
 
 // These functions must be invoked with interrupts disabled.  They save/restore the
 // current redirection table entries to/from memory.  They are intended for use
