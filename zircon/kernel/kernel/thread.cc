@@ -717,8 +717,8 @@ void Thread::SetMigrateFn(MigrateFn migrate_fn) {
 }
 
 void Thread::SetMigrateFnLocked(MigrateFn migrate_fn) {
+  DEBUG_ASSERT(!migrate_fn || !migrate_pending_);
   canary_.Assert();
-  DEBUG_ASSERT(!migrate_pending_);
   // If |migrate_fn_| was previously set, remove |this| from |migrate_list_|.
   if (migrate_fn_) {
     migrate_list_.erase(*this);
