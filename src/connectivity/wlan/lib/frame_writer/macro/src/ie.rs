@@ -194,7 +194,7 @@ impl BufferWrite for IeDefinition {
             ),
             Ie::ExtendedRates { continue_rates } => {
                 if continue_rates {
-                    quote!(rates_writer.write_ext_supported_rates(&mut w);)
+                    quote!(rates_writer.write_extended_supported_rates(&mut w);)
                 } else {
                     // Extended supported rates should only be written if the maximum supported
                     // rates were specified.
@@ -205,7 +205,7 @@ impl BufferWrite for IeDefinition {
                                 maximum allowed supported_rates: {}", rates.len()
                             )).into());
                         }
-                        ie::write_ext_supported_rates(&mut w, &extended_supported_rates[..])?;
+                        ie::write_extended_supported_rates(&mut w, &extended_supported_rates[..])?;
                     )
                 }
             }

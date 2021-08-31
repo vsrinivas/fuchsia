@@ -17,7 +17,7 @@ impl Id {
     pub const COUNTRY: Self = Self(7);
     pub const HT_CAPABILITIES: Self = Self(45);
     pub const RSNE: Self = Self(48);
-    pub const EXT_SUPPORTED_RATES: Self = Self(50);
+    pub const EXTENDED_SUPPORTED_RATES: Self = Self(50);
     pub const MOBILITY_DOMAIN: Self = Self(54);
     pub const HT_OPERATION: Self = Self(61);
     pub const RM_ENABLED_CAPABILITIES: Self = Self(70);
@@ -61,7 +61,7 @@ impl IeType {
     ie_type_basic_const!(COUNTRY);
     ie_type_basic_const!(HT_CAPABILITIES);
     ie_type_basic_const!(RSNE);
-    ie_type_basic_const!(EXT_SUPPORTED_RATES);
+    ie_type_basic_const!(EXTENDED_SUPPORTED_RATES);
     ie_type_basic_const!(MOBILITY_DOMAIN);
     ie_type_basic_const!(HT_OPERATION);
     ie_type_basic_const!(RM_ENABLED_CAPABILITIES);

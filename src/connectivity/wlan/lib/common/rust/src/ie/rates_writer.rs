@@ -7,7 +7,8 @@ use {
         appendable::Appendable,
         error::FrameWriteError,
         ie::{
-            write_ext_supported_rates, write_supported_rates, IE_MAX_LEN, SUPPORTED_RATES_MAX_LEN,
+            write_extended_supported_rates, write_supported_rates,
+            EXTENDED_SUPPORTED_RATES_MAX_LEN, SUPPORTED_RATES_MAX_LEN,
         },
     },
     zerocopy::ByteSlice,
@@ -19,7 +20,7 @@ impl<S: ByteSlice> RatesWriter<S> {
     pub fn try_new(rates: S) -> Result<RatesWriter<S>, FrameWriteError> {
         if rates.len() == 0 {
             Err(FrameWriteError::new_invalid_data("no rates to write"))
-        } else if rates.len() > SUPPORTED_RATES_MAX_LEN + IE_MAX_LEN {
+        } else if rates.len() > SUPPORTED_RATES_MAX_LEN + EXTENDED_SUPPORTED_RATES_MAX_LEN {
             Err(FrameWriteError::new_invalid_data("rates will not fit in elements"))
         } else {
             Ok(RatesWriter(rates))
@@ -32,10 +33,10 @@ impl<S: ByteSlice> RatesWriter<S> {
         write_supported_rates(&mut *buf, &self.0[..num_rates]).unwrap();
     }
 
-    pub fn write_ext_supported_rates<B: Appendable>(&self, buf: &mut B) {
+    pub fn write_extended_supported_rates<B: Appendable>(&self, buf: &mut B) {
         if self.0.len() > SUPPORTED_RATES_MAX_LEN {
             // safe to unwrap because it is guaranteed to fit.
-            write_ext_supported_rates(&mut *buf, &self.0[SUPPORTED_RATES_MAX_LEN..]).unwrap();
+            write_extended_supported_rates(&mut *buf, &self.0[SUPPORTED_RATES_MAX_LEN..]).unwrap();
         }
     }
 }
@@ -52,13 +53,13 @@ mod tests {
 
     #[test]
     fn too_many_rates_error() {
-        let rates = [0; 1 + SUPPORTED_RATES_MAX_LEN + IE_MAX_LEN];
+        let rates = [0; 1 + SUPPORTED_RATES_MAX_LEN + EXTENDED_SUPPORTED_RATES_MAX_LEN];
         assert!(RatesWriter::try_new(&rates[..]).is_err());
     }
 
     #[test]
     fn max_num_of_rates_ok() {
-        let rates = [42; SUPPORTED_RATES_MAX_LEN + IE_MAX_LEN];
+        let rates = [42; SUPPORTED_RATES_MAX_LEN + EXTENDED_SUPPORTED_RATES_MAX_LEN];
         assert!(RatesWriter::try_new(&rates[..]).is_ok());
     }
 
@@ -68,7 +69,7 @@ mod tests {
         let rates_writer = RatesWriter::try_new(&rates[..]).expect("Should be valid RatesWriter");
         let mut buf = vec![];
         rates_writer.write_supported_rates(&mut buf);
-        rates_writer.write_ext_supported_rates(&mut buf);
+        rates_writer.write_extended_supported_rates(&mut buf);
         assert_eq!(
             &buf[..],
             &[
@@ -84,7 +85,7 @@ mod tests {
         let rates_writer = RatesWriter::try_new(&rates[..]).expect("Should be valid RatesWriter");
         let mut buf = vec![];
         rates_writer.write_supported_rates(&mut buf);
-        rates_writer.write_ext_supported_rates(&mut buf);
+        rates_writer.write_extended_supported_rates(&mut buf);
         assert_eq!(
             &buf[..],
             &[

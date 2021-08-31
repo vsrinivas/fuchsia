@@ -108,7 +108,7 @@ impl BssDescriptionCreator {
         ies_updater.set_raw(&rates_buf[..]).context("set rates")?;
 
         let mut ext_rates_buf = vec![];
-        rates_writer.write_ext_supported_rates(&mut ext_rates_buf);
+        rates_writer.write_extended_supported_rates(&mut ext_rates_buf);
         ies_updater.set_raw(&ext_rates_buf[..]).context("set extended rates")?;
 
         if let Some(rsne) = derive_rsne(self.protection_cfg) {

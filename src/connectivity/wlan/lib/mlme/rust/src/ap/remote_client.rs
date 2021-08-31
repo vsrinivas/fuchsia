@@ -925,7 +925,7 @@ impl RemoteClient {
 
                 for (id, ie_body) in ie::Reader::new(&elements[..]) {
                     match id {
-                        ie::Id::SUPPORTED_RATES | ie::Id::EXT_SUPPORTED_RATES => {
+                        ie::Id::SUPPORTED_RATES | ie::Id::EXTENDED_SUPPORTED_RATES => {
                             // We don't try too hard to verify if supported rates are supplied
                             // before extended rates: extended rates are only present when supported
                             // rates run out of space, so they can always be extracted from this

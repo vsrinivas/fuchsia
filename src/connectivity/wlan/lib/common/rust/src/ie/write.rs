@@ -17,7 +17,7 @@ use {
 };
 
 macro_rules! validate {
-    ( $condition:expr, $fmt:expr $(, $args:expr)* ) => {
+    ( $condition:expr, $fmt:expr $(, $args:expr)* $(,)? ) => {
         if !$condition {
             return Err($crate::error::FrameWriteError::new_invalid_data(format!($fmt, $($args,)*)));
         }
@@ -70,16 +70,22 @@ pub fn write_supported_rates<B: Appendable>(
     write_ie!(buf, Id::SUPPORTED_RATES, rates)
 }
 
-pub fn write_rsne<B: Appendable>(buf: &mut B, rsne: &rsne::Rsne) -> Result<(), FrameWriteError> {
-    rsne.write_into(buf).map_err(|e| e.into())
-}
-
-pub fn write_ext_supported_rates<B: Appendable>(
+pub fn write_extended_supported_rates<B: Appendable>(
     buf: &mut B,
     rates: &[u8],
 ) -> Result<(), FrameWriteError> {
     validate!(!rates.is_empty(), "List of Extended Supported Rates is empty");
-    write_ie!(buf, Id::EXT_SUPPORTED_RATES, rates)
+    validate!(
+        rates.len() <= EXTENDED_SUPPORTED_RATES_MAX_LEN,
+        "Too many Extended Supported Rates (max {}, got {})",
+        EXTENDED_SUPPORTED_RATES_MAX_LEN,
+        rates.len()
+    );
+    write_ie!(buf, Id::EXTENDED_SUPPORTED_RATES, rates)
+}
+
+pub fn write_rsne<B: Appendable>(buf: &mut B, rsne: &rsne::Rsne) -> Result<(), FrameWriteError> {
+    rsne.write_into(buf).map_err(|e| e.into())
 }
 
 pub fn write_ht_capabilities<B: Appendable>(
@@ -426,7 +432,7 @@ mod tests {
     #[test]
     fn ext_supported_rates_ok() {
         let mut buf = vec![];
-        write_ext_supported_rates(&mut buf, &[1, 2, 3, 4, 5, 6, 7, 8]).expect("expected Ok");
+        write_extended_supported_rates(&mut buf, &[1, 2, 3, 4, 5, 6, 7, 8]).expect("expected Ok");
         assert_eq!(&[50, 8, 1, 2, 3, 4, 5, 6, 7, 8], &buf[..]);
     }
 
@@ -437,7 +443,7 @@ mod tests {
             Err(FrameWriteError::new_invalid_data(
                 "List of Extended Supported Rates is empty".to_string()
             )),
-            write_ext_supported_rates(&mut buf, &[])
+            write_extended_supported_rates(&mut buf, &[])
         );
     }
 

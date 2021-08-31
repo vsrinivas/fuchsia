@@ -922,7 +922,7 @@ impl<'a> BoundClient<'a> {
                     // safe to unwrap because supported rate is 1-byte long thus always aligned
                     assoc_conf.rates.extend_from_slice(&body);
                 }
-                Id::EXT_SUPPORTED_RATES => {
+                Id::EXTENDED_SUPPORTED_RATES => {
                     // safe to unwrap because supported rate is 1-byte thus always aligned
                     assoc_conf.rates.extend_from_slice(&body);
                 }
@@ -2253,7 +2253,7 @@ mod tests {
         let rates = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let rates_writer = ie::RatesWriter::try_new(&rates[..]).expect("Valid rates");
         // It should work even if ext_supp_rates shows up before supp_rates
-        rates_writer.write_ext_supported_rates(&mut ies);
+        rates_writer.write_extended_supported_rates(&mut ies);
         rates_writer.write_supported_rates(&mut ies);
         ie::write_ht_capabilities(&mut ies, &ie::fake_ht_capabilities()).expect("Valid HT Cap");
         ie::write_vht_capabilities(&mut ies, &ie::fake_vht_capabilities()).expect("Valid VHT Cap");

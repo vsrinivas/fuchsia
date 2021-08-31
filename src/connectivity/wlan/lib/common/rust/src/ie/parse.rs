@@ -30,9 +30,19 @@ pub fn parse_ssid<B: ByteSlice>(raw_body: B) -> FrameParseResult<B> {
 pub fn parse_supported_rates<B: ByteSlice>(
     raw_body: B,
 ) -> FrameParseResult<LayoutVerified<B, [SupportedRate]>> {
-    validate!(!raw_body.is_empty(), "Empty Supported Rates element");
-    validate!(raw_body.len() <= SUPPORTED_RATES_MAX_LEN, "Too many Supported Rates");
+    validate!(!raw_body.is_empty(), "Empty Supported Rates IE");
+    validate!(raw_body.len() <= SUPPORTED_RATES_MAX_LEN, "Too many bytes in Supported Rates IE");
+    // unwrap() is OK because sizeof(SupportedRate) is 1, and any slice length is a multiple of 1
+    Ok(LayoutVerified::new_slice_unaligned(raw_body).unwrap())
+}
 
+pub fn parse_extended_supported_rates<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<LayoutVerified<B, [SupportedRate]>> {
+    validate!(!raw_body.is_empty(), "Empty Extended Supported Rates IE");
+    // The maximum number of extended supported rates (each a single u8) is the same as the
+    // maximum number of bytes in an IE. Therefore, there is no need to check the max length
+    // of the extended supported rates IE body.
     // unwrap() is OK because sizeof(SupportedRate) is 1, and any slice length is a multiple of 1
     Ok(LayoutVerified::new_slice_unaligned(raw_body).unwrap())
 }
@@ -72,14 +82,6 @@ pub fn parse_ht_capabilities<B: ByteSlice>(
 ) -> FrameParseResult<LayoutVerified<B, HtCapabilities>> {
     LayoutVerified::new(raw_body)
         .ok_or(FrameParseError::new("Invalid length of HT Capabilities element"))
-}
-
-pub fn parse_ext_supported_rates<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, [SupportedRate]>> {
-    validate!(!raw_body.is_empty(), "Empty Extended Supported Rates element");
-    // unwrap() is OK because sizeof(SupportedRate) is 1, and any slice length is a multiple of 1
-    Ok(LayoutVerified::new_slice_unaligned(raw_body).unwrap())
 }
 
 pub fn parse_ht_operation<B: ByteSlice>(
@@ -312,13 +314,13 @@ mod tests {
     #[test]
     pub fn supported_rates_empty() {
         let err = parse_supported_rates(&[][..]).expect_err("expected Err");
-        assert_eq!("Empty Supported Rates element", err.debug_message());
+        assert_eq!("Empty Supported Rates IE", err.debug_message());
     }
 
     #[test]
     pub fn supported_rates_too_long() {
         let err = parse_supported_rates(&[0u8; 9][..]).expect_err("expected Err");
-        assert_eq!("Too many Supported Rates", err.debug_message());
+        assert_eq!("Too many bytes in Supported Rates IE", err.debug_message());
     }
 
     #[test]
@@ -456,15 +458,15 @@ mod tests {
     }
 
     #[test]
-    pub fn ext_supported_rates_ok() {
-        let r = parse_ext_supported_rates(&[1, 2, 3][..]).expect("expected Ok");
+    pub fn extended_supported_rates_ok() {
+        let r = parse_extended_supported_rates(&[1, 2, 3][..]).expect("expected Ok");
         assert_eq!(&[SupportedRate(1), SupportedRate(2), SupportedRate(3)][..], &r[..]);
     }
 
     #[test]
-    pub fn ext_supported_rates_empty() {
-        let err = parse_ext_supported_rates(&[][..]).expect_err("expected Err");
-        assert_eq!("Empty Extended Supported Rates element", err.debug_message());
+    pub fn extended_supported_rates_empty() {
+        let err = parse_extended_supported_rates(&[][..]).expect_err("expected Err");
+        assert_eq!("Empty Extended Supported Rates IE", err.debug_message());
     }
 
     #[test]

@@ -492,7 +492,7 @@ impl TryFrom<fidl_internal::BssDescription> for BssDescription {
                     ie::parse_ssid(body)?;
                     ssid_range = Some(range);
                 }
-                IeType::SUPPORTED_RATES | IeType::EXT_SUPPORTED_RATES => {
+                IeType::SUPPORTED_RATES | IeType::EXTENDED_SUPPORTED_RATES => {
                     rates.get_or_insert(vec![]).extend_from_slice(body);
                 }
                 IeType::TIM => {
@@ -1030,7 +1030,7 @@ mod tests {
             ies_overrides: IesOverrides::new()
                 .set(IeType::SSID, b"ssidie".to_vec())
                 .set(IeType::SUPPORTED_RATES, vec![0x81, 0x82, 0x83])
-                .set(IeType::EXT_SUPPORTED_RATES, vec![4, 5, 6])
+                .set(IeType::EXTENDED_SUPPORTED_RATES, vec![4, 5, 6])
                 .set(IeType::COUNTRY, vec![1, 2, 3])
                 .set(IeType::HT_CAPABILITIES, ht_cap.clone())
                 .set(IeType::HT_OPERATION, ht_op.clone())
