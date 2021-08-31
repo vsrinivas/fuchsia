@@ -73,6 +73,13 @@ protocol RepositoryRegistry {
         include_fields ListFields;
     }) -> (struct {}) error RepositoryError;
 
+    /// List the components in the package named `package_name` from a repo named `repository_name` .
+    ShowPackage(resource struct {
+        repository_name string:MAX_NAME;
+        package_name string:MAX_NAME;
+        iterator server_end:PackageEntryIterator;
+    }) -> (struct {}) error RepositoryError;
+
     /// Get a list associating repositories with the targets they have been registered to.
     ListRegisteredTargets(resource struct {
         iterator server_end:RepositoryTargetsIterator;
@@ -90,6 +97,12 @@ protocol RepositoryIterator {
     });
 };
 
+protocol PackageEntryIterator {
+    Next() -> (struct {
+        entries vector<PackageEntry>:MAX;
+    });
+};
+
 protocol RepositoryPackagesIterator {
     Next() -> (struct {
         packages vector<RepositoryPackage>:MAX;
@@ -103,7 +116,15 @@ protocol RepositoryTargetsIterator {
 };
 
 type PackageEntry = table {
+    /// Blob name
     1: path string:MAX_PATH;
+    /// Blob's merkle hash
+    2: hash string:MAX_PATH;
+    /// Size in bytes of this blob.
+    3: size uint64;
+    /// Last modification timestamp (seconds since UNIX epoch). May be null
+    /// depending on repository source.
+    4: modified uint64;
 };
 
 type ListFields = flexible bits : uint32 {

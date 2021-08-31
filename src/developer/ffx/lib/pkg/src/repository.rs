@@ -49,6 +49,7 @@ pub use http_repository::package_download;
 pub use manager::RepositoryManager;
 pub use pm::PmRepository;
 pub use server::{listen_addr, RepositoryServer, RepositoryServerBuilder};
+use tuf::metadata::VirtualTargetPath;
 
 /// A unique ID which is given to every repository.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -353,42 +354,17 @@ impl Repository {
     async fn get_components_for_package(
         &self,
         package: &RepositoryPackage,
-    ) -> Result<Vec<PackageEntry>> {
-        // TODO: use `fetch_blobs` here once fxrev.dev/554888 is submitted.
-        let res = self.fetch_bytes(&format!("blobs/{}", package.hash.as_ref().unwrap())).await?;
-        let mut archive = AsyncReader::new(Adapter::new(futures::io::Cursor::new(res))).await?;
-
-        let mut components = vec![];
-        for item in archive.list() {
-            if is_component_manifest(item.path()) {
-                components.push(PackageEntry {
-                    path: Some(item.path().to_string()),
-                    ..PackageEntry::EMPTY
-                });
-            }
+    ) -> Result<Option<Vec<PackageEntry>>> {
+        let package_entries = self.show_package(package.name.as_ref().unwrap().to_string()).await?;
+        if package_entries.is_none() {
+            return Ok(None);
         }
-
-        match archive.read_file("meta/contents").await {
-            Ok(c) => {
-                let contents = MetaContents::deserialize(c.as_slice())?;
-                for item in contents.contents().keys() {
-                    if is_component_manifest(item) {
-                        components.push(PackageEntry {
-                            path: Some(item.to_string()),
-                            ..PackageEntry::EMPTY
-                        });
-                    }
-                }
-            }
-            Err(e) => {
-                log::warn!(
-                    "failed to read meta/contents for package {}: {}",
-                    package.name.as_ref().unwrap_or(&String::from("<missing name>")),
-                    e
-                );
-            }
-        }
-        Ok(components)
+        let components = package_entries
+            .unwrap()
+            .into_iter()
+            .filter(|e| is_component_manifest(&e.path.as_ref().unwrap()))
+            .collect();
+        Ok(Some(components))
     }
 
     // TODO(fxbug.dev/79915) add tests for this method.
@@ -434,7 +410,7 @@ impl Repository {
         if include_fields.intersects(ListFields::Components) {
             for package in packages.iter_mut() {
                 match self.get_components_for_package(&package).await {
-                    Ok(components) => package.entries = Some(components),
+                    Ok(components) => package.entries = components,
                     Err(e) => {
                         log::error!(
                             "failed to get components for package '{}': {}",
@@ -446,6 +422,91 @@ impl Repository {
             }
         }
         Ok(packages)
+    }
+
+    pub async fn show_package(&self, package_name: String) -> Result<Option<Vec<PackageEntry>>> {
+        let mut client = self.client.lock();
+
+        // Get the latest TUF metadata.
+        client.update().await?;
+        let virtual_target_path = VirtualTargetPath::new(package_name.clone())?;
+
+        let trusted_targets = client.trusted_targets();
+        if trusted_targets.is_none() {
+            return Ok(None);
+        }
+        let target = trusted_targets.unwrap().targets().get(&virtual_target_path);
+
+        let mut entries = Vec::new();
+        if target.is_none() {
+            log::error!("failed to read package with name : '{}'", package_name);
+            return Ok(None);
+        }
+        let target_description = target.unwrap();
+        let custom = target_description.custom().unwrap();
+        let hash = custom.get("merkle").unwrap().as_str().unwrap_or("").to_string();
+        let size = custom.get("size").unwrap().as_u64().unwrap_or(0);
+        let modified = self
+            .backend
+            .target_modification_time(&package_name)
+            .await?
+            .map(|x| -> anyhow::Result<u64> {
+                Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
+            })
+            .transpose()?;
+        let res = self.fetch_bytes(&format!("blobs/{}", &hash)).await?;
+
+        // Add entry for meta.far
+        entries.push(PackageEntry {
+            path: Some("meta.far".to_string()),
+            hash: Some(hash),
+            size: Some(size),
+            modified,
+            ..PackageEntry::EMPTY
+        });
+
+        let mut archive = AsyncReader::new(Adapter::new(futures::io::Cursor::new(res))).await?;
+
+        for item in archive.list() {
+            if is_component_manifest(item.path()) {
+                entries.push(PackageEntry {
+                    path: Some(item.path().to_string()),
+                    size: Some(item.length()),
+                    modified,
+                    ..PackageEntry::EMPTY
+                });
+            }
+        }
+
+        match archive.read_file("meta/contents").await {
+            Ok(c) => {
+                let contents = MetaContents::deserialize(c.as_slice())?;
+                for (name, hash) in contents.contents() {
+                    let hash_string = hash.to_string();
+                    let path = format!("blobs/{}", &hash_string);
+                    let size = self.fetch(&path).await?.len;
+                    let modified = self
+                        .backend
+                        .target_modification_time(&path)
+                        .await?
+                        .map(|x| -> anyhow::Result<u64> {
+                            Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
+                        })
+                        .transpose()?;
+                    entries.push(PackageEntry {
+                        path: Some(name.to_owned()),
+                        hash: Some(hash_string),
+                        size: Some(size),
+                        modified,
+                        ..PackageEntry::EMPTY
+                    });
+                }
+            }
+            Err(e) => {
+                log::warn!("failed to read meta/contents for package {}: {}", package_name, e);
+            }
+        }
+        Ok(Some(entries))
     }
 }
 

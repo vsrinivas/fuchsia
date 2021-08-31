@@ -530,6 +530,66 @@ impl<T: EventHandlerProvider> Repo<T> {
 
         Ok(())
     }
+
+    async fn show_package(
+        &self,
+        repository_name: &str,
+        package_name: &str,
+        iterator: ServerEnd<bridge::PackageEntryIteratorMarker>,
+    ) -> Result<(), bridge::RepositoryError> {
+        let mut stream = match iterator.into_stream() {
+            Ok(s) => s,
+            Err(e) => {
+                log::warn!("error converting iterator to stream: {}", e);
+                return Err(bridge::RepositoryError::InternalError);
+            }
+        };
+
+        let repo = if let Some(r) = self.manager.get(&repository_name) {
+            r
+        } else {
+            return Err(bridge::RepositoryError::NoMatchingRepository);
+        };
+
+        let values = repo.show_package(package_name.to_owned()).await.map_err(|err| {
+            log::error!("Unable to list package contents: {:#?}", err);
+            bridge::RepositoryError::IoError
+        })?;
+        if values.is_none() {
+            return Err(bridge::RepositoryError::TargetCommunicationFailure);
+        }
+        let values = values.unwrap();
+
+        fasync::Task::spawn(async move {
+            let mut pos = 0;
+            while let Some(request) = stream.next().await {
+                match request {
+                    Ok(bridge::PackageEntryIteratorRequest::Next { responder }) => {
+                        let len = values.len();
+                        let chunk = &mut values[pos..]
+                            [..std::cmp::min(len - pos, MAX_PACKAGES as usize)]
+                            .into_iter()
+                            .map(|p| p.clone());
+                        pos += MAX_PACKAGES as usize;
+                        pos = std::cmp::min(pos, len);
+
+                        if let Err(e) = responder.send(chunk) {
+                            log::warn!(
+                                "Error responding to PackageEntryIteratorRequest request: {}",
+                                e
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("Error in PackageEntryIteratorRequest request stream: {}", e)
+                    }
+                }
+            }
+        })
+        .detach();
+
+        Ok(())
+    }
 }
 
 impl<T: EventHandlerProvider + Default> Default for Repo<T> {
@@ -608,6 +668,17 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlService for Repo<T
                 responder,
             } => {
                 responder.send(&mut self.list_packages(&name, iterator, include_fields).await)?;
+                Ok(())
+            }
+            bridge::RepositoryRegistryRequest::ShowPackage {
+                repository_name,
+                package_name,
+                iterator,
+                responder,
+            } => {
+                responder.send(
+                    &mut self.show_package(&repository_name, &package_name, iterator).await,
+                )?;
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::ListRepositories { iterator, .. } => {
