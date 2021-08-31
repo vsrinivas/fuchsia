@@ -1,9 +1,14 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/vulkan/test-application.shard.cmx"
+        "//src/lib/vulkan/test-application.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/vkloop"
+    },
+    "sandbox": {
+        "dev": [
+            "class/gpu"
+        ]
     }
 }

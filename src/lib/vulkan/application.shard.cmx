@@ -1,8 +1,5 @@
 {
     "sandbox": {
-        "features": [
-            "vulkan"
-        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator",

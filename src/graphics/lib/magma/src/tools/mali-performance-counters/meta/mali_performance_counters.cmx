@@ -1,13 +1,14 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/vulkan/test-application.shard.cmx"
+        "//src/lib/vulkan/test-application.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/mali-performance-counters"
     },
     "sandbox": {
         "dev": [
+            "class/gpu",
             "class/gpu-performance-counters"
         ]
     }

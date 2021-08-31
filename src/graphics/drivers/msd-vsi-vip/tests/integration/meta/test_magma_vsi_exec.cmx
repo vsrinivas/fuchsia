@@ -1,9 +1,14 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/vulkan/test-application.shard.cmx"
+        "//src/lib/vulkan/test-application.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "test/test_magma_vsi_exec_bin"
+    },
+    "sandbox": {
+        "dev": [
+            "class/gpu"
+        ]
     }
 }

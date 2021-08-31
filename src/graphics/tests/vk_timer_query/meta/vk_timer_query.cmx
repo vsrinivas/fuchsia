@@ -1,12 +1,15 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/vulkan/test-application.shard.cmx"
+        "//src/lib/vulkan/test-application.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/vk_timer_query"
     },
     "sandbox": {
+        "dev": [
+            "class/gpu"
+        ],
         "features": [
             "isolated-temp"
         ]
