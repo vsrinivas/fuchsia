@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.escaping/cpp/wire.h>
 #include <fidl/test/escaping/cpp/natural_types.h>
-#include <fidl/test/escaping/llcpp/fidl.h>
 
 namespace fidl_test_escaping {
 /// "pleaseescapethisdocommentproperly"

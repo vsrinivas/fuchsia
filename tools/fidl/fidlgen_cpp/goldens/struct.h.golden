@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.struct/cpp/wire.h>
 #include <fidl/test/struct/cpp/natural_types.h>
-#include <fidl/test/struct/llcpp/fidl.h>
 
 namespace fidl_test_struct {
 using Simple = ::fidl::test::struct_::Simple;

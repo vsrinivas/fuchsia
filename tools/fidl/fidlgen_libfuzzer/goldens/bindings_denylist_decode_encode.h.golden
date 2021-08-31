@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/bindingsdenylist/llcpp/fidl.h>
+#include <fidl/fidl.test.bindingsdenylist/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>

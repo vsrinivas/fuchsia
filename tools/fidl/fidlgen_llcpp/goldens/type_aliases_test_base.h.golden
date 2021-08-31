@@ -2,4 +2,4 @@
 
 #pragma once
 
-#include <fidl/test/typealiases/llcpp/fidl.h>
+#include <fidl/fidl.test.typealiases/cpp/wire.h>

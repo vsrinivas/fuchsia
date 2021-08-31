@@ -2,4 +2,4 @@
 
 #pragma once
 
-#include <fidl/test/arrays/llcpp/fidl.h>
+#include <fidl/fidl.test.arrays/cpp/wire.h>

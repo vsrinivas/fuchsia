@@ -69,19 +69,19 @@ if (is_host) {
           info.denylist) {
         deps += [ "${info.target}_llcpp_generate($fidl_toolchain)" ]
         gen_dir = "${info.fidl_gen_dir}/${info.target_name}/llcpp"
-        include_path = string_replace(info.library, ".", "/") + "/llcpp"
+        include_path = "fidl/${info.library}/cpp"
         entries += [
           {
             golden = "${info.name}.h.golden"
-            generated = "$gen_dir/$include_path/fidl.h"
+            generated = "$gen_dir/$include_path/wire.h"
           },
           {
             golden = "${info.name}.cc.golden"
-            generated = "$gen_dir/$include_path/fidl.cc"
+            generated = "$gen_dir/$include_path/wire.cc"
           },
           {
             golden = "${info.name}_test_base.h.golden"
-            generated = "$gen_dir/$include_path/fidl_test_base.h"
+            generated = "$gen_dir/$include_path/wire_test_base.h"
           },
         ]
       }

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/nullable/llcpp/fidl.h>
+#include <fidl/fidl.test.nullable/cpp/wire.h>
 namespace fidl_test_nullable {
 namespace testing {
 

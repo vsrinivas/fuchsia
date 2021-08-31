@@ -2,5 +2,5 @@
 
 #pragma once
 
+#include <fidl/fidl.test.service/cpp/wire.h>
 #include <fidl/test/service/cpp/natural_types.h>
-#include <fidl/test/service/llcpp/fidl.h>

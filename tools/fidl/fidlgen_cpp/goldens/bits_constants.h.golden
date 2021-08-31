@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.bitsconstants/cpp/wire.h>
 #include <fidl/test/bitsconstants/cpp/natural_types.h>
-#include <fidl/test/bitsconstants/llcpp/fidl.h>
 
 namespace fidl_test_bitsconstants {
 using BitsType = ::fidl::test::bitsconstants::BitsType;

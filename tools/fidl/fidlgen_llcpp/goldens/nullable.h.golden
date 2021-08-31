@@ -34,8 +34,8 @@
 #include <lib/zx/vmo.h>
 
 #endif  // __Fuchsia__
+#include <fidl/zx/cpp/wire.h>
 #include <zircon/fidl.h>
-#include <zx/llcpp/fidl.h>
 
 namespace fidl_test_nullable {
 namespace wire {

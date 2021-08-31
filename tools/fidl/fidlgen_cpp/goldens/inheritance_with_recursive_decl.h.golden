@@ -2,5 +2,5 @@
 
 #pragma once
 
+#include <fidl/fidl.test.inheritancewithrecursivedecl/cpp/wire.h>
 #include <fidl/test/inheritancewithrecursivedecl/cpp/natural_types.h>
-#include <fidl/test/inheritancewithrecursivedecl/llcpp/fidl.h>

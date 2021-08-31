@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/placementofattributes/llcpp/fidl.h>
+#include <fidl/fidl.test.placementofattributes/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>

@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.doccomments/cpp/wire.h>
 #include <fidl/test/doccomments/cpp/natural_types.h>
-#include <fidl/test/doccomments/llcpp/fidl.h>
 
 namespace fidl_test_doccomments {
 /// table comment #1

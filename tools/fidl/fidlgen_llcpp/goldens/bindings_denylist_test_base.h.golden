@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/bindingsdenylist/llcpp/fidl.h>
+#include <fidl/fidl.test.bindingsdenylist/cpp/wire.h>
 namespace fidl_test_bindingsdenylist {
 namespace testing {
 

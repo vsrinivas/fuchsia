@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.arrays/cpp/wire.h>
 #include <fidl/test/arrays/cpp/natural_types.h>
-#include <fidl/test/arrays/llcpp/fidl.h>
 
 namespace fidl_test_arrays {
 using UnionSmallArray = ::fidl::test::arrays::UnionSmallArray;

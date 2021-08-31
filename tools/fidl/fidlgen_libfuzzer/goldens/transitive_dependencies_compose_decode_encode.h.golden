@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/transitivedependenciescompose/llcpp/fidl.h>
+#include <fidl/fidl.test.transitivedependenciescompose/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>

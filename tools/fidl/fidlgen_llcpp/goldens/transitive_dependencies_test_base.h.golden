@@ -2,4 +2,4 @@
 
 #pragma once
 
-#include <fidl/test/transitivedependencies/llcpp/fidl.h>
+#include <fidl/fidl.test.transitivedependencies/cpp/wire.h>

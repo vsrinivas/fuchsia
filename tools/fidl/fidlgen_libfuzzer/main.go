@@ -57,6 +57,10 @@ func (f flagsDef) WireBindingsIncludeStem() string {
 	return *f.wireBindingsIncludeStem
 }
 
+func (f flagsDef) UnifiedSourceLayout() bool {
+	return false
+}
+
 var flags = flagsDef{
 	CommonFlags: cpp.CommonFlags{
 		Json: flag.String("json", "",

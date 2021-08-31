@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.vectors/cpp/wire.h>
 #include <fidl/test/vectors/cpp/natural_types.h>
-#include <fidl/test/vectors/llcpp/fidl.h>
 
 namespace fidl_test_vectors {
 using ExampleUseOfVectors = ::fidl::test::vectors::ExampleUseOfVectors;

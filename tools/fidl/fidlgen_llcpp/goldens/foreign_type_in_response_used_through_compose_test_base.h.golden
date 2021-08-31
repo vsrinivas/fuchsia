@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/foreigntypeinresponseusedthroughcompose/llcpp/fidl.h>
+#include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/wire.h>
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 namespace testing {
 

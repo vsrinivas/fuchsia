@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.unionsandwich/cpp/wire.h>
 #include <fidl/test/unionsandwich/cpp/natural_types.h>
-#include <fidl/test/unionsandwich/llcpp/fidl.h>
 
 namespace fidl_test_unionsandwich {
 using UnionSize8Alignment4 = ::fidl::test::unionsandwich::UnionSize8Alignment4;

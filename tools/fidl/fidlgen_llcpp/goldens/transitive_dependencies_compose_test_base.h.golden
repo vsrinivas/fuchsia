@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/transitivedependenciescompose/llcpp/fidl.h>
+#include <fidl/fidl.test.transitivedependenciescompose/cpp/wire.h>
 namespace fidl_test_transitivedependenciescompose {
 namespace testing {
 

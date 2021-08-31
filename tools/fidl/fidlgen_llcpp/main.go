@@ -33,6 +33,10 @@ func (f flagsDef) Header() string {
 	return *f.CommonFlags.Header
 }
 
+func (f flagsDef) UnifiedSourceLayout() bool {
+	return true
+}
+
 var flags = flagsDef{
 	CommonFlags: cpp.CommonFlags{
 		Json: flag.String("json", "",

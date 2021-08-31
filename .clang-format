@@ -15,7 +15,7 @@ ForEachMacros: ['list_for_every_entry','list_for_every_entry_safe']
 IncludeBlocks: Regroup
 IncludeCategories:
   # C Header: <foo.h>, <net/foo.h>, etc
-  - Regex:           '^(<((zircon/|lib/|fuchsia/|arpa/|net/|netinet/|sys/)[a-zA-Z0-9_/-]+\.h|[a-zA-Z0-9_-]+\.h)>)'
+  - Regex:           '^(<((zircon/|lib/|fuchsia/|arpa/|net/|netinet/|sys/|fidl/)[a-zA-Z0-9_/\.-]+\.h|[a-zA-Z0-9_-]+\.h)>)'
     Priority:        1
   # Cpp Header: <foo> and <experimental/foo>
   - Regex:           '^(<(experimental/)*[a-zA-Z0-9_-]+>)'

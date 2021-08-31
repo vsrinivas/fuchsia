@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/union/llcpp/fidl.h>
+#include <fidl/fidl.test.union/cpp/wire.h>
 namespace fidl_test_union {
 namespace testing {
 

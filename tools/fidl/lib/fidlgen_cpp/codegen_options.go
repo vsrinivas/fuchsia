@@ -21,6 +21,9 @@ type CodegenOptions interface {
 
 	// Header returns the path to the generated library header file.
 	Header() string
+
+	// Use the unified binding source layout.
+	UnifiedSourceLayout() bool
 }
 
 // CalcPrimaryHeader computes the relative path to include the main generated library header.
@@ -36,11 +39,17 @@ func CalcPrimaryHeader(opts CodegenOptions, library fidlgen.LibraryIdentifier) (
 	// fidl library dependencies, i.e.
 	//     #include <fuchsia/library/name/{include-stem}.h>
 	if opts.IncludeBase() == "" {
-		var parts []string
-		for _, part := range library {
-			parts = append(parts, string(part))
+		var libraryPath = ""
+		if opts.UnifiedSourceLayout() {
+			libraryPath = fmt.Sprintf("fidl/%s", library)
+		} else {
+			var parts []string
+			for _, part := range library {
+				parts = append(parts, string(part))
+			}
+			libraryPath = filepath.Join(parts...)
 		}
-		return fmt.Sprintf("%s/%s.h", filepath.Join(parts...), opts.IncludeStem()), nil
+		return fmt.Sprintf("%s/%s.h", libraryPath, opts.IncludeStem()), nil
 	}
 
 	absoluteIncludeBase, err := filepath.Abs(opts.IncludeBase())

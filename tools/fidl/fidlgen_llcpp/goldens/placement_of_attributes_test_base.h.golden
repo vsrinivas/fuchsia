@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/placementofattributes/llcpp/fidl.h>
+#include <fidl/fidl.test.placementofattributes/cpp/wire.h>
 namespace fidl_test_placementofattributes {
 namespace testing {
 

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/requestflexibleenvelope/llcpp/fidl.h>
+#include <fidl/fidl.test.requestflexibleenvelope/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>

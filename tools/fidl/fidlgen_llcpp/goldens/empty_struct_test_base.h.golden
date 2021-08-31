@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/emptystruct/llcpp/fidl.h>
+#include <fidl/fidl.test.emptystruct/cpp/wire.h>
 namespace fidl_test_emptystruct {
 namespace testing {
 

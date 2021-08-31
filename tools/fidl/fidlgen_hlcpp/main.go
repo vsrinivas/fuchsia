@@ -159,6 +159,10 @@ func (c codegenOptions) IncludeStem() string {
 	return c.includeStem
 }
 
+func (c codegenOptions) UnifiedSourceLayout() bool {
+	return false
+}
+
 func main() {
 	flag.Parse()
 	if !flag.Parsed() {

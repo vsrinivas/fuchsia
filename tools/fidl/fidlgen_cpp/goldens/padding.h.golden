@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.padding/cpp/wire.h>
 #include <fidl/test/padding/cpp/natural_types.h>
-#include <fidl/test/padding/llcpp/fidl.h>
 
 namespace fidl_test_padding {
 using Padding7ByteMiddle = ::fidl::test::padding::Padding7ByteMiddle;

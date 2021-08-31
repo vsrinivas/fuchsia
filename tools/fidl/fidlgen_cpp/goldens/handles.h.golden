@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.handles/cpp/wire.h>
 #include <fidl/test/handles/cpp/natural_types.h>
-#include <fidl/test/handles/llcpp/fidl.h>
 #include <zx/cpp/fidl_v2.h>
 
 namespace fidl_test_handles {

@@ -3,8 +3,8 @@
 #pragma once
 
 #include <exampleusing/cpp/fidl_v2.h>
+#include <fidl/fidl.test.placementofattributes/cpp/wire.h>
 #include <fidl/test/placementofattributes/cpp/natural_types.h>
-#include <fidl/test/placementofattributes/llcpp/fidl.h>
 
 namespace fidl_test_placementofattributes {
 using ExampleXUnion = ::fidl::test::placementofattributes::ExampleXUnion;

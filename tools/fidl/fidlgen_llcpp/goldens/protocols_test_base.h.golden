@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/protocols/llcpp/fidl.h>
+#include <fidl/fidl.test.protocols/cpp/wire.h>
 namespace fidl_test_protocols {
 namespace testing {
 

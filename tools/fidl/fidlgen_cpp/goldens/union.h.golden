@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.union/cpp/wire.h>
 #include <fidl/test/union/cpp/natural_types.h>
-#include <fidl/test/union/llcpp/fidl.h>
 
 namespace fidl_test_union {
 using Union = ::fidl::test::union_::Union;

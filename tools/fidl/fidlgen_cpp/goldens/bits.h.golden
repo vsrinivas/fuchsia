@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.bits/cpp/wire.h>
 #include <fidl/test/bits/cpp/natural_types.h>
-#include <fidl/test/bits/llcpp/fidl.h>
 
 namespace fidl_test_bits {
 using StrictBits = ::fidl::test::bits::StrictBits;

@@ -33,8 +33,8 @@
 #include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
-#include <bottom/llcpp/fidl.h>
-#include <middle/llcpp/fidl.h>
+#include <fidl/bottom/cpp/wire.h>
+#include <fidl/middle/cpp/wire.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_transitivedependenciescompose {

@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.emptystruct/cpp/wire.h>
 #include <fidl/test/emptystruct/cpp/natural_types.h>
-#include <fidl/test/emptystruct/llcpp/fidl.h>
 
 namespace fidl_test_emptystruct {
 using Empty = ::fidl::test::emptystruct::Empty;

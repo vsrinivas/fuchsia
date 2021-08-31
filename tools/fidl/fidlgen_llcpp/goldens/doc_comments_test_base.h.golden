@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/doccomments/llcpp/fidl.h>
+#include <fidl/fidl.test.doccomments/cpp/wire.h>
 namespace fidl_test_doccomments {
 namespace testing {
 

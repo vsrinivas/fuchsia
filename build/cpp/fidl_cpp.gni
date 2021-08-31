@@ -9,7 +9,7 @@ import("//build/sdk/sdk_atom_alias.gni")
 
 # Define the include patterns for various binding flavors.
 # Includes will be of the form <my/library/{output-stem}.h>
-_llcpp_output_stem = "llcpp/fidl"
+_llcpp_output_stem = "cpp/wire"
 _hlcpp_output_stem = "cpp/fidl"
 _natural_types_output_stem = "cpp/natural_types"
 _unified_cpp_output_stem = "cpp/fidl_v2"
@@ -22,11 +22,17 @@ template("_fidl_cpp_codegen_impl") {
   fidl_target_gen_dir =
       get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
 
+  use_unified_dir = invoker.bindings_flavor == "llcpp"
+
   library_name = invoker.library_name
   include_base =
       "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
-  include_stem =
-      string_replace(library_name, ".", "/") + "/" + invoker.output_stem
+  if (use_unified_dir) {
+    include_stem = "fidl/$library_name/${invoker.output_stem}"
+  } else {
+    include_stem =
+        string_replace(library_name, ".", "/") + "/" + invoker.output_stem
+  }
   file_stem = "$include_base/$include_stem"
 
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
@@ -232,6 +238,47 @@ template("fidl_cpp_codegen") {
   }
 }
 
+# Utility template to generate a forwarding header.
+#
+# Parameters
+#
+#   forwarding_header (required)
+#     String of forwarding header to generate with include path
+#
+#   target_header (required)
+#     String with the name of the header to #include
+#
+template("_fidl_llcpp_forwarding_header") {
+  forwarding_header = invoker.forwarding_header
+  target_header = invoker.target_header
+
+  config_target_name = target_name + "__config"
+  generate_target_name = target_name + "__generate"
+
+  output_dir = get_label_info(":$target_name", "target_gen_dir") + "__" +
+               target_name + "__forwarding"
+  output_file = "$output_dir/$forwarding_header"
+
+  config(config_target_name) {
+    include_dirs = [ output_dir ]
+  }
+
+  action(generate_target_name) {
+    outputs = [ output_file ]
+    script = "//build/cpp/gen_forwarding_header.py"
+    args = [
+      rebase_path(output_file),
+      target_header,
+    ]
+  }
+
+  source_set(target_name) {
+    public_configs = [ ":$config_target_name" ]
+    deps = [ ":$generate_target_name" ]
+    sources = [ output_file ]
+  }
+}
+
 template("_fidl_cpp_library_impl") {
   config_target_name = "${target_name}__config"
 
@@ -245,8 +292,32 @@ template("_fidl_cpp_library_impl") {
 
   include_base =
       "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
-  include_stem =
-      string_replace(library_name, ".", "/") + "/" + invoker.output_stem
+  extra_public_deps = []
+  if (invoker.bindings_flavor == "llcpp") {
+    _fidl_llcpp_forwarding_header(
+        "${target_name}__llcpp_main_forwarding_header") {
+      forwarding_header =
+          string_replace(library_name, ".", "/") + "/llcpp/fidl.h"
+      target_header = "fidl/$library_name/cpp/wire.h"
+    }
+
+    _fidl_llcpp_forwarding_header(
+        "${target_name}__llcpp_test_forwarding_header") {
+      forwarding_header =
+          string_replace(library_name, ".", "/") + "/llcpp/fidl_test_base.h"
+      target_header = "fidl/$library_name/cpp/wire_test_base.h"
+    }
+
+    extra_public_deps += [
+      ":${target_name}__llcpp_main_forwarding_header",
+      ":${target_name}__llcpp_test_forwarding_header",
+    ]
+
+    include_stem = "fidl/" + library_name + "/" + invoker.output_stem
+  } else {
+    include_stem =
+        string_replace(library_name, ".", "/") + "/" + invoker.output_stem
+  }
   file_stem = "$include_base/$include_stem"
 
   config(config_target_name) {
@@ -315,6 +386,8 @@ template("_fidl_cpp_library_impl") {
     if (defined(invoker.deps)) {
       public_deps += invoker.deps
     }
+
+    public_deps += extra_public_deps
   }
 }
 

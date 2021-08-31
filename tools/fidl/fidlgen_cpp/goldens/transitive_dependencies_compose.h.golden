@@ -3,6 +3,6 @@
 #pragma once
 
 #include <bottom/cpp/fidl_v2.h>
+#include <fidl/fidl.test.transitivedependenciescompose/cpp/wire.h>
 #include <fidl/test/transitivedependenciescompose/cpp/natural_types.h>
-#include <fidl/test/transitivedependenciescompose/llcpp/fidl.h>
 #include <middle/cpp/fidl_v2.h>

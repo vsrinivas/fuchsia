@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.bindingsdenylist/cpp/wire.h>
 #include <fidl/test/bindingsdenylist/cpp/natural_types.h>
-#include <fidl/test/bindingsdenylist/llcpp/fidl.h>
 
 namespace fidl_test_bindingsdenylist {
 constexpr uint32_t AllBindings = ::fidl::test::bindingsdenylist::AllBindings;

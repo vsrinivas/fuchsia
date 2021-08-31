@@ -203,13 +203,22 @@ type Member interface {
 }
 
 type Root struct {
-	Headers         []string
 	HandleTypes     []string
 	RawLibrary      fidlgen.LibraryIdentifier
 	Library         fidlgen.LibraryIdentifier
 	LibraryReversed fidlgen.LibraryIdentifier
 	Decls           []Kinded
+	Dependencies    []fidlgen.LibraryIdentifier
 	HeaderOptions
+}
+
+// Headers returns the list of dependency headers without the final path component.
+func (r Root) Headers() []string {
+	headers := []string{}
+	for _, l := range r.Dependencies {
+		headers = append(headers, formatLibraryPath(l))
+	}
+	return headers
 }
 
 // NaturalDomainObjectsHeader computes the path to #include the natural domain
@@ -227,7 +236,7 @@ func (r Root) HlcppBindingsHeader() string {
 	if r.HlcppBindingsIncludeStem == "" {
 		fidlgen.TemplateFatalf("High-level C++ bindings include stem was missing")
 	}
-	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.RawLibrary), r.HlcppBindingsIncludeStem)
+	return fmt.Sprintf("%s/%s.h", formatLibraryLegacyPath(r.RawLibrary), r.HlcppBindingsIncludeStem)
 }
 
 // WireBindingsHeader computes the path to #include the wire bindings header.
@@ -235,7 +244,7 @@ func (r Root) WireBindingsHeader() string {
 	if r.WireBindingsIncludeStem == "" {
 		fidlgen.TemplateFatalf("Wire bindings include stem was missing")
 	}
-	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.RawLibrary), r.WireBindingsIncludeStem)
+	return fmt.Sprintf("%s/%s.h", formatLibraryUnifiedPath(r.RawLibrary), r.WireBindingsIncludeStem)
 }
 
 // HeaderOptions are independent from the FIDL library IR, but used in the generated
@@ -329,8 +338,20 @@ func formatLibraryPrefix(library fidlgen.LibraryIdentifier) string {
 	return formatLibrary(library, "_", keepPartIfReserved)
 }
 
-func formatLibraryPath(library fidlgen.LibraryIdentifier) string {
+func formatLibraryLegacyPath(library fidlgen.LibraryIdentifier) string {
 	return formatLibrary(library, "/", keepPartIfReserved)
+
+}
+func formatLibraryUnifiedPath(library fidlgen.LibraryIdentifier) string {
+	return fmt.Sprintf("fidl/%s", formatLibrary(library, ".", keepPartIfReserved))
+
+}
+
+func formatLibraryPath(library fidlgen.LibraryIdentifier) string {
+	if currentVariant == wireVariant {
+		return formatLibraryUnifiedPath(library)
+	}
+	return formatLibraryLegacyPath(library)
 }
 
 func codingTableName(ident fidlgen.EncodedCompoundIdentifier) string {
@@ -649,8 +670,7 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 			// We don't need to include our own header.
 			continue
 		}
-		libraryIdent := fidlgen.ParseLibraryName(l.Name)
-		root.Headers = append(root.Headers, formatLibraryPath(libraryIdent))
+		root.Dependencies = append(root.Dependencies, fidlgen.ParseLibraryName(l.Name))
 	}
 
 	// zx::channel is always referenced by the protocols in llcpp bindings API

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/inheritance/llcpp/fidl.h>
+#include <fidl/fidl.test.inheritance/cpp/wire.h>
 namespace fidl_test_inheritance {
 namespace testing {
 

@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.anonymous/cpp/wire.h>
 #include <fidl/test/anonymous/cpp/natural_types.h>
-#include <fidl/test/anonymous/llcpp/fidl.h>
 
 namespace fidl_test_anonymous {
 using UnionMember = ::fidl::test::anonymous::UnionMember;

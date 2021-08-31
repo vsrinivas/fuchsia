@@ -41,6 +41,8 @@ type Config interface {
 	IncludeBase() string
 	// The path suffix after the library path when referencing includes.
 	IncludeStem() string
+	// Use the unified binding source layout.
+	UnifiedSourceLayout() bool
 }
 
 type FidlGenerator struct {

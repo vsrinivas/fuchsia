@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.table/cpp/wire.h>
 #include <fidl/test/table/cpp/natural_types.h>
-#include <fidl/test/table/llcpp/fidl.h>
 
 namespace fidl_test_table {
 using SimpleTable = ::fidl::test::table::SimpleTable;

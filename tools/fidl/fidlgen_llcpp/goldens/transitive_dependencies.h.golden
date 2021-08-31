@@ -32,7 +32,7 @@
 #include <lib/fidl/txn_header.h>
 
 #endif  // __Fuchsia__
-#include <middle/llcpp/fidl.h>
+#include <fidl/middle/cpp/wire.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_transitivedependencies {

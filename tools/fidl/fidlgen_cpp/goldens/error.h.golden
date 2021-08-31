@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.error/cpp/wire.h>
 #include <fidl/test/error/cpp/natural_types.h>
-#include <fidl/test/error/llcpp/fidl.h>
 
 namespace fidl_test_error {
 using Example_foo_Response = ::fidl::test::error::Example_foo_Response;

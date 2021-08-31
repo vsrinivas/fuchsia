@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.consts/cpp/wire.h>
 #include <fidl/test/consts/cpp/natural_types.h>
-#include <fidl/test/consts/llcpp/fidl.h>
 
 namespace fidl_test_consts {
 using EnumType = ::fidl::test::consts::EnumType;

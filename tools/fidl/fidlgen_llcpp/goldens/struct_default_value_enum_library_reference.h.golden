@@ -32,7 +32,7 @@
 #include <lib/fidl/txn_header.h>
 
 #endif  // __Fuchsia__
-#include <dependent/llcpp/fidl.h>
+#include <fidl/dependent/cpp/wire.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_structdefaultvalueenumlibraryreference {

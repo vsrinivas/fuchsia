@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <fidl/fidl.test.typealiases/cpp/wire.h>
 #include <fidl/test/typealiases/cpp/natural_types.h>
-#include <fidl/test/typealiases/llcpp/fidl.h>
 #include <someotherlibrary/cpp/fidl_v2.h>
 
 namespace fidl_test_typealiases {
