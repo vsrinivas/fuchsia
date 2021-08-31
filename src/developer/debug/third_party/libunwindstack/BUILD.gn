@@ -77,4 +77,13 @@ static_library("libunwindstack") {
   }
 
   configs += [ "//build/config:Wno-conversion" ]
+
+  # ../../src/developer/debug/third_party/libunwindstack/DwarfCfa.cpp:263:19: error: loop variable 'line' creates a copy from type 'const std::string' [-Werror,-Wrange-loop-construct]
+  #   for (const auto line : expression_lines) {
+  #                   ^
+  # ../../src/developer/debug/third_party/libunwindstack/DwarfCfa.cpp:263:8: note: use reference type 'const std::string &' to prevent copying
+  #   for (const auto line : expression_lines) {
+  #        ^~~~~~~~~~~~~~~~~
+  #                   &
+  configs += [ "//build/config:Wno-range-loop-construct" ]
 }

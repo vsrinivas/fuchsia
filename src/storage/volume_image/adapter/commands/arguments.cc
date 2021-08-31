@@ -403,7 +403,7 @@ Command CommandFromString(std::string_view command_str) {
       std::make_pair("extend", Command::kExtend),
       std::make_pair("size", Command::kSize),
   });
-  for (const auto [str, command] : kCommandStringToCommand) {
+  for (const auto& [str, command] : kCommandStringToCommand) {
     if (str == command_str) {
       return command;
     }

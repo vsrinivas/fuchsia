@@ -101,7 +101,7 @@ std::unique_ptr<StreamTypeSet> StreamTypeSet::Clone() const {
 }
 
 bool StreamTypeSet::IncludesEncoding(const std::string& encoding) const {
-  for (const std::string set_encoding : encodings_) {
+  for (const std::string& set_encoding : encodings_) {
     if (set_encoding == encoding) {
       return true;
     }

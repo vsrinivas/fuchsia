@@ -66,7 +66,7 @@ void EngineRendererVisitor::Visit(ViewNode* r) {
 
   // Render all the annotation ViewHolders.
   if (r->GetView()) {
-    for (const auto annotation_view_holder : r->GetView()->annotation_view_holders()) {
+    for (const auto& annotation_view_holder : r->GetView()->annotation_view_holders()) {
       Visit(annotation_view_holder.get());
     }
   }

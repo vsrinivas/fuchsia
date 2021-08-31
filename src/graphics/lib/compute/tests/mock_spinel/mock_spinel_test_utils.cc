@@ -102,7 +102,7 @@ operator<<(std::ostream & os, const Composition & composition)
   os << "MockComposition[";
   auto         layerMap = composition.computeLayerMap();
   list_ostream ls(os);
-  for (const auto it : layerMap)
+  for (const auto & it : layerMap)
     {
       uint32_t layer_id = it.first;
       ls << "Layer[id:" << layer_id << ",";

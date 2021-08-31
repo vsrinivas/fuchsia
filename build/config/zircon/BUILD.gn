@@ -355,10 +355,6 @@ config("default_warnings") {
       "-Wno-unknown-warning-option",
       "-Wno-c99-designator",
 
-      # TODO(fxbug.dev/43681): Temporarily disable this warning until we roll toolchain,
-      # then come back and fix the instances this appears after rolling.
-      "-Wno-range-loop-analysis",
-
       # TODO(fxbug.dev/77973): Temporarily disable this warning until we address the
       # issues in first party code and suppress the warning in third party code.
       "-Wno-unused-but-set-parameter",

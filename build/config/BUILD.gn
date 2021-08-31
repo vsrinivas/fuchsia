@@ -541,10 +541,6 @@ config("default_warnings") {
     # TODO(fxbug.dev/37765): Keep this flag here while it is enabled in ZN to keep the
     # flags unified.
     "-Wno-address-of-packed-member",
-
-    # TODO(fxbug.dev/43681): Temporarily disable this warning until we roll toolchain,
-    # then come back and fix the instances this appears after rolling.
-    "-Wno-range-loop-analysis",
   ]
   cflags_cc = [
     # TODO(fxbug.dev/38640): Keep this flag here while it is enabled in ZN to keep the
@@ -595,6 +591,11 @@ config("Wno-deprecated-declarations") {
     "//src/ui/input/lib/hid-input-report/*",
     "//src/ui/scenic/lib/input/tests/*",
   ]
+}
+
+config("Wno-range-loop-construct") {
+  cflags = [ "-Wno-range-loop-construct" ]
+  visibility = [ "//src/developer/debug/third_party/libunwindstack" ]
 }
 
 # TODO(fxbug.dev/58162): clean up instances of this outside of third party code.

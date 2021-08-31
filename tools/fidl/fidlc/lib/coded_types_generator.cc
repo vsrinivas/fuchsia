@@ -324,7 +324,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                  "cannot process empty message payloads");
 
           if (message) {
-            for (const auto parameter : FlattenedStructMembers(*message)) {
+            for (const auto& parameter : FlattenedStructMembers(*message)) {
               auto coded_parameter_type =
                   CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope);
               if (!coded_parameter_type->is_noop) {
@@ -370,7 +370,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       std::vector<coded::StructElement>& struct_elements = coded_struct->elements;
       uint32_t field_num = 0;
       bool is_noop = true;
-      for (const auto member : FlattenedStructMembers(*struct_decl)) {
+      for (const auto& member : FlattenedStructMembers(*struct_decl)) {
         std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
         auto coded_member_type = CompileType(member.type, coded::CodingContext::kOutsideEnvelope);
         if (!coded_member_type->is_noop) {

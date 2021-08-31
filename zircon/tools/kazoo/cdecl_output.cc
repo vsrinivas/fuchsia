@@ -41,7 +41,7 @@ bool IsHandleType(const Type& type) {
 
 std::optional<std::string_view> HandleAnnotation(const StructMember& arg) {
   if (IsHandleType(arg.type())) {
-    for (const auto [attr, anno] : kHandleAttributes) {
+    for (const auto& [attr, anno] : kHandleAttributes) {
       if (arg.attributes().count(std::string(attr))) {
         return anno;
       }
@@ -75,7 +75,7 @@ void CDeclarationMacro(const Syscall& syscall, std::string_view macro,
     if (syscall.is_noreturn()) {
       attrs += " __NO_RETURN";
     }
-    for (const auto [attr, anno] : kFunctionAttributes) {
+    for (const auto& [attr, anno] : kFunctionAttributes) {
       if (syscall.HasAttribute(attr)) {
         attrs += " ";
         attrs += anno;

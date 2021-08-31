@@ -434,9 +434,8 @@ bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
 
   std::vector<std::string> netstack_args;
   for (const config::Guest& guest : guests) {
-    for (const std::pair<std::string, std::string>& mac_ethertap_mapping : guest.macs()) {
-      netstack_args.push_back("--interface=" + mac_ethertap_mapping.first + "=" +
-                              mac_ethertap_mapping.second);
+    for (const auto& [mac, network] : guest.macs()) {
+      netstack_args.push_back("--interface=" + mac + "=" + network);
     }
   }
 
@@ -511,12 +510,11 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
                cfg.set_virtio_gpu(false);
 
                if (!guest.macs().empty()) {
-                 for (const std::pair<std::string, std::string>& mac_ethertap_mapping :
-                      guest.macs()) {
+                 for (const auto& [mac, network] : guest.macs()) {
                    fuchsia::virtualization::NetSpec out{};
                    uint32_t bytes[6];
-                   std::sscanf(mac_ethertap_mapping.first.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x",
-                               &bytes[0], &bytes[1], &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
+                   std::sscanf(mac.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &bytes[0], &bytes[1],
+                               &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
                    for (size_t i = 0; i != 6; ++i) {
                      out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
                    }

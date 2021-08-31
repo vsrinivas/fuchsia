@@ -84,7 +84,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
           // if the memory is all valid. Flatten all contiguous valid regions to a single buffer.
           std::vector<uint8_t> flat;
           flat.reserve(dump.size());
-          for (const auto block : dump.blocks()) {
+          for (const auto& block : dump.blocks()) {
             if (!block.valid)
               break;
             flat.insert(flat.end(), block.data.begin(), block.data.end());

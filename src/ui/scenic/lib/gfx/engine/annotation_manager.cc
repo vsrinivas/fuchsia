@@ -88,7 +88,7 @@ void AnnotationManager::CleanupInvalidHandlerState(
     const std::vector<std::pair<AnnotationHandlerId, zx_status_t>>& invalid_handlers_info) {
   std::unordered_set<AnnotationHandlerId> removed_handlers;
   // Clean up invalid handlers.
-  for (const auto [handler_id, epitaph] : invalid_handlers_info) {
+  for (const auto& [handler_id, epitaph] : invalid_handlers_info) {
     if (removed_handlers.find(handler_id) == removed_handlers.end()) {
       auto result = RemoveHandlerWithEpitaph(handler_id, epitaph);
       removed_handlers.insert(handler_id);

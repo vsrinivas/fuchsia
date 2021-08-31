@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/utils.h>
+
 #include <sstream>
 
-#include <fidl/utils.h>
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -480,7 +481,7 @@ TEST(CanonicalNamesTests, BadInconsistentTypeSpelling) {
   };
 
   for (const auto decl_template : decl_templates) {
-    for (const auto [decl_name, use_name] : names) {
+    for (const auto& [decl_name, use_name] : names) {
       std::string decl(decl_template), use(use_template);
       decl.replace(decl.find("%s"), 2, decl_name);
       use.replace(use.find("%s"), 2, use_name);
@@ -504,7 +505,7 @@ TEST(CanonicalNamesTests, BadInconsistentConstSpelling) {
       std::make_pair("fooBar", "FooBar"),
   };
 
-  for (const auto [decl_name, use_name] : names) {
+  for (const auto& [decl_name, use_name] : names) {
     std::ostringstream s;
     s << "library example;\n\n"
       << "const " << decl_name << " bool = false;\n"
@@ -522,7 +523,7 @@ TEST(CanonicalNamesTests, BadInconsistentEnumMemberSpelling) {
       std::make_pair("fooBar", "FooBar"),
   };
 
-  for (const auto [decl_name, use_name] : names) {
+  for (const auto& [decl_name, use_name] : names) {
     std::ostringstream s;
     s << "library example;\n\n"
       << "type Enum = enum { " << decl_name << " = 1; };\n"
@@ -545,7 +546,7 @@ TEST(CanonicalNamesTests, BadInconsistentBitsMemberSpelling) {
       std::make_pair("fooBar", "FooBar"),
   };
 
-  for (const auto [decl_name, use_name] : names) {
+  for (const auto& [decl_name, use_name] : names) {
     std::ostringstream s;
     s << "library example;\n\n"
       << "type Bits = bits { " << decl_name << " = 1; };\n"
