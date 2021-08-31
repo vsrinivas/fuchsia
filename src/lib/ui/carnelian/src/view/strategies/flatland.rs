@@ -195,6 +195,7 @@ pub(crate) struct FlatlandViewStrategy {
     pending_present_count: usize,
     last_presentation_time: i64,
     future_presentation_times: Vec<PresentationTime>,
+    custom_render_offset: Option<i64>,
     present_interval: i64,
     num_presents_allowed: usize,
     render_timer_scheduled: bool,
@@ -233,6 +234,7 @@ impl FlatlandViewStrategy {
             pending_present_count: 1,
             last_presentation_time: fasync::Time::now().into_nanos(),
             future_presentation_times: Vec::new(),
+            custom_render_offset: None,
             present_interval: DEFAULT_PRESENT_INTERVAL,
             num_presents_allowed: 1,
             render_timer_scheduled: false,
@@ -394,7 +396,10 @@ impl FlatlandViewStrategy {
             // Conservative render offset to prefer throughput over low-latency.
             // TODO: allow applications that prefer low-latency to control this
             // dynamically.
-            let render_offset = self.present_interval - 1_000_000; // 1ms
+            const DEFAULT_RENDER_OFFSET_DELTA: i64 = 1_000_000; // 1ms
+            let render_offset = self
+                .custom_render_offset
+                .unwrap_or_else(|| self.present_interval - DEFAULT_RENDER_OFFSET_DELTA);
             let render_time = presentation_time.latch_point - render_offset;
             let timer = fasync::Timer::new(fuchsia_async::Time::from_nanos(render_time));
             let timer_sender = self.app_sender.clone();
@@ -488,6 +493,7 @@ impl ViewStrategy for FlatlandViewStrategy {
         let render_context =
             Self::make_view_assistant_context(view_details, 0, 0, self.app_sender.clone());
         view_assistant.setup(&render_context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
+        self.custom_render_offset = view_assistant.get_render_offset();
         self.render_requested();
     }
 

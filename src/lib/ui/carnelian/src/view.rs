@@ -337,6 +337,12 @@ pub trait ViewAssistant {
     fn ownership_changed(&mut self, _owned: bool) -> Result<(), Error> {
         Ok(())
     }
+
+    /// This method is called after setup to get an offset to use when calculating
+    /// render time. It is only called once.
+    fn get_render_offset(&mut self) -> Option<i64> {
+        None
+    }
 }
 
 /// Reference to a view assistant. _This type is likely to change in the future so

@@ -27,6 +27,7 @@ use {
         convert::TryFrom,
         f32, fs,
         ops::Range,
+        time::Duration,
     },
 };
 
@@ -1296,6 +1297,10 @@ impl ViewAssistant for InkViewAssistant {
             ink.handle_pointer_event(event);
         }
         Ok(())
+    }
+
+    fn get_render_offset(&mut self) -> Option<i64> {
+        Some(Duration::from_millis(15).as_nanos() as i64)
     }
 }
 
