@@ -34,8 +34,9 @@ executable("profiler_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_shell_package("audio_mixer_profiler") {
+fuchsia_package_with_single_component("audio_mixer_profiler") {
   testonly = true
 
   deps = [ ":profiler_bin" ]
+  manifest = "meta/audio_mixer_profiler.cmx"
 }
