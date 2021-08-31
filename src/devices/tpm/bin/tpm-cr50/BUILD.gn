@@ -51,6 +51,7 @@ rustc_binary("bin") {
     "src/cr50.rs",
     "src/cr50/command.rs",
     "src/cr50/command/ccd.rs",
+    "src/cr50/command/wp.rs",
     "src/cr50/status.rs",
     "src/main.rs",
     "src/util.rs",

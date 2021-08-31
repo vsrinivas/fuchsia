@@ -7,6 +7,7 @@
 //! Values are converted to/from big-endian when they're transmitted/received.
 
 pub mod ccd;
+pub mod wp;
 
 use super::status::{ExecuteError, TpmStatus};
 use crate::util::{DeserializeError, Deserializer, Serializer};

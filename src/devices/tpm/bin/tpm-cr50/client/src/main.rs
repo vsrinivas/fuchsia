@@ -4,7 +4,7 @@
 
 use anyhow::{Context, Error};
 use argh::FromArgs;
-use fidl_fuchsia_tpm_cr50::Cr50Marker;
+use fidl_fuchsia_tpm_cr50::{Cr50Marker, Cr50Rc, Cr50Status, WpState};
 use fuchsia_zircon as zx;
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -18,6 +18,7 @@ struct Args {
 #[argh(subcommand)]
 enum SubCommand {
     Ccd(CcdSubCommand),
+    Wp(WpCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -39,6 +40,11 @@ enum CcdCommand {
 #[argh(subcommand, name = "get-info")]
 /// get info about CCD.
 struct GetInfo {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "wp")]
+/// get the current write protect state.
+struct WpCommand {}
 
 #[fuchsia::component]
 async fn main() {
@@ -80,6 +86,38 @@ async fn run_cmd(args: Args) -> Result<(), Error> {
                 }
             } else {
                 println!("Error: {:?}", rc);
+            }
+        }
+        SubCommand::Wp(_) => {
+            let (rc, state) = proxy
+                .wp_get_state()
+                .await
+                .context("Getting state")?
+                .map_err(zx::Status::from_raw)
+                .context("Getting state")?;
+            if rc != Cr50Rc::Cr50(Cr50Status::Success) {
+                println!("Error: {:?}", rc);
+            } else {
+                print!("WP state: ");
+                if state.contains(WpState::Force) {
+                    print!("force ");
+                }
+                if state.contains(WpState::Enable) {
+                    println!("enabled");
+                } else {
+                    println!("disabled");
+                }
+                print!("At boot:  ");
+                if state.contains(WpState::AtBootSet) {
+                    print!("force ");
+                    if state.contains(WpState::AtBootEnable) {
+                        println!("enable");
+                    } else {
+                        println!("disable");
+                    }
+                } else {
+                    println!("follow_batt_pres");
+                }
             }
         }
     };

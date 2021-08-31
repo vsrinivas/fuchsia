@@ -166,11 +166,32 @@ type Cr50Rc = flexible union {
     2: cr50 Cr50Status;
 };
 
+/// Write protect status field.
+type WpState = flexible bits : uint8 {
+    /// Appears to be unused.
+    UPDATE = 0x1;
+    /// If set, then WP is enabled.
+    ENABLE = 0x2;
+    /// If set, then the current WP state is forced.
+    FORCE = 0x4;
+    /// If set, then WP state is overriden at boot.
+    /// Otherwise WP is enabled if battery is present, disabled otherwise.
+    AT_BOOT_SET = 0x8;
+    /// Determines state of WP at boot if AT_BOOT_SET is set.
+    AT_BOOT_ENABLE = 0x10;
+};
+
 @discoverable
 protocol Cr50 {
     /// Get information about the current state of case-closed debugging.
     CcdGetInfo() -> (struct {
         rc Cr50Rc;
         info CcdInfo:optional;
+    }) error zx.status;
+
+    /// Get the current state of the AP BIOS flash write protect.
+    WpGetState() -> (struct {
+        rc Cr50Rc;
+        state WpState;
     }) error zx.status;
 };

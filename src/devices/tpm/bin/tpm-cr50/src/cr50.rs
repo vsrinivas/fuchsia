@@ -8,6 +8,7 @@ mod status;
 use crate::cr50::{
     command::{
         ccd::{CcdCommand, CcdGetInfoResponse, CcdRequest},
+        wp::WpInfoRequest,
         TpmCommand,
     },
     status::ExecuteError,
@@ -16,7 +17,7 @@ use anyhow::{Context, Error};
 use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{
     CcdCapability, CcdFlags, CcdIndicator, CcdInfo, CcdState, Cr50Rc, Cr50Request,
-    Cr50RequestStream, Cr50Status,
+    Cr50RequestStream, Cr50Status, WpState,
 };
 use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
@@ -32,21 +33,38 @@ impl Cr50 {
         Arc::new(Cr50 { proxy })
     }
 
+    fn make_response<W>(
+        cmd: &str,
+        result: Result<W, ExecuteError>,
+        default: W,
+    ) -> Result<(Cr50Rc, W), i32> {
+        match result {
+            Ok(content) => Ok((Cr50Rc::Cr50(Cr50Status::Success), content)),
+            Err(ExecuteError::Tpm(status)) => Ok((status.into(), default)),
+            Err(ExecuteError::Other(e)) => {
+                fx_log_warn!("Error while executing {}: {:?}", cmd, e);
+                Err(zx::Status::INTERNAL.into_raw())
+            }
+        }
+    }
+
     pub async fn handle_stream(&self, mut stream: Cr50RequestStream) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await.context("Reading from stream")? {
             match request {
-                Cr50Request::CcdGetInfo { responder } => match self.get_info().await {
-                    Ok(info) => responder
-                        .send(&mut Ok((Cr50Rc::Cr50(Cr50Status::Success), Some(Box::new(info))))),
-                    Err(ExecuteError::Tpm(status)) => {
-                        responder.send(&mut Ok((status.into(), None)))
-                    }
-                    Err(ExecuteError::Other(e)) => {
-                        fx_log_warn!("Error while executing GetInfo: {:?}", e);
-                        responder.send(&mut Err(zx::Status::INTERNAL.into_raw()))
-                    }
-                }
-                .context("Replying to request")?,
+                Cr50Request::CcdGetInfo { responder } => responder
+                    .send(&mut Self::make_response(
+                        "CcdGetInfo",
+                        self.get_info().await.map(|v| Some(Box::new(v))),
+                        None,
+                    ))
+                    .context("Replying to request")?,
+                Cr50Request::WpGetState { responder } => responder
+                    .send(&mut Self::make_response(
+                        "WpGetState",
+                        self.wp_get_state().await,
+                        WpState::empty(),
+                    ))
+                    .context("Replying to request")?,
             };
         }
 
@@ -72,5 +90,11 @@ impl Cr50 {
             indicator: CcdIndicator::from_bits_truncate(result.ccd_indicator_bitmap),
             force_disabled: result.ccd_forced_disabled > 0,
         })
+    }
+
+    pub async fn wp_get_state(&self) -> Result<WpState, ExecuteError> {
+        let req = WpInfoRequest::new();
+        let result = req.execute(&self.proxy).await?;
+        return Ok(result.get_state());
     }
 }
