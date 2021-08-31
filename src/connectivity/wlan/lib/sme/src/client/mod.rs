@@ -41,7 +41,7 @@ use {
     futures::channel::{mpsc, oneshot},
     ieee80211::{Bssid, Ssid},
     log::{error, info, warn},
-    std::sync::Arc,
+    std::{convert::TryInto, sync::Arc},
     wep_deprecated,
     wlan_common::{
         self,
@@ -127,7 +127,7 @@ impl ClientConfig {
             probe_resp_wsc: bss.probe_resp_wsc(),
             wmm_param,
             compatible: self.is_bss_compatible(bss, device_info),
-            bss_description: bss.clone().to_fidl(),
+            bss_description: bss.clone().into(),
         }
     }
 
@@ -493,7 +493,7 @@ impl ClientSme {
         // Cancel any ongoing connect attempt
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
-        let bss_description = match BssDescription::from_fidl(req.bss_description) {
+        let bss_description: BssDescription = match req.bss_description.try_into() {
             Ok(bss_description) => bss_description,
             Err(e) => {
                 error!("Failed converting FIDL BssDescription in ConnectRequest: {:?}", e);
@@ -897,7 +897,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_description: bss_description.to_fidl(),
+                bss_description: bss_description.into(),
             }
         );
 
@@ -934,7 +934,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: Some(wmm_param),
-                bss_description: bss_description.to_fidl(),
+                bss_description: bss_description.into(),
             }
         );
 
@@ -968,7 +968,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_description: bss_description.to_fidl(),
+                bss_description: bss_description.into(),
             },
         );
 
@@ -1003,7 +1003,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_description: bss_description.to_fidl(),
+                bss_description: bss_description.into(),
             },
         );
     }

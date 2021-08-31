@@ -31,6 +31,7 @@ pub enum Cbw {
 }
 
 impl Cbw {
+    // TODO(fxbug.dev/83769): Implement `From `instead.
     pub fn to_fidl(&self) -> (fidl_common::ChannelBandwidth, u8) {
         match self {
             Cbw::Cbw20 => (fidl_common::ChannelBandwidth::Cbw20, 0),
@@ -69,6 +70,7 @@ pub enum Phy {
 }
 
 impl Phy {
+    // TODO(fxbug.dev/83769): Implement `From `instead.
     pub fn to_fidl(&self) -> fidl_common::Phy {
         match self {
             Phy::Hr => fidl_common::Phy::Hr,

@@ -29,7 +29,7 @@ use {
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
     log::{debug, error, info},
-    std::sync::Arc,
+    std::{convert::TryInto, sync::Arc},
     void::ResultVoidErrExt,
     wlan_common::{bss::BssDescription, RadioConfig},
     wlan_metrics_registry::{
@@ -467,7 +467,7 @@ async fn connecting_state<'a>(
                             return handle_connecting_error_and_retry(common_options, options).await;
                         }
                     };
-                    let parsed_bss_description = match BssDescription::from_fidl(bss_description.clone()) {
+                    let parsed_bss_description: Box<BssDescription> = match bss_description.clone().try_into() {
                         Ok(bss_description) => Box::new(bss_description),
                         Err(e) => {
                             // This should never happen because SME only send parseable
@@ -2536,7 +2536,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2653,7 +2653,7 @@ mod tests {
                 network: types::NetworkIdentifier { ssid: network_ssid, security_type: security },
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
@@ -2723,7 +2723,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2935,7 +2935,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2998,7 +2998,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
@@ -3199,7 +3199,7 @@ mod tests {
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -3377,7 +3377,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
@@ -3457,7 +3457,7 @@ mod tests {
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
@@ -3719,7 +3719,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone().to_fidl()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,

@@ -1044,7 +1044,7 @@ impl ClientState {
         selected_bss.channel.cbw = cbw_to_use;
 
         context.mlme_sink.send(MlmeRequest::Join(fidl_mlme::JoinRequest {
-            selected_bss: selected_bss.to_fidl(),
+            selected_bss: (*selected_bss).into(),
             join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
             nav_sync_delay: 0,
             op_rates: vec![],

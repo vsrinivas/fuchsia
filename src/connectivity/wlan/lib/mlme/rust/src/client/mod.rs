@@ -221,7 +221,7 @@ impl ClientMlme {
     }
 
     fn on_sme_join(&mut self, req: fidl_mlme::JoinRequest) -> Result<(), Error> {
-        let bss = BssDescription::from_fidl(req.selected_bss).map_err(|e| {
+        let bss: BssDescription = req.selected_bss.try_into().map_err(|e| {
             Error::Status(format!("Error parsing BssDescription: {:?}", e), zx::Status::IO_INVALID)
         })?;
 

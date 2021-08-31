@@ -18,7 +18,14 @@ use {
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     ieee80211::{Bssid, Ssid},
     static_assertions::assert_eq_size,
-    std::{cmp::Ordering, collections::HashMap, convert::TryInto, fmt, hash::Hash, ops::Range},
+    std::{
+        cmp::Ordering,
+        collections::HashMap,
+        convert::{TryFrom, TryInto},
+        fmt,
+        hash::Hash,
+        ops::Range,
+    },
     zerocopy::{AsBytes, LayoutVerified},
 };
 
@@ -407,8 +414,29 @@ impl BssDescription {
             self.rssi_dbm,
         )
     }
+}
 
-    pub fn from_fidl(bss: fidl_internal::BssDescription) -> Result<Self, anyhow::Error> {
+impl From<BssDescription> for fidl_internal::BssDescription {
+    fn from(bss: BssDescription) -> fidl_internal::BssDescription {
+        fidl_internal::BssDescription {
+            bssid: bss.bssid.0,
+            bss_type: bss.bss_type,
+            beacon_period: bss.beacon_period,
+            timestamp: bss.timestamp,
+            local_time: bss.local_time,
+            capability_info: bss.capability_info,
+            channel: bss.channel,
+            rssi_dbm: bss.rssi_dbm,
+            snr_db: bss.snr_db,
+            ies: bss.ies,
+        }
+    }
+}
+
+impl TryFrom<fidl_internal::BssDescription> for BssDescription {
+    type Error = anyhow::Error;
+
+    fn try_from(bss: fidl_internal::BssDescription) -> Result<BssDescription, Self::Error> {
         let mut ssid_range = None;
         let mut rates = None;
         let mut tim_range = None;
@@ -481,21 +509,6 @@ impl BssDescription {
             vht_cap_range,
             vht_op_range,
         })
-    }
-
-    pub fn to_fidl(self) -> fidl_internal::BssDescription {
-        fidl_internal::BssDescription {
-            bssid: self.bssid.0,
-            bss_type: self.bss_type,
-            beacon_period: self.beacon_period,
-            timestamp: self.timestamp,
-            local_time: self.local_time,
-            capability_info: self.capability_info,
-            channel: self.channel,
-            rssi_dbm: self.rssi_dbm,
-            snr_db: self.snr_db,
-            ies: self.ies,
-        }
     }
 }
 

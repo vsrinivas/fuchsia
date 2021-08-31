@@ -356,7 +356,7 @@ macro_rules! fake_fidl_bss_description {
 macro_rules! fake_bss_description {
     ($protection_type:ident $(, $bss_key:ident: $bss_value:expr)* $(,)?) => {{
         let fidl_bss = $crate::fake_fidl_bss_description!($protection_type $(, $bss_key: $bss_value)*);
-        let bss_description = $crate::bss::BssDescription::from_fidl(fidl_bss)
+        let bss_description: $crate::bss::BssDescription = std::convert::TryFrom::try_from(fidl_bss)
             .expect("expect BSS conversion to succeed");
         bss_description
     }}
@@ -368,6 +368,7 @@ mod tests {
         super::*,
         crate::bss::{BssDescription, Protection},
         ie::IeType,
+        std::convert::TryFrom,
     };
 
     #[test]
@@ -375,7 +376,7 @@ mod tests {
         let fidl_bss_description = fake_fidl_bss_description!(Open);
         let bss_description = fake_bss_description!(Open);
         assert_eq!(
-            BssDescription::from_fidl(fidl_bss_description)
+            BssDescription::try_from(fidl_bss_description)
                 .expect("Failed to convert fake_fidl_bss_description value"),
             bss_description
         );

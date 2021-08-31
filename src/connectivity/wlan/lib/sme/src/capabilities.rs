@@ -109,6 +109,7 @@ impl From<fidl_mlme::AssociateConfirm> for ApCapabilities {
 }
 
 impl StaCapabilities {
+    // TODO(fxbug.dev/83769): Implement `From `instead.
     pub fn to_fidl_negotiated_capabilities(
         &self,
         channel: &Channel,

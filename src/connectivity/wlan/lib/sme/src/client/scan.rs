@@ -15,6 +15,7 @@ use {
     log::warn,
     std::{
         collections::{hash_map, HashMap, HashSet},
+        convert::TryInto,
         mem,
         sync::Arc,
     },
@@ -228,7 +229,7 @@ fn convert_bss_map(
 
             let mut ies = ies_merger.finalize();
             std::mem::swap(&mut ies, &mut bss.ies);
-            let bss = BssDescription::from_fidl(bss).ok();
+            let bss: Option<BssDescription> = bss.try_into().ok();
             if bss.is_none() {
                 sme_inspect.scan_discard_fidl_bss.add(1);
             }

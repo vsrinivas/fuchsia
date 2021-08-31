@@ -55,6 +55,7 @@ impl RadioConfig {
         RadioConfig { phy: Some(phy), cbw: Some(cbw), primary_channel: Some(primary_channel) }
     }
 
+    // TODO(fxbug.dev/83769): Implement `From `instead.
     pub fn to_fidl(&self) -> fidl_sme::RadioConfig {
         let (channel_bandwidth, _) = self.cbw.or(Some(Cbw::Cbw20)).unwrap().to_fidl();
         fidl_sme::RadioConfig {
