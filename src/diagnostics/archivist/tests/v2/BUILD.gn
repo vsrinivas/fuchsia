@@ -62,6 +62,7 @@ rustc_test("integration_tests_bin") {
     "src/logs/lifecycle.rs",
     "src/logs/mod.rs",
     "src/logs/redaction.rs",
+    "src/logs/selectors.rs",
     "src/logs/sorting.rs",
     "src/logs/utils.rs",
     "src/test_topology.rs",

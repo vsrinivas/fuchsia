@@ -8,5 +8,6 @@ mod budget;
 mod crash;
 mod lifecycle;
 mod redaction;
+mod selectors;
 mod sorting;
 mod utils;

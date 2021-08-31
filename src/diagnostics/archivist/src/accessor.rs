@@ -19,6 +19,7 @@ use {
         self, ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorRequest,
         BatchIteratorRequestStream, ClientSelectorConfiguration, DataType, Format,
         PerformanceConfiguration, Selector, SelectorArgument, StreamMode, StreamParameters,
+        StringSelector, TreeSelector, TreeSelectorUnknown,
     },
     fuchsia_async::{self as fasync, Task},
     fuchsia_inspect::NumericProperty,
@@ -44,7 +45,7 @@ pub struct ArchiveAccessor {
     moniker_rewriter: Option<Arc<MonikerRewriter>>,
 }
 
-fn validate_and_parse_inspect_selectors(
+fn validate_and_parse_selectors(
     selector_args: Vec<SelectorArgument>,
 ) -> Result<Vec<Selector>, AccessorError> {
     let mut selectors = vec![];
@@ -63,6 +64,36 @@ fn validate_and_parse_inspect_selectors(
         selectors.push(selector);
     }
 
+    Ok(selectors)
+}
+
+fn validate_and_parse_log_selectors(
+    selector_args: Vec<SelectorArgument>,
+) -> Result<Vec<Selector>, AccessorError> {
+    // Only accept selectors of the type: `component:root` for logs for now.
+    let selectors = validate_and_parse_selectors(selector_args)?;
+    for selector in &selectors {
+        // Unwrap safe: Previous validation discards any selector without a node.
+        let tree_selector = selector.tree_selector.as_ref().unwrap();
+        match tree_selector {
+            TreeSelector::PropertySelector(_) => {
+                return Err(AccessorError::InvalidLogSelector);
+            }
+            TreeSelector::SubtreeSelector(subtree_selector) => {
+                if subtree_selector.node_path.len() != 1 {
+                    return Err(AccessorError::InvalidLogSelector);
+                }
+                match &subtree_selector.node_path[0] {
+                    StringSelector::ExactMatch(val) if val == "root" => {}
+                    StringSelector::StringPattern(val) if val == "root" => {}
+                    _ => {
+                        return Err(AccessorError::InvalidLogSelector);
+                    }
+                }
+            }
+            TreeSelectorUnknown!() => {}
+        }
+    }
     Ok(selectors)
 }
 
@@ -109,7 +140,7 @@ impl ArchiveAccessor {
 
                 let selectors = match selectors {
                     ClientSelectorConfiguration::Selectors(selectors) => {
-                        Some(validate_and_parse_inspect_selectors(selectors)?)
+                        Some(validate_and_parse_selectors(selectors)?)
                     }
                     ClientSelectorConfiguration::SelectAll(_) => None,
                     _ => Err(AccessorError::InvalidSelectors("unrecognized selectors"))?,
@@ -174,7 +205,17 @@ impl ArchiveAccessor {
             }
             DataType::Logs => {
                 let stats = Arc::new(accessor_stats.new_logs_batch_iterator());
-                let logs = pipeline.read().logs(mode);
+                let selectors = match params.client_selector_configuration {
+                    Some(ClientSelectorConfiguration::Selectors(selectors)) => {
+                        Some(validate_and_parse_log_selectors(selectors)?)
+                    }
+                    // TODO(fxbug.dev/83169): this differs from inspect. Inspect requires selectors
+                    // to be set. At the moment, existing clients of ArchiveAccessor don't send
+                    // selectors and select everything. For now, we maintain this property.
+                    None | Some(ClientSelectorConfiguration::SelectAll(_)) => None,
+                    _ => Err(AccessorError::InvalidSelectors("unrecognized selectors"))?,
+                };
+                let logs = pipeline.read().logs(mode, selectors);
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
             }
         }
@@ -182,7 +223,7 @@ impl ArchiveAccessor {
 
     /// Spawn an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open
     /// reader session to diagnostics data.
-    pub fn spawn_archive_accessor_server(
+    pub fn spawn_server(
         self,
         mut stream: ArchiveAccessorRequestStream,
         task_sender: UnboundedSender<Task<()>>,
@@ -455,5 +496,73 @@ impl TryFrom<&StreamParameters> for PerformanceConfig {
                 .unwrap_or(constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS),
             aggregated_content_limit_bytes,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{pipeline::Pipeline, repository::DataRepo};
+    use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, BatchIteratorMarker};
+    use fuchsia_inspect::Node;
+    use fuchsia_zircon_status as zx_status;
+    use futures::channel::mpsc;
+    use matches::assert_matches;
+    use parking_lot::RwLock;
+
+    #[fuchsia::test]
+    async fn logs_only_accept_basic_component_selectors() {
+        let (accessor, stream) =
+            fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
+        let (snd, _rcv) = mpsc::unbounded();
+        fasync::Task::spawn(async move {
+            let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None, DataRepo::default())));
+            let accessor =
+                ArchiveAccessor::new(pipeline, Arc::new(AccessorStats::new(Node::default())));
+            accessor.spawn_server(stream, snd);
+        })
+        .detach();
+
+        // A selector of the form `component:node/path:property` is rejected.
+        let (batch_iterator, server_end) =
+            fidl::endpoints::create_proxy::<BatchIteratorMarker>().unwrap();
+        assert!(accessor
+            .r#stream_diagnostics(
+                StreamParameters {
+                    data_type: Some(DataType::Logs),
+                    stream_mode: Some(StreamMode::SnapshotThenSubscribe),
+                    format: Some(Format::Json),
+                    client_selector_configuration: Some(ClientSelectorConfiguration::Selectors(
+                        vec![SelectorArgument::RawSelector("foo:root/bar:baz".to_string()),]
+                    )),
+                    ..StreamParameters::EMPTY
+                },
+                server_end
+            )
+            .is_ok());
+        assert_matches!(
+            batch_iterator.get_next().await,
+            Err(fidl::Error::ClientChannelClosed { status: zx_status::Status::INVALID_ARGS, .. })
+        );
+
+        // A selector of the form `component:root` is accepted.
+        let (batch_iterator, server_end) =
+            fidl::endpoints::create_proxy::<BatchIteratorMarker>().unwrap();
+        assert!(accessor
+            .r#stream_diagnostics(
+                StreamParameters {
+                    data_type: Some(DataType::Logs),
+                    stream_mode: Some(StreamMode::Snapshot),
+                    format: Some(Format::Json),
+                    client_selector_configuration: Some(ClientSelectorConfiguration::Selectors(
+                        vec![SelectorArgument::RawSelector("foo:root".to_string()),]
+                    )),
+                    ..StreamParameters::EMPTY
+                },
+                server_end
+            )
+            .is_ok());
+
+        assert!(batch_iterator.get_next().await.is_ok());
     }
 }

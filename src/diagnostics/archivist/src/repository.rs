@@ -138,7 +138,7 @@ impl DataRepo {
             let listener = Listener::new(listener, options)?;
             let mode =
                 if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
-            let logs = self.logs_cursor(mode);
+            let logs = self.logs_cursor(mode, None);
             if let Some(s) = selectors {
                 self.write().update_logs_interest(s);
             }
@@ -151,13 +151,19 @@ impl DataRepo {
     pub fn logs_cursor(
         &self,
         mode: StreamMode,
+        selectors: Option<Vec<Selector>>,
     ) -> impl Stream<Item = Arc<MessageWithStats>> + Send + 'static {
         let mut repo = self.write();
-        let (merged, mpx_handle) = Multiplexer::new();
+        let (mut merged, mpx_handle) = Multiplexer::new();
+        if let Some(selectors) = selectors {
+            merged.set_selectors(selectors);
+        }
         repo.data_directories
             .iter()
             .filter_map(|(_, c)| c)
-            .filter_map(|c| c.logs_cursor(mode).map(|cursor| (c.identity.to_string(), cursor)))
+            .filter_map(|c| {
+                c.logs_cursor(mode).map(|cursor| (c.identity.relative_moniker.clone(), cursor))
+            })
             .for_each(|(n, c)| {
                 mpx_handle.send(n, c);
             });
@@ -548,7 +554,7 @@ impl MultiplexerBroker {
     /// in their results.
     pub fn send(&mut self, container: &Arc<LogsArtifactsContainer>) {
         self.live_iterators.retain(|(mode, recipient)| {
-            recipient.send(container.identity.to_string(), container.cursor(*mode))
+            recipient.send(container.identity.relative_moniker.clone(), container.cursor(*mode))
         });
     }
 
@@ -563,8 +569,12 @@ impl MultiplexerBroker {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::events::types::ComponentIdentifier,
-        diagnostics_hierarchy::trie::TrieIterableNode, fidl_fuchsia_io::DirectoryMarker,
+        super::*,
+        crate::events::types::ComponentIdentifier,
+        diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity},
+        diagnostics_hierarchy::trie::TrieIterableNode,
+        diagnostics_message::message::METADATA_SIZE,
+        fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon as zx,
     };
 
@@ -822,5 +832,55 @@ mod tests {
             selectors::parse_selector("foo.cmx:root").expect("parse selector"),
         )]);
         assert_eq!(0, data_repo.read().fetch_inspect_data(&selectors, None).len());
+    }
+
+    #[fuchsia::test]
+    async fn data_repo_filters_logs_by_selectors() {
+        let repo = DataRepo::default();
+        let foo_container =
+            repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::parse_from_moniker("./foo:0").unwrap(),
+                "fuchsia-pkg://foo",
+            ));
+        let bar_container =
+            repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::parse_from_moniker("./bar:0").unwrap(),
+                "fuchsia-pkg://bar",
+            ));
+
+        foo_container.ingest_message(make_message("foo", "a", 1));
+        bar_container.ingest_message(make_message("bar", "b", 2));
+        foo_container.ingest_message(make_message("foo", "c", 3));
+
+        let stream = repo.logs_cursor(StreamMode::Snapshot, None);
+
+        let results =
+            stream.map(|value| value.msg().unwrap().to_string()).collect::<Vec<_>>().await;
+        assert_eq!(results, vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+
+        let filtered_stream = repo.logs_cursor(
+            StreamMode::Snapshot,
+            Some(vec![selectors::parse_selector("foo:root").unwrap()]),
+        );
+
+        let results =
+            filtered_stream.map(|value| value.msg().unwrap().to_string()).collect::<Vec<_>>().await;
+        assert_eq!(results, vec!["a".to_string(), "c".to_string()]);
+    }
+
+    fn make_message(component: &str, msg: &str, timestamp_nanos: i64) -> MessageWithStats {
+        MessageWithStats::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: diagnostics_data::Timestamp::from(timestamp_nanos),
+                component_url: Some(format!("fuchsia-pkg://{}", component)),
+                moniker: component.to_string(),
+                severity: Severity::Debug,
+                size_bytes: METADATA_SIZE + 1,
+            })
+            .set_pid(1)
+            .set_message(msg.to_string())
+            .set_tid(2)
+            .build(),
+        )
     }
 }

@@ -38,6 +38,12 @@ impl Deref for Moniker {
     }
 }
 
+impl std::fmt::Display for Moniker {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.join("/"))
+    }
+}
+
 impl Into<Moniker> for Vec<&str> {
     fn into(self) -> Moniker {
         Moniker(self.into_iter().map(|s| s.to_string()).collect())

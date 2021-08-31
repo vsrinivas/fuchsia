@@ -24,6 +24,9 @@ pub enum AccessorError {
     #[error("couldn't parse/validate the provided selectors: {}", .0)]
     ParseSelectors(#[source] anyhow::Error),
 
+    #[error("only selectors of type `component:root` are supported for logs at the moment")]
+    InvalidLogSelector,
+
     #[error("format must be set")]
     MissingFormat,
 
@@ -67,6 +70,7 @@ impl AccessorError {
             | AccessorError::EmptySelectors
             | AccessorError::MissingSelectors
             | AccessorError::InvalidSelectors(_)
+            | AccessorError::InvalidLogSelector
             | AccessorError::ParseSelectors(_) => ZxStatus::INVALID_ARGS,
             AccessorError::VmoCreate(status) | AccessorError::VmoWrite(status) => status,
             AccessorError::MissingFormat | AccessorError::MissingMode => ZxStatus::INVALID_ARGS,

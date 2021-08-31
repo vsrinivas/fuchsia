@@ -215,13 +215,17 @@ impl Pipeline {
             if let Some(rewriter) = &moniker_rewriter {
                 accessor.add_moniker_rewriter(rewriter.clone());
             }
-            accessor.spawn_archive_accessor_server(stream, listen_sender.clone());
+            accessor.spawn_server(stream, listen_sender.clone());
         });
         this
     }
 
-    pub fn logs(&self, mode: StreamMode) -> impl Stream<Item = RedactedItem<MessageWithStats>> {
-        self.log_redactor.clone().redact_stream(self.data_repo.logs_cursor(mode))
+    pub fn logs(
+        &self,
+        mode: StreamMode,
+        selectors: Option<Vec<Selector>>,
+    ) -> impl Stream<Item = RedactedItem<MessageWithStats>> {
+        self.log_redactor.clone().redact_stream(self.data_repo.logs_cursor(mode, selectors))
     }
 
     pub fn remove(&mut self, relative_moniker: &[String]) {
