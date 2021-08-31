@@ -881,7 +881,7 @@ group("unicode-width") {
 }
 
 group("untrusted") {
-  deps = [ ":untrusted-v0_7_0" ]
+  deps = [ ":untrusted-v0_7_1" ]
 }
 
 group("url") {
@@ -3113,7 +3113,7 @@ rust_library("derp-v0_0_13") {
   ]
 
   deps = []
-  deps += [ ":untrusted-v0_7_0" ]
+  deps += [ ":untrusted-v0_7_1" ]
 
   rustenv = []
 
@@ -7855,7 +7855,7 @@ rust_library("ring-v0_16_12") {
   ]
 
   deps = []
-  deps += [ ":untrusted-v0_7_0" ]
+  deps += [ ":untrusted-v0_7_1" ]
   if ((current_cpu == "arm64" || false || false || current_cpu == "x64") &&
       !false) {
     deps += [ ":spin-v0_5_2" ]
@@ -8510,7 +8510,7 @@ rust_library("sct-v0_6_0") {
 
   deps = []
   deps += [ ":ring-v0_16_12" ]
-  deps += [ ":untrusted-v0_7_0" ]
+  deps += [ ":untrusted-v0_7_1" ]
 
   rustenv = []
 
@@ -10690,10 +10690,10 @@ rust_library("unindent-v0_1_3") {
   ]
 }
 
-rust_library("untrusted-v0_7_0") {
+rust_library("untrusted-v0_7_1") {
   crate_name = "untrusted"
   crate_root = "//third_party/rust_crates/vendor/untrusted/src/untrusted.rs"
-  output_name = "untrusted-5f8476d9b2f7fe29"
+  output_name = "untrusted-645a69efdf6d68fc"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -10706,8 +10706,8 @@ rust_library("untrusted-v0_7_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=5f8476d9b2f7fe29",
-    "-Cextra-filename=-5f8476d9b2f7fe29",
+    "-Cmetadata=645a69efdf6d68fc",
+    "-Cextra-filename=-645a69efdf6d68fc",
   ]
 }
 
@@ -11252,7 +11252,7 @@ rust_library("webpki-v0_21_0") {
 
   deps = []
   deps += [ ":ring-v0_16_12" ]
-  deps += [ ":untrusted-v0_7_0" ]
+  deps += [ ":untrusted-v0_7_1" ]
 
   rustenv = []
 

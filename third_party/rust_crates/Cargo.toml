@@ -153,7 +153,7 @@ tracing-core = "0.1.17"
 tracing-futures = "0.2.5"
 tracing-log = "0.1.2"
 unicase = "2.2.0"
-untrusted = "0.7"
+untrusted = "0.7.1"
 url = "2.1"
 uuid = { version = "0.7.2", features = ["serde", "v4"] } # move ?
 valico = "2.4.2"

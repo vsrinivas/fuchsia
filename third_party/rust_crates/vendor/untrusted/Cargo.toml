@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "untrusted"
-version = "0.7.0"
+version = "0.7.1"
 authors = ["Brian Smith <brian@briansmith.org>"]
 description = "Safe, fast, zero-panic, zero-crashing, zero-allocation parsing of untrusted inputs in Rust."
 documentation = "https://briansmith.org/rustdoc/untrusted/"

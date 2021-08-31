@@ -89,7 +89,6 @@
 #![forbid(
     anonymous_parameters,
     box_pointers,
-    legacy_directory_ownership,
     missing_docs,
     trivial_casts,
     trivial_numeric_casts,
