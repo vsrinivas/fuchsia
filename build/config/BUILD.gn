@@ -538,10 +538,6 @@ config("default_warnings") {
     "-Wno-unknown-warning-option",
     "-Wno-c99-designator",
 
-    # TODO(fxbug.dev/37215): Temporarily disable this warning until we roll toolchain.
-    # Then we can re-enable it and cleanup instances it appears.
-    "-Wno-int-in-bool-context",
-
     # TODO(fxbug.dev/37765): Keep this flag here while it is enabled in ZN to keep the
     # flags unified.
     "-Wno-address-of-packed-member",
