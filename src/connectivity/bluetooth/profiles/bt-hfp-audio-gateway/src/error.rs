@@ -90,6 +90,7 @@ impl From<bredr::ScoErrorCode> for ScoConnectError {
             bredr::ScoErrorCode::Cancelled => Self::ScoCanceled,
             bredr::ScoErrorCode::Failure => Self::ScoFailed,
             bredr::ScoErrorCode::InvalidArguments => Self::ScoInvalidArguments,
+            bredr::ScoErrorCode::ParametersRejected => Self::ScoFailed,
         }
     }
 }

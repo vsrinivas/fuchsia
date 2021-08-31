@@ -440,8 +440,12 @@ impl ProfileRegistrar {
             bredr::ProfileRequest::ConnectSco {
                 mut peer_id, initiator, params, receiver, ..
             } => {
-                let _ =
-                    self.profile_upstream.connect_sco(&mut peer_id, initiator, params, receiver);
+                let _ = self.profile_upstream.connect_sco(
+                    &mut peer_id,
+                    initiator,
+                    &mut params.into_iter(),
+                    receiver,
+                );
             }
         }
         None
@@ -599,7 +603,7 @@ mod tests {
             .connect_sco(
                 &mut PeerId(1).into(),
                 /*initiator=*/ true,
-                bredr::ScoConnectionParameters::new_empty(),
+                &mut vec![bredr::ScoConnectionParameters::new_empty()].into_iter(),
                 receiver_client
             )
             .is_ok());

@@ -219,14 +219,25 @@ protocol Profile {
         channel Channel;
     }) error fuchsia.bluetooth.ErrorCode;
 
-    /// Attempt to establish a synchronous connection to `peer_id` configured using `params`.
-    /// If `initiator` is true, a connection request will be sent. If `initiator` is false, the host will
-    /// attempt to accept the next connection request.
-    /// The result of the connection attempt will be returned with `receiver`. Dropping `receiver` will cancel the request.
+    /// Attempt to establish a synchronous connection to `peer_id` configured
+    /// using `params`.
+    ///
+    /// If `initiator` is true, a connection request will be sent. Only 1
+    /// parameter may be specified.
+    ///
+    /// If `initiator` is false, the host will attempt to accept the next
+    /// connection request using the parameters given in order. The parameters
+    /// will be tried in order until either a connection is successful, all
+    /// parameters have been rejected (`ScoErrorCode.PARAMETERS_REJECTED`), or
+    /// the procedure is canceled.
+    ///
+    /// The result of the connection attempt and the parameters used for the
+    /// connection will be returned with `receiver`.  Dropping `receiver` will
+    /// cancel the request.
     ConnectSco(resource struct {
         peer_id fuchsia.bluetooth.PeerId;
         initiator bool;
-        params ScoConnectionParameters;
+        params vector<ScoConnectionParameters>:MAX;
         receiver client_end:ScoConnectionReceiver;
     });
 };

@@ -85,7 +85,7 @@ impl ScoConnector {
             fidl::endpoints::create_request_stream::<bredr::ScoConnectionReceiverMarker>()?;
 
         info!("Initiating SCO connection for {}: {:?}", peer_id, params);
-        proxy.connect_sco(&mut peer_id.into(), true, params.clone(), client)?;
+        proxy.connect_sco(&mut peer_id.into(), true, &mut vec![params].into_iter(), client)?;
 
         let socket = match requests.next().await {
             Some(Ok(bredr::ScoConnectionReceiverRequest::Connected { connection, .. })) => {

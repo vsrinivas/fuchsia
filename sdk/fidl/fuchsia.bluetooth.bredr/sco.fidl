@@ -10,6 +10,7 @@ type ScoErrorCode = strict enum {
     FAILURE = 1;
     CANCELLED = 2;
     INVALID_ARGUMENTS = 3;
+    PARAMETERS_REJECTED = 4;
 };
 
 /// Codec parameter sets defined in the Hands-Free Profile specification (v1.8, section 5.7).
@@ -102,9 +103,11 @@ type ScoConnection = resource table {
 /// Represents an active synchronous connection request by a profile.
 /// Either `Connected()` or `Error()` will be called and then server will close the protocol.
 protocol ScoConnectionReceiver {
-    /// Called upon successful connection establishment.
+    /// Called upon successful connection establishment. `params` contains the
+    /// parameters that were used to establish the connection.
     Connected(resource struct {
         connection ScoConnection;
+        params ScoConnectionParameters;
     });
 
     /// Called when connection establishment fails or is cancelled by the host.

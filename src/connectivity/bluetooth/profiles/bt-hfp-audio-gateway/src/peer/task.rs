@@ -1331,8 +1331,9 @@ mod tests {
     ) -> Option<zx::Socket> {
         let proxy = match profile_requests.next().await.expect("request").unwrap() {
             bredr::ProfileRequest::ConnectSco { receiver, params, .. } => {
+                assert_eq!(params.len(), 1);
+                let param_set = params[0].parameter_set.unwrap();
                 // TODO(fxbug.dev/81374): Remove when mSBC is enabled again.
-                let param_set = params.parameter_set.unwrap();
                 assert!(param_set != bredr::HfpParameterSet::MsbcT1);
                 assert!(param_set != bredr::HfpParameterSet::MsbcT2);
                 receiver.into_proxy().unwrap()
@@ -1344,7 +1345,7 @@ mod tests {
                 let (local, remote) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
                 let connection =
                     bredr::ScoConnection { socket: Some(local), ..bredr::ScoConnection::EMPTY };
-                proxy.connected(connection).unwrap();
+                proxy.connected(connection, bredr::ScoConnectionParameters::EMPTY).unwrap();
                 Some(remote)
             }
             Err(code) => {
