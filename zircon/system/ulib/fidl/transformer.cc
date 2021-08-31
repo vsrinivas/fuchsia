@@ -765,6 +765,7 @@ zx_status_t internal__fidl_transform__may_break(fidl_transformation_t transforma
     return ZX_OK;
   }
 
+  memset(dst_bytes, 0, dst_num_bytes_capacity);
   Transformer transformer(transformation, src_bytes, src_num_bytes, dst_bytes,
                           dst_num_bytes_capacity);
   zx_status_t status = transformer.Transform(type, 0, 0);

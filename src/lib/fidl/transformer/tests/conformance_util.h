@@ -18,6 +18,7 @@ void FidlTransformSuccessCase(fidl_transformation_t transformation,
                               const std::vector<uint8_t>& input_bytes,
                               const std::vector<uint8_t>& expected_bytes) {
   auto buffer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+  memset(buffer_bytes.get(), 0x33, ZX_CHANNEL_MAX_MSG_BYTES);
   uint32_t bytes_actual;
   const char* error = nullptr;
   zx_status_t status = internal__fidl_transform__may_break(
@@ -34,6 +35,7 @@ template <typename FidlType>
 void FidlTransformFailureCase(fidl_transformation_t transformation,
                               const std::vector<uint8_t>& input_bytes) {
   auto buffer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+  memset(buffer_bytes.get(), 0x33, ZX_CHANNEL_MAX_MSG_BYTES);
   uint32_t bytes_actual;
   const char* error = nullptr;
   internal__fidl_transform__may_break(transformation, FidlType::Type, input_bytes.data(),
