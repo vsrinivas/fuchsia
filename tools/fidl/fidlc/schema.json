@@ -50,15 +50,11 @@
                 "name": {
                     "description": "Attribute name",
                     "type": "string"
-                },
-                "value": {
-                    "description": "Attribute value (deprecated)",
-                    "type": "string"
                 }
             },
             "required": [
                 "name",
-                "value"
+                "arguments"
             ],
             "type": "object"
         },
@@ -161,10 +157,6 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the bits declaration"
                 },
-                "naming_context": {
-                    "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the bits"
-                },
                 "members": {
                     "description": "List of bits members",
                     "items": {
@@ -175,6 +167,10 @@
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
                     "description": "Fully qualified name of the bits"
+                },
+                "naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the bits"
                 },
                 "strict": {
                     "description": "Strictness of the bits",
@@ -353,10 +349,6 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the enum declaration"
                 },
-                "naming_context": {
-                    "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the table"
-                },
                 "maybe_unknown_value": {
                     "description": "Unknown member value (present for flexible enums only)",
                     "type": "integer"
@@ -371,6 +363,10 @@
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
                     "description": "Fully qualified name of the enum"
+                },
+                "naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the table"
                 },
                 "strict": {
                     "description": "Strictness of the enum",
@@ -1223,10 +1219,6 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the struct declaration"
                 },
-                "naming_context": {
-                    "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the struct"
-                },
                 "members": {
                     "description": "List of struct members",
                     "items": {
@@ -1237,6 +1229,10 @@
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
                     "description": "Name of struct"
+                },
+                "naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the struct"
                 },
                 "resource": {
                     "description": "True if the struct is a resource type (declared to contain handles)",
@@ -1325,10 +1321,6 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of table attributes"
                 },
-                "naming_context": {
-                    "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the table"
-                },
                 "members": {
                     "description": "List of table members",
                     "items": {
@@ -1339,6 +1331,10 @@
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
                     "description": "Name of table"
+                },
+                "naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the table"
                 },
                 "resource": {
                     "description": "True if the table is a resource type (may contain handles)",
@@ -1599,10 +1595,6 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of extensible union attributes"
                 },
-                "naming_context": {
-                    "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the union"
-                },
                 "members": {
                     "description": "List of extensible union members",
                     "items": {
@@ -1613,6 +1605,10 @@
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
                     "description": "Name of extensible union"
+                },
+                "naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the union"
                 },
                 "resource": {
                     "description": "True if the union is a resource type (may contain handles)",

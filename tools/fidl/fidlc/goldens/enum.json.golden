@@ -186,7 +186,6 @@
           "maybe_attributes": [
             {
               "name": "unknown",
-              "value": "",
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",

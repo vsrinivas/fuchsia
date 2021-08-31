@@ -4,7 +4,6 @@
   "maybe_attributes": [
     {
       "name": "doc",
-      "value": " library comment #1\n\n library comment #2\n",
       "arguments": [
         {
           "name": "value",
@@ -50,7 +49,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " strict bits comment #1\n\n strict bits comment #2\n",
           "arguments": [
             {
               "name": "value",
@@ -107,7 +105,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -159,7 +156,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -207,7 +203,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " flexible bits comment #1\n\n flexible bits comment #2\n",
           "arguments": [
             {
               "name": "value",
@@ -264,7 +259,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -316,7 +310,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -363,7 +356,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " const comment #1\n\n const comment #3\n",
           "arguments": [
             {
               "name": "value",
@@ -424,7 +416,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " strict enum comment #1.\n\n strict enum comment #2.\n",
           "arguments": [
             {
               "name": "value",
@@ -477,7 +468,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " FOO member comment #1\n\n FOO member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -529,7 +519,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " BAR member comment #1\n\n BAR member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -577,7 +566,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " flexible enum comment #1.\n\n flexible enum comment #2.\n",
           "arguments": [
             {
               "name": "value",
@@ -630,7 +618,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " FOO member comment #1\n\n FOO member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -682,7 +669,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " BAR member comment #1\n\n BAR member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -731,7 +717,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " interface comment #1\n\n interface comment #3\n",
           "arguments": [
             {
               "name": "value",
@@ -776,7 +761,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " method comment #1\n\n method comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -841,7 +825,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " event comment #1\n\n event comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -908,7 +891,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " service comment #1\n\n service comment #3\n",
           "arguments": [
             {
               "name": "value",
@@ -955,7 +937,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " member comment #1\n\n member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -1005,7 +986,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " struct comment #1\n\n struct comment #3\n",
           "arguments": [
             {
               "name": "value",
@@ -1051,7 +1031,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " struct member comment #1\n\n struct member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -1127,7 +1106,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " table comment #1\n\n table comment #3\n",
           "arguments": [
             {
               "name": "value",
@@ -1175,7 +1153,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " table field comment #1\n\n table field comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -1244,7 +1221,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " strict union comment #1\n\n strict union comment #3\n",
           "arguments": [
             {
               "name": "value",
@@ -1292,7 +1268,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " union member comment #1\n\n union member comment #3\n",
               "arguments": [
                 {
                   "name": "value",
@@ -1359,7 +1334,6 @@
       "maybe_attributes": [
         {
           "name": "doc",
-          "value": " flexible union comment #1\n\n flexible union comment #3\n",
           "arguments": [
             {
               "name": "value",
@@ -1407,7 +1381,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " union member comment #1\n\n union member comment #3\n",
               "arguments": [
                 {
                   "name": "value",

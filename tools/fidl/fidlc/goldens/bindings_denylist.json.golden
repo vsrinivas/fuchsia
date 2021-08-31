@@ -17,7 +17,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
-          "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust",
           "arguments": [
             {
               "name": "value",
@@ -88,7 +87,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_deny_list",
-          "value": "there_are_no_bindings_with_this_name",
           "arguments": [
             {
               "name": "value",
@@ -149,7 +147,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
-          "value": "cpp, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
           "arguments": [
             {
               "name": "value",
@@ -217,7 +214,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
-          "value": "cpp, dart, go, rust, syzkaller",
           "arguments": [
             {
               "name": "value",
@@ -313,7 +309,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
-          "value": "dart, go, libfuzzer, rust, syzkaller",
           "arguments": [
             {
               "name": "value",
@@ -359,7 +354,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
-          "value": "cpp, dart, go, libfuzzer, llcpp, rust, syzkaller",
           "arguments": [
             {
               "name": "value",
@@ -408,7 +402,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
-          "value": "cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller",
           "arguments": [
             {
               "name": "value",
@@ -475,7 +468,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
-          "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller",
           "arguments": [
             {
               "name": "value",
@@ -543,7 +535,6 @@
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
-          "value": "cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller",
           "arguments": [
             {
               "name": "value",

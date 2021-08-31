@@ -1024,7 +1024,6 @@
       "maybe_attributes": [
         {
           "name": "transport",
-          "value": "Channel",
           "arguments": [
             {
               "name": "value",
@@ -1519,7 +1518,6 @@
       "maybe_attributes": [
         {
           "name": "transport",
-          "value": "Syscall",
           "arguments": [
             {
               "name": "value",
@@ -1652,7 +1650,6 @@
           "maybe_attributes": [
             {
               "name": "transitional",
-              "value": "",
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1762,7 +1759,6 @@
           "maybe_attributes": [
             {
               "name": "transitional",
-              "value": "",
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1830,7 +1826,6 @@
           "maybe_attributes": [
             {
               "name": "transitional",
-              "value": "",
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1898,7 +1893,6 @@
       "maybe_attributes": [
         {
           "name": "discoverable",
-          "value": "",
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -2507,7 +2501,6 @@
           "maybe_attributes": [
             {
               "name": "bindings_denylist",
-              "value": "rust",
               "arguments": [
                 {
                   "name": "value",
@@ -5676,7 +5669,6 @@
       "maybe_attributes": [
         {
           "name": "result",
-          "value": "",
           "arguments": []
         }
       ],
@@ -5751,7 +5743,6 @@
       "maybe_attributes": [
         {
           "name": "result",
-          "value": "",
           "arguments": []
         }
       ],
@@ -5826,7 +5817,6 @@
       "maybe_attributes": [
         {
           "name": "result",
-          "value": "",
           "arguments": []
         }
       ],
@@ -5902,7 +5892,6 @@
       "maybe_attributes": [
         {
           "name": "result",
-          "value": "",
           "arguments": []
         }
       ],

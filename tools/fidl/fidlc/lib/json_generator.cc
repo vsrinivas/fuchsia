@@ -240,38 +240,6 @@ void JSONGenerator::Generate(const flat::Attribute& value) {
   GenerateObject([&]() {
     const auto& name = fidl::utils::to_lower_snake_case(value.name);
     GenerateObjectMember("name", name, Position::kFirst);
-
-    // TODO(fxbug.dev/74955): the rest of this block currently assumes a single
-    //  string argument, as is the case in the old syntax. This should be
-    //  expanded to parse multiple arguments, and produce an "arguments" JSON
-    //  field, to support the new syntax.
-    if (value.args.size() > 1) {
-      assert(value.args.size() <= 1 && "multiple argument attributes not yet supported");
-    }
-
-    std::string attribute_value;
-    auto arg_constant = value.GetArg();
-    if (arg_constant.has_value()) {
-      switch (arg_constant.value().get().kind) {
-        case flat::ConstantValue::Kind::kDocComment: {
-          auto arg_value =
-              static_cast<const flat::DocCommentConstantValue&>(arg_constant.value().get());
-          GenerateObjectMember("value", arg_value.MakeContents());
-          break;
-        }
-        case flat::ConstantValue::Kind::kString: {
-          auto arg_value =
-              static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
-          GenerateObjectMember("value", arg_value.MakeContents());
-          break;
-        }
-        default: {
-          assert(false && "non-string/doc-comment attribute arguments not yet supported");
-        }
-      }
-    } else {
-      GenerateObjectMember("value", std::string_view());
-    }
     GenerateObjectMember("arguments", value.args);
 
     // TODO(fxbug.dev/7660): Be consistent in emitting location fields.

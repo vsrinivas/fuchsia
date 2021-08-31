@@ -130,7 +130,6 @@
           "maybe_attributes": [
             {
               "name": "doc",
-              "value": " doc comment on compose\n",
               "arguments": [
                 {
                   "name": "value",
