@@ -81,7 +81,7 @@ type DisplaySettings = table {
 };
 
 type LightSensorData = table {
-    /// Brightness from the light sensor measured in lux.
+    /// Brightness from the light sensor (a.k.a. the `Clear` value in RGBC).
     1: illuminance_lux float32;
 
     /// Color measured by light sensor in rgb.
