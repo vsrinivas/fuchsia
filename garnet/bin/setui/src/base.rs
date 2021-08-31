@@ -13,9 +13,14 @@
 //! while particular types, such as setting-specific definitions, are moved to
 //! a common base mod underneath the parent setting mod.
 
+use std::array;
+use std::collections::HashSet;
+use std::convert::TryFrom;
+
+use serde::{Deserialize, Serialize};
+
 use crate::accessibility::types::AccessibilityInfo;
 use crate::audio::types::AudioInfo;
-use crate::device::types::DeviceInfo;
 use crate::display::types::{DisplayInfo, LightData};
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::factory_reset::types::FactoryResetInfo;
@@ -25,10 +30,6 @@ use crate::light::types::LightInfo;
 use crate::night_mode::types::NightModeInfo;
 use crate::privacy::types::PrivacyInfo;
 use crate::setup::types::SetupInfo;
-use serde::{Deserialize, Serialize};
-use std::array;
-use std::collections::HashSet;
-use std::convert::TryFrom;
 
 /// The setting types supported by the service.
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
@@ -39,7 +40,6 @@ pub enum SettingType {
     Accessibility,
     Account,
     Audio,
-    Device,
     Display,
     DoNotDisturb,
     FactoryReset,
@@ -127,7 +127,6 @@ generate_inspect_with_info! {
         Accessibility(AccessibilityInfo),
         Audio(AudioInfo),
         Brightness(DisplayInfo),
-        Device(DeviceInfo),
         FactoryReset(FactoryResetInfo),
         Light(LightInfo),
         LightSensor(LightData),
@@ -172,7 +171,6 @@ conversion_impls! {
     Accessibility(AccessibilityInfo) => Accessibility,
     Audio(AudioInfo) => Audio,
     Brightness(DisplayInfo) => Display,
-    Device(DeviceInfo) => Device,
     FactoryReset(FactoryResetInfo) => FactoryReset,
     Light(LightInfo) => Light,
     LightSensor(LightData) => LightSensor,
@@ -192,7 +190,6 @@ impl From<&SettingInfo> for SettingType {
             SettingInfo::Accessibility(_) => SettingType::Accessibility,
             SettingInfo::Audio(_) => SettingType::Audio,
             SettingInfo::Brightness(_) => SettingType::Display,
-            SettingInfo::Device(_) => SettingType::Device,
             SettingInfo::DoNotDisturb(_) => SettingType::DoNotDisturb,
             SettingInfo::FactoryReset(_) => SettingType::FactoryReset,
             SettingInfo::Input(_) => SettingType::Input,
@@ -224,7 +221,6 @@ pub(crate) trait Merge<Other = Self> {
 pub fn get_default_setting_types() -> HashSet<SettingType> {
     array::IntoIter::new([
         SettingType::Accessibility,
-        SettingType::Device,
         SettingType::Intl,
         SettingType::Privacy,
         SettingType::Setup,
@@ -239,7 +235,6 @@ pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
     array::IntoIter::new([
         SettingType::Accessibility,
         SettingType::Audio,
-        SettingType::Device,
         SettingType::Display,
         SettingType::DoNotDisturb,
         SettingType::FactoryReset,
@@ -256,8 +251,9 @@ pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
 
 #[cfg(test)]
 mod testing {
-    use super::{SettingInfo, UnknownInfo};
     use crate::handler::device_storage::DeviceStorageCompatible;
+
+    use super::{SettingInfo, UnknownInfo};
 
     impl DeviceStorageCompatible for UnknownInfo {
         const KEY: &'static str = "unknown_info";
