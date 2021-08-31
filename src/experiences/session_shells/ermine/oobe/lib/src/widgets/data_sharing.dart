@@ -25,7 +25,7 @@ class DataSharing extends StatelessWidget {
             children: [
               // Title.
               Text(
-                oobe.privacyVisible.value
+                oobe.privacyVisible
                     ? Strings.privacyPolicyTitle
                     : Strings.dataSharingTitle,
                 textAlign: TextAlign.center,
@@ -33,7 +33,7 @@ class DataSharing extends StatelessWidget {
               ),
 
               // Description.
-              if (!oobe.privacyVisible.value)
+              if (!oobe.privacyVisible)
                 Container(
                   alignment: Alignment.center,
                   padding: EdgeInsets.all(24),
@@ -86,7 +86,7 @@ class DataSharing extends StatelessWidget {
                 ),
 
               Expanded(
-                child: oobe.privacyVisible.value
+                child: oobe.privacyVisible
                     ? Container(
                         alignment: Alignment.center,
                         margin: EdgeInsets.all(24),
@@ -110,7 +110,7 @@ class DataSharing extends StatelessWidget {
               Container(
                 alignment: Alignment.center,
                 padding: EdgeInsets.all(24),
-                child: oobe.privacyVisible.value
+                child: oobe.privacyVisible
                     ? OutlinedButton(
                         autofocus: true,
                         onPressed: oobe.hidePrivacy,

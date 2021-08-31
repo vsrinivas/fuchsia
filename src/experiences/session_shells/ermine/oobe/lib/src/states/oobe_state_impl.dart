@@ -23,7 +23,7 @@ class OobeStateImpl with Disposable implements OobeState {
     required this.channelService,
     required this.sshKeysService,
     required this.privacyConsentService,
-  }) : localeStream = channelService.stream.asObservable() {
+  }) : _localeStream = channelService.stream.asObservable() {
     privacyPolicy = privacyConsentService.privacyPolicy;
 
     channelService.onConnected = (connected) => runInAction(() async {
@@ -31,9 +31,9 @@ class OobeStateImpl with Disposable implements OobeState {
             channels
               ..clear()
               ..addAll(await channelService.channels);
-            currentChannel.value = await channelService.currentChannel;
+            _currentChannel.value = await channelService.currentChannel;
           }
-          updateChannelsAvailable.value = connected;
+          _updateChannelsAvailable.value = connected;
         });
   }
 
@@ -46,29 +46,35 @@ class OobeStateImpl with Disposable implements OobeState {
   }
 
   @override
-  final ObservableStream<Locale> localeStream;
+  Locale? get locale => _localeStream.value;
+  final ObservableStream<Locale> _localeStream;
 
   @override
-  final Observable<OobeScreen> screen = OobeScreen.channel.asObservable();
+  OobeScreen get screen => _screen.value;
+  final Observable<OobeScreen> _screen = OobeScreen.channel.asObservable();
 
   @override
-  final Observable<bool> updateChannelsAvailable = false.asObservable();
+  bool get updateChannelsAvailable => _updateChannelsAvailable.value;
+  final Observable<bool> _updateChannelsAvailable = false.asObservable();
 
   @override
   final ObservableList<String> channels = ObservableList.of([]);
 
   @override
-  final Observable<String> currentChannel = ''.asObservable();
+  String get currentChannel => _currentChannel.value;
+  final Observable<String> _currentChannel = ''.asObservable();
 
   @override
   final channelDescriptions = ChannelService.descriptions;
 
   @override
-  final Observable<SshScreen> sshScreen = SshScreen.add.asObservable();
+  SshScreen get sshScreen => _sshScreen.value;
+  final Observable<SshScreen> _sshScreen = SshScreen.add.asObservable();
 
   @override
-  late final sshKeyTitle = (() {
-    switch (sshScreen.value) {
+  String get sshKeyTitle => _sshKeyTitle.value;
+  late final _sshKeyTitle = (() {
+    switch (sshScreen) {
       case SshScreen.add:
         return Strings.oobeSshKeysAddTitle;
       case SshScreen.confirm:
@@ -81,12 +87,13 @@ class OobeStateImpl with Disposable implements OobeState {
   }).asComputed();
 
   @override
-  late final sshKeyDescription = (() {
-    switch (sshScreen.value) {
+  String get sshKeyDescription => _sshKeyDescription.value;
+  late final _sshKeyDescription = (() {
+    switch (sshScreen) {
       case SshScreen.add:
         return Strings.oobeSshKeysAddDesc;
       case SshScreen.confirm:
-        return Strings.oobeSshKeysSelectionDesc(sshKeys.value?.length ?? 0);
+        return Strings.oobeSshKeysSelectionDesc(sshKeys.length);
       case SshScreen.error:
         return errorMessage;
       case SshScreen.exit:
@@ -95,139 +102,138 @@ class OobeStateImpl with Disposable implements OobeState {
   }).asComputed();
 
   @override
-  final Observable<SshImport> importMethod = SshImport.github.asObservable();
+  SshImport get importMethod => _importMethod.value;
+  final Observable<SshImport> _importMethod = SshImport.github.asObservable();
 
   @override
-  ObservableFuture<List<String>> sshKeys =
-      Future<List<String>>.value([]).asObservable();
+  final List<String> sshKeys = ObservableList<String>();
 
   @override
-  final sshKeyIndex = 0.asObservable();
+  int get sshKeyIndex => _sshKeyIndex.value;
+  @override
+  set sshKeyIndex(int value) => _sshKeyIndex.value = value;
+  final _sshKeyIndex = 0.asObservable();
 
   @override
-  final Observable<bool> privacyVisible = false.asObservable();
+  bool get privacyVisible => _privacyVisible.value;
+  final Observable<bool> _privacyVisible = false.asObservable();
 
   @override
   late final String privacyPolicy;
 
   @override
-  late final Action setCurrentChannel = (channel) async {
-    await channelService.setCurrentChannel(channel);
-    currentChannel.value = await channelService.currentChannel;
-  }.asAction();
+  void setCurrentChannel(String channel) => runInAction(() async {
+        await channelService.setCurrentChannel(channel);
+        _currentChannel.value = await channelService.currentChannel;
+      });
 
   @override
-  late final Action prevScreen = () {
-    if (screen.value.index > 0) {
-      // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
-      // finalized.
-      if (screen.value == OobeScreen.sshKeys) {
-        screen.value = OobeScreen.values[screen.value.index - 2];
-      } else {
-        screen.value = OobeScreen.values[screen.value.index - 1];
-      }
-    }
-  }.asAction();
+  void prevScreen() => runInAction(() {
+        if (screen.index > 0) {
+          // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
+          // finalized.
+          if (screen == OobeScreen.sshKeys) {
+            _screen.value = OobeScreen.values[screen.index - 2];
+          } else {
+            _screen.value = OobeScreen.values[screen.index - 1];
+          }
+        }
+      });
 
   @override
-  late final Action nextScreen = () {
-    if (screen.value.index + 1 < OobeScreen.done.index) {
-      // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
-      // finalized.
-      if (screen.value == OobeScreen.channel) {
-        screen.value = OobeScreen.values[screen.value.index + 2];
-      } else {
-        screen.value = OobeScreen.values[screen.value.index + 1];
-      }
-    }
-  }.asAction();
+  void nextScreen() => runInAction(() {
+        if (screen.index + 1 < OobeScreen.done.index) {
+          // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
+          // finalized.
+          if (screen == OobeScreen.channel) {
+            _screen.value = OobeScreen.values[screen.index + 2];
+          } else {
+            _screen.value = OobeScreen.values[screen.index + 1];
+          }
+        }
+      });
 
   @override
-  late final Action agree = () {
-    privacyConsentService.setConsent(consent: true);
-    nextScreen();
-  }.asAction();
+  void agree() => runInAction(() {
+        privacyConsentService.setConsent(consent: true);
+        nextScreen();
+      });
 
   @override
-  late final Action disagree = () {
-    privacyConsentService.setConsent(consent: false);
-    nextScreen();
-  }.asAction();
+  void disagree() => runInAction(() {
+        privacyConsentService.setConsent(consent: false);
+        nextScreen();
+      });
 
   @override
-  late final Action showPrivacy = () {
-    privacyVisible.value = true;
-  }.asAction();
+  void showPrivacy() => runInAction(() => _privacyVisible.value = true);
 
   @override
-  late final Action hidePrivacy = () {
-    privacyVisible.value = false;
-  }.asAction();
+  void hidePrivacy() => runInAction(() => _privacyVisible.value = false);
 
   @override
-  late final Action sshImportMethod = (method) {
-    importMethod.value = method;
-  }.asAction();
+  void sshImportMethod(SshImport? method) =>
+      runInAction(() => _importMethod.value = method!);
 
   @override
-  late final Action sshBackScreen = () {
-    if (sshScreen.value == SshScreen.add) {
-      prevScreen();
-    } else {
-      sshScreen.value = SshScreen.add;
-    }
-  }.asAction();
+  void sshBackScreen() => runInAction(() {
+        if (sshScreen == SshScreen.add) {
+          prevScreen();
+        } else {
+          _sshScreen.value = SshScreen.add;
+        }
+      });
 
   String errorMessage = '';
   @override
-  late final Action sshAdd = (userNameOrKey) {
-    if (sshScreen.value == SshScreen.add) {
-      if (importMethod.value == SshImport.github) {
-        final future = sshKeysService.fetchKeys(userNameOrKey);
-        sshKeys = future.asObservable();
-        future.then((keys) {
-          if (keys.isEmpty) {
-            errorMessage = Strings.oobeSshKeysGithubErrorDesc(userNameOrKey);
-            sshScreen.value = SshScreen.error;
+  void sshAdd(String userNameOrKey) => runInAction(() {
+        if (sshScreen == SshScreen.add) {
+          if (importMethod == SshImport.github) {
+            sshKeysService.fetchKeys(userNameOrKey).then((keys) {
+              if (keys.isEmpty) {
+                errorMessage =
+                    Strings.oobeSshKeysGithubErrorDesc(userNameOrKey);
+                _sshScreen.value = SshScreen.error;
+              } else {
+                sshKeys
+                  ..clear()
+                  ..addAll(keys);
+                _sshScreen.value = SshScreen.confirm;
+              }
+            }).catchError((e) {
+              errorMessage = e.message;
+              _sshScreen.value = SshScreen.error;
+            });
           } else {
-            sshScreen.value = SshScreen.confirm;
+            // Add it manually.
+            _saveKey(userNameOrKey);
           }
-        }).catchError((e) {
-          errorMessage = e.message;
-          sshScreen.value = SshScreen.error;
-        });
-      } else {
-        // Add it manually.
-        _saveKey(userNameOrKey);
-      }
-    } else if (sshScreen.value == SshScreen.confirm) {
-      if (sshKeys.value?.isNotEmpty == true) {
-        final selectedKey = sshKeys.value!.elementAt(sshKeyIndex.value);
-        _saveKey(selectedKey);
-      }
-    }
-  }.asAction();
+        } else if (sshScreen == SshScreen.confirm) {
+          if (sshKeys.isNotEmpty == true) {
+            final selectedKey = sshKeys.elementAt(sshKeyIndex);
+            _saveKey(selectedKey);
+          }
+        }
+      });
 
   void _saveKey(String key) {
     sshKeysService
         .addKey(key)
         .then((_) => runInAction(() {
-              sshScreen.value = SshScreen.exit;
+              _sshScreen.value = SshScreen.exit;
             }))
         .catchError((e) {
       errorMessage = Strings.oobeSshKeysFidlErrorDesc;
-      sshScreen.value = SshScreen.error;
+      _sshScreen.value = SshScreen.error;
     });
   }
 
   @override
-  late final Action skip = () {
-    sshScreen.value = SshScreen.exit;
-  }.asAction();
+  void skip() => runInAction(() => _sshScreen.value = SshScreen.exit);
 
   @override
-  late final Action finish = () {
-    dispose();
-    Isolate.current.kill();
-  }.asAction();
+  void finish() => runInAction(() {
+        dispose();
+        Isolate.current.kill();
+      });
 }

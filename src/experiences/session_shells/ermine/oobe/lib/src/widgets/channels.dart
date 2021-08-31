@@ -48,7 +48,7 @@ class Channels extends StatelessWidget {
           Expanded(
             child: Observer(builder: (context) {
               final channels = oobe.channels;
-              return oobe.updateChannelsAvailable.value
+              return oobe.updateChannelsAvailable
                   ? ListView(
                       scrollDirection: Axis.horizontal,
                       children: [
@@ -67,7 +67,7 @@ class Channels extends StatelessWidget {
                               child: ListTile(
                                 minVerticalPadding: 24,
                                 leading: Radio<String>(
-                                  value: oobe.currentChannel.value,
+                                  value: oobe.currentChannel,
                                   groupValue: channels.elementAt(index),
                                   onChanged: (_) {},
                                 ),
@@ -84,10 +84,10 @@ class Channels extends StatelessWidget {
                                       .bodyText1!
                                       .copyWith(height: 1.55),
                                 ),
-                                selected: oobe.currentChannel.value ==
+                                selected: oobe.currentChannel ==
                                     channels.elementAt(index),
                                 onTap: () => oobe.setCurrentChannel(
-                                    [channels.elementAt(index)]),
+                                    channels.elementAt(index)),
                               ),
                             ),
                         ],

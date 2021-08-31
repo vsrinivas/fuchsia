@@ -51,7 +51,7 @@ class Oobe extends StatelessWidget {
           // Body: Oobe screens.
           Expanded(
             child: Observer(builder: (context) {
-              switch (oobe.screen.value) {
+              switch (oobe.screen) {
                 case OobeScreen.channel:
                   return Channels(oobe);
                 case OobeScreen.dataSharing:
@@ -82,9 +82,8 @@ class Oobe extends StatelessWidget {
                         height: 12,
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.white),
-                          color: index == oobe.screen.value.index
-                              ? Colors.white
-                              : null,
+                          color:
+                              index == oobe.screen.index ? Colors.white : null,
                         ),
                       );
                     }),

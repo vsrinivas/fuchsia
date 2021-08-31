@@ -4,7 +4,6 @@
 
 import 'dart:ui';
 
-import 'package:mobx/mobx.dart';
 import 'package:oobe/src/services/channel_service.dart';
 import 'package:oobe/src/services/privacy_consent_service.dart';
 import 'package:oobe/src/services/ssh_keys_service.dart';
@@ -20,34 +19,34 @@ enum SshScreen { add, confirm, error, exit }
 enum SshImport { github, manual }
 
 /// Defines the state of an application view.
-abstract class OobeState with Store {
-  ObservableStream<Locale> get localeStream;
-  ObservableValue<OobeScreen> get screen;
-  ObservableValue<bool> get updateChannelsAvailable;
-  ObservableValue<String> get currentChannel;
-  ObservableList<String> get channels;
+abstract class OobeState {
+  Locale? get locale;
+  OobeScreen get screen;
+  bool get updateChannelsAvailable;
+  String get currentChannel;
+  List<String> get channels;
   Map<String, String> get channelDescriptions;
-  ObservableValue<SshScreen> get sshScreen;
-  ObservableValue<String> get sshKeyTitle;
-  ObservableValue<String> get sshKeyDescription;
-  ObservableValue<SshImport> get importMethod;
-  ObservableFuture<List<String>> get sshKeys;
-  Observable<int> get sshKeyIndex;
-  ObservableValue<bool> get privacyVisible;
+  SshScreen get sshScreen;
+  String get sshKeyTitle;
+  String get sshKeyDescription;
+  SshImport get importMethod;
+  List<String> get sshKeys;
+  abstract int sshKeyIndex;
+  bool get privacyVisible;
   String get privacyPolicy;
 
-  Action get setCurrentChannel;
-  Action get nextScreen;
-  Action get prevScreen;
-  Action get agree;
-  Action get disagree;
-  Action get showPrivacy;
-  Action get hidePrivacy;
-  Action get sshImportMethod;
-  Action get sshBackScreen;
-  Action get sshAdd;
-  Action get skip;
-  Action get finish;
+  void setCurrentChannel(String channel);
+  void nextScreen();
+  void prevScreen();
+  void agree();
+  void disagree();
+  void showPrivacy();
+  void hidePrivacy();
+  void sshImportMethod(SshImport? method);
+  void sshBackScreen();
+  void sshAdd(String userNameOrKey);
+  void skip();
+  void finish();
 
   factory OobeState.fromEnv() {
     return OobeStateImpl(

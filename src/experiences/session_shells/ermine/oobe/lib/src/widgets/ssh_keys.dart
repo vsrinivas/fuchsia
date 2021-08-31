@@ -27,7 +27,7 @@ class SshKeys extends StatelessWidget {
             children: [
               // Title.
               Text(
-                oobe.sshKeyTitle.value,
+                oobe.sshKeyTitle,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headline3,
               ),
@@ -39,7 +39,7 @@ class SshKeys extends StatelessWidget {
                 child: SizedBox(
                   width: 600,
                   child: Text(
-                    oobe.sshKeyDescription.value,
+                    oobe.sshKeyDescription,
                     textAlign: TextAlign.center,
                     style: Theme.of(context)
                         .textTheme
@@ -51,7 +51,7 @@ class SshKeys extends StatelessWidget {
 
               Expanded(
                 child: Builder(builder: (context) {
-                  switch (oobe.sshScreen.value) {
+                  switch (oobe.sshScreen) {
                     case SshScreen.add:
                       return _buildAddScreen(textController);
                     case SshScreen.confirm:
@@ -79,7 +79,7 @@ class SshKeys extends StatelessWidget {
                     ),
 
                     // Skip button.
-                    if (oobe.sshScreen.value != SshScreen.exit)
+                    if (oobe.sshScreen != SshScreen.exit)
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: OutlinedButton(
@@ -89,18 +89,18 @@ class SshKeys extends StatelessWidget {
                       ),
 
                     // Add button.
-                    if (oobe.sshScreen.value != SshScreen.exit &&
-                        oobe.sshScreen.value != SshScreen.error)
+                    if (oobe.sshScreen != SshScreen.exit &&
+                        oobe.sshScreen != SshScreen.error)
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: OutlinedButton(
-                          onPressed: () => oobe.sshAdd([textController.text]),
+                          onPressed: () => oobe.sshAdd(textController.text),
                           child: Text(Strings.add.toUpperCase()),
                         ),
                       ),
 
                     // Ok button.
-                    if (oobe.sshScreen.value == SshScreen.exit)
+                    if (oobe.sshScreen == SshScreen.exit)
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: OutlinedButton(
@@ -132,15 +132,15 @@ class SshKeys extends StatelessWidget {
                 children: [
                   Radio<SshImport>(
                     value: SshImport.github,
-                    groupValue: oobe.importMethod.value,
-                    onChanged: (method) => oobe.sshImportMethod([method]),
+                    groupValue: oobe.importMethod,
+                    onChanged: oobe.sshImportMethod,
                   ),
                   Text(Strings.oobeSshKeysGithubMethod),
                   SizedBox(width: 24),
                   Radio<SshImport>(
                     value: SshImport.manual,
-                    groupValue: oobe.importMethod.value,
-                    onChanged: (method) => oobe.sshImportMethod([method]),
+                    groupValue: oobe.importMethod,
+                    onChanged: oobe.sshImportMethod,
                   ),
                   Text(Strings.oobeSshKeysManualMethod),
                 ],
@@ -148,7 +148,7 @@ class SshKeys extends StatelessWidget {
               SizedBox(height: 24),
 
               // Github username.
-              if (oobe.importMethod.value == SshImport.github)
+              if (oobe.importMethod == SshImport.github)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -163,7 +163,7 @@ class SshKeys extends StatelessWidget {
                       child: TextField(
                         controller: textController,
                         autofocus: true,
-                        onSubmitted: (text) => oobe.sshAdd([text]),
+                        onSubmitted: oobe.sshAdd,
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -178,7 +178,7 @@ class SshKeys extends StatelessWidget {
                 ),
 
               // Manual key.
-              if (oobe.importMethod.value == SshImport.manual)
+              if (oobe.importMethod == SshImport.manual)
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -196,7 +196,7 @@ class SshKeys extends StatelessWidget {
                           autofocus: true,
                           controller: textController,
                           maxLines: null,
-                          onSubmitted: (text) => oobe.sshAdd([text]),
+                          onSubmitted: oobe.sshAdd,
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             focusedBorder: InputBorder.none,
@@ -218,7 +218,7 @@ class SshKeys extends StatelessWidget {
 
   Widget _buildConfirmScreen(TextEditingController textController) =>
       Observer(builder: (context) {
-        return oobe.sshKeys.status == FutureStatus.fulfilled
+        return oobe.sshKeys.isNotEmpty
             ? Padding(
                 padding: EdgeInsets.only(top: 48),
                 child: Column(
@@ -249,31 +249,29 @@ class SshKeys extends StatelessWidget {
                             ),
                             Expanded(
                               child: ListView.builder(
-                                  itemCount: oobe.sshKeys.value!.length,
+                                  itemCount: oobe.sshKeys.length,
                                   itemBuilder: (context, index) {
                                     return Observer(builder: (context) {
                                       return ListTile(
                                           contentPadding: EdgeInsets.zero,
-                                          selected:
-                                              index == oobe.sshKeyIndex.value,
+                                          selected: index == oobe.sshKeyIndex,
                                           leading: Radio<int>(
                                             value: index,
-                                            groupValue: oobe.sshKeyIndex.value,
+                                            groupValue: oobe.sshKeyIndex,
                                             onChanged: (_) {
                                               runInAction(() {
-                                                oobe.sshKeyIndex.value = index;
+                                                oobe.sshKeyIndex = index;
                                               });
                                             },
                                           ),
                                           title: Text(
-                                            oobe.sshKeys.value!
-                                                .elementAt(index),
+                                            oobe.sshKeys.elementAt(index),
                                             softWrap: true,
                                             maxLines: 3,
                                           ),
                                           onTap: () {
                                             runInAction(() {
-                                              oobe.sshKeyIndex.value = index;
+                                              oobe.sshKeyIndex = index;
                                             });
                                           });
                                     });

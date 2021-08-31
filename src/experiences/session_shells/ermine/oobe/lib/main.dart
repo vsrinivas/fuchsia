@@ -32,7 +32,7 @@ class OobeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      final locale = oobe.localeStream.value;
+      final locale = oobe.locale;
       if (locale == null) {
         return Offstage();
       }
