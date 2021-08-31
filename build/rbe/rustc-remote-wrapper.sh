@@ -131,6 +131,9 @@ comma_remote_inputs=
 # Prefix command with `env` in case it starts with local environment variables.
 rustc_command=(env)
 
+# Paths to direct dependencies.
+extern_paths=()
+
 prev_opt=
 for opt in "$@"
 do
@@ -142,6 +145,13 @@ do
     eval "$prev_opt"=\$opt
     case "$prev_opt" in
       comma_remote_inputs) ;;  # Remove this optarg.
+      # Copy this opt, but also append its value to extern_paths.
+      extern)
+        extern_path=$(expr "X$opt" : '[^=]*=\(.*\)')
+        extern_paths+=("$(realpath --relative-to="$project_root" "$extern_path")")
+        dep_only_command+=( "$dep_only_token" )
+        rustc_command+=( "$opt" )
+        ;;
       # Copy all others.
       *) dep_only_command+=( "$dep_only_token" )
         rustc_command+=( "$opt" )
@@ -279,6 +289,13 @@ EOF
         fi
         ;;
 
+    # Paths of direct dependency rlibs/dylibs: --extern CRATE=LOCATION
+    # Normally, we rely solely on the depfile as complete source of files
+    # needed, but this was added to workaround a bug in depfile generation.
+    # There may be redundant entries between this and the depfiles, but the
+    # reclient tools de-dupe for us.
+    --extern ) prev_opt=extern ;;
+
     --*=* ) ;;  # forward
 
     # Forward other environment variables (or similar looking).
@@ -381,6 +398,7 @@ rm -f "$depfile.nolink"
 #   * direct source files [$top_source]
 #   * indirect source files [$depfile.nolink]
 #   * direct dependent libraries [$depfile.nolink]
+#     * also from --extern CRATE=LOCATION
 #   * transitive dependent libraries [$depfile.nolink]
 #   * objects and libraries used as linker arguments [$link_arg_files]
 #   * system rust libraries [$depfile.nolink]
@@ -402,6 +420,7 @@ remote_inputs=(
   "${rustc_shlibs[@]}"
   "$top_source"
   "${depfile_inputs[@]}"
+  "${extern_paths[@]}"
   "${envvar_files[@]}"
   "${tools_dir[@]}"
   "${link_arg_files[@]}"
@@ -430,6 +449,7 @@ dump_vars() {
   debug_var "depfile" "$depfile"
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
   debug_var "depfile inputs" "${depfile_inputs[@]}"
+  debug_var "extern paths" "${extern_paths[@]}"
   debug_var "tools dir" "${tools_dir[@]}"
   debug_var "extra inputs" "${extra_inputs[@]}"
 }
