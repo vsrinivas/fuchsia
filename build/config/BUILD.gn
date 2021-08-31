@@ -1223,6 +1223,7 @@ config("werror") {
 
 config("temporarily_disable_ubsan_do_not_use") {
   cflags = [ "-fno-sanitize=undefined" ]
+  visibility = [ "//third_party/*" ]
 }
 
 config("no_stack_protector") {
