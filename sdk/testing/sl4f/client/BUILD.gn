@@ -65,6 +65,7 @@ dart_library("client") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input3",
     "//third_party/dart-pkg/pub/archive",
+    "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/meta",

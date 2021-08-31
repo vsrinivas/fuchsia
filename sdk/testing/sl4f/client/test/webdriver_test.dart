@@ -84,7 +84,7 @@ void main(List<String> args) {
       return Future.value(HostAndPort(testDutAddress, remotePort + 10));
     });
 
-    when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) {
+    when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) async {
       WebDriver webDriver = MockWebDriver();
       when(webDriver.currentUrl).thenReturn('https://www.test.com/path/2');
       return webDriver;
@@ -139,7 +139,7 @@ void mockAvailableWebDrivers(MockWebDriverHelper webDriverHelper, MockSl4f sl4f,
     return Future.value(HostAndPort(testDutAddress, remotePort + 10));
   });
 
-  when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) {
+  when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) async {
     final accessPoint = invocation.positionalArguments.first;
     expect(accessPoint.host, equals(testDutAddress));
     final openPort = accessPoint.port;

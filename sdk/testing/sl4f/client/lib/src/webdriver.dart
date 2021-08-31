@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:io' as io;
 
+import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:retry/retry.dart';
 import 'package:sl4f/sl4f.dart';
@@ -252,7 +253,9 @@ class WebDriverConnector {
     for (final remotePort in ports) {
       if (!_webDriverSessions.containsKey(remotePort)) {
         final webDriverSession = await _createWebDriverSession(remotePort);
-        _webDriverSessions[remotePort] = webDriverSession;
+        if (webDriverSession != null) {
+          _webDriverSessions[remotePort] = webDriverSession;
+        }
       }
     }
 
@@ -287,9 +290,16 @@ class WebDriverConnector {
       {int tries = 5}) async {
     final accessPoint = await _portForwarder.forwardPort(remotePort);
     final webDriver = await retry(
-      () => _webDriverHelper.createDriver(accessPoint, _chromedriverPort),
+      () async {
+        return await _webDriverHelper.createDriver(
+            accessPoint, _chromedriverPort);
+      },
       maxAttempts: tries,
     );
+
+    if (webDriver == null) {
+      return null;
+    }
 
     return WebDriverSession(accessPoint, webDriver);
   }
@@ -397,7 +407,18 @@ class WebDriverHelper {
 
   /// Create a new WebDriver pointing to Chromedriver on the given uri and with
   /// given desired capabilities.
-  WebDriver createDriver(HostAndPort debuggerAddress, int chromedriverPort) {
+  Future<WebDriver> createDriver(
+      HostAndPort debuggerAddress, int chromedriverPort) async {
+    // Check if the devtools port is responsive, to allow for this function to
+    // be called on non-existant debugging ports. Without this check webdriver's
+    // createDriver function may infinite loop trying to connect.
+    try {
+      await http.get(
+          Uri.parse('http://${debuggerAddress.host}:${debuggerAddress.port}/'));
+    } on Exception {
+      return null;
+    }
+
     final chromeOptions = {
       'debuggerAddress': '${debuggerAddress.host}:${debuggerAddress.port}'
     };
