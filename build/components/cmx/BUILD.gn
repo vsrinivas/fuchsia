@@ -87,7 +87,6 @@ group("cmx_allowlist") {
     "//garnet/lib/process/*",
     "//garnet/lib/rust/files_async/*",
     "//garnet/lib/rust/io_util/*",
-    "//garnet/lib/rust/sysconfig-client/*",
     "//garnet/lib/rust/webpki-roots-fuchsia/*",
     "//garnet/public/lib/fostr/*",
     "//prebuilt/cts/*",
