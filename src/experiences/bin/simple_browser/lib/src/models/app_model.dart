@@ -20,10 +20,9 @@ import '../utils/browser_shortcuts.dart';
 /// initialLocale: A getter for the initial localization value.
 /// keyboardShortcuts: A getter for the browser's [KeyboardShortcuts].
 class AppModel {
-  late final FocusNode fieldFocus;
   final TabsBloc tabsBloc;
-
   Stream<Locale> _localeStream;
+  late final FocusNode fieldFocus;
   late final KeyboardShortcuts? _keyboardShortcuts;
 
   AppModel({
@@ -108,13 +107,6 @@ class AppModel {
   }
 
   void _focusField() => fieldFocus.requestFocus();
-
-  // ignore: avoid_positional_boolean_parameters
-  void onFocus(bool focused) {
-    if (focused && tabsBloc.currentTab!.webService.isLoaded) {
-      tabsBloc.currentTab!.request.add(SetFocusAction());
-    }
-  }
 
   // TODO: Activate/Deactivate the keyboardShortcuts depending on the browser's
   // focus state when its relevant support is ready (fxb/42185)

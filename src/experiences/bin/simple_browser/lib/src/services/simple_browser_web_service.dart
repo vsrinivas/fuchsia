@@ -6,7 +6,6 @@ import 'dart:async';
 import 'package:fidl/fidl.dart' show InterfaceHandle;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' as views;
 import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
-import 'package:fuchsia_scenic/views.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart'
     show FuchsiaViewConnection;
 import 'package:zircon/zircon.dart';
@@ -24,32 +23,29 @@ class SimpleBrowserWebService {
       SimpleBrowserNavigationEventListener();
 
   /// Used to present webpage in Flutter FuchsiaView
-  late FuchsiaViewConnection _fuchsiaViewConnection;
-  bool _rendered = false;
-
   FuchsiaViewConnection get fuchsiaViewConnection => _fuchsiaViewConnection;
-  bool get isLoaded => _rendered;
+  late FuchsiaViewConnection _fuchsiaViewConnection;
+
+  late views.ViewHolderToken _viewHolderToken;
+
   SimpleBrowserNavigationEventListener get navigationEventListener =>
       _simpleBrowserNavigationEventListener;
 
   factory SimpleBrowserWebService({
     required web.ContextProxy context,
     required void Function(WebPageBloc webPageBloc) popupHandler,
-    void Function()? onLoaded,
   }) {
     final frame = web.FrameProxy();
     context.createFrame(frame.ctrl.request());
     return SimpleBrowserWebService.withFrame(
       frame: frame,
       popupHandler: popupHandler,
-      onLoaded: onLoaded,
     );
   }
 
   SimpleBrowserWebService.withFrame({
     required web.FrameProxy frame,
     required void Function(WebPageBloc webPageBloc) popupHandler,
-    void Function()? onLoaded,
   }) : _frame = frame {
     _frame
 
@@ -64,30 +60,14 @@ class SimpleBrowserWebService {
       );
 
     /// Creates a token pair for the newly-created View.
-    final tokenPair = ViewTokenPair();
-    final viewRefPair = EventPairPair();
-    assert(viewRefPair.status == ZX.OK);
+    final tokenPair = EventPairPair();
+    assert(tokenPair.status == ZX.OK);
+    _viewHolderToken = views.ViewHolderToken(value: tokenPair.first!);
 
-    final viewRef =
-        views.ViewRef(reference: viewRefPair.first!.duplicate(ZX.RIGHTS_BASIC));
-    final viewRefControl = views.ViewRefControl(
-      reference: viewRefPair.second!
-          .duplicate(ZX.DEFAULT_EVENTPAIR_RIGHTS & (~ZX.RIGHT_DUPLICATE)),
-    );
-    final viewRefInject =
-        views.ViewRef(reference: viewRefPair.first!.duplicate(ZX.RIGHTS_BASIC));
+    final viewToken = views.ViewToken(value: tokenPair.second!);
 
-    _frame.createViewWithViewRef(tokenPair.viewToken, viewRefControl, viewRef);
-    _fuchsiaViewConnection = FuchsiaViewConnection(
-      tokenPair.viewHolderToken,
-      viewRef: viewRefInject,
-      onViewStateChanged: (_, state) {
-        if (state == true && !_rendered) {
-          onLoaded?.call();
-          _rendered = true;
-        }
-      },
-    );
+    _frame.createView(viewToken);
+    _fuchsiaViewConnection = FuchsiaViewConnection(_viewHolderToken);
   }
 
   Future<void> enableConsoleLog() =>
@@ -98,12 +78,11 @@ class SimpleBrowserWebService {
     _frame.ctrl.close();
   }
 
+  // TODO(fxr/77454): Make [url] required once the 'any' keyword in mockito is
+  // available in unit tests for null-safe packages.
   Future<void> loadUrl(String url) => _navigationController.loadUrl(
         url,
-        web.LoadUrlParams(
-          type: web.LoadUrlReason.typed,
-          wasUserActivated: true,
-        ),
+        web.LoadUrlParams(type: web.LoadUrlReason.typed),
       );
   Future<void> goBack() => _navigationController.goBack();
   Future<void> goForward() => _navigationController.goForward();
@@ -113,10 +92,8 @@ class SimpleBrowserWebService {
 
 class _PopupListener extends web.PopupFrameCreationListener {
   final void Function(WebPageBloc webPageBloc) _handler;
-  final void Function()? _onLoaded;
 
-  _PopupListener(this._handler, {void Function()? onLoaded})
-      : _onLoaded = onLoaded;
+  _PopupListener(this._handler);
 
   @override
   Future<void> onPopupFrameCreated(
@@ -126,7 +103,6 @@ class _PopupListener extends web.PopupFrameCreationListener {
     final webService = SimpleBrowserWebService.withFrame(
       frame: web.FrameProxy()..ctrl.bind(frame),
       popupHandler: _handler,
-      onLoaded: _onLoaded,
     );
     _handler(
       WebPageBloc(webService: webService),

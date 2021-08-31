@@ -92,10 +92,6 @@ class WebPageBloc {
         break;
       case WebPageActionType.refresh:
         await webService.refresh();
-        break;
-      case WebPageActionType.setFocus:
-        await fuchsiaViewConnection.requestFocus();
-        break;
     }
   }
 }
