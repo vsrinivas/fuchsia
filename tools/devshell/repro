@@ -4,8 +4,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Build
-#### EXPERIMENTAL
-### [EXPERIMENTAL] locally replicate the result of infra builds and tests
+### Locally replicate the result of infra builds and tests
 ##
 ## This command attempts to replicate the result of an infra builder by reading
 ## build information and translating to corresponding local 'fx' commands.
@@ -21,7 +20,7 @@
 ##
 ##  FINT_PARAMS_FILE: a local path to a fint params file, usually a *.textproto file
 ##       in //integration/infra/config/generated/*/fint_params/. For example:
-##       integration/infra/config/generated/fuchsia/fint_params/try/core-x64-release.textproto
+##       integration/infra/config/generated/fuchsia/fint_params/try/core.x64-release.textproto
 ##
 ## Please provide feedback on go/fx-repro-feedback
 
