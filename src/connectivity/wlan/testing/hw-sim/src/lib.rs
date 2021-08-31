@@ -539,14 +539,6 @@ pub fn handle_tx_event<F>(
         Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
             match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
                 Some(mac::MgmtBody::Authentication { auth_hdr, elements }) => {
-                    // Reset authenticator state just in case this is not the 1st connection attempt
-                    // SAE handshake uses multiple frames, so only reset on the first auth frame.
-                    // Note: If we want to test retransmission of auth frame 1, we should find
-                    //       a different way to do this.
-                    if auth_hdr.auth_txn_seq_num == 1 {
-                        authenticator.as_mut().map(|authenticator| authenticator.reset());
-                    }
-
                     match auth_hdr.auth_alg_num {
                         mac::AuthAlgorithmNumber::OPEN => match authenticator {
                             Some(wlan_rsn::Authenticator {
@@ -569,6 +561,19 @@ pub fn handle_tx_event<F>(
                             let mut update_sink = update_sink.as_mut().unwrap_or_else(|| {
                                 panic!("No UpdateSink provided with Authenticator.")
                             });
+                            log::info!("auth_txn_seq_num: {}", { auth_hdr.auth_txn_seq_num });
+                            // Reset authenticator state just in case this is not the 1st
+                            // connection attempt. SAE handshake uses multiple frames, so only
+                            // reset on the first auth frame.
+                            // Note: If we want to test retransmission of auth frame 1, we should
+                            //       find a different way to do this.
+                            if auth_hdr.auth_txn_seq_num == 1 {
+                                authenticator.reset();
+                                // Clear out update sink so that the authenticator doesn't process
+                                // the PMK from the first attempt.
+                                update_sink.clear();
+                            }
+
                             authenticator
                                 .on_sae_frame_rx(
                                     &mut update_sink,
