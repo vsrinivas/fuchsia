@@ -4,6 +4,11 @@
 
 import("../../../gn/build_rules.gni")
 
+declare_args() {
+  # Set this to true to enable bifrost targets.
+  use_spinel_vk_bifrost_targets = false
+}
+
 config("spinel_vk_public_config") {
   # The sources and clients use 'spinel_xxx.h' to include the headers.
   include_dirs = [ "${graphics_compute_dir}/spinel/include/spinel" ]
@@ -75,9 +80,13 @@ config("spinel_vk_ext_public_config") {
 
   defines = []
   if (board_name == "astro") {
-    defines += [ "SPN_VK_TARGET_ARM_BIFROST4" ]
+    if (use_spinel_vk_bifrost_targets) {
+      defines += [ "SPN_VK_TARGET_ARM_BIFROST4" ]
+    }
   } else if (board_name == "sherlock" || board_name == "vim3") {
-    defines += [ "SPN_VK_TARGET_ARM_BIFROST8" ]
+    if (use_spinel_vk_bifrost_targets) {
+      defines += [ "SPN_VK_TARGET_ARM_BIFROST8" ]
+    }
   } else if (board_name == "qemu-x64" || !is_fuchsia) {
     # Include amd, intel, and nvidia targets when building for emulator or host.
     defines += [
@@ -113,9 +122,13 @@ static_library("vk_find_target") {
   # These deps need to agree with spinel_vk_ext_public_config.
   # Future support for dynamic linking will avoid that.
   if (board_name == "astro") {
-    deps += [ "targets/vendors/arm/bifrost4:generate" ]
+    if (use_spinel_vk_bifrost_targets) {
+      deps += [ "targets/vendors/arm/bifrost4:generate" ]
+    }
   } else if (board_name == "sherlock" || board_name == "vim3") {
-    deps += [ "targets/vendors/arm/bifrost8:generate" ]
+    if (use_spinel_vk_bifrost_targets) {
+      deps += [ "targets/vendors/arm/bifrost8:generate" ]
+    }
   } else if (board_name == "qemu-x64" || !is_fuchsia) {
     # Include amd, intel, and nvidia targets when building for emulator or host.
     deps += [
