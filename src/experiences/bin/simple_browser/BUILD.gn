@@ -94,7 +94,7 @@ fuchsia_package("simple-browser") {
   deps = [ ":component" ]
 }
 
-# fx run-host-tests simple_browser_unittests
+# fx test simple_browser_unittests
 flutter_test("simple_browser_unittests") {
   null_safe = true
   sources = [
