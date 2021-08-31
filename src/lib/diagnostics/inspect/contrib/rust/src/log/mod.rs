@@ -122,8 +122,9 @@ macro_rules! inspect_insert {
 
     // Insert optional value
     (@internal $node_writer:expr, var $key:ident?: $val:expr) => {{
-        if let Some(val) = $val {
-            inspect_insert!(@internal $node_writer, var $key: val);
+        match $val {
+            Some(val) => inspect_insert!(@internal $node_writer, var $key: val),
+            None => (),
         }
     }};
 
