@@ -31,6 +31,7 @@ LinuxComponent::LinuxComponent(
       application_controller_(this),
       remote_view_provider_(std::move(remote_view_provider)),
       id_(id) {
+  application_controller_.Bind(std::move(application_controller_request));
   application_controller_.set_error_handler([this](zx_status_t status) { Kill(); });
 
   auto& launch_info = startup_info.launch_info;

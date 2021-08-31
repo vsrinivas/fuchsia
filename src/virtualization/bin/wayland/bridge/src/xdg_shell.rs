@@ -548,8 +548,16 @@ impl XdgToplevel {
                     }
                     // We only support a single view, so we'll stop handling
                     // CreateView requests after we create the first view.
+                    while let Some(request) = stream.try_next().await.unwrap() {
+                        panic!("unsupported view provider request: {:?}", request)
+                    }
                     break;
                 }
+                task_queue.post(|_client| {
+                    // Returning an error causes the client connection to be
+                    // closed (and that typically closes the application).
+                    Err(format_err!("View provider channel closed "))
+                });
                 Ok(())
             }
             .unwrap_or_else(|e: Error| println!("{:?}", e)),
@@ -609,12 +617,6 @@ impl XdgToplevel {
                     view.lock().handle_properies_changed(&properties);
                 }
                 Ok(())
-            }),
-            fidl_fuchsia_ui_gfx::Event::ViewDetachedFromScene(
-                fidl_fuchsia_ui_gfx::ViewDetachedFromSceneEvent { view_id: _ },
-            ) => task_queue.post(move |_client| {
-                // Returning an error causes the client connection to be closed.
-                Err(format_err!("View detached"))
             }),
 
             e => println!("Got unhandled gfx event: {:?}", e),
@@ -782,8 +784,16 @@ impl XdgToplevel {
                     }
                     // We only support a single view, so we'll stop handling
                     // CreateView requests after we create the first view.
+                    while let Some(request) = stream.try_next().await.unwrap() {
+                        panic!("unsupported view provider request: {:?}", request)
+                    }
                     break;
                 }
+                task_queue.post(|_client| {
+                    // Returning an error causes the client connection to be
+                    // closed (and that typically closes the application).
+                    Err(format_err!("View provider channel closed "))
+                });
                 Ok(())
             }
             .unwrap_or_else(|e: Error| println!("{:?}", e)),
