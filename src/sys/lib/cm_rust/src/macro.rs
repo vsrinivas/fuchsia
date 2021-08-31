@@ -17,9 +17,18 @@ struct EnumVariant {
 }
 
 #[derive(FromField)]
+#[darling(attributes(fidl_decl))]
 struct StructField {
     ident: Option<Ident>,
     ty: Type,
+
+    // If `#[fidl_decl(default)]` is specified and the field is `None` in FIDL,
+    // the field will be set to `Default::default()` in the native type.
+    //
+    // NOTE: the `#[darling(default)]` means that the `default` field itself
+    // should default to `false`.
+    #[darling(default)]
+    default: bool,
 }
 
 #[derive(FromDeriveInput)]
@@ -154,8 +163,8 @@ fn generate_struct(struct_ident: Ident, fidl_type: Type, fields: Vec<StructField
     let mut native_into_fidl_lines = Vec::new();
     for field in fields {
         let field_ident = field.ident.unwrap();
-        match wrapper_type(&field.ty) {
-            WrapperType::Raw => {
+        match (wrapper_type(&field.ty), field.default) {
+            (WrapperType::Raw, false) => {
                 fidl_into_native_lines.push(quote_spanned! {field_ident.span()=>
                     #field_ident: self.#field_ident.unwrap().fidl_into_native()
                 });
@@ -163,7 +172,15 @@ fn generate_struct(struct_ident: Ident, fidl_type: Type, fields: Vec<StructField
                     #field_ident: Some(self.#field_ident.native_into_fidl())
                 });
             }
-            WrapperType::Option => {
+            (WrapperType::Raw, true) => {
+                fidl_into_native_lines.push(quote_spanned! {field_ident.span()=>
+                    #field_ident: self.#field_ident.map(FidlIntoNative::fidl_into_native).unwrap_or_default()
+                });
+                native_into_fidl_lines.push(quote_spanned! {field_ident.span()=>
+                    #field_ident: Some(self.#field_ident.native_into_fidl())
+                });
+            }
+            (WrapperType::Option, false) => {
                 fidl_into_native_lines.push(quote_spanned! {field_ident.span()=>
                     #field_ident: self.#field_ident.map(FidlIntoNative::fidl_into_native)
                 });
@@ -171,7 +188,10 @@ fn generate_struct(struct_ident: Ident, fidl_type: Type, fields: Vec<StructField
                     #field_ident: self.#field_ident.map(NativeIntoFidl::native_into_fidl)
                 });
             }
-            WrapperType::Vec => {
+            (WrapperType::Option, true) => {
+                panic!("fidl_decl(default) attribute cannot be used with Option types")
+            }
+            (WrapperType::Vec, false) => {
                 fidl_into_native_lines.push(quote_spanned! {field_ident.span()=>
                     #field_ident: self
                         .#field_ident
@@ -188,6 +208,9 @@ fn generate_struct(struct_ident: Ident, fidl_type: Type, fields: Vec<StructField
                         Some(self.#field_ident.into_iter().map(NativeIntoFidl::native_into_fidl).collect())
                     }
                 });
+            }
+            (WrapperType::Vec, true) => {
+                panic!("fidl_decl(default) attribute cannot be used with Vec types")
             }
         }
     }

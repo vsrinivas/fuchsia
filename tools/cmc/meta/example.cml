@@ -18,6 +18,16 @@
             name: "modular",
             durability: "persistent",
         },
+        {
+            name: "explicit_static",
+            durability: "persistent",
+            allowed_offers: "static_only",
+        },
+        {
+            name: "explicit_dynamic",
+            durability: "persistent",
+            allowed_offers: "static_and_dynamic",
+        },
     ],
     capabilities: [
         {

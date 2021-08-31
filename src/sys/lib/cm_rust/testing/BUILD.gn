@@ -20,6 +20,7 @@ rustc_library("testing") {
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/cm_types",
     "//src/sys/lib/routing",
   ]
 

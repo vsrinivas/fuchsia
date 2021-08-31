@@ -257,12 +257,29 @@ fn main() {
             environment: Some("env_one".to_string()),
             ..ChildDecl::EMPTY
         }];
-        let collections = vec![CollectionDecl {
-            name: Some("modular".to_string()),
-            durability: Some(Durability::Persistent),
-            environment: None,
-            ..CollectionDecl::EMPTY
-        }];
+        let collections = vec![
+            CollectionDecl {
+                name: Some("modular".to_string()),
+                durability: Some(Durability::Persistent),
+                allowed_offers: None,
+                environment: None,
+                ..CollectionDecl::EMPTY
+            },
+            CollectionDecl {
+                name: Some("explicit_static".to_string()),
+                durability: Some(Durability::Persistent),
+                allowed_offers: Some(AllowedOffers::StaticOnly),
+                environment: None,
+                ..CollectionDecl::EMPTY
+            },
+            CollectionDecl {
+                name: Some("explicit_dynamic".to_string()),
+                durability: Some(Durability::Persistent),
+                allowed_offers: Some(AllowedOffers::StaticAndDynamic),
+                environment: None,
+                ..CollectionDecl::EMPTY
+            },
+        ];
         let facets = Object {
             entries: vec![
                 Entry {

@@ -14,6 +14,13 @@ type CollectionDecl = table {
     /// The durability of instances in the collection.
     2: durability Durability;
 
+    /// The kinds of offers that can target the child instances in this
+    /// collection. The default value is `STATIC_ONLY`.
+    ///
+    /// Only components using the `dynamic_offers` restricted feature may set
+    /// this field.
+    4: allowed_offers AllowedOffers;
+
     /// The environment assigned to child instances in this collection.
     ///
     /// Must be non-empty, reference an environment defined in the containing
@@ -32,4 +39,20 @@ type Durability = strict enum {
     /// An instance is started upon creation and is immediately destroyed when
     /// it stops.
     SINGLE_RUN = 3;
+};
+
+/// The kinds of offers that can target the children in a collection.
+type AllowedOffers = strict enum {
+    /// Only static offers may target components in the collection. "Static
+    /// offers" are the offers in the `ComponentDecl` that target the collection
+    /// itself.
+    ///
+    /// This is the default behavior.
+    STATIC_ONLY = 1;
+
+    /// Both static offers and dynamic offers may target components in the
+    /// collection. "Static offers" are the offers in the `ComponentDecl` that
+    /// target the collection itself. "Dynamic offers" are additional offers
+    /// that are passed to `CreateChild` at runtime.
+    STATIC_AND_DYNAMIC = 2;
 };

@@ -216,6 +216,7 @@ impl CollectionDeclBuilder {
         CollectionDeclBuilder(cm_rust::CollectionDecl {
             name: String::new(),
             durability: fsys::Durability::Transient,
+            allowed_offers: cm_types::AllowedOffers::StaticOnly,
             environment: None,
         })
     }
@@ -239,6 +240,13 @@ impl CollectionDeclBuilder {
     /// Sets the CollectionDecl's durability
     pub fn durability(mut self, durability: fsys::Durability) -> Self {
         self.0.durability = durability;
+        self
+    }
+
+    /// Sets the kinds of offers that may target the instances in the
+    /// collection.
+    pub fn allowed_offers(mut self, allowed_offers: cm_types::AllowedOffers) -> Self {
+        self.0.allowed_offers = allowed_offers;
         self
     }
 

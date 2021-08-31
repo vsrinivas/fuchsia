@@ -681,6 +681,7 @@ fn translate_collections(
         out_collections.push(fsys::CollectionDecl {
             name: Some(collection.name.clone().into()),
             durability: Some(collection.durability.clone().into()),
+            allowed_offers: collection.allowed_offers.clone().map(|a| a.into()),
             environment: extract_environment_ref(collection.environment.as_ref()).map(|e| e.into()),
             ..fsys::CollectionDecl::EMPTY
         });
@@ -1569,6 +1570,7 @@ mod tests {
                     fsys::CollectionDecl {
                         name: Some("coll".to_string()),
                         durability: Some(fsys::Durability::Transient),
+                        allowed_offers: None,
                         environment: None,
                         ..fsys::CollectionDecl::EMPTY
                     }
@@ -1713,7 +1715,54 @@ mod tests {
                     fsys::CollectionDecl {
                         name: Some("coll".to_string()),
                         durability: Some(fsys::Durability::Transient),
+                        allowed_offers: None,
                         environment: None,
+                        ..fsys::CollectionDecl::EMPTY
+                    }
+                ]),
+                ..fsys::ComponentDecl::EMPTY
+            },
+        },
+    }}
+
+    test_compile_with_features! { FeatureSet::from(vec![Feature::DynamicOffers]), {
+        test_compile_dynamic_offers => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent",
+                    },
+                    {
+                        "name": "tests",
+                        "durability": "transient",
+                        "allowed_offers": "static_only",
+                    },
+                    {
+                        "name": "dynamic_offers",
+                        "durability": "transient",
+                        "allowed_offers": "static_and_dynamic",
+                    },
+                ],
+            }),
+            output = fsys::ComponentDecl {
+                collections: Some(vec![
+                    fsys::CollectionDecl {
+                        name: Some("modular".to_string()),
+                        durability: Some(fsys::Durability::Persistent),
+                        allowed_offers: None,
+                        ..fsys::CollectionDecl::EMPTY
+                    },
+                    fsys::CollectionDecl {
+                        name: Some("tests".to_string()),
+                        durability: Some(fsys::Durability::Transient),
+                        allowed_offers: Some(fsys::AllowedOffers::StaticOnly),
+                        ..fsys::CollectionDecl::EMPTY
+                    },
+                    fsys::CollectionDecl {
+                        name: Some("dynamic_offers".to_string()),
+                        durability: Some(fsys::Durability::Transient),
+                        allowed_offers: Some(fsys::AllowedOffers::StaticAndDynamic),
                         ..fsys::CollectionDecl::EMPTY
                     }
                 ]),
@@ -2829,6 +2878,7 @@ mod tests {
                     fsys::CollectionDecl {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
+                        allowed_offers: None,
                         environment: None,
                         ..fsys::CollectionDecl::EMPTY
                     }
@@ -2930,12 +2980,14 @@ mod tests {
                     fsys::CollectionDecl {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
+                        allowed_offers: None,
                         environment: None,
                         ..fsys::CollectionDecl::EMPTY
                     },
                     fsys::CollectionDecl {
                         name: Some("tests".to_string()),
                         durability: Some(fsys::Durability::Transient),
+                        allowed_offers: None,
                         environment: Some("myenv".to_string()),
                         ..fsys::CollectionDecl::EMPTY
                     }
@@ -3548,6 +3600,7 @@ mod tests {
                     fsys::CollectionDecl {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
+                        allowed_offers: None,
                         environment: None,
                         ..fsys::CollectionDecl::EMPTY
                     }

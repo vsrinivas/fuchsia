@@ -58,6 +58,23 @@ macro_rules! fidl_translations_identical {
     };
 }
 
+/// Generates `FidlIntoNative` and `NativeIntoFidl` implementations that
+/// delegate to existing `Into` implementations.
+macro_rules! fidl_translations_from_into {
+    ($native_type:ty, $fidl_type:ty) => {
+        impl FidlIntoNative<$native_type> for $fidl_type {
+            fn fidl_into_native(self) -> $native_type {
+                self.into()
+            }
+        }
+        impl NativeIntoFidl<$fidl_type> for $native_type {
+            fn native_into_fidl(self) -> $fidl_type {
+                self.into()
+            }
+        }
+    };
+}
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Default)]
 #[fidl_decl(fidl_table = "fsys::ComponentDecl")]
 pub struct ComponentDecl {
@@ -675,6 +692,9 @@ pub struct CreateChildArgs {
 pub struct CollectionDecl {
     pub name: String,
     pub durability: fsys::Durability,
+
+    #[fidl_decl(default)]
+    pub allowed_offers: cm_types::AllowedOffers,
     pub environment: Option<String>,
 }
 
@@ -772,6 +792,9 @@ fidl_translations_identical!(fio2::Operations);
 fidl_translations_identical!(fsys::EnvironmentExtends);
 fidl_translations_identical!(fsys::StorageId);
 fidl_translations_identical!(Vec<fprocess::HandleInfo>);
+
+fidl_translations_from_into!(cm_types::AllowedOffers, fsys::AllowedOffers);
+fidl_translations_from_into!(CapabilityName, String);
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1026,18 +1049,6 @@ impl FidlIntoNative<PathBuf> for String {
 impl NativeIntoFidl<String> for PathBuf {
     fn native_into_fidl(self) -> String {
         self.into_os_string().into_string().expect("invalid utf8")
-    }
-}
-
-impl FidlIntoNative<CapabilityName> for String {
-    fn fidl_into_native(self) -> CapabilityName {
-        self.into()
-    }
-}
-
-impl NativeIntoFidl<String> for CapabilityName {
-    fn native_into_fidl(self) -> String {
-        self.to_string()
     }
 }
 
@@ -1855,12 +1866,14 @@ mod tests {
                      fsys::CollectionDecl {
                          name: Some("modular".to_string()),
                          durability: Some(fsys::Durability::Persistent),
+                         allowed_offers: Some(fsys::AllowedOffers::StaticOnly),
                          environment: None,
                          ..fsys::CollectionDecl::EMPTY
                      },
                      fsys::CollectionDecl {
                          name: Some("tests".to_string()),
                          durability: Some(fsys::Durability::Transient),
+                         allowed_offers: Some(fsys::AllowedOffers::StaticAndDynamic),
                          environment: Some("test_env".to_string()),
                          ..fsys::CollectionDecl::EMPTY
                      },
@@ -2126,11 +2139,13 @@ mod tests {
                         CollectionDecl {
                             name: "modular".to_string(),
                             durability: fsys::Durability::Persistent,
+                            allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             environment: None,
                         },
                         CollectionDecl {
                             name: "tests".to_string(),
                             durability: fsys::Durability::Transient,
+                            allowed_offers: cm_types::AllowedOffers::StaticAndDynamic,
                             environment: Some("test_env".to_string()),
                         },
                     ],
@@ -2408,6 +2423,87 @@ mod tests {
                 obj.insert("obj".to_string(), Value::Obj(obj_outer));
                 obj.insert("null".to_string(), Value::Null);
                 obj
+            },
+        },
+
+        all_with_omitted_defaults => {
+            input = fsys::ComponentDecl {
+                program: Some(fsys::ProgramDecl {
+                    runner: Some("elf".to_string()),
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
+                }),
+                uses: Some(vec![]),
+                exposes: Some(vec![]),
+                offers: Some(vec![]),
+                capabilities: Some(vec![]),
+                children: Some(vec![]),
+                collections: Some(vec![
+                     fsys::CollectionDecl {
+                         name: Some("modular".to_string()),
+                         durability: Some(fsys::Durability::Persistent),
+                         allowed_offers: None,
+                         environment: None,
+                         ..fsys::CollectionDecl::EMPTY
+                     },
+                     fsys::CollectionDecl {
+                         name: Some("tests".to_string()),
+                         durability: Some(fsys::Durability::Transient),
+                         allowed_offers: Some(fsys::AllowedOffers::StaticOnly),
+                         environment: Some("test_env".to_string()),
+                         ..fsys::CollectionDecl::EMPTY
+                     },
+                     fsys::CollectionDecl {
+                         name: Some("dyn_offers".to_string()),
+                         durability: Some(fsys::Durability::Transient),
+                         allowed_offers: Some(fsys::AllowedOffers::StaticAndDynamic),
+                         ..fsys::CollectionDecl::EMPTY
+                     },
+                ]),
+                facets: Some(fsys::Object{entries: vec![]}),
+                environments: Some(vec![]),
+                ..fsys::ComponentDecl::EMPTY
+            },
+            result = {
+                ComponentDecl {
+                    program: Some(ProgramDecl {
+                        runner: Some("elf".try_into().unwrap()),
+                        info: fdata::Dictionary {
+                            entries: Some(vec![]),
+                            ..fdata::Dictionary::EMPTY
+                        },
+                    }),
+                    uses: vec![],
+                    exposes: vec![],
+                    offers: vec![],
+                    capabilities: vec![],
+                    children: vec![],
+                    collections: vec![
+                        CollectionDecl {
+                            name: "modular".to_string(),
+                            durability: fsys::Durability::Persistent,
+                            allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                            environment: None,
+                        },
+                        CollectionDecl {
+                            name: "tests".to_string(),
+                            durability: fsys::Durability::Transient,
+                            allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                            environment: Some("test_env".to_string()),
+                        },
+                        CollectionDecl {
+                            name: "dyn_offers".to_string(),
+                            durability: fsys::Durability::Transient,
+                            allowed_offers: cm_types::AllowedOffers::StaticAndDynamic,
+                            environment: None,
+                        },
+                    ],
+                    facets: Some(fsys::Object{entries: vec![]}),
+                    environments: vec![]
+                }
             },
         },
     }

@@ -595,6 +595,25 @@ impl Default for OnTerminate {
     }
 }
 
+/// The kinds of offers that can target components in a given collection. See
+/// [`AllowedOffers`].
+///
+/// [`AllowedOffers`]: ../../fidl_fuchsia_sys2/enum.AllowedOffers.html
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AllowedOffers {
+    StaticOnly,
+    StaticAndDynamic,
+}
+
+symmetrical_enums!(AllowedOffers, fsys::AllowedOffers, StaticOnly, StaticAndDynamic);
+
+impl Default for AllowedOffers {
+    fn default() -> Self {
+        Self::StaticOnly
+    }
+}
+
 /// Offered dependency type. See [`DependencyType`].
 ///
 /// [`DependencyType`]: ../../fidl_fuchsia_sys2/enum.DependencyType.html

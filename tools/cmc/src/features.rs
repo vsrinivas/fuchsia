@@ -42,6 +42,9 @@ impl From<Vec<Feature>> for FeatureSet {
 pub enum Feature {
     /// Enables unified services support in CML.
     Services,
+
+    /// Allows `ComponentDecl.allowed_offers` to be specified in CML.
+    DynamicOffers,
 }
 
 impl FromStr for Feature {
@@ -49,6 +52,7 @@ impl FromStr for Feature {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "services" => Ok(Feature::Services),
+            "dynamic_offers" => Ok(Feature::DynamicOffers),
             _ => Err(format!("unrecognized feature \"{}\"", s)),
         }
     }
@@ -58,6 +62,7 @@ impl fmt::Display for Feature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Feature::Services => "services",
+            Feature::DynamicOffers => "dynamic_offers",
         })
     }
 }
@@ -69,11 +74,13 @@ mod tests {
     #[test]
     fn feature_is_parsed() {
         assert_eq!(Feature::Services, "services".parse::<Feature>().unwrap());
+        assert_eq!(Feature::DynamicOffers, "dynamic_offers".parse::<Feature>().unwrap());
     }
 
     #[test]
     fn feature_is_printed() {
         assert_eq!("services", Feature::Services.to_string());
+        assert_eq!("dynamic_offers", Feature::DynamicOffers.to_string());
     }
 
     #[test]

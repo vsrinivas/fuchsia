@@ -26,8 +26,8 @@ use {
 };
 
 pub use cm_types::{
-    DependencyType, Durability, Name, OnTerminate, ParseError, Path, RelativePath, StartupMode,
-    StorageId, Url,
+    AllowedOffers, DependencyType, Durability, Name, OnTerminate, ParseError, Path, RelativePath,
+    StartupMode, StorageId, Url,
 };
 
 lazy_static! {
@@ -1241,6 +1241,7 @@ pub struct Child {
 pub struct Collection {
     pub name: Name,
     pub durability: Durability,
+    pub allowed_offers: Option<AllowedOffers>,
     pub environment: Option<EnvironmentRef>,
 }
 

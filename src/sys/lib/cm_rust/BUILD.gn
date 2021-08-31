@@ -55,7 +55,10 @@ rustc_macro("cm_rust_derive") {
 
 fuchsia_unittest_package("cm_rust_tests") {
   manifest = "meta/cm_rust_tests.cmx"
-  deps = [ ":cm_rust_test" ]
+  deps = [
+    ":cm_rust_test",
+    "//src/sys/lib/cm_types",
+  ]
   test_specs = {
   }
 }

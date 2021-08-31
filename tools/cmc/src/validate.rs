@@ -306,6 +306,10 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_collection(&self, collection: &'a cml::Collection) -> Result<(), Error> {
+        if collection.allowed_offers.is_some() {
+            self.features.check(Feature::DynamicOffers)?;
+        }
+
         if let Some(environment_ref) = &collection.environment {
             match environment_ref {
                 cml::EnvironmentRef::Named(environment_name) => {
@@ -4840,6 +4844,63 @@ mod tests {
                 ]
             }),
             Err(Error::RestrictedFeature(s)) if s == "services"
+        ),
+    }
+
+    // Tests the use of `allowed_offers` when the "DynamicOffers" feature is set.
+    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::DynamicOffers]), {
+        test_cml_validate_set_allowed_offers_static(
+            json!({
+                "collections": [
+                    {
+                        "name": "foo",
+                        "durability": "transient",
+                        "allowed_offers": "static_only"
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_validate_set_allowed_offers_dynamic(
+            json!({
+                "collections": [
+                    {
+                        "name": "foo",
+                        "durability": "transient",
+                        "allowed_offers": "static_and_dynamic"
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+    }}
+
+    // Tests that the use of `allowed_offers` fails when the "DynamicOffers"
+    // feature is not set.
+    test_validate_cml! {
+        test_cml_static_only_without_feature(
+            json!({
+                "collections": [
+                    {
+                        "name": "foo",
+                        "durability": "transient",
+                        "allowed_offers": "static_only"
+                    },
+                ],
+            }),
+            Err(Error::RestrictedFeature(s)) if s == "dynamic_offers"
+        ),
+        test_cml_static_and_dynamic_offers_without_feature(
+            json!({
+                "collections": [
+                    {
+                        "name": "foo",
+                        "durability": "transient",
+                        "allowed_offers": "static_and_dynamic"
+                    },
+                ],
+            }),
+            Err(Error::RestrictedFeature(s)) if s == "dynamic_offers"
         ),
     }
 
