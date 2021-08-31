@@ -47,6 +47,7 @@ group("common") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/inspect",
@@ -63,6 +64,7 @@ driver_module("focaltech-driver") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "ft_device.cc",
+    "ft_firmware.cc",
     "ft_firmware_none.cc",
   ]
   deps = [ ":common" ]
@@ -81,7 +83,10 @@ driver_module("focaltech-sherlock-driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "ft_device.cc" ]
+  sources = [
+    "ft_device.cc",
+    "ft_firmware.cc",
+  ]
   deps = [
     ":common",
     ":firmware-sherlock",
@@ -99,12 +104,14 @@ test("focaltech-test-bin") {
   sources = [
     "ft_device.cc",
     "ft_device_test.cc",
+    "ft_firmware.cc",
   ]
   deps = [
     ":common",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
   ]
 }

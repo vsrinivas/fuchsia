@@ -30,7 +30,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 
 #include "src/ui/input/drivers/focaltech/focaltech_touch_bind.h"
 
@@ -341,30 +340,6 @@ void FtDevice::LogRegisterValue(uint8_t addr, const char* name) {
     node_.CreateString(name, "error", &values_);
     zxlogf(ERROR, "  %-16s: error %d", name, status);
   }
-}
-
-zx_status_t FtDevice::UpdateFirmwareIfNeeded(const FocaltechMetadata& metadata) {
-  if (!metadata.needs_firmware) {
-    return ZX_OK;
-  }
-
-  fbl::Span<const uint8_t> firmware;
-  const fbl::Span<const FirmwareEntry> entries(kFirmwareEntries, kNumFirmwareEntries);
-  for (const auto& entry : entries) {
-    if (entry.display_vendor == metadata.display_vendor &&
-        entry.ddic_version == metadata.ddic_version) {
-      firmware = fbl::Span(entry.firmware_data, entry.firmware_size);
-      break;
-    }
-  }
-
-  if (firmware.empty()) {
-    zxlogf(WARNING, "No firmware found for vendor %u DDIC %u", metadata.display_vendor,
-           metadata.ddic_version);
-  }
-
-  // TODO(fxbug.dev/75032): Implement the firmware update process.
-  return ZX_OK;
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

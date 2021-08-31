@@ -12,6 +12,7 @@
 #include <lib/focaltech/focaltech.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/interrupt.h>
+#include <lib/zx/status.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -20,11 +21,10 @@
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
+#include <fbl/span.h>
 #include <hid/ft3x27.h>
 #include <hid/ft5726.h>
 #include <hid/ft6336.h>
-
-#include "ft_firmware.h"
 
 // clang-format off
 #define FTS_REG_CURPOINT                    0x02
@@ -106,6 +106,30 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
   static constexpr uint32_t kFingerRptSize = 6;
 
   static constexpr size_t kMaxI2cTransferLength = 8;
+
+  static uint8_t CalculateEcc(const uint8_t* buffer, size_t size, uint8_t initial = 0);
+
+  // Enters romboot and returns true if firmware download is needed, returns false otherwise.
+  zx::status<bool> CheckFirmwareAndStartRomboot(uint8_t firmware_version);
+  zx_status_t StartRomboot();
+  zx_status_t WaitForRomboot();
+
+  zx::status<uint16_t> GetBootId();
+
+  // Returns true if the expected value was read before the timeout, false if not.
+  zx::status<bool> WaitForFlashStatus(uint16_t expected_value, int tries, zx::duration retry_sleep);
+
+  zx_status_t EraseFlash(size_t firmware_size);
+  zx_status_t SendFirmware(fbl::Span<const uint8_t> firmware);
+  zx_status_t SendFirmwarePacket(uint32_t address, const uint8_t* buffer, size_t size);
+  zx_status_t CheckFirmwareEcc(size_t size, uint8_t expected_ecc);
+
+  zx::status<uint8_t> ReadReg8(uint8_t address);
+  zx::status<uint16_t> ReadReg16(uint8_t address);
+
+  zx_status_t Write8(uint8_t value);
+  zx_status_t WriteReg8(uint8_t address, uint8_t value);
+  zx_status_t WriteReg16(uint8_t address, uint16_t value);
 
   zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
 
