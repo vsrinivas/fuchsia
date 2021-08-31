@@ -350,8 +350,8 @@ impl CachedSessionStream {
     ) -> Result<Self> {
         let mut entries = session_dir.sort_entries().await?;
 
-        if stream_mode == StreamMode::SnapshotRecentThenSubscribe && entries.len() > 2 {
-            entries.drain(0..entries.len() - 2);
+        if stream_mode == StreamMode::SnapshotRecentThenSubscribe && entries.len() > 4 {
+            entries.drain(0..(entries.len() - 4));
         }
 
         if let Some(start_ts) = start_target_timestamp {
@@ -1422,23 +1422,38 @@ mod test {
         let log2 = make_valid_log(TIMESTAMP, "log2".to_string());
         let log3 = make_valid_log(TIMESTAMP, "log3".to_string());
         let log4 = make_valid_log(TIMESTAMP, "log4".to_string());
-        streamer.append_logs(vec![log.clone(), log.clone(), log2.clone(), log3.clone()]).await?;
+        let log5 = make_valid_log(TIMESTAMP, "log5".to_string());
+        let log6 = make_valid_log(TIMESTAMP, "log6".to_string());
+        streamer
+            .append_logs(vec![
+                log.clone(),
+                log.clone(),
+                log2.clone(),
+                log3.clone(),
+                log4.clone(),
+                log5.clone(),
+            ])
+            .await?;
 
-        // SnapshotRecent will include only the most recent two chunks
+        // SnapshotRecent will include only the most recent four chunks
         let mut iterator =
             streamer.stream_entries(StreamMode::SnapshotRecentThenSubscribe, None).await?;
         verify_log(&mut iterator, log2.clone()).await.context(format!("{:?}", log2)).unwrap();
         verify_log(&mut iterator, log3.clone()).await.context(format!("{:?}", log3)).unwrap();
+        verify_log(&mut iterator, log4.clone()).await.context(format!("{:?}", log4)).unwrap();
+        verify_log(&mut iterator, log5.clone()).await.context(format!("{:?}", log5)).unwrap();
         verify_times_out(&mut iterator).await;
 
-        streamer.append_logs(vec![log4.clone()]).await?;
-        verify_log(&mut iterator, log4.clone()).await.context(format!("{:?}", log4)).unwrap();
+        streamer.append_logs(vec![log6.clone()]).await?;
+        verify_log(&mut iterator, log6.clone()).await.context(format!("{:?}", log6)).unwrap();
         verify_times_out(&mut iterator).await;
 
         let mut iterator =
             streamer.stream_entries(StreamMode::SnapshotRecentThenSubscribe, None).await?;
         verify_log(&mut iterator, log3.clone()).await.context(format!("{:?}", log3)).unwrap();
         verify_log(&mut iterator, log4.clone()).await.context(format!("{:?}", log4)).unwrap();
+        verify_log(&mut iterator, log5.clone()).await.context(format!("{:?}", log5)).unwrap();
+        verify_log(&mut iterator, log6.clone()).await.context(format!("{:?}", log6)).unwrap();
         verify_times_out(&mut iterator).await;
 
         Ok(())
