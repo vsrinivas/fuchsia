@@ -194,7 +194,7 @@ if (!defined(toolchain_variant.name)) {
 #
 #   no variant    --->  lib/                 ""               (default target toolchain)
 #   thinlto       --->  lib/                 ""               (uninstrumented)
-#   ubsan-asan    --->  lib/ubsan-asan/      "ubsan-asan/"    (instrumented)
+#   asan-ubsan    --->  lib/asan-ubsan/      "asan-ubsan/"    (instrumented)
 #   asan-fuzzer   --->  lib/asan/            "asan/"          (instrumented + fuzzing)
 #
 # Note that to run an ELF executable, the system will look its PT_INTERP entry, prepend
