@@ -109,8 +109,8 @@ class MsiDispatcherImpl : public MsiDispatcher {
       : MsiDispatcher(ktl::move(alloc), ktl::move(mapping), base_irq_id, msi_id, register_int_fn),
         has_platform_pvm_(msi_supports_masking()),
         has_cap_pvm_(has_cap_pvm),
-        capability_(reinterpret_cast<MsiCapability*>(this->mapping()->base() + reg_offset)),
-        mask_bits_reg_((has_64bit) ? &capability_->mask_bits_64 : &capability_->mask_bits_32) {}
+        has_64bit_(has_64bit),
+        capability_(reinterpret_cast<MsiCapability*>(this->mapping()->base() + reg_offset)) {}
   void MaskInterrupt() final;
   void UnmaskInterrupt() final;
 
@@ -121,11 +121,11 @@ class MsiDispatcherImpl : public MsiDispatcher {
   // Whether or not the given device function supports per vector masking within
   // the PCI MSI capability.
   const bool has_cap_pvm_;
+  const bool has_64bit_;
   // A pointer to the MSI Mask Register for this specific device function. To
   // synchronize with other MSI interactions in the device it requires the MSI
   // allocation's lock.
-  volatile MsiCapability* const capability_ TA_GUARDED(allocation()->lock()) = nullptr;
-  volatile mutable uint32_t* mask_bits_reg_ TA_GUARDED(allocation()->lock()) = nullptr;
+  volatile MsiCapability* const capability_ TA_GUARDED(allocation()->lock());
 };
 
 // For MSI-X, the kernel only needs to interact with a given table entry for a specific vector.

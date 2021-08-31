@@ -90,7 +90,7 @@ zx_status_t AcpiCrOsEcUsbPdDevice::HandleEvent() {
 
 zx_status_t AcpiCrOsEcUsbPdDevice::GetPorts() {
   ec_response_usb_pd_ports response;
-  zx_status_t status = ec_->IssueCommand(EC_CMD_USB_PD_PORTS, 0, &response);
+  zx_status_t status = ec_->IssueCommand(EC_CMD_USB_PD_PORTS, 0, response);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to issue EC_CMD_USB_PD_PORTS: %s", zx_status_get_string(status));
     return status;
@@ -117,7 +117,7 @@ zx_status_t AcpiCrOsEcUsbPdDevice::UpdateState(bool* changed) {
         .port = port,
     };
     ec_response_usb_pd_power_info response;
-    zx_status_t status = ec_->IssueCommand(EC_CMD_USB_PD_POWER_INFO, 0, request, &response);
+    zx_status_t status = ec_->IssueCommand(EC_CMD_USB_PD_POWER_INFO, 0, request, response);
     if (status != ZX_OK) {
       return status;
     }

@@ -89,7 +89,7 @@ zx_status_t RealEmbeddedController::Create(fbl::RefPtr<EmbeddedController>* out)
 
   // Cache the feature set.
   zx_status_t status =
-      dev->EmbeddedController::IssueCommand(EC_CMD_GET_FEATURES, 0, &dev->features_);
+      dev->EmbeddedController::IssueCommand(EC_CMD_GET_FEATURES, 0, dev->features_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi-cros-ec-core: get features failed: %d", status);
     return status;
@@ -111,7 +111,7 @@ bool RealEmbeddedController::SupportsFeature(enum ec_feature_code feature) const
   return features_.flags[0] & EC_FEATURE_MASK_0(feature);
 }
 
-zx_status_t GetECVersion(EmbeddedController* controller, ec_response_get_version* version) {
+zx_status_t GetECVersion(EmbeddedController* controller, ec_response_get_version& version) {
   // Fetch the version strings.
   zx_status_t status = controller->IssueCommand(EC_CMD_GET_VERSION, 0, version);
   if (status != ZX_OK) {
@@ -120,8 +120,8 @@ zx_status_t GetECVersion(EmbeddedController* controller, ec_response_get_version
 
   // The spec states that returned strings should be NUL terminated, but we re-write
   // the final NUL to avoid undefined behaviour if the EC is out of spec.
-  version->version_string_ro[sizeof(version->version_string_ro) - 1] = 0;
-  version->version_string_rw[sizeof(version->version_string_rw) - 1] = 0;
+  version.version_string_ro[sizeof(version.version_string_ro) - 1] = 0;
+  version.version_string_rw[sizeof(version.version_string_rw) - 1] = 0;
   return ZX_OK;
 }
 
@@ -129,7 +129,7 @@ zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t*
                         ACPI_HANDLE acpi_handle) {
   // Get EC version.
   ec_response_get_version version;
-  if (zx_status_t status = GetECVersion(controller.get(), &version); status != ZX_OK) {
+  if (zx_status_t status = GetECVersion(controller.get(), version); status != ZX_OK) {
     zxlogf(DEBUG, "acpi-cros-ec-core: failed to get EC version details.");
     return status;
   }

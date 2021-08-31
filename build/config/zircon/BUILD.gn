@@ -313,9 +313,6 @@ config("default_warnings") {
     "-Wextra",
     "-Wimplicit-fallthrough",
     "-Wno-unused-parameter",
-
-    # TODO(fxbug.dev/37765): Temporarily disable this warning to unblock the GCC roll.
-    "-Wno-address-of-packed-member",
   ]
   cflags_c = [
     "-Wstrict-prototypes",
