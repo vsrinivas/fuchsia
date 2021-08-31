@@ -54,6 +54,8 @@ struct MountSubCommand {}
 #[argh(subcommand, name = "fsck")]
 struct FsckSubCommand {}
 
+// The number of threads chosen here must exceed the number of concurrent system calls to paged VMOs
+// that we allow since otherwise deadlocks are possible.  Search for CONCURRENT_SYSCALLS.
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init().unwrap();

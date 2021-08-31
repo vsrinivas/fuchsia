@@ -12,6 +12,7 @@ pub mod object_handle;
 pub mod object_store;
 #[cfg(target_os = "fuchsia")]
 pub mod remote_crypt;
+pub mod round;
 #[cfg(target_os = "fuchsia")]
 pub mod server;
 #[cfg(test)]

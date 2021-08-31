@@ -27,7 +27,6 @@ struct PagerThread {
     pager: zx::Pager,
     port: zx::Port,
     inner: Mutex<Inner>,
-    zero_vmo: zx::Vmo,
 }
 
 struct Inner {
@@ -65,8 +64,6 @@ impl FileHolder {
     }
 }
 
-const ZERO_VMO_SIZE: u64 = 1048_576;
-
 /// Pager handles page requests. It is a per-volume object.
 impl Pager {
     pub fn new() -> Result<Self, Error> {
@@ -74,7 +71,6 @@ impl Pager {
             pager: zx::Pager::create(zx::PagerOptions::empty())?,
             port: zx::Port::create()?,
             inner: Mutex::new(Inner { files: HashMap::new(), terminate_event: Event::new() }),
-            zero_vmo: zx::Vmo::create(ZERO_VMO_SIZE)?,
         });
         let thread_clone = thread.clone();
         std::thread::spawn(move || {
@@ -195,23 +191,10 @@ impl PagerThread {
                     Some(FileHolder::Strong(file)) => file.clone(),
                     Some(FileHolder::Weak(file)) => {
                         if let Some(file) = file.upgrade() {
-                            // TODO(fxbug.dev/82198): at the moment all writes to the VMO trigger
-                            // page requests, so we need to service requests even if we haven't
-                            // given the VMO to any clients.  We can just supply zero pages.  The
-                            // only path that can trigger this at the moment is writes that use
-                            // Fuchsia.io and they are guaranteed to be less than ZERO_VMO_SIZE at
-                            // the moment.
-                            assert!(contents.range().end - contents.range().start <= ZERO_VMO_SIZE);
-                            if let Err(e) = self.pager.supply_pages(
-                                file.vmo(),
-                                contents.range(),
-                                &self.zero_vmo,
-                                0,
-                            ) {
-                                log::error!("Supply zero pages error: {:?}", e);
-                            }
+                            file
+                        } else {
+                            return false;
                         }
-                        return false;
                     }
                     _ => return false,
                 };

@@ -21,11 +21,11 @@ use {
         object_store::{
             filesystem::{Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
-            round_down,
             store_object_handle::DirectWriter,
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
             CachingObjectHandle, HandleOptions, ObjectStore,
         },
+        round::round_down,
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},

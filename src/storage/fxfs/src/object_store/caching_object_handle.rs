@@ -10,15 +10,15 @@ use {
         },
         object_store::{
             allocator::{self},
-            data_buffer::{DataBufferFactory, NativeDataBuffer},
             record::Timestamp,
-            store_object_handle::{round_down, round_up},
             transaction::{LockKey, Options, TRANSACTION_METADATA_MAX_AMOUNT},
-            writeback_cache::{ReadResult, StorageReservation, WriteResult, WritebackCache},
-            AssocObj, Mutation, ObjectKey, ObjectStore, ObjectValue, StoreObjectHandle,
+            writeback_cache::{StorageReservation, WritebackCache},
+            AssocObj, HandleOwner, Mutation, ObjectKey, ObjectStore, ObjectValue,
+            StoreObjectHandle,
         },
+        round::{round_down, round_up},
     },
-    anyhow::{anyhow, bail, Context, Error},
+    anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
     std::{
         ops::Range,
@@ -34,59 +34,44 @@ pub use crate::object_store::writeback_cache::CACHE_READ_AHEAD_SIZE;
 
 // TODO(jfsulliv): We should move away from having CachingObjectHandle implement ObjectHandle, since
 // it stubs out most of the methods.
-pub struct CachingObjectHandle<S: AsRef<ObjectStore> + Send + Sync + 'static> {
+pub struct CachingObjectHandle<S: HandleOwner> {
     handle: StoreObjectHandle<S>,
-    cache: WritebackCache,
+    cache: WritebackCache<S::Buffer>,
 }
 
-impl<S: AsRef<ObjectStore> + DataBufferFactory + Send + Sync + 'static> CachingObjectHandle<S> {
+impl<S: HandleOwner> CachingObjectHandle<S> {
     pub fn new(handle: StoreObjectHandle<S>) -> Self {
         let size = handle.get_size();
         let buffer = handle.owner().create_data_buffer(handle.object_id(), size);
         Self { handle, cache: WritebackCache::new(buffer) }
     }
-}
 
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
-    pub async fn read_cached(&self, offset: u64, buffer: &mut [u8]) -> Result<usize, Error> {
-        loop {
-            let result = self.cache.read(offset, buffer, self.block_size() as u64);
-            match result {
-                ReadResult::Done(bytes) => {
-                    return Ok(bytes as usize);
-                }
-                ReadResult::MissingRanges(missing_ranges) => {
-                    let fs = self.store().filesystem();
-                    let _guard = fs
-                        .read_lock(&[LockKey::object_attribute(
-                            self.store().store_object_id,
-                            self.handle.object_id,
-                            self.handle.attribute_id,
-                        )])
-                        .await;
-                    let mut buffer = self.allocate_buffer(CACHE_READ_AHEAD_SIZE as usize);
-                    for missing_range in missing_ranges {
-                        let range = missing_range.range().clone();
-                        let aligned_start = round_down(range.start, CACHE_READ_AHEAD_SIZE);
-                        let align = (range.start - aligned_start) as usize;
-                        let to_read = (range.end - aligned_start) as usize;
-                        let bytes_read =
-                            self.handle.read(aligned_start, buffer.subslice_mut(..to_read)).await?;
-                        let len = bytes_read.saturating_sub(align);
-                        if len == 0 {
-                            // A zero-length read would result in an infinite loop since we'd try to
-                            // read in the same range again, and indicates an inconsistency between
-                            // the object size and the actual amount of stored data.
-                            bail!(FxfsError::Inconsistent);
-                        }
-                        missing_range.populate(&buffer.as_slice()[align..align + len]);
-                    }
-                }
-                ReadResult::Contended(event) => {
-                    let _ = event.await;
-                }
-            }
-        }
+    pub fn owner(&self) -> &Arc<S> {
+        self.handle.owner()
+    }
+
+    pub fn store(&self) -> &ObjectStore {
+        self.handle.store()
+    }
+
+    pub fn data_buffer(&self) -> &S::Buffer {
+        &self.cache.data_buffer()
+    }
+
+    pub async fn read_cached(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Error> {
+        self.cache.read(offset, buf, &self.handle).await
+    }
+
+    pub async fn read_uncached(&self, range: std::ops::Range<u64>) -> Result<Buffer<'_>, Error> {
+        let mut buffer = self.allocate_buffer((range.end - range.start) as usize);
+        let read = self.handle.read(range.start, buffer.as_mut()).await?;
+        buffer.as_mut_slice()[read..].fill(0);
+        Ok(buffer)
+    }
+
+    /// Returns the minimum size the object has been since the last flush.
+    pub fn min_size(&self) -> u64 {
+        self.cache.min_size()
     }
 
     pub async fn write_or_append_cached(
@@ -94,53 +79,37 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
         offset: Option<u64>,
         buf: &[u8],
     ) -> Result<u64, Error> {
+        let fs = self.store().filesystem();
+        let _locks = fs
+            .transaction_lock(&[LockKey::cached_write(
+                self.store().store_object_id,
+                self.handle.object_id,
+                self.handle.attribute_id,
+            )])
+            .await;
         let time = Timestamp::now().into();
-        let bs = self.block_size() as u64;
-        loop {
-            let result = self.cache.write_or_append(offset, buf, bs, self, Some(time))?;
-            match result {
-                WriteResult::Done(size) => {
-                    return Ok(size);
-                }
-                WriteResult::MissingRanges(missing_ranges) => {
-                    let fs = self.store().filesystem();
-                    let _guard = fs
-                        .read_lock(&[LockKey::object_attribute(
-                            self.store().store_object_id,
-                            self.handle.object_id,
-                            self.handle.attribute_id,
-                        )])
-                        .await;
-                    let mut buffer = self.allocate_buffer(bs as usize);
-                    for missing_range in missing_ranges {
-                        let range = missing_range.range().clone();
-                        assert!(range.start % bs == 0);
-                        assert!(range.end - range.start <= bs);
-                        let bytes_read = self
-                            .handle
-                            .read(
-                                range.start,
-                                buffer.subslice_mut(..(range.end - range.start) as usize),
-                            )
-                            .await?;
-                        missing_range.populate(&buffer.as_slice()[..bytes_read]);
-                    }
-                }
-                WriteResult::Contended(event) => {
-                    let _ = event.await;
-                }
-            }
-        }
+        let len = buf.len();
+        self.cache
+            .write_or_append(
+                offset,
+                buf,
+                self.handle.block_size().into(),
+                self,
+                Some(time),
+                &self.handle,
+            )
+            .await?;
+        Ok(len as u64)
     }
 }
 
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Drop for CachingObjectHandle<S> {
+impl<S: HandleOwner> Drop for CachingObjectHandle<S> {
     fn drop(&mut self) {
         self.cache.cleanup(self);
     }
 }
 
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StorageReservation for CachingObjectHandle<S> {
+impl<S: HandleOwner> StorageReservation for CachingObjectHandle<S> {
     fn reserve_for_sync(&self) -> Result<allocator::Reservation, Error> {
         self.store()
             .allocator()
@@ -157,21 +126,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StorageReservation for Cachi
     }
 }
 
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
-    pub fn owner(&self) -> &Arc<S> {
-        self.handle.owner()
-    }
-
-    pub fn store(&self) -> &ObjectStore {
-        self.handle.store()
-    }
-
-    pub fn data_buffer(&self) -> &NativeDataBuffer {
-        &self.cache.data_buffer()
-    }
-}
-
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for CachingObjectHandle<S> {
+impl<S: HandleOwner> ObjectHandle for CachingObjectHandle<S> {
     fn set_trace(&self, v: bool) {
         self.handle.set_trace(v);
     }
@@ -194,7 +149,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for CachingObje
 }
 
 #[async_trait]
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> GetProperties for CachingObjectHandle<S> {
+impl<S: HandleOwner> GetProperties for CachingObjectHandle<S> {
     async fn get_properties(&self) -> Result<ObjectProperties, Error> {
         let mut props = self.handle.get_properties().await?;
         let cached_metadata = self.cache.cached_metadata();
@@ -209,20 +164,28 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> GetProperties for CachingObj
 }
 
 #[async_trait]
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for CachingObjectHandle<S> {
+impl<S: HandleOwner> ReadObjectHandle for CachingObjectHandle<S> {
     async fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
-        self.read_cached(offset, buf.as_mut_slice()).await
+        self.cache.read(offset, buf.as_mut_slice(), &self.handle).await
     }
 }
 
 #[async_trait]
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for CachingObjectHandle<S> {
+impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
     async fn write_or_append(&self, offset: Option<u64>, buf: BufferRef<'_>) -> Result<u64, Error> {
         self.write_or_append_cached(offset, buf.as_slice()).await
     }
 
     async fn truncate(&self, size: u64) -> Result<(), Error> {
-        self.cache.resize(size, self.block_size() as u64);
+        let fs = self.store().filesystem();
+        let _locks = fs
+            .transaction_lock(&[LockKey::cached_write(
+                self.store().store_object_id,
+                self.handle.object_id,
+                self.handle.attribute_id,
+            )])
+            .await;
+        self.cache.resize(size, self.block_size() as u64).await;
         Ok(())
     }
 
@@ -231,6 +194,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for Cachin
         crtime: Option<Timestamp>,
         mtime: Option<Timestamp>,
     ) -> Result<(), Error> {
+        let fs = self.store().filesystem();
+        let _locks = fs
+            .transaction_lock(&[LockKey::cached_write(
+                self.store().store_object_id,
+                self.handle.object_id,
+                self.handle.attribute_id,
+            )])
+            .await;
         self.cache.update_timestamps(crtime.map(|t| t.into()), mtime.map(|t| t.into()));
         Ok(())
     }
@@ -280,8 +251,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for Cachin
                     },
                 )
                 .await?;
-            if flushable.metadata.content_size_changed {
-                self.handle.truncate(&mut transaction, flushable.metadata.content_size).await?;
+            if let Some(content_size) = flushable.metadata.content_size {
+                self.handle.truncate(&mut transaction, content_size).await?;
             }
             self.handle
                 .write_timestamps(
@@ -320,13 +291,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for Cachin
                 flushable.metadata.modification_time.map(|t| t.into()),
             )
             .await?;
-        if flushable.metadata.content_size_changed {
+        if let Some(content_size) = flushable.metadata.content_size {
             // TODO(jfsulliv): We also need to zero the last block here, but this is tricky to deal
             // with, since a txn_write might conflict with the write of the last block.
             let old_size = self.handle.get_size();
-            let size = flushable.metadata.content_size;
-            if size < old_size {
-                let aligned_size = round_up(size, bs).ok_or(FxfsError::TooBig)?;
+            if content_size < old_size {
+                let aligned_size = round_up(content_size, bs).ok_or(FxfsError::TooBig)?;
                 self.handle
                     .zero(
                         &mut transaction,
@@ -338,7 +308,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for Cachin
                 self.store().store_object_id,
                 Mutation::replace_or_insert_object(
                     ObjectKey::attribute(self.handle.object_id, self.handle.attribute_id),
-                    ObjectValue::attribute(size),
+                    ObjectValue::attribute(content_size),
                 ),
                 AssocObj::Borrowed(&self.handle),
             );
@@ -438,7 +408,6 @@ mod tests {
             align + len
         );
         assert_eq!(&buf.as_slice()[align..align + len], &vec![0u8; len]);
-        assert_eq!(&buf.as_slice()[align + len..], &vec![123u8; buf.len() - align - len]);
         fs.close().await.expect("Close failed");
     }
 
@@ -647,7 +616,7 @@ mod tests {
             .await
             .expect("purge failed");
 
-        assert_eq!(allocated_before - allocator.get_allocated_bytes(), fs.block_size() as u64,);
+        assert_eq!(allocated_before - allocator.get_allocated_bytes(), fs.block_size() as u64);
 
         let layer_set = store.tree.layer_set();
         let mut merger = layer_set.merger();
