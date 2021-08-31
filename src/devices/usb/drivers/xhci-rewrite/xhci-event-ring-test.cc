@@ -280,7 +280,7 @@ zx_status_t UsbXhci::UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t UsbXhci::UsbHciHubDeviceRemoved(uint32_t hub_id, uint32_t port) {
+zx_status_t UsbXhci::UsbHciHubDeviceRemoved(uint32_t device_id, uint32_t port) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

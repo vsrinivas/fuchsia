@@ -527,9 +527,8 @@ bool TransferRing::AvailableSlots(size_t count) {
       // Don't count link TRBs as available slots. We can't actually
       // put data in them.
       continue;
-    } else {
-      current++;
     }
+    current++;
     count--;
   }
   return true;

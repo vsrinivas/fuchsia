@@ -4,6 +4,7 @@
 
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
+
 #include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/zx/status.h>
 
@@ -23,7 +24,7 @@ struct ContiguousTRBInfo {
   fbl::Span<TRB> nop;   // Optional page of NOPs
   fbl::Span<TRB> trbs;  // Contiguous TRBs
   fbl::Span<TRB> first() {
-    if (nop.size()) {
+    if (!nop.empty()) {
       return nop;
     }
     return trbs;
@@ -144,7 +145,7 @@ class TransferRing {
   zx_paddr_t trb_start_phys_ = 0;
   // Producer cycle bit (section 4.9.2)
   bool pcs_ __TA_GUARDED(mutex_) = true;
-  TRB* dequeue_trb_ __TA_GUARDED(mutex_) = 0;
+  TRB* dequeue_trb_ __TA_GUARDED(mutex_) = nullptr;
   // Capacity (number of TRBs, including link TRBs in ring)
   size_t capacity_ __TA_GUARDED(mutex_) = 0;
   size_t page_size_ __TA_GUARDED(mutex_);

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_PORT_STATE
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_PORT_STATE
+
 #include <stdint.h>
 
 namespace usb_xhci {
@@ -31,3 +34,6 @@ struct PortState {
 };
 
 }  // namespace usb_xhci
+
+
+#endif // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_PORT_STATE

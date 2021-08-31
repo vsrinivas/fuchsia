@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_
-#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING
+
 #include <lib/dma-buffer/buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/synchronous-executor/executor.h>
@@ -18,6 +19,7 @@
 
 #include "registers.h"
 #include "xhci-context.h"
+#include "xhci-port-state.h"
 #include "xhci-hub.h"
 
 namespace usb_xhci {
@@ -77,7 +79,6 @@ struct PortStatusChangeState : public fbl::RefCounted<PortStatusChangeState> {
 
 // Keeps track of events received from the XHCI controller
 class UsbXhci;
-struct PortState;
 class CommandRing;
 class EventRing {
  public:
@@ -160,7 +161,7 @@ class EventRing {
   zx_paddr_t erdp_phys_ = 0;
 
   // Current Cycle State
-  bool ccs_ = 1;
+  bool ccs_ = true;
   fbl::Mutex segment_mutex_;
   size_t trbs_ __TA_GUARDED(segment_mutex_);
   EventRingSegmentTable segments_ __TA_GUARDED(segment_mutex_);
@@ -196,4 +197,4 @@ class EventRing {
 };
 }  // namespace usb_xhci
 
-#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_
+#endif // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING
