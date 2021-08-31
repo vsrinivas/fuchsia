@@ -846,8 +846,6 @@ static void iwl_flip_hw_address(__le32 mac_addr0, __le32 mac_addr1, uint8_t* des
 }
 
 static void iwl_set_hw_address_from_csr(struct iwl_trans* trans, struct iwl_nvm_data* data) {
-  IWL_ERR(trans, "unimplemented iwl_set_hw_address_from_csr()\n");
-#if 0   // NEEDS_PORTING
   __le32 mac_addr0 = cpu_to_le32(iwl_read32(trans, trans->cfg->csr->mac_addr0_strap));
   __le32 mac_addr1 = cpu_to_le32(iwl_read32(trans, trans->cfg->csr->mac_addr1_strap));
 
@@ -864,7 +862,6 @@ static void iwl_set_hw_address_from_csr(struct iwl_trans* trans, struct iwl_nvm_
   mac_addr1 = cpu_to_le32(iwl_read32(trans, trans->cfg->csr->mac_addr1_otp));
 
   iwl_flip_hw_address(mac_addr0, mac_addr1, data->hw_addr);
-#endif  // NEEDS_PORTING
 }
 
 static void iwl_set_hw_address_family_8000(struct iwl_trans* trans, const struct iwl_cfg* cfg,
