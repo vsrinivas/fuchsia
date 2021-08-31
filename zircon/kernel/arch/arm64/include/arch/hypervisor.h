@@ -29,6 +29,9 @@ static constexpr uint16_t kNumInterrupts = 256;
 static_assert(kMaintenanceVector < kNumInterrupts, "Maintenance vector is out of range");
 static_assert(kTimerVector < kNumInterrupts, "Timer vector is out of range");
 
+// Maximum VCPUs per guest.
+constexpr size_t kMaxGuestVcpus = 8;
+
 typedef struct zx_port_packet zx_port_packet_t;
 class PortDispatcher;
 enum class InterruptState : uint8_t;
@@ -55,8 +58,7 @@ class Guest {
   const uint8_t vmid_;
 
   DECLARE_MUTEX(Guest) vcpu_mutex_;
-  // TODO(alexlegg): Find a good place for this constant to live (max vcpus).
-  hypervisor::IdAllocator<uint8_t, 8> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
+  hypervisor::IdAllocator<uint8_t, kMaxGuestVcpus> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
 
   explicit Guest(uint8_t vmid);
 };

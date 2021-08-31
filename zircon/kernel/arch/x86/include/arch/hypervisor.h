@@ -27,6 +27,9 @@
 
 struct VmxInfo;
 
+// Maximum VCPUs per guest.
+constexpr size_t kMaxGuestVcpus = 64;
+
 class VmxPage : public hypervisor::Page {
  public:
   zx_status_t Alloc(const VmxInfo& info, uint8_t fill);
@@ -58,8 +61,7 @@ class Guest {
   VmxPage msr_bitmaps_page_;
 
   DECLARE_MUTEX(Guest) vcpu_mutex_;
-  // TODO(alexlegg): Find a good place for this constant to live (max VCPUs).
-  hypervisor::IdAllocator<uint16_t, 64> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
+  hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
 
   Guest() = default;
 };

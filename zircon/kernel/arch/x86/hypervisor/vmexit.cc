@@ -698,9 +698,25 @@ static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
 }
 
 static uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t self) {
+  DEBUG_ASSERT(self < kMaxGuestVcpus);
+
   switch (icr.destination_shorthand) {
-    case InterruptDestinationShorthand::NO_SHORTHAND:
+    case InterruptDestinationShorthand::NO_SHORTHAND: {
+      // Intel Volume 3, Section 10.12.9: A destination ID value of FFFF_FFFFH
+      // is used for broadcast of interrupts in both logical destination and
+      // physical destination modes.
+      if (icr.destination == kIpiBroadcastDestination) {
+        return UINT64_MAX;
+      }
+
+      // If an invalid destination was provided, just return the empty mask.
+      if (unlikely(icr.destination >= kMaxGuestVcpus)) {
+        return 0;
+      }
+
+      // Otherwise, generate a mask for the target VCPU.
       return 1u << icr.destination;
+    }
     case InterruptDestinationShorthand::SELF:
       return 1u << self;
     case InterruptDestinationShorthand::ALL_INCLUDING_SELF:
@@ -708,6 +724,7 @@ static uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t se
     case InterruptDestinationShorthand::ALL_EXCLUDING_SELF:
       return ~(1u << self);
   }
+
   return 0;
 }
 

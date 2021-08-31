@@ -228,11 +228,13 @@ TEST(Guest, VcpuIpi) {
   // The guest will attempt to send IPIs to sets of CPUs in the following order.
   //
   // Changes here will need to be synchronised with `vcpu_ipi`.
-  std::array<uint64_t, 4> expected_masks = {
+  std::array<uint64_t, 6> expected_masks = {
       0b1111,  // Shorthand all (including self)
       0b0001,  // Shorthand self
       0b1110,  // Shorthand all (excluding self)
       0b0100,  // CPU #2
+      0b1111,  // Broadcast (all including self)
+      0b0000,  // CPU #64 (invalid CPU)
   };
 
   // Each time an IPI is sent the hypervisor will return control to the VMM,

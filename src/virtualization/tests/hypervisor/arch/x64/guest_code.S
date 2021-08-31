@@ -521,6 +521,16 @@ FUNCTION vcpu_ipi
     mov $X2APIC_ICR_FIXED(X2APIC_ICR_SHORTHAND_NONE, INT_IPI_VECTOR), %eax
     wrmsr
 
+    // Send IPI to broadcast destination (0xffff'ffff).
+    mov $(-1), %edx
+    mov $X2APIC_ICR_FIXED(X2APIC_ICR_SHORTHAND_NONE, INT_IPI_VECTOR), %eax
+    wrmsr
+
+    // Send IPI to invalid CPU 64.
+    mov $64, %edx
+    mov $X2APIC_ICR_FIXED(X2APIC_ICR_SHORTHAND_NONE, INT_IPI_VECTOR), %eax
+    wrmsr
+
     movq $0, (EXIT_TEST_ADDR)
 END_FUNCTION
 

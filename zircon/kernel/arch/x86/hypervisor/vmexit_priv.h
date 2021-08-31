@@ -245,6 +245,8 @@ enum class VmCallType : uint64_t {
 
 // clang-format on
 
+constexpr uint32_t kIpiBroadcastDestination = 0xffff'ffff;
+
 typedef struct zx_port_packet zx_port_packet_t;
 
 class AutoVmcs;
