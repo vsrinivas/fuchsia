@@ -117,6 +117,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.ui.remotewidgets",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.update",
     "//sdk/fidl/fuchsia.update.channelcontrol",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",

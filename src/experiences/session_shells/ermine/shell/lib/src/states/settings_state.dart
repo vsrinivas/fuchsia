@@ -83,4 +83,5 @@ abstract class SettingsState implements TaskService {
   void showAboutSettings();
   void showChannelSettings();
   void setTargetChannel(String channel);
+  void checkForUpdates();
 }

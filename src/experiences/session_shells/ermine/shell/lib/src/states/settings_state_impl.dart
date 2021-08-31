@@ -308,6 +308,9 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     dateTimeNow.value = DateTime.now();
   }.asAction();
 
+  @override
+  void checkForUpdates() => runInAction(channelService.checkForUpdates);
+
   static List<String> _loadTimezones() {
     return File(kTimezonesFile).readAsLinesSync();
   }

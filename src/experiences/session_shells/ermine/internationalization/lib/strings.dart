@@ -847,6 +847,11 @@ class Strings {
         name: 'switch to previous app',
         desc: 'Keyboard shortcut description to switch to previous app.',
       );
+  static String get update => Intl.message(
+        'Update',
+        name: 'update',
+        desc: 'The label for "Update" text field.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

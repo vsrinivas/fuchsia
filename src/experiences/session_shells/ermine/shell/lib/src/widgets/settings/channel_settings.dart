@@ -53,7 +53,15 @@ class ChannelSettings extends StatelessWidget {
             ),
             shape: Border(
                 top: BorderSide(color: Theme.of(context).indicatorColor)),
-            // TODO(fxb/79588): Add button to start update
+            actions: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
+                child: ElevatedButton(
+                  onPressed: state.checkForUpdates,
+                  child: Text(Strings.update.toUpperCase()),
+                ),
+              ),
+            ],
           ),
         ],
       );
