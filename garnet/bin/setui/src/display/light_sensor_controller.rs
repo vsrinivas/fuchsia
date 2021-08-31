@@ -17,10 +17,11 @@ use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Duration;
 use futures::channel::mpsc::{unbounded, UnboundedReceiver};
 use futures::channel::oneshot::{self, Receiver, Sender};
-use futures::future::{AbortHandle, Abortable};
+use futures::future::{AbortHandle, Abortable, FusedFuture};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use std::fs::File;
+use std::pin::Pin;
 use std::sync::Arc;
 
 pub const LIGHT_SENSOR_SERVICE_NAME: &str = "light_sensor_hid";
@@ -90,7 +91,7 @@ impl controller::Handle for LightSensorController {
                 let (cancellation_tx, cancellation_rx) = oneshot::channel();
                 let (task, change_receiver) = start_light_sensor_scanner(
                     self.sensor.clone(),
-                    SCAN_DURATION_MS,
+                    || fasync::Timer::new(Duration::from_millis(SCAN_DURATION_MS).after_now()),
                     cancellation_rx,
                 );
                 self.sensor_task = Some((task, cancellation_tx));
@@ -177,15 +178,26 @@ async fn notify_on_change(
     abort_handle
 }
 
-/// Runs a task that periodically checks for changes on the light sensor
-/// and sends notifications when the value changes.
-/// Will not send any initial value if nothing changes.
-/// This terminates when the receiver closes without panicking.
-fn start_light_sensor_scanner(
+/// Runs a task that periodically checks for changes on the light sensor and sends notifications
+/// when the value changes. Will not send any initial value if nothing changes. This terminates when
+/// the receiver closes without panicking.
+///
+/// Arguments:
+///
+/// * `sensor`: The sensor to read events from.
+/// * `trigger_factory`: A factory that creates futures that, once resolved, signify it's time to
+///                      process the next event from the sensor.
+/// * `cancellation_rx`: A receiver for a cancellation event. Once a signal is received, any
+///                      event currently being handled will finish processing, but no further events
+///                      will be processed.
+fn start_light_sensor_scanner<F>(
     sensor: Sensor,
-    scan_duration_ms: i64,
+    trigger_factory: impl Fn() -> F + Send + 'static,
     cancellation_rx: Receiver<()>,
-) -> (Task<()>, UnboundedReceiver<LightData>) {
+) -> (Task<()>, UnboundedReceiver<LightData>)
+where
+    F: Future<Output = ()> + Send,
+{
     let (sender, receiver) = unbounded::<LightData>();
 
     (
@@ -194,12 +206,13 @@ fn start_light_sensor_scanner(
                 let light_data = get_sensor_data(&sensor).await;
                 Some((light_data, sensor))
             });
-            let timer = fasync::Timer::new(Duration::from_millis(0).after_now()).fuse();
-            futures::pin_mut!(timer, stream, cancellation_rx);
+            let trigger: Pin<Box<dyn FusedFuture<Output = ()> + Send>> =
+                Box::pin(futures::future::ready(()).fuse());
+            futures::pin_mut!(trigger, stream, cancellation_rx);
             let mut data = stream.next().await.expect("There should always be a first value");
             loop {
                 futures::select! {
-                    _ = timer => {
+                    _ = trigger => {
                         if let Some(new_data) = stream.next().await {
                             if data != new_data {
                                 data = new_data;
@@ -208,9 +221,7 @@ fn start_light_sensor_scanner(
                                 }
                             }
                         }
-                        *timer =
-                            fasync::Timer::new(Duration::from_millis(scan_duration_ms).after_now())
-                                .fuse();
+                        *trigger = Box::pin(trigger_factory().fuse());
                     }
                     _ = cancellation_rx => break,
                 }
@@ -236,10 +247,10 @@ mod tests {
     use crate::display::light_sensor::testing;
     use crate::service_context::{ExternalServiceProxy, ServiceContext};
     use fidl_fuchsia_input_report::{InputReport, InputReportsReaderReadInputReportsResponder};
-    use futures::channel::mpsc::{self, UnboundedSender};
-
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use futures::channel::mpsc::{self, UnboundedSender};
+    use matches::assert_matches;
 
     type Notifier = UnboundedSender<SettingType>;
 
@@ -310,10 +321,29 @@ mod tests {
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
         let (cancellation_tx, cancellation_rx) = oneshot::channel();
-        let (task, mut receiver) = start_light_sensor_scanner(sensor, 1, cancellation_rx);
+        let (mut trigger_tx, trigger_rx) = unbounded();
+        let (create_tx, mut create_rx) = unbounded();
+        let trigger_rx = Arc::new(Mutex::new(trigger_rx));
+        let trigger_factory = move || {
+            let mut create_tx = create_tx.clone();
+            let trigger_rx = Arc::clone(&trigger_rx);
+            async move {
+                create_tx.send(()).await.expect("should be able to send create signal");
+                trigger_rx.lock().await.next().await.expect("should be able to get trigger")
+            }
+        };
 
-        let sleep_duration = zx::Duration::from_millis(5);
-        fasync::Timer::new(sleep_duration.after_now()).await;
+        let (task, mut receiver) =
+            start_light_sensor_scanner(sensor, trigger_factory, cancellation_rx);
+
+        // Wait for the the factory to be called to get a new trigger.
+        create_rx.next().await.expect("should be able to get creation signal");
+
+        // Signal the trigger so the inner loop begins.
+        trigger_tx.send(()).await.expect("should be able to trigger scanner");
+
+        // Wait for the factory to be called again so we now the previous trigger was processed.
+        create_rx.next().await.expect("should be able to get creation signal");
 
         let next = receiver.try_next();
         if next.is_ok() {
@@ -321,6 +351,12 @@ mod tests {
         };
 
         data_producer.lock().await.trigger();
+
+        // Signal the trigger so the inner loop begins.
+        trigger_tx.send(()).await.expect("should be able to trigger scanner");
+
+        // Wait for the factory to be called again so we now the previous trigger was processed.
+        create_rx.next().await.expect("should be able to get creation signal");
 
         let data = receiver.next().await;
 
@@ -334,9 +370,11 @@ mod tests {
         task.await;
         receiver.close();
 
-        // Make sure we don't panic after receiver closes
-        let sleep_duration = zx::Duration::from_millis(5);
-        fasync::Timer::new(sleep_duration.after_now()).await;
+        // Make sure the final future is dropped.
+        assert_matches!(
+            trigger_tx.send(()).await,
+            Err(send_error) if send_error.is_disconnected()
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -381,7 +419,9 @@ mod tests {
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
         let (cancellation_tx, cancellation_rx) = oneshot::channel();
-        let (task, data_receiver) = start_light_sensor_scanner(sensor, 1, cancellation_rx);
+        let trigger_factory = || futures::future::pending();
+        let (task, data_receiver) =
+            start_light_sensor_scanner(sensor, trigger_factory, cancellation_rx);
         *receiver.lock().await = Some(data_receiver);
 
         assert_eq!(completed_rx.next().await, Some(()));
