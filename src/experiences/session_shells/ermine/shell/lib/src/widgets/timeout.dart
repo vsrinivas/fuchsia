@@ -47,7 +47,7 @@ class LoadTimeout extends StatelessWidget {
                         SizedBox(width: 24),
                         Expanded(
                           child: Text(
-                            view.timeout.value
+                            view.timeout
                                 ? Strings.applicationNotResponding
                                 : Strings.loadingApplication(view.title),
                             softWrap: true,
@@ -60,7 +60,7 @@ class LoadTimeout extends StatelessWidget {
                     ),
 
                     // Prompt text, wait and close buttons.
-                    if (view.timeout.value) ...[
+                    if (view.timeout) ...[
                       SizedBox(height: 24),
                       Text(Strings.promptToWaitOrClose(view.title)),
                       SizedBox(height: 24),

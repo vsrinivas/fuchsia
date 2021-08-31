@@ -26,7 +26,7 @@ class AboutSettings extends StatelessWidget {
           SizedBox(height: 16),
           Text(Strings.disclaimerText,
               style: Theme.of(context).textTheme.bodyText2),
-          if (state.optedIntoUpdates.value == true) ...[
+          if (state.optedIntoUpdates == true) ...[
             SizedBox(height: 16),
             Text(Strings.updatesAndPrivacy,
                 style: Theme.of(context).textTheme.subtitle1),

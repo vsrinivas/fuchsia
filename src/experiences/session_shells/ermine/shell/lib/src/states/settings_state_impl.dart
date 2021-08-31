@@ -26,89 +26,120 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final settingsPage = SettingsPage.none.asObservable();
 
   @override
-  late final shortcutsPageVisible =
+  bool get shortcutsPageVisible => _shortcutsPageVisible.value;
+  late final _shortcutsPageVisible =
       (() => settingsPage.value == SettingsPage.shortcuts).asComputed();
 
   @override
-  late final allSettingsPageVisible =
+  bool get allSettingsPageVisible => _allSettingsPageVisible.value;
+  late final _allSettingsPageVisible =
       (() => settingsPage.value == SettingsPage.none).asComputed();
 
   @override
-  late final timezonesPageVisible =
+  bool get timezonesPageVisible => _timezonesPageVisible.value;
+  late final _timezonesPageVisible =
       (() => settingsPage.value == SettingsPage.timezone).asComputed();
 
   @override
-  late final aboutPageVisible =
+  bool get aboutPageVisible => _aboutPageVisible.value;
+  late final _aboutPageVisible =
       (() => settingsPage.value == SettingsPage.about).asComputed();
 
   @override
-  late final channelPageVisible =
+  bool get channelPageVisible => _channelPageVisible.value;
+  late final _channelPageVisible =
       (() => settingsPage.value == SettingsPage.channel).asComputed();
 
   @override
-  final wifiStrength = Observable<WiFiStrength>(WiFiStrength.good);
+  WiFiStrength get wifiStrength => _wifiStrength.value;
+  final _wifiStrength = Observable<WiFiStrength>(WiFiStrength.good);
 
   @override
-  final batteryCharge = Observable<BatteryCharge>(BatteryCharge.charging);
+  BatteryCharge get batteryCharge => _batteryCharge.value;
+  final _batteryCharge = Observable<BatteryCharge>(BatteryCharge.charging);
 
   @override
   final Map<String, Set<String>> shortcutBindings;
 
   @override
-  final Observable<String> selectedTimezone;
+  String get selectedTimezone => _selectedTimezone.value;
+  set selectedTimezone(String value) => _selectedTimezone.value = value;
+  final Observable<String> _selectedTimezone;
 
   @override
   final networkAddresses = ObservableList<String>();
 
   @override
-  final Observable<String> memUsed = '--'.asObservable();
+  String get memUsed => _memUsed.value;
+  set memUsed(String value) => _memUsed.value = value;
+  final Observable<String> _memUsed = '--'.asObservable();
 
   @override
-  final Observable<String> memTotal = '--'.asObservable();
+  String get memTotal => _memTotal.value;
+  set memTotal(String value) => _memTotal.value = value;
+  final Observable<String> _memTotal = '--'.asObservable();
 
   @override
-  final Observable<double?> memPercentUsed = Observable<double?>(null);
+  double? get memPercentUsed => _memPercentUsed.value;
+  set memPercentUsed(double? value) => _memPercentUsed.value = value;
+  final Observable<double?> _memPercentUsed = Observable<double?>(null);
 
   @override
-  final Observable<IconData> powerIcon = Icons.battery_unknown.asObservable();
+  IconData get powerIcon => _powerIcon.value;
+  set powerIcon(IconData value) => _powerIcon.value = value;
+  final Observable<IconData> _powerIcon = Icons.battery_unknown.asObservable();
 
   @override
-  final Observable<double?> powerLevel = Observable<double?>(null);
+  double? get powerLevel => _powerLevel.value;
+  set powerLevel(double? value) => _powerLevel.value = value;
+  final Observable<double?> _powerLevel = Observable<double?>(null);
 
   @override
-  final Observable<double?> brightnessLevel = Observable<double?>(null);
+  double? get brightnessLevel => _brightnessLevel.value;
+  set brightnessLevel(double? value) => _brightnessLevel.value = value;
+  final Observable<double?> _brightnessLevel = Observable<double?>(null);
 
   @override
-  final Observable<bool?> brightnessAuto = Observable<bool?>(null);
+  bool? get brightnessAuto => _brightnessAuto.value;
+  set brightnessAuto(bool? value) => _brightnessAuto.value = value;
+  final Observable<bool?> _brightnessAuto = Observable<bool?>(null);
 
   @override
-  final Observable<IconData> brightnessIcon =
+  IconData get brightnessIcon => _brightnessIcon.value;
+  set brightnessIcon(IconData value) => _brightnessIcon.value = value;
+  final Observable<IconData> _brightnessIcon =
       Icons.brightness_auto.asObservable();
 
   @override
-  final Observable<bool?> optedIntoUpdates = Observable<bool?>(null);
+  bool? get optedIntoUpdates => _optedIntoUpdates.value;
+  set optedIntoUpdates(bool? value) => _optedIntoUpdates.value = value;
+  final Observable<bool?> _optedIntoUpdates = Observable<bool?>(null);
 
   @override
-  final Observable<String> currentChannel = Observable<String>('');
+  String get currentChannel => _currentChannel.value;
+  set currentChannel(String value) => _currentChannel.value = value;
+  final Observable<String> _currentChannel = Observable<String>('');
 
   @override
-  final Observable<List<String>> availableChannels =
-      Observable<List<String>>(['']);
+  final List<String> availableChannels = ObservableList<String>();
 
   @override
-  final Observable<String> targetChannel = Observable<String>('');
+  String get targetChannel => _targetChannel.value;
+  set targetChannel(String value) => _targetChannel.value = value;
+  final Observable<String> _targetChannel = Observable<String>('');
 
   final List<String> _timezones;
 
   @override
   List<String> get timezones {
     // Move the selected timezone to the top.
-    return [selectedTimezone.value]
-      ..addAll(_timezones.where((zone) => zone != selectedTimezone.value));
+    return [selectedTimezone]
+      ..addAll(_timezones.where((zone) => zone != selectedTimezone));
   }
 
   @override
-  late final ObservableValue<String> dateTime = (() =>
+  String get dateTime => _dateTime.value;
+  late final ObservableValue<String> _dateTime = (() =>
       // Ex: Mon, Jun 7 2:25 AM
       DateFormat.MMMEd().add_jm().format(dateTimeNow.value)).asComputed();
 
@@ -131,18 +162,18 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.channelService,
   })  : shortcutBindings = shortcutsService.keyboardBindings,
         _timezones = _loadTimezones(),
-        selectedTimezone = timezoneService.timezone.asObservable() {
+        _selectedTimezone = timezoneService.timezone.asObservable() {
     dateTimeService.onChanged = updateDateTime;
     timezoneService.onChanged =
-        (timezone) => runInAction(() => selectedTimezone.value = timezone);
+        (timezone) => runInAction(() => selectedTimezone = timezone);
     networkService.onChanged = () => NetworkInterface.list().then((interfaces) {
           // Gather all addresses from all interfaces and sort them such that
           // IPv4 addresses come before IPv6.
           final addresses = interfaces
               .expand((interface) => interface.addresses)
               .toList(growable: false)
-                ..sort((addr1, addr2) =>
-                    addr1.type == InternetAddressType.IPv4 ? -1 : 0);
+            ..sort((addr1, addr2) =>
+                addr1.type == InternetAddressType.IPv4 ? -1 : 0);
 
           runInAction(() => networkAddresses
             ..clear()
@@ -150,46 +181,46 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         });
     memoryWatcherService.onChanged = () {
       runInAction(() {
-        memUsed.value =
-            '${memoryWatcherService.memUsed!.toStringAsPrecision(2)}GB';
-        memTotal.value =
-            '${memoryWatcherService.memTotal!.toStringAsPrecision(2)}GB';
-        memPercentUsed.value =
+        memUsed = '${memoryWatcherService.memUsed!.toStringAsPrecision(2)}GB';
+        memTotal = '${memoryWatcherService.memTotal!.toStringAsPrecision(2)}GB';
+        memPercentUsed =
             memoryWatcherService.memUsed! / memoryWatcherService.memTotal!;
       });
     };
     batteryWatcherService.onChanged = () {
       runInAction(() {
-        powerIcon.value = batteryWatcherService.icon;
-        powerLevel.value = batteryWatcherService.levelPercent;
+        powerIcon = batteryWatcherService.icon;
+        powerLevel = batteryWatcherService.levelPercent;
       });
     };
     brightnessService.onChanged = () {
       runInAction(() {
-        brightnessLevel.value = brightnessService.brightness;
-        brightnessAuto.value = brightnessService.auto;
-        brightnessIcon.value = brightnessService.icon;
+        brightnessLevel = brightnessService.brightness;
+        brightnessAuto = brightnessService.auto;
+        brightnessIcon = brightnessService.icon;
       });
     };
     channelService.onChanged = () {
       runInAction(() {
-        optedIntoUpdates.value = channelService.optedIntoUpdates;
-        currentChannel.value = channelService.currentChannel;
+        optedIntoUpdates = channelService.optedIntoUpdates;
+        currentChannel = channelService.currentChannel;
         // Ensure current channel is listed first in available channels
         List<String> channels;
-        if (channelService.channels.contains(currentChannel.value)) {
+        if (channelService.channels.contains(currentChannel)) {
           channels = channelService.channels;
-          int index = channels.indexOf(currentChannel.value);
+          int index = channels.indexOf(currentChannel);
           if (index != 0) {
             channels
               ..removeAt(index)
-              ..insert(0, currentChannel.value);
+              ..insert(0, currentChannel);
           }
         } else {
-          channels = [currentChannel.value]..addAll(availableChannels.value);
+          channels = [currentChannel]..addAll(availableChannels);
         }
-        availableChannels.value = channels;
-        targetChannel.value = channelService.targetChannel;
+        availableChannels
+          ..clear()
+          ..addAll(channels);
+        targetChannel = channelService.targetChannel;
       });
     };
   }
@@ -232,51 +263,42 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   }
 
   @override
-  late final Action updateTimezone = (timezone) {
-    selectedTimezone.value = timezone;
-    timezoneService.timezone = timezone;
-    settingsPage.value = SettingsPage.none;
-  }.asAction();
+  void updateTimezone(String timezone) => runInAction(() {
+        selectedTimezone = timezone;
+        timezoneService.timezone = timezone;
+        settingsPage.value = SettingsPage.none;
+      });
 
   @override
-  late final Action showAllSettings = () {
-    settingsPage.value = SettingsPage.none;
-  }.asAction();
+  void showAllSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.none);
 
   @override
-  late final Action showAboutSettings = () {
-    settingsPage.value = SettingsPage.about;
-  }.asAction();
+  void showAboutSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.about);
 
   @override
-  late final Action showShortcutSettings = () {
-    settingsPage.value = SettingsPage.shortcuts;
-  }.asAction();
+  void showShortcutSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.shortcuts);
 
   @override
-  late final Action showTimezoneSettings = () {
-    settingsPage.value = SettingsPage.timezone;
-  }.asAction();
+  void showTimezoneSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.timezone);
 
   @override
-  late final Action showChannelSettings = () {
-    settingsPage.value = SettingsPage.channel;
-  }.asAction();
+  void showChannelSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.channel);
 
   @override
-  late final Action setTargetChannel = (String value) {
-    channelService.targetChannel = value;
-  }.asAction();
+  void setTargetChannel(String value) =>
+      runInAction(() => channelService.targetChannel = value);
 
   @override
-  late final Action setBrightnessLevel = (double value) {
-    brightnessService.brightness = value;
-  }.asAction();
+  void setBrightnessLevel(double value) =>
+      runInAction(() => brightnessService.brightness = value);
 
   @override
-  late final Action setBrightnessAuto = (bool value) {
-    brightnessService.auto = value;
-  }.asAction();
+  void setBrightnessAuto() => runInAction(() => brightnessService.auto = true);
 
   Observable<DateTime>? _dateTimeNow;
   Observable<DateTime> get dateTimeNow =>

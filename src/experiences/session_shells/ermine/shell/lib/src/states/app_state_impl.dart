@@ -456,7 +456,7 @@ class AppStateImpl with Disposable implements AppState {
 
       // If the child view is the screen saver, make it non-focusable in order
       // for keyboard input to get routed to the shell and dismiss it.
-      viewState.focusable.value = viewState.url != kScreenSaverUrl;
+      viewState.focusable = viewState.url != kScreenSaverUrl;
 
       // If any, remove previously cached launch errors for the app.
       if (viewState.url != null) {
@@ -466,7 +466,7 @@ class AppStateImpl with Disposable implements AppState {
 
     // Focus on view when it is loading.
     view.reactions.add(reaction<bool>((_) => view.loading, (loading) {
-      if (loading && view == topView && view.focusable.value) {
+      if (loading && view == topView && view.focusable) {
         setFocusToChildView();
       }
     }));
@@ -475,11 +475,11 @@ class AppStateImpl with Disposable implements AppState {
     view.reactions.add(reaction<bool>((_) => overlaysVisible, (overlay) {
       // Don't reset hittest flag when showing app switcher, because the
       // app switcher does not react to pointer events.
-      view.hitTestable.value = !overlay || switcherVisible;
+      view.hitTestable = !overlay || switcherVisible;
     }));
 
     // Remove view from views when it is closed.
-    view.reactions.add(when((_) => view.closed.value, () {
+    view.reactions.add(when((_) => view.closed, () {
       _onViewDismissed(view);
     }));
     return true;

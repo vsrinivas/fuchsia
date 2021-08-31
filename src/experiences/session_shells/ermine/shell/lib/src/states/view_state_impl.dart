@@ -33,10 +33,12 @@ class ViewStateImpl with Disposable implements ViewState {
   final Observable<bool> _connected = false.asObservable();
 
   @override
-  final Observable<bool> timeout = false.asObservable();
+  bool get timeout => _timeout.value;
+  final Observable<bool> _timeout = false.asObservable();
 
   @override
-  final Observable<bool> closed = false.asObservable();
+  bool get closed => _closed.value;
+  final Observable<bool> _closed = false.asObservable();
 
   /// Returns true when the view is connected to the view tree but has not
   /// rendered a frame.
@@ -62,27 +64,33 @@ class ViewStateImpl with Disposable implements ViewState {
   }) : _onClose = onClose;
 
   @override
-  final Observable<bool> hitTestable = true.asObservable();
+  bool get hitTestable => _hitTestable.value;
+  @override
+  set hitTestable(bool value) => _hitTestable.value = value;
+  final Observable<bool> _hitTestable = true.asObservable();
 
   @override
-  final Observable<bool> focusable = true.asObservable();
+  bool get focusable => _focusable.value;
+  @override
+  set focusable(bool value) => _focusable.value = value;
+  final Observable<bool> _focusable = true.asObservable();
 
   @override
   Rect? get viewport => viewConnection.viewport;
 
   final VoidCallback _onClose;
   @override
-  late final Action close = () {
-    closed.value = true;
-    _onClose();
-  }.asAction();
+  void close() => runInAction(() {
+        _closed.value = true;
+        _onClose();
+      });
 
   @override
-  late final Action wait = () {
-    timeout.value = false;
-    Future.delayed(
-        Duration(seconds: 10), () => runInAction(() => timeout.value = true));
-  }.asAction();
+  void wait() => runInAction(() {
+        _timeout.value = false;
+        Future.delayed(Duration(seconds: 10),
+            () => runInAction(() => _timeout.value = true));
+      });
 
   /// Called by [PresenterService] when the view is attached to the scene.
   void viewConnected() {
@@ -91,7 +99,7 @@ class ViewStateImpl with Disposable implements ViewState {
 
     // Mark the view as timed-out if it fails to render in time.
     Future.delayed(
-        Duration(seconds: 10), () => runInAction(() => timeout.value = true));
+        Duration(seconds: 10), () => runInAction(() => _timeout.value = true));
   }
 
   /// Called by [PresenterService] when the view has rendered a new frame.
@@ -104,7 +112,7 @@ class ViewStateImpl with Disposable implements ViewState {
       _rendered.value = true;
 
       // Cancel timeout waiting for the view to render its first frame.
-      timeout.value = false;
+      _timeout.value = false;
     });
   }
 

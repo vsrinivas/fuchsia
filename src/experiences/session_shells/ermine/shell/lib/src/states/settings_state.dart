@@ -15,7 +15,6 @@ import 'package:ermine/src/states/settings_state_impl.dart';
 import 'package:ermine/src/widgets/quick_settings.dart';
 import 'package:ermine/src/widgets/settings/setting_details.dart';
 import 'package:flutter/material.dart' hide Action;
-import 'package:mobx/mobx.dart';
 
 enum WiFiStrength { off, searching, weak, good, strong, error }
 
@@ -36,31 +35,31 @@ enum SettingsPage {
 }
 
 /// Defines the state of the [QuickSettings] overlay.
-abstract class SettingsState with Store implements TaskService {
-  ObservableValue<bool> get allSettingsPageVisible;
-  ObservableValue<bool> get shortcutsPageVisible;
-  ObservableValue<bool> get timezonesPageVisible;
-  ObservableValue<bool> get aboutPageVisible;
-  ObservableValue<bool> get channelPageVisible;
-  ObservableValue<WiFiStrength> get wifiStrength;
-  ObservableValue<BatteryCharge> get batteryCharge;
-  ObservableValue<String> get dateTime;
-  ObservableValue<String> get selectedTimezone;
-  ObservableList<String> get networkAddresses;
-  ObservableValue<String> get memUsed;
-  ObservableValue<String> get memTotal;
-  ObservableValue<double?> get memPercentUsed;
-  ObservableValue<IconData> get powerIcon;
-  ObservableValue<double?> get powerLevel;
+abstract class SettingsState implements TaskService {
+  bool get allSettingsPageVisible;
+  bool get shortcutsPageVisible;
+  bool get timezonesPageVisible;
+  bool get aboutPageVisible;
+  bool get channelPageVisible;
+  WiFiStrength get wifiStrength;
+  BatteryCharge get batteryCharge;
+  String get dateTime;
+  String get selectedTimezone;
+  List<String> get networkAddresses;
+  String get memUsed;
+  String get memTotal;
+  double? get memPercentUsed;
+  IconData get powerIcon;
+  double? get powerLevel;
   Map<String, Set<String>> get shortcutBindings;
   List<String> get timezones;
-  ObservableValue<double?> get brightnessLevel;
-  ObservableValue<bool?> get brightnessAuto;
-  ObservableValue<IconData> get brightnessIcon;
-  ObservableValue<bool?> get optedIntoUpdates;
-  ObservableValue<String> get currentChannel;
-  ObservableValue<List<String>> get availableChannels;
-  ObservableValue<String> get targetChannel;
+  double? get brightnessLevel;
+  bool? get brightnessAuto;
+  IconData get brightnessIcon;
+  bool? get optedIntoUpdates;
+  String get currentChannel;
+  List<String> get availableChannels;
+  String get targetChannel;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(
@@ -75,13 +74,13 @@ abstract class SettingsState with Store implements TaskService {
     );
   }
 
-  Action get updateTimezone;
-  Action get showAllSettings;
-  Action get showShortcutSettings;
-  Action get showTimezoneSettings;
-  Action get setBrightnessLevel;
-  Action get setBrightnessAuto;
-  Action get showAboutSettings;
-  Action get showChannelSettings;
-  Action get setTargetChannel;
+  void updateTimezone(String tz);
+  void showAllSettings();
+  void showShortcutSettings();
+  void showTimezoneSettings();
+  void setBrightnessLevel(double value);
+  void setBrightnessAuto();
+  void showAboutSettings();
+  void showChannelSettings();
+  void setTargetChannel(String channel);
 }

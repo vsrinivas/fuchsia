@@ -18,10 +18,10 @@ class ChannelSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      final channels = state.availableChannels.value;
-      final targetMessage = state.targetChannel.value == ''
+      final channels = state.availableChannels;
+      final targetMessage = state.targetChannel == ''
           ? Strings.selectAnUpdateChannel
-          : Strings.downloadTargetChannel(state.targetChannel.value);
+          : Strings.downloadTargetChannel(state.targetChannel);
       return Column(
         children: [
           Expanded(
@@ -36,8 +36,8 @@ class ChannelSettings extends StatelessWidget {
                     title: Text(channel),
                     subtitle: index == 0 ? Text(Strings.currentChannel) : null,
                     onTap: () => onChange(channels[index]),
-                    trailing: ((state.targetChannel.value != '') &&
-                            (state.targetChannel.value == channel))
+                    trailing: ((state.targetChannel != '') &&
+                            (state.targetChannel == channel))
                         ? Icon(Icons.check_outlined)
                         : null,
                   );

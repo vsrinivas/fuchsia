@@ -79,11 +79,11 @@ class Status extends StatelessWidget {
                         title: Text(Strings.power),
                         subtitle: Row(
                           children: [
-                            if (settings.powerLevel.value != null) ...[
-                              Text('${settings.powerLevel.value!.toInt()}%'),
+                            if (settings.powerLevel != null) ...[
+                              Text('${settings.powerLevel!.toInt()}%'),
                               SizedBox(width: 4),
                             ],
-                            Icon(settings.powerIcon.value),
+                            Icon(settings.powerIcon),
                           ],
                         ),
                       ),
@@ -113,14 +113,14 @@ class Status extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             SizedBox(height: 8),
-                            if (settings.memPercentUsed.value != null) ...[
+                            if (settings.memPercentUsed != null) ...[
                               LinearProgressIndicator(
-                                value: settings.memPercentUsed.value,
+                                value: settings.memPercentUsed,
                               ),
                               SizedBox(height: 8),
                             ],
                             Text(
-                              '${settings.memUsed.value} / ${settings.memTotal.value}',
+                              '${settings.memUsed} / ${settings.memTotal}',
                               textAlign: TextAlign.end,
                             ),
                           ],

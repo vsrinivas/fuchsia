@@ -6,10 +6,9 @@ import 'dart:ui';
 
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
-import 'package:mobx/mobx.dart';
 
 /// Defines the state of an application view.
-abstract class ViewState with Store {
+abstract class ViewState {
   FuchsiaViewConnection get viewConnection;
   ViewHandle get view;
   String get title;
@@ -17,20 +16,20 @@ abstract class ViewState with Store {
   String? get id;
   Rect? get viewport;
 
-  ObservableValue<bool> get hitTestable;
-  ObservableValue<bool> get focusable;
+  abstract bool hitTestable;
+  abstract bool focusable;
 
   /// Returns true if the application fails to render a frame until a timeout.
-  ObservableValue<bool> get timeout;
+  bool get timeout;
 
   /// Returns true if the application closes itself due to error or exit.
-  ObservableValue<bool> get closed;
+  bool get closed;
 
   /// Call to close (quit) the application.
-  Action get close;
+  void close();
 
   /// Call to continue waiting on the application to render its first frame.
-  Action get wait;
+  void wait();
 
   /// Returns true when the view has rendered a frame.
   bool get loaded;

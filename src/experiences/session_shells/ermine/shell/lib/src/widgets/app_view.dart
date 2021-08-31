@@ -22,8 +22,8 @@ class AppView extends StatelessWidget {
         children: [
           FuchsiaView(
             controller: view.viewConnection,
-            hitTestable: view.hitTestable.value,
-            focusable: view.focusable.value,
+            hitTestable: view.hitTestable,
+            focusable: view.focusable,
           ),
 
           // Loading and timeout UX.

@@ -35,16 +35,17 @@ class QuickSettings extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 _ListSettings(appState),
-                if (state.shortcutsPageVisible.value) ShortcutSettings(state),
-                if (state.timezonesPageVisible.value)
+                if (state.shortcutsPageVisible) ShortcutSettings(state),
+                if (state.timezonesPageVisible)
                   TimezoneSettings(
-                      state: state,
-                      onChange: (tz) => state.updateTimezone([tz])),
-                if (state.aboutPageVisible.value) AboutSettings(state),
-                if (state.channelPageVisible.value)
+                    state: state,
+                    onChange: state.updateTimezone,
+                  ),
+                if (state.aboutPageVisible) AboutSettings(state),
+                if (state.channelPageVisible)
                   ChannelSettings(
                     state: state,
-                    onChange: (channel) => state.setTargetChannel([channel]),
+                    onChange: state.setTargetChannel,
                   ),
               ],
             ),
@@ -93,7 +94,7 @@ class _ListSettings extends StatelessWidget {
                 // Date time.
                 Observer(builder: (context) {
                   return Text(
-                    appState.settingsState.dateTime.value,
+                    appState.settingsState.dateTime,
                     style: Theme.of(context).textTheme.bodyText1,
                   );
                 }),
@@ -134,7 +135,7 @@ class _ListSettings extends StatelessWidget {
                     spacing: 8,
                     children: [
                       Text(
-                        appState.settingsState.selectedTimezone.value
+                        appState.settingsState.selectedTimezone
                             // Remove '_' from city names.
                             .replaceAll('_', ' ')
                             .replaceAll('/', ' / '),
@@ -151,32 +152,26 @@ class _ListSettings extends StatelessWidget {
                   return ListTile(
                     enabled: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                    leading: Icon(appState.settingsState.brightnessIcon.value),
+                    leading: Icon(appState.settingsState.brightnessIcon),
                     title: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(Strings.brightness),
                         Expanded(
                           child: Slider(
-                            value:
-                                appState.settingsState.brightnessLevel.value ??
-                                    1,
-                            onChanged: (double value) {
-                              appState.settingsState
-                                  .setBrightnessLevel([value]);
-                            },
+                            value: appState.settingsState.brightnessLevel ?? 1,
+                            onChanged:
+                                appState.settingsState.setBrightnessLevel,
                           ),
                         ),
                       ],
                     ),
-                    trailing:
-                        appState.settingsState.brightnessAuto.value == true
-                            ? Text(Strings.auto.toUpperCase())
-                            : OutlinedButton(
-                                onPressed: () => appState.settingsState
-                                    .setBrightnessAuto([true]),
-                                child: Text(Strings.auto.toUpperCase()),
-                              ),
+                    trailing: appState.settingsState.brightnessAuto == true
+                        ? Text(Strings.auto.toUpperCase())
+                        : OutlinedButton(
+                            onPressed: appState.settingsState.setBrightnessAuto,
+                            child: Text(Strings.auto.toUpperCase()),
+                          ),
                   );
                 }),
                 // Channel
@@ -191,7 +186,7 @@ class _ListSettings extends StatelessWidget {
                       SizedBox(width: 48),
                       Expanded(
                         child: Text(
-                          appState.settingsState.currentChannel.value,
+                          appState.settingsState.currentChannel,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
                           maxLines: 1,
