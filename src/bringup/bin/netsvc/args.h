@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_ARGS_H_
 #define SRC_BRINGUP_BIN_NETSVC_ARGS_H_
 
-#include <lib/zx/channel.h>
+#include <fuchsia/io/llcpp/fidl.h>
 
 #include <string>
 
@@ -30,7 +30,7 @@ struct NetsvcArgs {
 
 // Parses NetsvcArgs via the kernel commandline and the binary commandline (argv).
 // If ParseArgs returns < 0, an error string will be returned in |error|.
-int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** error,
-              NetsvcArgs* out);
+int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+              const char** error, NetsvcArgs* out);
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_ARGS_H_

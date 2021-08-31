@@ -22,7 +22,7 @@ using ReadCallback = fbl::Function<zx_status_t(void* /*buf*/, size_t /*offset*/,
 
 class PayloadStreamer : public fidl::WireServer<fuchsia_paver::PayloadStream> {
  public:
-  PayloadStreamer(zx::channel chan, ReadCallback callback);
+  PayloadStreamer(fidl::ServerEnd<fuchsia_paver::PayloadStream> server_end, ReadCallback callback);
 
   PayloadStreamer(const PayloadStreamer&) = delete;
   PayloadStreamer& operator=(const PayloadStreamer&) = delete;

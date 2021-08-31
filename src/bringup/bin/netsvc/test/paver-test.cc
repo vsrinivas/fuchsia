@@ -31,16 +31,14 @@ TEST(PaverTest, GetSingleton) {
 }
 
 TEST(PaverTest, InitialInProgressFalse) {
-  zx::channel chan;
   fbl::unique_fd fd;
-  netsvc::Paver paver_(std::move(chan), std::move(fd));
+  netsvc::Paver paver_({}, std::move(fd));
   ASSERT_FALSE(paver_.InProgress());
 }
 
 TEST(PaverTest, InitialExitCodeValid) {
-  zx::channel chan;
   fbl::unique_fd fd;
-  netsvc::Paver paver_(std::move(chan), std::move(fd));
+  netsvc::Paver paver_({}, std::move(fd));
   ASSERT_OK(paver_.exit_code());
 }
 

@@ -84,7 +84,8 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
                   public fidl::WireServer<fuchsia_paver::BootManager>,
                   public fidl::WireServer<fuchsia_paver::DynamicDataSink> {
  public:
-  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
+  zx_status_t Connect(async_dispatcher_t* dispatcher,
+                      fidl::ServerEnd<fuchsia_paver::Paver> request) {
     dispatcher_ = dispatcher;
     return fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::Paver>>(
         dispatcher, std::move(request), this);
@@ -93,14 +94,15 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
   void FindDataSink(FindDataSinkRequestView request,
                     FindDataSinkCompleter::Sync& _completer) override {
     fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::DynamicDataSink>>(
-        dispatcher_, request->data_sink.TakeChannel(), this);
+        dispatcher_,
+        fidl::ServerEnd<fuchsia_paver::DynamicDataSink>(request->data_sink.TakeChannel()), this);
   }
 
   void UseBlockDevice(UseBlockDeviceRequestView request,
                       UseBlockDeviceCompleter::Sync& _completer) override {
-    auto result =
-        fidl::WireCall<fuchsia_device::Controller>(request->block_device.borrow().channel())
-            .GetTopologicalPath();
+    auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
+                                     request->block_device.borrow().channel()))
+                      .GetTopologicalPath();
     if (!result.ok() || result->result.is_err()) {
       return;
     }
@@ -112,7 +114,7 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
       }
     }
     fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::DynamicDataSink>>(
-        dispatcher_, request->data_sink.TakeChannel(), this);
+        dispatcher_, std::move(request->data_sink), this);
   }
 
   void FindBootManager(FindBootManagerRequestView request,
@@ -121,7 +123,7 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
     AppendCommand(Command::kInitializeAbr);
     if (abr_supported_) {
       fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::BootManager>>(
-          dispatcher_, request->boot_manager.TakeChannel(), this);
+          dispatcher_, std::move(request->boot_manager), this);
     }
   }
 
@@ -273,7 +275,7 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
       completer.Reply(status);
       return;
     }
-    fidl::WireSyncClient<fuchsia_paver::PayloadStream> stream(request->payload.TakeChannel());
+    fidl::WireSyncClient stream = fidl::BindSyncClient(std::move(request->payload));
     auto result = stream.RegisterVmo(std::move(vmo));
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
@@ -420,23 +422,22 @@ class FakeSvc {
     root_dir->AddEntry(
         fidl::DiscoverableProtocolName<fuchsia_paver::Paver>,
         fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fuchsia_paver::Paver> request) {
-          return fake_paver_.Connect(dispatcher_, request.TakeChannel());
+          return fake_paver_.Connect(dispatcher_, std::move(request));
         }));
 
-    zx::channel svc_remote;
-    ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));
-
-    vfs_.ServeDirectory(root_dir, std::move(svc_remote));
+    zx::status server_end = fidl::CreateEndpoints(&svc_local_);
+    ASSERT_OK(server_end.status_value());
+    vfs_.ServeDirectory(root_dir, std::move(server_end.value()));
   }
 
   FakePaver& fake_paver() { return fake_paver_; }
-  zx::channel& svc_chan() { return svc_local_; }
+  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
 
  private:
   async_dispatcher_t* dispatcher_;
   fs::SynchronousVfs vfs_;
   FakePaver fake_paver_;
-  zx::channel svc_local_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 
 class FakeDev {

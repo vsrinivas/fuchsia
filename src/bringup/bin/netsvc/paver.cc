@@ -7,10 +7,8 @@
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/sysconfig/sync-client.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
 #include <zircon/boot/netboot.h>
@@ -18,7 +16,6 @@
 #include <zircon/types.h>
 
 #include <algorithm>
-#include <string>
 #include <string_view>
 
 #include "lib/async-loop/loop.h"
@@ -31,13 +28,8 @@ namespace netsvc {
 Paver* Paver::Get() {
   static Paver* instance_ = nullptr;
   if (instance_ == nullptr) {
-    zx::channel local, remote;
-    auto status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      return nullptr;
-    }
-    status = fdio_service_connect("/svc", remote.release());
-    if (status != ZX_OK) {
+    zx::status client_end = service::Connect<fuchsia_io::Directory>("/svc");
+    if (client_end.is_error()) {
       return nullptr;
     }
     fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
@@ -45,7 +37,7 @@ Paver* Paver::Get() {
       return nullptr;
     }
 
-    instance_ = new Paver(std::move(local), std::move(devfs_root));
+    instance_ = new Paver(std::move(client_end.value()), std::move(devfs_root));
   }
   return instance_;
 }
@@ -123,38 +115,35 @@ int Paver::StreamBuffer() {
     in_progress_.store(false);
   });
 
-  zx::channel data_sink, remote;
-  auto status = zx::channel::create(0, &data_sink, &remote);
-  if (status != ZX_OK) {
+  zx::status data_sink = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
+  if (data_sink.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
-    exit_code_.store(status);
+    exit_code_.store(data_sink.status_value());
     return 0;
   }
 
-  auto res = paver_svc_->FindDataSink(std::move(remote));
-  status = res.status();
-  if (status != ZX_OK) {
+  fidl::WireResult res = paver_svc_->FindDataSink(std::move(data_sink->server));
+  if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find data sink\n");
-    exit_code_.store(status);
+    exit_code_.store(res.status());
     return 0;
   }
 
-  zx::channel client, server;
-  status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
+  zx::status payload_stream = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
+  if (payload_stream.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
-    exit_code_.store(status);
+    exit_code_.store(payload_stream.status_value());
     return 0;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  PayloadStreamer streamer(std::move(server), std::move(callback));
+  PayloadStreamer streamer(std::move(payload_stream->server), std::move(callback));
   loop.StartThread("payload-streamer");
 
   // Blocks until paving is complete.
-  auto res2 = fidl::WireCall<fuchsia_paver::DataSink>(zx::unowned(data_sink))
-                  .WriteVolumes(std::move(client));
-  status = res2.status() == ZX_OK ? res2.value().status : res2.status();
+  fidl::WireResult res2 =
+      fidl::WireCall(data_sink->client).WriteVolumes(std::move(payload_stream->client));
+  zx_status_t status = res2.ok() ? res2.value().status : res2.status();
 
   exit_code_.store(status);
   return 0;
@@ -186,23 +175,21 @@ zx_status_t ProcessWriteFirmwareResult(const WriteFirmwareResult& res, const cha
 
 zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> data_sink,
                                 fuchsia_mem::wire::Buffer buffer) {
-  zx::channel boot_manager_chan, remote;
-  auto status = zx::channel::create(0, &boot_manager_chan, &remote);
-  if (status != ZX_OK) {
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
+  if (endpoints.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
-    exit_code_.store(status);
+    exit_code_.store(endpoints.status_value());
     return 0;
   }
 
-  auto res2 = paver_svc_->FindBootManager(std::move(remote));
-  status = res2.status();
-  if (status != ZX_OK) {
+  fidl::WireResult res = paver_svc_->FindBootManager(std::move(endpoints->server));
+  if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find boot manager\n");
-    exit_code_.store(status);
+    exit_code_.store(res.status());
     return 0;
   }
-  std::optional<fidl::WireSyncClient<fuchsia_paver::BootManager>> boot_manager;
-  boot_manager.emplace(std::move(boot_manager_chan));
+  std::optional<fidl::WireSyncClient<fuchsia_paver::BootManager>> boot_manager =
+      fidl::BindSyncClient(std::move(endpoints->client));
 
   // First find out whether or not ABR is supported.
   {
@@ -299,19 +286,19 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
 }
 
 zx_status_t Paver::ClearSysconfig() {
-  zx::channel sysconfig_local, sysconfig_remote;
-  if (auto status = zx::channel::create(0, &sysconfig_local, &sysconfig_remote); status != ZX_OK) {
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::Sysconfig>();
+  if (endpoints.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
-    return status;
+    return endpoints.status_value();
   }
 
-  auto status_find_sysconfig = paver_svc_->FindSysconfig(std::move(sysconfig_remote));
-  if (status_find_sysconfig.status() != ZX_OK) {
+  fidl::WireResult status_find_sysconfig = paver_svc_->FindSysconfig(std::move(endpoints->server));
+  if (!status_find_sysconfig.ok()) {
     fprintf(stderr, "netsvc: unable to find sysconfig\n");
     return status_find_sysconfig.status();
   }
 
-  fidl::WireSyncClient<fuchsia_paver::Sysconfig> client(std::move(sysconfig_local));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(endpoints->client));
 
   auto wipe_result = client.Wipe();
   auto wipe_status =
@@ -358,37 +345,29 @@ zx_status_t Paver::OpenDataSink(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx::channel block_dev_chan, remote;
-  status = zx::channel::create(0, &block_dev_chan, &remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "netsvc: unable to create channel\n");
-    return status;
-  }
-
   fdio_cpp::UnownedFdioCaller caller(devfs_root_.get());
 
-  status = fdio_service_connect_at(caller.borrow_channel(), &partition_info.block_device_path[5],
-                                   remote.release());
-  if (status != ZX_OK) {
+  zx::status client_end = service::ConnectAt<fuchsia_hardware_block::Block>(
+      caller.directory(), &partition_info.block_device_path[5]);
+  if (client_end.is_error()) {
     fprintf(stderr, "netsvc: Unable to open %s.\n", partition_info.block_device_path);
-    return status;
+    return client_end.status_value();
   }
 
-  zx::channel data_sink_chan;
-  status = zx::channel::create(0, &data_sink_chan, &remote);
-  if (status != ZX_OK) {
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
+  if (endpoints.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel.\n");
-    return status;
+    return endpoints.status_value();
   }
 
-  auto res = paver_svc_->UseBlockDevice(std::move(block_dev_chan), std::move(remote));
-  status = res.status();
-  if (status != ZX_OK) {
+  fidl::WireResult res =
+      paver_svc_->UseBlockDevice(std::move(client_end.value()), std::move(endpoints->server));
+  if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to use block device.\n");
-    return status;
+    return res.status();
   }
 
-  data_sink->emplace(std::move(data_sink_chan));
+  data_sink->emplace(std::move(endpoints->client));
   return ZX_OK;
 }
 
@@ -486,22 +465,20 @@ int Paver::MonitorBuffer() {
       break;
   };
 
-  zx::channel remote, data_sink_chan;
-  status = zx::channel::create(0, &data_sink_chan, &remote);
-  if (status != ZX_OK) {
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
+  if (endpoints.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
-    exit_code_.store(status);
+    exit_code_.store(endpoints.status_value());
     return 0;
   }
 
-  auto res = paver_svc_->FindDataSink(std::move(remote));
-  status = res.status();
-  if (status != ZX_OK) {
+  fidl::WireResult res = paver_svc_->FindDataSink(std::move(endpoints->server));
+  if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find data sink\n");
-    exit_code_.store(status);
+    exit_code_.store(res.status());
     return 0;
   }
-  fidl::WireSyncClient<fuchsia_paver::DataSink> data_sink(std::move(data_sink_chan));
+  fidl::WireSyncClient data_sink = fidl::BindSyncClient(std::move(endpoints->client));
 
   // Blocks until paving is complete.
   switch (command_) {

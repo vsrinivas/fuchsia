@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_LIB_MEXEC_MEXEC_H_
 #define SRC_BRINGUP_LIB_MEXEC_MEXEC_H_
 
-#include <lib/zx/channel.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
@@ -17,7 +17,8 @@ namespace mexec {
 // implementing fuchsia.device.manager.Administrator (to ensure an orderly
 // shutdown of devices), and kernel and data ZBIs (as described by the
 // protocol's documentation).
-zx_status_t Boot(zx::resource resource, zx::channel devmgr_channel, zx::vmo kernel_zbi,
+zx_status_t Boot(zx::resource resource,
+                 fidl::ClientEnd<fuchsia_device_manager::Administrator> devmgr, zx::vmo kernel_zbi,
                  zx::vmo data_zbi);
 
 }  // namespace mexec

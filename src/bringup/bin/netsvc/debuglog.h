@@ -9,7 +9,7 @@
 
 zx_time_t debuglog_next_timeout();
 
-int debuglog_init();
+zx_status_t debuglog_init();
 
 void debuglog_recv(void* data, size_t len, bool is_mcast);
 

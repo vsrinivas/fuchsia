@@ -5,7 +5,6 @@
 #include "mexec.h"
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
-#include <lib/fdio/directory.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/memory.h>
@@ -39,7 +38,8 @@ zx_status_t GetMexecDataZbi(zx::unowned_resource resource, fbl::Array<std::byte>
 
 }  // namespace
 
-zx_status_t Boot(zx::resource resource, zx::channel devmgr_channel, zx::vmo kernel_zbi,
+zx_status_t Boot(zx::resource resource,
+                 fidl::ClientEnd<fuchsia_device_manager::Administrator> devmgr, zx::vmo kernel_zbi,
                  zx::vmo data_zbi) {
   fbl::Array<std::byte> mexec_data_zbi;
   if (auto status = GetMexecDataZbi(resource.borrow(), mexec_data_zbi); status != ZX_OK) {
@@ -70,10 +70,9 @@ zx_status_t Boot(zx::resource resource, zx::channel devmgr_channel, zx::vmo kern
   }
   mandatory_memset(entropy.data(), 0, entropy.size());
   {
-    namespace devmgr = fuchsia_device_manager;
-
-    fidl::WireSyncClient<devmgr::Administrator> client(std::move(devmgr_channel));
-    if (zx_status_t status = client.Suspend(devmgr::wire::kSuspendFlagMexec).status();
+    fidl::WireSyncClient client = fidl::BindSyncClient(std::move(devmgr));
+    if (zx_status_t status =
+            client.Suspend(fuchsia_device_manager::wire::kSuspendFlagMexec).status();
         status != ZX_OK) {
       printf("mexec::Boot: failed to suspend devices: %s\n", zx_status_get_string(status));
       return ZX_ERR_INTERNAL;

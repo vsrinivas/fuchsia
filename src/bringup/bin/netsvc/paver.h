@@ -53,7 +53,7 @@ class Paver : public PaverInterface {
   void Close() final;
 
   // Visible for testing.
-  explicit Paver(zx::channel svc_root, fbl::unique_fd devfs_root)
+  explicit Paver(fidl::ClientEnd<fuchsia_io::Directory> svc_root, fbl::unique_fd devfs_root)
       : svc_root_(std::move(svc_root)), devfs_root_(std::move(devfs_root)) {}
 
   void set_timeout(zx::duration timeout) { timeout_ = timeout; }

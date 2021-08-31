@@ -5,8 +5,7 @@
 #include "args.h"
 
 #include <fuchsia/boot/llcpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <stdlib.h>
+#include <lib/service/llcpp/service.h>
 
 #include <cstring>
 
@@ -29,28 +28,20 @@ int ParseCommonArgs(int argc, char** argv, const char** error, std::string* inte
 }
 }  // namespace
 
-int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** error,
-              NetsvcArgs* out) {
+int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+              const char** error, NetsvcArgs* out) {
   // Reset the args.
   *out = NetsvcArgs();
 
   // First parse from kernel args, then use use cmdline args as overrides.
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    *error = "netsvc: unable to create channel";
-    return -1;
-  }
-
-  status = fdio_service_connect_at(
-      svc_root.get(), fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>, remote.release());
-  if (status != ZX_OK) {
+  zx::status client_end = service::ConnectAt<fuchsia_boot::Arguments>(svc_dir);
+  if (client_end.is_error()) {
     *error = "netsvc: unable to connect to fuchsia.boot.Arguments";
     return -1;
   }
 
-  fidl::WireSyncClient<fuchsia_boot::Arguments> client(std::move(local));
-  auto string_resp = client.GetString(fidl::StringView{"netsvc.interface"});
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireResult string_resp = client.GetString(fidl::StringView{"netsvc.interface"});
   if (string_resp.ok()) {
     auto& value = string_resp->value;
     out->interface = std::string{value.data(), value.size()};
@@ -63,7 +54,7 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
       {fidl::StringView{"netsvc.all-features"}, false},
   };
 
-  auto bool_resp =
+  fidl::WireResult bool_resp =
       client.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
   if (bool_resp.ok()) {
     out->disable = bool_resp->values[0];

@@ -5,12 +5,14 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_BOARD_INFO_H_
 #define SRC_BRINGUP_BIN_NETSVC_BOARD_INFO_H_
 
-#include <lib/zx/channel.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <unistd.h>
 
-bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length);
+bool CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, const char* name,
+                    size_t length);
 
-bool ReadBoardInfo(const zx::channel& sysinfo, void* data, off_t offset, size_t* length);
+bool ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, void* data,
+                   off_t offset, size_t* length);
 
 size_t BoardInfoSize();
 

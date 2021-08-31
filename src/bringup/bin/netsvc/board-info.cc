@@ -5,36 +5,17 @@
 #include "board-info.h"
 
 #include <dirent.h>
-#include <fcntl.h>
-#include <stdio.h>
 #include <string.h>
-
-// clang-format off
-#include <zircon/types.h>
-#undef VMOID_INVALID
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/block/llcpp/fidl.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
-#include <lib/fdio/cpp/caller.h>
-#include <lib/fdio/directory.h>
-#include <lib/zx/resource.h>
-#include <lib/zx/vmo.h>
 #include <zircon/boot/netboot.h>
-#include <zircon/device/block.h>
-#include <zircon/status.h>
-// clang-format on
+#include <zircon/types.h>
 
 #include <algorithm>
-#include <memory>
-
-#include <fbl/unique_fd.h>
-#include <gpt/gpt.h>
 
 namespace {
 
-[[maybe_unused]] static bool IsChromebook(const zx::channel& sysinfo) {
-  auto result =
-      fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(sysinfo)).GetBootloaderVendor();
+[[maybe_unused]] static bool IsChromebook(
+    fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo) {
+  fidl::WireResult result = fidl::WireCall(sysinfo).GetBootloaderVendor();
   zx_status_t status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     return status;
@@ -42,8 +23,9 @@ namespace {
   return strncmp(result->vendor.data(), "coreboot", result->vendor.size()) == 0;
 }
 
-zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
-  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(sysinfo)).GetBoardName();
+zx_status_t GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
+                         char* real_board_name) {
+  fidl::WireResult result = fidl::WireCall(sysinfo).GetBoardName();
   if (!result.ok()) {
     return false;
   }
@@ -71,8 +53,9 @@ zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
   return ZX_OK;
 }
 
-zx_status_t GetBoardRevision(const zx::channel& sysinfo, uint32_t* board_revision) {
-  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(sysinfo)).GetBoardRevision();
+zx_status_t GetBoardRevision(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
+                             uint32_t* board_revision) {
+  fidl::WireResult result = fidl::WireCall(sysinfo).GetBoardRevision();
   if (!result.ok()) {
     return false;
   }
@@ -86,7 +69,8 @@ zx_status_t GetBoardRevision(const zx::channel& sysinfo, uint32_t* board_revisio
 
 }  // namespace
 
-bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length) {
+bool CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, const char* name,
+                    size_t length) {
   if (!sysinfo) {
     return false;
   }
@@ -100,7 +84,8 @@ bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length)
   return strncmp(real_board_name, name, length) == 0;
 }
 
-bool ReadBoardInfo(const zx::channel& sysinfo, void* data, off_t offset, size_t* length) {
+bool ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, void* data,
+                   off_t offset, size_t* length) {
   if (!sysinfo) {
     return false;
   }

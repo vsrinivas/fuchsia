@@ -93,9 +93,9 @@ static const char* zedboot_banner =
     "\n";
 
 int main(int argc, char** argv) {
-  zx_status_t status = StdoutToDebuglog::Init();
-  if (status != ZX_OK) {
-    printf("Failed to redirect stdout to debuglog, assuming test environment and continuing\n");
+  if (zx_status_t status = StdoutToDebuglog::Init(); status != ZX_OK) {
+    printf("Failed to redirect stdout to debuglog, assuming test environment and continuing: %s\n",
+           zx_status_get_string(status));
   }
 
   fbl::unique_fd svc_root(open("/svc", O_RDWR | O_DIRECTORY));
@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
 
   NetsvcArgs args;
   const char* error;
-  if (ParseArgs(argc, argv, *caller.channel(), &error, &args) < 0) {
+  if (ParseArgs(argc, argv, caller.directory(), &error, &args) < 0) {
     printf("netsvc: fatal error: %s\n", error);
     return -1;
   };
@@ -124,7 +124,8 @@ int main(int argc, char** argv) {
   }
 
   if (g_all_features) {
-    if (debuglog_init() < 0) {
+    if (zx_status_t status = debuglog_init(); status != ZX_OK) {
+      printf("netsvc: fatal: error initializing debuglog: %s\n", zx_status_get_string(status));
       return -1;
     }
   }

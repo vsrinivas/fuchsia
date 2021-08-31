@@ -55,31 +55,22 @@ executable("netsvc") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/inet6",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
   data_deps = [
     # netsvc launches /boot/bin/sh for netruncmd.
     "//zircon/third_party/uapp/dash",
   ]
   configs += [ ":netsvc_config" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("args") {
   sources = [ "args.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zx",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 source_set("netsvc_common") {
@@ -122,11 +113,6 @@ source_set("netsvc_common") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inet6",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("netsvc-test") {
@@ -156,11 +142,6 @@ test("netsvc-test") {
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zircon-internal",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("netsvc-stress-test") {
@@ -180,11 +161,6 @@ test("netsvc-stress-test") {
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zircon-internal",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 isolated_devmgr_unittest_component("netsvc-stress-test-component") {

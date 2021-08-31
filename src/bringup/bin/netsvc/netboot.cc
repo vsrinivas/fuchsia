@@ -10,23 +10,17 @@
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <threads.h>
-#include <unistd.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <inet6/inet6.h>
-#include <inet6/netifc.h>
 
 #include "netcp.h"
 #include "netsvc.h"
@@ -40,7 +34,6 @@ static uint32_t last_arg = 0;
 static uint32_t last_ack_cmd = 0;
 static uint32_t last_ack_arg = 0;
 
-#define PAGE_ROUNDUP(x) ((x + zx_system_get_page_size() - 1) & ~(zx_system_get_page_size() - 1))
 #define MAX_ADVERTISE_DATA_LEN 256
 
 bool xfer_active = false;
@@ -58,28 +51,14 @@ static nbfile* active;
 
 namespace {
 
-bool ConnectToService(const char* service, zx::channel& channel) {
-  zx::channel remote;
-  if (zx_status_t status = zx::channel::create(0, &channel, &remote); status != ZX_OK) {
-    printf("failed to create a channel: %s\n", zx_status_get_string(status));
-    return false;
-  }
-  std::string svc = "/svc/" + std::string(service);
-  if (zx_status_t status = fdio_service_connect(svc.c_str(), remote.release()); status != ZX_OK) {
-    printf("failed to connect to %s: %s\n", service, zx_status_get_string(status));
-    return false;
-  }
-  return true;
-};
-
 bool GetMexecResource(zx::resource* resource) {
   using Resource = fuchsia_boot::RootResource;
 
-  zx::channel local;
-  if (!ConnectToService(fidl::DiscoverableProtocolName<Resource>, local)) {
+  zx::status client_end = service::Connect<Resource>();
+  if (client_end.is_error()) {
     return false;
   }
-  fidl::WireSyncClient<Resource> client(std::move(local));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end.value()));
   if (auto result = client.Get(); !result.ok()) {
     printf("failed to get root resource %s\n", result.status_string());
     return false;
@@ -297,13 +276,12 @@ static zx_status_t do_dmctl_mexec() {
   if (!GetMexecResource(&resource)) {
     return ZX_ERR_INTERNAL;
   }
-  zx::channel devmgr_channel;
-  if (!ConnectToService(fidl::DiscoverableProtocolName<fuchsia_device_manager::Administrator>,
-                        devmgr_channel)) {
-    return ZX_ERR_INTERNAL;
+  zx::status client_end = service::Connect<fuchsia_device_manager::Administrator>();
+  if (client_end.is_error()) {
+    return client_end.status_value();
   }
 
-  status = mexec::Boot(std::move(resource), std::move(devmgr_channel), std::move(kernel_zbi),
+  status = mexec::Boot(std::move(resource), std::move(client_end.value()), std::move(kernel_zbi),
                        std::move(data_zbi));
   if (status != ZX_OK) {
     return ZX_ERR_INTERNAL;
@@ -317,12 +295,12 @@ static zx_status_t do_dmctl_mexec() {
 static zx_status_t reboot() {
   namespace statecontrol = fuchsia_hardware_power_statecontrol;
 
-  zx::channel local;
-  if (!ConnectToService(fidl::DiscoverableProtocolName<statecontrol::Admin>, local)) {
-    return ZX_ERR_INTERNAL;
+  zx::status client_end = service::Connect<statecontrol::Admin>();
+  if (client_end.is_error()) {
+    return client_end.status_value();
   }
-  auto response = fidl::WireCall<statecontrol::Admin>(local.borrow())
-                      .Reboot(statecontrol::wire::RebootReason::kUserRequest);
+  fidl::WireResult response =
+      fidl::WireCall(client_end.value()).Reboot(statecontrol::wire::RebootReason::kUserRequest);
   if (response.status() != ZX_OK) {
     return response.status();
   }

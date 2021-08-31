@@ -4,7 +4,6 @@
 
 #include "tftp.h"
 
-#include <lib/fdio/spawn.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>

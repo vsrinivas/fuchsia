@@ -5,7 +5,6 @@
 #include "src/bringup/bin/netsvc/file-api.h"
 
 #include <fcntl.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -69,37 +68,38 @@ class FakeNetCopy : public netsvc::NetCopyInterface {
 class FakeSysinfo : public fidl::WireServer<fuchsia_sysinfo::SysInfo> {
  public:
   FakeSysinfo(async_dispatcher_t* dispatcher) {
-    zx::channel remote;
-    ASSERT_OK(zx::channel::create(0, &remote, &svc_chan_));
-    fidl::BindSingleInFlightOnly(dispatcher, std::move(remote), this);
+    zx::status server_end = fidl::CreateEndpoints(&svc_chan_);
+    ASSERT_OK(server_end.status_value());
+    fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end.value()), this);
   }
 
-  void GetBoardName(GetBoardNameRequestView request, GetBoardNameCompleter::Sync& completer) {
+  void GetBoardName(GetBoardNameRequestView request,
+                    GetBoardNameCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, fidl::StringView{board_, sizeof(board_)});
   }
 
   void GetBoardRevision(GetBoardRevisionRequestView request,
-                        GetBoardRevisionCompleter::Sync& completer) {
+                        GetBoardRevisionCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, 0);
   }
 
   void GetBootloaderVendor(GetBootloaderVendorRequestView request,
-                           GetBootloaderVendorCompleter::Sync& completer) {
+                           GetBootloaderVendorCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, fidl::StringView{vendor_, sizeof(vendor_)});
   }
 
   void GetInterruptControllerInfo(GetInterruptControllerInfoRequestView request,
-                                  GetInterruptControllerInfoCompleter::Sync& completer) {
+                                  GetInterruptControllerInfoCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   }
 
-  zx::channel& svc_chan() { return svc_chan_; }
+  fidl::ClientEnd<fuchsia_sysinfo::SysInfo>& svc_chan() { return svc_chan_; }
 
   void set_board_name(const char* board) { strlcpy(board_, board, sizeof(board_)); }
   void set_bootloader_vendor(const char* vendor) { strlcpy(vendor_, vendor, sizeof(vendor_)); }
 
  private:
-  zx::channel svc_chan_;
+  fidl::ClientEnd<fuchsia_sysinfo::SysInfo> svc_chan_;
 
   char board_[32] = {};
   char vendor_[32] = {};

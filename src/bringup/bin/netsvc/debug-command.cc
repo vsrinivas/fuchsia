@@ -7,7 +7,6 @@
 #include <lib/zx/debuglog.h>
 #include <stdio.h>
 #include <zircon/processargs.h>
-#include <zircon/syscalls.h>
 
 #include "netboot.h"
 

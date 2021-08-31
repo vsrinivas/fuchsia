@@ -6,14 +6,11 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <stdio.h>
 #include <zircon/boot/netboot.h>
 
-#include <fbl/unique_fd.h>
-
 #include "board-info.h"
-#include "netboot.h"
 
 namespace netsvc {
 namespace {
@@ -23,8 +20,8 @@ size_t NB_FILENAME_PREFIX_LEN() { return strlen(NB_FILENAME_PREFIX); }
 
 }  // namespace
 
-FileApi::FileApi(bool is_zedboot, std::unique_ptr<NetCopyInterface> netcp, zx::channel sysinfo,
-                 PaverInterface* paver)
+FileApi::FileApi(bool is_zedboot, std::unique_ptr<NetCopyInterface> netcp,
+                 fidl::ClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, PaverInterface* paver)
     : is_zedboot_(is_zedboot),
       sysinfo_(std::move(sysinfo)),
       netcp_(std::move(netcp)),
@@ -33,9 +30,9 @@ FileApi::FileApi(bool is_zedboot, std::unique_ptr<NetCopyInterface> netcp, zx::c
 
   if (!sysinfo_) {
     constexpr char kSysInfoPath[] = "/dev/sys/platform";
-    fbl::unique_fd sysinfo_fd(open(kSysInfoPath, O_RDWR));
-    if (sysinfo_fd) {
-      fdio_get_service_handle(sysinfo_fd.release(), sysinfo_.reset_and_get_address());
+    zx::status client_end = service::Connect<fuchsia_sysinfo::SysInfo>(kSysInfoPath);
+    if (client_end.is_ok()) {
+      sysinfo_ = std::move(client_end.value());
     }
   }
 }
