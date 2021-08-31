@@ -92,6 +92,7 @@ impl TestEnvironment {
 
 fn create_key_down_event(key: input::Key, modifiers: ui_input3::Modifiers) -> ui_input3::KeyEvent {
     ui_input3::KeyEvent {
+        timestamp: Some(0),
         key: Some(key),
         modifiers: Some(modifiers),
         type_: Some(ui_input3::KeyEventType::Pressed),
@@ -101,6 +102,7 @@ fn create_key_down_event(key: input::Key, modifiers: ui_input3::Modifiers) -> ui
 
 fn create_key_up_event(key: input::Key, modifiers: ui_input3::Modifiers) -> ui_input3::KeyEvent {
     ui_input3::KeyEvent {
+        timestamp: Some(0),
         key: Some(key),
         modifiers: Some(modifiers),
         type_: Some(ui_input3::KeyEventType::Released),
@@ -265,11 +267,13 @@ async fn test_sync_cancel_with_connections(
 
     let key1 = input::Key::A;
     let event1_press = ui_input3::KeyEvent {
+        timestamp: Some(0),
         key: Some(key1),
         type_: Some(ui_input3::KeyEventType::Pressed),
         ..ui_input3::KeyEvent::EMPTY
     };
     let event1_release = ui_input3::KeyEvent {
+        timestamp: Some(0),
         key: Some(key1),
         type_: Some(ui_input3::KeyEventType::Released),
         ..ui_input3::KeyEvent::EMPTY

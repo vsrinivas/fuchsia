@@ -125,12 +125,14 @@ impl<'a> KeySimulator<'a> {
     // Simulate a key press and release of `key`.
     async fn simulate_keypress(&self, key: input::Key) -> Result<()> {
         self.dispatch(ui_input3::KeyEvent {
+            timestamp: Some(0),
             type_: Some(ui_input3::KeyEventType::Pressed),
             key: Some(key),
             ..ui_input3::KeyEvent::EMPTY
         })
         .await?;
         self.dispatch(ui_input3::KeyEvent {
+            timestamp: Some(0),
             type_: Some(ui_input3::KeyEventType::Released),
             key: Some(key),
             ..ui_input3::KeyEvent::EMPTY
@@ -156,6 +158,7 @@ impl<'a> KeySimulator<'a> {
         stream::iter(sequence)
             .for_each(|(type_, key)| {
                 self.dispatch(ui_input3::KeyEvent {
+                    timestamp: Some(0),
                     type_: Some(type_),
                     key: Some(key),
                     ..ui_input3::KeyEvent::EMPTY

@@ -156,11 +156,7 @@ impl KeyboardService {
             // Send the CANCEL events to the client that's about to lose focus.
             let dispatches = cancel_events.map(|event| {
                 // See the note below around "Send the SYNC events to the newly focused client".
-                assert!(
-                    event.timestamp.is_some(),
-                    "keyboard event without a timestamp: {:?}",
-                    &event
-                );
+                validate_key_event(&event);
                 subscriber.listener.on_key_event(event)
             });
 
@@ -197,8 +193,8 @@ impl KeyboardService {
         // Send the SYNC events to the newly focused client.
         let dispatches = sync_events.map(|event: ui_input3::KeyEvent| {
             // Since ui_input3::KeyEvent is a FIDL type there is no way to guarantee
-            // at compile time.  Let's check here.
-            assert!(event.timestamp.is_some(), "keyboard event without a timestamp: {:?}", &event);
+            // its well-formedness at compile time.  Let's check here.
+            validate_key_event(&event);
             subscriber.listener.on_key_event(event)
         });
 
@@ -324,6 +320,22 @@ impl KeyboardService {
     }
 }
 
+// Validates the well-formedness of `KeyEvent` and crashes if the checks fail.
+//
+// Clients already malfunction if any of the conditions below are not fulfilled, and
+// this behavior may well be reasonable given how we've defined the `KeyboardListener` FIDL
+// protocol.
+//
+// Let's make things official by verifying that what we're sending the clients is valid.
+fn validate_key_event(event: &ui_input3::KeyEvent) {
+    assert!(event.type_.is_some(), "keyboard event without a type");
+    assert!(event.timestamp.is_some(), "keyboard event without a timestamp");
+    assert!(
+        event.key.is_some() || event.key_meaning.is_some(),
+        "keyboard event without a key or key_meaning"
+    );
+}
+
 impl KeyListenerStore {
     fn add_new_subscriber(
         &mut self,
@@ -349,6 +361,7 @@ impl KeyListenerStore {
     }
 
     async fn dispatch_key(&self, event: ui_input3::KeyEvent) -> Result<bool, Error> {
+        validate_key_event(&event);
         let subscribers = self
             .subscribers
             .iter()
@@ -368,17 +381,10 @@ impl KeyListenerStore {
                     if !self.is_focused(&subscriber.view_ref) {
                         return Ok(());
                     }
-                    let event = ui_input3::KeyEvent {
-                        key: event.key,
-                        key_meaning: event.key_meaning,
-                        modifiers: event.modifiers,
-                        timestamp: event.timestamp,
-                        type_: event.type_,
-                        ..ui_input3::KeyEvent::EMPTY
-                    };
+                    let forwarded_event = event.clone();
                     let handled = subscriber
                         .listener
-                        .on_key_event(event)
+                        .on_key_event(forwarded_event)
                         .on_timeout(fasync::Time::after(DEFAULT_LISTENER_TIMEOUT), || {
                             fx_log_info!("Key listener timeout! {:?}", subscriber.view_ref);
                             Ok(ui_input3::KeyEventStatus::NotHandled)
@@ -771,6 +777,7 @@ mod tests {
         helper
             .service
             .handle_key_event(ui_input3::KeyEvent {
+                timestamp: Some(0),
                 key: Some(key),
                 type_: Some(ui_input3::KeyEventType::Released),
                 ..ui_input3::KeyEvent::EMPTY
@@ -783,6 +790,7 @@ mod tests {
         helper
             .service
             .handle_key_event(ui_input3::KeyEvent {
+                timestamp: Some(0),
                 key: Some(input::Key::LeftShift),
                 type_: Some(ui_input3::KeyEventType::Sync),
                 ..ui_input3::KeyEvent::EMPTY
@@ -798,6 +806,7 @@ mod tests {
         helper
             .service
             .handle_key_event(ui_input3::KeyEvent {
+                timestamp: Some(0),
                 key: Some(input::Key::LeftShift),
                 type_: Some(ui_input3::KeyEventType::Cancel),
                 ..ui_input3::KeyEvent::EMPTY
