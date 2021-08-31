@@ -756,6 +756,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
           VLOGF(1, "Bus device %p '%s' is unbound", parent.get(), parent->name().data());
 
           if (parent->retries > 0) {
+            LOGF(INFO, "Suspected crash: attempting to re-bind %s", parent->name().data());
             // Add device with an exponential backoff.
             zx_status_t r = parent->SignalReadyForBind(parent->backoff);
             if (r != ZX_OK) {
