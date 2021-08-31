@@ -922,13 +922,16 @@ mod tests {
         realm_instance.destroy().await.expect("failed to destroy realm");
 
         // Check that the components reported themselves being dropped
-        select! {
-            res = component_1_drop_receiver => res.expect("failed to receive stop notification"),
-            default => panic!("component_1 should have stopped by now"),
-        }
-        select! {
-            res = component_2_drop_receiver => res.expect("failed to receive stop notification"),
-            default => panic!("component_2 should have stopped by now"),
-        }
+        component_1_drop_receiver.await.expect("failed to receive stop notificaiton");
+        component_2_drop_receiver.await.expect("failed to receive stop notificaiton");
+        // TODO(82021): reenable the following
+        //select! {
+        //    res = component_1_drop_receiver => res.expect("failed to receive stop notification"),
+        //    default => panic!("component_1 should have stopped by now"),
+        //}
+        //select! {
+        //    res = component_2_drop_receiver => res.expect("failed to receive stop notification"),
+        //    default => panic!("component_2 should have stopped by now"),
+        //}
     }
 }
