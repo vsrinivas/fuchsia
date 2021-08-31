@@ -29,7 +29,7 @@ pub use caching_object_handle::CachingObjectHandle;
 pub use directory::Directory;
 pub use filesystem::FxFilesystem;
 pub use record::{ObjectDescriptor, Timestamp};
-pub use store_object_handle::StoreObjectHandle;
+pub use store_object_handle::{round_down, round_up, StoreObjectHandle};
 
 use {
     crate::{
@@ -41,7 +41,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
-            data_buffer::{DataBuffer, MemDataBuffer},
+            data_buffer::{DataBufferFactory, NativeDataBuffer},
             filesystem::{Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
             record::{
@@ -74,14 +74,6 @@ use {
     },
     storage_device::Device,
 };
-
-/// StoreObjectHandle stores an owner that must implement this trait, which allows the handle to get
-/// back to an ObjectStore and provides a callback for creating a data buffer for the handle.
-pub trait HandleOwner: AsRef<ObjectStore> + Send + Sync + 'static {
-    type Buffer: DataBuffer;
-
-    fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> Self::Buffer;
-}
 
 // StoreInfo stores information about the object store.  This is stored within the parent object
 // store, and is used, for example, to get the persistent layer objects.
@@ -254,7 +246,7 @@ impl ObjectStore {
         Ok(store)
     }
 
-    pub async fn open_object<S: HandleOwner>(
+    pub async fn open_object<S: AsRef<ObjectStore> + Send + Sync + 'static>(
         owner: &Arc<S>,
         object_id: u64,
         options: HandleOptions,
@@ -299,7 +291,7 @@ impl ObjectStore {
         }
     }
 
-    async fn create_object_with_id<S: HandleOwner>(
+    async fn create_object_with_id<S: AsRef<ObjectStore> + Send + Sync + 'static>(
         owner: &Arc<S>,
         transaction: &mut Transaction<'_>,
         object_id: u64,
@@ -345,7 +337,7 @@ impl ObjectStore {
         ))
     }
 
-    pub async fn create_object<S: HandleOwner>(
+    pub async fn create_object<S: AsRef<ObjectStore> + Send + Sync + 'static>(
         owner: &Arc<S>,
         mut transaction: &mut Transaction<'_>,
         options: HandleOptions,
@@ -680,6 +672,12 @@ impl ObjectStore {
     }
 }
 
+impl DataBufferFactory for ObjectStore {
+    fn create_data_buffer(&self, _object_id: u64, initial_size: u64) -> NativeDataBuffer {
+        NativeDataBuffer::new(initial_size)
+    }
+}
+
 // In a major compaction (i.e. a compaction which involves the base layer), we have an opportunity
 // to apply a number of optimizations, such as removing tombstoned objects or deleted extents.
 // These optimizations can only be applied after the compaction completes, thus we have an explicit
@@ -967,15 +965,6 @@ impl Mutations for ObjectStore {
         }
 
         Ok(())
-    }
-}
-
-// TODO(csuter): MemDataBuffer has size limits so we should check sizes before we use it.
-impl HandleOwner for ObjectStore {
-    type Buffer = MemDataBuffer;
-
-    fn create_data_buffer(&self, _object_id: u64, initial_size: u64) -> Self::Buffer {
-        MemDataBuffer::new(initial_size)
     }
 }
 

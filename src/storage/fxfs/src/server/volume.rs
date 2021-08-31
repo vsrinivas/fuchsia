@@ -6,10 +6,10 @@ use {
     crate::{
         errors::FxfsError,
         object_store::{
+            data_buffer::{DataBufferFactory, NativeDataBuffer},
             directory::{self, Directory, ObjectDescriptor, ReplacedChild},
             transaction::{LockKey, Options},
-            vmo_data_buffer::VmoDataBuffer,
-            HandleOptions, HandleOwner, ObjectStore,
+            HandleOptions, ObjectStore,
         },
         pager::Pager,
         server::{
@@ -21,7 +21,6 @@ use {
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
-    fuchsia_async as fasync,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
     vfs::{
@@ -36,17 +35,11 @@ pub struct FxVolume {
     cache: NodeCache,
     store: Arc<ObjectStore>,
     pager: Pager,
-    executor: fasync::EHandle,
 }
 
 impl FxVolume {
     pub fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
-        Ok(Self {
-            cache: NodeCache::new(),
-            store,
-            pager: Pager::new()?,
-            executor: fasync::EHandle::local(),
-        })
+        Ok(Self { cache: NodeCache::new(), store, pager: Pager::new()? })
     }
 
     pub fn store(&self) -> &Arc<ObjectStore> {
@@ -59,10 +52,6 @@ impl FxVolume {
 
     pub fn pager(&self) -> &Pager {
         &self.pager
-    }
-
-    pub fn executor(&self) -> &fasync::EHandle {
-        &self.executor
     }
 
     pub async fn terminate(&self) {
@@ -136,17 +125,15 @@ impl FxVolume {
     }
 }
 
-impl HandleOwner for FxVolume {
-    type Buffer = VmoDataBuffer;
-
-    fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> Self::Buffer {
-        self.pager.create_vmo(object_id, initial_size).unwrap().into()
-    }
-}
-
 impl AsRef<ObjectStore> for FxVolume {
     fn as_ref(&self) -> &ObjectStore {
         &self.store
+    }
+}
+
+impl DataBufferFactory for FxVolume {
+    fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> NativeDataBuffer {
+        self.pager.create_vmo(object_id, initial_size).unwrap().into()
     }
 }
 
@@ -338,7 +325,7 @@ mod tests {
         io_util::{read_file_bytes, write_file_bytes},
     };
 
-    #[fasync::run(10, test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_rename_different_dirs() {
         use fuchsia_zircon::Event;
 
@@ -388,7 +375,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_rename_same_dir() {
         use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;
@@ -428,7 +415,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_rename_overwrites_file() {
         use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;
@@ -492,7 +479,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_rename_overwrites_dir() {
         use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;

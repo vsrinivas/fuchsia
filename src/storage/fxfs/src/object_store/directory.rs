@@ -16,7 +16,7 @@ use {
                 Timestamp,
             },
             transaction::{Mutation, Transaction},
-            HandleOptions, HandleOwner, ObjectStore, ObjectStoreMutation, StoreObjectHandle,
+            HandleOptions, ObjectStore, ObjectStoreMutation, StoreObjectHandle,
         },
         trace_duration,
     },
@@ -41,7 +41,7 @@ pub struct Directory<S> {
     is_deleted: AtomicBool,
 }
 
-impl<S: HandleOwner> Directory<S> {
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
     pub fn new(owner: Arc<S>, object_id: u64) -> Self {
         Directory { owner, object_id, is_deleted: AtomicBool::new(false) }
     }
@@ -322,7 +322,7 @@ impl<S: HandleOwner> Directory<S> {
     }
 }
 
-impl<S: HandleOwner> fmt::Debug for Directory<S> {
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> fmt::Debug for Directory<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Directory")
             .field("store_id", &self.store().store_object_id())
@@ -382,7 +382,7 @@ pub enum ReplacedChild {
 ///
 /// If |src| is None, this is effectively the same as unlink(dst.0/dst.1).
 #[must_use]
-pub async fn replace_child<'a, S: HandleOwner>(
+pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
     transaction: &mut Transaction<'a>,
     src: Option<(&'a Directory<S>, &str)>,
     dst: (&'a Directory<S>, &str),

@@ -23,7 +23,6 @@ use {
             },
             HandleOptions, ObjectStore,
         },
-        round::{round_down, round_up},
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
@@ -662,6 +661,16 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> AssociatedObject for StoreOb
     }
 }
 
+// TODO(jfsulliv): Move into utils module or something else.
+pub fn round_down<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
+    offset - offset % block_size.into()
+}
+
+pub fn round_up<T: Into<u64>>(offset: u64, block_size: T) -> Option<u64> {
+    let block_size = block_size.into();
+    Some(round_down(offset.checked_add(block_size - 1)?, block_size))
+}
+
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObjectHandle<S> {
     fn set_trace(&self, v: bool) {
         log::info!("{}.{} tracing: {}", self.store().store_object_id, self.object_id(), v);
@@ -933,10 +942,10 @@ mod tests {
                 crypt::InsecureCrypt,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
                 record::{ExtentKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
+                round_up,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },
-            round::round_up,
         },
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, join},

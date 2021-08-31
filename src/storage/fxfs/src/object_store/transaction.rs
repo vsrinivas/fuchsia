@@ -294,9 +294,6 @@ pub enum LockKey {
 
     /// Locks the entire filesystem.
     Filesystem,
-
-    /// Used to lock cached writes to an object attribute.
-    CachedWrite { store_object_id: u64, object_id: u64, attribute_id: u64 },
 }
 
 impl LockKey {
@@ -306,10 +303,6 @@ impl LockKey {
 
     pub fn object(store_object_id: u64, object_id: u64) -> Self {
         LockKey::Object { store_object_id, object_id }
-    }
-
-    pub fn cached_write(store_object_id: u64, object_id: u64, attribute_id: u64) -> Self {
-        LockKey::CachedWrite { store_object_id, object_id, attribute_id }
     }
 }
 
