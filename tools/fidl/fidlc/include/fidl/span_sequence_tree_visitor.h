@@ -23,8 +23,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
       : file_(file), tokens_(std::move(tokens)) {}
   // These "On*" methods may be called on files written in the new syntax.
   void OnAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> const& element) override;
-  void OnAttributeArg(raw::AttributeArg const& element) override;
-  void OnAttributeNew(raw::AttributeNew const& element) override;
+  void OnAttributeArg(std::unique_ptr<raw::AttributeArg> const& element) override;
+  void OnAttributeNew(std::unique_ptr<raw::AttributeNew> const& element) override;
   void OnAttributeListNew(std::unique_ptr<raw::AttributeListNew> const& element) override;
   void OnBinaryOperatorConstant(
       std::unique_ptr<raw::BinaryOperatorConstant> const& element) override;

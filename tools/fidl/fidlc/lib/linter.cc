@@ -768,7 +768,7 @@ Linter::Linter()
         if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
           if (element.args.empty())
             return;
-          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.args.front().value.get());
+          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.args.front()->value.get());
           if (std::regex_search(doc_comment->MakeContents(), copyright_regex)) {
             linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
           }

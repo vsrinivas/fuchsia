@@ -50,7 +50,7 @@ std::string Display(const raw::AttributeListNew* a) {
     if (it != a->attributes.cbegin()) {
       attributes_found << ", ";
     }
-    attributes_found << it->name;
+    attributes_found << (*it)->name;
   }
   return attributes_found.str();
 }

@@ -310,7 +310,7 @@ class AttributeNew final : public SourceElement {
   };
 
   AttributeNew(SourceElement const& element, Provenance provenance, std::string name,
-               std::vector<AttributeArg> args)
+               std::vector<std::unique_ptr<AttributeArg>> args)
       : SourceElement(element),
         provenance(provenance),
         name(std::move(name)),
@@ -320,17 +320,17 @@ class AttributeNew final : public SourceElement {
 
   Provenance provenance;
   const std::string name;
-  std::vector<AttributeArg> args;
+  std::vector<std::unique_ptr<AttributeArg>> args;
 };
 
 class AttributeListNew final : public SourceElement {
  public:
-  AttributeListNew(SourceElement const& element, std::vector<AttributeNew> attributes)
+  AttributeListNew(SourceElement const& element, std::vector<std::unique_ptr<AttributeNew>> attributes)
       : SourceElement(element), attributes(std::move(attributes)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::vector<AttributeNew> attributes;
+  std::vector<std::unique_ptr<AttributeNew>> attributes;
 };
 
 // TODO(fxbug.dev/70247): Remove the two type constructor versions and remove

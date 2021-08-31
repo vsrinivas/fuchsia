@@ -1833,9 +1833,6 @@ void AttributeSchema::ValidateConstraint(Reporter* reporter,
   if (passed) {
     assert(check.NoNewErrors() && "cannot add errors and pass");
   } else if (check.NoNewErrors()) {
-    // TODO(pascallouis): It would be nicer to use the span of
-    // the declaration, however we do not keep it around today.
-
     // TODO(fxbug.dev/74955): this currently assumes a single string argument, as
     //  is the case in the old syntax. This error reporting will need to be
     //  changed to handle other cases (multiple args, different arg types, etc).
@@ -2616,14 +2613,14 @@ bool Library::ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw
       //  a regular vector, to check for duplicates, when enabling multiple
       //  arguments.
       std::vector<std::unique_ptr<AttributeArg>> args;
-      for (auto& raw_arg : raw_attribute.args) {
+      for (auto& raw_arg : raw_attribute->args) {
         std::unique_ptr<LiteralConstant> constant;
-        constant = std::make_unique<LiteralConstant>(std::move(raw_arg.value));
+        constant = std::make_unique<LiteralConstant>(std::move(raw_arg->value));
         args.emplace_back(std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant),
-                                                         raw_arg.span()));
+                                                         raw_arg->span()));
       }
-      auto attribute = std::make_unique<Attribute>(raw_attribute.name, fidl::utils::Syntax::kNew,
-                                                   raw_attribute.span(), std::move(args));
+      auto attribute = std::make_unique<Attribute>(raw_attribute->name, fidl::utils::Syntax::kNew,
+                                                   raw_attribute->span(), std::move(args));
       attributes_builder.Insert(std::move(attribute));
     }
   }

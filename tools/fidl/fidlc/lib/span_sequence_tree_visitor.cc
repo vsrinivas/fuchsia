@@ -397,22 +397,22 @@ void SpanSequenceTreeVisitor::OnAliasDeclaration(
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
 
-void SpanSequenceTreeVisitor::OnAttributeArg(const raw::AttributeArg& element) {
+void SpanSequenceTreeVisitor::OnAttributeArg(const std::unique_ptr<raw::AttributeArg>& element) {
   const auto visiting = Visiting(this, VisitorKind::kAttributeArg);
-  const auto builder = SpanBuilder<AtomicSpanSequence>(this, element);
+  const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
 
   // Since the name member of the Attribute is not passed in as a raw AST node, but rather as a
   // string, it will be processed as the prelude to the value member's TokenSpanSequence.
-  TreeVisitor::OnLiteral(element.value);
+  TreeVisitor::OnLiteral(element->value);
 }
 
-void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
+void SpanSequenceTreeVisitor::OnAttributeNew(const std::unique_ptr<raw::AttributeNew>& element) {
   const auto visiting = Visiting(this, VisitorKind::kAttribute);
 
   // Special case: this attribute is actually a doc comment.  Treat it like any other comment type,
   // and ingest until the last newline in the doc comment.
-  if (element.provenance == raw::AttributeNew::Provenance::kDocComment) {
-    auto doc_comment = IngestUpToAndIncluding(element.end_);
+  if (element->provenance == raw::AttributeNew::Provenance::kDocComment) {
+    auto doc_comment = IngestUpToAndIncluding(element->end_);
     if (doc_comment.has_value())
       building_.top().push_back(std::move(doc_comment.value()));
     return;
@@ -420,10 +420,10 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
 
   // Special case: attribute with no arguments.  Just make a TokenSpanSequence out of the @ string
   // and exit.
-  if (element.args.empty()) {
+  if (element->args.empty()) {
     const auto builder =
-        SpanBuilder<AtomicSpanSequence>(this, element, SpanSequence::Position::kNewlineUnindented);
-    const auto token_builder = TokenBuilder(this, element.start_, false);
+        SpanBuilder<AtomicSpanSequence>(this, *element, SpanSequence::Position::kNewlineUnindented);
+    const auto token_builder = TokenBuilder(this, element->start_, false);
     return;
   }
 
@@ -435,17 +435,17 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
   //           ("my very very ... very long arg 1"
   //           , "my very very ... very long arg 2")
   const auto builder = SpanBuilder<DivisibleSpanSequence>(
-      this, element.args[0].start_, SpanSequence::Position::kNewlineUnindented);
+      this, element->args[0]->start_, SpanSequence::Position::kNewlineUnindented);
   auto as_atomic = static_cast<AtomicSpanSequence*>(building_.top().front().get());
   SetSpacesBetweenChildren(as_atomic->EditChildren(), false);
 
   std::optional<SpanBuilder<AtomicSpanSequence>> arg_builder;
-  for (const auto& arg : element.args) {
-    auto postscript = IngestUpTo(arg.start_);
+  for (const auto& arg : element->args) {
+    auto postscript = IngestUpTo(arg->start_);
     if (postscript.has_value())
       building_.top().push_back(std::move(postscript.value()));
 
-    arg_builder.emplace(this, arg);
+    arg_builder.emplace(this, *arg);
     TreeVisitor::OnAttributeArg(arg);
   }
 
@@ -454,7 +454,7 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
   arg_builder.reset();
 
   // Ingest the closing ")" token, and append it to the final argument.
-  auto postscript = IngestUpToAndIncluding(element.end_);
+  auto postscript = IngestUpToAndIncluding(element->end_);
   if (postscript.has_value()) {
     auto last_argument_span_sequence =
         static_cast<AtomicSpanSequence*>(building_.top().back().get());

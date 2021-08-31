@@ -324,7 +324,7 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseAttributeNew() {
   if (!Ok())
     return Fail();
 
-  std::vector<raw::AttributeArg> args;
+  std::vector<std::unique_ptr<raw::AttributeArg>> args;
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftParen))) {
     // TODO(fxbug.dev/74955): for now, assume that this is a lone StringLiteral.
     //  Alter to use any kind of multiple constants once typed constant support
@@ -333,7 +333,7 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseAttributeNew() {
     auto string_literal = ParseStringLiteral();
     if (!Ok())
       return Fail();
-    args.emplace_back(arg_scope.GetSourceElement(), "value", std::move(string_literal));
+    args.emplace_back(std::make_unique<raw::AttributeArg>(arg_scope.GetSourceElement(), "value", std::move(string_literal)));
 
     ConsumeToken(OfKind(Token::Kind::kRightParen));
     if (!Ok())
@@ -376,15 +376,15 @@ std::unique_ptr<raw::AttributeListOld> Parser::ParseAttributeListOld(
 
 std::unique_ptr<raw::AttributeListNew> Parser::ParseAttributeListNew(
     std::unique_ptr<raw::AttributeNew> doc_comment, ASTScope& scope) {
-  std::vector<raw::AttributeNew> attributes;
+  std::vector<std::unique_ptr<raw::AttributeNew>> attributes;
   if (doc_comment)
-    attributes.emplace_back(std::move(*doc_comment));
+    attributes.emplace_back(std::move(doc_comment));
 
   for (;;) {
     auto attribute = ParseAttributeNew();
     if (!Ok())
       return Fail();
-    attributes.emplace_back(std::move(*attribute));
+    attributes.emplace_back(std::move(attribute));
     if (Peek().kind() != Token::Kind::kAt) {
       break;
     }
@@ -448,8 +448,8 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseDocCommentNew() {
   if (Peek().kind() == Token::Kind::kEndOfFile)
     reporter_->Report(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
 
-  std::vector<raw::AttributeArg> args;
-  args.emplace_back(scope.GetSourceElement(), "value", std::move(literal));
+  std::vector<std::unique_ptr<raw::AttributeArg>> args;
+  args.emplace_back(std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), "value", std::move(literal)));
 
   return std::make_unique<raw::AttributeNew>(
       scope.GetSourceElement(), raw::AttributeNew::Provenance::kDocComment, "doc", std::move(args));
@@ -496,9 +496,9 @@ std::unique_ptr<raw::AttributeListNew> Parser::MaybeParseAttributeListNew(bool f
   }
   // no generic attributes, start the attribute list
   if (doc_comment) {
-    std::vector<raw::AttributeNew> attributes;
+    std::vector<std::unique_ptr<raw::AttributeNew>> attributes;
     if (doc_comment)
-      attributes.emplace_back(std::move(*doc_comment));
+      attributes.emplace_back(std::move(doc_comment));
 
     return std::make_unique<raw::AttributeListNew>(scope.GetSourceElement(), std::move(attributes));
   }
@@ -982,9 +982,9 @@ std::unique_ptr<raw::ParameterListNew> Parser::ParseParameterListNew() {
 
   if (attributes) {
     auto& attrs = attributes->attributes;
-    if (!attrs.empty() && attrs[0].name == "doc") {
-      auto& args = attrs[0].args;
-      if (!args.empty() && args[0].value->kind == raw::Literal::Kind::kDocComment) {
+    if (!attrs.empty() && attrs[0]->name == "doc") {
+      auto& args = attrs[0]->args;
+      if (!args.empty() && args[0]->value->kind == raw::Literal::Kind::kDocComment) {
         Fail(ErrDocCommentOnParameters);
         const auto result = RecoverToEndOfParamList();
         if (result == RecoverResult::Failure) {

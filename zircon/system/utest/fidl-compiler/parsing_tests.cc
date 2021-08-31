@@ -509,13 +509,13 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
 
-  fidl::raw::AttributeNew attribute =
+  std::unique_ptr<fidl::raw::AttributeNew> attribute =
       std::move(ast->type_decls.front()->attributes->attributes.front());
-  ASSERT_STR_EQ(attribute.name.c_str(), "foo");
-  ASSERT_TRUE(attribute.args.size() == 1);
+  ASSERT_STR_EQ(attribute->name.c_str(), "foo");
+  ASSERT_TRUE(attribute->args.size() == 1);
 
-  fidl::raw::AttributeArg arg = std::move(attribute.args[0]);
-  ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(arg.value.get())->MakeContents(), "Bar");
+  std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);
+  ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(arg->value.get())->MakeContents(), "Bar");
 }
 
 TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
@@ -531,13 +531,13 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
 
-  fidl::raw::AttributeNew attribute =
+  std::unique_ptr<fidl::raw::AttributeNew> attribute =
       std::move(ast->type_decls.front()->attributes->attributes.front());
-  ASSERT_STR_EQ(attribute.name.c_str(), "doc");
-  ASSERT_TRUE(attribute.args.size() == 1);
+  ASSERT_STR_EQ(attribute->name.c_str(), "doc");
+  ASSERT_TRUE(attribute->args.size() == 1);
 
-  fidl::raw::AttributeArg arg = std::move(attribute.args[0]);
-  ASSERT_STR_EQ(static_cast<fidl::raw::DocCommentLiteral*>(arg.value.get())->MakeContents(),
+  std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);
+  ASSERT_STR_EQ(static_cast<fidl::raw::DocCommentLiteral*>(arg->value.get())->MakeContents(),
                 " A\n multiline\n comment!\n");
 }
 

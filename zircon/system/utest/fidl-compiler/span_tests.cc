@@ -204,12 +204,12 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
 
   // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
   // --- start new syntax ---
-  void OnAttributeArg(fidl::raw::AttributeArg const& element) override {
-    CheckSpanOfType(ElementType::AttributeArg, element);
+  void OnAttributeArg(std::unique_ptr<fidl::raw::AttributeArg> const& element) override {
+    CheckSpanOfType(ElementType::AttributeArg, *element);
     TreeVisitor::OnAttributeArg(element);
   }
-  void OnAttributeNew(fidl::raw::AttributeNew const& element) override {
-    CheckSpanOfType(ElementType::AttributeNew, element);
+  void OnAttributeNew(std::unique_ptr<fidl::raw::AttributeNew> const& element) override {
+    CheckSpanOfType(ElementType::AttributeNew, *element);
     TreeVisitor::OnAttributeNew(element);
   }
   void OnAttributeListNew(std::unique_ptr<fidl::raw::AttributeListNew> const& element) override {

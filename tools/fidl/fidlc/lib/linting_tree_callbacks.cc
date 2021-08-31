@@ -216,9 +216,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
     // --- end old syntax ---
 
     // --- start new syntax ---
-    void OnAttributeNew(const raw::AttributeNew& element) override {
+    void OnAttributeNew(std::unique_ptr<raw::AttributeNew> const& element) override {
       for (auto& callback : callbacks_.attribute_callbacks_) {
-        callback(element);
+        callback(*element);
       }
     }
     void OnOrdinaledLayoutMember(
