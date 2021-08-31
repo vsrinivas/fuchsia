@@ -757,8 +757,11 @@ StoryControllerImpl::StoryControllerImpl(std::string story_id,
       story_shell_context_impl_{story_id_},
       weak_factory_(this) {
   story_storage_->SubscribeModuleDataUpdated(
-      [this](const fuchsia::modular::ModuleData& module_data) {
-        auto* const running_mod_info = FindRunningModInfo(module_data.module_path());
+      [weak_this = weak_factory_.GetWeakPtr()](const fuchsia::modular::ModuleData& module_data) {
+        if (!weak_this) {
+          return WatchInterest::kStop;
+        }
+        auto* const running_mod_info = weak_this->FindRunningModInfo(module_data.module_path());
         if (running_mod_info) {
           if (module_data.has_annotations()) {
             fidl::Clone(module_data.annotations(),
@@ -766,7 +769,7 @@ StoryControllerImpl::StoryControllerImpl(std::string story_id,
           }
           running_mod_info->UpdateInspectProperties();
         }
-        OnModuleDataUpdated(CloneModuleData(module_data));
+        weak_this->OnModuleDataUpdated(CloneModuleData(module_data));
         return WatchInterest::kContinue;
       });
 }
