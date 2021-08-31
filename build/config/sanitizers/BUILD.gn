@@ -145,21 +145,10 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
 sanitizer_extra_options("suppress-asan-stack-use-after-return") {
   visibility = [
     # These tests need to check actual stack behavior, not fake stack.
-    "//zircon/system/ulib/c/test/sanitizer:*",
-
-    # TODO(fxbug.dev/59214): allow only necessary third-party or TODO(bug-filed) cases
-
-    # TODO(fxbug.dev/62979): fix input_unit_tests
-    "//src/lib/ui/input:gesture_tests",
-
-    # TODO(fxbug.dev/62981): fix async-test-pkg
-    "//zircon/system/ulib/async/test:async",
+    "//zircon/system/ulib/c/test/sanitizer:memory-snapshot-test",
 
     # TODO(fxbug.dev/62982): fix brcmfmac-sim-test
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test:err_inject_test",
-
-    # TODO(fxbug.dev/62984): fix gesture_recognizers_tests
-    "//src/ui/a11y/lib/gesture_manager/recognizers/tests:gesture_recognizers_tests",
   ]
 
   args = [ "detect_stack_use_after_return=0" ]
@@ -171,6 +160,8 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
 # if a part of the application is built with asan and another part is not. See
 # https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow.
 sanitizer_extra_options("suppress-asan-container-overflow") {
+  visibility = [ "//src/lib/llvm:*" ]
+
   args = [ "detect_container_overflow=0" ]
   output_name = "asan_default_options"
   tags = [ "asan" ]

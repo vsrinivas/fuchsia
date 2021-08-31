@@ -151,64 +151,62 @@ TEST(PagedVmoMethodTest, CreateVmoThenDetach) {
   CreateVmoThenDetachTest(&harness);
 }
 
-void RepeatedCreationTest(Harness* harness) {
+template <typename T>
+void RepeatedCreationTest() {
   MockDispatcher dispatcher;
   zx::pager pager;
   ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
   uint32_t options = 1;
   uint64_t vmo_size = 2;
   zx::vmo vmo;
+
+  // The harness' destructor might require use of the dispatcher; ensure the dispatcher outlives it.
+  T harness;
+
   // Repeated creation fails.
-  ASSERT_OK(harness->paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
-                                           vmo_size, &vmo));
+  ASSERT_OK(harness.paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
+                                          vmo_size, &vmo));
   EXPECT_STATUS(ZX_ERR_ALREADY_EXISTS,
-                harness->paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
-                                               vmo_size, &vmo));
+                harness.paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
+                                              vmo_size, &vmo));
 
   // Creation after detaching succeeds.
-  ASSERT_OK(harness->paged_vmo().Detach());
-  EXPECT_OK(harness->paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
-                                           vmo_size, &vmo));
+  ASSERT_OK(harness.paged_vmo().Detach());
+  EXPECT_OK(harness.paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
+                                          vmo_size, &vmo));
 }
 
-TEST(PagedVmoLambdaTest, RepeatedVmoCreation) {
-  LambdaHarness harness;
-  RepeatedCreationTest(&harness);
-}
+TEST(PagedVmoLambdaTest, RepeatedVmoCreation) { RepeatedCreationTest<LambdaHarness>(); }
 
-TEST(PagedVmoMethodTest, RepeatedVmoCreation) {
-  MethodHarness harness;
-  RepeatedCreationTest(&harness);
-}
+TEST(PagedVmoMethodTest, RepeatedVmoCreation) { RepeatedCreationTest<MethodHarness>(); }
 
-void RunHandlerTest(Harness* harness) {
+template <typename T>
+void RunHandlerTest() {
   MockDispatcher dispatcher;
   zx::pager pager;
   ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
   uint32_t options = 1;
   uint64_t vmo_size = 2;
   zx::vmo vmo;
-  ASSERT_OK(harness->paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
-                                           vmo_size, &vmo));
 
-  ASSERT_FALSE(harness->handler_ran);
+  // The harness' destructor might require use of the dispatcher; ensure the dispatcher outlives it.
+  T harness;
+
+  ASSERT_OK(harness.paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
+                                          vmo_size, &vmo));
+
+  ASSERT_FALSE(harness.handler_ran);
   dispatcher.last_paged_vmo->handler(&dispatcher, dispatcher.last_paged_vmo, ZX_OK,
                                      &dummy_port_packet.page_request);
-  EXPECT_TRUE(harness->handler_ran);
-  EXPECT_EQ(&harness->paged_vmo(), harness->last_paged_vmo);
-  EXPECT_STATUS(ZX_OK, harness->last_status);
-  EXPECT_EQ(&dummy_port_packet.page_request, harness->last_request);
+  EXPECT_TRUE(harness.handler_ran);
+  EXPECT_EQ(&harness.paged_vmo(), harness.last_paged_vmo);
+  EXPECT_STATUS(ZX_OK, harness.last_status);
+  EXPECT_EQ(&dummy_port_packet.page_request, harness.last_request);
 }
 
-TEST(PagedVmoLambdaTest, RunHandler) {
-  LambdaHarness harness;
-  RunHandlerTest(&harness);
-}
+TEST(PagedVmoLambdaTest, RunHandler) { RunHandlerTest<LambdaHarness>(); }
 
-TEST(PagedVmoMethodTest, RunHandler) {
-  MethodHarness harness;
-  RunHandlerTest(&harness);
-}
+TEST(PagedVmoMethodTest, RunHandler) { RunHandlerTest<MethodHarness>(); }
 
 TEST(PagedVmoStubsTest, CreateVmoStub) {
   async::DispatcherStub dispatcher;
