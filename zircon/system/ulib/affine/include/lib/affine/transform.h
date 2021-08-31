@@ -31,7 +31,7 @@ namespace affine {
 // 2) Scale by (B_scale / A_scale)
 // 3) Offset by B_offset
 //
-// Each stage is saturated indepenedently.  That is to say, if the result of
+// Each stage is saturated independently.  That is to say, if the result of
 // stage #1 is clamped at int64::min, this is the input value which will be fed
 // into stage #2.  The calculations are *not* done with infinite precision and
 // then clamped at the end.
@@ -61,12 +61,13 @@ class Transform {
                        int64_t val) {
     if constexpr (SATURATE == Saturate::Yes) {
       return utils::ClampAdd(ratio.Scale(utils::ClampSub(val, a_offset)), b_offset);
-    } else {
-      // TODO(johngro) : the multiplication by the ratio operation here
+    }
+    if constexpr (SATURATE == Saturate::No) {
+      // TODO(johngro): the multiplication by the ratio operation here
       // actually implements saturation behavior.  If we want this
       // operation to actually perform no saturation checks at all, we
       // need to make a Saturate::No version of Ratio::Scale.
-      return ((val - a_offset) * ratio) + b_offset;
+      return AddUnchecked((SubUnchecked(val, a_offset) * ratio), b_offset);
     }
   }
 
@@ -86,7 +87,7 @@ class Transform {
       : a_offset_(a_offset), b_offset_(b_offset), ratio_(ratio) {}
 
   // Construct a linear transformation (zero offsets) from a ratio
-  explicit Transform(Ratio ratio) : a_offset_(0), b_offset_(0), ratio_(ratio) {}
+  explicit Transform(Ratio ratio) : ratio_(ratio) {}
 
   bool invertible() const { return ratio_.invertible(); }
   int64_t a_offset() const { return a_offset_; }
@@ -130,6 +131,18 @@ class Transform {
   static Transform Compose(const Transform& bc, const Transform& ab, Exact exact = Exact::Yes);
 
  private:
+  // TODO(https://fxbug.dev/41888): overflow here is undefined behavior.
+  __attribute__((no_sanitize("signed-integer-overflow"))) static inline int64_t AddUnchecked(
+      int64_t a, int64_t b) {
+    return a + b;
+  }
+
+  // TODO(https://fxbug.dev/41888): overflow here is undefined behavior.
+  __attribute__((no_sanitize("signed-integer-overflow"))) static inline int64_t SubUnchecked(
+      int64_t a, int64_t b) {
+    return a - b;
+  }
+
   int64_t a_offset_ = 0;
   int64_t b_offset_ = 0;
   Ratio ratio_{1, 1};

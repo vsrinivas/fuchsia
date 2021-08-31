@@ -36,10 +36,6 @@ test("affine") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/affine",
   ]
-
-  # TODO(fxbug.dev/41888): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 fuchsia_unittest_package("affine-test-pkg") {
