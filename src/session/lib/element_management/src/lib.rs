@@ -412,7 +412,7 @@ impl ElementManager {
         initial_annotations: Vec<felement::Annotation>,
         annotation_controller: Option<ClientEnd<felement::AnnotationControllerMarker>>,
     ) -> Result<felement::ViewControllerProxy, Error> {
-        let view_provider = element.connect_to_service::<fuiapp::ViewProviderMarker>()?;
+        let view_provider = element.connect_to_protocol::<fuiapp::ViewProviderMarker>()?;
         let token_pair = scenic::ViewTokenPair::new()?;
         let scenic::ViewRefPair { mut control_ref, mut view_ref } = scenic::ViewRefPair::new()?;
         let view_ref_dup = scenic::duplicate_view_ref(&view_ref)?;
@@ -751,12 +751,12 @@ mod tests {
         // Now use the element api to open a service in the element's outgoing dir. Verify
         // that the directory channel received the request with the correct path.
         let (_client_channel, server_channel) = zx::Channel::create().unwrap();
-        let _ = element.connect_to_named_service_with_channel("myService", server_channel);
+        let _ = element.connect_to_named_protocol_with_channel("myProtocol", server_channel);
         let open_paths = directory_open_receiver.take(1).collect::<Vec<_>>().await;
         // While a standard v1 component publishes its services to "svc/...", LaunchInfo.directory_request,
         // which is mocked in the test setup, points to the "svc" subdirectory in production. This is why
         // the expected path does not contain the "svc/" prefix.
-        assert_eq!(vec!["myService"], open_paths);
+        assert_eq!(vec!["myProtocol"], open_paths);
     }
 
     /// Tests that launching multiple v1 components (without "*.cm") successfully returns [`Ok`].
@@ -972,9 +972,9 @@ mod tests {
         // Now use the element api to open a service in the element's outgoing dir. Verify
         // that the directory channel received the request with the correct path.
         let (_client_channel, server_channel) = zx::Channel::create().unwrap();
-        let _ = element.connect_to_named_service_with_channel("myService", server_channel);
+        let _ = element.connect_to_named_protocol_with_channel("myProtocol", server_channel);
         let open_paths = directory_open_receiver.take(2).collect::<Vec<_>>().await;
-        assert_eq!(vec![fcomponent::BinderMarker::DEBUG_NAME, "svc/myService"], open_paths);
+        assert_eq!(vec![fcomponent::BinderMarker::DEBUG_NAME, "svc/myProtocol"], open_paths);
     }
 
     /// Tests that adding a .cm element does not use fuchsia.sys.Launcher.

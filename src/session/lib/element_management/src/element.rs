@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy, ServiceMarker},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     std::fmt,
@@ -118,7 +119,7 @@ impl Element {
         }
     }
 
-    /// Connect to a service provided by the `Element`.
+    /// Connect to a protocol provided by the `Element`.
     ///
     /// # Type Parameters
     /// - P: A FIDL service `Marker` type.
@@ -127,15 +128,13 @@ impl Element {
     /// - A service `Proxy` matching the `Marker`, or an error if the service is not available from
     /// the `Element`.
     #[inline]
-    pub fn connect_to_service<P: DiscoverableProtocolMarker>(
-        &self,
-    ) -> Result<P::Proxy, anyhow::Error> {
+    pub fn connect_to_protocol<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
-        self.connect_to_service_with_channel::<P>(server_channel)?;
+        self.connect_to_protocol_with_channel::<P>(server_channel)?;
         Ok(P::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
-    /// Connect to a FIDL service provided by the `Element`.
+    /// Connect to the "default" instance of a FIDL service provided by the `Element`.
     ///
     /// # Type Parameters
     /// - US: A FIDL service `Marker` type.
@@ -144,13 +143,11 @@ impl Element {
     /// - A service `Proxy` matching the `Marker`, or an error if the service is not available from
     /// the `Element`.
     #[inline]
-    pub fn connect_to_unified_service<US: ServiceMarker>(
-        &self,
-    ) -> Result<US::Proxy, anyhow::Error> {
+    pub fn connect_to_service<US: ServiceMarker>(&self) -> Result<US::Proxy, Error> {
         fuchsia_component::client::connect_to_service_at_dir::<US>(&self.directory_channel())
     }
 
-    /// Connect to a service by passing a channel for the server.
+    /// Connect to a protocol by passing a channel for the server.
     ///
     /// # Type Parameters
     /// - P: A FIDL service `Marker` type.
@@ -162,14 +159,14 @@ impl Element {
     /// # Returns
     /// - Result::Ok or an error if the service is not available from the `Element`.
     #[inline]
-    pub fn connect_to_service_with_channel<P: DiscoverableProtocolMarker>(
+    pub fn connect_to_protocol_with_channel<P: DiscoverableProtocolMarker>(
         &self,
         server_channel: zx::Channel,
-    ) -> Result<(), anyhow::Error> {
-        self.connect_to_named_service_with_channel(P::PROTOCOL_NAME, server_channel)
+    ) -> Result<(), Error> {
+        self.connect_to_named_protocol_with_channel(P::PROTOCOL_NAME, server_channel)
     }
 
-    /// Connect to a service by name.
+    /// Connect to a protocol by name.
     ///
     /// # Parameters
     /// - service_name: A FIDL service by name.
@@ -179,14 +176,14 @@ impl Element {
     /// # Returns
     /// - Result::Ok or an error if the service is not available from the `Element`.
     #[inline]
-    pub fn connect_to_named_service_with_channel(
+    pub fn connect_to_named_protocol_with_channel(
         &self,
-        service_name: &str,
+        protocol_name: &str,
         server_channel: zx::Channel,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         fdio::service_connect_at(
             &self.directory_channel(),
-            &(self.service_path_prefix().to_owned() + service_name),
+            &(self.service_path_prefix().to_owned() + protocol_name),
             server_channel,
         )?;
         Ok(())
