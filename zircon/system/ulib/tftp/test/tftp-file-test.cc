@@ -132,7 +132,7 @@ void file_close(void* file_cookie) {}
 /* FAUX SOCKET INTERFACE */
 
 #define FAKE_SOCK_BUF_SZ 65536
-typedef struct {
+typedef struct fake_socket {
   uint8_t buf[FAKE_SOCK_BUF_SZ];
   size_t size = FAKE_SOCK_BUF_SZ;
   std::atomic<size_t> read_ndx;

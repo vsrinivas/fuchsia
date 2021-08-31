@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_STRING_VIEW_H_
+#define SYSROOT_ZIRCON_STRING_VIEW_H_
 
 #include <stddef.h>
 #if __cplusplus >= 201103L && __has_include(<type_traits>)
@@ -22,7 +23,7 @@
 // source.  C++ 17 callers can take advantage of direct coercion to
 // the standard std::string_view and std::u8string_view types, which
 // also allows e.g. direct construction of std::string.
-typedef struct {
+typedef struct zx_string_view {
   const char* c_str;  // UTF-8, guaranteed to be '\0'-terminated.
   size_t length;      // Length, not including the '\0' terminator.
 
@@ -65,3 +66,5 @@ typedef struct {
   size_type size() const { return length; }
 #endif
 } zx_string_view_t;
+
+#endif  // SYSROOT_ZIRCON_STRING_VIEW_H_

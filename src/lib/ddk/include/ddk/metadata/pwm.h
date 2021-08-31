@@ -14,7 +14,7 @@
                 higher exception level or a bootloader configuration must
                 be preserved.  (for a dvfs rail for example)
 */
-typedef struct {
+typedef struct pwm_id {
   uint32_t id;
   bool protect = false;
 } pwm_id_t;

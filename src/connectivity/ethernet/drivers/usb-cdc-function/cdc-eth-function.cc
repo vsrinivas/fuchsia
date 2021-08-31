@@ -49,7 +49,7 @@ namespace usb_cdc_function {
 
 #define ETH_MTU 1500
 
-typedef struct {
+typedef struct usb_cdc {
   zx_device_t* zxdev = nullptr;
   usb_function_protocol_t function = {};
 

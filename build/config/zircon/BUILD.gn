@@ -364,11 +364,6 @@ config("default_warnings") {
       "-Wno-unused-but-set-parameter",
       "-Wno-unused-but-set-variable",
     ]
-    cflags_cc += [
-      # TODO(fxbug.dev/45689): Temporarily disable this warning until we roll toolchain,
-      # then come back and fix the instances this appears after rolling.
-      "-Wno-non-c-typedef-for-linkage",
-    ]
   }
 }
 
