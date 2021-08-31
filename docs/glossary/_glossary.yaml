@@ -162,10 +162,11 @@
   area: ["Components"]
 
 - term: "Component"
-  short_description: "A unit of executable software on Fuchsia."
-  full_description: "A component is a unit of executable software on Fuchsia. Components support
-  <a href=\"/docs/glossary#capability-routing\">capability routing</a>, software composition,
-  isolation boundaries, continuity between executions, and introspection."
+  short_description: "Components are the common abstraction that defines how all software
+  is described, sandboxed, and executed on a Fuchsia system."
+  full_description: "Components are the common abstraction that defines how all software
+  (regardless of source, programming language, or runtime) is described, sandboxed,
+  and executed on a Fuchsia system."
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
