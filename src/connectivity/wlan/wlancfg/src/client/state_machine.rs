@@ -528,7 +528,6 @@ async fn connecting_state<'a>(
                                 },
                             );
                             common_options.telemetry_sender.send(TelemetryEvent::Connected {
-                                latest_ap_state: (*bss_description).clone(),
                                 iface_id: common_options.iface_id,
                             });
                             let connected_options = ConnectedOptions {
@@ -672,7 +671,6 @@ async fn connected_state(
                                 connect_start_time = fasync::Time::now();
                                 common_options.telemetry_sender.send(TelemetryEvent::Connected {
                                     iface_id: common_options.iface_id,
-                                    latest_ap_state: (*options.latest_ap_state).clone(),
                                 });
                                 false
                             }
@@ -1107,7 +1105,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = types::Ssid::from("bar");
-        let bss_description = fake_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1169,7 +1167,7 @@ mod tests {
         });
         let scan_results = vec![fidl_sme::ScanResult {
             ssid: next_network_ssid.to_vec(),
-            bss_description: bss_description.clone().to_fidl(),
+            bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wep,
             ..generate_random_sme_scan_result()
@@ -1192,7 +1190,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.bss_description, bss_description.clone().to_fidl());
+                assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, false);
@@ -1265,9 +1263,7 @@ mod tests {
         // Check that connected telemetry event is sent
         assert_variant!(
             telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::Connected { iface_id: 1, latest_ap_state })) => {
-                assert_eq!(bss_description, latest_ap_state);
-            }
+            Ok(Some(TelemetryEvent::Connected { iface_id: 1 }))
         );
 
         // Progress the state machine

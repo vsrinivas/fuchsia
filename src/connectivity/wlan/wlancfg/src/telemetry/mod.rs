@@ -27,7 +27,7 @@ use {
             Arc,
         },
     },
-    wlan_common::bss::{BssDescription, Protection as BssProtection},
+    wlan_common::bss::BssDescription,
     wlan_metrics_registry as metrics,
 };
 
@@ -103,7 +103,7 @@ pub enum TelemetryEvent {
     /// Notify the telemetry event loop that the client has connected.
     /// Subsequently, the telemetry event loop will increment the `connected_duration` counter
     /// periodically.
-    Connected { iface_id: u16, latest_ap_state: BssDescription },
+    Connected { iface_id: u16 },
     /// Notify the telemetry event loop that the client has disconnected.
     /// Subsequently, the telemetry event loop will increment the downtime counters periodically
     /// if TelemetrySender has requested downtime to be tracked via `track_subsequent_downtime`
@@ -183,14 +183,8 @@ pub fn serve_telemetry(
 enum ConnectionState {
     // Like disconnected, but no downtime is tracked.
     Idle,
-    Connected(ConnectedState),
+    Connected { iface_id: u16, prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats> },
     Disconnected(DisconnectedState),
-}
-
-#[derive(Debug, Clone)]
-struct ConnectedState {
-    iface_id: u16,
-    prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats>,
 }
 
 #[derive(Debug, Clone)]
@@ -303,11 +297,11 @@ impl Telemetry {
 
         match &mut self.connection_state {
             ConnectionState::Idle => (),
-            ConnectionState::Connected(state) => {
+            ConnectionState::Connected { iface_id, prev_counters } => {
                 self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration)).await;
-                match self.dev_svc_proxy.get_iface_stats(state.iface_id).await {
+                match self.dev_svc_proxy.get_iface_stats(*iface_id).await {
                     Ok((zx::sys::ZX_OK, Some(stats))) => {
-                        if let Some(prev_counters) = state.prev_counters.as_ref() {
+                        if let Some(prev_counters) = prev_counters.as_ref() {
                             diff_and_log_counters(
                                 &mut self.stats_logger,
                                 prev_counters,
@@ -316,11 +310,11 @@ impl Telemetry {
                             )
                             .await;
                         }
-                        let _prev = state.prev_counters.replace(*stats);
+                        let _prev = prev_counters.replace(*stats);
                     }
                     _ => {
                         self.get_iface_stats_fail_count.add(1);
-                        let _ = state.prev_counters.take();
+                        let _ = prev_counters.take();
                     }
                 }
             }
@@ -375,8 +369,7 @@ impl Telemetry {
                     _ => (),
                 }
             }
-            TelemetryEvent::Connected { iface_id, latest_ap_state } => {
-                self.stats_logger.log_device_connected_cobalt_metrics(&latest_ap_state).await;
+            TelemetryEvent::Connected { iface_id } => {
                 if let ConnectionState::Disconnected(state) = &self.connection_state {
                     if state.latest_no_saved_neighbor_time.is_some() {
                         warn!("'No saved neighbor' flag still set even though connected");
@@ -401,7 +394,7 @@ impl Telemetry {
                         .await;
                 }
                 self.connection_state =
-                    ConnectionState::Connected(ConnectedState { iface_id, prev_counters: None });
+                    ConnectionState::Connected { iface_id, prev_counters: None };
                 self.last_checked_connection_state = now;
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
@@ -800,90 +793,6 @@ impl StatsLogger {
             &[disconnect_info.reason_code as u32, disconnect_source_dim as u32],
         );
     }
-
-    async fn log_device_connected_cobalt_metrics(&mut self, latest_ap_state: &BssDescription) {
-        let mut metric_events = vec![];
-        metric_events.push(MetricEvent {
-            metric_id: metrics::NUMBER_OF_CONNECTED_DEVICES_METRIC_ID,
-            event_codes: vec![],
-            payload: MetricEventPayload::Count(1),
-        });
-
-        let security_type_dim = {
-            use metrics::ConnectedNetworkSecurityTypeMetricDimensionSecurityType::*;
-            match latest_ap_state.protection() {
-                BssProtection::Unknown => Unknown,
-                BssProtection::Open => Open,
-                BssProtection::Wep => Wep,
-                BssProtection::Wpa1 => Wpa1,
-                BssProtection::Wpa1Wpa2PersonalTkipOnly => Wpa1Wpa2PersonalTkipOnly,
-                BssProtection::Wpa2PersonalTkipOnly => Wpa2PersonalTkipOnly,
-                BssProtection::Wpa1Wpa2Personal => Wpa1Wpa2Personal,
-                BssProtection::Wpa2Personal => Wpa2Personal,
-                BssProtection::Wpa2Wpa3Personal => Wpa2Wpa3Personal,
-                BssProtection::Wpa3Personal => Wpa3Personal,
-                BssProtection::Wpa2Enterprise => Wpa2Enterprise,
-                BssProtection::Wpa3Enterprise => Wpa3Enterprise,
-            }
-        };
-        metric_events.push(MetricEvent {
-            metric_id: metrics::CONNECTED_NETWORK_SECURITY_TYPE_METRIC_ID,
-            event_codes: vec![security_type_dim as u32],
-            payload: MetricEventPayload::Count(1),
-        });
-
-        if latest_ap_state.supports_uapsd() {
-            metric_events.push(MetricEvent {
-                metric_id: metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_APSD_METRIC_ID,
-                event_codes: vec![],
-                payload: MetricEventPayload::Count(1),
-            });
-        }
-
-        if let Some(rm_enabled_cap) = latest_ap_state.rm_enabled_cap() {
-            let rm_enabled_cap_head = rm_enabled_cap.rm_enabled_caps_head;
-            if rm_enabled_cap_head.link_measurement_enabled() {
-                metric_events.push(MetricEvent {
-                    metric_id:
-                        metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_LINK_MEASUREMENT_METRIC_ID,
-                    event_codes: vec![],
-                    payload: MetricEventPayload::Count(1),
-                });
-            }
-            if rm_enabled_cap_head.neighbor_report_enabled() {
-                metric_events.push(MetricEvent {
-                    metric_id:
-                        metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_NEIGHBOR_REPORT_METRIC_ID,
-                    event_codes: vec![],
-                    payload: MetricEventPayload::Count(1),
-                });
-            }
-        }
-
-        if latest_ap_state.supports_ft() {
-            metric_events.push(MetricEvent {
-                metric_id: metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_FT_METRIC_ID,
-                event_codes: vec![],
-                payload: MetricEventPayload::Count(1),
-            });
-        }
-
-        if let Some(cap) = latest_ap_state.ext_cap().map(|cap| cap.ext_caps_octet_3).flatten() {
-            if cap.bss_transition() {
-                metric_events.push(MetricEvent {
-                    metric_id: metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_BSS_TRANSITION_MANAGEMENT_METRIC_ID,
-                    event_codes: vec![],
-                    payload: MetricEventPayload::Count(1),
-                });
-            }
-        }
-
-        log_cobalt_1dot1_batch!(
-            self.cobalt_1dot1_proxy,
-            &mut metric_events.iter_mut(),
-            "log_device_connected_cobalt_metrics",
-        );
-    }
 }
 
 enum StatOp {
@@ -990,7 +899,7 @@ mod tests {
         fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, Inspector},
         futures::{pin_mut, task::Poll, TryStreamExt},
         std::{cmp::min, pin::Pin},
-        wlan_common::{fake_bss_description, ie::IeType, test_utils::fake_stas::IesOverrides},
+        wlan_common::fake_bss_description,
     };
 
     const STEP_INCREMENT: zx::Duration = zx::Duration::from_seconds(1);
@@ -999,7 +908,7 @@ mod tests {
     #[fuchsia::test]
     fn test_stat_cycles() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours() - TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
@@ -1169,7 +1078,7 @@ mod tests {
     #[fuchsia::test]
     fn test_connected_counters_increase_when_connected() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
@@ -1261,7 +1170,7 @@ mod tests {
     #[fuchsia::test]
     fn test_counters_connect_then_disconnect() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.seconds(), test_fut.as_mut());
@@ -1311,8 +1220,8 @@ mod tests {
     #[fuchsia::test]
     fn test_downtime_no_saved_neighbor_duration_counter() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
-        test_helper.drain_cobalt_events(&mut test_fut);
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         // Disconnect and track downtime.
         let info = fake_disconnect_info();
@@ -1439,7 +1348,7 @@ mod tests {
     #[fuchsia::test]
     fn test_disconnect_count_counter() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         assert_data_tree!(test_helper.inspector, root: {
@@ -1491,7 +1400,7 @@ mod tests {
     #[fuchsia::test]
     fn test_rx_tx_counters_no_issue() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1533,7 +1442,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1577,7 +1486,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1620,7 +1529,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1652,7 +1561,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1676,7 +1585,7 @@ mod tests {
     #[fuchsia::test]
     fn test_log_daily_uptime_ratio_cobalt_metric() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(12.hours(), test_fut.as_mut());
@@ -1717,7 +1626,7 @@ mod tests {
     #[fuchsia::test]
     fn test_log_daily_disconnect_per_day_connected_cobalt_metric() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(6.hours(), test_fut.as_mut());
@@ -1762,7 +1671,7 @@ mod tests {
         test_helper.cobalt_events.clear();
 
         // Connect for another 1 day to dilute the 7d ratio
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
@@ -1829,7 +1738,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
@@ -1859,7 +1768,7 @@ mod tests {
         // log to Cobalt.
         let (mut test_helper, mut test_fut) = setup_test();
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
@@ -1884,7 +1793,7 @@ mod tests {
     fn test_log_hourly_fleetwise_uptime_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1981,7 +1890,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -2014,7 +1923,7 @@ mod tests {
     fn test_log_disconnect_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.advance_by(3.hours(), test_fut.as_mut());
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.hours(), test_fut.as_mut());
@@ -2078,8 +1987,8 @@ mod tests {
     #[fuchsia::test]
     fn test_log_downtime_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
-        test_helper.drain_cobalt_events(&mut test_fut);
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         let info = DisconnectInfo {
             reason_code: 3,
@@ -2111,7 +2020,9 @@ mod tests {
 
         test_helper.advance_by(7.minutes(), test_fut.as_mut());
         // Reconnect
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
         test_helper.drain_cobalt_events(&mut test_fut);
 
         let breakdowns_by_reason = test_helper
@@ -2125,118 +2036,6 @@ mod tests {
             breakdowns_by_reason[0].payload,
             MetricEventPayload::IntegerValue(49.minutes().into_micros())
         );
-    }
-
-    #[fuchsia::test]
-    fn test_log_device_connected_cobalt_metrics() {
-        let (mut test_helper, mut test_fut) = setup_test();
-
-        let wmm_info = vec![0x80]; // U-APSD enabled
-        #[rustfmt::skip]
-        let rm_enabled_capabilities = vec![
-            0x03, // link measurement and neighbor report enabled
-            0x00, 0x00, 0x00, 0x00,
-        ];
-        #[rustfmt::skip]
-        let ext_capabilities = vec![
-            0x04, 0x00,
-            0x08, // BSS transition supported
-            0x00, 0x00, 0x00, 0x00, 0x40
-        ];
-        let bss_description = fake_bss_description!(Wpa2,
-            ies_overrides: IesOverrides::new()
-                .remove(IeType::WMM_PARAM)
-                .set(IeType::WMM_INFO, wmm_info)
-                .set(IeType::RM_ENABLED_CAPABILITIES, rm_enabled_capabilities)
-                .set(IeType::MOBILITY_DOMAIN, vec![0x00; 3])
-                .set(IeType::EXT_CAPABILITIES, ext_capabilities)
-        );
-        test_helper.send_connected_event(bss_description);
-        test_helper.drain_cobalt_events(&mut test_fut);
-
-        let num_devices_connected =
-            test_helper.get_logged_metrics(metrics::NUMBER_OF_CONNECTED_DEVICES_METRIC_ID);
-        assert_eq!(num_devices_connected.len(), 1);
-        assert_eq!(num_devices_connected[0].payload, MetricEventPayload::Count(1));
-
-        let connected_security_type =
-            test_helper.get_logged_metrics(metrics::CONNECTED_NETWORK_SECURITY_TYPE_METRIC_ID);
-        assert_eq!(connected_security_type.len(), 1);
-        assert_eq!(
-            connected_security_type[0].event_codes,
-            vec![
-                metrics::ConnectedNetworkSecurityTypeMetricDimensionSecurityType::Wpa2Personal
-                    as u32
-            ]
-        );
-        assert_eq!(connected_security_type[0].payload, MetricEventPayload::Count(1));
-
-        let connected_apsd = test_helper
-            .get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_APSD_METRIC_ID);
-        assert_eq!(connected_apsd.len(), 1);
-        assert_eq!(connected_apsd[0].payload, MetricEventPayload::Count(1));
-
-        let connected_link_measurement = test_helper.get_logged_metrics(
-            metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_LINK_MEASUREMENT_METRIC_ID,
-        );
-        assert_eq!(connected_link_measurement.len(), 1);
-        assert_eq!(connected_link_measurement[0].payload, MetricEventPayload::Count(1));
-
-        let connected_neighbor_report = test_helper.get_logged_metrics(
-            metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_NEIGHBOR_REPORT_METRIC_ID,
-        );
-        assert_eq!(connected_neighbor_report.len(), 1);
-        assert_eq!(connected_neighbor_report[0].payload, MetricEventPayload::Count(1));
-
-        let connected_ft = test_helper
-            .get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_FT_METRIC_ID);
-        assert_eq!(connected_ft.len(), 1);
-        assert_eq!(connected_ft[0].payload, MetricEventPayload::Count(1));
-
-        let connected_bss_transition_mgmt = test_helper.get_logged_metrics(
-            metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_BSS_TRANSITION_MANAGEMENT_METRIC_ID,
-        );
-        assert_eq!(connected_bss_transition_mgmt.len(), 1);
-        assert_eq!(connected_bss_transition_mgmt[0].payload, MetricEventPayload::Count(1));
-    }
-
-    #[fuchsia::test]
-    fn test_log_device_connected_cobalt_metrics_ap_features_not_supported() {
-        let (mut test_helper, mut test_fut) = setup_test();
-
-        let bss_description = fake_bss_description!(Wpa2,
-            ies_overrides: IesOverrides::new()
-                .remove(IeType::WMM_PARAM)
-                .remove(IeType::WMM_INFO)
-                .remove(IeType::RM_ENABLED_CAPABILITIES)
-                .remove(IeType::MOBILITY_DOMAIN)
-                .remove(IeType::EXT_CAPABILITIES)
-        );
-        test_helper.send_connected_event(bss_description);
-        test_helper.drain_cobalt_events(&mut test_fut);
-
-        let connected_apsd = test_helper
-            .get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_APSD_METRIC_ID);
-        assert_eq!(connected_apsd.len(), 0);
-
-        let connected_link_measurement = test_helper.get_logged_metrics(
-            metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_LINK_MEASUREMENT_METRIC_ID,
-        );
-        assert_eq!(connected_link_measurement.len(), 0);
-
-        let connected_neighbor_report = test_helper.get_logged_metrics(
-            metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_NEIGHBOR_REPORT_METRIC_ID,
-        );
-        assert_eq!(connected_neighbor_report.len(), 0);
-
-        let connected_ft = test_helper
-            .get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_FT_METRIC_ID);
-        assert_eq!(connected_ft.len(), 0);
-
-        let connected_bss_transition_mgmt = test_helper.get_logged_metrics(
-            metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_BSS_TRANSITION_MANAGEMENT_METRIC_ID,
-        );
-        assert_eq!(connected_bss_transition_mgmt.len(), 0);
     }
 
     struct TestHelper {
@@ -2355,11 +2154,6 @@ mod tests {
 
         fn get_logged_metrics(&self, metric_id: u32) -> Vec<MetricEvent> {
             self.cobalt_events.iter().filter(|ev| ev.metric_id == metric_id).cloned().collect()
-        }
-
-        fn send_connected_event(&self, latest_ap_state: BssDescription) {
-            self.telemetry_sender
-                .send(TelemetryEvent::Connected { iface_id: IFACE_ID, latest_ap_state });
         }
     }
 

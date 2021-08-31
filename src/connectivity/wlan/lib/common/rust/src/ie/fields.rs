@@ -723,7 +723,7 @@ pub struct ExtCapabilitiesView<B> {
 )]
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy, Unaligned)]
-pub struct ExtCapabilitiesOctet1(pub u8);
+pub struct ExtCapabilitiesOctet1(u8);
 
 #[bitfield(
     0       diagnostics,
@@ -737,7 +737,7 @@ pub struct ExtCapabilitiesOctet1(pub u8);
 )]
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy, Unaligned)]
-pub struct ExtCapabilitiesOctet2(pub u8);
+pub struct ExtCapabilitiesOctet2(u8);
 
 #[bitfield(
     0       tfs,
@@ -751,7 +751,7 @@ pub struct ExtCapabilitiesOctet2(pub u8);
 )]
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy, Unaligned)]
-pub struct ExtCapabilitiesOctet3(pub u8);
+pub struct ExtCapabilitiesOctet3(u8);
 
 // IEEE Std 802.11-2016, 9.4.2.113, Figure 9-478
 #[bitfield(
