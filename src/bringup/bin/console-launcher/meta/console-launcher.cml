@@ -38,9 +38,14 @@
             path: "/dev",
         },
         {
-            directory: "hub",
+            directory: "hub-legacy",
             rights: [ "rw*" ],
             path: "/hub",
+        },
+        {
+            directory: "hub",
+            rights: [ "r*" ],
+            path: "/hub-v2",
         },
         {
             directory: "install",

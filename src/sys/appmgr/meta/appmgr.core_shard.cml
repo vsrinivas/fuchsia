@@ -118,7 +118,7 @@
             from: "#appmgr",
         },
         {
-            directory: "hub",
+            directory: "hub-legacy",
             from: "#appmgr",
         },
     ],

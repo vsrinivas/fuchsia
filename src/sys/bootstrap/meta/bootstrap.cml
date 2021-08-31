@@ -561,12 +561,14 @@
 
         // The v1 hub is needed for the serial console.
         {
+            directory: "hub-legacy",
+            from: "parent",
+            to: "#console-launcher",
+        },
+        {
             directory: "hub",
             from: "parent",
-            to: [
-                "#console-launcher",
-                "#netsvc",
-            ],
+            to: "#console-launcher",
         },
         {
             protocol: "fuchsia.sysinfo.SysInfo",

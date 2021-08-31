@@ -173,7 +173,7 @@
 
         // driver_manager needs the v1 hub for the serial console
         {
-            directory: "hub",
+            directory: "hub-legacy",
             from: "#core",
             to: "#bootstrap",
             dependency: "weak_for_migration",
@@ -183,7 +183,10 @@
         {
             directory: "hub",
             from: "framework",
-            to: "#core",
+            to: [
+                "#bootstrap",
+                "#core",
+            ],
         },
 
         // Offer events to `bootstrap` for diagnostics usage.

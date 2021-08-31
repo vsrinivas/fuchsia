@@ -25,7 +25,7 @@
             ],
         },
         {
-            directory: "hub",
+            directory: "hub-legacy",
             rights: [ "rw*" ],
             path: "/hub",
         },
@@ -603,7 +603,7 @@
     ],
     expose: [
         {
-            directory: "hub",
+            directory: "hub-legacy",
             from: "self",
         },
         {
