@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_settings::{
-    AccessibilityRequestStream, AudioRequestStream, DisplayRequestStream,
-    DoNotDisturbRequestStream, FactoryResetRequestStream, InputRequestStream, IntlRequestStream,
-    LightRequestStream, NightModeRequestStream, PrivacyRequestStream, SetupRequestStream,
-};
-use fuchsia_component::server::{ServiceFsDir, ServiceObj};
-use fuchsia_zircon;
-
 use crate::base::{Dependency, Entity, SettingType};
 use crate::handler::base::Error;
 use crate::ingress::registration::{self, Registrant, Registrar};
 use crate::job::source::Seeder;
 use crate::service::message::Delegate;
+use fidl_fuchsia_settings::{
+    AccessibilityRequestStream, AudioRequestStream, DeviceRequestStream, DisplayRequestStream,
+    DoNotDisturbRequestStream, FactoryResetRequestStream, InputRequestStream, IntlRequestStream,
+    LightRequestStream, NightModeRequestStream, PrivacyRequestStream, SetupRequestStream,
+};
+use fuchsia_component::server::{ServiceFsDir, ServiceObj};
+use fuchsia_zircon;
 
 impl From<Error> for fuchsia_zircon::Status {
     fn from(error: Error) -> fuchsia_zircon::Status {
@@ -33,6 +32,7 @@ impl From<&SettingType> for Interface {
         match item {
             SettingType::Accessibility => Interface::Accessibility,
             SettingType::Audio => Interface::Audio,
+            SettingType::Device => Interface::Device,
             SettingType::Display => Interface::Display(display::InterfaceFlags::BASE),
             SettingType::DoNotDisturb => Interface::DoNotDisturb,
             SettingType::FactoryReset => Interface::FactoryReset,
@@ -55,6 +55,7 @@ impl From<&SettingType> for Interface {
 pub enum Interface {
     Audio,
     Accessibility,
+    Device,
     Display(display::InterfaceFlags),
     DoNotDisturb,
     FactoryReset,
@@ -96,6 +97,9 @@ impl Interface {
             }
             Interface::Audio => {
                 vec![Dependency::Entity(Entity::Handler(SettingType::Audio))]
+            }
+            Interface::Device => {
+                vec![Dependency::Entity(Entity::Handler(SettingType::Device))]
             }
             Interface::Display(interfaces) => {
                 let mut dependencies = Vec::new();
@@ -154,6 +158,11 @@ impl Interface {
                     Interface::Audio => {
                         service_dir.add_fidl_service(move |stream: AudioRequestStream| {
                             crate::audio::fidl_io::spawn(delegate.clone(), stream);
+                        });
+                    }
+                    Interface::Device => {
+                        service_dir.add_fidl_service(move |stream: DeviceRequestStream| {
+                            crate::device::fidl_io::spawn(delegate.clone(), stream);
                         });
                     }
                     Interface::Accessibility => {
@@ -228,12 +237,7 @@ impl Interface {
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_settings::PrivacyMarker;
-    use fuchsia_async as fasync;
-    use fuchsia_component::server::ServiceFs;
-    use futures::StreamExt;
-    use matches::assert_matches;
-
+    use super::Interface;
     use crate::base::{Dependency, Entity, SettingType};
     use crate::handler::base::{Payload, Request};
     use crate::ingress::registration::Registrant;
@@ -241,8 +245,11 @@ mod tests {
     use crate::message::base::MessengerType;
     use crate::message::MessageHubUtil;
     use crate::service;
-
-    use super::Interface;
+    use fidl_fuchsia_settings::PrivacyMarker;
+    use fuchsia_async as fasync;
+    use fuchsia_component::server::ServiceFs;
+    use futures::StreamExt;
+    use matches::assert_matches;
 
     const ENV_NAME: &str = "settings_service_fidl_environment";
 

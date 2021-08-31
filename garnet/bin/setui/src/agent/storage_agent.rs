@@ -5,14 +5,6 @@
 //! The [`StorageAgent`] is responsible for all reads and writes to storage for the
 //! settings service.
 
-use std::borrow::Borrow;
-use std::sync::Arc;
-
-use fuchsia_async as fasync;
-use futures::future::BoxFuture;
-use futures::stream::{FuturesUnordered, StreamFuture};
-use futures::StreamExt;
-
 use crate::accessibility::types::AccessibilityInfo;
 use crate::agent::{self, Context, Lifespan};
 use crate::audio::policy as audio_policy;
@@ -42,6 +34,12 @@ use crate::storage::{Error, Payload, StorageInfo, StorageRequest, StorageRespons
 use crate::trace::TracingNonce;
 use crate::Role;
 use crate::{trace, trace_guard};
+use fuchsia_async as fasync;
+use futures::future::BoxFuture;
+use futures::stream::{FuturesUnordered, StreamFuture};
+use futures::StreamExt;
+use std::borrow::Borrow;
+use std::sync::Arc;
 
 /// `Blueprint` struct for managing the state needed to construct a [`StorageAgent`].
 pub(crate) struct Blueprint<T>
@@ -255,6 +253,7 @@ where
                         trace!(nonce, "audio storage read");
                         self.read::<AudioInfo>(nonce, responder).await
                     }
+                    SettingType::Device => panic!("SettingType::Device does not support storage"),
                     SettingType::Display => self.read::<DisplayInfo>(nonce, responder).await,
                     SettingType::DoNotDisturb => {
                         self.read::<DoNotDisturbInfo>(nonce, responder).await
@@ -290,6 +289,9 @@ where
                         self.write(info, flush, responder).await
                     }
                     SettingInfo::Brightness(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Device(_) => {
+                        panic!("SettingInfo::Device does not support storage")
+                    }
                     SettingInfo::DoNotDisturb(info) => self.write(info, flush, responder).await,
                     SettingInfo::FactoryReset(info) => self.write(info, flush, responder).await,
                     SettingInfo::Input(info) => self.write(info, flush, responder).await,
@@ -317,13 +319,13 @@ where
 payload_convert!(Storage, Payload);
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::async_property_test;
+    use crate::device::types::DeviceInfo;
     use crate::display::types::LightData;
     use crate::handler::device_storage::testing::InMemoryStorageFactory;
     use crate::message::base::Audience;
     use crate::message::MessageHubUtil;
-
-    use super::*;
 
     enum Setting {
         Info(SettingInfo),
@@ -334,8 +336,14 @@ mod tests {
         #[should_panic(expected = "SettingType::Account does not support storage")]
         account_read(Setting::Type(SettingType::Account)),
 
+        #[should_panic(expected = "SettingType::Device does not support storage")]
+        device_read(Setting::Type(SettingType::Device)),
+
         #[should_panic(expected = "SettingType::LightSensor does not support storage")]
         light_sensor_read(Setting::Type(SettingType::LightSensor)),
+
+        #[should_panic(expected = "SettingInfo::Device does not support storage")]
+        device_write(Setting::Info(SettingInfo::Device(DeviceInfo::new("abc".into())))),
 
         #[should_panic(expected = "SettingInfo::LightSensor does not support storage")]
         light_sensor_write(Setting::Info(SettingInfo::LightSensor(LightData {

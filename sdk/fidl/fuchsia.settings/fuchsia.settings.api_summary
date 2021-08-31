@@ -59,6 +59,10 @@ strict enum fuchsia.settings/ColorBlindnessType uint32
 bits/member fuchsia.settings/ConfigurationInterfaces.ETHERNET 1
 bits/member fuchsia.settings/ConfigurationInterfaces.WIFI 2
 strict bits fuchsia.settings/ConfigurationInterfaces uint32
+protocol/member fuchsia.settings/Device.Watch() -> (fuchsia.settings/DeviceSettings device_settings)
+protocol fuchsia.settings/Device
+table/member fuchsia.settings/DeviceSettings.build_tag string:50
+table fuchsia.settings/DeviceSettings
 table/member fuchsia.settings/DeviceState.toggle_flags fuchsia.settings/ToggleStateFlags
 table fuchsia.settings/DeviceState
 enum/member fuchsia.settings/DeviceStateSource.HARDWARE 1

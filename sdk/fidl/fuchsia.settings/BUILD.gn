@@ -10,6 +10,7 @@ fidl("fuchsia.settings") {
   sources = [
     "accessibility.fidl",
     "audio.fidl",
+    "device.fidl",
     "display.fidl",
     "do_not_disturb.fidl",
     "factory_reset.fidl",
