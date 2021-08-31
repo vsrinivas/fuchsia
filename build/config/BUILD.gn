@@ -545,10 +545,6 @@ config("default_warnings") {
     # TODO(fxbug.dev/43681): Temporarily disable this warning until we roll toolchain,
     # then come back and fix the instances this appears after rolling.
     "-Wno-range-loop-analysis",
-
-    # TODO(fxbug.dev/71108): Temporarily disable this warning until we address the
-    # reported issue in one of Scudo tests.
-    "-Wno-free-nonheap-object",
   ]
   cflags_cc = [
     # TODO(fxbug.dev/38640): Keep this flag here while it is enabled in ZN to keep the
