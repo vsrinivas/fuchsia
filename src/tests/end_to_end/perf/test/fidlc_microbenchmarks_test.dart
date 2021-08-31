@@ -11,7 +11,9 @@ void main() {
 
   test('/bin/fidlc_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestCommand((resultsFile) =>
-        '/bin/fidlc_microbenchmarks -p --quiet --out $resultsFile');
+    await helper.runTestComponent(
+        packageName: 'fidlc_microbenchmarks',
+        componentName: 'fidlc_microbenchmarks.cmx',
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 }
