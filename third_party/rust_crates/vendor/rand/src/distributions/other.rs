@@ -10,59 +10,30 @@
 
 use core::char;
 use core::num::Wrapping;
-#[cfg(feature = "alloc")]
-use alloc::string::String;
 
-use crate::distributions::{Distribution, Standard, Uniform};
-#[cfg(feature = "alloc")]
-use crate::distributions::DistString;
 use crate::Rng;
-
-#[cfg(feature = "serde1")]
-use serde::{Serialize, Deserialize};
-#[cfg(feature = "min_const_gen")]
-use std::mem::{self, MaybeUninit};
-
+use crate::distributions::{Distribution, Standard, Uniform};
 
 // ----- Sampling distributions -----
 
-/// Sample a `u8`, uniformly distributed over ASCII letters and numbers:
+/// Sample a `char`, uniformly distributed over ASCII letters and numbers:
 /// a-z, A-Z and 0-9.
-///
+/// 
 /// # Example
 ///
 /// ```
 /// use std::iter;
 /// use rand::{Rng, thread_rng};
 /// use rand::distributions::Alphanumeric;
-///
+/// 
 /// let mut rng = thread_rng();
 /// let chars: String = iter::repeat(())
 ///         .map(|()| rng.sample(Alphanumeric))
-///         .map(char::from)
 ///         .take(7)
 ///         .collect();
 /// println!("Random chars: {}", chars);
 /// ```
-///
-/// # Passwords
-///
-/// Users sometimes ask whether it is safe to use a string of random characters
-/// as a password. In principle, all RNGs in Rand implementing `CryptoRng` are
-/// suitable as a source of randomness for generating passwords (if they are
-/// properly seeded), but it is more conservative to only use randomness
-/// directly from the operating system via the `getrandom` crate, or the
-/// corresponding bindings of a crypto library.
-///
-/// When generating passwords or keys, it is important to consider the threat
-/// model and in some cases the memorability of the password. This is out of
-/// scope of the Rand project, and therefore we defer to the following
-/// references:
-///
-/// - [Wikipedia article on Password Strength](https://en.wikipedia.org/wiki/Password_strength)
-/// - [Diceware for generating memorable passwords](https://en.wikipedia.org/wiki/Diceware)
-#[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde1", derive(Serialize, Deserialize))]
+#[derive(Debug)]
 pub struct Alphanumeric;
 
 
@@ -89,23 +60,11 @@ impl Distribution<char> for Standard {
     }
 }
 
-/// Note: the `String` is potentially left with excess capacity; optionally the
-/// user may call `string.shrink_to_fit()` afterwards.
-#[cfg(feature = "alloc")]
-impl DistString for Standard {
-    fn append_string<R: Rng + ?Sized>(&self, rng: &mut R, s: &mut String, len: usize) {
-        // A char is encoded with at most four bytes, thus this reservation is
-        // guaranteed to be sufficient. We do not shrink_to_fit afterwards so
-        // that repeated usage on the same `String` buffer does not reallocate.
-        s.reserve(4 * len);
-        s.extend(Distribution::<char>::sample_iter(self, rng).take(len));
-    }
-}
-
-impl Distribution<u8> for Alphanumeric {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> u8 {
+impl Distribution<char> for Alphanumeric {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> char {
         const RANGE: u32 = 26 + 26 + 10;
-        const GEN_ASCII_STR_CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+        const GEN_ASCII_STR_CHARSET: &[u8] =
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                 abcdefghijklmnopqrstuvwxyz\
                 0123456789";
         // We can pick from 62 characters. This is so close to a power of 2, 64,
@@ -115,18 +74,8 @@ impl Distribution<u8> for Alphanumeric {
         loop {
             let var = rng.next_u32() >> (32 - 6);
             if var < RANGE {
-                return GEN_ASCII_STR_CHARSET[var as usize];
+                return GEN_ASCII_STR_CHARSET[var as usize] as char
             }
-        }
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl DistString for Alphanumeric {
-    fn append_string<R: Rng + ?Sized>(&self, rng: &mut R, string: &mut String, len: usize) {
-        unsafe {
-            let v = string.as_mut_vec();
-            v.extend(self.sample_iter(rng).take(len));
         }
     }
 }
@@ -169,40 +118,21 @@ macro_rules! tuple_impl {
 impl Distribution<()> for Standard {
     #[allow(clippy::unused_unit)]
     #[inline]
-    fn sample<R: Rng + ?Sized>(&self, _: &mut R) -> () {
-        ()
-    }
+    fn sample<R: Rng + ?Sized>(&self, _: &mut R) -> () { () }
 }
-tuple_impl! {A}
-tuple_impl! {A, B}
-tuple_impl! {A, B, C}
-tuple_impl! {A, B, C, D}
-tuple_impl! {A, B, C, D, E}
-tuple_impl! {A, B, C, D, E, F}
-tuple_impl! {A, B, C, D, E, F, G}
-tuple_impl! {A, B, C, D, E, F, G, H}
-tuple_impl! {A, B, C, D, E, F, G, H, I}
-tuple_impl! {A, B, C, D, E, F, G, H, I, J}
-tuple_impl! {A, B, C, D, E, F, G, H, I, J, K}
-tuple_impl! {A, B, C, D, E, F, G, H, I, J, K, L}
+tuple_impl!{A}
+tuple_impl!{A, B}
+tuple_impl!{A, B, C}
+tuple_impl!{A, B, C, D}
+tuple_impl!{A, B, C, D, E}
+tuple_impl!{A, B, C, D, E, F}
+tuple_impl!{A, B, C, D, E, F, G}
+tuple_impl!{A, B, C, D, E, F, G, H}
+tuple_impl!{A, B, C, D, E, F, G, H, I}
+tuple_impl!{A, B, C, D, E, F, G, H, I, J}
+tuple_impl!{A, B, C, D, E, F, G, H, I, J, K}
+tuple_impl!{A, B, C, D, E, F, G, H, I, J, K, L}
 
-#[cfg(feature = "min_const_gen")]
-impl<T, const N: usize> Distribution<[T; N]> for Standard
-where Standard: Distribution<T>
-{
-    #[inline]
-    fn sample<R: Rng + ?Sized>(&self, _rng: &mut R) -> [T; N] {
-        let mut buff: [MaybeUninit<T>; N] = unsafe { MaybeUninit::uninit().assume_init() };
-
-        for elem in &mut buff {
-            *elem = MaybeUninit::new(_rng.gen());
-        }
-
-        unsafe { mem::transmute_copy::<_, _>(&buff) }
-    }
-}
-
-#[cfg(not(feature = "min_const_gen"))]
 macro_rules! array_impl {
     // recursive, given at least one type parameter:
     {$n:expr, $t:ident, $($ts:ident,)*} => {
@@ -223,12 +153,9 @@ macro_rules! array_impl {
     };
 }
 
-#[cfg(not(feature = "min_const_gen"))]
-array_impl! {32, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T,}
+array_impl!{32, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T,}
 
-impl<T> Distribution<Option<T>> for Standard
-where Standard: Distribution<T>
-{
+impl<T> Distribution<Option<T>> for Standard where Standard: Distribution<T> {
     #[inline]
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Option<T> {
         // UFCS is needed here: https://github.com/rust-lang/rust/issues/24066
@@ -240,9 +167,7 @@ where Standard: Distribution<T>
     }
 }
 
-impl<T> Distribution<Wrapping<T>> for Standard
-where Standard: Distribution<T>
-{
+impl<T> Distribution<Wrapping<T>> for Standard where Standard: Distribution<T> {
     #[inline]
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Wrapping<T> {
         Wrapping(rng.gen())
@@ -254,17 +179,17 @@ where Standard: Distribution<T>
 mod tests {
     use super::*;
     use crate::RngCore;
-    #[cfg(feature = "alloc")] use alloc::string::String;
+    #[cfg(all(not(feature="std"), feature="alloc"))] use alloc::string::String;
 
     #[test]
     fn test_misc() {
         let rng: &mut dyn RngCore = &mut crate::test::rng(820);
-
+        
         rng.sample::<char, _>(Standard);
         rng.sample::<bool, _>(Standard);
     }
-
-    #[cfg(feature = "alloc")]
+    
+    #[cfg(feature="alloc")]
     #[test]
     fn test_chars() {
         use core::iter;
@@ -273,10 +198,8 @@ mod tests {
         // Test by generating a relatively large number of chars, so we also
         // take the rejection sampling path.
         let word: String = iter::repeat(())
-            .map(|()| rng.gen::<char>())
-            .take(1000)
-            .collect();
-        assert!(!word.is_empty());
+                .map(|()| rng.gen::<char>()).take(1000).collect();
+        assert!(word.len() != 0);
     }
 
     #[test]
@@ -287,19 +210,18 @@ mod tests {
         // take the rejection sampling path.
         let mut incorrect = false;
         for _ in 0..100 {
-            let c: char = rng.sample(Alphanumeric).into();
-            incorrect |= !(('0'..='9').contains(&c) ||
-                           ('A'..='Z').contains(&c) ||
-                           ('a'..='z').contains(&c) );
+            let c = rng.sample(Alphanumeric);
+            incorrect |= !((c >= '0' && c <= '9') ||
+                           (c >= 'A' && c <= 'Z') ||
+                           (c >= 'a' && c <= 'z') );
         }
-        assert!(!incorrect);
+        assert!(incorrect == false);
     }
-
+    
     #[test]
     fn value_stability() {
         fn test_samples<T: Copy + core::fmt::Debug + PartialEq, D: Distribution<T>>(
-            distr: &D, zero: T, expected: &[T],
-        ) {
+            distr: &D, zero: T, expected: &[T]) {
             let mut rng = crate::test::rng(807);
             let mut buf = [zero; 5];
             for x in &mut buf {
@@ -307,55 +229,25 @@ mod tests {
             }
             assert_eq!(&buf, expected);
         }
-
-        test_samples(&Standard, 'a', &[
-            '\u{8cdac}',
-            '\u{a346a}',
-            '\u{80120}',
-            '\u{ed692}',
-            '\u{35888}',
-        ]);
-        test_samples(&Alphanumeric, 0, &[104, 109, 101, 51, 77]);
+        
+        test_samples(&Standard, 'a', &['\u{8cdac}', '\u{a346a}', '\u{80120}', '\u{ed692}', '\u{35888}']);
+        test_samples(&Alphanumeric, 'a', &['h', 'm', 'e', '3', 'M']);
         test_samples(&Standard, false, &[true, true, false, true, false]);
-        test_samples(&Standard, None as Option<bool>, &[
-            Some(true),
-            None,
-            Some(false),
-            None,
-            Some(false),
-        ]);
-        test_samples(&Standard, Wrapping(0i32), &[
-            Wrapping(-2074640887),
-            Wrapping(-1719949321),
-            Wrapping(2018088303),
-            Wrapping(-547181756),
-            Wrapping(838957336),
-        ]);
-
+        test_samples(&Standard, None as Option<bool>,
+                &[Some(true), None, Some(false), None, Some(false)]);
+        test_samples(&Standard, Wrapping(0i32), &[Wrapping(-2074640887),
+                Wrapping(-1719949321), Wrapping(2018088303),
+                Wrapping(-547181756), Wrapping(838957336)]);
+        
         // We test only sub-sets of tuple and array impls
         test_samples(&Standard, (), &[(), (), (), (), ()]);
-        test_samples(&Standard, (false,), &[
-            (true,),
-            (true,),
-            (false,),
-            (true,),
-            (false,),
-        ]);
-        test_samples(&Standard, (false, false), &[
-            (true, true),
-            (false, true),
-            (false, false),
-            (true, false),
-            (false, false),
-        ]);
-
+        test_samples(&Standard, (false,), &[(true,), (true,), (false,), (true,), (false,)]);
+        test_samples(&Standard, (false,false), &[(true,true), (false,true),
+                (false,false), (true,false), (false,false)]);
+        
         test_samples(&Standard, [0u8; 0], &[[], [], [], [], []]);
-        test_samples(&Standard, [0u8; 3], &[
-            [9, 247, 111],
-            [68, 24, 13],
-            [174, 19, 194],
-            [172, 69, 213],
-            [149, 207, 29],
-        ]);
+        test_samples(&Standard, [0u8; 3], &[[9, 247, 111],
+                [68, 24, 13], [174, 19, 194],
+                [172, 69, 213], [149, 207, 29]]);
     }
 }

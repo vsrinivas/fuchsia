@@ -763,7 +763,7 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("tempfile") {
-  deps = [ ":tempfile-v3_2_0" ]
+  deps = [ ":tempfile-v3_1_0" ]
 }
 
 group("termion") {
@@ -1958,7 +1958,7 @@ rust_library("c2-chacha-v0_2_3") {
   ]
 
   deps = []
-  deps += [ ":ppv-lite86-v0_2_10" ]
+  deps += [ ":ppv-lite86-v0_2_6" ]
 
   rustenv = []
 
@@ -4011,7 +4011,6 @@ rust_library("getrandom-v0_2_2") {
     "--edition=2018",
     "-Cmetadata=a3378427d5ef87b9",
     "-Cextra-filename=-a3378427d5ef87b9",
-    "--cfg=feature=\"std\"",
   ]
 }
 
@@ -6569,10 +6568,10 @@ rust_library("polling-v2_0_2") {
   ]
 }
 
-rust_library("ppv-lite86-v0_2_10") {
+rust_library("ppv-lite86-v0_2_6") {
   crate_name = "ppv_lite86"
   crate_root = "//third_party/rust_crates/vendor/ppv-lite86/src/lib.rs"
-  output_name = "ppv_lite86-e73b5df0490cc9a"
+  output_name = "ppv_lite86-4f2afd05532d6926"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -6585,8 +6584,8 @@ rust_library("ppv-lite86-v0_2_10") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=e73b5df0490cc9a",
-    "-Cextra-filename=-e73b5df0490cc9a",
+    "-Cmetadata=4f2afd05532d6926",
+    "-Cextra-filename=-4f2afd05532d6926",
     "--cfg=feature=\"simd\"",
     "--cfg=feature=\"std\"",
   ]
@@ -6865,7 +6864,7 @@ rust_library("proptest-v0_9_3") {
   deps += [ ":rand_xorshift-v0_1_1" ]
   deps += [ ":regex-syntax-v0_6_17" ]
   deps += [ ":rusty-fork-v0_2_1" ]
-  deps += [ ":tempfile-v3_2_0" ]
+  deps += [ ":tempfile-v3_1_0" ]
 
   rustenv = []
 
@@ -7225,7 +7224,7 @@ rust_library("rand-v0_6_5") {
 
 rust_library("rand-v0_7_2") {
   crate_name = "rand"
-  crate_root = "//third_party/rust_crates/vendor/rand-0.7.2/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/rand/src/lib.rs"
   output_name = "rand-20e81bc4d0ea2cd2"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -7264,45 +7263,6 @@ rust_library("rand-v0_7_2") {
   }
 }
 
-rust_library("rand-v0_8_4") {
-  crate_name = "rand"
-  crate_root = "//third_party/rust_crates/vendor/rand/src/lib.rs"
-  output_name = "rand-3acdc77c21a3a508"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":rand_core-v0_6_3" ]
-  if (!false) {
-    deps += [ ":rand_chacha-v0_3_1" ]
-  }
-  if (false) {
-    deps += [ ":rand_hc-v0_3_1" ]
-  }
-  if (true) {
-    deps += [ ":libc-v0_2_88" ]
-  }
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=3acdc77c21a3a508",
-    "-Cextra-filename=-3acdc77c21a3a508",
-    "--cfg=feature=\"alloc\"",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"getrandom\"",
-    "--cfg=feature=\"libc\"",
-    "--cfg=feature=\"rand_chacha\"",
-    "--cfg=feature=\"rand_hc\"",
-    "--cfg=feature=\"std\"",
-    "--cfg=feature=\"std_rng\"",
-  ]
-}
-
 rust_library("rand_chacha-v0_1_1") {
   crate_name = "rand_chacha"
   crate_root = "//third_party/rust_crates/vendor/rand_chacha-0.1.1/src/lib.rs"
@@ -7328,7 +7288,7 @@ rust_library("rand_chacha-v0_1_1") {
 
 rust_library("rand_chacha-v0_2_1") {
   crate_name = "rand_chacha"
-  crate_root = "//third_party/rust_crates/vendor/rand_chacha-0.2.1/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/rand_chacha/src/lib.rs"
   output_name = "rand_chacha-e6eac7ee40461c84"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -7346,30 +7306,6 @@ rust_library("rand_chacha-v0_2_1") {
     "--edition=2018",
     "-Cmetadata=e6eac7ee40461c84",
     "-Cextra-filename=-e6eac7ee40461c84",
-    "--cfg=feature=\"std\"",
-  ]
-}
-
-rust_library("rand_chacha-v0_3_1") {
-  crate_name = "rand_chacha"
-  crate_root = "//third_party/rust_crates/vendor/rand_chacha/src/lib.rs"
-  output_name = "rand_chacha-fcec8b118d26a7b7"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":ppv-lite86-v0_2_10" ]
-  deps += [ ":rand_core-v0_6_3" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=fcec8b118d26a7b7",
-    "-Cextra-filename=-fcec8b118d26a7b7",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -7423,7 +7359,7 @@ rust_library("rand_core-v0_4_0") {
 
 rust_library("rand_core-v0_5_1") {
   crate_name = "rand_core"
-  crate_root = "//third_party/rust_crates/vendor/rand_core-0.5.1/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/rand_core/src/lib.rs"
   output_name = "rand_core-3b8db019998b7ccd"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -7440,31 +7376,6 @@ rust_library("rand_core-v0_5_1") {
     "--edition=2018",
     "-Cmetadata=3b8db019998b7ccd",
     "-Cextra-filename=-3b8db019998b7ccd",
-    "--cfg=feature=\"alloc\"",
-    "--cfg=feature=\"getrandom\"",
-    "--cfg=feature=\"std\"",
-  ]
-}
-
-rust_library("rand_core-v0_6_3") {
-  crate_name = "rand_core"
-  crate_root = "//third_party/rust_crates/vendor/rand_core/src/lib.rs"
-  output_name = "rand_core-c72139d238b8db6b"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":getrandom-v0_2_2" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=c72139d238b8db6b",
-    "-Cextra-filename=-c72139d238b8db6b",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"getrandom\"",
     "--cfg=feature=\"std\"",
@@ -7495,7 +7406,7 @@ rust_library("rand_hc-v0_1_0") {
 
 rust_library("rand_hc-v0_2_0") {
   crate_name = "rand_hc"
-  crate_root = "//third_party/rust_crates/vendor/rand_hc-0.2.0/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/rand_hc/src/lib.rs"
   output_name = "rand_hc-dcd34d22f422cc06"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -7512,28 +7423,6 @@ rust_library("rand_hc-v0_2_0") {
     "--edition=2018",
     "-Cmetadata=dcd34d22f422cc06",
     "-Cextra-filename=-dcd34d22f422cc06",
-  ]
-}
-
-rust_library("rand_hc-v0_3_1") {
-  crate_name = "rand_hc"
-  crate_root = "//third_party/rust_crates/vendor/rand_hc/src/lib.rs"
-  output_name = "rand_hc-3ce129596cc19371"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":rand_core-v0_6_3" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=3ce129596cc19371",
-    "-Cextra-filename=-3ce129596cc19371",
   ]
 }
 
@@ -8436,7 +8325,7 @@ rust_library("rusty-fork-v0_2_1") {
   deps = []
   deps += [ ":fnv-v1_0_6" ]
   deps += [ ":quick-error-v1_2_2" ]
-  deps += [ ":tempfile-v3_2_0" ]
+  deps += [ ":tempfile-v3_1_0" ]
   deps += [ ":wait-timeout-v0_1_5" ]
 
   rustenv = []
@@ -9586,21 +9475,21 @@ rust_library("tempdir-v0_3_7") {
   ]
 }
 
-rust_library("tempfile-v3_2_0") {
+rust_library("tempfile-v3_1_0") {
   crate_name = "tempfile"
   crate_root = "//third_party/rust_crates/vendor/tempfile/src/lib.rs"
-  output_name = "tempfile-713baaf360fa1fa9"
+  output_name = "tempfile-7b1346fb1d7972df"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":cfg-if-v1_0_0" ]
-  deps += [ ":rand-v0_8_4" ]
+  deps += [ ":cfg-if-v0_1_10" ]
+  deps += [ ":rand-v0_7_2" ]
   deps += [ ":remove_dir_all-v0_5_1" ]
   if (false) {
-    deps += [ ":redox_syscall-v0_2_5" ]
+    deps += [ ":redox_syscall-v0_1_51" ]
   }
   if (true) {
     deps += [ ":libc-v0_2_92" ]
@@ -9614,12 +9503,12 @@ rust_library("tempfile-v3_2_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=713baaf360fa1fa9",
-    "-Cextra-filename=-713baaf360fa1fa9",
+    "-Cmetadata=7b1346fb1d7972df",
+    "-Cextra-filename=-7b1346fb1d7972df",
   ]
 
   aliased_deps = {
-    syscall = ":redox_syscall-v0_2_5"
+    syscall = ":redox_syscall-v0_1_51"
   }
 }
 

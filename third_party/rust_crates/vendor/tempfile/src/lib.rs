@@ -124,7 +124,6 @@
 )]
 #![cfg_attr(test, deny(warnings))]
 #![deny(rust_2018_idioms)]
-#![allow(clippy::redundant_field_names)]
 
 #[macro_use]
 extern crate cfg_if;
@@ -144,9 +143,7 @@ mod spooled;
 mod util;
 
 pub use crate::dir::{tempdir, tempdir_in, TempDir};
-pub use crate::file::{
-    tempfile, tempfile_in, NamedTempFile, PathPersistError, PersistError, TempPath,
-};
+pub use crate::file::{tempfile, tempfile_in, NamedTempFile, PathPersistError, PersistError, TempPath};
 pub use crate::spooled::{spooled_tempfile, SpooledTempFile};
 
 /// Create a new temporary file or directory with custom parameters.
