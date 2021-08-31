@@ -11,13 +11,13 @@
 
 struct DeviceNameProviderArgs {
   // This is the string value of `netsvc.interface`.
-  // It is overriden by the string value of `--interface` on the binary commandline.
+  // It is overridden by the string value of `--interface` on the binary commandline.
   std::string interface;
   // This is the string value of `zircon.nodename`.
-  // It is overriden by the string value of `--nodename` on the binary commandline.
+  // It is overridden by the string value of `--nodename` on the binary commandline.
   std::string nodename;
   // This defaults to "/dev/class/ethernet/"
-  // BUT it overriden by `--ethdir` on the binary commandline.
+  // BUT it overridden by `--ethdir` on the binary commandline.
   std::string ethdir;
   // This is the integer value of `zircon.namegen`
   // It is overridden by the value of `--namegen` on the commandline.
