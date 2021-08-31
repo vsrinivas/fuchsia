@@ -18,6 +18,7 @@ impl Id {
     pub const HT_CAPABILITIES: Self = Self(45);
     pub const RSNE: Self = Self(48);
     pub const EXT_SUPPORTED_RATES: Self = Self(50);
+    pub const MOBILITY_DOMAIN: Self = Self(54);
     pub const HT_OPERATION: Self = Self(61);
     pub const RM_ENABLED_CAPABILITIES: Self = Self(70);
     pub const BSS_MAX_IDLE_PERIOD: Self = Self(90);
@@ -61,6 +62,7 @@ impl IeType {
     ie_type_basic_const!(HT_CAPABILITIES);
     ie_type_basic_const!(RSNE);
     ie_type_basic_const!(EXT_SUPPORTED_RATES);
+    ie_type_basic_const!(MOBILITY_DOMAIN);
     ie_type_basic_const!(HT_OPERATION);
     ie_type_basic_const!(RM_ENABLED_CAPABILITIES);
     ie_type_basic_const!(BSS_MAX_IDLE_PERIOD);
@@ -71,6 +73,9 @@ impl IeType {
     ie_type_basic_const!(PERR);
     ie_type_basic_const!(VHT_CAPABILITIES);
     ie_type_basic_const!(VHT_OPERATION);
+
+    pub const WMM_INFO: Self = Self::new_vendor([0x00, 0x50, 0xf2, 0x02, 0x00, 0x01]);
+    pub const WMM_PARAM: Self = Self::new_vendor([0x00, 0x50, 0xf2, 0x02, 0x01, 0x01]);
 
     pub const fn new_basic(id: Id) -> Self {
         Self::Ieee { id, extension: None }

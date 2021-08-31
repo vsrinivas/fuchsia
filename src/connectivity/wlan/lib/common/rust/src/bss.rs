@@ -125,6 +125,8 @@ pub struct BssDescription {
     rsne_range: Option<Range<usize>>,
     ht_cap_range: Option<Range<usize>>,
     ht_op_range: Option<Range<usize>>,
+    rm_enabled_cap_range: Option<Range<usize>>,
+    ext_cap_range: Option<Range<usize>>,
     vht_cap_range: Option<Range<usize>>,
     vht_op_range: Option<Range<usize>>,
 }
@@ -172,6 +174,17 @@ impl BssDescription {
             // Safe to unwrap because we already verified HT op is parseable in `from_fidl`
             ie::parse_ht_operation(&self.ies[range]).unwrap()
         })
+    }
+
+    pub fn rm_enabled_cap(&self) -> Option<LayoutVerified<&[u8], ie::RmEnabledCapabilities>> {
+        self.rm_enabled_cap_range.clone().map(|range| {
+            // Safe to unwrap because we already verified RM enabled cap is parseable in `from_fidl`
+            ie::parse_rm_enabled_capabilities(&self.ies[range]).unwrap()
+        })
+    }
+
+    pub fn ext_cap(&self) -> Option<ie::ExtCapabilitiesView<&[u8]>> {
+        self.ext_cap_range.clone().map(|range| ie::parse_ext_capabilities(&self.ies[range]))
     }
 
     pub fn raw_ht_op(&self) -> Option<fidl_internal::HtOperation> {
@@ -376,6 +389,29 @@ impl BssDescription {
         }
     }
 
+    pub fn supports_uapsd(&self) -> bool {
+        let wmm_info = ie::Reader::new(&self.ies[..])
+            .filter_map(|(id, ie)| match id {
+                ie::Id::VENDOR_SPECIFIC => match ie::parse_vendor_ie(ie) {
+                    Ok(ie::VendorIe::WmmInfo(body)) => {
+                        ie::parse_wmm_info(body).map(|wmm_info| *wmm_info).ok()
+                    }
+                    Ok(ie::VendorIe::WmmParam(body)) => {
+                        ie::parse_wmm_param(body).map(|wmm_param| wmm_param.wmm_info).ok()
+                    }
+                    _ => None,
+                },
+                _ => None,
+            })
+            .next();
+        wmm_info.map(|wmm_info| wmm_info.ap_wmm_info().uapsd()).unwrap_or(false)
+    }
+
+    /// IEEE 802.11-2016 4.5.4.8
+    pub fn supports_ft(&self) -> bool {
+        ie::Reader::new(&self.ies[..]).any(|(id, _ie)| id == ie::Id::MOBILITY_DOMAIN)
+    }
+
     /// Returns a simplified BssCandidacy which implements PartialOrd.
     pub fn candidacy(&self) -> BssCandidacy {
         let rssi_dbm = self.rssi_dbm;
@@ -444,6 +480,8 @@ impl TryFrom<fidl_internal::BssDescription> for BssDescription {
         let mut rsne_range = None;
         let mut ht_cap_range = None;
         let mut ht_op_range = None;
+        let mut rm_enabled_cap_range = None;
+        let mut ext_cap_range = None;
         let mut vht_cap_range = None;
         let mut vht_op_range = None;
 
@@ -471,6 +509,15 @@ impl TryFrom<fidl_internal::BssDescription> for BssDescription {
                 IeType::HT_OPERATION => {
                     ie::parse_ht_operation(body)?;
                     ht_op_range = Some(range);
+                }
+                IeType::RM_ENABLED_CAPABILITIES => {
+                    if let Ok(_) = ie::parse_rm_enabled_capabilities(body) {
+                        rm_enabled_cap_range = Some(range);
+                    }
+                }
+                IeType::EXT_CAPABILITIES => {
+                    // Parsing ExtCapabilities always succeeds, so no need to test parsing it here
+                    ext_cap_range = Some(range);
                 }
                 IeType::VHT_CAPABILITIES => {
                     ie::parse_vht_capabilities(body)?;
@@ -506,6 +553,8 @@ impl TryFrom<fidl_internal::BssDescription> for BssDescription {
             rsne_range,
             ht_cap_range,
             ht_op_range,
+            rm_enabled_cap_range,
+            ext_cap_range,
             vht_cap_range,
             vht_op_range,
         })
@@ -667,6 +716,55 @@ mod tests {
     }
 
     #[test]
+    fn test_rm_enabled_cap_ie() {
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::RM_ENABLED_CAPABILITIES)
+        );
+        assert!(bss.rm_enabled_cap().is_none());
+
+        #[rustfmt::skip]
+        let rm_enabled_capabilities = vec![
+            0x03, // link measurement and neighbor report enabled
+            0x00, 0x00, 0x00, 0x00,
+        ];
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::RM_ENABLED_CAPABILITIES)
+                .set(IeType::RM_ENABLED_CAPABILITIES, rm_enabled_capabilities.clone())
+        );
+        assert_variant!(bss.rm_enabled_cap(), Some(cap) => {
+            assert_eq!(cap.as_bytes(), &rm_enabled_capabilities[..]);
+        });
+    }
+
+    #[test]
+    fn test_ext_cap_ie() {
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::EXT_CAPABILITIES)
+        );
+        assert!(bss.ext_cap().is_none());
+
+        #[rustfmt::skip]
+        let ext_capabilities = vec![
+            0x04, 0x00,
+            0x08, // BSS transition supported
+            0x00, 0x00, 0x00, 0x00, 0x40
+        ];
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::EXT_CAPABILITIES)
+                .set(IeType::EXT_CAPABILITIES, ext_capabilities.clone())
+        );
+        let ext_cap = bss.ext_cap().expect("expect bss.ext_cap() to be Some");
+        assert_eq!(ext_cap.ext_caps_octet_1.map(|o| o.0), Some(0x04));
+        assert_eq!(ext_cap.ext_caps_octet_2.map(|o| o.0), Some(0x00));
+        assert_eq!(ext_cap.ext_caps_octet_3.map(|o| o.0), Some(0x08));
+        assert_eq!(ext_cap.remaining, &[0x00, 0x00, 0x00, 0x00, 0x40]);
+    }
+
+    #[test]
     fn test_wpa_ie() {
         let mut buf = vec![];
         fake_bss_description!(Wpa1)
@@ -770,6 +868,77 @@ mod tests {
                 .remove(IeType::VHT_OPERATION),
         );
         assert_eq!(Standard::Dot11A, bss.latest_standard());
+    }
+
+    #[test]
+    fn test_supports_uapsd() {
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::WMM_INFO)
+                .remove(IeType::WMM_PARAM)
+        );
+        assert!(!bss.supports_uapsd());
+
+        let mut wmm_info = vec![0x80]; // U-APSD enabled
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::WMM_INFO)
+                .remove(IeType::WMM_PARAM)
+                .set(IeType::WMM_INFO, wmm_info.clone())
+        );
+        assert!(bss.supports_uapsd());
+
+        wmm_info = vec![0x00]; // U-APSD not enabled
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::WMM_INFO)
+                .remove(IeType::WMM_PARAM)
+                .set(IeType::WMM_INFO, wmm_info)
+        );
+        assert!(!bss.supports_uapsd());
+
+        #[rustfmt::skip]
+        let mut wmm_param = vec![
+            0x80, // U-APSD enabled
+            0x00, // reserved
+            0x03, 0xa4, 0x00, 0x00, // AC_BE parameters
+            0x27, 0xa4, 0x00, 0x00, // AC_BK parameters
+            0x42, 0x43, 0x5e, 0x00, // AC_VI parameters
+            0x62, 0x32, 0x2f, 0x00, // AC_VO parameters
+        ];
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::WMM_INFO)
+                .remove(IeType::WMM_PARAM)
+                .set(IeType::WMM_PARAM, wmm_param.clone())
+        );
+        assert!(bss.supports_uapsd());
+
+        wmm_param[0] = 0x00; // U-APSD not enabled
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::WMM_INFO)
+                .remove(IeType::WMM_PARAM)
+                .set(IeType::WMM_PARAM, wmm_param)
+        );
+        assert!(!bss.supports_uapsd());
+    }
+
+    #[test]
+    fn test_supports_ft() {
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::MOBILITY_DOMAIN)
+        );
+        assert!(!bss.supports_ft());
+
+        let bss = fake_bss_description!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::MOBILITY_DOMAIN)
+                // We only check that the IE exists, so just set the content to bytes 0's.
+                .set(IeType::MOBILITY_DOMAIN, vec![0x00; 3])
+        );
+        assert!(bss.supports_ft());
     }
 
     #[test]
