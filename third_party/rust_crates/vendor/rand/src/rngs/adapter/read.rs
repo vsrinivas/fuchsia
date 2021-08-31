@@ -9,10 +9,12 @@
 
 //! A wrapper around any Read to treat it as an RNG.
 
-use std::io::Read;
-use std::fmt;
+#![allow(deprecated)]
 
-use rand_core::{RngCore, Error, impls};
+use std::fmt;
+use std::io::Read;
+
+use rand_core::{impls, Error, RngCore};
 
 
 /// An RNG that reads random bytes straight from any type supporting
@@ -30,30 +32,18 @@ use rand_core::{RngCore, Error, impls};
 /// have enough data, will only be reported through [`try_fill_bytes`].
 /// The other [`RngCore`] methods will panic in case of an error.
 ///
-/// # Example
-///
-/// ```
-/// use rand::Rng;
-/// use rand::rngs::adapter::ReadRng;
-///
-/// let data = vec![1, 2, 3, 4, 5, 6, 7, 8];
-/// let mut rng = ReadRng::new(&data[..]);
-/// println!("{:x}", rng.gen::<u32>());
-/// ```
-///
 /// [`OsRng`]: crate::rngs::OsRng
 /// [`try_fill_bytes`]: RngCore::try_fill_bytes
 #[derive(Debug)]
+#[deprecated(since="0.8.4", note="removal due to lack of usage")]
 pub struct ReadRng<R> {
-    reader: R
+    reader: R,
 }
 
 impl<R: Read> ReadRng<R> {
     /// Create a new `ReadRng` from a `Read`.
     pub fn new(r: R) -> ReadRng<R> {
-        ReadRng {
-            reader: r
-        }
+        ReadRng { reader: r }
     }
 }
 
@@ -67,19 +57,28 @@ impl<R: Read> RngCore for ReadRng<R> {
     }
 
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        self.try_fill_bytes(dest).unwrap_or_else(|err|
-                panic!("reading random bytes from Read implementation failed; error: {}", err));
+        self.try_fill_bytes(dest).unwrap_or_else(|err| {
+            panic!(
+                "reading random bytes from Read implementation failed; error: {}",
+                err
+            )
+        });
     }
 
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
-        if dest.is_empty() { return Ok(()); }
+        if dest.is_empty() {
+            return Ok(());
+        }
         // Use `std::io::read_exact`, which retries on `ErrorKind::Interrupted`.
-        self.reader.read_exact(dest).map_err(|e| Error::new(ReadError(e)))
+        self.reader
+            .read_exact(dest)
+            .map_err(|e| Error::new(ReadError(e)))
     }
 }
 
 /// `ReadRng` error type
 #[derive(Debug)]
+#[deprecated(since="0.8.4")]
 pub struct ReadError(std::io::Error);
 
 impl fmt::Display for ReadError {
@@ -97,30 +96,33 @@ impl std::error::Error for ReadError {
 
 #[cfg(test)]
 mod test {
+    use std::println;
+
     use super::ReadRng;
     use crate::RngCore;
 
     #[test]
     fn test_reader_rng_u64() {
         // transmute from the target to avoid endianness concerns.
-        let v = vec![0u8, 0, 0, 0, 0, 0, 0, 1,
-                     0  , 0, 0, 0, 0, 0, 0, 2,
-                     0,   0, 0, 0, 0, 0, 0, 3];
+        #[rustfmt::skip]
+        let v = [0u8, 0, 0, 0, 0, 0, 0, 1,
+                 0,   4, 0, 0, 3, 0, 0, 2,
+                 5,   0, 0, 0, 0, 0, 0, 0];
         let mut rng = ReadRng::new(&v[..]);
 
-        assert_eq!(rng.next_u64(), 1_u64.to_be());
-        assert_eq!(rng.next_u64(), 2_u64.to_be());
-        assert_eq!(rng.next_u64(), 3_u64.to_be());
+        assert_eq!(rng.next_u64(), 1 << 56);
+        assert_eq!(rng.next_u64(), (2 << 56) + (3 << 32) + (4 << 8));
+        assert_eq!(rng.next_u64(), 5);
     }
 
     #[test]
     fn test_reader_rng_u32() {
-        let v = vec![0u8, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3];
+        let v = [0u8, 0, 0, 1, 0, 0, 2, 0, 3, 0, 0, 0];
         let mut rng = ReadRng::new(&v[..]);
 
-        assert_eq!(rng.next_u32(), 1_u32.to_be());
-        assert_eq!(rng.next_u32(), 2_u32.to_be());
-        assert_eq!(rng.next_u32(), 3_u32.to_be());
+        assert_eq!(rng.next_u32(), 1 << 24);
+        assert_eq!(rng.next_u32(), 2 << 16);
+        assert_eq!(rng.next_u32(), 3);
     }
 
     #[test]
