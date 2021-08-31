@@ -3957,6 +3957,13 @@ Include a config in the example packages to attempt to use Spinel
 
 From //src/lib/ui/carnelian/BUILD.gn:25
 
+### use_spinel_vk_bifrost_targets
+Set this to true to enable bifrost targets.
+
+**Current value (from the default):** `false`
+
+From //src/graphics/lib/compute/spinel/platforms/vk/BUILD.gn:9
+
 ### use_swiftshader_vulkan_icd_on_host
 
 Global arguments for whether we use the SwiftShader Vulkan ICD on host
@@ -4023,6 +4030,14 @@ From //build/images/args.gni:95
 **Current value (from the default):** `""`
 
 From //build/images/args.gni:96
+
+### vboot_keys
+vboot signing key directory. Must contain `kernel.keyblock` and
+`kernel_data_key.vbprivk`. Defaults to the public ChromeOS test keys.
+
+**Current value (from the default):** `"//third_party/vboot_reference/tests/devkeys"`
+
+From //build/images/vboot/vboot.gni:15
 
 ### vboot_verbose
 If true, vboot() image builds print out the exact "futility" command line.
