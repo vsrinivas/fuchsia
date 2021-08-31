@@ -74,7 +74,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
     ScopedToken t(domain_token());
     res = Init();
     if (res != ZX_OK) {
-      zxlogf(ERROR, "Init failure in %s (res %d)", __PRETTY_FUNCTION__, res);
+      zxlogf(ERROR, "Init failure (res %d)", res);
       return res;
     }
     // If no subclass has set this, we need to do so here.
@@ -89,7 +89,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
 
   res = PublishInternal();
   if (res != ZX_OK) {
-    zxlogf(ERROR, "Publish failure in %s (res %d)", __PRETTY_FUNCTION__, res);
+    zxlogf(ERROR, "Publish failure (res %d)", res);
     return res;
   }
 
@@ -99,7 +99,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
 zx_status_t SimpleAudioStream::PublishInternal() {
   device_name_[sizeof(device_name_) - 1] = 0;
   if (!strlen(device_name_)) {
-    zxlogf(ERROR, "Zero-length device name in %s", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Zero-length device name");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -220,7 +220,7 @@ void SimpleAudioStream::GetChannel(GetChannelRequestView request,
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   if (!endpoints.is_ok()) {
-    zxlogf(ERROR, "Could not create channel in %s", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Could not create channel");
     completer.Close(ZX_ERR_NO_MEMORY);
     return;
   }
@@ -274,7 +274,7 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
       rb_started_ = false;
       state_.Set("deactivated");
     }
-    rb_fetched_ = false;
+    rb_vmo_fetched_ = false;
     expected_notifications_per_ring_.store(0);
     {
       fbl::AutoLock position_lock(&position_lock_);
@@ -344,7 +344,7 @@ void SimpleAudioStream::CreateRingBuffer(
   }
 
   if (!found_one) {
-    zxlogf(ERROR, "Could not find a suitable format in %s", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Could not find a suitable format");
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -378,7 +378,7 @@ void SimpleAudioStream::CreateRingBuffer(
   // Actually attempt to change the format.
   auto result = ChangeFormat(req);
   if (result != ZX_OK) {
-    zxlogf(ERROR, "Could not ChangeFormat in %s", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Could not ChangeFormat");
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -691,9 +691,11 @@ void SimpleAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync&
   frames_requested_.Set(request->min_frames);
 
   if (rb_started_) {
+    zxlogf(ERROR, "Cannot call GetVmo while started");
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
+  expected_notifications_per_ring_.store(request->clock_recovery_notifications_per_ring);
 
   uint32_t num_ring_buffer_frames = 0;
   audio_proto::RingBufGetBufferReq req = {};
@@ -703,19 +705,20 @@ void SimpleAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync&
   auto status = GetBuffer(req, &num_ring_buffer_frames, &buffer);
   if (status != ZX_OK) {
     expected_notifications_per_ring_.store(0);
+    zxlogf(ERROR, "GetBuffer failed (err %u)", status);
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
 
-  expected_notifications_per_ring_.store(req.notifications_per_ring);
-  rb_fetched_ = true;
   uint64_t size = 0;
   status = buffer.get_size(&size);
   if (status != ZX_OK) {
     expected_notifications_per_ring_.store(0);
+    zxlogf(ERROR, "vmo::get_size failed (err %u)", status);
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
+  rb_vmo_fetched_ = true;
   ring_buffer_size_.Set(size);
   completer.ReplySuccess(num_ring_buffer_frames, std::move(buffer));
 }
@@ -723,13 +726,18 @@ void SimpleAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync&
 void SimpleAudioStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
   ScopedToken t(domain_token());
 
-  uint64_t start_time = 0;
-  if (rb_started_ || !rb_fetched_) {
-    zxlogf(ERROR, "Could not start %s\n", __PRETTY_FUNCTION__);
-    completer.Reply(start_time);
+  if (!rb_vmo_fetched_) {
+    zxlogf(ERROR, "Cannot call Start before GetVmo");
+    completer.Close(ZX_ERR_BAD_STATE);
+    return;
+  }
+  if (rb_started_) {
+    zxlogf(ERROR, "Cannot call Start when already started");
+    completer.Close(ZX_ERR_BAD_STATE);
     return;
   }
 
+  uint64_t start_time = 0;
   auto result = Start(&start_time);
   if (result == ZX_OK) {
     rb_started_ = true;
@@ -741,8 +749,14 @@ void SimpleAudioStream::Start(StartRequestView request, StartCompleter::Sync& co
 
 void SimpleAudioStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   ScopedToken t(domain_token());
+
+  if (!rb_vmo_fetched_) {
+    zxlogf(ERROR, "Cannot call Stop before GetVmo");
+    completer.Close(ZX_ERR_BAD_STATE);
+    return;
+  }
   if (!rb_started_) {
-    zxlogf(ERROR, "Could not stop %s\n", __PRETTY_FUNCTION__);
+    zxlogf(INFO, "Stop called while stopped; doing nothing");
     completer.Reply();
     return;
   }

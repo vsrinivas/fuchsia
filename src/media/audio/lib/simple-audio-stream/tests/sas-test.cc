@@ -147,15 +147,19 @@ class MockSimpleAudio : public SimpleAudioStream {
     zx::vmo rb;
     *out_num_rb_frames = req.min_ring_buffer_frames;
     zx::vmo::create(*out_num_rb_frames * 2 * 2, 0, &rb);
-    us_per_notification_ = 1'000 * MockSimpleAudio::kTestFrameRate / *out_num_rb_frames * 1'000 /
-                           req.notifications_per_ring;
+    us_per_notification_ = (req.notifications_per_ring
+                                ? (1'000'000 * req.min_ring_buffer_frames) /
+                                      (MockSimpleAudio::kTestFrameRate * req.notifications_per_ring)
+                                : 0);
     constexpr uint32_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
     return rb.duplicate(rights, out_buffer);
   }
 
   zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_token()) override {
     *out_start_time = zx::clock::get_monotonic().get();
-    notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
+    if (us_per_notification_) {
+      notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
+    }
     return ZX_OK;
   }
 
@@ -174,7 +178,9 @@ class MockSimpleAudio : public SimpleAudioStream {
     resp.monotonic_time = zx::clock::get_monotonic().get();
     resp.ring_buffer_pos = kTestPositionNotify;
     NotifyPosition(resp);
-    notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
+    if (us_per_notification_) {
+      notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
+    }
   }
 
   void ShutdownHook() __TA_REQUIRES(domain_token()) override { Stop(); }
@@ -183,7 +189,7 @@ class MockSimpleAudio : public SimpleAudioStream {
   async::TaskClosureMethod<MockSimpleAudio, &MockSimpleAudio::ProcessRingNotification> notify_timer_
       TA_GUARDED(domain_token()){this};
 
-  uint32_t us_per_notification_ = 0;
+  uint64_t us_per_notification_ = 0;  // if 0, do not emit position notifications
 };
 
 TEST_F(SimpleAudioTest, DdkLifeCycleTest) {
@@ -967,6 +973,140 @@ TEST_F(SimpleAudioTest, RingBufferTests) {
   server->DdkRelease();
 }
 
+TEST_F(SimpleAudioTest, RingBufferStartBeforeGetVmo) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  fidl::WireSyncClient<audio_fidl::Device> client;
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
+  ASSERT_EQ(ch.status(), ZX_OK);
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
+  fidl::Arena allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
+                .CreateRingBuffer(std::move(format), std::move(remote));
+  ASSERT_OK(rb.status());
+
+  // Start() before GetVmo() must result in channel closure
+  auto start = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, start.status());  // We get a channel close.
+
+  server->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+  server->DdkRelease();
+}
+
+TEST_F(SimpleAudioTest, RingBufferStartWhileStarted) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  fidl::WireSyncClient<audio_fidl::Device> client;
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
+  ASSERT_EQ(ch.status(), ZX_OK);
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
+  fidl::Arena allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
+                .CreateRingBuffer(std::move(format), std::move(remote));
+  ASSERT_OK(rb.status());
+
+  auto vmo =
+      fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(MockSimpleAudio::kTestFrameRate, 0);
+  ASSERT_OK(vmo.status());
+
+  auto start = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
+  ASSERT_OK(start.status());
+
+  // Start() while already started must result in channel closure
+  auto restart = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, restart.status());  // We get a channel close.
+
+  server->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+  server->DdkRelease();
+}
+
+TEST_F(SimpleAudioTest, RingBufferStopBeforeGetVmo) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  fidl::WireSyncClient<audio_fidl::Device> client;
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
+  ASSERT_EQ(ch.status(), ZX_OK);
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
+  fidl::Arena allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
+                .CreateRingBuffer(std::move(format), std::move(remote));
+  ASSERT_OK(rb.status());
+
+  // Stop() before GetVmo() must result in channel closure
+  auto stop = fidl::WireCall<audio_fidl::RingBuffer>(local).Stop();
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, stop.status());  // We get a channel close.
+
+  server->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+  server->DdkRelease();
+}
+
+TEST_F(SimpleAudioTest, RingBufferStopWhileStopped) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  fidl::WireSyncClient<audio_fidl::Device> client;
+  *client.mutable_channel() = std::move(ddk_.FidlClient());
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
+  ASSERT_EQ(ch.status(), ZX_OK);
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
+  fidl::Arena allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
+                .CreateRingBuffer(std::move(format), std::move(remote));
+  ASSERT_OK(rb.status());
+
+  auto vmo =
+      fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(MockSimpleAudio::kTestFrameRate, 0);
+  ASSERT_OK(vmo.status());
+
+  // We are already stopped, but this should be harmless
+  auto stop = fidl::WireCall<audio_fidl::RingBuffer>(local).Stop();
+  ASSERT_OK(stop.status());
+  // Another stop immediately afterward should also be harmless
+  auto restop = fidl::WireCall<audio_fidl::RingBuffer>(local).Stop();
+  ASSERT_OK(restop.status());
+
+  server->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+  server->DdkRelease();
+}
+
 TEST_F(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
@@ -1092,7 +1232,7 @@ TEST_F(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) 
   server->DdkRelease();
 }
 
-TEST_F(SimpleAudioTest, NonPriviledged) {
+TEST_F(SimpleAudioTest, NonPrivileged) {
   auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
@@ -1119,8 +1259,8 @@ TEST_F(SimpleAudioTest, NonPriviledged) {
     ASSERT_OK(ret1.status());
   }
   fidl::WireSyncClient<audio_fidl::RingBuffer> ringbuffer1(std::move(endpoints1->client));
-  auto stop1 = ringbuffer1.Stop();
-  ASSERT_OK(stop1.status());  // Priviledged channel.
+  auto vmo1 = ringbuffer1.GetVmo(MockSimpleAudio::kTestFrameRate, /* notifs_per_sec = */ 0);
+  ASSERT_OK(vmo1.status());
 
   auto channel2 = zx::unowned_channel(ch2->channel.channel());
   fidl::WireSyncClient<audio_fidl::StreamConfig> client2(std::move(ch2->channel));
@@ -1136,8 +1276,8 @@ TEST_F(SimpleAudioTest, NonPriviledged) {
     ASSERT_OK(ret2.status());
   }
   fidl::WireSyncClient<audio_fidl::RingBuffer> ringbuffer2(std::move(endpoints2->client));
-  auto stop2 = ringbuffer2.Stop();
-  ASSERT_NOT_OK(stop2.status());  // Non-priviledged channel.
+  auto vmo2 = ringbuffer2.GetVmo(MockSimpleAudio::kTestFrameRate, 0);
+  ASSERT_NOT_OK(vmo2.status());  // Non-privileged channel.
 
   auto channel3 = zx::unowned_channel(ch3->channel.channel());
   fidl::WireSyncClient<audio_fidl::StreamConfig> client3(std::move(ch3->channel));
@@ -1153,8 +1293,8 @@ TEST_F(SimpleAudioTest, NonPriviledged) {
     ASSERT_OK(ret3.status());
   }
   fidl::WireSyncClient<audio_fidl::RingBuffer> ringbuffer3(std::move(endpoints3->client));
-  auto stop3 = ringbuffer3.Stop();
-  ASSERT_NOT_OK(stop3.status());  // Non-priviledged channel.
+  auto vmo3 = ringbuffer3.GetVmo(MockSimpleAudio::kTestFrameRate, 0);
+  ASSERT_NOT_OK(vmo3.status());  // Non-privileged channel.
 
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());

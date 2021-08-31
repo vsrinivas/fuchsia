@@ -445,7 +445,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
   // State used for protocol enforcement.
   bool rb_started_ __TA_GUARDED(domain_token()) = false;
-  bool rb_fetched_ __TA_GUARDED(domain_token()) = false;
+  bool rb_vmo_fetched_ __TA_GUARDED(domain_token()) = false;
 
   // |shutting_down_| is a boolean indicating whether |loop_| is about to be shut down.
   bool shutting_down_ __TA_GUARDED(channel_lock_) = false;
