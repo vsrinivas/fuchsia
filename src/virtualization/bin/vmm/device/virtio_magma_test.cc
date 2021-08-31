@@ -640,4 +640,82 @@ TEST_F(VirtioMagmaTest, InternalMapAndUnmap) {
   ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
 }
 
+TEST_F(VirtioMagmaTest, BufferHandle) {
+  magma_device_t device{};
+  ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
+
+  uint64_t connection{};
+  ASSERT_NO_FATAL_FAILURE(CreateConnection(device, &connection));
+
+  magma_buffer_t buffer{};
+  ASSERT_NO_FATAL_FAILURE(CreateBuffer(connection, &buffer));
+
+  magma_handle_t buffer_handle;
+  {
+    virtio_magma_get_buffer_handle2_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_GET_BUFFER_HANDLE2;
+    request.buffer = buffer;
+    uint16_t descriptor_id{};
+    virtio_magma_get_buffer_handle2_resp_t response{};
+    void* response_ptr;
+    constexpr uint64_t kSizeofResponse = sizeof(response) + sizeof(uint64_t);
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(&request, sizeof(request))
+                  .AppendWritableDescriptor(&response_ptr, kSizeofResponse)
+                  .Build(&descriptor_id),
+              ZX_OK);
+    magma_->NotifyQueue(0);
+
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, kSizeofResponse);
+
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2);
+    EXPECT_EQ(response.hdr.flags, 0u);
+    EXPECT_NE(response.handle_out, 0u);
+    ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
+
+    uint64_t buffer_size;
+    memcpy(&buffer_size, reinterpret_cast<uint8_t*>(response_ptr) + sizeof(response),
+           sizeof(buffer_size));
+    EXPECT_EQ(buffer_size, kBufferSize);
+
+    // This is a copy of the handle bits, not a true handle, so it can only be used as a reference.
+    buffer_handle = static_cast<magma_handle_t>(response.handle_out);
+  }
+
+  // Releasing the buffer has no effect because VirtioMagma maintains a copy of the handle.
+  ASSERT_NO_FATAL_FAILURE(ReleaseBuffer(connection, buffer));
+
+  {
+    virtio_magma_internal_release_handle_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_INTERNAL_RELEASE_HANDLE;
+    request.handle = buffer_handle;
+    virtio_magma_internal_release_handle_resp_t response{};
+    uint16_t descriptor_id{};
+    void* response_ptr;
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(&request, sizeof(request))
+                  .AppendWritableDescriptor(&response_ptr, sizeof(response))
+                  .Build(&descriptor_id),
+              ZX_OK);
+    magma_->NotifyQueue(0);
+
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(response));
+
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_INTERNAL_RELEASE_HANDLE);
+    EXPECT_EQ(response.hdr.flags, 0u);
+    ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
+  }
+
+  ASSERT_NO_FATAL_FAILURE(ReleaseConnection(connection));
+  ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
+}
+
 }  // namespace

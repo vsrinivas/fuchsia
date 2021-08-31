@@ -175,6 +175,40 @@ zx_status_t VirtioMagma::HandleCommandDescriptors(VirtioDescriptor* request_desc
 
       return ZX_OK;
     }
+
+    // Returns the buffer size after the response struct.
+    case VIRTIO_MAGMA_CMD_GET_BUFFER_HANDLE2: {
+      auto request = reinterpret_cast<virtio_magma_get_buffer_handle2_ctrl_t*>(request_desc->addr);
+
+      virtio_magma_get_buffer_handle2_resp_t response = {
+          .hdr.type = VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2,
+      };
+
+      zx::vmo vmo;
+      response.result_return =
+          magma_get_buffer_handle2(request->buffer, vmo.reset_and_get_address());
+      response.handle_out = vmo.get();
+
+      memcpy(response_desc->addr, &response, sizeof(response));
+      *used_out = sizeof(response);
+
+      if (response.result_return == MAGMA_STATUS_OK) {
+        uint64_t buffer_size;
+        zx_status_t status = vmo.get_size(&buffer_size);
+        if (status != ZX_OK)
+          return status;
+
+        void* buffer_size_ptr =
+            reinterpret_cast<virtio_magma_get_buffer_handle2_resp_t*>(response_desc->addr) + 1;
+        memcpy(buffer_size_ptr, &buffer_size, sizeof(buffer_size));
+        *used_out += sizeof(buffer_size);
+
+        // Keep the handle alive while the guest is referencing it.
+        stored_handles_.push_back(std::move(vmo));
+      }
+
+      return ZX_OK;
+    }
   }
 
   return ZX_ERR_NOT_SUPPORTED;
@@ -286,6 +320,25 @@ zx_status_t VirtioMagma::Handle_internal_unmap(const virtio_magma_internal_unmap
   }
 
   response->result_return = MAGMA_STATUS_INVALID_ARGS;
+  return ZX_OK;
+}
+
+zx_status_t VirtioMagma::Handle_internal_release_handle(
+    const virtio_magma_internal_release_handle_ctrl_t* request,
+    virtio_magma_internal_release_handle_resp_t* response) {
+  FX_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_INTERNAL_RELEASE_HANDLE);
+
+  response->hdr.type = VIRTIO_MAGMA_RESP_INTERNAL_RELEASE_HANDLE;
+
+  auto iter = std::find(stored_handles_.begin(), stored_handles_.end(), request->handle);
+
+  if (iter == stored_handles_.end()) {
+    response->result_return = MAGMA_STATUS_INVALID_ARGS;
+  } else {
+    stored_handles_.erase(iter);
+    response->result_return = MAGMA_STATUS_OK;
+  }
+
   return ZX_OK;
 }
 

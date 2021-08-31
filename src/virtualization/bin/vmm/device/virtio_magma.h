@@ -7,9 +7,11 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/zx/handle.h>
 #include <lib/zx/vmar.h>
 #include <zircon/types.h>
 
+#include <list>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -60,6 +62,9 @@ class VirtioMagma : public VirtioMagmaGeneric,
                                   virtio_magma_internal_map_resp_t* response) override;
   zx_status_t Handle_internal_unmap(const virtio_magma_internal_unmap_ctrl_t* request,
                                     virtio_magma_internal_unmap_resp_t* response) override;
+  zx_status_t Handle_internal_release_handle(
+      const virtio_magma_internal_release_handle_ctrl_t* request,
+      virtio_magma_internal_release_handle_resp_t* response) override;
   zx_status_t Handle_poll(const virtio_magma_poll_ctrl_t* request,
                           virtio_magma_poll_resp_t* response) override;
   zx_status_t Handle_export(const virtio_magma_export_ctrl_t* request,
@@ -79,6 +84,9 @@ class VirtioMagma : public VirtioMagmaGeneric,
   VirtioQueue out_queue_;
   fuchsia::virtualization::hardware::VirtioWaylandImporterSyncPtr wayland_importer_;
   std::unordered_multimap<zx_koid_t, std::pair<zx_vaddr_t, size_t>> buffer_maps_;
+
+  // We store handles that are returned to the client to keep them alive.
+  std::list<zx::handle> stored_handles_;
 
   // Each connection maps images to info, populated either when image is created or imported
   using ImageMap = std::unordered_map<magma_buffer_t, ImageInfoWithToken>;

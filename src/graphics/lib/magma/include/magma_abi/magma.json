@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 75,
+    "next-free-ordinal": 77,
     "exports": [
       {
         "ordinal": 4,
@@ -918,7 +918,7 @@
         "ordinal": 67,
         "name": "magma_get_buffer_handle",
         "type": "magma_status_t",
-        "description": "Gets a platform handle for the given buffer. This can be used to perform a CPU mapping of the buffer using the standard syscall.  The handle may be released without invalidating such CPU mappings.",
+        "description": "DEPRECATED. Gets a platform handle for the given buffer. This can be used to perform a CPU mapping of the buffer using the standard syscall.  The handle may be released without invalidating such CPU mappings.",
         "arguments": [
           {
             "name": "connection",
@@ -1061,6 +1061,24 @@
             "description": "An array of semaphore ids; first should be |command_buffer->wait_semaphore_count| wait semaphores followed by |command_buffer->signal_signal_semaphores| signal semaphores."
           }
         ]
+      },
+      {
+        "ordinal": 75,
+        "name": "magma_get_buffer_handle2",
+        "type": "magma_status_t",
+        "description": "Gets a platform handle for the given buffer. This can be used to perform a CPU mapping of the buffer using the standard syscall.  The handle may be released without invalidating such CPU mappings.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "handle_out",
+            "type": "magma_handle_t*",
+            "description": "Pointer to the returned handle."
+          }
+        ]
       }
     ],
     "virtmagma-internal": [
@@ -1112,6 +1130,19 @@
             "name": "address",
             "type": "void*",
             "description": "The mapped address."
+          }
+        ]
+      },
+      {
+        "ordinal": 76,
+        "name": "magma_internal_release_handle",
+        "type": "magma_status_t",
+        "description": "Releases the given handle.  Must be called to free resources on the host for each handle returned by interfaces such as magma_get_buffer_handle2.",
+        "arguments": [
+          {
+            "name": "handle",
+            "type": "magma_handle_t",
+            "description": "A valid handle."
           }
         ]
       }

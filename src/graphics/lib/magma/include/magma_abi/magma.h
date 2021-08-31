@@ -504,9 +504,9 @@ magma_status_t magma_buffer_get_info(
     magma_buffer_info_t* info_out);
 
 ///
-/// \brief Gets a platform handle for the given buffer. This can be used to perform a CPU mapping of
-///        the buffer using the standard syscall.  The handle may be released without invalidating
-///        such CPU mappings.
+/// \brief DEPRECATED. Gets a platform handle for the given buffer. This can be used to perform a
+///        CPU mapping of the buffer using the standard syscall.  The handle may be released without
+///        invalidating such CPU mappings.
 /// \param connection An open connection.
 /// \param buffer A valid buffer.
 /// \param handle_out Pointer to the returned handle.
@@ -582,6 +582,17 @@ magma_status_t magma_execute_command_buffer_with_resources2(
     struct magma_command_buffer* command_buffer,
     struct magma_exec_resource* resources,
     uint64_t* semaphore_ids);
+
+///
+/// \brief Gets a platform handle for the given buffer. This can be used to perform a CPU mapping of
+///        the buffer using the standard syscall.  The handle may be released without invalidating
+///        such CPU mappings.
+/// \param buffer A valid buffer.
+/// \param handle_out Pointer to the returned handle.
+///
+magma_status_t magma_get_buffer_handle2(
+    magma_buffer_t buffer,
+    magma_handle_t* handle_out);
 
 #if defined(__cplusplus)
 }
