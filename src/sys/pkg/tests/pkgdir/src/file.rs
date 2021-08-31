@@ -7,7 +7,7 @@
 //! meaningful differences in File behavior.
 
 use {
-    crate::{dirs_to_test, repeat_by_n},
+    crate::{dirs_to_test, repeat_by_n, PackageSource},
     fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
@@ -28,12 +28,13 @@ const TEST_PKG_HASH: &str = "4679b8a4d2853fa935f4c63511f402ab387f1afbc26cf9addec
 
 #[fuchsia::test]
 async fn read() {
-    for dir in dirs_to_test().await {
-        read_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        read_per_package_source(source).await
     }
 }
 
-async fn read_per_package_source(root_dir: DirectoryProxy) {
+async fn read_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     for (path, expected_contents) in
         [("file", "file"), ("meta/file", "meta/file"), ("meta", TEST_PKG_HASH)]
     {
@@ -107,12 +108,13 @@ async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &st
 
 #[fuchsia::test]
 async fn read_at() {
-    for dir in dirs_to_test().await {
-        read_at_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        read_at_per_package_source(source).await
     }
 }
 
-async fn read_at_per_package_source(root_dir: DirectoryProxy) {
+async fn read_at_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     for path in ["file", "meta/file"] {
         assert_read_at_max_buffer_success(&root_dir, path).await;
         assert_read_at_success(&root_dir, path).await;
@@ -197,12 +199,13 @@ async fn assert_read_at_does_not_affect_seek_end_origin(root_dir: &DirectoryProx
 
 #[fuchsia::test]
 async fn seek() {
-    for dir in dirs_to_test().await {
-        seek_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        seek_per_package_source(source).await
     }
 }
 
-async fn seek_per_package_source(root_dir: DirectoryProxy) {
+async fn seek_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     for path in ["file", "meta/file"] {
         assert_seek_success(&root_dir, path, SeekOrigin::Start).await;
         assert_seek_success(&root_dir, path, SeekOrigin::Current).await;
@@ -283,14 +286,15 @@ async fn assert_seek_past_end_end_origin(root_dir: &DirectoryProxy, path: &str) 
 
 #[fuchsia::test]
 async fn get_buffer() {
-    for dir in dirs_to_test().await {
-        get_buffer_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        get_buffer_per_package_source(source).await
     }
 }
 
 // Ported over version of TestMapFileForRead, TestMapFileForReadPrivate, TestMapFileForReadExact,
 // TestMapFilePrivateAndExact, TestMapFileForWrite, and TestMapFileForExec from pkgfs_test.go.
-async fn get_buffer_per_package_source(root_dir: DirectoryProxy) {
+async fn get_buffer_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     // For non-meta files, GetBuffer() calls with supported flags should succeed.
     for path in ["file", "meta/file"] {
         let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
@@ -362,14 +366,15 @@ async fn test_get_buffer_success(
 
 #[fuchsia::test]
 async fn clone() {
-    for dir in dirs_to_test().await {
-        clone_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        clone_per_package_source(source).await
     }
 }
 
 // TODO(fxbug.dev/81447) test Clones for meta as file. Currently, if we try and test Cloning
 // meta as file, it will hang.
-async fn clone_per_package_source(root_dir: DirectoryProxy) {
+async fn clone_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     assert_clone_success(&root_dir, "file").await;
     assert_clone_success(&root_dir, "meta/file").await;
 }
@@ -388,12 +393,13 @@ async fn assert_clone_success(package_root: &DirectoryProxy, path: &str) {
 
 #[fuchsia::test]
 async fn get_flags() {
-    for dir in dirs_to_test().await {
-        get_flags_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        get_flags_per_package_source(source).await
     }
 }
 
-async fn get_flags_per_package_source(root_dir: DirectoryProxy) {
+async fn get_flags_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     assert_get_flags_content_file(&root_dir).await;
     assert_get_flags_meta_file(&root_dir, "meta").await;
     assert_get_flags_meta_file(&root_dir, "meta/file").await;
@@ -475,12 +481,13 @@ async fn assert_get_flags_meta_file(root_dir: &DirectoryProxy, path: &str) {
 
 #[fuchsia::test]
 async fn unsupported() {
-    for dir in dirs_to_test().await {
-        unsupported_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        unsupported_per_package_source(source).await
     }
 }
 
-async fn unsupported_per_package_source(root_dir: DirectoryProxy) {
+async fn unsupported_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     async fn verify_unsupported_calls(
         root_dir: &DirectoryProxy,
         path: &str,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::dirs_to_test,
+    crate::{dirs_to_test, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
@@ -15,8 +15,8 @@ use {
 
 #[fuchsia::test]
 async fn get_attr() {
-    for dir in dirs_to_test().await {
-        get_attr_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        get_attr_per_package_source(source).await
     }
 }
 
@@ -42,7 +42,8 @@ impl U64Verifier for PositiveU64 {
     }
 }
 
-async fn get_attr_per_package_source(root_dir: DirectoryProxy) {
+async fn get_attr_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     struct Args {
         open_flags: u32,
         open_mode: u32,
@@ -158,12 +159,13 @@ async fn get_attr_per_package_source(root_dir: DirectoryProxy) {
 
 #[fuchsia::test]
 async fn close() {
-    for dir in dirs_to_test().await {
-        close_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        close_per_package_source(source).await
     }
 }
 
-async fn close_per_package_source(root_dir: DirectoryProxy) {
+async fn close_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     async fn verify_close(root_dir: &DirectoryProxy, path: &str, mode: u32) {
         let node =
             io_util::directory::open_node(root_dir, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
@@ -189,12 +191,13 @@ async fn close_per_package_source(root_dir: DirectoryProxy) {
 
 #[fuchsia::test]
 async fn describe() {
-    for dir in dirs_to_test().await {
-        describe_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        describe_per_package_source(source).await
     }
 }
 
-async fn describe_per_package_source(root_dir: DirectoryProxy) {
+async fn describe_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     assert_describe_directory(&root_dir, ".").await;
 
     assert_describe_directory(&root_dir, "meta").await;

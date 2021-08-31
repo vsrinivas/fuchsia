@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{dirs_to_test, repeat_by_n},
+    crate::{dirs_to_test, repeat_by_n, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io::{
@@ -30,12 +30,13 @@ use {
 
 #[fuchsia::test]
 async fn open() {
-    for dir in dirs_to_test().await {
-        open_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        open_per_package_source(source).await
     }
 }
 
-async fn open_per_package_source(root_dir: DirectoryProxy) {
+async fn open_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     // Testing dimensions:
     //   1. Receiver of the open call: /, meta/, subdir below meta/, subdir not below meta/
     //   2. Type of node the path points at: self, meta/, subdir below meta/, file below meta/,
@@ -619,12 +620,13 @@ async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
 // TODO(fxbug.dev/81447) enhance Clone tests.
 #[fuchsia::test]
 async fn clone() {
-    for dir in dirs_to_test().await {
-        clone_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        clone_per_package_source(source).await
     }
 }
 
-async fn clone_per_package_source(root_dir: DirectoryProxy) {
+async fn clone_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     for flag in [
         OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
@@ -725,12 +727,13 @@ async fn assert_clone_directory_overflow(
 
 #[fuchsia::test]
 async fn read_dirents() {
-    for dir in dirs_to_test().await {
-        read_dirents_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        read_dirents_per_package_source(source).await
     }
 }
 
-async fn read_dirents_per_package_source(root_dir: DirectoryProxy) {
+async fn read_dirents_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     // Handle overflow cases (e.g. when size of total dirents exceeds MAX_BUF).
     assert_read_dirents_overflow(
         &root_dir,
@@ -839,12 +842,13 @@ async fn assert_read_dirents_no_overflow(dir: &DirectoryProxy, expected_dirents:
 
 #[fuchsia::test]
 async fn rewind() {
-    for dir in dirs_to_test().await {
-        rewind_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        rewind_per_package_source(source).await
     }
 }
 
-async fn rewind_per_package_source(root_dir: DirectoryProxy) {
+async fn rewind_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     // Handle overflow cases.
     for path in [".", "meta", "dir_overflow_readdirents", "meta/dir_overflow_readdirents"] {
         let dir = io_util::directory::open_directory(&root_dir, path, 0).await.unwrap();
@@ -922,12 +926,13 @@ async fn assert_rewind_no_overflow(dir: &DirectoryProxy) {
 
 #[fuchsia::test]
 async fn get_token() {
-    for dir in dirs_to_test().await {
-        get_token_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        get_token_per_package_source(source).await
     }
 }
 
-async fn get_token_per_package_source(root_dir: DirectoryProxy) {
+async fn get_token_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     for path in [".", "dir", "meta", "meta/dir"] {
         let dir = io_util::directory::open_directory(&root_dir, path, 0).await.unwrap();
 
@@ -942,12 +947,13 @@ async fn get_token_per_package_source(root_dir: DirectoryProxy) {
 
 #[fuchsia::test]
 async fn unsupported() {
-    for dir in dirs_to_test().await {
-        unsupported_per_package_source(dir).await
+    for source in dirs_to_test().await {
+        unsupported_per_package_source(source).await
     }
 }
 
-async fn unsupported_per_package_source(root_dir: DirectoryProxy) {
+async fn unsupported_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
     // Test unsupported APIs for root directory and subdirectory.
     assert_unsupported_directory_calls(&root_dir, ".", "file").await;
     assert_unsupported_directory_calls(&root_dir, ".", "dir").await;
