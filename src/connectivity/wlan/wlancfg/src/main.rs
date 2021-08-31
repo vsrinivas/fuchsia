@@ -18,12 +18,12 @@ use {
     futures::{
         self,
         channel::{mpsc, oneshot},
-        future::{try_join, BoxFuture},
+        future::try_join,
         lock::Mutex,
         prelude::*,
         select, TryFutureExt,
     },
-    log::{error, info},
+    log::{error, info, warn},
     pin_utils::pin_mut,
     std::sync::Arc,
     void::Void,
@@ -173,25 +173,40 @@ async fn serve_metrics(
     try_join(record_metrics_fut.map(|()| Ok(())), cobalt_fut.map(|()| Ok(()))).await.map(|_| ())
 }
 
-// Some builds will not include the RegulatoryRegionWatcher.  In such cases, wlancfg can continue
-// to run, though it will not be able to set its country code and will fallback to world wide.
-fn run_regulatory_manager(
+// wlancfg expects to be able to get updates from the RegulatoryRegionWatcher UNLESS the
+// service is not present in wlancfg's sandbox OR the product configuration does not offer the
+// service to wlancfg.  If the RegulatoryRegionWatcher is not available for either of these
+// allowed reasons, wlancfg will continue serving the WLAN policy API in WW mode.
+async fn run_regulatory_manager(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     regulatory_sender: oneshot::Sender<()>,
-) -> BoxFuture<'static, Result<(), Error>> {
-    match fuchsia_component::client::connect_to_protocol::<RegulatoryRegionWatcherMarker>() {
-        Ok(regulatory_svc) => {
-            let regulatory_manager = RegulatoryManager::new(regulatory_svc, iface_manager);
-            let regulatory_fut = async move { regulatory_manager.run(regulatory_sender).await };
-
-            Box::pin(regulatory_fut)
-        }
+) -> Result<(), Error> {
+    // Check if RegulatoryRegionWatcher is offered to wlancfg.
+    let req = match fuchsia_component::client::new_protocol_connector::<RegulatoryRegionWatcherMarker>(
+    ) {
+        Ok(req) => req,
         Err(e) => {
-            error!("could not connect to regulatory manager: {:?}", e);
-            let regulatory_fut = async move { Ok(()) };
-            Box::pin(regulatory_fut)
+            warn!("error probing RegulatoryRegionWatcher service: {:?}", e);
+            return Ok(());
         }
+    };
+
+    // Only proceed with monitoring for updates if the RegulatoryRegionService exists and if we can
+    // connect to it.
+    if !req.exists().await.context("error checking for RegulatoryRegionWatcher existence")? {
+        warn!("RegulatoryRegionWatcher is not available");
+        return Ok(());
     }
+
+    // If RegulatoryRegionWatcher is present in the manifest and platform configuration, then
+    // wlancfg expects to be able to connect to the service.  A failure in this scenario implies
+    // that the product will not function in the desired configuration and should be considered
+    // fatal.
+    let regulatory_svc =
+        req.connect().context("unable to connect RegulatoryRegionWatcher proxy")?;
+
+    let regulatory_manager = RegulatoryManager::new(regulatory_svc, iface_manager);
+    regulatory_manager.run(regulatory_sender).await
 }
 
 async fn run_all_futures() -> Result<(), Error> {
