@@ -503,7 +503,8 @@ struct SandwichUnionSize8Alignment4 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(SandwichUnionSize8Alignment4* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -650,7 +651,8 @@ struct SandwichUnionSize36Alignment4 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(SandwichUnionSize36Alignment4* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -797,7 +799,8 @@ struct SandwichUnionSize12Alignment4 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(SandwichUnionSize12Alignment4* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -942,7 +945,8 @@ struct StructSize16Alignment8 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructSize16Alignment8* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1089,7 +1093,8 @@ struct SandwichUnionSize24Alignment8 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(SandwichUnionSize24Alignment8* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

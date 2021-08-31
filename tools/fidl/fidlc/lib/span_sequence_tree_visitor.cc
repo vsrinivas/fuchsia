@@ -609,6 +609,16 @@ void SpanSequenceTreeVisitor::OnIdentifierConstant(
   TreeVisitor::OnIdentifierConstant(element);
 }
 
+void SpanSequenceTreeVisitor::OnInlineLayoutReference(
+    const std::unique_ptr<raw::InlineLayoutReference>& element) {
+  if (element->attributes != nullptr) {
+    OnAttributeListNew(element->attributes);
+  }
+
+  TreeVisitor::OnInlineLayoutReference(element);
+  ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
+}
+
 void SpanSequenceTreeVisitor::OnLayout(const std::unique_ptr<raw::Layout>& element) {
   const auto visiting = Visiting(this, VisitorKind::kLayout);
 
@@ -727,9 +737,6 @@ void SpanSequenceTreeVisitor::OnOrdinaledLayoutMember(
 void SpanSequenceTreeVisitor::OnParameterListNew(
     const std::unique_ptr<raw::ParameterListNew>& element) {
   const auto visiting = Visiting(this, VisitorKind::kParameterList);
-  if (element->attributes != nullptr) {
-    OnAttributeListNew(element->attributes);
-  }
 
   const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
   if (element->type_ctor) {
@@ -739,7 +746,6 @@ void SpanSequenceTreeVisitor::OnParameterListNew(
   }
 
   TreeVisitor::OnParameterListNew(element);
-  ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
 }
 
 void SpanSequenceTreeVisitor::OnProtocolCompose(

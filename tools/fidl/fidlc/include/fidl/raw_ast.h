@@ -325,7 +325,8 @@ class AttributeNew final : public SourceElement {
 
 class AttributeListNew final : public SourceElement {
  public:
-  AttributeListNew(SourceElement const& element, std::vector<std::unique_ptr<AttributeNew>> attributes)
+  AttributeListNew(SourceElement const& element,
+                   std::vector<std::unique_ptr<AttributeNew>> attributes)
       : SourceElement(element), attributes(std::move(attributes)) {}
 
   void Accept(TreeVisitor* visitor) const;
@@ -575,19 +576,11 @@ class ParameterListOld final : public SourceElement {
 
 class ParameterListNew final : public SourceElement {
  public:
-  ParameterListNew(SourceElement const& element, std::unique_ptr<AttributeListNew> attributes,
-                   std::unique_ptr<TypeConstructorNew> type_ctor)
-      : SourceElement(element),
-        attributes(std::move(attributes)),
-        type_ctor(std::move(type_ctor)) {}
+  ParameterListNew(SourceElement const& element, std::unique_ptr<TypeConstructorNew> type_ctor)
+      : SourceElement(element), type_ctor(std::move(type_ctor)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  // TODO(fxbug.dev/74955): this is only parsed to report an error at compile
-  //  time that attributes are not yet allowed at this position.  When the
-  //  complete solution that allows attributes on any anonymous layout is
-  //  implemented, that error and this field should be removed.
-  std::unique_ptr<AttributeListNew> attributes;
   std::unique_ptr<TypeConstructorNew> type_ctor;
 };
 
@@ -1036,11 +1029,16 @@ class LayoutReference : public SourceElement {
 
 class InlineLayoutReference final : public LayoutReference {
  public:
-  explicit InlineLayoutReference(SourceElement const& element, std::unique_ptr<Layout> layout)
-      : LayoutReference(element, Kind::kInline), layout(std::move(layout)) {}
+  explicit InlineLayoutReference(SourceElement const& element,
+                                 std::unique_ptr<AttributeListNew> attributes,
+                                 std::unique_ptr<Layout> layout)
+      : LayoutReference(element, Kind::kInline),
+        attributes(std::move(attributes)),
+        layout(std::move(layout)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
+  std::unique_ptr<AttributeListNew> attributes;
   std::unique_ptr<Layout> layout;
 };
 

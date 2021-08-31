@@ -333,7 +333,8 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseAttributeNew() {
     auto string_literal = ParseStringLiteral();
     if (!Ok())
       return Fail();
-    args.emplace_back(std::make_unique<raw::AttributeArg>(arg_scope.GetSourceElement(), "value", std::move(string_literal)));
+    args.emplace_back(std::make_unique<raw::AttributeArg>(arg_scope.GetSourceElement(), "value",
+                                                          std::move(string_literal)));
 
     ConsumeToken(OfKind(Token::Kind::kRightParen));
     if (!Ok())
@@ -449,7 +450,8 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseDocCommentNew() {
     reporter_->Report(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
 
   std::vector<std::unique_ptr<raw::AttributeArg>> args;
-  args.emplace_back(std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), "value", std::move(literal)));
+  args.emplace_back(
+      std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), "value", std::move(literal)));
 
   return std::make_unique<raw::AttributeNew>(
       scope.GetSourceElement(), raw::AttributeNew::Provenance::kDocComment, "doc", std::move(args));
@@ -976,24 +978,6 @@ std::unique_ptr<raw::ParameterListNew> Parser::ParseParameterListNew() {
   if (!Ok())
     return Fail();
 
-  std::unique_ptr<raw::AttributeListNew> attributes = MaybeParseAttributeListNew();
-  if (!Ok())
-    return Fail();
-
-  if (attributes) {
-    auto& attrs = attributes->attributes;
-    if (!attrs.empty() && attrs[0]->name == "doc") {
-      auto& args = attrs[0]->args;
-      if (!args.empty() && args[0]->value->kind == raw::Literal::Kind::kDocComment) {
-        Fail(ErrDocCommentOnParameters);
-        const auto result = RecoverToEndOfParamList();
-        if (result == RecoverResult::Failure) {
-          return Fail();
-        }
-      }
-    }
-  }
-
   if (Peek().kind() != Token::Kind::kRightParen) {
     type_ctor = ParseTypeConstructorNew();
     if (!Ok()) {
@@ -1002,14 +986,31 @@ std::unique_ptr<raw::ParameterListNew> Parser::ParseParameterListNew() {
         return Fail();
       }
     }
+
+    if (type_ctor && type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
+      const auto* layout =
+          static_cast<const raw::InlineLayoutReference*>(type_ctor->layout_ref.get());
+      if (layout->attributes != nullptr) {
+        auto& attrs = layout->attributes->attributes;
+        if (!attrs.empty() && attrs[0]->name == "doc") {
+          auto& args = attrs[0]->args;
+          if (!args.empty() && args[0]->value->kind == raw::Literal::Kind::kDocComment) {
+            Fail(ErrDocCommentOnParameters, attrs[0]->span());
+            const auto result = RecoverToEndOfParamList();
+            if (result == RecoverResult::Failure) {
+              return Fail();
+            }
+          }
+        }
+      }
+    }
   }
 
   ConsumeToken(OfKind(Token::Kind::kRightParen));
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::ParameterListNew>(scope.GetSourceElement(), std::move(attributes),
-                                                 std::move(type_ctor));
+  return std::make_unique<raw::ParameterListNew>(scope.GetSourceElement(), std::move(type_ctor));
 }
 
 raw::ParameterList Parser::ParseParameterList() {
@@ -2010,6 +2011,9 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
   ASTScope scope(this);
 
   auto attributes = MaybeParseAttributeListNew();
+  if (!Ok())
+    return Fail();
+
   std::unique_ptr<raw::Ordinal64> ordinal = nullptr;
   std::unique_ptr<raw::Identifier> identifier = nullptr;
   if (kind == raw::LayoutMember::Kind::kOrdinaled) {
@@ -2247,164 +2251,190 @@ raw::ConstraintOrSubtype Parser::ParseTokenAfterColon() {
                                                    /*parameters=*/nullptr, /*constraints=*/nullptr);
 }
 
+using NamedOrInline =
+    std::variant<std::unique_ptr<raw::CompoundIdentifier>, std::unique_ptr<raw::Layout>>;
+
 // [ name | { ... } ][ < ... > ][ : ... ]
 std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
   ASTScope scope(this);
-  ASTScope modifiers_scope(this);
-  bool resourceness_comes_first = false;
-  std::unique_ptr<raw::Modifiers> modifiers;
-  std::unique_ptr<raw::CompoundIdentifier> identifier;
-  std::optional<types::Strictness> maybe_strictness = std::nullopt;
-  std::optional<Token> maybe_strictness_token = std::nullopt;
-  std::optional<types::Resourceness> maybe_resourceness = std::nullopt;
-  std::optional<Token> maybe_resourceness_token = std::nullopt;
-
-  // Consume tokens until we get one that isn't a modifier, treating duplicates
-  // and conflicts as immediately recovered errors. For conflicts (e.g. "strict
-  // flexible" or "flexible strict"), we use the earliest one.
-  for (;;) {
-    if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kStrict) ||
-        Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kFlexible) ||
-        Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kResource)) {
-      ASTScope maybe_compound_identifier_scope(this);
-      auto modifier_subkind = Peek().subkind();
-      auto maybe_modifier = ParseIdentifier();
-      if (!Ok())
-        return Fail();
-
-      // Special case: this is either a reference to a type named "flexible/strict/resource" (ex:
-      // `struct { foo resource; };`, or otherwise the first modifier on an inline type definition
-      // (ex: `struct { foo resource union {...}; };`).  The only way to decide which is which is to
-      // peek ahead: if the next token is not an identifier, we assume that the last parsed modifier
-      // is actually the identifier of a named value instead.  For example, if the next token after
-      // this one isn't an identifier, we're looking at something like:
-      //
-      //   strict resource;
-      //
-      // If that's the case, the user is referencing a type named "flexible/strict/resource."  This
-      // will need special handling to properly reclassify this modifier as the identifier for the
-      // whole TypeConstructorNew being built here.
-      if (Peek().kind() != Token::kIdentifier) {
-        // Looks like we're dealing with named layout reference that has unfortunately been named
-        // "flexible/strict/resource."
-        identifier =
-            ParseCompoundIdentifier(maybe_compound_identifier_scope, std::move(maybe_modifier));
-        break;
-      }
-
-      Token& modifier_token = maybe_modifier->start_;
-      switch (modifier_subkind) {
-        case Token::Subkind::kFlexible:
-        case Token::Subkind::kStrict: {
-          auto as_strictness = modifier_subkind == Token::Subkind::kFlexible
-                                   ? types::Strictness::kFlexible
-                                   : types::Strictness::kStrict;
-          if (maybe_strictness == as_strictness) {
-            Fail(ErrDuplicateModifier, modifier_token, modifier_token.kind_and_subkind());
-            RecoverOneError();
-            break;
-          }
-          if (maybe_strictness.has_value()) {
-            Fail(ErrConflictingModifier, modifier_token, modifier_token.kind_and_subkind(),
-                 Token::KindAndSubkind(Token::Kind::kIdentifier,
-                                       modifier_subkind == Token::Subkind::kFlexible
-                                           ? Token::Subkind::kStrict
-                                           : Token::Subkind::kFlexible));
-            RecoverOneError();
-            break;
-          }
-          maybe_strictness = as_strictness;
-          maybe_strictness_token = maybe_modifier->start_;
-          break;
-        }
-        case Token::Subkind::kResource: {
-          if (maybe_resourceness == types::Resourceness::kResource) {
-            Fail(ErrDuplicateModifier, modifier_token, modifier_token.kind_and_subkind());
-            RecoverOneError();
-            break;
-          }
-          if (maybe_strictness == std::nullopt) {
-            resourceness_comes_first = true;
-          }
-          maybe_resourceness = types::Resourceness::kResource;
-          maybe_resourceness_token = maybe_modifier->start_;
-          break;
-        }
-        default: {
-          assert(false && "expected modifier token");
-        }
-      }
-    } else {
-      if (maybe_strictness.has_value() || maybe_resourceness.has_value()) {
-        modifiers = std::make_unique<raw::Modifiers>(
-            modifiers_scope.GetSourceElement(), maybe_resourceness, maybe_resourceness_token,
-            maybe_strictness, maybe_strictness_token, resourceness_comes_first);
-      }
-      break;
-    }
-  }
-
-  // Any type constructor which is not a reference to a type named "flexible/strict/resource" will
-  // have the identifier unset, and will enter the block below to parse it.
-  if (identifier == nullptr) {
-    identifier = ParseCompoundIdentifier();
-    if (!Ok())
-      return Fail();
-  }
-
   std::unique_ptr<raw::LayoutReference> layout_ref;
   std::unique_ptr<raw::LayoutParameterList> parameters;
   std::unique_ptr<raw::TypeConstraints> constraints;
-  switch (Peek().kind()) {
-    case Token::Kind::kLeftCurly: {
-      auto layout =
-          ParseLayout(scope, std::move(modifiers), std::move(identifier), /*subtype_ctor=*/nullptr);
+  NamedOrInline layout;
+  auto attributes = MaybeParseAttributeListNew();
+
+  // Everything except for the (optional) attributes at the start of the type constructor
+  // declaration is placed in its own scope.  This is done because in cases of type-level attributes
+  // like this
+  //
+  // «@foo @bar «struct MyStruct { ... }»»;
+  //
+  // the start and end of the type_ctor and layout SourceElements should begin before and after the
+  // attributes block, respectively.
+  {
+    ASTScope layout_scope(this);
+    bool resourceness_comes_first = false;
+    std::unique_ptr<raw::Modifiers> modifiers;
+    std::unique_ptr<raw::CompoundIdentifier> identifier;
+    std::optional<types::Strictness> maybe_strictness = std::nullopt;
+    std::optional<Token> maybe_strictness_token = std::nullopt;
+    std::optional<types::Resourceness> maybe_resourceness = std::nullopt;
+    std::optional<Token> maybe_resourceness_token = std::nullopt;
+
+    // Consume tokens until we get one that isn't a modifier, treating duplicates
+    // and conflicts as immediately recovered errors. For conflicts (e.g. "strict
+    // flexible" or "flexible strict"), we use the earliest one.
+    for (;;) {
+      if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kStrict) ||
+          Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kFlexible) ||
+          Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kResource)) {
+        ASTScope maybe_compound_identifier_scope(this);
+        auto modifier_subkind = Peek().subkind();
+        auto maybe_modifier = ParseIdentifier();
+        if (!Ok())
+          return Fail();
+
+        // Special case: this is either a reference to a type named "flexible/strict/resource" (ex:
+        // `struct { foo resource; };`, or otherwise the first modifier on an inline type definition
+        // (ex: `struct { foo resource union {...}; };`).  The only way to decide which is which is
+        // to peek ahead: if the next token is not an identifier, we assume that the last parsed
+        // modifier is actually the identifier of a named value instead.  For example, if the next
+        // token after this one isn't an identifier, we're looking at something like:
+        //
+        //   strict resource;
+        //
+        // If that's the case, the user is referencing a type named "flexible/strict/resource." This
+        // will need special handling to properly reclassify this modifier as the identifier for the
+        // whole TypeConstructorNew being built here.
+        if (Peek().kind() != Token::kIdentifier) {
+          // Looks like we're dealing with named layout reference that has unfortunately been named
+          // "flexible/strict/resource."
+          identifier =
+              ParseCompoundIdentifier(maybe_compound_identifier_scope, std::move(maybe_modifier));
+          break;
+        }
+
+        Token& modifier_token = maybe_modifier->start_;
+        switch (modifier_subkind) {
+          case Token::Subkind::kFlexible:
+          case Token::Subkind::kStrict: {
+            auto as_strictness = modifier_subkind == Token::Subkind::kFlexible
+                                     ? types::Strictness::kFlexible
+                                     : types::Strictness::kStrict;
+            if (maybe_strictness == as_strictness) {
+              Fail(ErrDuplicateModifier, modifier_token, modifier_token.kind_and_subkind());
+              RecoverOneError();
+              break;
+            }
+            if (maybe_strictness.has_value()) {
+              Fail(ErrConflictingModifier, modifier_token, modifier_token.kind_and_subkind(),
+                   Token::KindAndSubkind(Token::Kind::kIdentifier,
+                                         modifier_subkind == Token::Subkind::kFlexible
+                                             ? Token::Subkind::kStrict
+                                             : Token::Subkind::kFlexible));
+              RecoverOneError();
+              break;
+            }
+            maybe_strictness = as_strictness;
+            maybe_strictness_token = maybe_modifier->start_;
+            break;
+          }
+          case Token::Subkind::kResource: {
+            if (maybe_resourceness == types::Resourceness::kResource) {
+              Fail(ErrDuplicateModifier, modifier_token, modifier_token.kind_and_subkind());
+              RecoverOneError();
+              break;
+            }
+            if (maybe_strictness == std::nullopt) {
+              resourceness_comes_first = true;
+            }
+            maybe_resourceness = types::Resourceness::kResource;
+            maybe_resourceness_token = maybe_modifier->start_;
+            break;
+          }
+          default: {
+            assert(false && "expected modifier token");
+          }
+        }
+      } else {
+        if (maybe_strictness.has_value() || maybe_resourceness.has_value()) {
+          modifiers = std::make_unique<raw::Modifiers>(
+              layout_scope.GetSourceElement(), maybe_resourceness, maybe_resourceness_token,
+              maybe_strictness, maybe_strictness_token, resourceness_comes_first);
+        }
+        break;
+      }
+    }
+
+    // Any type constructor which is not a reference to a type named "flexible/strict/resource" will
+    // have the identifier unset, and will enter the block below to parse it.
+    if (identifier == nullptr) {
+      identifier = ParseCompoundIdentifier();
       if (!Ok())
         return Fail();
-
-      layout_ref =
-          std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(), std::move(layout));
-      break;
     }
-    case Token::Kind::kColon: {
-      auto pre_colon_source = scope.GetSourceElement();
-      raw::ConstraintOrSubtype after_colon = ParseTokenAfterColon();
-      std::visit(fidl::utils::matchers{
-                     [&](std::unique_ptr<raw::TypeConstraints>& constraint) -> void {
-                       if (modifiers != nullptr)
-                         ValidateModifiersNew</* none */>(modifiers, identifier->start_);
-                       constraints = std::move(constraint);
-                       layout_ref = std::make_unique<raw::NamedLayoutReference>(
-                           pre_colon_source, std::move(identifier));
-                     },
-                     [&](std::unique_ptr<raw::TypeConstructorNew>& type_ctor) -> void {
-                       auto layout = ParseLayout(scope, std::move(modifiers), std::move(identifier),
-                                                 std::move(type_ctor));
-                       if (!Ok()) {
-                         Fail();
-                         return;
-                       }
 
-                       layout_ref = std::make_unique<raw::InlineLayoutReference>(
-                           scope.GetSourceElement(), std::move(layout));
-                     },
-                     [&](std::monostate _) -> void { assert(!Ok()); },
-                 },
-                 after_colon);
-
-      if (!Ok()) {
-        return nullptr;
+    switch (Peek().kind()) {
+      case Token::Kind::kLeftCurly: {
+        layout = ParseLayout(layout_scope, std::move(modifiers), std::move(identifier),
+                             /*subtype_ctor=*/nullptr);
+        if (!Ok())
+          return Fail();
+        break;
       }
-      assert(layout_ref != nullptr && "must be set in each std::visit branch");
-      break;
-    }
-    default: {
-      if (modifiers != nullptr)
-        ValidateModifiersNew</* none */>(modifiers, identifier->start_);
-      layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
-                                                               std::move(identifier));
+      case Token::Kind::kColon: {
+        raw::ConstraintOrSubtype after_colon = ParseTokenAfterColon();
+        std::visit(fidl::utils::matchers{
+                       [&](std::unique_ptr<raw::TypeConstraints>& constraint) -> void {
+                         if (modifiers != nullptr)
+                           ValidateModifiersNew</* none */>(modifiers, identifier->start_);
+                         if (attributes != nullptr)
+                           Fail(ErrCannotAttachAttributeToIdentifier, attributes->span());
+                         constraints = std::move(constraint);
+                         layout = std::move(identifier);
+                       },
+                       [&](std::unique_ptr<raw::TypeConstructorNew>& type_ctor) -> void {
+                         layout = ParseLayout(layout_scope, std::move(modifiers),
+                                              std::move(identifier), std::move(type_ctor));
+                         if (!Ok()) {
+                           Fail();
+                         }
+                       },
+                       [&](std::monostate _) -> void { assert(!Ok()); },
+                   },
+                   after_colon);
+
+        if (!Ok()) {
+          return nullptr;
+        }
+        break;
+      }
+      default: {
+        if (modifiers != nullptr)
+          ValidateModifiersNew</* none */>(modifiers, identifier->start_);
+        if (attributes != nullptr)
+          Fail(ErrCannotAttachAttributeToIdentifier, attributes->span());
+        layout = std::move(identifier);
+      }
     }
   }
+
+  // Build a LayoutReference of the right type based on the underlying type of the layout.
+  assert((std::holds_alternative<std::unique_ptr<raw::CompoundIdentifier>>(layout) ||
+          std::holds_alternative<std::unique_ptr<raw::Layout>>(layout)) &&
+         "must have set layout by this point");
+  std::visit(fidl::utils::matchers{
+                 [&](std::unique_ptr<raw::CompoundIdentifier>& named_layout) -> void {
+                   layout_ref = std::make_unique<raw::NamedLayoutReference>(
+                       raw::SourceElement(named_layout->start_, named_layout->end_),
+                       std::move(named_layout));
+                 },
+                 [&](std::unique_ptr<raw::Layout>& inline_layout) -> void {
+                   layout_ref = std::make_unique<raw::InlineLayoutReference>(
+                       scope.GetSourceElement(), std::move(attributes), std::move(inline_layout));
+                 },
+             },
+             layout);
 
   if (previous_token_.kind() != Token::Kind::kColon) {
     parameters = MaybeParseLayoutParameterList();
@@ -2449,6 +2479,11 @@ std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(
   if (!Ok())
     return Fail();
 
+  bool layout_has_attributes =
+      layout->layout_ref->kind == raw::LayoutReference::Kind::kInline &&
+      static_cast<raw::InlineLayoutReference*>(layout->layout_ref.get())->attributes != nullptr;
+  if (attributes != nullptr && layout_has_attributes)
+    return Fail(ErrRedundantAttributePlacement, scope.GetSourceElement().span());
   return std::make_unique<raw::TypeDecl>(scope.GetSourceElement(), std::move(attributes),
                                          std::move(identifier), std::move(layout));
 }

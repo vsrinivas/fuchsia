@@ -182,8 +182,8 @@ library example;
 
 protocol Example {
   Method(/// Doc comment
-      { b bool; }) -> (/// Doc comment
-      struct  { b bool; });
+      struct { b bool; }) -> (/// Doc comment
+      struct { b bool; });
 };
 )FIDL");
 

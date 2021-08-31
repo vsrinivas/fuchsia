@@ -250,15 +250,16 @@ struct ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage()
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size())) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size())) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
                    static_cast<uint32_t>(backing_buffer_.size())) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   request) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -861,15 +862,16 @@ struct ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage()
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size())) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size())) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
                    static_cast<uint32_t>(backing_buffer_.size())) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   request) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

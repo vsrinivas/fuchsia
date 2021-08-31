@@ -382,7 +382,12 @@ const std::vector<TestCase> test_cases = {
           «@foo("foo")»
           «@bar»
           const bool MY_BOOL = false;
-        )FIDL",
+         )FIDL",
+         R"FIDL(library x;
+          protocol Foo {
+            Bar(«@foo» struct {});
+          };
+         )FIDL",
      }},
     {ElementType::Modifiers,
      {
@@ -509,6 +514,23 @@ const std::vector<TestCase> test_cases = {
             }»:optional;
           }»;
          )FIDL",
+         R"FIDL(library x;
+          protocol P {
+            M(«struct {
+              intval int64;
+              boolval bool = false;
+              stringval string:MAX_STRING_SIZE;
+              inner «union {
+                1: floatval float64;
+              }»:optional;
+            }»);
+          };
+         )FIDL",
+         R"FIDL(library x;
+          protocol Foo {
+            Bar(«@foo struct {}»);
+          };
+         )FIDL",
      }},
     {ElementType::NamedLayoutReference,
      {
@@ -577,6 +599,11 @@ const std::vector<TestCase> test_cases = {
               properties {
                   rights «rights»;
               };
+          };
+         )FIDL",
+         R"FIDL(library x;
+          protocol Foo {
+            Bar(«@foo struct {}»);
           };
          )FIDL",
      }},

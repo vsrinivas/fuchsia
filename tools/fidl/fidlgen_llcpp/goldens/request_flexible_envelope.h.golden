@@ -473,7 +473,8 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     explicit OwnedEncodedMessage(
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), s) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), s) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -481,8 +482,8 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
                    static_cast<uint32_t>(backing_buffer_.size()), s) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   request) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -656,7 +657,8 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     explicit OwnedEncodedMessage(
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), f) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), f) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -666,8 +668,8 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                  RequestStrictResponseFlexible>* response)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   response) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -842,7 +844,8 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     explicit OwnedEncodedMessage(
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), s) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), s) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -850,8 +853,8 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
                    static_cast<uint32_t>(backing_buffer_.size()), s) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   request) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1024,7 +1027,8 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
    public:
     explicit OwnedEncodedMessage(
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), f) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), f) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1034,8 +1038,8 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                  RequestFlexibleResponseStrict>* response)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   response) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

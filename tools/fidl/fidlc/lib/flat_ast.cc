@@ -3116,13 +3116,6 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<Namin
   }
 
   Name name = Name::CreateAnonymous(this, parameter_layout->span(), context);
-
-  // TODO(fxbug.dev/74955): Once full-fledged anonymous layout attributes are
-  //  implemented, this error check can be removed.
-  if (parameter_layout->attributes) {
-    Fail(ErrNotYetSupportedAttributesOnPayloadStructs, name);
-  }
-
   if (!ConsumeTypeConstructorNew(std::move(parameter_layout->type_ctor), std::move(context),
                                  /*raw_attribute_list=*/nullptr, is_request_or_response,
                                  /*out_type_=*/nullptr))
@@ -3571,7 +3564,10 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
 
   if (raw_type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
     auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->layout_ref.get());
-    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(raw_attribute_list),
+    auto attributes = std::move(raw_attribute_list);
+    if (inline_ref->attributes != nullptr)
+      attributes = std::move(inline_ref->attributes);
+    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(attributes),
                        is_request_or_response))
       return false;
 

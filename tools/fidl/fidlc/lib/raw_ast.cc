@@ -500,6 +500,9 @@ void Layout::Accept(TreeVisitor* visitor) const {
 
 void InlineLayoutReference::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
+  if (attributes != nullptr) {
+    visitor->OnAttributeListNew(attributes);
+  }
   visitor->OnLayout(layout);
 }
 

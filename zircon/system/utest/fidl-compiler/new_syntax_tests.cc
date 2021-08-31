@@ -1107,19 +1107,6 @@ protocol MyProtocol {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
 }
 
-// TODO(fxbug.dev/76349): attributes on struct payloads are not supported for
-//  the time being.
-TEST(NewSyntaxTests, BadAttributesOnPayloadStruct) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  MyMethod(@attr struct { s string; });
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedAttributesOnPayloadStructs);
-}
-
 // TODO(fxbug.dev/76349): using empty structs as request/response payloads is
 //  only supported in the new syntax.  Until this is supported, we throw a user
 //  facing error instead.

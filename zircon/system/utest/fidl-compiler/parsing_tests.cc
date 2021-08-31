@@ -776,4 +776,28 @@ type Foo = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
+TEST(ParsingTests, BadIdentifierAttributes) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+  data @foo uint32;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributeToIdentifier);
+}
+
+TEST(ParsingTests, BadIdentifierWithConstraintsAttributes) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Bar = table {};
+
+type Foo = struct {
+  data @foo Bar:optional;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributeToIdentifier);
+}
+
 }  // namespace

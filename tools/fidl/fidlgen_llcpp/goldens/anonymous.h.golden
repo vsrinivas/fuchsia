@@ -546,7 +546,8 @@ class TableMember final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(TableMember* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -850,7 +851,8 @@ class FunctionApplication final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(FunctionApplication* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -1393,7 +1395,8 @@ struct TableData {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(TableData* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned, TableData* value)
@@ -1537,7 +1540,8 @@ struct BinOp {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(BinOp* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned, BinOp* value)
@@ -1681,7 +1685,8 @@ struct SomeProtocolSomeMethodResponse {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(SomeProtocolSomeMethodResponse* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1911,18 +1916,20 @@ struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
     explicit OwnedEncodedMessage(
         ::fidl_test_anonymous::wire::UnionMember union_member,
         ::fidl_test_anonymous::wire::TableMember table_member)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   union_member, table_member) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), union_member,
+                   table_member) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         ::fidl_test_anonymous::wire::UnionMember union_member,
         ::fidl_test_anonymous::wire::TableMember table_member)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), union_member, table_member) {}
+                   static_cast<uint32_t>(backing_buffer_.size()), union_member,
+                   table_member) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   request) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -2091,8 +2098,8 @@ struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
    public:
     explicit OwnedEncodedMessage(
         ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), result) {
-    }
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), result) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -2102,8 +2109,8 @@ struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
             response)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   response) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

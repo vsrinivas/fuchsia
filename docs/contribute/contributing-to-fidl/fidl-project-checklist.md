@@ -36,7 +36,11 @@ semantics changes.
     compatibility tests.
 * For parser changes specifically:
   * Update the [`span_tests`][span-tests] to ensure that the parsed spans are
-    correct, and not just that parsing succeeds.
+    correct, and not just that parsing succeeds
+* For raw AST changes:
+  * Ensure updates to the AST are propagated to the raw AST tree visitor and its
+    downstream users as well. For example, adding a new field to a node probably
+    should be accompanied with a visitor change that visits that new field.
 * For semantics changes:
   * Update the feature specific unittest, e.g. [`table_tests`][table-tests] when
     making a modification to tables, or create a new test file.

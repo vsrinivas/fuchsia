@@ -128,7 +128,8 @@ struct Padding7ByteMiddle {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding7ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -271,7 +272,8 @@ struct Padding7ByteEnd {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding7ByteEnd* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -415,7 +417,8 @@ struct Padding6ByteMiddle {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding6ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -558,7 +561,8 @@ struct Padding6ByteEnd {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding6ByteEnd* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -704,7 +708,8 @@ struct Padding5ByteMiddle {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding5ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -849,7 +854,8 @@ struct Padding5ByteEnd {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding5ByteEnd* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -993,7 +999,8 @@ struct Padding4ByteMiddle {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding4ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1136,7 +1143,8 @@ struct Padding4ByteEnd {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding4ByteEnd* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1285,7 +1293,8 @@ struct Padding4ByteAlignmentLength12 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding4ByteAlignmentLength12* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1429,7 +1438,8 @@ struct Padding3ByteMiddle {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding3ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1572,7 +1582,8 @@ struct Padding3ByteEnd {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding3ByteEnd* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1716,7 +1727,8 @@ struct Padding2ByteMiddle {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding2ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1859,7 +1871,8 @@ struct Padding2ByteEnd {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding2ByteEnd* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -2006,7 +2019,8 @@ struct Padding2ByteAlignmentLength6 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding2ByteAlignmentLength6* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -2150,7 +2164,8 @@ struct Padding1ByteMiddle {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding1ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -2293,7 +2308,8 @@ struct Padding1ByteEnd {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Padding1ByteEnd* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

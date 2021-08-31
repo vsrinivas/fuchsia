@@ -90,7 +90,8 @@ extern "C" const fidl_type_t
   _outgoing
       .Call<::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                      RequestStrictResponseFlexible>>(
-          _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
+          _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+          _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_requestflexibleenvelope {
@@ -158,7 +159,8 @@ namespace fidl_test_requestflexibleenvelope {
   _outgoing
       .Call<::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                      RequestFlexibleResponseStrict>>(
-          _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
+          _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+          _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_requestflexibleenvelope {

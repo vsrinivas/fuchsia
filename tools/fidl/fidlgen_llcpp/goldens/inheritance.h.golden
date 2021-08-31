@@ -164,7 +164,8 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(::fidl::StringView s)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), s) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), s) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -172,8 +173,8 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> final {
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
                    static_cast<uint32_t>(backing_buffer_.size()), s) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   request) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -331,7 +332,8 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo> final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(int64_t y)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), y) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), y) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned, int64_t y)
@@ -339,8 +341,8 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo> final {
                    static_cast<uint32_t>(backing_buffer_.size()), y) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   response) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -843,7 +845,8 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(::fidl::StringView s)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), s) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), s) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -851,8 +854,8 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> final {
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
                    static_cast<uint32_t>(backing_buffer_.size()), s) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   request) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -1008,7 +1011,8 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo> final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(int64_t y)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), y) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), y) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned, int64_t y)
@@ -1016,8 +1020,8 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo> final {
                    static_cast<uint32_t>(backing_buffer_.size()), y) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
-                   response) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

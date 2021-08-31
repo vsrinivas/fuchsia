@@ -56,6 +56,10 @@ constexpr ErrorDef ErrUnrecognizedProtocolMember("unrecognized protocol member")
 constexpr ErrorDef ErrExpectedProtocolMember("expected protocol member");
 constexpr ErrorDef ErrCannotAttachAttributesToReservedOrdinals(
     "Cannot attach attributes to reserved ordinals");
+constexpr ErrorDef ErrCannotAttachAttributeToIdentifier("cannot attach attributes to identifiers");
+constexpr ErrorDef ErrRedundantAttributePlacement(
+    "cannot specify attributes on the type declaration and the corresponding layout at the same "
+    "time; please merge them into one location instead");
 constexpr ErrorDef<Token::KindAndSubkind> ErrExpectedOrdinalOrCloseBrace(
     "Expected one of ordinal or '}', found {}");
 constexpr ErrorDef ErrMustHaveNonReservedMember(

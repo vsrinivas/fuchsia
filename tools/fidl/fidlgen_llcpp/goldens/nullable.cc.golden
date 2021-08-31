@@ -63,7 +63,8 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing
       .Call<::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
-          _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
+          _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+          _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_nullable {

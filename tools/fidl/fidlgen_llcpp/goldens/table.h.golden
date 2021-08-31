@@ -194,7 +194,8 @@ class SimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(SimpleTable* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -491,7 +492,8 @@ class ReverseOrdinalTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(ReverseOrdinalTable* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -721,7 +723,8 @@ class OlderSimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(OlderSimpleTable* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -1011,7 +1014,8 @@ class NewerSimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(NewerSimpleTable* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -3330,7 +3334,8 @@ class GreaterThan64OrdinalTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(GreaterThan64OrdinalTable* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -3591,7 +3596,8 @@ class EmptyTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(EmptyTable* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.

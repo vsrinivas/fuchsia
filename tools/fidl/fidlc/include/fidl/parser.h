@@ -385,15 +385,6 @@ class Parser {
   std::unique_ptr<raw::TypeConstraints> ParseTypeConstraints();
   raw::ConstraintOrSubtype ParseTokenAfterColon();
 
-  // TODO(fxbug.dev/74955): We should pass a "is_in_anonymous_context" boolean
-  //  to this method, so that it can deduce whether or not it is being used to
-  //  define an anonymous layout. If that is the case, we can then parse the
-  //  attributes attached to that layout. This enables attribute parsing on
-  //  anonymous layouts, like:
-  //  [ParseableToday]
-  //  type S = struct { // <- attributes before the "struct" still not allowed
-  //    [ParseableToday] foo [ShouldAlsoBeParseable] struct{};
-  //  };
   std::unique_ptr<raw::TypeConstructorNew> ParseTypeConstructorNew();
   raw::TypeConstructor ParseTypeConstructor();
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(std::unique_ptr<raw::AttributeListNew> attributes,

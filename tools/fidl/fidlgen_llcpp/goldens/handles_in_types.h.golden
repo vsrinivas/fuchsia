@@ -266,7 +266,8 @@ class TableWithHandle final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(TableWithHandle* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -457,7 +458,8 @@ struct HandlesInTypes {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(HandlesInTypes* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

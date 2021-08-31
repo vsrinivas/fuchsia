@@ -98,7 +98,8 @@ struct ExampleUseOfVectors {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(ExampleUseOfVectors* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

@@ -342,7 +342,8 @@ class TableSmallArray final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(TableSmallArray* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -571,7 +572,8 @@ class TableLargeArray final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(TableLargeArray* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Construct a message using owned buffers.
     // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
     // the input FIDL object, which is not owned by it.
@@ -740,7 +742,8 @@ struct StructSmallArray {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructSmallArray* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
@@ -881,7 +884,8 @@ struct StructLargeArray {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructLargeArray* value)
-        : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), value) {}
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,

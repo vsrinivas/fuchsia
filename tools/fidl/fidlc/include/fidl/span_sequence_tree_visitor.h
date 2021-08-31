@@ -38,6 +38,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   };
   void OnIdentifierConstant(std::unique_ptr<raw::IdentifierConstant> const& element) override;
   void OnLayout(std::unique_ptr<raw::Layout> const& element) override;
+  void OnInlineLayoutReference(std::unique_ptr<raw::InlineLayoutReference> const& element) override;
   void OnLayoutMember(std::unique_ptr<raw::LayoutMember> const& element) override;
   void OnLibraryDecl(std::unique_ptr<raw::LibraryDecl> const& element) override;
   void OnLiteral(std::unique_ptr<raw::Literal> const& element) override;

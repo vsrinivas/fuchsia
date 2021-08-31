@@ -846,4 +846,51 @@ protocol ExampleProtocol {
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
+
+TEST(AttributesTests, BadDuplicateAttributePlacement) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@foo
+type Foo = @bar struct {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrRedundantAttributePlacement);
+}
+
+TEST(AttributesTests, GoodLayoutAttributePlacements) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@foo
+type Foo = struct {};
+
+type Bar = @bar struct {};
+
+protocol MyProtocol {
+  MyMethod(@baz struct {
+    inner_layout @qux struct {};
+  });
+};
+
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto foo = library.LookupStruct("Foo");
+  ASSERT_NOT_NULL(foo);
+  EXPECT_TRUE(foo->attributes->HasAttribute("foo"));
+
+  auto bar = library.LookupStruct("Bar");
+  ASSERT_NOT_NULL(bar);
+  EXPECT_TRUE(bar->attributes->HasAttribute("bar"));
+
+  auto req = library.LookupStruct("MyProtocolMyMethodRequest");
+  ASSERT_NOT_NULL(req);
+  EXPECT_TRUE(req->attributes->HasAttribute("baz"));
+
+  auto inner = library.LookupStruct("InnerLayout");
+  ASSERT_NOT_NULL(inner);
+  EXPECT_TRUE(inner->attributes->HasAttribute("qux"));
+}
+
 }  // namespace

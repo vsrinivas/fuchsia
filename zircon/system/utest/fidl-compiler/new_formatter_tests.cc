@@ -5212,4 +5212,36 @@ type MyEnum = strict enum : uint16 {
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
+TEST(NewFormatter, ParameterListAttributes) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+protocol Foo {
+  Bar(@foo struct {});
+  Baz(@foo struct { data uint8; }) -> (@foo @bar struct { data uint8; });
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Foo {
+    Bar(
+    @foo struct {});
+    Baz(
+    @foo struct {
+        data uint8;
+    }) -> (
+    @foo
+    @bar struct {
+        data uint8;
+    });
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 }  // namespace
