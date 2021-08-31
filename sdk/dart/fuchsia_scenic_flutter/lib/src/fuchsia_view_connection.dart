@@ -124,25 +124,23 @@ class FuchsiaViewConnection extends FuchsiaViewController {
           reference:
               connection.viewRef!.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
 
-      await connection.pointerInjector.register(
+      connection.pointerInjector.register(
         hostViewRef: connection.hostViewRef,
         viewRef: viewRefDup,
         viewport: connection.viewport!,
       );
     }
 
-    if (connection.pointerInjector.registered) {
-      return connection.pointerInjector.dispatchEvent(
-        pointer: pointer,
-        viewport: connection.viewport,
-      );
-    }
+    return connection.pointerInjector.dispatchEvent(
+      pointer: pointer,
+      viewport: connection.viewport,
+    );
   }
 
   @visibleForTesting
   void onPointerInjectionError() {
     // Dispose the current instance of pointer injector. It gets recreated on
-    // next viewStateChanged event.
+    // next _handlePointerEvent().
     pointerInjector.dispose();
     _pointerInjector = null;
   }

@@ -14,6 +14,7 @@ import 'package:flutter/gestures.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:meta/meta.dart';
+import 'package:pedantic/pedantic.dart';
 
 /// Defines a class that uses the pointer injector service to inject pointer
 /// events into child views.
@@ -60,11 +61,15 @@ class PointerInjector {
   }
 
   /// Registers with the pointer injector service.
-  Future<void> register({
+  ///
+  /// Returns immediately after submitting the registration request.
+  /// This means that the registration request may still be in-flight
+  /// on the server side when this function returns.
+  void register({
     required ViewRef hostViewRef,
     required ViewRef viewRef,
     required Rect viewport,
-  }) async {
+  }) {
     final config = Config(
       deviceId: 1,
       deviceType: DeviceType.touch,
@@ -77,14 +82,16 @@ class PointerInjector {
       dispatchPolicy: DispatchPolicy.exclusiveTarget,
     );
 
-    return _registry.register(config, _device.ctrl.request()).then((_) {
-      registered = true;
-    }).catchError((e) {
+    final future =
+        _registry.register(config, _device.ctrl.request()).catchError((e) {
       log.warning('Failed to register pointer injector: $e.');
+      registered = false;
       // Registration failures are critical; higher-level code should handle
       // them.
       onError();
     });
+    registered = true;
+    unawaited(future);
   }
 
   /// Dispatch [PointerEvent] and [Rect] viewport event to embedded child.
