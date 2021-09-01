@@ -57,7 +57,6 @@ enum class ExampleEnum : uint32_t {
 class ExampleBits final {
  public:
   constexpr ExampleBits() = default;
-  constexpr ExampleBits(const ExampleBits& other) = default;
 
   // Constructs an instance of |ExampleBits| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.

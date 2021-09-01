@@ -85,6 +85,7 @@ template <typename T>
 class WordOffset final {
  public:
   WordOffset() = delete;
+  WordOffset& operator=(const WordOffset& other) = default;
   WordOffset(const WordOffset& other) {
     capacity_ = other.capacity_;
     value_ = other.value_;

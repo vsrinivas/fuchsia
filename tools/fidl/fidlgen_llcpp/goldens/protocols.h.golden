@@ -45,7 +45,6 @@ namespace wire {
 class Rights final {
  public:
   constexpr Rights() = default;
-  constexpr Rights(const Rights& other) = default;
 
   // Constructs an instance of |Rights| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.

@@ -23,8 +23,6 @@ struct Driver {
 
   Driver() = default;
 
-  Driver(const Driver&) = default;
-
   explicit Driver(const config_type& config) {}
 
   constexpr bool operator==(const Driver& other) const { return true; }

@@ -21,7 +21,6 @@ class {{ .Name }} final {
 public:
   constexpr {{ .Name }}() : value_(0) {}
   constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
-  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
   constexpr operator {{ .Type }}() const { return value_; }
 
   constexpr bool IsUnknown() const {

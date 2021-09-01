@@ -301,8 +301,6 @@ class View {
     /// equality comparison.
     iterator() = default;
 
-    iterator& operator=(const iterator&) = default;
-
     bool operator==(const iterator& other) const {
       return other.view_ == view_ && other.offset_ == offset_;
     }

@@ -50,7 +50,6 @@ enum class EnumType : int32_t {
 class BitsType final {
  public:
   constexpr BitsType() = default;
-  constexpr BitsType(const BitsType& other) = default;
 
   // Constructs an instance of |BitsType| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.

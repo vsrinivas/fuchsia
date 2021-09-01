@@ -71,7 +71,6 @@ enum class MyStrictEnum : uint32_t {
 class MyStrictBits final {
  public:
   constexpr MyStrictBits() = default;
-  constexpr MyStrictBits(const MyStrictBits& other) = default;
 
   // Constructs an instance of |MyStrictBits| from an underlying primitive
   // value, preserving any bit member not defined in the FIDL schema.
@@ -174,7 +173,6 @@ class MyFlexibleEnum final {
  public:
   constexpr MyFlexibleEnum() : value_(0) {}
   constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
-  constexpr MyFlexibleEnum(const MyFlexibleEnum& other) = default;
   constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -219,7 +217,6 @@ constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
 class MyFlexibleBits final {
  public:
   constexpr MyFlexibleBits() = default;
-  constexpr MyFlexibleBits(const MyFlexibleBits& other) = default;
 
   // Constructs an instance of |MyFlexibleBits| from an underlying primitive
   // value, preserving any bit member not defined in the FIDL schema.

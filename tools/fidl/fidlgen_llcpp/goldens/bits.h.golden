@@ -42,7 +42,6 @@ namespace wire {
 class StrictBits final {
  public:
   constexpr StrictBits() = default;
-  constexpr StrictBits(const StrictBits& other) = default;
 
   // Constructs an instance of |StrictBits| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
@@ -140,7 +139,6 @@ constexpr inline void StrictBits::operator^=(
 class MyBits final {
  public:
   constexpr MyBits() = default;
-  constexpr MyBits(const MyBits& other) = default;
 
   // Constructs an instance of |MyBits| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
@@ -239,7 +237,6 @@ constexpr inline void MyBits::operator^=(
 class FlexibleBits final {
  public:
   constexpr FlexibleBits() = default;
-  constexpr FlexibleBits(const FlexibleBits& other) = default;
 
   // Constructs an instance of |FlexibleBits| from an underlying primitive
   // value, preserving any bit member not defined in the FIDL schema.

@@ -62,6 +62,8 @@ union Rights {
     return *this;
   }
 
+  constexpr Rights(const Rights& other) = default;
+
   // Returns true if the rights does not exceed those in |other|.
   bool StricterOrSameAs(Rights other) const { return (raw_value & ~(other.raw_value)) == 0; }
 
@@ -236,6 +238,8 @@ struct VnodeConnectionOptions {
       raw_value = other.raw_value;
       return *this;
     }
+
+    constexpr Flags(const Flags& other) = default;
 
   } flags = {};
 

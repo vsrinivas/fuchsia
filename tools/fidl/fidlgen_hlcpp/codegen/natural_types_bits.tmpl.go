@@ -67,7 +67,6 @@ constexpr inline {{ . }} operator~({{ . }} _value) {
 class {{ .Name }} final {
 public:
   constexpr {{ .Name }}() = default;
-  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
 
   // Constructs an instance of |{{ .Name }}| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the

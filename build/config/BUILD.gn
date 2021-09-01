@@ -536,11 +536,6 @@ config("default_warnings") {
     # and we do some cleanup, this will be re-enabled.
     "-Wno-c99-designator",
   ]
-  cflags_cc = [
-    # TODO(fxbug.dev/38640): Keep this flag here while it is enabled in ZN to keep the
-    # flags unified.
-    "-Wno-deprecated-copy",
-  ]
 }
 
 # TODO(fxbug.dev/58160): clean up instances of this outside of third party code.

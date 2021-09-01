@@ -109,11 +109,15 @@ class BitFieldMember {
     return *this;
   }
 
+  constexpr BitFieldMember() = default;
+
   constexpr BitFieldMember& operator=(const BitFieldMember& other) {
     T new_value = other;
     *this = new_value;
     return *this;
   }
+
+  constexpr BitFieldMember(const BitFieldMember& other) = default;
 
  private:
   T value_;

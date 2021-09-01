@@ -25,7 +25,6 @@ class ParseResult {
   };
 
  public:
-  ParseResult(const ParseResult&) = default;
   explicit ParseResult(std::string_view text) : ParseResult(text, 0, 0, 0, nullptr, nullptr) {}
 
   bool is_end() const { return frame_ == nullptr; }

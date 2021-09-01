@@ -48,8 +48,6 @@ class SomeProtocolSomeMethodError final {
   constexpr SomeProtocolSomeMethodError() : value_(0) {}
   constexpr explicit SomeProtocolSomeMethodError(uint32_t value)
       : value_(value) {}
-  constexpr SomeProtocolSomeMethodError(
-      const SomeProtocolSomeMethodError& other) = default;
   constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -86,7 +84,6 @@ class Op final {
  public:
   constexpr Op() : value_(0) {}
   constexpr explicit Op(uint32_t value) : value_(value) {}
-  constexpr Op(const Op& other) = default;
   constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -128,7 +125,6 @@ struct OverrideTest;
 class Flags final {
  public:
   constexpr Flags() = default;
-  constexpr Flags(const Flags& other) = default;
 
   // Constructs an instance of |Flags| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
@@ -231,7 +227,6 @@ class Expression;
 class BitsMember final {
  public:
   constexpr BitsMember() = default;
-  constexpr BitsMember(const BitsMember& other) = default;
 
   // Constructs an instance of |BitsMember| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.

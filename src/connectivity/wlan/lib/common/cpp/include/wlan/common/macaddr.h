@@ -27,8 +27,7 @@ struct MacAddr {
   // Consider if this should be private. Pay attention to byte alignment.
   uint8_t byte[kMacAddrLen];
 
-  MacAddr() {}
-  MacAddr(const MacAddr& addr) { Set(addr); }
+  MacAddr() = default;
   explicit MacAddr(const std::string& addr) { Set(addr); }
   explicit MacAddr(const uint8_t addr[kMacAddrLen]) { Set(addr); }
   explicit MacAddr(::std::array<uint8_t, 6> addr) { Set(addr.data()); }

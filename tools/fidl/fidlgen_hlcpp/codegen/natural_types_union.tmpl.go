@@ -156,7 +156,7 @@ class {{ .Name }} final {
       set_response({{ .Result.ValueStructDecl }}{result.take_value()});
       {{- end }}
     } else {
-      set_err(std::move(result.take_error()));
+      set_err(result.take_error());
     }
   }
   {{ .Name }}(fpromise::ok_result<{{ .Result.ValueDecl }}>&& result)

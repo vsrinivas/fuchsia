@@ -19,7 +19,6 @@ const fragmentBitsTmpl = `
 class {{ .Name }} final {
 public:
   constexpr {{ .Name }}() = default;
-  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
 
   // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.

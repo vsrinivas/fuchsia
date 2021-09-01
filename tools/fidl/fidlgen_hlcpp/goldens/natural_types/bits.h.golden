@@ -134,7 +134,6 @@ inline zx_status_t Clone(::fidl::test::bits::MyBits value,
 class FlexibleBits final {
  public:
   constexpr FlexibleBits() = default;
-  constexpr FlexibleBits(const FlexibleBits& other) = default;
 
   // Constructs an instance of |FlexibleBits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the

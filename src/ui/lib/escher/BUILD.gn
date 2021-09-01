@@ -68,8 +68,9 @@ config("vk_mem_alloc_small_heap_max_size") {
 
 config("vk_mem_alloc_error_suppression") {
   cflags = [
-    "-Wno-unused-variable",
+    "-Wno-deprecated-copy",
     "-Wno-missing-field-initializers",
+    "-Wno-unused-variable",
   ]
 
   if (is_mac) {

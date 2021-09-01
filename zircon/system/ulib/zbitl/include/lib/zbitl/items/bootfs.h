@@ -80,8 +80,6 @@ class BootfsView {
 
     iterator() = default;
 
-    iterator& operator=(const iterator&) = default;
-
     bool operator==(const iterator& other) const {
       return other.bootfs_ == bootfs_ && other.offset_ == offset_;
     }

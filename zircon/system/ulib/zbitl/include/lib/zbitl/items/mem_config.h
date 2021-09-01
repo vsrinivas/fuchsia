@@ -59,7 +59,6 @@ class MemRangeTable {
   class iterator {
    public:
     iterator() = default;
-    iterator(const iterator& other) = default;
 
     // Iterator traits.
     using iterator_category = std::input_iterator_tag;

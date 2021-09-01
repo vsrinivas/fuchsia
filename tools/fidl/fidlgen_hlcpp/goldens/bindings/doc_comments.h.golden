@@ -122,7 +122,6 @@ class MyFlexibleEnum final {
  public:
   constexpr MyFlexibleEnum() : value_(0) {}
   constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
-  constexpr MyFlexibleEnum(const MyFlexibleEnum& other) = default;
   constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -176,7 +175,6 @@ inline zx_status_t Clone(::fidl::test::doccomments::MyFlexibleEnum value,
 class MyFlexibleBits final {
  public:
   constexpr MyFlexibleBits() = default;
-  constexpr MyFlexibleBits(const MyFlexibleBits& other) = default;
 
   // Constructs an instance of |MyFlexibleBits| from an underlying primitive
   // value if the primitive does not contain any unknown members not defined in

@@ -9,15 +9,16 @@
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
+#include <lib/syslog/cpp/macros.h>
+
+#include <array>
+
+#include "src/ui/lib/escher/util/debug_print.h"
+
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
-#include <lib/syslog/cpp/macros.h>
-
-#include "src/ui/lib/escher/util/debug_print.h"
-
-#include <array>
 
 namespace escher {
 
@@ -108,8 +109,6 @@ struct planeN {
       : dir_(direction), dist_(glm::dot(point_on_plane, direction)) {
     FX_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon);
   }
-
-  planeN(const planeN& other) : dir_(other.dir_), dist_(other.dist_) {}
 
   bool operator==(const planeN<VecT>& other) const {
     return dir_ == other.dir_ && dist_ == other.dist_;

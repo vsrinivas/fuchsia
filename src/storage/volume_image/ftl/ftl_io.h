@@ -45,7 +45,6 @@ class FtlHandle {
   FtlHandle()
       : instance_(std::make_unique<FtlInstance>()),
         volume_(std::make_unique<ftl::VolumeImpl>(instance_.get())) {}
-  FtlHandle(const FtlHandle&) = default;
 
   fpromise::result<void, std::string> Init(std::unique_ptr<ftl::NdmDriver> driver);
 

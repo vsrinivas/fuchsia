@@ -21,8 +21,6 @@ class SomeProtocol_SomeMethod_Error final {
   constexpr SomeProtocol_SomeMethod_Error() : value_(0) {}
   constexpr explicit SomeProtocol_SomeMethod_Error(uint32_t value)
       : value_(value) {}
-  constexpr SomeProtocol_SomeMethod_Error(
-      const SomeProtocol_SomeMethod_Error& other) = default;
   constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -69,7 +67,6 @@ class Op final {
  public:
   constexpr Op() : value_(0) {}
   constexpr explicit Op(uint32_t value) : value_(value) {}
-  constexpr Op(const Op& other) = default;
   constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -120,7 +117,6 @@ class OverrideTest;
 class Flags final {
  public:
   constexpr Flags() = default;
-  constexpr Flags(const Flags& other) = default;
 
   // Constructs an instance of |Flags| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
@@ -233,7 +229,6 @@ class Expression;
 class BitsMember final {
  public:
   constexpr BitsMember() = default;
-  constexpr BitsMember(const BitsMember& other) = default;
 
   // Constructs an instance of |BitsMember| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
@@ -1057,7 +1052,7 @@ class SomeProtocol_SomeMethod_Result final {
       set_response(::fidl::test::anonymous::SomeProtocol_SomeMethod_Response{
           result.take_value()});
     } else {
-      set_err(std::move(result.take_error()));
+      set_err(result.take_error());
     }
   }
   SomeProtocol_SomeMethod_Result(

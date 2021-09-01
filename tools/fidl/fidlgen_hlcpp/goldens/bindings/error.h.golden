@@ -135,7 +135,7 @@ class Example_foo_Result final {
       set_response(
           ::fidl::test::error::Example_foo_Response{result.take_value()});
     } else {
-      set_err(std::move(result.take_error()));
+      set_err(result.take_error());
     }
   }
   Example_foo_Result(fpromise::ok_result<int64_t>&& result)

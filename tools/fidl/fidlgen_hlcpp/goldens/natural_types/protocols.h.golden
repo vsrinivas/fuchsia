@@ -318,7 +318,7 @@ class WithErrorSyntax_HandleInResult_Result final {
           ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response{
               result.take_value()});
     } else {
-      set_err(std::move(result.take_error()));
+      set_err(result.take_error());
     }
   }
   WithErrorSyntax_HandleInResult_Result(
@@ -668,7 +668,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
           ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response{
               result.take_value()});
     } else {
-      set_err(std::move(result.take_error()));
+      set_err(result.take_error());
     }
   }
   WithErrorSyntax_ResponseAsStruct_Result(
@@ -847,7 +847,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
       set_response(
           ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response{});
     } else {
-      set_err(std::move(result.take_error()));
+      set_err(result.take_error());
     }
   }
   WithErrorSyntax_ErrorAsPrimitive_Result(fpromise::ok_result<void>&& result)
@@ -2016,7 +2016,7 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
       set_response(
           ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response{});
     } else {
-      set_err(std::move(result.take_error()));
+      set_err(result.take_error());
     }
   }
   WithErrorSyntax_ErrorAsEnum_Result(fpromise::ok_result<void>&& result)

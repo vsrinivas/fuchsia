@@ -10,6 +10,7 @@
 class ByteOffset {
  public:
   ByteOffset(const ByteOffset& other) : value_(other.value_), capacity_(other.capacity_) {}
+  ByteOffset& operator=(const ByteOffset& other) = default;
   static ByteOffset FromBuffer(size_t offset, size_t capacity) {
     return ByteOffset(offset, capacity).AssertValid();
   }
@@ -47,6 +48,7 @@ template <typename T>
 class WordOffset {
  public:
   WordOffset() = delete;
+  WordOffset& operator=(const WordOffset& other) = default;
   WordOffset(WordOffset& other) {
     capacity_ = other.capacity_;
     value_ = other.value_;

@@ -82,10 +82,6 @@ class DriverBase {
  public:
   using config_type = KdrvConfig;
 
-  DriverBase() = delete;
-
-  DriverBase(const DriverBase&) = default;
-
   explicit DriverBase(const config_type& cfg) : cfg_(cfg) {}
 
   constexpr bool operator==(const Driver& other) const {
