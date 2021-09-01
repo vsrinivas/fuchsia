@@ -6,7 +6,7 @@
         },
         {
             name: "stash",
-            url: "fuchsia-pkg://fuchsia.com/wlancfg-tests#meta/stash_secure.cm",
+            url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm",
             startup: "eager",
         },
     ],
