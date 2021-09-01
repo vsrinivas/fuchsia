@@ -364,6 +364,11 @@ Similarly, tables do not permit exhaustive matching. Instead, you must use the
 
 The generated `User` `struct` follows the [`#[derive]` rules](#derives).
 
+### Inline layouts
+
+The generated Rust code uses the [the name reserved by `fidlc`][anon-names] for
+inline layouts.
+
 ### Derives {#derives}
 
 When the FIDL toolchain generates a new `struct` or `enum` for a FIDL type, it
@@ -721,6 +726,7 @@ The calculation of traits derivation rules is visible in
 ```
 
 <!-- link labels -->
+[anon-names]: /docs/reference/fidl/language/language.md#inline-layouts
 [`decode_persistent`]: https://fuchsia-docs.firebaseapp.com/rust/fidl/encoding/fn.decode_persistent.html
 [`encode_persistent`]: https://fuchsia-docs.firebaseapp.com/rust/fidl/encoding/fn.encode_persistent.html
 [lang-bits]: /docs/reference/fidl/language/language.md#bits

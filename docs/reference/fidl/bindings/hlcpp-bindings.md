@@ -425,6 +425,11 @@ Example usage:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
+### Inline layouts
+
+The generated C++ code uses the [the name reserved by `fidlc`][anon-names] for
+inline layouts.
+
 ## Protocols {#protocols}
 
 Given the [protocol][lang-protocols]:
@@ -684,6 +689,7 @@ For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
 
 
 <!-- xrefs -->
+[anon-names]: /docs/reference/fidl/language/language.md#inline-layouts
 [client-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/client.md
 [server-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md
 [lang-constants]: /docs/reference/fidl/language/language.md#constants

@@ -344,6 +344,39 @@ strategies described in the [tutorial][llcpp-allocation] can also be used.
 Note: Tables with unknown fields will decode successfully but will fail to
 encode.
 
+### Inline layouts
+
+The generated C++ code uses the [the name reserved by `fidlc`][anon-names] for
+inline layouts.
+
+LLCPP also generates scoped names to refer to any inline layouts that were
+defined directly within a parent layout in FIDL. For example, for the FIDL:
+
+```fidl
+type Outer = struct {
+  inner struct {};
+};
+```
+
+The inner struct can be referred to using its globally unique name `Inner` as
+well as the scoped name `Outer::Inner`. This can be useful when the top level
+name is overridden using the [`@generated_name`][generated-name-attr] attribute,
+for example in:
+
+```fidl
+type Outer = struct {
+  inner
+  @generated_name("SomeCustomName") struct {};
+};
+```
+
+the inner struct can be referred to as `SomeCustomName` or `Outer::Inner`.
+
+Another example of this is the [protocol result](#protocol-results) types: the
+success and error variants of a type such as `TicTacToe_MakeMove_Result` can be
+referenced as `TicTacToe_MakeMove_Result::Response` and
+`TicTacToe_MakeMove_Result::Err`, respectively.
+
 ## Protocols {#protocols}
 
 Given the [protocol][lang-protocols]:
@@ -1179,7 +1212,9 @@ methods `StartGame` and `MakeMove`, which are implemented to just call
 completer)`, respectively.
 
 <!-- xrefs -->
+[anon-names]: /docs/reference/fidl/language/language.md#inline-layouts
 [cpp-style]: https://google.github.io/styleguide/cppguide.html#Naming
+[generated-name-attr]: /docs/reference/fidl/language/attributes.md#generated-name
 [llcpp-allocation]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md
 [llcpp-async-example]: /docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
 [llcpp-threading-guide]: /docs/development/languages/fidl/guides/llcpp-threading.md

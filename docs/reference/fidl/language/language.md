@@ -819,6 +819,64 @@ more-specific name in scope).
 The `fidlc` compiler automatically generates an internal [ZX library](library-zx.md)
 for you that contains commonly used Zircon definitions.
 
+### Inline layouts {#inline-layouts}
+
+Layouts can also be specified inline, rather than in a `type` introduction
+declaration. This is useful when a specific layout is only used once. For
+example, the following FIDL:
+
+```fidl
+type Options = table {
+    1: reticulate_splines bool;
+};
+
+protocol Launcher {
+    GenerateTerrain(struct {
+        options Options;
+    });
+};
+```
+
+can be rewritten using an inline layout:
+
+```fidl
+protocol Launcher {
+    GenerateTerrain(struct {
+        options table {
+            1: reticulate_splines bool;
+        };
+    });
+};
+```
+
+When an inline layout is used, `fidlc` will reserve a name for it that is
+guaranteed to be unique, based on the [naming context][naming-context] that the
+layout is used in. This results in the following reserved names:
+
+* For inline layouts used as the type of an outer layout member, the reserved
+  name is simply the name of the corresponding member.
+    * In the example above, the name `Options` is reserved for the inlined
+      `table`.
+* For top level request/response types, `fidlc` concatenates the protocol name,
+  the method name, and then either `"Request"` or `"Response"` depending on
+  where the type is used.
+    * In the example above, the name `LauncherGenerateTerrainRequest` is
+      reserved for the struct used as the request of the `GenerateTerrain`
+      method.
+    * Note that the `"Request"` suffix denotes that the type is used to initiate
+      communication; for this reason, event types will have the `"Request"`
+      suffix reserved instead of the `"Response"` suffix.
+
+The name that is actually used in the generated code depends on the binding, and
+is described in the individual [bindings references][bindings-reference].
+
+For inline layouts used as the type of a layout member, there are two ways to
+obtain a different reserved name:
+
+* Rename the layout member.
+* Override the reserved name using the [`@generated_name`][generated-name-attr]
+  attribute.
+
 <!-- xref -->
 [mixin]: https://en.wikipedia.org/wiki/Mixin
 [rfc-0023]: /docs/contribute/governance/rfcs/0023_compositional_model_protocols.md
@@ -836,3 +894,5 @@ for you that contains commonly used Zircon definitions.
 [bindings-reference]: /docs/reference/fidl/bindings/overview.md
 [lexicon-validate]: /docs/reference/fidl/language/lexicon.md#validate
 [wire-format]: /docs/reference/fidl/language/wire-format/README.md
+[naming-context]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#layout-naming-contexts
+[generated-name-attr]: /docs/reference/fidl/language/attributes.md#generated-name

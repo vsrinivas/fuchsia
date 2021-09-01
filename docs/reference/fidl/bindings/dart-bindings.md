@@ -315,6 +315,11 @@ Example usage:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/test/types_test.dart" region_tag="tables" adjust_indentation="auto" %}
 ```
 
+### Inline layouts
+
+The generated Dart code uses the [the name reserved by `fidlc`][anon-names] for
+inline layouts.
+
 ## Protocols {#protocols}
 
 Given the [protocol][lang-protocols]:
@@ -516,6 +521,7 @@ and all events are implemented by returning a Stream with a single
 `UnimplementedError` event.
 
 <!-- xrefs -->
+[anon-names]: /docs/reference/fidl/language/language.md#inline-layouts
 [dart-tutorial]: /docs/development/languages/fidl/tutorials/dart
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits

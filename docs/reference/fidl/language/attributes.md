@@ -6,6 +6,7 @@ The following FIDL attributes are supported:
 * [`@discoverable`](#discoverable)
 * [`@doc`](#doc)
 * [`@for_deprecated_c_bindings`](#layout)
+* [`@generated_name`](#generated-name)
 * [`@max_bytes`](#maxbytes)
 * [`@max_handles`](#maxhandles)
 * [`@no_doc`](#nodoc)
@@ -102,6 +103,53 @@ deprecated C bindings. There should be no new uses of this attribute.
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="layout-simple" %}
+```
+
+## `@generated_name` {#generated-name}
+
+**USAGE**: `@generated_name("Foo")`
+
+**MEANING**: This attribute is used to override the name that `fidlc` reserves
+for any inline layout. This can be useful when a different name is preferred
+(for example, to avoid a name conflict with a another type).
+
+As an example, the following code leads to a name conflict, because both inline
+layouts reserve the same name of `Options`:
+
+```fidl
+table StartupConfig {
+  1: options table {
+    ...
+  };
+  ...
+};
+
+table TeardownConfig {
+  2: options table {
+    ...
+  };
+};
+```
+
+One way to disambiguate between the two is to manually specify different
+generated names:
+
+```fidl
+table StartupConfig {
+  1: options
+  @generated_name("StartupOptions") table {
+    ...
+  };
+  ...
+};
+
+table TeardownConfig {
+  1: options
+  @generated_name("TeardownOptions") table {
+    ...
+  };
+  ...
+};
 ```
 
 ## `@max_bytes` {#maxbytes}

@@ -327,6 +327,11 @@ Example usage:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="tables" %}
 ```
 
+### Inline layouts
+
+The generated Go code uses the [the name reserved by `fidlc`][anon-names] for
+inline layouts.
+
 ## Protocols {#protocols}
 
 Given the [protocol][lang-protocols]:
@@ -503,6 +508,7 @@ In addition, FIDL generates a `TicTacToeName` constant that contains the
 protocol name.
 
 <!-- xrefs -->
+[anon-names]: /docs/reference/fidl/language/language.md#inline-layouts
 [example-client]: /examples/fidl/go/client
 [example-server]: /examples/fidl/go/server
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
