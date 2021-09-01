@@ -30,7 +30,6 @@ zx_library("zircon-internal") {
   ]
 
   kernel = true
-  host = true
   static = true
   sources = []
 }

@@ -23,7 +23,6 @@ sdk_source_set("zx") {
 }
 
 zx_library("zxc") {
-  host = true
   kernel = true
   static = true
 

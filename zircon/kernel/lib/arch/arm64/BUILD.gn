@@ -9,7 +9,6 @@ import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 zx_library("arm64") {
   kernel = true
-  host = true
   static = true
   visibility = [ "../*" ]
   sources = [

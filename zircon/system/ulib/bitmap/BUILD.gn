@@ -14,7 +14,6 @@ zx_library("bitmap") {
   ]
 
   kernel = true
-  host = true
   static = true
   sources = [ "raw-bitmap.cc" ]
   public_deps = [ "//zircon/system/ulib/fbl:headers" ]

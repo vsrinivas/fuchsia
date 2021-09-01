@@ -10,7 +10,6 @@ import("//build/zircon/migrated_targets.gni")
 is_elf = current_os != "mac" && current_os != "win"
 
 zx_library("elfldltl") {
-  host = true
   kernel = true
   static = true
 

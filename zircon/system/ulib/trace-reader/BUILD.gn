@@ -12,7 +12,6 @@ zx_library("trace-reader") {
     "trace-reader/reader_internal.h",
     "trace-reader/records.h",
   ]
-  host = true
   sources = [
     "file_reader.cc",
     "reader.cc",

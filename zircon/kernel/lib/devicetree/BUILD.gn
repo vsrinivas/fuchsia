@@ -8,7 +8,6 @@ import("//build/zircon/migrated_targets.gni")
 
 zx_library("devicetree") {
   kernel = true
-  host = true
   sources = [ "devicetree.cc" ]
   deps = [ "//zircon/system/ulib/fbl" ]
 

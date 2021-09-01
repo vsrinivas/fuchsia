@@ -5,7 +5,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("zbitl") {
-  host = true
   kernel = true
   static = true
 

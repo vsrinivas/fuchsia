@@ -43,7 +43,6 @@ zx_library("watchdog") {
     "lib/watchdog/watchdog.h",
     "lib/watchdog/operations.h",
   ]
-  host = true
   deps = [
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",

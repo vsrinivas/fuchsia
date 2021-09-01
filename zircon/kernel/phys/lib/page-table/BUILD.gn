@@ -10,7 +10,6 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("page-table") {
   sdk = "source"
 
-  host = true
   kernel = true
   static = true
 

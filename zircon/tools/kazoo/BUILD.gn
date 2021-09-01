@@ -14,8 +14,6 @@ config("kazoo_config") {
 }
 
 zx_library("kazoo_lib") {
-  host = true
-
   sdk = "source"
 
   configs += [ ":kazoo_config" ]

@@ -10,7 +10,6 @@ declare_args() {
 }
 
 zx_library("fit-promise") {
-  host = true
   static = true
 
   sdk = "source"

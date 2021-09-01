@@ -12,7 +12,6 @@ zx_library("cmdline") {
     "lib/cmdline/optional.h",
     "lib/cmdline/status.h",
   ]
-  host = true
 
   sources = [ "args_parser.cc" ]
 }

@@ -12,7 +12,6 @@ zx_library("mtd") {
     "lib/mtd/mtd-interface.h",
     "lib/mtd/nand-interface.h",
   ]
-  host = true
 
   sources = []
   if (current_os == "linux") {

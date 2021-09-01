@@ -6,7 +6,6 @@ import("//build/zircon/migrated_targets.gni")
 
 zx_library("uart") {
   kernel = true
-  host = true
   static = true
 
   sdk = "source"
@@ -40,7 +39,6 @@ zx_library("uart-mock") {
   testonly = true
   kernel = true
   static = true
-  host = true
   sdk = "source"
   sdk_headers = [ "lib/uart/mock.h" ]
 

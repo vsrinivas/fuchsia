@@ -10,7 +10,6 @@ zx_library("fs-host") {
     "fs-host/common.h",
     "fs-host/json_recorder.h",
   ]
-  host = true
   sources = [
     "common.cc",
     "json_recorder.cc",

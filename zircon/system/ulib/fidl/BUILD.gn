@@ -13,7 +13,6 @@ config("fidl-tracing-config") {
 zx_library("fidl_base") {
   sdk = "source"
   sdk_publishable = true
-  host = true
   sdk_headers = [
     "lib/fidl/coding.h",
     "lib/fidl/txn_header.h",
@@ -154,7 +153,6 @@ if (is_fuchsia) {
   }
 } else {
   zx_library("fidl-llcpp") {
-    host = true
     sdk = "source"
     sdk_headers = [
                     "lib/fidl/llcpp/array.h",

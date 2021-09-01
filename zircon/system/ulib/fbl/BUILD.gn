@@ -54,7 +54,6 @@ zx_library("fbl") {
     "fbl/vector.h",
   ]
 
-  host = true
   kernel = true
   static = true
 

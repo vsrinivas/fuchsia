@@ -19,7 +19,6 @@ zx_library("static-pie") {
   sdk = "source"
   sdk_headers = [ "lib/static-pie/static-pie.h" ]
 
-  host = true
   kernel = true
   static = true
 

@@ -8,7 +8,6 @@ zx_library("unittest") {
   sdk = "shared"
   sdk_headers = [ "unittest/unittest.h" ]
   testonly = true
-  host = true
   shared = true
   sources = [
     "all-tests.cc",
@@ -44,7 +43,6 @@ zx_library("unittest-static") {
   sdk = "static"
   sdk_headers = [ "unittest/unittest.h" ]
   testonly = true
-  host = true
   sources = [
     "all-tests.cc",
     "unittest-main.cc",

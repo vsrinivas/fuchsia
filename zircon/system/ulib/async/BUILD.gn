@@ -18,7 +18,6 @@ zx_library("async") {
     "lib/async/wait.h",
   ]
 
-  host = true
   public_deps = [
     # <lib/async/cpp/executor.h> has #include <lib/fit/promise.h>
     "//sdk/lib/fit-promise:headers",

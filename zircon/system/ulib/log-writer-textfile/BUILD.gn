@@ -8,7 +8,6 @@ zx_library("log-writer-textfile") {
   sdk = "shared"
   sdk_headers = [ "lib/log-writer-textfile/log-writer-textfile.h" ]
   shared = true
-  host = true
   sources = [ "log-writer-textfile.cc" ]
   deps = [
     "//sdk/lib/fdio",

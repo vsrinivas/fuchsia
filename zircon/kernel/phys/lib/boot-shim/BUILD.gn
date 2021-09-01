@@ -9,7 +9,6 @@ import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("boot-shim") {
-  host = true
   kernel = true
   static = true
 
@@ -56,7 +55,6 @@ zx_library("boot-shim") {
 if (!is_kernel) {
   zx_library("boot-shim-test") {
     testonly = true
-    host = true
     static = true
 
     sdk = "source"

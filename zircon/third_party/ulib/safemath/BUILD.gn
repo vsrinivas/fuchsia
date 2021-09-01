@@ -23,7 +23,6 @@ zx_library("safemath") {
   ]
 
   sources = []
-  host = true
   kernel = false
   static = true
 }

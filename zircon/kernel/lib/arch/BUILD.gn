@@ -12,9 +12,6 @@ zx_library("arch") {
   kernel = true
   static = true
 
-  # Not much is actually usable on host, but hwreg definitions and such are.
-  host = true
-
   sdk = "source"
   sdk_headers = [ "lib/arch/asm.h" ]
 

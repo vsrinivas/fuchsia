@@ -14,7 +14,6 @@ zx_library("nand-redundant-storage") {
     "lib/nand-redundant-storage/nand-redundant-storage-interface.h",
     "lib/nand-redundant-storage/nand-redundant-storage.h",
   ]
-  host = true
 
   if (current_os == "linux") {
     sources = [

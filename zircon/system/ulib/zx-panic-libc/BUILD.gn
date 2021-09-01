@@ -7,7 +7,6 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("zx-panic-libc") {
   sdk = "source"
 
-  host = true
   static = true
 
   sdk_headers = []

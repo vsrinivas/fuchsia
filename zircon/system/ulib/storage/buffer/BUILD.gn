@@ -16,7 +16,6 @@ zx_library("buffer") {
     "storage/buffer/vmoid_registry.h",
     "storage/buffer/array_buffer.h",
   ]
-  host = true
   sources = [
     "array_buffer.cc",
     "block_buffer.cc",

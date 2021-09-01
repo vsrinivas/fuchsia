@@ -10,7 +10,6 @@ group("tests") {
 }
 
 zx_library("stdcompat") {
-  host = true
   static = true
   kernel = true
 

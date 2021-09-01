@@ -9,7 +9,6 @@ zx_library("range") {
   sdk_headers = [ "range/range.h" ]
   sources = [ "range.cc" ]
   public_deps = [ "//zircon/system/public" ]
-  host = true
 }
 
 group("tests") {

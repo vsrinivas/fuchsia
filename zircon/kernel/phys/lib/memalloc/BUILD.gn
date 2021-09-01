@@ -17,7 +17,6 @@ zx_library("memalloc") {
     "lib/memalloc/range.h",
   ]
 
-  host = true
   kernel = true
   static = true
 

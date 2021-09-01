@@ -91,12 +91,6 @@ import("//build/toolchain/toolchain_environment.gni")
 # to support zx_library() calls that are shared by BUILD.zircon.gn and BUILD.gn
 # file. Support for these may be removed after build unification completes.
 #
-#   host
-#     Optional: Was set to true if this library can be used in
-#     host-side code, e.g. to be a dependency of a host_tool().
-#     Type: bool
-#     Default: false
-#
 #   static
 #     Optional: True if this library can be statically linked in user code.
 #     Type: bool
@@ -109,7 +103,6 @@ import("//build/toolchain/toolchain_environment.gni")
 #
 template("zx_library") {
   template_params = [
-    "host",
     "kernel",
     "sdk",
     "sdk_headers",
@@ -186,7 +179,6 @@ template("zx_library") {
     not_needed(invoker,
                [
                  "kernel",
-                 "host",
                  "static",
                  "shared",
                ])

@@ -16,7 +16,6 @@ zx_library("ffl") {
   ]
 
   sources = [ "string.cc" ]
-  host = true
   kernel = true
   static = true
 }

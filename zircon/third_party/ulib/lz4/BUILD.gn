@@ -8,7 +8,6 @@ import("//build/zircon/migrated_targets.gni")
 lz4_lib = "//third_party/lz4/lib"
 
 zx_library("lz4") {
-  host = true
   sdk = "source"
   sdk_headers = [
     "lz4/lz4.h",

@@ -5,7 +5,6 @@
 import("//build/unification/zx_library.gni")
 
 zx_library("perftest") {
-  host = true
   sdk = "source"
   sdk_headers = [
     "perftest/perftest.h",

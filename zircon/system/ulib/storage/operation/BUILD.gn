@@ -5,7 +5,6 @@
 import("//build/unification/zx_library.gni")
 
 zx_library("operation") {
-  host = true
   sources = [ "operation.cc" ]
   deps = [
     "//zircon/public/lib/fbl",

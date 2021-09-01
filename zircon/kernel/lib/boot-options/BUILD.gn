@@ -38,7 +38,6 @@ if (current_toolchain == default_toolchain) {
 
 zx_library("boot-options") {
   kernel = true
-  host = true
 
   sources = [
     "boot-options.cc",

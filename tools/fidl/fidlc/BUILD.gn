@@ -23,7 +23,6 @@ config("headers.config") {
 }
 
 zx_library("fidl") {
-  host = true
   sdk = "source"
   sdk_headers = []
 

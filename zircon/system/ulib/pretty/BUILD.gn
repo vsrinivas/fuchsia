@@ -13,7 +13,6 @@ zx_library("pretty") {
   ]
 
   kernel = true
-  host = true
   static = true
   sources = [
     "hexdump.cc",

@@ -11,7 +11,6 @@ zx_library("xdc-server-utils") {
     "xdc-server-utils/msg.h",
     "xdc-server-utils/packet.h",
   ]
-  host = true
   sources = [ "packet.c" ]
   if (is_host) {
     deps = [ "//zircon/system/public" ]

@@ -100,7 +100,6 @@ zx_library("trace-engine-headers-for-handler") {
 # This code also runs on the host.
 zx_library("trace-engine-headers-for-reader") {
   sdk = "source"
-  host = true
   sdk_headers = [
     "lib/trace-engine/fields.h",
     "lib/trace-engine/types.h",

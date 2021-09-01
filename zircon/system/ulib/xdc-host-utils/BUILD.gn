@@ -10,7 +10,6 @@ zx_library("xdc-host-utils") {
     "xdc-host-utils/client.h",
     "xdc-host-utils/conn.h",
   ]
-  host = true
   sources = [ "client.cc" ]
   deps = [ "//zircon/public/lib/fbl" ]
 }

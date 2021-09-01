@@ -13,7 +13,6 @@ zx_library("affine") {
     "lib/affine/utils.h",
   ]
 
-  host = true
   kernel = true
   static = true
 

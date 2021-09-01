@@ -30,7 +30,6 @@ zx_library("ftl") {
     "lib/ftl/ndm-driver.h",
     "lib/ftl/volume.h",
   ]
-  host = true
 
   sources = [
     "ftln/ftln_init.c",

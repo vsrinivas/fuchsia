@@ -21,7 +21,6 @@ zx_library("acpi_lite") {
 
   kernel = true
   static = true
-  host = true
 
   sources = [
     "acpi_lite.cc",

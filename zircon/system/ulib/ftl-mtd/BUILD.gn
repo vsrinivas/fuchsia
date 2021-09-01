@@ -7,7 +7,6 @@ import("//build/unification/zx_library.gni")
 zx_library("ftl-mtd") {
   sdk = "source"
   sdk_headers = [ "lib/ftl-mtd/nand-volume-driver.h" ]
-  host = true
 
   sources = [ "nand-volume-driver.cc" ]
 
