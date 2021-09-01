@@ -363,7 +363,9 @@ static void scanner_init_func(uint level) {
   pmm_page_queues()->StartThreads(ZX_SEC(gBootOptions->page_scanner_min_aging_interval),
                                   ZX_SEC(gBootOptions->page_scanner_max_aging_interval));
   // Ensure at least 1 second between access scans.
+  // what to do with this?
   accessed_scan_period = ZX_SEC(ktl::max(gBootOptions->page_scanner_min_aging_interval, 1u));
+  //accessed_scan_period = ZX_SEC(4);
 
   thread->Resume();
 }
