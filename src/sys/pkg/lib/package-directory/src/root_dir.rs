@@ -64,6 +64,13 @@ impl RootDir {
 
         for entry in reader_list {
             if entry.path().starts_with("meta/") {
+                for (i, _) in entry.path().match_indices("/").skip(1) {
+                    if meta_files.contains_key(&entry.path()[..i]) {
+                        return Err(Error::FileDirectoryCollision {
+                            path: entry.path()[..i].to_string(),
+                        });
+                    }
+                }
                 meta_files.insert(
                     String::from(entry.path()),
                     MetaFileLocation { offset: entry.offset(), length: entry.length() },
@@ -343,6 +350,27 @@ mod tests {
         .cloned()
         .collect();
         assert_eq!(root_dir.non_meta_files, non_meta_files);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn rejects_meta_file_collisions() {
+        let pkg = PackageBuilder::new("base-package-0")
+            .add_resource_at("meta/dir/file", "meta-contents0".as_bytes())
+            .add_resource_at_ignore_path_collisions("meta/dir", "meta-contents1".as_bytes())
+            .build()
+            .await
+            .unwrap();
+        let (metafar_blob, _) = pkg.contents();
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+
+        match RootDir::new(blobfs_client, metafar_blob.merkle).await {
+            Ok(_) => panic!("this should not be reached!"),
+            Err(Error::FileDirectoryCollision { path }) => {
+                assert_eq!(path, "meta/dir".to_string());
+            }
+            Err(e) => panic!("Expected collision error, receieved {:?}", e),
+        };
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -456,6 +456,29 @@ impl PackageBuilder {
         self
     }
 
+    /// Adds the provided `contents` to the package at the given `path`.
+    ///
+    /// Does not check for dir/file collisions.
+    pub fn add_resource_at_ignore_path_collisions(
+        mut self,
+        path: impl Into<PathBuf>,
+        mut contents: impl io::Read,
+    ) -> Self {
+        let path = path.into();
+        let _ = fuchsia_pkg::check_resource_path(
+            path.to_str().expect(&format!("path must be utf8: {:?}", path)),
+        )
+        .expect(&format!("path must be an object relative path expression: {:?}", path));
+        let mut data = vec![];
+        contents.read_to_end(&mut data).unwrap();
+
+        if let Some(parent) = path.parent() {
+            self.make_dirs(parent);
+        }
+        self.contents.insert(path.clone(), PackageEntry::File(data));
+        self
+    }
+
     fn make_dirs(&mut self, path: &Path) {
         for ancestor in path.ancestors() {
             if ancestor == Path::new("") {

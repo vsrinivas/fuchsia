@@ -32,6 +32,9 @@ pub enum Error {
 
     #[error("while deserializing meta/contents")]
     DeserializeMetaContents(#[source] fuchsia_pkg::MetaContentsError),
+
+    #[error("collision between a file and a directory at path: '{:?}'", path)]
+    FileDirectoryCollision { path: String },
 }
 
 /// Serves a package directory for the package with hash `meta_far` on `server_end`.
