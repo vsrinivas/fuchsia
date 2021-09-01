@@ -87,7 +87,7 @@ DirEntry *Dir::FindInBlock(Page *dentry_page, const char *name, int namelen, int
 #endif
   int slots;
 
-  bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
+  bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
   while (bit_pos < kNrDentryInBlock) {
     de = &dentry_blk->dentry[bit_pos];
     slots = (LeToCpu(de->name_len) + kNameLen - 1) / kNameLen;
@@ -99,7 +99,7 @@ DirEntry *Dir::FindInBlock(Page *dentry_page, const char *name, int namelen, int
       }
     }
     next_pos = bit_pos + slots;
-    bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, next_pos);
+    bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, next_pos);
     if (bit_pos >= kNrDentryInBlock)
       end_pos = kNrDentryInBlock;
     else
@@ -356,11 +356,11 @@ int Dir::RoomForFilename(DentryBlock *dentry_blk, int slots) {
   int zero_start, zero_end;
 
   while (true) {
-    zero_start = find_next_zero_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_start);
+    zero_start = FindNextZeroBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_start);
     if (zero_start >= kNrDentryInBlock)
       return kNrDentryInBlock;
 
-    zero_end = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, zero_start);
+    zero_end = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, zero_start);
     if (zero_end - zero_start >= slots)
       return zero_start;
 
@@ -440,7 +440,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
           de->ino = CpuToLe(vnode->Ino());
           SetDeType(de, vnode);
           for (i = 0; i < slots; i++)
-            test_and_set_bit_le(bit_pos + i, &dentry_blk->dentry_bitmap);
+            TestAndSetBit(bit_pos + i, dentry_blk->dentry_bitmap);
 #if 0  // porting needed
        // set_page_dirty(dentry_page);
 #else
@@ -500,10 +500,10 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   dentry_blk = static_cast<DentryBlock *>(kaddr);
   bit_pos = dentry - dentry_blk->dentry;
   for (i = 0; i < slots; i++)
-    test_and_clear_bit_le(bit_pos + i, &dentry_blk->dentry_bitmap);
+    TestAndClearBit(bit_pos + i, dentry_blk->dentry_bitmap);
 
   /* Let's check and deallocate this dentry page */
-  bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
+  bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
 #if 0  // porting needed
   // kunmap(page); /* kunmap - pair of f2fs_find_entry */
   // set_page_dirty(page);
@@ -587,8 +587,8 @@ zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode, VnodeF2fs *parent) {
   memcpy(dentry_blk->filename[1], "..", 2);
   SetDeType(de, vnode);
 
-  test_and_set_bit_le(0, &dentry_blk->dentry_bitmap);
-  test_and_set_bit_le(1, &dentry_blk->dentry_bitmap);
+  TestAndSetBit(0, dentry_blk->dentry_bitmap);
+  TestAndSetBit(1, dentry_blk->dentry_bitmap);
 #if 0  // porting needed
   // kunmap_atomic(kaddr);
   // set_page_dirty(dentry_page);
@@ -629,7 +629,7 @@ bool Dir::IsEmptyDir() {
       bit_pos = 2;
     else
       bit_pos = 0;
-    bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_pos);
+    bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_pos);
 #if 0  // porting needed
     // kunmap_atomic(kaddr);
 #endif
@@ -678,7 +678,7 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
 #endif
     while (bit_pos < kNrDentryInBlock) {
       d_type = DT_UNKNOWN;
-      bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_pos);
+      bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_pos);
       if (bit_pos >= kNrDentryInBlock)
         break;
 

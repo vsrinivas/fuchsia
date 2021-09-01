@@ -6,7 +6,7 @@
 
 namespace f2fs {
 
-inline SegEntry *SegMgr::GetSegEntry(uint32_t segno) {
+SegEntry *SegMgr::GetSegEntry(uint32_t segno) {
   SbInfo &sbi = fs_->GetSbInfo();
   SitInfo *sit_i = GetSitInfo(&sbi);
   return &sit_i->sentries[segno];
@@ -18,7 +18,7 @@ inline SecEntry *SegMgr::GetSecEntry(uint32_t segno) {
   return &sit_i->sec_entries[GetSecNo(&sbi, segno)];
 }
 
-inline uint32_t SegMgr::GetValidBlocks(uint32_t segno, int section) {
+uint32_t SegMgr::GetValidBlocks(uint32_t segno, int section) {
   // In order to get # of valid blocks in a section instantly from many
   // segments, f2fs manages two counting structures separately.
   if (section > 1) {
@@ -48,7 +48,7 @@ inline void SegMgr::SegInfoToRawSit(SegEntry *se, SitEntry *rs) {
 inline uint32_t SegMgr::FindNextInuse(FreeSegmapInfo *free_i, uint32_t max, uint32_t segno) {
   uint32_t ret;
   fs::SharedLock segmap_lock(free_i->segmap_lock);
-  ret = find_next_bit_le(free_i->free_segmap, max, segno);
+  ret = FindNextBit(free_i->free_segmap, max, segno);
   return ret;
 }
 
@@ -60,12 +60,12 @@ inline void SegMgr::SetFree(uint32_t segno) {
   uint32_t next;
 
   std::lock_guard segmap_lock(free_i->segmap_lock);
-  clear_bit(segno, free_i->free_segmap);
+  ClearBit(segno, free_i->free_segmap);
   free_i->free_segments++;
 
-  next = find_next_bit_le(free_i->free_segmap, TotalSegs(&sbi), start_segno);
+  next = FindNextBit(free_i->free_segmap, TotalSegs(&sbi), start_segno);
   if (next >= start_segno + sbi.segs_per_sec) {
-    clear_bit(secno, free_i->free_secmap);
+    ClearBit(secno, free_i->free_secmap);
     free_i->free_sections++;
   }
 }
@@ -74,9 +74,9 @@ inline void SegMgr::SetInuse(uint32_t segno) {
   SbInfo &sbi = fs_->GetSbInfo();
   FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
   uint32_t secno = segno / sbi.segs_per_sec;
-  set_bit(segno, free_i->free_segmap);
+  SetBit(segno, free_i->free_segmap);
   free_i->free_segments--;
-  if (!test_and_set_bit(secno, free_i->free_secmap))
+  if (!TestAndSetBit(secno, free_i->free_secmap))
     free_i->free_sections--;
 }
 
@@ -88,12 +88,12 @@ inline void SegMgr::SetTestAndFree(uint32_t segno) {
   uint32_t next;
 
   std::lock_guard segmap_lock(free_i->segmap_lock);
-  if (test_and_clear_bit(segno, free_i->free_segmap)) {
+  if (TestAndClearBit(segno, free_i->free_segmap)) {
     free_i->free_segments++;
 
-    next = find_next_bit_le(free_i->free_segmap, TotalSegs(&sbi), start_segno);
+    next = FindNextBit(free_i->free_segmap, TotalSegs(&sbi), start_segno);
     if (next >= start_segno + sbi.segs_per_sec) {
-      if (test_and_clear_bit(secno, free_i->free_secmap))
+      if (TestAndClearBit(secno, free_i->free_secmap))
         free_i->free_sections++;
     }
   }
@@ -104,9 +104,9 @@ inline void SegMgr::SetTestAndInuse(uint32_t segno) {
   FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
   uint32_t secno = segno / sbi.segs_per_sec;
   std::lock_guard segmap_lock(free_i->segmap_lock);
-  if (!test_and_set_bit(segno, free_i->free_segmap)) {
+  if (!TestAndSetBit(segno, free_i->free_segmap)) {
     free_i->free_segments--;
-    if (!test_and_set_bit(secno, free_i->free_secmap))
+    if (!TestAndSetBit(secno, free_i->free_secmap))
       free_i->free_sections--;
   }
 }
@@ -158,7 +158,7 @@ inline uint32_t SegMgr::FreeSections() {
   return free_secs;
 }
 
-inline uint32_t SegMgr::PrefreeSegments() {
+uint32_t SegMgr::PrefreeSegments() {
   SbInfo &sbi = fs_->GetSbInfo();
   return GetDirtyInfo(&sbi)->nr_dirty[static_cast<int>(DirtyType::kPre)];
 }
@@ -239,7 +239,7 @@ uint8_t SegMgr::CursegAllocType(int type) {
   return curseg->alloc_type;
 }
 
-inline uint16_t SegMgr::CursegBlkoff(int type) {
+uint16_t SegMgr::CursegBlkoff(int type) {
   SbInfo &sbi = fs_->GetSbInfo();
   CursegInfo *curseg = CURSEG_I(&sbi, static_cast<CursegType>(type));
   return curseg->next_blkoff;
@@ -324,7 +324,7 @@ inline void SegMgr::SetToNextSit(SitInfo *sit_i, uint32_t start) {
   }
 }
 
-inline uint64_t SegMgr::GetMtime() {
+uint64_t SegMgr::GetMtime() {
   auto cur_time = time(nullptr);
   SbInfo &sbi = fs_->GetSbInfo();
   SitInfo *sit_i = GetSitInfo(&sbi);
@@ -333,7 +333,7 @@ inline uint64_t SegMgr::GetMtime() {
   return 0;
 }
 
-inline void SegMgr::SetSummary(Summary *sum, nid_t nid, uint32_t ofs_in_node, uint8_t version) {
+void SegMgr::SetSummary(Summary *sum, nid_t nid, uint32_t ofs_in_node, uint8_t version) {
   sum->nid = CpuToLe(nid);
   sum->ofs_in_node = CpuToLe(ofs_in_node);
   sum->version = version;
@@ -412,13 +412,13 @@ void SegMgr::LocateDirtySegment(uint32_t segno, DirtyType dirty_type) {
   if (IsCurSeg(&sbi, segno))
     return;
 
-  if (!test_and_set_bit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
+  if (!TestAndSetBit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
     dirty_i->nr_dirty[static_cast<int>(dirty_type)]++;
 
   if (dirty_type == DirtyType::kDirty) {
     SegEntry *sentry = GetSegEntry(segno);
     dirty_type = static_cast<DirtyType>(sentry->type);
-    if (!test_and_set_bit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
+    if (!TestAndSetBit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
       dirty_i->nr_dirty[static_cast<int>(dirty_type)]++;
   }
 }
@@ -427,16 +427,16 @@ void SegMgr::RemoveDirtySegment(uint32_t segno, DirtyType dirty_type) {
   SbInfo &sbi = fs_->GetSbInfo();
   DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
 
-  if (test_and_clear_bit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
+  if (TestAndClearBit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
     dirty_i->nr_dirty[static_cast<int>(dirty_type)]--;
 
   if (dirty_type == DirtyType::kDirty) {
     SegEntry *sentry = GetSegEntry(segno);
     dirty_type = static_cast<DirtyType>(sentry->type);
-    if (test_and_clear_bit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
+    if (TestAndClearBit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
       dirty_i->nr_dirty[static_cast<int>(dirty_type)]--;
-    clear_bit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)]);
-    clear_bit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)]);
+    ClearBit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)]);
+    ClearBit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)]);
   }
 }
 
@@ -475,8 +475,8 @@ void SegMgr::SetPrefreeAsFreeSegments() {
 
   fbl::AutoLock seglist_lock(&dirty_i->seglist_lock);
   while (true) {
-    segno = find_next_bit_le(dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)], total_segs,
-                             offset);
+    segno =
+        FindNextBit(dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)], total_segs, offset);
     if (segno >= total_segs)
       break;
     SetTestAndFree(segno);
@@ -492,13 +492,13 @@ void SegMgr::ClearPrefreeSegments() {
 
   fbl::AutoLock seglist_lock(&dirty_i->seglist_lock);
   while (true) {
-    segno = find_next_bit_le(dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)], total_segs,
-                             offset);
+    segno =
+        FindNextBit(dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)], total_segs, offset);
     if (segno >= total_segs)
       break;
 
     offset = segno + 1;
-    if (test_and_clear_bit(segno, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]))
+    if (TestAndClearBit(segno, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]))
       dirty_i->nr_dirty[static_cast<int>(DirtyType::kPre)]--;
 
     if (TestOpt(&sbi, kMountDiscard))
@@ -509,7 +509,7 @@ void SegMgr::ClearPrefreeSegments() {
 void SegMgr::MarkSitEntryDirty(uint32_t segno) {
   SbInfo &sbi = fs_->GetSbInfo();
   SitInfo *sit_i = GetSitInfo(&sbi);
-  if (!test_and_set_bit_le(segno, sit_i->dirty_sentries_bitmap))
+  if (!TestAndSetBit(segno, sit_i->dirty_sentries_bitmap))
     sit_i->dirty_sentries++;
 }
 
@@ -655,10 +655,10 @@ void SegMgr::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
   std::lock_guard segmap_lock(free_i->segmap_lock);
 
   auto find_other_zone = [&]() -> bool {
-    secno = find_next_zero_bit(free_i->free_secmap, total_secs, hint);
+    secno = FindNextZeroBit(free_i->free_secmap, total_secs, hint);
     if (secno >= total_secs) {
       if (dir == static_cast<int>(AllocDirection::kAllocRight)) {
-        secno = find_next_zero_bit(free_i->free_secmap, total_secs, 0);
+        secno = FindNextZeroBit(free_i->free_secmap, total_secs, 0);
         ZX_ASSERT(!(secno >= total_secs));
       } else {
         go_left = 1;
@@ -671,7 +671,7 @@ void SegMgr::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
   };
 
   if (!new_sec && ((*newseg + 1) % sbi.segs_per_sec)) {
-    segno = find_next_zero_bit(free_i->free_segmap, TotalSegs(&sbi), *newseg + 1);
+    segno = FindNextZeroBit(free_i->free_segmap, TotalSegs(&sbi), *newseg + 1);
     if (segno < TotalSegs(&sbi)) {
       got_it = true;
     }
@@ -679,12 +679,12 @@ void SegMgr::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
 
   while (!got_it) {
     if (!find_other_zone()) {
-      while (test_bit(left_start, free_i->free_secmap)) {
+      while (TestBit(left_start, free_i->free_secmap)) {
         if (left_start > 0) {
           left_start--;
           continue;
         }
-        left_start = find_next_zero_bit(free_i->free_secmap, total_secs, 0);
+        left_start = FindNextZeroBit(free_i->free_secmap, total_secs, 0);
         ZX_ASSERT(!(left_start >= total_secs));
         break;
       }
@@ -734,7 +734,7 @@ void SegMgr::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
     break;
   }
   // set it as dirty segment in free segmap
-  ZX_ASSERT(!test_bit(segno, free_i->free_segmap));
+  ZX_ASSERT(!TestBit(segno, free_i->free_segmap));
   SetInuse(segno);
   *newseg = segno;
 }
@@ -887,7 +887,7 @@ const segment_allocation default_salloc_ops = {
 };
 
 void SegMgr::EndIoWrite(bio *bio, int err) {
-  // const int uptodate = test_bit(BIO_UPTODATE, &bio->bi_flags);
+  // const int uptodate = TestBit(BIO_UPTODATE, &bio->bi_flags);
   // bio_vec *bvec = bio->bi_io_vec + bio->bi_vcnt - 1;
   // BioPrivate *p = bio->bi_private;
 
@@ -899,7 +899,7 @@ void SegMgr::EndIoWrite(bio *bio, int err) {
   // 	if (!uptodate) {
   // 		SetPageError(page);
   // 		if (page->mapping)
-  // 			set_bit(AS_EIO, &page->mapping->flags);
+  // 			SetBit(AS_EIO, &page->mapping->flags);
   // 		p->sbi->ckpt->ckpt_flags |= kCpErrorFlag;
   // 		set_page_dirty(page);
   // 	}
@@ -1587,7 +1587,7 @@ void SegMgr::FlushSitEntries() {
     // to the SIT area or not.
     flushed = FlushSitsInJournal();
 
-    while ((segno = find_next_bit_le(bitmap, nsegs, segno + 1)) < nsegs) {
+    while ((segno = FindNextBit(bitmap, nsegs, segno + 1)) < nsegs) {
       SegEntry *se = GetSegEntry(segno);
       int sit_offset, offset = -1;
 
@@ -1620,7 +1620,7 @@ void SegMgr::FlushSitEntries() {
         // udpate entry in SIT block
         SegInfoToRawSit(se, &raw_sit->entries[sit_offset]);
       }
-      __clear_bit(segno, bitmap);
+      ClearBit(segno, bitmap);
       sit_i->dirty_sentries--;
     }
   }
@@ -2074,7 +2074,7 @@ void SegMgr::DestroySegmentManager() {
   DestroyFreeSegmap();
   DestroySitInfo();
   sbi.sm_info = nullptr;
-  free(sm_info);
+  delete sm_info;
 }
 
 }  // namespace f2fs

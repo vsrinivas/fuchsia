@@ -327,6 +327,9 @@ TEST(NodeMgrTest, NodePage) {
   unittest_lib::Unmount(std::move(fs), &bc);
 }
 
+// TODO(fxbug.dev/83831) This test takes >1 minute to run on ASAN in some configurations such as ARM
+// on the buildbot. We should configure the test so there is a longer timeout and re-enable.
+#if !__has_feature(address_sanitizer)
 TEST(NodeMgrTest, Truncate) {
   std::unique_ptr<Bcache> bc;
   unittest_lib::MkfsOnFakeDev(&bc);
@@ -447,6 +450,7 @@ TEST(NodeMgrTest, Truncate) {
 
   unittest_lib::Unmount(std::move(fs), &bc);
 }
+#endif
 
 }  // namespace
 }  // namespace f2fs

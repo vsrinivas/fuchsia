@@ -122,7 +122,7 @@ inline void NodeMgr::SetToNextNat(NmInfo *nm_i, nid_t start_nid) {
     SetValidBitmap(block_off, nm_i->nat_bitmap);
 }
 
-inline void NodeMgr::FillNodeFooter(Page *page, nid_t nid, nid_t ino, uint32_t ofs, bool reset) {
+void NodeMgr::FillNodeFooter(Page *page, nid_t nid, nid_t ino, uint32_t ofs, bool reset) {
   void *kaddr = PageAddress(page);
   Node *rn = static_cast<Node *>(kaddr);
   if (reset)
@@ -151,7 +151,7 @@ void NodeMgr::FillNodeFooterBlkaddr(Page *page, block_t blkaddr) {
   rn->footer.next_blkaddr = blkaddr;
 }
 
-inline nid_t NodeMgr::InoOfNode(Page *node_page) {
+nid_t NodeMgr::InoOfNode(Page *node_page) {
   void *kaddr = PageAddress(node_page);
   Node *rn = static_cast<Node *>(kaddr);
   return LeToCpu(rn->footer.ino);
@@ -281,7 +281,7 @@ uint8_t NodeMgr::IsDentDnode(Page *page) {
   return flag & (0x1 << static_cast<int>(BitShift::kDentBitShift));
 }
 
-inline void NodeMgr::SetColdNode(VnodeF2fs *vnode, Page *page) {
+void NodeMgr::SetColdNode(VnodeF2fs *vnode, Page *page) {
   Node *rn = static_cast<Node *>(PageAddress(page));
   uint32_t flag = LeToCpu(rn->footer.flag);
 
@@ -753,7 +753,8 @@ zx_status_t NodeMgr::GetDnodeOfData(DnodeOfData *dn, pgoff_t index, int ro) {
     return err;
 
   parent = npage[0];
-  nids[1] = GetNid(parent, offset[0], true);
+  if (level != 0)
+    nids[1] = GetNid(parent, offset[0], true);
   dn->inode_page = npage[0];
   dn->inode_page_locked = true;
 
@@ -2007,9 +2008,9 @@ zx_status_t NodeMgr::InitNodeManager() {
   nm_i->init_scan_nid = LeToCpu(sbi.ckpt->next_free_nid);
   nm_i->next_scan_nid = LeToCpu(sbi.ckpt->next_free_nid);
 
-  nm_i->nat_bitmap = static_cast<char *>(malloc(nm_i->bitmap_size));
+  nm_i->nat_bitmap = new char[nm_i->bitmap_size];
   memset(nm_i->nat_bitmap, 0, nm_i->bitmap_size);
-  nm_i->nat_prev_bitmap = static_cast<char *>(malloc(nm_i->bitmap_size));
+  nm_i->nat_prev_bitmap = new char[nm_i->bitmap_size];
   memset(nm_i->nat_prev_bitmap, 0, nm_i->bitmap_size);
 
   if (!nm_i->nat_bitmap)
@@ -2044,39 +2045,42 @@ void NodeMgr::DestroyNodeManager() {
   SbInfo &sbi = fs_->GetSbInfo();
   NmInfo *nm_i = GetNmInfo(&sbi);
   FreeNid *i, *next_i;
-  NatEntry *natvec[kNatvecSize];
-  nid_t nid = 0;
-  uint32_t found;
 
   if (!nm_i)
     return;
 
-  // destroy free nid list
-  std::lock_guard free_nid_lock(nm_i->free_nid_list_lock);
-  list_for_every_entry_safe (&nm_i->free_nid_list, i, next_i, FreeNid, list) {
-    ZX_ASSERT(i->state != static_cast<int>(NidState::kNidAlloc));
-    DelFromFreeNidList(i);
-    nm_i->fcnt--;
+  {
+    // destroy free nid list
+    std::lock_guard free_nid_lock(nm_i->free_nid_list_lock);
+    list_for_every_entry_safe (&nm_i->free_nid_list, i, next_i, FreeNid, list) {
+      ZX_ASSERT(i->state != static_cast<int>(NidState::kNidAlloc));
+      DelFromFreeNidList(i);
+      nm_i->fcnt--;
+    }
   }
   ZX_ASSERT(!nm_i->fcnt);
 
-  /* destroy nat cache */
-  std::lock_guard nat_lock(nm_i->nat_tree_lock);
-  while ((found = GangLookupNatCache(nm_i, nid, kNatvecSize, natvec))) {
-    uint32_t idx;
-    for (idx = 0; idx < found; idx++) {
-      NatEntry *e = natvec[idx];
-      nid = NatGetNid(e) + 1;
+  {
+    // destroy nat cache
+    std::lock_guard nat_lock(nm_i->nat_tree_lock);
+    list_node_t *cur, *next;
+    list_for_every_safe(&nm_i->dirty_nat_entries, cur, next) {
+      NatEntry *e = containerof(cur, NatEntry, list);
+      DelFromNatCache(nm_i, e);
+    }
+
+    list_for_every_safe(&nm_i->nat_entries, cur, next) {
+      NatEntry *e = containerof(cur, NatEntry, list);
       DelFromNatCache(nm_i, e);
     }
   }
-  // TODO: Check nm_i->nat_cnt
-  // ZX_ASSERT(!nm_i->nat_cnt);
+
+  ZX_ASSERT(!nm_i->nat_cnt);
 
   delete[] nm_i->nat_bitmap;
   delete[] nm_i->nat_prev_bitmap;
+  delete sbi.nm_info;
   sbi.nm_info = nullptr;
-  delete nm_i;
 }
 
 zx_status_t NodeMgr::CreateNodeManagerCaches() {

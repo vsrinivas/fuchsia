@@ -6,10 +6,7 @@
 
 namespace f2fs {
 
-/**
- * We guarantee no failure on the returned page.
- */
-
+// We guarantee no failure on the returned page.
 Page *F2fs::GrabMetaPage(pgoff_t index) {
   Page *page;
 
@@ -395,7 +392,7 @@ zx_status_t F2fs::GetValidCheckpoint() {
   uint64_t cp1_version = 0, cp2_version = 0;
   uint64_t cp_start_blk_no;
 
-  sbi_->ckpt = static_cast<Checkpoint *>(malloc(blk_size));
+  sbi_->ckpt = reinterpret_cast<Checkpoint *>(new FsBlock);
   if (!sbi_->ckpt)
     return -ENOMEM;
   /*
@@ -444,7 +441,7 @@ zx_status_t F2fs::GetValidCheckpoint() {
   return 0;
 
 fail_no_cp:
-  free(sbi_->ckpt);
+  delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
   return -EINVAL;
 }
 

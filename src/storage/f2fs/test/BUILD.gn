@@ -13,11 +13,13 @@ group("test") {
   deps = [
     ":f2fs-fs-tests",
     ":f2fs-slow-fs-tests",
-    ":f2fs-unittest",
   ]
 }
 
 test("f2fs_unit") {
+  # TODO(fxbug.dev/83674) fix the conversion warnings and remove this config.
+  configs += [ "//build/config:Wno-conversion" ]
+
   sources = [
     "unit/bcache.cc",
     "unit/checkpoint.cc",
@@ -60,7 +62,7 @@ test("f2fs_unit") {
   ]
 }
 
-fuchsia_unittest_component("f2fs-unit") {
+fuchsia_unittest_component("f2fs-unittest") {
   manifest = "f2fs_unittest.cml"
   deps = [ ":f2fs_unit" ]
 }
@@ -70,6 +72,9 @@ test("f2fs_query_service") {
 
   # We need some extra system flags that the _ALL_SOURCE define exposes.
   configs += [ "//build/config:all_source" ]
+
+  # TODO(fxbug.dev/83674) fix the conversion warnings and remove this config.
+  configs += [ "//build/config:Wno-conversion" ]
 
   sources = [ "unit/query_service_test.cc" ]
   deps = [
@@ -88,17 +93,6 @@ test("f2fs_query_service") {
 
 storage_isolated_devmgr_unittest_v2_component("f2fs-query-service") {
   deps = [ ":f2fs_query_service" ]
-}
-
-fuchsia_test_package("f2fs-unittest") {
-  deps = [
-    ":f2fs_query_service",
-    ":f2fs_unit",
-  ]
-  test_components = [
-    ":f2fs-unit",
-    ":f2fs-query-service",
-  ]
 }
 
 fs_test_config("f2fs") {
@@ -126,6 +120,10 @@ fs_test_suite("f2fs") {
   deps = [
     ":f2fs_fs_test_config",
     "//src/storage/bin/f2fs",
+  ]
+  extra_components = [
+    ":f2fs-unittest",
+    ":f2fs-query-service",
   ]
 }
 

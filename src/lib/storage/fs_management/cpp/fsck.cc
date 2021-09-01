@@ -97,6 +97,8 @@ zx_status_t fsck(const char* device_path, disk_format_t df, const FsckOptions& o
       return FsckFat(device_path, options, cb);
     case DISK_FORMAT_BLOBFS:
       return FsckNativeFs(device_path, options, cb, fs_management::GetBinaryPath("blobfs").c_str());
+    case DISK_FORMAT_F2FS:
+      return FsckNativeFs(device_path, options, cb, fs_management::GetBinaryPath("f2fs").c_str());
     default:
       auto* format = fs_management::CustomDiskFormat::Get(df);
       if (format == nullptr) {

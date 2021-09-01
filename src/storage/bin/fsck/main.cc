@@ -25,10 +25,8 @@ struct {
   const char* name;
   disk_format_t df;
 } FILESYSTEMS[] = {
-    {"blobfs", DISK_FORMAT_BLOBFS},
-    {"minfs", DISK_FORMAT_MINFS},
-    {"fat", DISK_FORMAT_FAT},
-    {"factoryfs", DISK_FORMAT_FACTORYFS},
+    {"blobfs", DISK_FORMAT_BLOBFS},       {"minfs", DISK_FORMAT_MINFS}, {"fat", DISK_FORMAT_FAT},
+    {"factoryfs", DISK_FORMAT_FACTORYFS}, {"f2fs", DISK_FORMAT_F2FS},
 };
 
 int usage(void) {

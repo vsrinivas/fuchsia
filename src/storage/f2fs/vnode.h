@@ -210,23 +210,23 @@ class VnodeF2fs : public fs::Vnode,
 
   inline bool SetFlag(const InodeInfoFlag &flag) __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
-    return (test_and_set_bit_le(static_cast<int>(flag), &fi_.flags) != 0);
+    return (TestAndSetBit(static_cast<int>(flag), &fi_.flags) != 0);
   }
   inline bool ClearFlag(const InodeInfoFlag &flag) __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
-    return (test_and_clear_bit_le(static_cast<int>(flag), &fi_.flags) != 0);
+    return (TestAndClearBit(static_cast<int>(flag), &fi_.flags) != 0);
   }
   inline bool TestFlag(const InodeInfoFlag &flag) __TA_EXCLUDES(mutex_) {
     fs::SharedLock lock(mutex_);
-    return (test_bit(static_cast<int>(flag), &fi_.flags) != 0);
+    return (TestBit(static_cast<int>(flag), &fi_.flags) != 0);
   }
 
-  inline void ClearAdvise(const FAdvise &bit) { clear_bit(static_cast<int>(bit), &fi_.i_advise); }
-  inline void SetAdvise(const FAdvise &bit) { set_bit(static_cast<int>(bit), &fi_.i_advise); }
+  inline void ClearAdvise(const FAdvise &bit) { ClearBit(static_cast<int>(bit), &fi_.i_advise); }
+  inline void SetAdvise(const FAdvise &bit) { SetBit(static_cast<int>(bit), &fi_.i_advise); }
   inline uint8_t GetAdvise() const { return fi_.i_advise; }
   inline void SetAdvise(const uint8_t &bits) { fi_.i_advise = bits; }
   inline int IsAdviseSet(const FAdvise &bit) {
-    return test_bit(static_cast<int>(bit), &fi_.i_advise);
+    return TestBit(static_cast<int>(bit), &fi_.i_advise);
   }
 
   inline uint64_t GetDirHashLevel() const { return fi_.clevel; }
@@ -258,7 +258,7 @@ class VnodeF2fs : public fs::Vnode,
   bool WaitForDeactive(fs::SharedMutex &mutex) __TA_REQUIRES_SHARED(mutex) {
     if (IsActive()) {
       flag_cvar_.wait(mutex, [this]() {
-        return (test_bit(static_cast<int>(InodeInfoFlag::kActive), &fi_.flags) == 0);
+        return (TestBit(static_cast<int>(InodeInfoFlag::kActive), &fi_.flags) == 0);
       });
       return true;
     }
@@ -278,7 +278,7 @@ class VnodeF2fs : public fs::Vnode,
 
   void WaitForInit() __TA_EXCLUDES(mutex_) {
     fs::SharedLock lock(mutex_);
-    if (test_bit(static_cast<int>(InodeInfoFlag::kInit), &fi_.flags)) {
+    if (TestBit(static_cast<int>(InodeInfoFlag::kInit), &fi_.flags)) {
       flag_cvar_.wait(
           mutex_, [this]() __TA_EXCLUDES(mutex_) { return (TestFlag(InodeInfoFlag::kInit) == 0); });
     }

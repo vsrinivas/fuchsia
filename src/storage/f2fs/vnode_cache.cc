@@ -143,6 +143,7 @@ void VnodeCache::Downgrade(VnodeF2fs* raw_vnode) {
 
   // It is leaked to keep alive in vnode_table
   __UNUSED auto leak = fbl::ExportToRawPtr(&vnode);
+  raw_vnode->Deactivate();
 }
 
 zx_status_t VnodeCache::Lookup(const ino_t& ino, fbl::RefPtr<VnodeF2fs>* out) {

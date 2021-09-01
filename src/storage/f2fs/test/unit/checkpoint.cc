@@ -386,8 +386,6 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
   uint32_t orphan_inos = kOrphansPerBlock * kOrphanInodeBlockCnt;
   uint32_t start_ino = (cp->checkpoint_ver - 1) * orphan_inos;
 
-  fs->InitOrphanInfo();
-
   if (!after_mkfs) {
     // 2. Get orphan inodes
     std::vector<uint32_t> cp_inos;
@@ -398,6 +396,10 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
     block_t orphan_blkaddr = cp->cp_pack_start_sum - 1;
 
     ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);
+
+    for (auto ino : exp_inos) {
+      fs->RemoveOrphanInode(ino);
+    }
 
     for (block_t i = 0; i < orphan_blkaddr; i++) {
       Page *page = fs->GetMetaPage(start_blk + i);
@@ -413,6 +415,11 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
 
     // 3. Check orphan inodes
     ASSERT_TRUE(std::equal(exp_inos.begin(), exp_inos.end(), cp_inos.begin()));
+  }
+
+  if (cp->checkpoint_ver > kCheckpointLoopCnt) {
+    F2fsPutPage(cp_page, 1);
+    return;
   }
 
   // 4. Add shuffled orphan inodes for next checkpoint
@@ -455,8 +462,6 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
   uint32_t orphan_inos = kOrphansPerBlock * kOrphanInodeBlockCnt;
   uint32_t start_ino = (cp->checkpoint_ver - 1) * orphan_inos;
 
-  fs->InitOrphanInfo();
-
   if (!after_mkfs) {
     // 2. Get orphan inodes
     std::vector<uint32_t> cp_inos;
@@ -481,6 +486,7 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
       for (block_t j = 0; j < LeToCpu(orphan_blk->entry_count); j++) {
         nid_t ino = LeToCpu(orphan_blk->ino[j]);
         cp_inos.push_back(ino);
+        fs->RemoveOrphanInode(ino);
       }
       F2fsPutPage(page, 1);
     }
@@ -497,11 +503,12 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
   uint64_t seed = cp->checkpoint_ver;
   std::shuffle(inos.begin(), inos.end(), std::default_random_engine(seed));
 
-  for (auto ino : inos) {
-    fs->AddOrphanInode(ino);
+  if (cp->checkpoint_ver <= kCheckpointLoopCnt) {
+    for (auto ino : inos) {
+      fs->AddOrphanInode(ino);
+    }
+    ASSERT_EQ(fs->GetSbInfo().n_orphans, orphan_inos);
   }
-
-  ASSERT_EQ(fs->GetSbInfo().n_orphans, orphan_inos);
 
   // 5. Remove orphan inodes
   std::vector<uint32_t> rm_inos(orphan_inos / 10);
@@ -530,8 +537,6 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
   uint32_t orphan_inos = kOrphansPerBlock;
   uint32_t start_ino = (cp->checkpoint_ver - 1) * orphan_inos;
 
-  fs->InitOrphanInfo();
-
   if (!after_mkfs) {
     // 2. Check recovery orphan inodes
     ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);
@@ -546,14 +551,17 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
     // TODO(jaeyoon): Add vnode null check when Iput() is enabled.
     for (auto &vnode_refptr : vnodes) {
       ASSERT_EQ(vnode_refptr.get()->GetNlink(), (uint32_t)0);
+      fs->RemoveOrphanInode(vnode_refptr->GetKey());
       vnode_refptr.reset();
     }
     vnodes.clear();
     vnodes.shrink_to_fit();
   }
 
-  if (cp->checkpoint_ver > kCheckpointLoopCnt)
+  if (cp->checkpoint_ver > kCheckpointLoopCnt) {
+    F2fsPutPage(cp_page, 1);
     return;
+  }
 
   // 3. Add shuffled orphan inodes for next checkpoint
   std::vector<uint32_t> inos(orphan_inos);
@@ -626,10 +634,12 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
             IsRootInode(static_cast<CursegType>(i), j))  // root inode dentry
           continue;
 
-        ASSERT_EQ(curseg->sum_blk->entries[j].nid, (uint32_t)3);
+        nid_t nid = curseg->sum_blk->entries[j].nid;
+        ASSERT_EQ(nid, (uint32_t)3);
         ASSERT_EQ(static_cast<uint64_t>(curseg->sum_blk->entries[j].version),
                   cp->checkpoint_ver - 1);
-        ASSERT_EQ(curseg->sum_blk->entries[j].ofs_in_node, j);
+        uint16_t ofs_in_node = curseg->sum_blk->entries[j].ofs_in_node;
+        ASSERT_EQ(ofs_in_node, j);
       }
     }
   }
@@ -709,11 +719,13 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
         if (cp->checkpoint_ver == 2 && IsRootInode(static_cast<CursegType>(i), j))  // root inode
           continue;
 
-        ASSERT_EQ(curseg->sum_blk->entries[j].nid, cp->checkpoint_ver - 1);
+        nid_t nid = curseg->sum_blk->entries[j].nid;
+        ASSERT_EQ(nid, cp->checkpoint_ver - 1);
         if (!IsNodeSeg(static_cast<CursegType>(i))) {
           ASSERT_EQ(static_cast<uint64_t>(curseg->sum_blk->entries[j].version),
                     cp->checkpoint_ver - 1);
-          ASSERT_EQ(curseg->sum_blk->entries[j].ofs_in_node, j);
+          uint16_t ofs_in_node = curseg->sum_blk->entries[j].ofs_in_node;
+          ASSERT_EQ(ofs_in_node, j);
         }
       }
     }
@@ -793,8 +805,8 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
       ASSERT_TRUE(fs->Segmgr().FlushSitsInJournal());
 
       // Clear dirty sentries
-      while ((segno = find_next_bit_le(bitmap, nsegs, segno + 1)) < nsegs) {
-        __clear_bit(segno, bitmap);
+      while ((segno = FindNextBit(bitmap, nsegs, segno + 1)) < nsegs) {
+        ClearBit(segno, bitmap);
         sit_i->dirty_sentries--;
       }
 
@@ -869,7 +881,6 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
         list_delete(&ne->list);
         nm_i->nat_cnt--;
         delete ne;
-        ne->checkpointed = true;
       }
 
 #ifdef F2FS_BU_DEBUG

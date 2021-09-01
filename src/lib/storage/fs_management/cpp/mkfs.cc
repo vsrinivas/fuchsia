@@ -118,6 +118,9 @@ zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
     case DISK_FORMAT_BLOBFS:
       return MkfsNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), device_path, cb, options,
                           true);
+    case DISK_FORMAT_F2FS:
+      return MkfsNativeFs(fs_management::GetBinaryPath("f2fs").c_str(), device_path, cb, options,
+                          true);
     default:
       auto* format = fs_management::CustomDiskFormat::Get(df);
       if (format == nullptr) {

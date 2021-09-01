@@ -60,20 +60,21 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
   return ZX_OK;
 }
 
-int Dir::IsMultimediaFile(const char *s, const char *sub) {
-  int slen = strlen(s);
+int Dir::IsMultimediaFile(VnodeF2fs *vnode, const char *sub) {
+  int slen = vnode->GetNameLen();
   int sublen = strlen(sub);
   int ret;
 
   if (sublen > slen)
     return 1;
 
-  if (ret = memcmp(s + slen - sublen, sub, sublen); ret != 0) { /* compare upper case */
+  if (ret = memcmp(vnode->GetName() + slen - sublen, sub, sublen);
+      ret != 0) { /* compare upper case */
     int i;
     char upper_sub[8];
     for (i = 0; i < sublen && i < static_cast<int>(sizeof(upper_sub)); i++)
       upper_sub[i] = toupper(sub[i]);
-    return memcmp(s + slen - sublen, upper_sub, sublen);
+    return memcmp(vnode->GetName() + slen - sublen, upper_sub, sublen);
   }
 
   return ret;
@@ -82,13 +83,13 @@ int Dir::IsMultimediaFile(const char *s, const char *sub) {
 /**
  * Set multimedia files as cold files for hot/cold data separation
  */
-inline void Dir::SetColdFile(const char *name, VnodeF2fs *vnode) {
+inline void Dir::SetColdFile(VnodeF2fs *vnode) {
   int i;
   uint8_t(*extlist)[8] = Vfs()->RawSb().extension_list;
 
   int count = LeToCpu(Vfs()->RawSb().extension_count);
   for (i = 0; i < count; i++) {
-    if (!IsMultimediaFile(name, reinterpret_cast<const char *>(extlist[i]))) {
+    if (!IsMultimediaFile(vnode, reinterpret_cast<const char *>(extlist[i]))) {
       vnode->SetAdvise(FAdvise::kCold);
       break;
     }
@@ -107,7 +108,7 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
   vnode->SetName(name);
 
   if (!TestOpt(&sbi, kMountDisableExtIdentify))
-    SetColdFile(name.data(), vnode);
+    SetColdFile(vnode);
 
   vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
@@ -145,6 +146,7 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _target) {
   DirEntry *old_entry = FindEntry(name, &old_entry_page);
   if (old_entry != nullptr) {
     nid_t old_ino = LeToCpu(old_entry->ino);
+    F2fsPutPage(old_entry_page, 0);
     if (old_ino == target->Ino())
       return ZX_ERR_ALREADY_EXISTS;
   }
@@ -417,14 +419,17 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
 
   old_ino = LeToCpu(old_entry->ino);
   if (zx_status_t err = VnodeF2fs::Vget(Vfs(), old_ino, &old_vn_ref); err != ZX_OK) {
+    F2fsPutPage(old_page, 0);
     return err;
   }
 
   old_vnode = old_vn_ref.get();
   ZX_ASSERT(old_vnode->IsSameName(oldname));
 
-  if (!old_vnode->IsDir() && (src_must_be_dir || dst_must_be_dir))
+  if (!old_vnode->IsDir() && (src_must_be_dir || dst_must_be_dir)) {
+    F2fsPutPage(old_page, 0);
     return ZX_ERR_NOT_DIR;
+  }
 
   ZX_ASSERT(!src_must_be_dir || old_vnode->IsDir());
 
@@ -441,10 +446,14 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     }
 
     auto is_subdir = (static_cast<Dir *>(old_vnode))->IsSubdir(new_dir);
-    if (is_subdir.is_error())
+    if (is_subdir.is_error()) {
+      F2fsPutPage(old_page, 0);
       return is_subdir.error_value();
-    if (*is_subdir)
+    }
+    if (*is_subdir) {
+      F2fsPutPage(old_page, 0);
       return ZX_ERR_INVALID_ARGS;
+    }
   }
 
   do {
@@ -474,17 +483,25 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       new_vnode = new_vn_ref.get();
       ZX_ASSERT(new_vnode->IsSameName(newname));
 
-      if (!new_vnode->IsDir() && (src_must_be_dir || dst_must_be_dir))
+      if (!new_vnode->IsDir() && (src_must_be_dir || dst_must_be_dir)) {
+        F2fsPutPage(old_page, 0);
         return ZX_ERR_NOT_DIR;
+      }
 
-      if (old_vnode->IsDir() && !new_vnode->IsDir())
+      if (old_vnode->IsDir() && !new_vnode->IsDir()) {
+        F2fsPutPage(old_page, 0);
         return ZX_ERR_NOT_DIR;
+      }
 
-      if (!old_vnode->IsDir() && new_vnode->IsDir())
+      if (!old_vnode->IsDir() && new_vnode->IsDir()) {
+        F2fsPutPage(old_page, 0);
         return ZX_ERR_NOT_FILE;
+      }
 
-      if (old_dir == new_dir && oldname == newname)
+      if (old_dir == new_dir && oldname == newname) {
+        F2fsPutPage(old_page, 0);
         return ZX_OK;
+      }
 
       if (old_dir_entry &&
           (!new_vnode->IsDir() || !(static_cast<Dir *>(new_vnode))->IsEmptyDir())) {
@@ -549,8 +566,10 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     // TODO(djkim): remove this after pager is available
     // If old_dir == new_dir, old_page is not up-to-date after add new entry with newname
     // Therefore, old_page should be read again, unless pager is implemented
-    if (old_dir == new_dir)
+    if (old_dir == new_dir) {
+      F2fsPutPage(old_page, 0);
       old_entry = FindEntry(oldname, &old_page);
+    }
 
     DeleteEntry(old_entry, old_page, NULL);
 
@@ -574,13 +593,14 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
 }
 
 zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out) {
-  Page *page;
+  Page *page = nullptr;
   zx_status_t status = ZX_OK;
 
   if (GetNlink() == 0)
     return ZX_ERR_NOT_FOUND;
 
   if (FindEntry(name, &page) != nullptr) {
+    F2fsPutPage(page, 0);
     return ZX_ERR_ALREADY_EXISTS;
   }
 

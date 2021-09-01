@@ -119,6 +119,9 @@ static_library("f2fs") {
   if (f2fs_roll_fwd) {
     defines += [ "F2FS_ROLL_FORWARD" ]
   }
+
+  # TODO(fxbug.dev/83674) fix the conversion warnings and remove this config.
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {
@@ -126,6 +129,5 @@ group("tests") {
   deps = [
     "test:f2fs-fs-tests",
     "test:f2fs-slow-fs-tests",
-    "test:f2fs-unittest",
   ]
 }

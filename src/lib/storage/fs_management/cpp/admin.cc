@@ -140,6 +140,9 @@ zx::status<> FsInit(zx::channel device, disk_format_t df, const InitOptions& opt
     case DISK_FORMAT_FACTORYFS:
       return InitNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), std::move(device),
                           options, std::move(outgoing_directory), std::move(crypt_client));
+    case DISK_FORMAT_F2FS:
+      return InitNativeFs(fs_management::GetBinaryPath("f2fs").c_str(), std::move(device), options,
+                          std::move(outgoing_directory), std::move(crypt_client));
     default:
       auto* format = CustomDiskFormat::Get(df);
       if (format == nullptr) {

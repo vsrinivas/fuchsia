@@ -107,7 +107,6 @@ struct NmInfo {
   nid_t next_scan_nid = 0;  // the next nid to be scanned
 
   // NAT cache management
-  RadixTreeRoot nat_root;         // root of the nat entry cache
   fs::SharedMutex nat_tree_lock;  // protect nat_tree_lock
   uint32_t nat_cnt = 0;           // the # of cached nat entries
   list_node_t nat_entries;        // cached nat entry list (clean)
@@ -320,9 +319,9 @@ static inline Checkpoint *GetCheckpoint(SbInfo *sbi) {
   return static_cast<Checkpoint *>(sbi->ckpt);
 }
 
-static inline NmInfo *GetNmInfo(SbInfo *sbi) { return static_cast<NmInfo *>(sbi->nm_info); }
+static inline NmInfo *GetNmInfo(SbInfo *sbi) { return sbi->nm_info; }
 
-static inline SmInfo *GetSmInfo(SbInfo *sbi) { return static_cast<SmInfo *>(sbi->sm_info); }
+static inline SmInfo *GetSmInfo(SbInfo *sbi) { return sbi->sm_info; }
 
 static inline SitInfo *GetSitInfo(SbInfo *sbi) {
   return static_cast<SitInfo *>((GetSmInfo(sbi)->SitInfo));

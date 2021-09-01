@@ -75,7 +75,7 @@ bool SegMgr::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc
   uint32_t nsearched = 0;
 
   while (1) {
-    uint32_t segno = find_next_bit_le(p.dirty_segmap, TotalSegs(&sbi), p.offset);
+    uint32_t segno = FindNextBit(p.dirty_segmap, TotalSegs(&sbi), p.offset);
     if (segno >= TotalSegs(&sbi)) {
       if (sbi.last_victim[static_cast<int>(p.gc_mode)]) {
         sbi.last_victim[static_cast<int>(p.gc_mode)] = 0;
@@ -86,10 +86,10 @@ bool SegMgr::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc
     }
     p.offset = ((segno / p.ofs_unit) * p.ofs_unit) + p.ofs_unit;
 
-    if (test_bit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)]))
+    if (TestBit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)]))
       continue;
     if (gc_type == GcType::kBgGc &&
-        test_bit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)]))
+        TestBit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)]))
       continue;
     if (IsCurSec(&sbi, GetSecNo(&sbi, segno)))
       continue;
@@ -116,7 +116,7 @@ got_it:
     *out = (p.min_segno / p.ofs_unit) * p.ofs_unit;
     if (p.alloc_mode == AllocMode::kLFS) {
       for (uint32_t i = 0; i < p.ofs_unit; i++)
-        set_bit(*out + i, dirty_i->victim_segmap[static_cast<int>(gc_type)]);
+        SetBit(*out + i, dirty_i->victim_segmap[static_cast<int>(gc_type)]);
     }
   }
 

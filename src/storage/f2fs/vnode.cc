@@ -27,7 +27,7 @@ void VnodeF2fs::SetMode(const umode_t &mode) { mode_ = mode; }
 
 umode_t VnodeF2fs::GetMode() const { return mode_; }
 
-inline bool VnodeF2fs::IsDir() const { return S_ISDIR(mode_); }
+bool VnodeF2fs::IsDir() const { return S_ISDIR(mode_); }
 
 bool VnodeF2fs::IsReg() const { return S_ISREG(mode_); }
 
@@ -136,7 +136,6 @@ void VnodeF2fs::RecycleNode() {
   }
   if (GetNlink()) {
     Vfs()->GetVCache().Downgrade(this);
-    Deactivate();
   } else {
     EvictVnode();
     Deactivate();

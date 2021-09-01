@@ -23,11 +23,6 @@ using ino_t = uint32_t;
 using pgoff_t = unsigned long;
 using atomic_t = std::atomic_int;
 using umode_t = uint16_t;
-// Radix Tree
-struct RadixTreeRoot {};
-
-// dentry
-struct dentry {};
 
 #if BYTE_ORDER == BIG_ENDIAN
 inline uint16_t LeToCpu(uint16_t x) { return SWAP_16(x); }

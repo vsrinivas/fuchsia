@@ -9,12 +9,10 @@
 
 namespace f2fs::fsck {
 
-struct Block {
-  uint8_t data[kBlockSize];
-};
+using Block = FsBlock;
 
 template <typename T>
-static inline void DisplayMember(uint32_t typesize, T &value, std::string name) {
+static inline void DisplayMember(uint32_t typesize, T value, std::string name) {
   if (typesize == sizeof(char)) {
     std::cout << name << " [" << value << "]" << std::endl;
   } else {
@@ -448,7 +446,7 @@ void FsckWorker::PrintDentry(uint32_t depth, std::string_view &name, DentryBlock
   name_len = LeToCpu(de_blk->dentry[idx].name_len);
   next_idx = idx + (name_len + kDentrySlotLen - 1) / kDentrySlotLen;
 
-  bit_offset = find_next_bit_le(de_blk->dentry_bitmap, kNrDentryInBlock, next_idx);
+  bit_offset = FindNextBit(de_blk->dentry_bitmap, kNrDentryInBlock, next_idx);
   if (bit_offset >= kNrDentryInBlock && last_blk)
     last_de = 1;
 
@@ -489,7 +487,7 @@ void FsckWorker::ChkDentryBlk(Inode *inode, uint32_t blk_addr, uint32_t *child_c
   fsck->dentry_depth++;
 
   for (i = 0; i < kNrDentryInBlock;) {
-    if (test_bit(i, (unsigned long *)de_blk->dentry_bitmap) == 0x0) {
+    if (TestBit(i, de_blk->dentry_bitmap) == 0x0) {
       i++;
       continue;
     }
@@ -647,8 +645,9 @@ zx_status_t FsckWorker::Init() {
 
   fsck->nr_main_blks = sm_i->main_segments << sbi_.log_blocks_per_seg;
   fsck->main_area_bitmap_sz = (fsck->nr_main_blks + 7) / 8;
-  fsck->main_area_bitmap = (char *)calloc(fsck->main_area_bitmap_sz, 1);
+  fsck->main_area_bitmap = new char[fsck->main_area_bitmap_sz];
   ZX_ASSERT(fsck->main_area_bitmap != nullptr);
+  memset(fsck->main_area_bitmap, 0, fsck->main_area_bitmap_sz);
 
   BuildNatAreaBitmap();
   BuildSitAreaBitmap();
@@ -742,10 +741,10 @@ zx_status_t FsckWorker::Verify() {
 void FsckWorker::Free() {
   FsckInfo *fsck = &fsck_;
   if (fsck->main_area_bitmap != nullptr)
-    free(fsck->main_area_bitmap);
+    delete[] fsck->main_area_bitmap;
 
   if (fsck->nat_area_bitmap != nullptr)
-    delete[] fsck->nat_area_bitmap;  // free
+    delete[] fsck->nat_area_bitmap;
 
   if (fsck->sit_area_bitmap != nullptr)
     delete[] fsck->sit_area_bitmap;
@@ -1593,6 +1592,7 @@ void FsckWorker::BuildSitAreaBitmap() {
   fsck->sit_area_bitmap_sz = sm_i->main_segments * kSitVBlockMapSize;
   fsck->sit_area_bitmap = new char[fsck->sit_area_bitmap_sz];
   ZX_ASSERT(fsck->sit_area_bitmap_sz == fsck->main_area_bitmap_sz);
+  memset(fsck->sit_area_bitmap, 0, fsck->sit_area_bitmap_sz);
   char *ptr = fsck->sit_area_bitmap;
 
   for (uint64_t segno = 0; segno < sm_i->main_segments; segno++) {
@@ -1670,6 +1670,7 @@ void FsckWorker::BuildNatAreaBitmap() {
   fsck->nat_area_bitmap_sz = (fsck->nr_nat_entries + 7) / 8;
   fsck->nat_area_bitmap = new char[fsck->nat_area_bitmap_sz];
   ZX_ASSERT(fsck->nat_area_bitmap != nullptr);
+  memset(fsck->nat_area_bitmap, 0, fsck->nat_area_bitmap_sz);
 
   for (block_off = 0; block_off < nr_nat_blks; block_off++) {
     seg_off = block_off >> sbi_.log_blocks_per_seg;
@@ -1782,7 +1783,7 @@ void FsckWorker::DoUmount() {
   }
   delete[] sit_i->sentries;
 
-  delete sit_i->sit_bitmap;
+  delete[] sit_i->sit_bitmap;
   delete sm_i->SitInfo;
 
   // free sm_info

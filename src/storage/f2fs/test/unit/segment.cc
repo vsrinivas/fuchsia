@@ -110,16 +110,16 @@ TEST(SegmentMgr, DirtyToFree) {
   // check the bitmaps and the number of free/prefree segments
   ASSERT_EQ(fs->Segmgr().FreeSegments(), nfree_segs - nprefree);
   for (auto &pre : prefree_array) {
-    ASSERT_TRUE(test_bit(pre, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]));
-    ASSERT_TRUE(test_bit(pre, free_i->free_segmap));
+    ASSERT_TRUE(TestBit(pre, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]));
+    ASSERT_TRUE(TestBit(pre, free_i->free_segmap));
   }
   // triggers checkpoint to make prefree segments transit to free ones
   fs->Segmgr().BalanceFs();
 
   // check the bitmaps and the number of free/prefree segments
   for (auto &pre : prefree_array) {
-    ASSERT_FALSE(test_bit(pre, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]));
-    ASSERT_FALSE(test_bit(pre, free_i->free_segmap));
+    ASSERT_FALSE(TestBit(pre, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]));
+    ASSERT_FALSE(TestBit(pre, free_i->free_segmap));
   }
   ASSERT_EQ(fs->Segmgr().FreeSegments(), nfree_segs);
   ASSERT_FALSE(fs->Segmgr().PrefreeSegments());

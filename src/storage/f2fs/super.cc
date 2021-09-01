@@ -26,7 +26,7 @@ void F2fs::PutSuper() {
   node_mgr_->DestroyNodeManager();
   seg_mgr_->DestroySegmentManager();
 
-  delete sbi_->ckpt;
+  delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
 
 #if 0  // porting needed
   //   brelse(sbi_->raw_super_buf);
@@ -419,7 +419,7 @@ free_sm:
   seg_mgr_->DestroySegmentManager();
   seg_mgr_.reset();
 free_cp:
-  delete sbi_->ckpt;
+  delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
 free_meta_inode:
 #if 0  // porting needed
   // MakeBadInode(sbi_->meta_inode);

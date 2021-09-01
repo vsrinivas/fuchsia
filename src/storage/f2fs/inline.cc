@@ -30,7 +30,7 @@ DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
   DirEntry *de = nullptr;
 
   for (uint64_t bit_pos = 0; bit_pos < kNrInlineDentry;) {
-    bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrInlineDentry, bit_pos);
+    bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrInlineDentry, bit_pos);
     if (bit_pos >= kNrInlineDentry)
       break;
 
@@ -57,6 +57,7 @@ DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
   }
 
   de = nullptr;
+  F2fsPutPage(node_page, 0);
 #if 0  // porting needed
   // unlock_page(node_page);
 #endif
@@ -100,8 +101,8 @@ zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode, VnodeF2fs *parent) {
   memcpy(dentry_blk->filename[1], "..", 2);
   SetDeType(de, vnode);
 
-  test_and_set_bit_le(0, &dentry_blk->dentry_bitmap);
-  test_and_set_bit_le(1, &dentry_blk->dentry_bitmap);
+  TestAndSetBit(0, dentry_blk->dentry_bitmap);
+  TestAndSetBit(1, dentry_blk->dentry_bitmap);
 
 #if 0  // porting needed
   // set_page_dirty(ipage);
@@ -123,11 +124,11 @@ unsigned int Dir::RoomInInlineDir(InlineDentry *dentry_blk, int slots) {
   int bit_start = 0;
 
   while (true) {
-    int zero_start = find_next_zero_bit_le(&dentry_blk->dentry_bitmap, kNrInlineDentry, bit_start);
+    int zero_start = FindNextZeroBit(dentry_blk->dentry_bitmap, kNrInlineDentry, bit_start);
     if (zero_start >= static_cast<int>(kNrInlineDentry))
       return kNrInlineDentry;
 
-    int zero_end = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrInlineDentry, zero_start);
+    int zero_end = FindNextBit(dentry_blk->dentry_bitmap, kNrInlineDentry, zero_start);
     if (zero_end - zero_start >= slots)
       return zero_start;
 
@@ -254,7 +255,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
   de->ino = CpuToLe(vnode->Ino());
   SetDeType(de, vnode);
   for (int i = 0; i < slots; i++)
-    test_and_set_bit_le(bit_pos + i, &dentry_blk->dentry_bitmap);
+    TestAndSetBit(bit_pos + i, dentry_blk->dentry_bitmap);
 #if 0  // porting needed
   // set_page_dirty(ipage);
 #else
@@ -289,7 +290,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   unsigned int bit_pos = dentry - inline_dentry->dentry;
   int slots = GetDentrySlots(LeToCpu(dentry->name_len));
   for (int i = 0; i < slots; i++)
-    test_and_clear_bit_le(bit_pos + i, &inline_dentry->dentry_bitmap);
+    TestAndClearBit(bit_pos + i, inline_dentry->dentry_bitmap);
 
 #if 0  // porting needed
   // set_page_dirty(page);
@@ -324,7 +325,7 @@ bool Dir::IsEmptyInlineDir() {
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(ipage);
   unsigned int bit_pos = 2;
-  bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrInlineDentry, bit_pos);
+  bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrInlineDentry, bit_pos);
 
   F2fsPutPage(ipage, 1);
 
@@ -355,7 +356,7 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
   InlineDentry *inline_dentry = GetInlineDentryAddr(ipage);
 
   while (bit_pos < kNrInlineDentry) {
-    bit_pos = find_next_bit_le(&inline_dentry->dentry_bitmap, kNrInlineDentry, bit_pos);
+    bit_pos = FindNextBit(inline_dentry->dentry_bitmap, kNrInlineDentry, bit_pos);
     if (bit_pos >= kNrInlineDentry)
       break;
 

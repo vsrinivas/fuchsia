@@ -5,6 +5,9 @@
 executable("f2fs") {
   sources = [ "main.cc" ]
 
+  # TODO fix the conversion warnings and remove this config.
+  configs += [ "//build/config:Wno-conversion" ]
+
   deps = [
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
     "//sdk/lib/sys/inspect/cpp",

@@ -124,4 +124,5 @@ type FsType = strict enum : uint32 {
     MINFS = 0x6e694d21;
     MEMFS = 0x3e694d21;
     FXFS = 0x73667866;
+    F2FS = 0xfe694d21;
 };

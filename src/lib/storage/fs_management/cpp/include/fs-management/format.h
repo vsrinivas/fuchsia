@@ -23,6 +23,7 @@ typedef enum disk_format_type {
   DISK_FORMAT_VBMETA = 10,
   DISK_FORMAT_BOOTPART = 11,
   DISK_FORMAT_FXFS = 12,
+  DISK_FORMAT_F2FS = 13,
   DISK_FORMAT_COUNT_,
 } disk_format_t;
 
@@ -61,6 +62,13 @@ static const uint8_t vbmeta_magic[4] = {
     'V',
     'B',
     '0',
+};
+
+static const uint8_t f2fs_magic[4] = {
+    0x10,
+    0x20,
+    0xf5,
+    0xf2,
 };
 
 disk_format_t detect_disk_format(int fd);

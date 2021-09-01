@@ -762,6 +762,7 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
     case DISK_FORMAT_VBMETA:
     case DISK_FORMAT_UNKNOWN:
     case DISK_FORMAT_FXFS:
+    case DISK_FORMAT_F2FS:
     case DISK_FORMAT_COUNT_:
       return ZX_ERR_NOT_SUPPORTED;
   }

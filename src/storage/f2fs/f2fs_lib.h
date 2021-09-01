@@ -74,51 +74,51 @@ inline void *ErrPtr(long error) { return nullptr; }
 inline size_t DivRoundUp(size_t n, size_t d) { return (((n) + (d)-1) / (d)); }
 inline size_t BitsToLongs(size_t nr) { return DivRoundUp(nr, kBitsPerByte * sizeof(long)); }
 
-static inline void set_bit(int nr, void *addr) {
-  uint64_t *bitmap = static_cast<uint64_t *>(addr);
-  uint32_t size_per_iter = sizeof(uint64_t) * 8;
+static inline void SetBit(int nr, void *addr) {
+  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+  uint32_t size_per_iter = 8;
 
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  bitmap[iter] |= 1ULL << offset_in_iter;
+  bitmap[iter] |= 1U << offset_in_iter;
 }
 
-static inline void clear_bit(int nr, void *addr) {
-  uint64_t *bitmap = static_cast<uint64_t *>(addr);
-  uint32_t size_per_iter = sizeof(uint64_t) * 8;
+static inline void ClearBit(int nr, void *addr) {
+  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+  uint32_t size_per_iter = 8;
 
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  bitmap[iter] &= ~(1ULL << offset_in_iter);
+  bitmap[iter] &= ~(1U << offset_in_iter);
 }
 
-static inline int test_bit(int nr, void *addr) {
-  uint64_t *bitmap = static_cast<uint64_t *>(addr);
-  uint32_t size_per_iter = sizeof(uint64_t) * 8;
+static inline int TestBit(int nr, void *addr) {
+  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+  uint32_t size_per_iter = 8;
 
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  int ret = (bitmap[iter] & (1ULL << offset_in_iter)) >> offset_in_iter;
+  int ret = (bitmap[iter] & (1U << offset_in_iter)) >> offset_in_iter;
 
   return ret;
 }
 
-static inline int find_next_zero_bit_le(void *addr, uint32_t size, uint32_t offset) {
-  uint64_t *bitmap = static_cast<uint64_t *>(addr);
-  uint32_t size_per_iter = sizeof(uint64_t) * 8;
+static inline int FindNextZeroBit(void *addr, uint32_t size, uint32_t offset) {
+  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+  uint32_t size_per_iter = 8;
 
   while (offset < size) {
     uint32_t iter = offset / size_per_iter;
     uint32_t offset_in_iter = offset % size_per_iter;
 
-    uint64_t mask = (~0ULL << offset_in_iter);
-    uint64_t res = bitmap[iter] & mask;
+    uint8_t mask = (~0U << offset_in_iter);
+    uint8_t res = bitmap[iter] & mask;
     if (res != mask) {  // found
       for (; offset_in_iter < size_per_iter; offset_in_iter++) {
-        if ((bitmap[iter] & (1ULL << offset_in_iter)) == 0) {
+        if ((bitmap[iter] & (1U << offset_in_iter)) == 0) {
           return std::min(iter * size_per_iter + offset_in_iter, size);
         }
       }
@@ -130,23 +130,19 @@ static inline int find_next_zero_bit_le(void *addr, uint32_t size, uint32_t offs
   return size;
 }
 
-static inline int find_next_zero_bit(void *addr, uint32_t size, uint32_t offset) {
-  return find_next_zero_bit_le(addr, (uint32_t)size, (uint32_t)offset);
-}
-
-static inline int find_next_bit_le(void *addr, uint32_t size, uint32_t offset) {
-  uint64_t *bitmap = static_cast<uint64_t *>(addr);
-  uint32_t size_per_iter = sizeof(uint64_t) * 8;
+static inline int FindNextBit(void *addr, uint32_t size, uint32_t offset) {
+  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+  uint32_t size_per_iter = 8;
 
   while (offset < size) {
     uint32_t iter = offset / size_per_iter;
     uint32_t offset_in_iter = offset % size_per_iter;
 
-    uint64_t mask = (~0ULL << offset_in_iter);
-    uint64_t res = bitmap[iter] & mask;
+    uint8_t mask = (~0U << offset_in_iter);
+    uint8_t res = bitmap[iter] & mask;
     if (res != 0) {  // found
       for (; offset_in_iter < size_per_iter; offset_in_iter++) {
-        if ((bitmap[iter] & (1ULL << offset_in_iter)) != 0) {
+        if ((bitmap[iter] & (1U << offset_in_iter)) != 0) {
           return std::min(iter * size_per_iter + offset_in_iter, size);
         }
       }
@@ -158,43 +154,31 @@ static inline int find_next_bit_le(void *addr, uint32_t size, uint32_t offset) {
   return size;
 }
 
-static inline int find_first_bit(void *addr, size_t size) {
-  return find_next_bit_le(addr, size, 0);
-}
-
-static inline int test_and_set_bit_le(int nr, void *addr) {
-  uint64_t *bitmap = static_cast<uint64_t *>(addr);
-  uint32_t size_per_iter = sizeof(uint64_t) * 8;
+static inline int TestAndSetBit(int nr, void *addr) {
+  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+  uint32_t size_per_iter = 8;
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  int ret = (bitmap[iter] & (1ULL << offset_in_iter)) >> offset_in_iter;
+  int ret = (bitmap[iter] & (1U << offset_in_iter)) >> offset_in_iter;
 
-  bitmap[iter] |= 1ULL << offset_in_iter;
+  bitmap[iter] |= 1U << offset_in_iter;
 
   return ret;
 }
 
-static inline int test_and_set_bit(int nr, void *addr) { return test_and_set_bit_le(nr, addr); }
-
-static inline int test_and_clear_bit_le(int nr, void *addr) {
-  uint64_t *bitmap = static_cast<uint64_t *>(addr);
-  uint32_t size_per_iter = sizeof(uint64_t) * 8;
+static inline int TestAndClearBit(int nr, void *addr) {
+  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+  uint32_t size_per_iter = 8;
 
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  int ret = (bitmap[iter] & (1ULL << offset_in_iter)) >> offset_in_iter;
+  int ret = (bitmap[iter] & (1U << offset_in_iter)) >> offset_in_iter;
 
-  bitmap[iter] &= ~(1ULL << offset_in_iter);
+  bitmap[iter] &= ~(1U << offset_in_iter);
 
   return ret;
-}
-
-static inline int test_and_clear_bit(int nr, void *addr) { return test_and_clear_bit_le(nr, addr); }
-
-static inline void __clear_bit(int nr, void *addr) {
-  *((uint32_t *)addr + (nr >> 5)) &= ~(1 << (nr & 31));
 }
 
 /*

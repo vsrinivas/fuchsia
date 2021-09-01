@@ -175,7 +175,7 @@ void CheckChildrenInBlock(Dir *vn, unsigned int bidx, std::unordered_set<std::st
   ASSERT_EQ(vn->FindDataPage(bidx, &page), ZX_OK);
   DentryBlock *dentry_blk = reinterpret_cast<DentryBlock *>(page);
 
-  uint64_t bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
+  uint64_t bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
   while (bit_pos < kNrDentryInBlock) {
     DirEntry *de = &dentry_blk->dentry[bit_pos];
     uint64_t slots = (LeToCpu(de->name_len) + kNameLen - 1) / kNameLen;
@@ -190,7 +190,7 @@ void CheckChildrenInBlock(Dir *vn, unsigned int bidx, std::unordered_set<std::st
     ASSERT_NE(iter, childs.end());
     childs.erase(iter);
 
-    bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_pos + slots);
+    bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_pos + slots);
   }
 
   ASSERT_TRUE(childs.empty());

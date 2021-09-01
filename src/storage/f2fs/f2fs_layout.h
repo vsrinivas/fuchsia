@@ -46,6 +46,10 @@ constexpr int kMaxActiveLogs = 16;
 constexpr int kMaxActiveNodeLogs = 8;
 constexpr int kMaxActiveDataLogs = 8;
 
+struct FsBlock {
+  uint8_t data[kBlockSize];
+};
+
 struct GlobalParameters {
   uint32_t sector_size = 0;
   uint32_t reserved_segments = 0;

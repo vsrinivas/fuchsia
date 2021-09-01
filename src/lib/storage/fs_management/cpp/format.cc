@@ -68,6 +68,7 @@ __EXPORT const char* disk_format_string(disk_format_t fs_type) {
       [DISK_FORMAT_VBMETA] = "vbmeta",
       [DISK_FORMAT_BOOTPART] = "bootpart",
       [DISK_FORMAT_FXFS] = "fxfs",
+      [DISK_FORMAT_F2FS] = "f2fs",
   };
 
   if (fs_type < DISK_FORMAT_COUNT_) {

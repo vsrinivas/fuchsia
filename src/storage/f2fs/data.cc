@@ -291,7 +291,7 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, Page **out
 #if 0  // porting needed
 // static void read_end_io(bio *bio, int err)
 // {
-//   const int uptodate = test_bit(BIO_UPTODATE, &bio->bi_flags);
+//   const int uptodate = TestBit(BIO_UPTODATE, &bio->bi_flags);
 //   bio_vec *bvec = bio->bi_io_vec + bio->bi_vcnt - 1;
 
 //   do {
