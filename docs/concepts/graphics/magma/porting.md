@@ -206,8 +206,8 @@ Testing at this stage:
 * `readelf -d` on the shared library to ensure it has no dependencies besides
   libc.so and libzircon.so.
 * Launching the vulkan loader using `fx shell cat
-  /svc/fuchsia.vulkan.loader.Loader` and checking `fx iquery core/vulkan_loader`
-  to see if it's loaded. Errors will go to syslog.
+  /svc/fuchsia.vulkan.loader.Loader` and checking `ffx inspect show
+  core/vulkan_loader` to see if it's loaded. Errors will go to syslog.
 * Run the [icd_load][icd_load] test. This test will check if any ICD on the
   system works, so ensure no other ICDs are on the system before running it.
 

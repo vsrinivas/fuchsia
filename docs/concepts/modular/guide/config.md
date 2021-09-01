@@ -19,11 +19,11 @@ The file may contain (non-standard JSON) C-style comments
 The configuration provided to `basemgr` is available through
 the [component inspection][docs-inspect] of the `basemgr` component.
 
-Use [`iquery`][docs-iquery] or `fx iquery` to query the configuration
+Use [`ffx inspect`][ffx-inspect] to query the configuration
 of a running `basemgr`:
 
 ```posix-terminal
-iquery show 'basemgr.cmx:root:config'
+ffx inspect show basemgr.cmx:root:config
 ```
 
 When using a session launcher component, the launcher provides a different
@@ -32,7 +32,7 @@ For the launched session, you can query a running `sessionmgr` to get
 this configuration:
 
 ```posix-terminal
-iquery show 'sessionmgr.cmx:root:config'
+ffx inspect show sessionmgr.cmx:root:config
 ```
 
 ## Launching Modular with custom configuration
@@ -241,4 +241,4 @@ configuration file.
   - **default**: `false`
 
 [docs-inspect]: /docs/development/diagnostics/inspect/README.md
-[docs-iquery]: /docs/reference/diagnostics/consumers/iquery.md
+[ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect

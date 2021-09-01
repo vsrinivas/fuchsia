@@ -973,8 +973,8 @@ component's `BUILD.gn`:
 In Components v1, `appmgr` provides access to the component's `/diagnostics`
 directory, which contains Inspect data. Components v2 requires a component to
 explicitly expose `/diagnostics` to the framework. This allows the
-[Archivist][archivist] to read Inspect data for snapshots, [iquery][iquery],
-etc.
+[Archivist][archivist] to read Inspect data for snapshots,
+[`ffx inspect`][ffx-inspect], and more.
 
 Note: For more details on the differences in data collection between Components
 v1 and Components v2, see the [Archivist documentation][archivist].
@@ -995,10 +995,10 @@ shard:
 #### Component moniker for selectors
 
 As [explained previously](#component-moniker), it's possible to infer the
-component moniker using `ffx component list`. Alternatively you can use `fx
-iquery list` to see available components for querying inspect data. Your
-component moniker should appear in the `iquery` output up after adding the
-`client.shard.cml` above.
+component moniker using `ffx component list`. Alternatively you can use `ffx
+inspect list` to see available components for querying inspect data. Your
+component moniker should appear in the `ffx inspect list` output up after
+adding the `client.shard.cml` above.
 
 #### Inspect data in tests {#inspect-tests}
 
@@ -2042,7 +2042,6 @@ this protocol, add it [while declaring required services](#required-services).
 [hub-v1]: /docs/concepts/components/v1/hub.md
 [hub-v2]: /docs/concepts/components/v2/hub.md
 [inspect]: /docs/development/diagnostics/inspect/README.md
-[iquery]: /docs/reference/diagnostics/consumers/iquery.md
 [logs]: /docs/development/diagnostics/logs/README.md
 [manifests-capabilities]: /docs/concepts/components/v2/component_manifests.md#capabilities
 [manifests-expose]: /docs/concepts/components/v2/component_manifests.md#expose
@@ -2061,3 +2060,4 @@ this protocol, add it [while declaring required services](#required-services).
 [system-services]: /docs/concepts/testing/v1_test_component.md#services
 [troubleshooting-components]: /docs/development/components/v2/troubleshooting.md
 [unit-tests-with-generated-manifests]: /docs/development/components/build.md#unit-tests
+[ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect

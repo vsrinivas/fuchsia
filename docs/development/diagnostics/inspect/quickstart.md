@@ -1,20 +1,18 @@
-# Inspect Quick Start
+# Quickstart for component inspection
 
-[TOC]
+This document is a guide on how to get started with [component
+inspection](README.md) depending on your needs.
 
-This document is a guide on how to get started with [Component
-Inspection](README.md) depending on your needs:
+**I want to learn more about Inspect concepts.**
 
-**I want to learn more about Inspect concepts**
+Read the [`README.md`](README.md) file.
 
-Read the [README](README.md).
+**I want to know how to use the iquery tool.**
 
-**I want to know how to use the iquery tool**
+Check out the [`ffx inspect`][ffx-inspect] reference page.
 
-Read the [iquery manual][iquery]. For detailed examples of usage,
-see the [Codelab](codelab/codelab.md).
-
-This document provides a simplified example of iquery below.
+This document provides some examples of `ffx inspect`.
+For detailed examples of usage, see the [Codelab](codelab/codelab.md).
 
 **I have an existing or new component, and I want to support inspection.**
 
@@ -22,7 +20,7 @@ Continue reading this document.
 
 ## Languages
 
-See below for the quick start guide in your language of choice.
+See below for the quick start guide in your language of choice:
 
 * {C++}
 
@@ -488,70 +486,80 @@ See below for the quick start guide in your language of choice.
 
 ## Viewing Inspect Data
 
-  You can use the `[iquery]` tool to view the Inspect data you
-  exported from your component by looking through the Hub.
+You can use the [`ffx inspect`][ffx-inspect] command to view the Inspect data
+you exported from your component.
 
-  This section assumes you have SSH access to your running Fuchsia system and
-  that you started running your component. We will use the name
-  `my_component.cmx` as a placeholder for the name of your component.
+This section assumes you have SSH access to your running Fuchsia system and
+that you started running your component. We will use the name
+`my_component.cmx` as a placeholder for the name of your component.
 
 ### Find your Inspect endpoint
 
-  Try the following:
+The command below prints all available components that expose inspect:
 
-  ```sh
-  # This prints all component selectors (monikers in v2 or realm paths in v1) available.
-  $ iquery list
+```posix-terminal
+ffx inspect list
+```
 
-  # This prints all files containing inspect under /hub (this won't show v2 components)
-  $ iquery list-files /hub
+The command below prints all `fuchsia.diagnostics.ArchiveAccessor` paths:
 
-  # This filters the above list to only print your component.
-  $ iquery list-files /hub | grep my_component.cmx
-  $ iquery list | grep my_component.cmx  # TODO(fxbug.dev/45458): allow to pass a manifest filter
-  ```
+```posix-terminal
+ffx inspect list-accessors
+```
+Your component's endpoint is listed as
+`<path>/my_component.cmx/<id>/out/diagnostics/fuchsia.inspect.Tree`.
+However, in some languages (without dynamic value support) and in drivers,
+the data is placed in VMO files instead. In that case, the endpoint is listed
+as `<path>/my_component.cmx/<id>/out/diagnostics/root.inspect`.
 
-  Under the listed directories you will see some paths including
-  "system\_objects." This Inspect data is placed there by the Component Runtime
-  itself.
+An accessor path listed by `ffx inspect list-accessors` can later be used by
+`ffx inspect show` and `ffx inspect selectors` using the `--accessor-path` flag.
 
-  Your component's endpoint will be listed as `<path>/my_component.cmx/<id>/out/diagnostics/root.inspect`.
+The command below prints all available selectors for a component
+(for example, `my_component.cmx`):
 
-  Note: If you followed [Dynamic Value Support](#dynamic-value-support) above,
-  "root.inspect" will be missing.
+```posix-terminal
+ffx inspect selectors my_component.cmx
+```
 
 ### Read your Inspect data
 
-  Use the moniker that `list` printed above, and run:
+The command below prints the inspect hierarchies of all components
+running in the system:
 
-  ```sh
-  $ iquery show 'realm/my_component.cmx'
-  ```
+```posix-terminal
+ffx inspect show
+```
 
-  You can also spcify a node/property using selectors:
+Using the output from `ffx inspect list`, you can specify a
+single component (for example, `my_component.cmx`) as input to
+`ffx inspect show`:
 
-  ```sh
-  $ iquery show 'realm/my_component.cmx:root/path/to/some:property'
-  ```
+```posix-terminal
+ffx inspect show my_component.cmx
+```
 
-  Navigate to the `out/` directory that was printed above, and run:
+Or specify multiple components (for example, `core/font_provider`
+and `my_component.cmx`):
 
-  ```sh
-  $ iquery --recursive fuchsia.inspect.Tree
-  # Or root.inspect if you are exposing a vmo file directly
-  # (this is not the case if using inspect libs directly)
-  ```
+```posix-terminal
+ffx inspect show core/font_provider my_component.cmx
+```
 
-  Or `root.inspect` instead of `fuchsia.inspect.Tree`. Note that this is not the
-  case in general (except on Dart). If you are using the standard inspect libs it'll be the Tree
-  protocol.
+You can also specify a node and property value (for example,
+`my_component.cmx:root.inspect)` from `ffx inspect selectors`
+as input to `ffx inspect show`:
 
-  This will print out the following if you followed the suggested steps above:
+```posix-terminal
+ffx inspect show my_component.cmx:root
+```
 
-  ```sh
-  root:
-    hello = world
-  ```
+This will print out the following if you followed the suggested steps above:
+
+```none {:.devsite-disable-click-to-copy}
+root:
+  hello = world
+```
 
 ## Supported Data Types
 
@@ -567,4 +575,6 @@ See below for the quick start guide in your language of choice.
     Node | A node under which metrics, properties, and more nodes may be nested. | All Languages
     LazyNode | Instantiates a complete tree of Nodes dynamically. | C++, Rust
 
-[iquery]: /docs/reference/diagnostics/consumers/iquery.md
+<!-- Reference links -->
+
+[ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect

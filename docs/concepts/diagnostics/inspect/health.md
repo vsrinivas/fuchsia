@@ -18,13 +18,13 @@ The following properties and metrics are exported in any health check node:
 
 ## User guide
 
-The following example illustrates the use of [iquery] for getting information about
+The following example illustrates the use of [`ffx inspect`][ffx-inspect] for getting information about
 the component health status.
 
 Examples:
 
-```none
-$ iquery show `iquery list`
+```none {:.devsite-disable-click-to-copy}
+$ ffx inspect show
 a.cmx:
   root:
     fuchsia.inspect.Health:
@@ -53,20 +53,20 @@ c.cmx:
       message = "Failed to connect to fuchsia.example.RequiredService"
 ```
 
-```none
-$ iquery show 'a.cmx:root/fuchsia.inspect.Health:status' 'b.cmx:root/fuchsia.inspect.Healh:status' 'c.cmx:root/fuchsia.inspect.Health:status'
+```none {:.devsite-disable-click-to-copy}
+$ ffx inspect show a.cmx:root/fuchsia.inspect.Health:status b.cmx:root/fuchsia.inspect.Healh:status c.cmx:root/fuchsia.inspect.Health:status
 a:
   root:
     fuchsia.inspectHealth:
-      status = Ok
+      status = OK
 b:
   root:
     fuchsia.inspectHealth:
-      status = Ok
+      status = OK
 c:
   root:
     fuchsia.inspectHealth:
-      status = Ok
+      status = UNHEALTHY
 ```
 
 ## Using health checks in components
@@ -134,5 +134,7 @@ various programming languages.
     }
   ```
 
+<!-- Reference links -->
 
-[iquery]: /docs/reference/diagnostics/consumers/iquery.md
+[ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect
+

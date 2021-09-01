@@ -20,7 +20,7 @@ The exact contents of the doc may change over time.
 
 ### Your goals as a Testability reviewer
 
-*   **Determine if the change is tested.** Apply Code-Review+2 if you
+*   **Determine if the change is tested.** Apply `Code-Review+2` if you
     agree that it’s tested, and reply with a note for what’s missing if it’s not.
 *   Apply the standard (this doc) consistently.
 *   If the change needs to be amended to meet the standards, provide actionable
@@ -85,7 +85,7 @@ The exact contents of the doc may change over time.
 ## What does not require testing
 
 Missing testing coverage for the below should not prevent a change from
-receiving Code-Review+2.
+receiving `Code-Review+2`.
 
 *   **Logging.** In most cases, it’s probably not worth testing the log output
     of components. The log output is usually treated as opaque data by the rest
@@ -95,8 +95,8 @@ receiving Code-Review+2.
     that contract is worth testing. This can also apply to other forms of
     instrumentation, such as Tracing. This does not apply to instrumentation
     when it is used as a contract, for instance Inspect usage can be tested, and
-    should be if you rely on it working as intended (for instance in fx iquery
-    or feedback reports).
+    should be if you rely on it working as intended (for instance, in `ffx
+    inspect` or feedback reports).
 *   **Code that we don’t own** (the source of truth is not in Fuchsia tree).
     Changes that pick up an update to source code that’s copied from elsewhere
     don’t bear testability requirements.
@@ -119,7 +119,7 @@ receiving Code-Review+2.
     demonstrate functionality that is hard to test in an automated fashion.
     Additions or modifications to manual tests therefore do not require
     automated tests. However, it is strongly recommended that manual tests be
-    paired with a README.md or TESTING.md document describing how to run them.
+    paired with a `README.md` or `TESTING.md` document describing how to run them.
 *   **Hardcoded values.** Additions or changes to hardcoded values do not
     necessarily require tests. Oftentimes, these values control behaviors that
     are not easily observable, such as unexposed implementation
@@ -163,7 +163,7 @@ load along with environmental factors like temperature.
     sync_completion_reset(&event_);
     ```
 
-    This code sample was adapted from [task_test.cc](https://fuchsia-review.googlesource.com/c/fuchsia/+/326106/7/src/camera/drivers/hw_accel/ge2d/test/task_test.cc#48).
+    This code sample was adapted from [`task_test.cc`](https://fuchsia-review.googlesource.com/c/fuchsia/+/326106/7/src/camera/drivers/hw_accel/ge2d/test/task_test.cc#48).
 
 ### Regression tests for race conditions
 
@@ -175,7 +175,7 @@ you should attempt to design APIs that prevent the existence of the race conditi
 
 ## Recently removed exemptions
 
-*   **Engprod scripts** (e.g. `fx` commands) and associated configuration files**
+*   **Engprod scripts** (e.g. `fx` commands) and **associated configuration files**
     no longer have an exemption from testability. `fx` must have integration
     tests before further changes land. Exceptions may be granted by the fx team
     after consulting with a testability reviewer.
@@ -185,7 +185,7 @@ you should attempt to design APIs that prevent the existence of the race conditi
 The following are currently exempt from Testability, while ongoing work aims to
 change that.
 
-*   **Engprod scripts** in the tools/devshell/contrib and associated
+*   **Engprod scripts** in the `tools/devshell/contrib` and associated
     configuration are exempt.
 *   **GN templates** are not easily testable. We are working on a test framework
     for GN templates. Until then, it's permitted for build template changes to
@@ -194,7 +194,7 @@ change that.
     term, such code should be refactored to use Rust or modern C++ idioms to
     reduce the chances of leaks, and automation should exist that is capable of
     automatically detecting leaks.
-*   **Gigaboot** is a UEFI bootloader in //src/firmware/gigaboot that predates
+*   **Gigaboot** is a UEFI bootloader in `//src/firmware/gigaboot` that predates
     testability policy. At present there is not an infrastructure available
     to write integration tests for the UEFI code. Introducing that
     infrastructure is tracked in fxbug.dev/34478. A testability exception is granted
