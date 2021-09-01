@@ -523,7 +523,7 @@ mod tests {
         super::*,
         crate::{
             assert_data_tree, ArrayProperty, ExponentialHistogramParams, HistogramProperty,
-            Inspector, LinearHistogramParams,
+            Inspector, LinearHistogramParams, StringReference,
         },
         anyhow::Error,
         futures::prelude::*,
@@ -661,6 +661,30 @@ mod tests {
                 "property-bool": false,
             }
         })
+    }
+
+    #[fuchsia::test]
+    async fn siblings_with_same_name() {
+        let inspector = Inspector::new();
+
+        let foo: StringReference<'static> = "foo".into();
+
+        inspector.root().record_int("foo", 0);
+        inspector.root().record_int("foo", 1);
+        inspector.root().record_int(&foo, 2);
+        inspector.root().record_int(&foo, 3);
+
+        let dh = read(&inspector).await.unwrap();
+        assert_eq!(dh.properties.len(), 4);
+        for i in 0..dh.properties.len() {
+            match &dh.properties[i] {
+                Property::Int(n, v) => {
+                    assert_eq!(n, "foo");
+                    assert_eq!(*v, i as i64);
+                }
+                _ => assert!(false),
+            }
+        }
     }
 
     #[test]
