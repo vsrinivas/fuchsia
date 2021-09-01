@@ -1991,6 +1991,12 @@ When migrating the `build-info` feature, instead use the
 only supported method of retrieving build information moving forward. To use
 this protocol, add it [while declaring required services](#required-services).
 
+### Vulkan {#vulkan}
+
+When migrating the `vulkan` feature or code that uses a `//src/lib/vulkan/*.shard.cmx`
+shard, instead use the `vulkan/client.shard.cml` [shard][manifests-shard] as
+described in the [Vulkan documentation][vulkan].
+
 [glossary.component-manifest]: /docs/glossary/README.md#component-manifest
 [glossary.components-v1]: /docs/glossary/README.md#components-v1
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
@@ -2061,3 +2067,4 @@ this protocol, add it [while declaring required services](#required-services).
 [troubleshooting-components]: /docs/development/components/v2/troubleshooting.md
 [unit-tests-with-generated-manifests]: /docs/development/components/build.md#unit-tests
 [ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect
+[vulkan]: /docs/concepts/graphics/magma/vulkan.md#components_v2
