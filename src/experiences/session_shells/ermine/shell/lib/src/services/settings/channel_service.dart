@@ -19,7 +19,7 @@ class ChannelService extends TaskService {
   late final ValueChanged<bool> onConnected;
 
   var _control = ChannelControlProxy();
-  final _manager = ManagerProxy();
+  var _manager = ManagerProxy();
 
   late String _currentChannel;
   late List<String> _availableChannels;
@@ -107,6 +107,8 @@ class ChannelService extends TaskService {
   void dispose() {
     _control.ctrl.close();
     _control = ChannelControlProxy();
+    _manager.ctrl.close();
+    _manager = ManagerProxy();
   }
 }
 
