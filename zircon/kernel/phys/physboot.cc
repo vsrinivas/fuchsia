@@ -110,30 +110,13 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
 }
 
 [[noreturn]] void BootZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kernel_item) {
-  LoadedZircon zircon = LoadZircon(zbi, kernel_item, kKernelBssEstimate);
-  if (!zircon.boot.Relocating() &&  //
-      (!zircon.boot.KernelCanLoadInPlace() ||
-       zircon.buffer.size_bytes() < zircon.boot.KernelMemorySize())) {
-    printf("physboot: Kernel ZBI at %#" PRIx64 " cannot be loaded in place!\n",
-           zircon.boot.KernelLoadAddress());
-    uint64_t bss_size = zircon.boot.KernelHeader()->reserve_memory_size;
-    printf("physboot: BSS size %#" PRIx64 " > estimate %#" PRIx64 "\n", bss_size,
-           kKernelBssEstimate);
-    ZX_ASSERT(bss_size > kKernelBssEstimate);
-    zircon = {};  // Free old resources.
-    printf("physboot: Repeating decompression with larger buffer...\n");
-    zircon = LoadZircon(zbi, kernel_item, bss_size);
-  }
-  auto& [buffer, boot] = zircon;
+  // While `buffer` owns the allocation of the decompressed STORAGE_KERNEL
+  // payload, it may no longer own the kernel image memory `boot` points to,
+  // since BootZbi::Load() handles relocation internally.
+  auto [buffer, boot] = LoadZircon(zbi, kernel_item, kKernelBssEstimate);
 
-  ZX_ASSERT(boot.KernelCanLoadInPlace());
-  ZX_ASSERT_MSG(buffer.size_bytes() >= boot.KernelMemorySize(),
-                "Kernel allocation %#zx too small for load size %#x +"
-                " bss %#" PRIx64 " + boot_alloc reserve %#" PRIx64 "\n",
-                buffer.size_bytes(), boot.KernelLoadSize(),
-                boot.KernelHeader()->reserve_memory_size, BootZbi::kKernelBootAllocReserve);
-
-  // The kernel is now in place, but it will just use the original data ZBI.
+  // `boot`'s data ZBI at this point is the tail of the decompressed kernel
+  // ZBI; overwrite that with the original data ZBI.
   boot.DataZbi().storage() = {
       const_cast<std::byte*>(zbi.storage().data()),
       zbi.storage().size(),

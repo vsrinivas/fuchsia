@@ -146,6 +146,12 @@ bool BootZbi::KernelCanLoadInPlace() const {
     return false;
   }
 
+  // If we have relocated the kernel, then it will already be in-place.
+  if (kernel_buffer_) {
+    ZX_DEBUG_ASSERT(kernel_buffer_.size_bytes() >= KernelMemorySize());
+    return true;
+  }
+
   // The incoming ZBI must supply enough reusable headroom for the kernel.
   uint32_t in_place_start = kernel_item_.item_offset() - sizeof(zbi_header_t);
   size_t in_place_space = zbi_.storage().size() - in_place_start;
@@ -375,12 +381,14 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
     });
   }
 
+  ZX_ASSERT(KernelCanLoadInPlace());
   ZX_ASSERT(data_.storage().size() >= data_required_size);
   ZX_ASSERT(data_.storage().size() - data_.size_bytes() >= extra_data_capacity);
   return fitx::ok();
 }
 
 [[noreturn]] void BootZbi::Boot() {
+  ZX_ASSERT_MSG(KernelCanLoadInPlace(), "Has Load() been called?");
   LogAddresses();
   LogBoot(KernelEntryAddress());
   auto kernel_hdr = const_cast<zircon_kernel_t*>(kernel_);

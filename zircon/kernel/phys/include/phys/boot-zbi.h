@@ -74,6 +74,10 @@ class BootZbi {
   // at least extra_data_capacity bytes of space available to Append() items to
   // it.  The input ZBI's memory may be reused for the kernel or data images,
   // so it should not be referenced afterwards.
+  //
+  // After Load(), the kernel and data images are both in place in memory and
+  // ready for Boot().  The data image can be modified in place between Load
+  // and Boot but no more shuffling of memory is expected after Load succeeds.
   fitx::result<Error> Load(uint32_t extra_data_capacity = 0,
                            ktl::optional<uintptr_t> kernel_load_address = {});
 
