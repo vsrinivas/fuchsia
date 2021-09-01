@@ -190,7 +190,7 @@ impl DaemonServiceProvider for Daemon {
     async fn get_target_event_queue(
         &self,
         target_identifier: Option<String>,
-    ) -> Result<(bridge::Target, events::Queue<TargetEvent>)> {
+    ) -> Result<(Rc<Target>, events::Queue<TargetEvent>)> {
         let target = self
             .get_target(target_identifier)
             .await
@@ -198,7 +198,7 @@ impl DaemonServiceProvider for Daemon {
             .context("getting default target")?;
         target.run_host_pipe();
         let events = target.events.clone();
-        Ok((target.as_ref().into(), events))
+        Ok((target, events))
     }
 
     async fn open_target_proxy_with_info(

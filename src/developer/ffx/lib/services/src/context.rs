@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     ffx_daemon_core::events::Queue,
     ffx_daemon_events::{DaemonEvent, TargetEvent},
-    ffx_daemon_target::target_collection::TargetCollection,
+    ffx_daemon_target::{target::Target, target_collection::TargetCollection},
     fidl::endpoints::Proxy,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
@@ -42,7 +42,7 @@ pub trait DaemonServiceProvider {
     async fn get_target_event_queue(
         &self,
         _target_identifier: Option<String>,
-    ) -> Result<(bridge::Target, Queue<TargetEvent>)> {
+    ) -> Result<(Rc<Target>, Queue<TargetEvent>)> {
         unimplemented!()
     }
 
@@ -99,10 +99,16 @@ impl Context {
         Ok((info, proxy))
     }
 
+    /// Returns a copy of the target event queue, as well as a reference to the
+    /// target that matched the query.
+    ///
+    /// Note: DO NOT use this unless you know what you're doing. This is
+    /// placeholder code in lieu of completing the target_collection service
+    /// API, and should not be used unless it is a blocker.
     pub async fn get_target_event_queue(
         &self,
         target_identifier: Option<String>,
-    ) -> Result<(bridge::Target, Queue<TargetEvent>)> {
+    ) -> Result<(Rc<Target>, Queue<TargetEvent>)> {
         self.inner.get_target_event_queue(target_identifier).await
     }
 
