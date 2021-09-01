@@ -8,7 +8,7 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.internal.a2dp.Controller" ],
+            protocol: [ "fuchsia.bluetooth.internal.a2dp.Controller" ],
             from: "#bt-a2dp",
             to: [ "#bt-hfp-audio-gateway" ],
         },
