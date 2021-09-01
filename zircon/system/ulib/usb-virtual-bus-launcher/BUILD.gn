@@ -5,13 +5,12 @@
 import("//build/unification/zx_library.gni")
 
 zx_library("usb-virtual-bus-launcher") {
-  sdk = "shared"
+  sdk = "static"
   sdk_headers = [
     "lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h",
     "lib/usb-virtual-bus-launcher-helper/usb-virtual-bus-launcher-helper.h",
   ]
   testonly = true
-  shared = true
   sources = [
     "usb-virtual-bus-launcher-helper.cc",
     "usb-virtual-bus-launcher.cc",
