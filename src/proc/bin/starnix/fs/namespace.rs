@@ -136,15 +136,39 @@ pub struct LookupContext {
     ///
     /// Each time path resolution calls readlink, this value is decremented.
     pub remaining_follows: u8,
+
+    /// Whether the result of the lookup must be a directory.
+    ///
+    /// For example, if the path ends with a `/` or if userspace passes
+    /// O_DIRECTORY. This flag can be set to true if the lookup encounters a
+    /// symlink that ends with a `/`.
+    pub must_be_directory: bool,
 }
 
 impl LookupContext {
     pub fn new(symlink_mode: SymlinkMode) -> LookupContext {
-        LookupContext { remaining_follows: MAX_SYMLINK_FOLLOWS, symlink_mode }
+        LookupContext {
+            remaining_follows: MAX_SYMLINK_FOLLOWS,
+            symlink_mode,
+            must_be_directory: false,
+        }
     }
 
     pub fn with(&self, symlink_mode: SymlinkMode) -> LookupContext {
-        LookupContext { remaining_follows: self.remaining_follows, symlink_mode }
+        LookupContext {
+            remaining_follows: self.remaining_follows,
+            symlink_mode,
+            must_be_directory: self.must_be_directory,
+        }
+    }
+
+    pub fn update_for_path<'a>(&mut self, path: &'a FsStr) -> &'a FsStr {
+        if path.last() == Some(&b'/') {
+            self.must_be_directory = true;
+            &path[..path.len() - 1]
+        } else {
+            path
+        }
     }
 }
 

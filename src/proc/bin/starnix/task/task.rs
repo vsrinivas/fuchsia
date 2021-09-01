@@ -452,12 +452,12 @@ impl Task {
         &self,
         context: &mut LookupContext,
         dir: NamespaceNode,
-        path: FsString,
+        path: &FsStr,
         mode: FileMode,
         flags: OpenFlags,
     ) -> Result<NamespaceNode, Errno> {
         let mut parent_content = context.with(SymlinkMode::Follow);
-        let (parent, basename) = self.lookup_parent(&mut parent_content, dir.clone(), &path)?;
+        let (parent, basename) = self.lookup_parent(&mut parent_content, dir.clone(), path)?;
         context.remaining_follows = parent_content.remaining_follows;
 
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
@@ -483,6 +483,7 @@ impl Task {
                     match name.entry.node.readlink(self)? {
                         SymlinkTarget::Path(path) => {
                             let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
+                            let path = context.update_for_path(&path);
                             self.resolve_open_path(context, dir, path, mode, flags)
                         }
                         SymlinkTarget::Node(node) => Ok(node),
@@ -495,6 +496,9 @@ impl Task {
                 }
             }
             Err(e) if e == errno!(ENOENT) && flags.contains(OpenFlags::CREAT) => {
+                if context.must_be_directory {
+                    return error!(EISDIR);
+                }
                 let access = self.fs.apply_umask(mode & FileMode::ALLOW_ALL);
                 parent.create_node(&basename, FileMode::IFREG | access, DeviceType::NONE)
             }
@@ -543,7 +547,9 @@ impl Task {
 
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
         let mut context = LookupContext::new(symlink_mode);
-        let name = self.resolve_open_path(&mut context, dir, path.to_vec(), mode, flags)?;
+        context.must_be_directory = flags.contains(OpenFlags::DIRECTORY);
+        let path = context.update_for_path(path);
+        let name = self.resolve_open_path(&mut context, dir, path, mode, flags)?;
 
         // Be sure not to reference the mode argument after this point.
         // Below, we shadow the mode argument with the mode of the file we are
@@ -555,30 +561,29 @@ impl Task {
         if nofollow && mode.is_lnk() {
             return error!(ELOOP);
         }
-        if flags.contains(OpenFlags::DIRECTORY) && !mode.is_dir() {
+
+        if mode.is_dir() {
+            if flags.can_write()
+                || flags.contains(OpenFlags::CREAT)
+                || flags.contains(OpenFlags::TRUNC)
+            {
+                return error!(EISDIR);
+            }
+        } else if context.must_be_directory {
             return error!(ENOTDIR);
         }
-        if flags.can_write() && mode.is_dir() {
-            return error!(EISDIR);
-        }
 
-        if flags.contains(OpenFlags::TRUNC) {
-            match mode.fmt() {
-                FileMode::IFREG => {
-                    // You might think we should check file.can_write() at this
-                    // point, which is what the docs suggest, but apparently we
-                    // are supposed to truncate the file if this task can write
-                    // to the underlying node, even if we are opening the file
-                    // as read-only. See OpenTest.CanTruncateReadOnly.
+        if flags.contains(OpenFlags::TRUNC) && mode.is_reg() {
+            // You might think we should check file.can_write() at this
+            // point, which is what the docs suggest, but apparently we
+            // are supposed to truncate the file if this task can write
+            // to the underlying node, even if we are opening the file
+            // as read-only. See OpenTest.CanTruncateReadOnly.
 
-                    // TODO(security): We should really do an access check for whether
-                    // this task can write to this file.
-                    if mode.contains(FileMode::IWUSR) {
-                        name.entry.node.truncate(0)?;
-                    }
-                }
-                FileMode::IFDIR => return error!(EISDIR),
-                _ => (),
+            // TODO(security): We should really do an access check for whether
+            // this task can write to this file.
+            if mode.contains(FileMode::IWUSR) {
+                name.entry.node.truncate(0)?;
             }
         }
 

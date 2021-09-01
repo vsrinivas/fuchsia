@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/open_test",
-        args: [ "--gunit_filter=-*.OCreateDirectory:*.CanTruncateReadOnlyNoWritePermission:*.CanTruncateWithStrangePermissions:*.OpenWithOpath" ],
+        args: [ "--gunit_filter=-*.CanTruncateReadOnlyNoWritePermission:*.CanTruncateWithStrangePermissions:*.OpenWithOpath" ],
     },
 }
