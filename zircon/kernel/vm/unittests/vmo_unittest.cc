@@ -1034,11 +1034,220 @@ static bool vmo_move_inactive_pages_test() {
   END_TEST;
 }
 
+static bool vmo_eviction_hints_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager-backed VMO with a single page.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  vm_page_t* page;
+  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Newly created page should be in the first pager backed page queue.
+  size_t queue;
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Hint that the page is not needed.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // The page should now have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(page));
+
+  // Hint that the page is always needed.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+
+  // The page should now have moved to the first LRU queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedInactive(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Evicting the page should fail.
+  EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  // Hint that the page is not needed again.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // The page should now have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(page));
+
+  // We should still not be able to evict the page, the AlwaysNeed hint is sticky.
+  EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  // Accessing the page should move it out of the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedInactive(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Verify that the page can be rotated as normal.
+  pmm_page_queues()->RotatePagerBackedQueues();
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(1u, queue);
+
+  // Touching the page should move it back to the first queue.
+  status = vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // We should still not be able to evict the page, the AlwaysNeed hint is sticky.
+  EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  // We should be able to evict the page when told to override the hint.
+  EXPECT_TRUE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Ignore));
+
+  END_TEST;
+}
+
+static bool vmo_eviction_hints_clone_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager-backed VMO with two pages. We will fork a page in a clone later.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  vm_page_t* pages[2];
+  zx_status_t status = make_committed_pager_vmo(2, pages, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Newly created pages should be in the first pager backed page queue.
+  size_t queue;
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0], &queue));
+  EXPECT_EQ(0u, queue);
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1], &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Create a clone.
+  fbl::RefPtr<VmObject> clone;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::PrivatePagerCopy, 0,
+                            2 * PAGE_SIZE, true, &clone);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Use the clone to perform a bunch of hinting operations on the first page.
+  // Hint that the page is not needed.
+  ASSERT_OK(clone->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // The page should now have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+
+  // Hint that the page is always needed.
+  ASSERT_OK(clone->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+
+  // The page should now have moved to the first LRU queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0], &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Evicting the page should fail.
+  EXPECT_FALSE(
+      vmo->DebugGetCowPages()->EvictPage(pages[0], 0, VmCowPages::EvictionHintAction::Follow));
+
+  // Hinting should also work via a clone of a clone.
+  fbl::RefPtr<VmObject> clone2;
+  status = clone->CreateClone(Resizability::NonResizable, CloneType::PrivatePagerCopy, 0,
+                              2 * PAGE_SIZE, true, &clone2);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Hint that the page is not needed.
+  ASSERT_OK(clone2->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // The page should now have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+
+  // Hint that the page is always needed.
+  ASSERT_OK(clone2->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+
+  // The page should now have moved to the first LRU queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0], &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Evicting the page should fail.
+  EXPECT_FALSE(
+      vmo->DebugGetCowPages()->EvictPage(pages[0], 0, VmCowPages::EvictionHintAction::Follow));
+
+  // Verify that hinting still works via the parent VMO.
+  // Hint that the page is not needed again.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // The page should now have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+
+  // Fork the page in the clone. And make sure hints no longer apply.
+  uint64_t data = 0xff;
+  clone->Write(&data, 0, sizeof(data));
+  EXPECT_EQ(1u, clone->AttributedPages());
+
+  // The write will have moved the page to the first page queue, because the page is still accessed
+  // in order to perform the fork. So hint using the parent again to move to the inactive queue.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // The page should now have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+
+  // Hint that the page is always needed via the clone.
+  ASSERT_OK(clone->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+
+  // The page should still be in the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+
+  // Hint that the page is always needed via the second level clone.
+  ASSERT_OK(clone2->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+
+  // This should move the page out of the the inactive queue. Since we forked the page in the
+  // intermediate clone *after* this clone was created, it will still refer to the original page,
+  // which is the same as the page in the root.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+
+  // Create another clone that sees the forked page.
+  // Hinting through this clone should have no effect, since it will see the forked page.
+  fbl::RefPtr<VmObject> clone3;
+  status = clone->CreateClone(Resizability::NonResizable, CloneType::PrivatePagerCopy, 0,
+                              2 * PAGE_SIZE, true, &clone3);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Move the page back to the inactive queue first.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // The page should now have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+
+  // Hint through clone3.
+  ASSERT_OK(clone3->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+
+  // The page should still be in the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[0]));
+
+  // Hint on the second page using clone3. This page hasn't been forked by the intermediate clone.
+  // So clone3 should still be able to see the root page.
+  // First verify that the page is still in queue 0.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1], &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Hint DontNeed through clone 3.
+  ASSERT_OK(clone3->HintRange(PAGE_SIZE, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // The page should have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(pages[1]));
+
+  END_TEST;
+}
+
 static bool vmo_eviction_test() {
   BEGIN_TEST;
   // Disable the page scanner as this test would be flaky if our pages get evicted by someone else.
-  scanner_push_disable_count();
-  auto pop_count = fit::defer([] { scanner_pop_disable_count(); });
+  AutoVmScannerDisable scanner_disable;
 
   // Make two pager backed vmos
   fbl::RefPtr<VmObjectPaged> vmo;
@@ -1051,12 +1260,15 @@ static bool vmo_eviction_test() {
   ASSERT_EQ(ZX_OK, status);
 
   // Shouldn't be able to evict pages from the wrong VMO.
-  EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page2, 0));
-  EXPECT_FALSE(vmo2->DebugGetCowPages()->EvictPage(page, 0));
+  EXPECT_FALSE(
+      vmo->DebugGetCowPages()->EvictPage(page2, 0, VmCowPages::EvictionHintAction::Follow));
+  EXPECT_FALSE(
+      vmo2->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Eviction should actually drop the number of committed pages.
   EXPECT_EQ(1u, vmo2->AttributedPages());
-  EXPECT_TRUE(vmo2->DebugGetCowPages()->EvictPage(page2, 0));
+  EXPECT_TRUE(
+      vmo2->DebugGetCowPages()->EvictPage(page2, 0, VmCowPages::EvictionHintAction::Follow));
   EXPECT_EQ(0u, vmo2->AttributedPages());
   pmm_free_page(page2);
   EXPECT_GT(vmo2->EvictionEventCount(), 0u);
@@ -1064,7 +1276,7 @@ static bool vmo_eviction_test() {
   // Pinned pages should not be evictable.
   status = vmo->CommitRangePinned(0, PAGE_SIZE);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page, 0));
+  EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow));
   vmo->Unpin(0, PAGE_SIZE);
 
   END_TEST;
@@ -1346,7 +1558,7 @@ static bool vmo_attribution_evict_test() {
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 1u));
 
   // Evicting the page should increment the generation count.
-  vmo->DebugGetCowPages()->EvictPage(page, 0);
+  vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow);
   ++expected_gen_count;
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
 
@@ -2013,6 +2225,8 @@ VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
 VM_UNITTEST(vmo_move_inactive_pages_test)
+VM_UNITTEST(vmo_eviction_hints_test)
+VM_UNITTEST(vmo_eviction_hints_clone_test)
 VM_UNITTEST(vmo_eviction_test)
 VM_UNITTEST(vmo_validate_page_splits_test)
 VM_UNITTEST(vmo_attribution_clones_test)
