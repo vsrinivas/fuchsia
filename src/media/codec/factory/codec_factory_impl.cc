@@ -166,31 +166,26 @@ void CodecFactoryImpl::CreateSelfOwned(
   //
   // As usual, can't use std::make_unique<> here since making it a friend would
   // break the point of making the constructor private.
-  std::unique_ptr<CodecFactoryImpl> self(
+  std::shared_ptr<CodecFactoryImpl> self(
       new CodecFactoryImpl(app, component_context, std::move(request)));
   auto* self_ptr = self.get();
   self_ptr->OwnSelf(std::move(self));
   assert(!self);
 }
 
+void CodecFactoryImpl::OwnSelf(std::shared_ptr<CodecFactoryImpl> self) { self_ = std::move(self); }
+
 CodecFactoryImpl::CodecFactoryImpl(
     CodecFactoryApp* app, sys::ComponentContext* component_context,
     fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request)
-    : app_(app), component_context_(component_context), request_temp_(std::move(request)) {}
-
-// TODO(dustingreen): Seems simpler to avoid request_temp_ and OwnSelf() and
-// just have CreateSelfOwned() directly create the binding.
-void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
-  binding_ =
-      std::make_unique<BindingType>(std::move(self), std::move(request_temp_), app_->dispatcher());
-  binding_->set_error_handler([this](zx_status_t status) {
-    // this will also ~this
-    binding_ = nullptr;
-  });
+    : app_(app),
+      component_context_(component_context),
+      binding_(this, std::move(request), app_->dispatcher()) {
+  binding_.set_error_handler([this](zx_status_t status) { self_.reset(); });
 
   // The app already has all hardware codecs loaded by the time we get to talk
   // to it, so we don't need to wait for it now.
-  binding_->events().OnCodecList(app_->MakeCodecList());
+  binding_.events().OnCodecList(app_->MakeCodecList());
 }
 
 void CodecFactoryImpl::CreateDecoder(
@@ -253,21 +248,21 @@ void CodecFactoryImpl::CreateDecoder(
   }
 
   FX_LOGS(INFO) << "CreateDecoder() found SW decoder for: " << params.input_details().mime_type();
-  ForwardToIsolate(
-      *maybe_decoder_isolate_url, component_context_,
-      [this, &params, &decoder](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
-        // Forward the request to the factory_delegate_ as-is. This
-        // avoids conversion to command-line parameters and back,
-        // and avoids creating a separate interface definition for
-        // the delegated call.  The downside is potential confusion
-        // re. why we have several implementations of CodecFactory,
-        // but we can comment why.  The presently-running
-        // implementation is the main implementation that clients
-        // use directly.
-        AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
-        factory_delegate->CreateDecoder(std::move(params), std::move(decoder));
-        ZX_DEBUG_ASSERT(lifetime_tracking_.empty());
-      });
+  ForwardToIsolate(*maybe_decoder_isolate_url, component_context_,
+                   [self = self_, &params,
+                    &decoder](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
+                     // Forward the request to the factory_delegate_ as-is. This
+                     // avoids conversion to command-line parameters and back,
+                     // and avoids creating a separate interface definition for
+                     // the delegated call.  The downside is potential confusion
+                     // re. why we have several implementations of CodecFactory,
+                     // but we can comment why.  The presently-running
+                     // implementation is the main implementation that clients
+                     // use directly.
+                     self->AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
+                     factory_delegate->CreateDecoder(std::move(params), std::move(decoder));
+                     ZX_DEBUG_ASSERT(self->lifetime_tracking_.empty());
+                   });
 }
 
 void CodecFactoryImpl::CreateEncoder(
@@ -327,9 +322,9 @@ void CodecFactoryImpl::CreateEncoder(
 
   ForwardToIsolate(
       *maybe_encoder_isolate_url, component_context_,
-      [this, &encoder_params,
+      [self = self_, &encoder_params,
        &encoder_request](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
-        AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
+        self->AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
         factory_delegate->CreateEncoder(std::move(encoder_params), std::move(encoder_request));
       });
 }
@@ -339,9 +334,9 @@ void CodecFactoryImpl::AttachLifetimeTracking(zx::eventpair codec_end) {
                   fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX);
   if (lifetime_tracking_.size() >=
       fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX) {
-    binding_->Close(ZX_ERR_BAD_STATE);
+    binding_.Close(ZX_ERR_BAD_STATE);
     // This call will delete this.
-    binding_.reset(nullptr);
+    self_.reset();
     return;
   }
   lifetime_tracking_.emplace_back(std::move(codec_end));

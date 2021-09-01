@@ -34,7 +34,7 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
  private:
   CodecFactoryImpl(CodecFactoryApp* app, sys::ComponentContext* component_context,
                    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
-  void OwnSelf(std::unique_ptr<CodecFactoryImpl> self);
+  void OwnSelf(std::shared_ptr<CodecFactoryImpl> self);
   void AttachLifetimeTrackingEventpairDownstream(
       const fuchsia::mediacodec::CodecFactoryPtr* factory);
 
@@ -48,21 +48,14 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
   // must ensure these outlast this instance of CodecFactoryImpl.
   CodecFactoryApp* app_ = nullptr;
   sys::ComponentContext* component_context_ = nullptr;
-  // This is only holding the underlying channel between construction and
-  // OwnSelf(), at which point the channel moves into the binding.
-  fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request_temp_;
 
-  // The CodecFactoryImpl is essentially self-owned via this member.  If we need
-  // to self-destruct we can reset this binding_ unique_ptr which will delete
-  // the binding which will delete the CodecFactoryImpl owned by binding_.
-  // Similarly if the channel closes, the binding will drop the unique_ptr to
-  // the CodecFactory which will delete the factory and binding.
-  //
-  // TODO(dustingreen): Cover both cases mentioned above.  May have to punt a
-  // stage of deletion to the async::Loop perhaps if this doesn't work.
-  using BindingType =
-      fidl::Binding<fuchsia::mediacodec::CodecFactory, std::unique_ptr<CodecFactoryImpl>>;
-  std::unique_ptr<BindingType> binding_;
+  fidl::Binding<fuchsia::mediacodec::CodecFactory> binding_;
+
+  // The CodecFactoryImpl is self-owned via this member. If we need to self-destruct we reset this
+  // member. If the channel closes we will also reset this member. The only references handed out
+  // is to async fidl callbacks that may need to run after the binding channel has closed, in order
+  // to pass requests to child codecs.
+  std::shared_ptr<CodecFactoryImpl> self_;
 
   std::vector<zx::eventpair> lifetime_tracking_;
 };
