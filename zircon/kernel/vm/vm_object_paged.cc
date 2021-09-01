@@ -113,6 +113,41 @@ void VmObjectPaged::PromoteForReclamation() {
   cow_pages_locked()->PromoteRangeForReclamationLocked(0, size_locked());
 }
 
+zx_status_t VmObjectPaged::HintRange(uint64_t offset, uint64_t len, EvictionHint hint) {
+  canary_.Assert();
+
+  // Ignore hints for non pager-backed VMOs. We choose to silently ignore hints for incompatible
+  // combinations instead of failing. This is because the kernel does not make any explicit
+  // guarantees on hints; since they are just hints, the kernel is always free to ignore them.
+  if (!is_pager_backed()) {
+    return ZX_OK;
+  }
+
+  uint64_t end_offset;
+  if (add_overflow(offset, len, &end_offset)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  Guard<Mutex> guard{lock()};
+
+  if (!InRange(offset, len, size_locked())) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  switch (hint) {
+    case EvictionHint::DontNeed: {
+      cow_pages_locked()->PromoteRangeForReclamationLocked(offset, len);
+      break;
+    }
+    case EvictionHint::AlwaysNeed: {
+      cow_pages_locked()->ProtectRangeFromReclamationLocked(offset, len, &guard);
+      break;
+    }
+  }
+
+  return ZX_OK;
+}
+
 bool VmObjectPaged::CanDedupZeroPagesLocked() {
   canary_.Assert();
 

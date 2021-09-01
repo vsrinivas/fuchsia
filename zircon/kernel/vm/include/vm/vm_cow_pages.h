@@ -93,8 +93,6 @@ class VmCowPages final
 
   uint64_t EvictionEventCountLocked() const TA_REQ(lock_) { return eviction_event_count_; }
 
-  fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
-
   void DetachSourceLocked() TA_REQ(lock_);
 
   // Resizes the range of this cow pages. |size| must be a multiple of the page size and this must
@@ -187,6 +185,11 @@ class VmCowPages final
   // the number of pages freed or scanned.
   uint32_t ScanForZeroPagesLocked(bool reclaim) TA_REQ(lock_);
 
+  enum class EvictionHintAction : uint8_t {
+    Follow,
+    Ignore,
+  };
+
   // Asks the VMO to attempt to evict the specified page. This returns true if the page was
   // actually from this VMO and was successfully evicted, at which point the caller now has
   // ownership of the page. Otherwise eviction is allowed to fail for any reason, specifically
@@ -194,7 +197,10 @@ class VmCowPages final
   // will fail. Although eviction may fail for any reason, if it does the caller is able to assume
   // that either the page was not from this vmo, or that the page is not in any evictable page queue
   // (such as the pager_backed_ queue).
-  bool EvictPage(vm_page_t* page, uint64_t offset);
+  // |hint_action| indicates whether the |always_need| eviction hint should be respected or ignored.
+  // If this page is not evicted as a result of the hint, the caller can assume that the page has
+  // been moved out from the evictable page queue(s) into the active queue(s).
+  bool EvictPage(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action);
 
   // Attempts to dedup the given page at the specified offset with the zero page. The only
   // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that
@@ -227,6 +233,14 @@ class VmCowPages final
   // Currently used only for pager-backed VMOs to move their pages to the end of the
   // pager-backed queue, so that they can be evicted first.
   void PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
+  // Protect pages in the specified range from reclamation under memory pressure. |offset| will be
+  // rounded down to the page boundary, and |len| will be rounded up to the page boundary. Used to
+  // set the |always_need| hint for pages in pager-backed VMOs. Any absent pages in the range will
+  // be committed first, and the call will block on the fulfillment of the page request(s), dropping
+  // |guard| while waiting (multiple times if multiple pages need to be supplied).
+  void ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len, Guard<Mutex>* guard)
+      TA_REQ(lock_);
 
   zx_status_t LockRangeLocked(uint64_t offset, uint64_t len, zx_vmo_lock_state_t* lock_state_out);
   zx_status_t TryLockRangeLocked(uint64_t offset, uint64_t len);
@@ -559,6 +573,12 @@ class VmCowPages final
       TA_EXCL(DiscardableVmosLock::Get());
 
   DiscardablePageCounts GetDiscardablePageCounts() const TA_EXCL(lock_);
+
+  // Walks up the parent tree and returns the root, or |this| if there is no parent.
+  const VmCowPages* GetRootLocked() const TA_REQ(lock_);
+
+  // Returns the root parent's page source.
+  fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;

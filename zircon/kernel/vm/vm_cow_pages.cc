@@ -60,6 +60,7 @@ void InitializeVmPage(vm_page_t* p) {
   p->object.pin_count = 0;
   p->object.cow_left_split = 0;
   p->object.cow_right_split = 0;
+  p->object.always_need = 0;
 }
 
 // Allocates a new page and populates it with the data at |parent_paddr|.
@@ -933,9 +934,9 @@ void VmCowPages::DumpLocked(uint depth, bool verbose) const {
         printf("offset %#" PRIx64 " zero page marker\n", offset);
       } else {
         vm_page_t* page = p->Page();
-        printf("offset %#" PRIx64 " page %p paddr %#" PRIxPTR "(%c%c)\n", offset, page,
+        printf("offset %#" PRIx64 " page %p paddr %#" PRIxPTR "(%c%c%c)\n", offset, page,
                page->paddr(), page->object.cow_left_split ? 'L' : '.',
-               page->object.cow_right_split ? 'R' : '.');
+               page->object.cow_right_split ? 'R' : '.', page->object.always_need ? 'A' : '.');
       }
       return ZX_ERR_NEXT;
     };
@@ -2307,21 +2308,121 @@ void VmCowPages::UnpinPage(vm_page_t* page, uint64_t offset) {
 void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
 
-  // We will have pages only if we are directly backed by a page source.
-  if (!page_source_) {
+  // Hints only apply to pager backed VMOs.
+  if (!is_pager_backed_locked()) {
     return;
   }
 
-  const uint64_t start_offset = ROUNDDOWN(offset, PAGE_SIZE);
-  const uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
-  page_list_.ForEveryPageInRange(
-      [](const auto* p, uint64_t) {
-        if (p->IsPage() && p->Page()->object.pin_count == 0) {
-          pmm_page_queues()->MoveToPagerBackedInactive(p->Page());
-        }
-        return ZX_ERR_NEXT;
-      },
-      start_offset, end_offset);
+  // Walk up the tree to get to the root parent. A raw pointer is fine as we're holding the lock and
+  // won't drop it in this function.
+  // We need the root to check if the pages are owned by the root below. Hints only apply to pages
+  // in the root that are visible to this child, not to pages the child might have forked.
+  const VmCowPages* const root = GetRootLocked();
+
+  uint64_t start_offset = ROUNDDOWN(offset, PAGE_SIZE);
+  uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
+
+  __UNINITIALIZED LookupInfo lookup;
+  while (start_offset < end_offset) {
+    // Don't pass in any fault flags. We only want to lookup an existing page. Note that we do want
+    // to look up the page in the child, instead of just forwarding the entire range lookup to the
+    // parent, because we do NOT want to hint pages in the parent that have already been forked in
+    // the child. That is, we need to first lookup the page and then check for ownership.
+    zx_status_t status = LookupPagesLocked(start_offset, 0, 1, nullptr, nullptr, &lookup);
+    // Successfully found an existing page.
+    if (status == ZX_OK) {
+      DEBUG_ASSERT(lookup.num_pages == 1);
+      vm_page_t* page = paddr_to_vm_page(lookup.paddrs[0]);
+      // Check to see if the page is owned by the root VMO. Hints only apply to the root.
+      // Don't move a pinned page to the inactive queue.
+      // Note that this does not unset the always_need bit if it has been previously set. The
+      // always_need hint is sticky.
+      if (page->object.get_object() == root && page->object.pin_count == 0) {
+        pmm_page_queues()->MoveToPagerBackedInactive(page);
+      }
+    }
+    // Can't really do anything in case an error is encountered while looking up the page. Simply
+    // ignore it and move on to the next page. Hints are best effort anyway.
+    start_offset += PAGE_SIZE;
+  }
+}
+
+void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len,
+                                                   Guard<Mutex>* guard) {
+  canary_.Assert();
+
+  // Hints only apply to pager backed VMOs.
+  if (!is_pager_backed_locked()) {
+    return;
+  }
+
+  // Walk up the tree to get to the root parent. A raw pointer is fine, as we'll recompute the root
+  // if we drop the lock below.
+  // We need the root to check if the pages are owned by the root below. Hints only apply to pages
+  // in the root that are visible to this child, not to pages the child might have forked.
+  const VmCowPages* root = GetRootLocked();
+
+  uint64_t start_offset = ROUNDDOWN(offset, PAGE_SIZE);
+  uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
+
+  __UNINITIALIZED LookupInfo lookup;
+  __UNINITIALIZED LazyPageRequest page_request;
+  while (start_offset < end_offset) {
+    // Simulate a read fault. We simply want to lookup the page in the parent (if visible from the
+    // child), without forking the page in the child. Note that we do want to look up the page in
+    // the child, instead of just forwarding the entire range lookup to the parent, because we do
+    // NOT want to hint pages in the parent that have already been forked in the child. That is, we
+    // need to first lookup the page and then check for ownership.
+    zx_status_t status =
+        LookupPagesLocked(start_offset, VMM_PF_FLAG_SW_FAULT, 1, nullptr, &page_request, &lookup);
+
+    // We need to wait for the page to be faulted in. We will drop the lock as we wait.
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      guard->CallUnlocked([&status, &page_request]() { status = page_request->Wait(); });
+
+      // The root might have gone away when the lock was dropped. Compute the root again and check
+      // if we still have a page source backing it.
+      root = GetRootLocked();
+      if (!root->page_source_) {
+        // No longer backed by a root with a page source (pager). Nothing more to do.
+        return;
+      }
+
+      // The size might have changed since we dropped the lock. Adjust the range if required.
+      if (start_offset >= size_locked()) {
+        // No more pages to hint.
+        return;
+      }
+      // Shrink the range if required. Proceed with hinting on the remaining pages in the range;
+      // we've already hinted on the preceding pages, so just go on ahead instead of returning an
+      // error. The range was valid at the time we started hinting.
+      if (end_offset > size_locked()) {
+        end_offset = size_locked();
+      }
+
+      if (status != ZX_OK) {
+        // Ignore the failure and move on to the next page. Hints are best effort.
+        start_offset += PAGE_SIZE;
+      }
+      // Try the same offset again, which should now have a backing page.
+      continue;
+    }
+
+    // We successfully found a page at the current offset.
+    if (status == ZX_OK) {
+      DEBUG_ASSERT(lookup.num_pages == 1);
+      vm_page_t* page = paddr_to_vm_page(lookup.paddrs[0]);
+      // Check to see if the page is owned by the root VMO. Hints only apply to the root.
+      if (page->object.get_object() == root) {
+        page->object.always_need = 1;
+        // Nothing more to do. The lookup must have already marked the page accessed, moving it
+        // to the head of the first page queue.
+      }
+    }
+    // Can't really do anything in case an error is encountered while looking up the page. Simply
+    // ignore it and move on to the next page. Hints are best effort anyway.
+    start_offset += PAGE_SIZE;
+  }
 }
 
 void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len) {
@@ -2879,16 +2980,24 @@ zx_status_t VmCowPages::FailPageRequestsLocked(uint64_t offset, uint64_t len,
   return ZX_OK;
 }
 
-fbl::RefPtr<PageSource> VmCowPages::GetRootPageSourceLocked() const {
+const VmCowPages* VmCowPages::GetRootLocked() const {
   auto cow_pages = this;
   AssertHeld(cow_pages->lock_);
   while (cow_pages->parent_) {
     cow_pages = cow_pages->parent_.get();
-    if (!cow_pages) {
-      return nullptr;
-    }
+    // We just checked that this is not null in the loop conditional.
+    DEBUG_ASSERT(cow_pages);
   }
-  return cow_pages->page_source_;
+  DEBUG_ASSERT(cow_pages);
+  return cow_pages;
+}
+
+fbl::RefPtr<PageSource> VmCowPages::GetRootPageSourceLocked() const {
+  auto root = GetRootLocked();
+  // The root will never be null. It will either point to a valid parent, or |this| if there's no
+  // parent.
+  DEBUG_ASSERT(root);
+  return root->page_source_;
 }
 
 void VmCowPages::DetachSourceLocked() {
@@ -2999,7 +3108,7 @@ void VmCowPages::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeCha
   RangeChangeUpdateListLocked(&list, op);
 }
 
-bool VmCowPages::EvictPage(vm_page_t* page, uint64_t offset) {
+bool VmCowPages::EvictPage(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action) {
   // Without a page source to bring the page back in we cannot even think about eviction.
   if (!page_source_) {
     return false;
@@ -3015,6 +3124,22 @@ bool VmCowPages::EvictPage(vm_page_t* page, uint64_t offset) {
 
   // Pinned pages could be in use by DMA so we cannot safely evict them.
   if (page->object.pin_count != 0) {
+    return false;
+  }
+
+  // Do not evict if the |always_need| hint is set, unless we are told to ignore the eviction hint.
+  if (page->object.always_need == 1 && hint_action == EvictionHintAction::Follow) {
+    // We still need to move the page from the tail of the LRU page queue(s) so that the eviction
+    // loop can make progress. Since this page is always needed, move it out of the way and into the
+    // MRU queue. Do this here while we hold the lock, instead of at the callsite.
+    //
+    // TODO(rashaeqbal): Since we're essentially simulating an access here, this page may not
+    // qualify for eviction if we do decide to override the hint soon after (i.e. if an OOM follows
+    // shortly after). Investigate adding a separate queue once we have some more data around hints
+    // usage. A possible approach might involve moving to a separate queue when we skip the page for
+    // eviction. Pages move out of said queue when accessed, and continue aging as other pages.
+    // Pages in the queue are considered for eviction pre-OOM, but ignored otherwise.
+    UpdateOnAccessLocked(page, offset);
     return false;
   }
 

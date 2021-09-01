@@ -74,6 +74,9 @@ struct vm_page {
       // be moved into the child instead of setting the second bit.
       uint8_t cow_left_split : 1;
       uint8_t cow_right_split : 1;
+      // Hint for whether the page is always needed and should not be considered for reclamation
+      // under memory pressure (unless the kernel decides to override hints for some reason).
+      uint8_t always_need : 1;
       // This struct has no type name and exists inside an unpacked parent and so it really doesn't
       // need to have any padding. By making it packed we allow the next outer variables, to use
       // space we would have otherwise wasted in padding, without breaking alignment rules.

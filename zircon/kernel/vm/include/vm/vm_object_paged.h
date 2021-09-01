@@ -242,6 +242,10 @@ class VmObjectPaged final : public VmObject {
   // pager-backed queue, so that they can be evicted first.
   void PromoteForReclamation();
 
+  // Hint how the specified range is intended to be used, so that the hint can be taken into
+  // consideration when reclaiming pages under memory pressure (if applicable).
+  zx_status_t HintRange(uint64_t offset, uint64_t len, EvictionHint hint) override;
+
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> root_state);

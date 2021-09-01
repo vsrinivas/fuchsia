@@ -365,6 +365,17 @@ class VmObject : public VmHierarchyBase,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  enum EvictionHint {
+    DontNeed,
+    AlwaysNeed,
+  };
+  // Hint how the specified range is intended to be used, so that the hint can be taken into
+  // consideration when reclaiming pages under memory pressure (if applicable).
+  virtual zx_status_t HintRange(uint64_t offset, uint64_t len, EvictionHint hint) {
+    // Hinting trivially succeeds for unsupported VMO types.
+    return ZX_OK;
+  }
+
   // The associated VmObjectDispatcher will set an observer to notify user mode.
   void SetChildObserver(VmObjectChildObserver* child_observer);
 
