@@ -9,9 +9,10 @@ mod controller;
 use {
     crate::verify::{
         collector::component_tree::V2ComponentTreeDataCollector,
-        controller::build::VerifyBuildController,
-        controller::capability_routing::CapabilityRouteController,
-        controller::capability_routing::TreeMappingController,
+        controller::{
+            build::VerifyBuildController,
+            capability_routing::{CapabilityRouteController, TreeMappingController},
+        },
     },
     cm_fidl_analyzer::{
         capability_routing::{error::CapabilityRouteError, route::RouteSegment},
@@ -80,6 +81,7 @@ pub struct WarningResult {
 pub struct OkResult {
     pub using_node: NodePath,
     pub capability: CapabilityName,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub route: Vec<RouteSegment>,
 }
 
@@ -176,11 +178,7 @@ mod tests {
     }
 
     fn new_directory_decl(name: CapabilityName, rights: Operations) -> DirectoryDecl {
-        DirectoryDecl {
-            name,
-            source_path: Some(CapabilityPath { dirname: "".to_string(), basename: "".to_string() }),
-            rights,
-        }
+        DirectoryDecl { name, source_path: None, rights }
     }
 
     fn new_use_protocol_decl(source: UseSource, source_name: CapabilityName) -> UseProtocolDecl {
@@ -422,6 +420,70 @@ mod tests {
               "ok": [
                 {
                   "capability": "good_dir",
+                  "using_node": "/child"
+                }
+              ]
+            }
+          },
+          {
+            "capability_type": "protocol",
+            "results": {
+              "warnings": [
+                {
+                  "capability": "protocol",
+                  "using_node": "/child",
+                  "warning": {
+                    "error": {
+                      "component_not_found": {
+                        "component_node_not_found": "/missing_child"
+                      }
+                    },
+                    "message": "failed to find component: `no node found with path `/missing_child``"
+                  }
+                }
+              ]
+            }
+          }
+        ]);
+
+        assert_eq!(response, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_capability_routing_verbose_results() -> Result<()> {
+        let model = two_node_tree_model()?;
+
+        let controller = CapabilityRouteController::default();
+        let response = controller.query(
+            model.clone(),
+            json!({ "capability_types": "directory protocol",
+                     "response_level": "verbose"}),
+        )?;
+
+        let expected = json!([
+          {
+            "capability_type": "directory",
+            "results": {
+              "errors": [
+                {
+                  "capability": "bad_dir",
+                  "error": {
+                    "error": {
+                      "offer_decl_not_found": [
+                        "/",
+                        "bad_dir"
+                      ]
+                    },
+                    "message": "no offer declaration for `/` with name `bad_dir`"
+                  },
+                  "using_node": "/child"
+                }
+              ],
+              "ok": [
+                {
+                  "capability": "good_dir",
                   "route": [
                     {
                       "action": "use_by",
@@ -457,7 +519,7 @@ mod tests {
                       "capability": {
                         "name": "good_dir",
                         "rights": 1,
-                        "source_path": "/",
+                        "source_path": null,
                         "type": "directory"
                       },
                       "node_path": "/"

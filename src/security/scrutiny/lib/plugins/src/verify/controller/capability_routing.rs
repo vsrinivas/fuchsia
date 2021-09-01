@@ -142,6 +142,8 @@ enum ResponseLevel {
     Warn,
     // Return errors, warnings, and a summary of each OK route.
     All,
+    // Same as `All`; also include unstable `cm_rust` types.
+    Verbose,
 }
 
 // An umbrella type for the capability-type-specific implementations of the
@@ -228,7 +230,20 @@ impl VerifierWithResults {
         let results = match level {
             ResponseLevel::Error => ResultsBySeverity { errors, ..Default::default() },
             ResponseLevel::Warn => ResultsBySeverity { errors, warnings, ..Default::default() },
-            ResponseLevel::All => ResultsBySeverity { errors, warnings, ok },
+            ResponseLevel::All => ResultsBySeverity {
+                errors,
+                warnings,
+                ok: ok
+                    .into_iter()
+                    .map(|result| OkResult {
+                        // `All` response level omits route details that depend on an
+                        // unstable route details format.
+                        route: vec![],
+                        ..result
+                    })
+                    .collect(),
+            },
+            ResponseLevel::Verbose => ResultsBySeverity { errors, warnings, ok },
         };
         ResultsForCapabilityType { capability_type: self.capability_type.clone(), results }
     }
@@ -294,6 +309,7 @@ impl CapabilityRouteController {
 
     fn parse_response_level(level: &str) -> Result<ResponseLevel> {
         match level {
+            "verbose" => Ok(ResponseLevel::Verbose),
             "all" => Ok(ResponseLevel::All),
             "warn" => Ok(ResponseLevel::Warn),
             "error" => Ok(ResponseLevel::Error),
@@ -331,9 +347,13 @@ impl DataController for CapabilityRouteController {
 
          Required parameters:
          --capability_types: a space-separated list of capability types to verify.
-         --response_level: one of `error` (return errors only), `warn` (return errors
-                           and warnings) and `all` (return errors, warnings, and a
-                           summary of each valid route)."
+         --response_level: one of `error` (return errors only); `warn` (return
+                           errors and warnings); `all` (return errors, warnings,
+                           and a list of capabilities with valid routes); or
+                           `verbose` (same as `all`, but with detailed route
+                           information). Note that the format for `verbose`
+                           output is unstable; external tools should not rely on
+                           the output format."
             .to_string()
     }
 }
