@@ -4,7 +4,8 @@
 
 use fidl_fuchsia_identity_account::{
     AccountManagerRequest::{
-        self, GetAccount, GetAccountAuthStates, GetAccountIds, GetAuthenticationMechanisms,
+        self, DeprecatedGetAccount, DeprecatedProvisionNewAccount, GetAccount,
+        GetAccountAuthStates, GetAccountIds, GetAccountMetadata, GetAuthenticationMechanisms,
         ProvisionNewAccount, RegisterAccountListener, RemoveAccount,
     },
     AccountManagerRequestStream, Error,
@@ -44,9 +45,15 @@ impl AccountManager {
                 let mut resp = Err(Error::UnsupportedOperation);
                 responder.send(&mut resp)
             }
+            GetAccountMetadata { id: _, responder: _ } => {
+                unimplemented!();
+            }
             GetAccount { id: _, context_provider: _, account: _, responder } => {
                 let mut resp = Err(Error::UnsupportedOperation);
                 responder.send(&mut resp)
+            }
+            DeprecatedGetAccount { id: _, password: _, account: _, responder: _ } => {
+                unimplemented!();
             }
             RegisterAccountListener { listener: _, options: _, responder } => {
                 let mut resp = Err(Error::UnsupportedOperation);
@@ -60,6 +67,15 @@ impl AccountManager {
                 let mut resp = Err(Error::UnsupportedOperation);
                 responder.send(&mut resp)
             }
+            DeprecatedProvisionNewAccount {
+                password: _,
+                metadata: _,
+                account: _,
+                responder: _,
+            } => {
+                unimplemented!();
+            }
+
             GetAuthenticationMechanisms { responder } => {
                 let mut resp = Err(Error::UnsupportedOperation);
                 responder.send(&mut resp)

@@ -5,6 +5,11 @@ library fuchsia.identity.account;
 
 using fuchsia.auth;
 
+/// The maximum length of the (UTF-8 encoded) password used in the temporary
+/// methods to support an initial prototype of password-based encryption.
+@deprecated
+const MAX_PASSWORD_SIZE uint32 = 128;
+
 /// AccountManager manages the overall state of Fuchsia accounts and personae on
 /// a Fuchsia device, installation of the AuthProviders that are used to obtain
 /// authentication tokens for these accounts, and access to TokenManagers for
@@ -32,6 +37,15 @@ protocol AccountManager {
         account_auth_states vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE;
     }) error Error;
 
+    /// Returns the metadata for a single account.
+    ///
+    /// `id` The account's identifier as returned by GetAccountIds()
+    GetAccountMetadata(struct {
+        id LocalAccountId;
+    }) -> (struct {
+        metadata AccountMetadata;
+    }) error Error;
+
     /// Connects a channel to read properties of and perform operations on
     /// one account. If the account is locked, an interactive authentication
     /// attempt will be invoked as part of this call.
@@ -44,6 +58,28 @@ protocol AccountManager {
     GetAccount(resource struct {
         id LocalAccountId;
         context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
+        account server_end:Account;
+    }) -> (struct {}) error Error;
+
+    /// Connects a channel to read properties of and perform operations on
+    /// one account. If the account is locked, the supplied password will be
+    /// used to attempt authentication.
+    ///
+    /// This is a temporary method used for an initial prototype of
+    /// password-based encryption. Its usage will be replaced by the
+    /// `GetAccount` method where the hardcoded authentication=password
+    /// assumption is replaced by a channel that can support different
+    /// authentication mechanisms.
+    ///
+    /// `id` The account's identifier as returned by GetAccountIds()
+    /// `password` The account's password
+    /// `account` The server end of an `Account` channel
+    ///
+    /// Fails with FAILED_AUTHENTICATION if the password was not correct.
+    @deprecated
+    DeprecatedGetAccount(resource struct {
+        id LocalAccountId;
+        password string:MAX_PASSWORD_SIZE;
         account server_end:Account;
     }) -> (struct {}) error Error;
 
@@ -78,9 +114,9 @@ protocol AccountManager {
         force bool;
     }) -> (struct {}) error Error;
 
-    /// Adds a new, initially empty, Fuchsia account to the current device. If a
-    /// storage unlock-capable authentication mechanism is provided, a single
-    /// enrollment will be created of that mecahnism.
+    /// Adds a new Fuchsia account to the current device. If a storage
+    /// unlock-capable authentication mechanism is provided, a single
+    /// enrollment will be created of that mechanism.
     ///
     /// `lifetime` The lifetime of the account
     /// `auth_mechanism_id` An `AuthMechanismId` for a storage
@@ -96,6 +132,31 @@ protocol AccountManager {
     }) -> (struct {
         account_id LocalAccountId;
     }) error Error;
+
+    /// Adds a new Fuchsia account to the current device using the
+    /// supplied password as the only authentication mechanism. The
+    /// account is automatically unlocked and the supplied channel
+    /// is connected to read properties of and perform operations on
+    /// the account.
+    ///
+    /// This is a temporary method used for an initial prototype of
+    /// password-based encryption. Its usage will be replaced by the
+    /// `ProvisionNewAccount` method where the hardcoded
+    /// authentication=password assumption is replaced by a channel
+    /// that can support different authentication mechanisms.
+    ///
+    /// `password` The password to be used for the new account
+    /// `metadata` Metadata for the new account
+    /// `account` The server end of an `Account` channel
+    ///
+    /// Fails with INVALID_REQUEST if the password does not meet
+    /// minimum strength requirements.
+    @deprecated
+    DeprecatedProvisionNewAccount(resource struct {
+        password string:MAX_PASSWORD_SIZE;
+        metadata AccountMetadata;
+        account server_end:Account;
+    }) -> (struct {}) error Error;
 
     /// Returns all available authentication mechanisms.
     GetAuthenticationMechanisms() -> (struct {

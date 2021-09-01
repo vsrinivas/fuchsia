@@ -110,6 +110,15 @@ type Error = strict enum {
 // INVALID_AUTH_PROVIDER,
 };
 
+/// Basic data about a system account. These data are available even while an
+/// account is locked.
+type AccountMetadata = table {
+    /// A human-readable name for the account. Account names are set by a human
+    /// and are not guaranteed to be meaningful or unique, even among the
+    /// accounts on a single device.
+    1: name string:MAX_NAME_SIZE;
+};
+
 /// A fuchsia component URI pointing to a component containing an authentication
 /// mechanism. It acts as a unique, stable identifier representing an
 /// authentication mechanism.

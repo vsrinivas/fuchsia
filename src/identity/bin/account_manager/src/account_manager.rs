@@ -100,9 +100,20 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 let mut response = self.get_account_auth_states(scenario).await;
                 responder.send(&mut response)?;
             }
+            AccountManagerRequest::GetAccountMetadata { id: _, responder: _ } => {
+                unimplemented!();
+            }
             AccountManagerRequest::GetAccount { id, context_provider, account, responder } => {
                 let mut response = self.get_account(id.into(), context_provider, account).await;
                 responder.send(&mut response)?;
+            }
+            AccountManagerRequest::DeprecatedGetAccount {
+                id: _,
+                password: _,
+                account: _,
+                responder: _,
+            } => {
+                unimplemented!();
             }
             AccountManagerRequest::RegisterAccountListener { listener, options, responder } => {
                 let mut response = self.register_account_listener(listener, options).await;
@@ -119,6 +130,14 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             } => {
                 let mut response = self.provision_new_account(lifetime, auth_mechanism_id).await;
                 responder.send(&mut response)?;
+            }
+            AccountManagerRequest::DeprecatedProvisionNewAccount {
+                password: _,
+                metadata: _,
+                account: _,
+                responder: _,
+            } => {
+                unimplemented!();
             }
             AccountManagerRequest::GetAuthenticationMechanisms { responder } => {
                 responder.send(&mut Err(ApiError::UnsupportedOperation))?;
