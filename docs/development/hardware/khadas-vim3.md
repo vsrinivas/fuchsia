@@ -85,7 +85,7 @@ For FTDI serial cables with black, white, red and green wires, use this:
 - 3rd from left, pin 18: RX (Green wire)
 - 4th from left, pin 17: Ground (Black wire)
 
-You can see these pins in [this diagram](http://docs.khadas.com/vim3/GPIOPinout.html) of the 40 pin header.
+You can see these pins on the "GPIO Pinout" tab of [this page](https://docs.khadas.com/linux/vim3/Hardware.html#VIM3-Hardware-Info).
 
 When connecting to the serial port, use (115200,8,N,1) as the settings.
 
