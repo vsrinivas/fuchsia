@@ -1601,3 +1601,18 @@
   consulted: ['wez@google.com']
   submitted: '2021-07-20'
   reviewed: '2021-08-18'
+
+- name: 'RFC-0124'
+  title: 'Decentralized Product Integration: Artifact Description and Propagation'
+  short_description: 'A mechanism to describe and propagate artifacts for decentralized product integration.'
+  authors: ['lijiaming@google.com','mesch@google.com','schilit@google.com']
+  file: '0124_decentralized_product_integration_artifact_description_and_propagation.md'
+  area: ['General']
+  issue: []
+  gerrit_change_id: ['509131']
+  status: 'Accepted'
+  reviewers: ['aaronwood@google.com', 'etryzelaar@google.com', 'wittrock@google.com',
+    'atyfto@google.com', 'marvinpaul@google.com', 'jsankey@google.com', 'enoharemaien@google.com',
+    'schilit@google.com']
+  submitted: '2021-03-30'
+  reviewed: '2021-08-30'
