@@ -4,7 +4,7 @@
 use crate::logs::message::MessageWithStats;
 
 use super::ListenerError;
-use diagnostics_message::message::LegacySeverity;
+use diagnostics_message::LegacySeverity;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter};
 use std::{collections::HashSet, convert::TryFrom};
 

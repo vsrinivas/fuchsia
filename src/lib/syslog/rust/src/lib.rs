@@ -463,7 +463,7 @@ pub fn is_enabled(severity: levels::LogLevel) -> bool {
 mod test {
     use super::*;
     use diagnostics_data::{assert_data_tree, Severity};
-    use diagnostics_message::message::{Message, MonikerWithUrl};
+    use diagnostics_message::{Message, MonikerWithUrl};
     use log::{debug, error, info, trace, warn};
     use std::fs::File;
     use std::io::Read;

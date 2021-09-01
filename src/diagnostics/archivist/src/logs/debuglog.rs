@@ -11,7 +11,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity};
-use diagnostics_message::message::METADATA_SIZE;
+use diagnostics_message::METADATA_SIZE;
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use diagnostics_message::message::fx_log_packet_t;
+use diagnostics_message::fx_log_packet_t;
 use fidl::{
     endpoints::{ClientEnd, ProtocolMarker, ServerEnd},
     Socket, SocketOpts,

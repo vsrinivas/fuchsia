@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::test_topology;
-use diagnostics_message::message::fx_log_packet_t;
+use diagnostics_message::fx_log_packet_t;
 use fidl_fuchsia_logger::{LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fuchsia_async as fasync;
 use fuchsia_component_test::RealmInstance;

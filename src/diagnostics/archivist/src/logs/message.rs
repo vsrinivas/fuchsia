@@ -8,7 +8,7 @@ use super::stats::LogStreamStats;
 use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder};
 use diagnostics_message::{
     error::MessageError,
-    message::{Message, MonikerWithUrl},
+    {Message, MonikerWithUrl},
 };
 use lazy_static::lazy_static;
 use serde::{Serialize, Serializer};
@@ -20,7 +20,7 @@ use std::{
 
 #[derive(Clone)]
 pub struct MessageWithStats {
-    msg: diagnostics_message::message::Message,
+    msg: diagnostics_message::Message,
     stats: Arc<LogStreamStats>,
 }
 
@@ -93,12 +93,12 @@ impl Serialize for MessageWithStats {
 
 impl From<LogsData> for MessageWithStats {
     fn from(data: LogsData) -> Self {
-        Self { msg: diagnostics_message::message::Message::from(data), stats: Default::default() }
+        Self { msg: diagnostics_message::Message::from(data), stats: Default::default() }
     }
 }
 
-impl From<diagnostics_message::message::Message> for MessageWithStats {
-    fn from(msg: diagnostics_message::message::Message) -> Self {
+impl From<diagnostics_message::Message> for MessageWithStats {
+    fn from(msg: diagnostics_message::Message) -> Self {
         Self { msg, stats: Default::default() }
     }
 }
@@ -137,7 +137,7 @@ impl PartialOrd for MessageWithStats {
 impl Eq for MessageWithStats {}
 
 impl Deref for MessageWithStats {
-    type Target = diagnostics_message::message::Message;
+    type Target = diagnostics_message::Message;
     fn deref(&self) -> &Self::Target {
         &self.msg
     }

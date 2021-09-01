@@ -315,7 +315,7 @@ pub enum LogSource {
 #[cfg(test)]
 mod tests {
     use diagnostics_data::{BuilderArgs, LogsDataBuilder};
-    use diagnostics_message::message::{Message, METADATA_SIZE, TEST_IDENTITY};
+    use diagnostics_message::{Message, METADATA_SIZE, TEST_IDENTITY};
 
     use {
         super::*, fuchsia_async as fasync, fuchsia_inspect::testing::*, fuchsia_inspect::*,

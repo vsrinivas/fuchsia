@@ -10,7 +10,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use diagnostics_log_encoding::{encode::Encoder, Record};
-use diagnostics_message::message::{fx_log_packet_t, MAX_DATAGRAM_LEN};
+use diagnostics_message::{fx_log_packet_t, MAX_DATAGRAM_LEN};
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_logger::{

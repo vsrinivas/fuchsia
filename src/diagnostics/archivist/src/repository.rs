@@ -573,7 +573,7 @@ mod tests {
         crate::events::types::ComponentIdentifier,
         diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity},
         diagnostics_hierarchy::trie::TrieIterableNode,
-        diagnostics_message::message::METADATA_SIZE,
+        diagnostics_message::METADATA_SIZE,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon as zx,
     };

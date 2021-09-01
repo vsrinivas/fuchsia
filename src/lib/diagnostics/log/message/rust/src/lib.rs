@@ -3,4 +3,5 @@
 // found in the LICENSE file.
 
 pub mod error;
-pub mod message;
+mod message;
+pub use crate::message::*;

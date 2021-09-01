@@ -1,5 +1,3 @@
-use diagnostics_message::message::{Message, MonikerWithUrl};
-
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -23,6 +21,7 @@ use {
     anyhow::{Context, Error},
     cm_rust::{CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl},
     cm_types::Url,
+    diagnostics_message::{Message, MonikerWithUrl},
     fidl::endpoints::{self, ProtocolMarker, Proxy},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{

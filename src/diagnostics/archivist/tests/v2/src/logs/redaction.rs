@@ -4,7 +4,7 @@
 
 use crate::{constants::*, test_topology};
 use archivist_lib::logs::redact::{REDACTED_CANARY_MESSAGE, UNREDACTED_CANARY_MESSAGE};
-use diagnostics_message::message::{fx_log_metadata_t, fx_log_packet_t};
+use diagnostics_message::{fx_log_metadata_t, fx_log_packet_t};
 use diagnostics_reader::{ArchiveReader, Data, Logs};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::{LogLevelFilter, LogSinkMarker, LogSinkProxy};

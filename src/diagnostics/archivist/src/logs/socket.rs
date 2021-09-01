@@ -4,7 +4,7 @@
 use super::{message::MessageWithStats, stats::LogStreamStats};
 use crate::container::ComponentIdentity;
 use crate::logs::error::StreamError;
-use diagnostics_message::message::MAX_DATAGRAM_LEN;
+use diagnostics_message::MAX_DATAGRAM_LEN;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::io::{self, AsyncReadExt};
@@ -117,7 +117,7 @@ mod tests {
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
-    use diagnostics_message::message::{fx_log_packet_t, LogsField, Severity, METADATA_SIZE};
+    use diagnostics_message::{fx_log_packet_t, LogsField, Severity, METADATA_SIZE};
     use std::io::Cursor;
 
     #[fasync::run_until_stalled(test)]
