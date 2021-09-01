@@ -29,44 +29,74 @@ use crate::rfcomm::{
     types::{status_to_rls_error, SignaledTask},
 };
 
-/// Manages the current clients of the RFCOMM server. Provides an API for
-/// registering, unregistering, and relaying RFCOMM channels to clients.
+/// An RFCOMM client that is registered with the RFCOMM server.
+struct RegisteredClient {
+    /// The proxy used to relay RFCOMM channels to the client.
+    connection_receiver: bredr::ConnectionReceiverProxy,
+    /// The channel number associated with the registration.
+    _channel_number: inspect::UintProperty,
+}
+
+/// Manages the current clients of the RFCOMM server. Provides an API for registering,
+/// unregistering, and relaying RFCOMM channels to clients.
+#[derive(Clone, Inspect)]
 pub struct Clients {
-    /// The currently registered clients. Each registered client is identified
-    /// by a unique ServerChannel.
-    channel_receivers: Mutex<HashMap<ServerChannel, bredr::ConnectionReceiverProxy>>,
+    #[inspect(forward)]
+    inner: Arc<Mutex<ClientsInner>>,
+}
+
+#[derive(Inspect)]
+pub struct ClientsInner {
+    /// The currently registered clients. Each registered client is identified by a unique
+    /// ServerChannel and can be inspected.
+    #[inspect(skip)]
+    channel_receivers: HashMap<ServerChannel, RegisteredClient>,
+    /// The inspect node for the set of clients.
+    inspect_node: inspect::Node,
 }
 
 impl Clients {
     pub fn new() -> Self {
-        Self { channel_receivers: Mutex::new(HashMap::new()) }
+        Self {
+            inner: Arc::new(Mutex::new(ClientsInner {
+                channel_receivers: HashMap::new(),
+                inspect_node: inspect::Node::default(),
+            })),
+        }
     }
 
     /// Returns the number of available spaces for clients that can be registered.
     async fn available_space(&self) -> usize {
-        let server_channels = self.channel_receivers.lock().await;
-        ServerChannel::all().filter(|sc| !server_channels.contains_key(&sc)).count()
+        let inner = self.inner.lock().await;
+        ServerChannel::all().filter(|sc| !inner.channel_receivers.contains_key(&sc)).count()
     }
 
     /// Removes the client that has registered `server_channel`.
     async fn remove(&self, server_channel: &ServerChannel) {
-        drop(self.channel_receivers.lock().await.remove(server_channel));
+        let _ = self.inner.lock().await.channel_receivers.remove(server_channel);
     }
 
     /// Clears all the registered clients.
     async fn clear(&self) {
-        self.channel_receivers.lock().await.clear();
+        self.inner.lock().await.channel_receivers.clear();
     }
 
     /// Reserves the next available ServerChannel for a client represented by a `proxy`.
     ///
     /// If allocated, returns the ServerChannel assigned to the client, None otherwise.
     pub async fn new_client(&self, proxy: bredr::ConnectionReceiverProxy) -> Option<ServerChannel> {
-        let mut server_channels = self.channel_receivers.lock().await;
-        let new_channel = ServerChannel::all().find(|sc| !server_channels.contains_key(&sc));
+        let mut inner = self.inner.lock().await;
+        let new_channel =
+            ServerChannel::all().find(|sc| !inner.channel_receivers.contains_key(&sc));
         new_channel.map(|channel| {
             trace!("Reserving RFCOMM channel: {:?}", channel);
-            let _ = server_channels.insert(channel, proxy);
+            let tagged_client = RegisteredClient {
+                connection_receiver: proxy,
+                _channel_number: inner
+                    .inspect_node
+                    .create_uint(inspect::unique_name("channel_number"), u8::from(channel) as u64),
+            };
+            let _ = inner.channel_receivers.insert(channel, tagged_client);
             channel
         })
     }
@@ -79,14 +109,16 @@ impl Clients {
         server_channel: ServerChannel,
         channel: Channel,
     ) -> Result<(), Error> {
-        let clients = self.channel_receivers.lock().await;
-        let client = clients
+        let inner = self.inner.lock().await;
+        let client = inner
+            .channel_receivers
             .get(&server_channel)
             .ok_or(format_err!("ServerChannel {:?} not registered", server_channel))?;
         // Build the RFCOMM protocol descriptor and relay the channel.
         let mut protocol: Vec<bredr::ProtocolDescriptor> =
             build_rfcomm_protocol(server_channel).iter().map(Into::into).collect();
         client
+            .connection_receiver
             .connected(
                 &mut peer_id.into(),
                 bredr::Channel::try_from(channel).unwrap(),
@@ -99,7 +131,7 @@ impl Clients {
 /// The RfcommServer handles connection requests from profiles clients and remote peers.
 pub struct RfcommServer {
     /// The currently registered profile clients of the RFCOMM server.
-    clients: Arc<Clients>,
+    clients: Clients,
 
     /// Active sessions between us and a remote peer. Each Session will multiplex
     /// RFCOMM connections over a single L2CAP channel.
@@ -113,6 +145,7 @@ pub struct RfcommServer {
 impl Inspect for &mut RfcommServer {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
         self.inspect = parent.create_child(name.as_ref());
+        self.clients.iattach(&self.inspect, "advertised_channels")?;
         Ok(())
     }
 }
@@ -120,7 +153,7 @@ impl Inspect for &mut RfcommServer {
 impl RfcommServer {
     pub fn new() -> Self {
         Self {
-            clients: Arc::new(Clients::new()),
+            clients: Clients::new(),
             sessions: DetachableMap::new(),
             inspect: inspect::Node::default(),
         }
@@ -273,6 +306,8 @@ mod tests {
         fidl_fuchsia_bluetooth_bredr::ConnectionReceiverMarker,
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
+        fuchsia_inspect::assert_data_tree,
+        fuchsia_inspect_derive::WithInspect,
         futures::{pin_mut, task::Poll, AsyncWriteExt, StreamExt},
         matches::assert_matches,
     };
@@ -423,6 +458,49 @@ mod tests {
         drop(s);
         let (local, _remote) = Channel::create();
         assert!(clients.deliver_channel(PeerId(1), server_channel, local).await.is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn clients_inspect_tree() {
+        let inspect = inspect::Inspector::new();
+        let clients = Clients::new()
+            .with_inspect(inspect.root(), "advertised_channels")
+            .expect("valid inspect tree");
+
+        // Default inspect tree.
+        assert_data_tree!(inspect, root: {
+            advertised_channels: {
+            }
+        });
+
+        // New client is ok.
+        let (c1, _s1) = create_proxy_and_stream::<bredr::ConnectionReceiverMarker>().unwrap();
+        let ch_number1 = clients.new_client(c1).await.expect("valid client");
+        let ch_number_raw1 = u8::from(ch_number1) as u64;
+        assert_data_tree!(inspect, root: {
+            advertised_channels: {
+                channel_number0: ch_number_raw1,
+            }
+        });
+
+        // Multiple clients is ok.
+        let (c2, _s2) = create_proxy_and_stream::<bredr::ConnectionReceiverMarker>().unwrap();
+        let ch_number2 = clients.new_client(c2).await.expect("valid client");
+        let ch_number_raw2 = u8::from(ch_number2) as u64;
+        assert_data_tree!(inspect, root: {
+            advertised_channels: {
+                channel_number0: ch_number_raw1,
+                channel_number1: ch_number_raw2,
+            }
+        });
+
+        // Removing a client should result in an updated inspect tree.
+        clients.remove(&ch_number1).await;
+        assert_data_tree!(inspect, root: {
+            advertised_channels: {
+                channel_number1: ch_number_raw2,
+            }
+        });
     }
 
     /// Makes a client Profile::Connect() request and returns the responder for the request

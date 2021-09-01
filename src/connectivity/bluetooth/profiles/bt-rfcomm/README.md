@@ -54,6 +54,9 @@ the current state of the RFCOMM server, use `fx iquery show bt-rfcomm_*/bt-rfcom
 ```
  root:
       rfcomm_server:
+        advertised_channels:
+          channel_number0: 1
+          channel_number1: 2
         peer_#:
           connected = (Connected / Disconnected)
           multiplexer:
