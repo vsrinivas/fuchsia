@@ -46,13 +46,15 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
   // space to render a crashlog into, render the payload of our crashlog before
   // stowing our reason.  Then, whether we have a payload or not, stow our final
   // crashlog.
-  if ((reason == ZirconCrashReason::Oom) || (reason == ZirconCrashReason::Panic) ||
-      (reason == ZirconCrashReason::SoftwareWatchdog)) {
-    auto& crashlog = PlatformCrashlog::Get();
+  {
     size_t rendered_crashlog_len = 0;
+    auto& crashlog = PlatformCrashlog::Get();
 
-    if (ktl::span<char> target = crashlog.GetRenderTarget(); target.size() > 0) {
-      rendered_crashlog_len = crashlog_to_string(target, reason);
+    if ((reason == ZirconCrashReason::Oom) || (reason == ZirconCrashReason::Panic) ||
+        (reason == ZirconCrashReason::SoftwareWatchdog)) {
+      if (ktl::span<char> target = crashlog.GetRenderTarget(); target.size() > 0) {
+        rendered_crashlog_len = crashlog_to_string(target, reason);
+      }
     }
 
     crashlog.Finalize(reason, rendered_crashlog_len);

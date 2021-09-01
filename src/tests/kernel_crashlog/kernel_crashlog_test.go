@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,7 +16,19 @@ import (
 
 // Boots an instance, |crash_cmd|, waits for the system to reboot, prints the
 // recovered crash report.
-func testCommon(t *testing.T, crash_cmd string) *emulatortest.Instance {
+//
+// |crash_cmd|                : The command to execute on the kernel command
+//                              line to trigger the crash.
+// |expected_crash_indicator| : The string to wait for which indicates that the
+//                              system in crashing in the expected way in
+//                              response to |crash_cmd|.
+// |expected_reboot_reason|   : The string we expect to see in the recovered
+//                              crashlog which reports the expected reason for
+//                              the crash/reboot.
+func testCommon(t *testing.T,
+	crash_cmd string,
+	expected_crash_indicator string,
+	expected_reboot_reason string) *emulatortest.Instance {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -52,7 +65,7 @@ func testCommon(t *testing.T, crash_cmd string) *emulatortest.Instance {
 
 	// Crash the kernel.
 	i.RunCommand(crash_cmd)
-	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
+	i.WaitForLogMessage(expected_crash_indicator)
 
 	// Now that the kernel has panicked, it should reboot.  Wait for it to come back up.
 	i.WaitForLogMessage("welcome to Zircon")
@@ -64,13 +77,13 @@ func testCommon(t *testing.T, crash_cmd string) *emulatortest.Instance {
 	i.RunCommand("dd if=/boot/log/last-panic.txt")
 
 	// See that the crashlog looks reasonable.
-	i.WaitForLogMessage("ZIRCON REBOOT REASON (KERNEL PANIC)")
+	i.WaitForLogMessage(fmt.Sprintf("ZIRCON REBOOT REASON (%s)", expected_reboot_reason))
 	return i
 }
 
 // See that the kernel stows a crashlog upon panicking.
 func TestKernelCrashlog(t *testing.T) {
-	i := testCommon(t, "k crash")
+	i := testCommon(t, "k crash", "ZIRCON KERNEL PANIC", "KERNEL PANIC")
 	// See that the crash report contains ESR and FAR.
 	//
 	// This is a regression test for fxbug.dev/52182. 'k crash' is going to
@@ -98,7 +111,7 @@ func TestKernelCrashlog(t *testing.T) {
 // See that when the kernel crashes because of an assert failure the crashlog contains the assert
 // message.
 func TestKernelCrashlogAssert(t *testing.T) {
-	i := testCommon(t, "k crash_assert")
+	i := testCommon(t, "k crash_assert", "ZIRCON KERNEL PANIC", "KERNEL PANIC")
 	// See that there's a backtrace, followed by some counters, and finally the assert
 	// message.
 	i.WaitForLogMessage("BACKTRACE")
@@ -111,6 +124,18 @@ func TestKernelCrashlogAssert(t *testing.T) {
 	i.WaitForLogMessage("--- BEGIN DLOG DUMP ---")
 	i.WaitForLogMessage("stopping other cpus")
 	i.WaitForLogMessage("--- END DLOG DUMP ---")
+}
+
+func TestKernelCrashlogOom(t *testing.T) {
+	testCommon(t, "k pmm oom", "memory-pressure: rebooting due to OOM", "OOM")
+}
+
+func TestKernelCrashlogRootJobTermination(t *testing.T) {
+	testCommon(t, "killall bootsvc", "root-job: taking reboot action", "USERSPACE ROOT JOB TERMINATION")
+}
+
+func TestKernelCrashlogNoCrash(t *testing.T) {
+	testCommon(t, "dm reboot", "[shutdown-shim]: started", "NO CRASH")
 }
 
 func execDir(t *testing.T) string {
