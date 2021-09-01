@@ -189,7 +189,7 @@ mod tests {
             }),
         );
 
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let environment = Environment::new_root(
             &top_instance,
             RunnerRegistry::default(),
@@ -235,7 +235,7 @@ mod tests {
             }),
         );
 
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let environment = Environment::new_root(
             &top_instance,
             RunnerRegistry::default(),
@@ -293,7 +293,7 @@ mod tests {
             }),
         );
 
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let environment = Environment::new_root(
             &top_instance,
             RunnerRegistry::default(),
@@ -330,7 +330,7 @@ mod tests {
 
         resolver.register(SCHEME.to_string(), Box::new(RelativeResolver::new()));
 
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let environment = Environment::new_root(
             &top_instance,
             RunnerRegistry::default(),

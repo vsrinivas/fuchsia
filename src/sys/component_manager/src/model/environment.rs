@@ -295,7 +295,7 @@ mod tests {
             registry
         };
 
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
@@ -385,7 +385,7 @@ mod tests {
             registry
         };
 
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
@@ -478,7 +478,7 @@ mod tests {
             registry
         };
 
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
@@ -567,7 +567,7 @@ mod tests {
             registry
         };
 
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
@@ -632,7 +632,7 @@ mod tests {
             registry.register("test".to_string(), Box::new(resolver));
             registry
         };
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),

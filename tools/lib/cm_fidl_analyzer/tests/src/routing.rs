@@ -46,6 +46,7 @@ pub struct RoutingTestBuilderForAnalyzer {
     root_url: String,
     decls_by_url: HashMap<String, ComponentDecl>,
     namespace_capabilities: Vec<CapabilityDecl>,
+    builtin_capabilities: Vec<CapabilityDecl>,
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
     debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
     component_id_index_path: Option<String>,
@@ -66,6 +67,7 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
             root_url,
             decls_by_url,
             namespace_capabilities: Vec::new(),
+            builtin_capabilities: Vec::new(),
             capability_policy: HashMap::new(),
             debug_capability_policy: HashMap::new(),
             component_id_index_path: None,
@@ -74,6 +76,10 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
 
     fn set_namespace_capabilities(&mut self, caps: Vec<CapabilityDecl>) {
         self.namespace_capabilities = caps;
+    }
+
+    fn set_builtin_capabilities(&mut self, caps: Vec<CapabilityDecl>) {
+        self.builtin_capabilities = caps;
     }
 
     /// Add a custom capability security policy to restrict routing of certain caps.
@@ -101,6 +107,7 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
     async fn build(self) -> RoutingTestForAnalyzer {
         let mut config = RuntimeConfig::default();
         config.namespace_capabilities = self.namespace_capabilities;
+        config.builtin_capabilities = self.builtin_capabilities;
 
         let mut security_policy = SecurityPolicy::default();
         security_policy.capability_policy = self.capability_policy;
@@ -268,7 +275,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
             }
             Ok(use_decl) => match self.model.check_use_capability(use_decl, &target).await {
                 Err(ref err) => match expected {
-                    ExpectedResult::Ok => panic!("routing failed, expected success: {}", err),
+                    ExpectedResult::Ok => panic!("routing failed, expected success: {:?}", err),
                     ExpectedResult::Err(status) => {
                         assert_eq!(err.as_zx_status(), status);
                     }

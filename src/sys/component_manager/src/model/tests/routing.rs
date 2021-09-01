@@ -283,7 +283,13 @@ async fn capability_requested_event_at_parent() {
                 .build(),
         ),
     ];
-    let test = RoutingTest::new("a", components).await;
+    let test = RoutingTestBuilder::new("a", components)
+        .set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })])
+        .build()
+        .await;
 
     let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
     let mut event_stream = capability_util::subscribe_to_event(
@@ -1037,7 +1043,14 @@ async fn use_runner_from_environment_failed() {
 
     // Set a capability provider for the runner that closes the server end.
     // `ComponentRunner.Start` to fail.
-    let test = RoutingTestBuilder::new("a", components).build().await;
+    let test = RoutingTestBuilder::new("a", components)
+        .set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })])
+        .build()
+        .await;
+
     let runner_host = Arc::new(RunnerHost {});
     test.model
         .root()
@@ -1669,7 +1682,7 @@ async fn resolver_component_decl_is_validated() {
 /// Capability policy denies the route from being allowed for started but
 /// not for capability_requested.
 #[fuchsia::test]
-async fn use_event_from_framework_denied_by_capabililty_policy() {
+async fn use_event_from_framework_denied_by_capability_policy() {
     let components = vec![
         (
             "a",
@@ -1732,6 +1745,10 @@ async fn use_event_from_framework_denied_by_capabililty_policy() {
     allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0"])));
 
     let test = RoutingTestBuilder::new("a", components)
+        .set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })])
         .add_capability_policy(
             CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![

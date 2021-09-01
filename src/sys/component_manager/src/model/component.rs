@@ -30,6 +30,7 @@ use {
         },
     },
     ::routing::{
+        capability_source::BuiltinCapabilities,
         component_id_index::{ComponentIdIndex, ComponentInstanceId},
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
@@ -199,6 +200,9 @@ pub struct ComponentManagerInstance {
     /// The list of capabilities offered from component manager's namespace.
     pub namespace_capabilities: NamespaceCapabilities,
 
+    /// The list of capabilities offered from component manager as built-in capabilities.
+    pub builtin_capabilities: BuiltinCapabilities,
+
     /// Mutable state for component manager's instance.
     state: Mutex<ComponentManagerInstanceState>,
 }
@@ -216,8 +220,15 @@ pub struct ComponentManagerInstanceState {
 }
 
 impl ComponentManagerInstance {
-    pub fn new(namespace_capabilities: NamespaceCapabilities) -> Self {
-        Self { namespace_capabilities, state: Mutex::new(ComponentManagerInstanceState::new()) }
+    pub fn new(
+        namespace_capabilities: NamespaceCapabilities,
+        builtin_capabilities: BuiltinCapabilities,
+    ) -> Self {
+        Self {
+            namespace_capabilities,
+            builtin_capabilities,
+            state: Mutex::new(ComponentManagerInstanceState::new()),
+        }
     }
 
     /// Adds a task to the list of tasks owned by component manager.
@@ -308,6 +319,10 @@ impl ComponentManagerInstanceState {
 impl TopInstanceInterface for ComponentManagerInstance {
     fn namespace_capabilities(&self) -> &NamespaceCapabilities {
         &self.namespace_capabilities
+    }
+
+    fn builtin_capabilities(&self) -> &BuiltinCapabilities {
+        &self.builtin_capabilities
     }
 }
 

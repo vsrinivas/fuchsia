@@ -12,11 +12,12 @@ use {
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ComponentDecl,
-        DependencyType, DictionaryValue, EventMode, ExposeDecl, ExposeDirectoryDecl,
+        DependencyType, DictionaryValue, EventDecl, EventMode, ExposeDecl, ExposeDirectoryDecl,
         ExposeProtocolDecl, ExposeServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
         OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferServiceDecl, OfferSource,
-        OfferTarget, ProgramDecl, RegistrationSource, ServiceDecl, UseDecl, UseDirectoryDecl,
-        UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseServiceDecl, UseSource,
+        OfferTarget, ProgramDecl, ProtocolDecl, RegistrationSource, ServiceDecl, UseDecl,
+        UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseServiceDecl,
+        UseSource,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -225,6 +226,9 @@ pub trait RoutingTestModelBuilder {
     /// Set the capabilities that should be available from the top instance's namespace.
     fn set_namespace_capabilities(&mut self, caps: Vec<CapabilityDecl>);
 
+    /// Set the capabilities that should be available as built-in capabilities.
+    fn set_builtin_capabilities(&mut self, caps: Vec<CapabilityDecl>);
+
     /// Add a custom capability security policy to restrict routing of certain caps.
     fn add_capability_policy(
         &mut self,
@@ -292,16 +296,10 @@ macro_rules! instantiate_common_routing_tests {
             test_event_filter_routing,
             test_event_mode_routing_failure,
             test_event_mode_routing_success,
+            test_use_builtin_event,
             test_route_service_from_parent,
             test_route_service_from_child,
             test_route_service_from_sibling,
-        }
-
-        // TODO(fxbug.dev/77649): These tests exercise features not currently supported under
-        // cm_fidl_analyzer
-        #[cfg(target_os = "fuchsia")]
-        instantiate_common_routing_tests! {
-            $builder_impl,
             test_use_builtin_from_grandparent,
             test_invalid_use_from_component_manager,
             test_invalid_offer_from_component_manager,
@@ -745,7 +743,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .build(),
             ),
         ];
-        let model = T::new("a", components).build().await;
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "builtin.Echo".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
         model
             .check_use(
                 vec!["b:0", "c:0"].into(),
@@ -2318,7 +2323,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .build(),
             ),
         ];
-        let model = T::new("a", components).build().await;
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
         model
             .check_use(
                 vec!["b:0"].into(),
@@ -2404,7 +2416,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .build(),
             ),
         ];
-        let model = T::new("a", components).build().await;
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
         model
             .check_use(
                 vec!["b:0"].into(),
@@ -2484,7 +2503,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .build(),
             ),
         ];
-        let model = T::new("a", components).build().await;
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
         model
             .check_use(
                 vec!["b:0"].into(),
@@ -2620,9 +2646,15 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     }],
                 }))
                 .build(),
-        ),
-    ];
-        let model = T::new("a", components).build().await;
+        )];
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
         model
             .check_use(
                 vec!["b:0", "c:0"].into(),
@@ -2844,7 +2876,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .build(),
             ),
         ];
-        let model = T::new("a", components).build().await;
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
         model
             .check_use(
                 vec!["b:0"].into(),
@@ -2961,7 +3000,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .build(),
             ),
         ];
-        let model = T::new("a", components).build().await;
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
         model
             .check_use(
                 vec!["b:0", "c:0"].into(),
@@ -3065,7 +3111,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .build(),
             ),
         ];
-        let model = T::new("a", components).build().await;
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
         model
             .check_use(
                 vec!["b:0", "c:0"].into(),
@@ -3074,7 +3127,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         "directory_ready_foo_bar".into(),
                         EventMode::Async,
                     ),
-                    start_component_tree: true,
+                    start_component_tree: false,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -3087,6 +3140,72 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         "directory_ready_foo_bar".into(),
                         EventMode::Sync,
                     ),
+                    start_component_tree: true,
+                    expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///
+    /// a: uses registered built-in event "directory_ready"
+    /// b: uses unregistered event "unregistered" as a built-in; should fail
+    pub async fn test_use_builtin_event(&self) {
+        let components = vec![(
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Event(UseEventDecl {
+                    dependency_type: DependencyType::Strong,
+                    source: UseSource::Parent,
+                    source_name: "directory_ready".into(),
+                    target_name: "directory_ready".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Async,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
+                    source: UseSource::Parent,
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    dependency_type: DependencyType::Strong,
+                    source: UseSource::Parent,
+                    source_name: "unregistered".into(),
+                    target_name: "unregistered".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Async,
+                }))
+                .build(),
+        )];
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![
+            CapabilityDecl::Protocol(ProtocolDecl {
+                name: "fuchsia.sys2.EventSource".into(),
+                source_path: None,
+            }),
+            CapabilityDecl::Event(EventDecl { name: "directory_ready".into() }),
+        ]);
+        let model = builder.build().await;
+
+        model
+            .check_use(
+                vec![].into(),
+                CheckUse::Event {
+                    request: EventSubscription::new("directory_ready".into(), EventMode::Async),
+                    start_component_tree: false,
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+
+        model
+            .check_use(
+                vec![].into(),
+                CheckUse::Event {
+                    request: EventSubscription::new("unregistered".into(), EventMode::Async),
                     start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },

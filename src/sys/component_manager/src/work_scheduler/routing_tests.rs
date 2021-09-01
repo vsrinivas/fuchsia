@@ -15,9 +15,9 @@ use {
         work_scheduler::WorkScheduler,
     },
     cm_rust::{
-        self, CapabilityName, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl,
-        ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource, OfferTarget,
-        UseDecl, UseProtocolDecl, UseSource,
+        self, CapabilityDecl, CapabilityName, CapabilityPath, DependencyType, ExposeDecl,
+        ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource,
+        OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl, UseSource,
     },
     cm_rust_testing::*,
     fidl::endpoints::Proxy,
@@ -35,7 +35,7 @@ struct BindingWorkScheduler {
 
 impl BindingWorkScheduler {
     async fn new() -> Self {
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let binder = FakeBinder::new(top_instance);
         let work_scheduler = WorkScheduler::new(binder.clone()).await;
         Self { work_scheduler, _binder: binder }
@@ -255,7 +255,7 @@ async fn use_work_scheduler_with_expose_to_realm() {
 ///    \
 ///     b
 ///
-/// b: uses WorkSchedulerControl offered by by a
+/// b: uses WorkSchedulerControl offered by a
 #[fuchsia::test]
 async fn use_work_scheduler_control_routed() {
     let offer_use_name = CapabilityName::from("WorkSchedulerControl");
@@ -288,8 +288,14 @@ async fn use_work_scheduler_control_routed() {
     ];
     let work_scheduler = new_work_scheduler().await;
 
-    let test =
-        RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
+    let test = RoutingTestBuilder::new("a", components)
+        .set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.WorkSchedulerControl".into(),
+            source_path: None,
+        })])
+        .add_hooks(work_scheduler.hooks())
+        .build()
+        .await;
 
     check_use_work_scheduler_control(&test, vec!["b:0"].into(), use_path.clone(), true).await;
 }

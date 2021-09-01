@@ -282,7 +282,7 @@ mod time_tests {
         fn new() -> Self {
             let executor = TestExecutor::new_with_fake_time().unwrap();
             executor.set_fake_time(Time::from_nanos(0));
-            let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+            let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
             let binder = FakeBinder::new(top_instance);
             let work_scheduler = WorkScheduler::new_raw(binder.clone());
             block_on(async {
@@ -792,7 +792,7 @@ mod connect_tests {
     #[fuchsia::test]
     async fn connect_to_work_scheduler_control_service() -> Result<(), Error> {
         // Retain `Arc` to keep `Binder` alive throughout test.
-        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
         let binder = FakeBinder::new(top_instance);
 
         let work_scheduler = WorkScheduler::new(binder).await;

@@ -4,8 +4,10 @@
 
 use {
     crate::{
-        capability_source::NamespaceCapabilities, component_id_index::ComponentIdIndex,
-        environment::EnvironmentInterface, error::ComponentInstanceError,
+        capability_source::{BuiltinCapabilities, NamespaceCapabilities},
+        component_id_index::ComponentIdIndex,
+        environment::EnvironmentInterface,
+        error::ComponentInstanceError,
         policy::GlobalPolicyChecker,
     },
     async_trait::async_trait,
@@ -147,4 +149,6 @@ impl<C: ComponentInstanceInterface> From<&ExtendedInstanceInterface<C>>
 /// A special instance identified with the top of the tree, i.e. component manager's instance.
 pub trait TopInstanceInterface: Sized + std::fmt::Debug {
     fn namespace_capabilities(&self) -> &NamespaceCapabilities;
+
+    fn builtin_capabilities(&self) -> &BuiltinCapabilities;
 }

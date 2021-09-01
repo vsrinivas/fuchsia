@@ -13,8 +13,8 @@ use {
     },
     routing::{
         capability_source::{
-            CapabilitySourceInterface, ComponentCapability, NamespaceCapabilities,
-            StorageCapabilitySource,
+            BuiltinCapabilities, CapabilitySourceInterface, ComponentCapability,
+            NamespaceCapabilities, StorageCapabilitySource,
         },
         component_id_index::ComponentIdIndex,
         component_instance::{
@@ -80,6 +80,7 @@ impl ModelBuilderForAnalyzer {
         let mut model = ComponentModelForAnalyzer {
             top_instance: TopInstanceForAnalyzer::new(
                 runtime_config.namespace_capabilities.clone(),
+                runtime_config.builtin_capabilities.clone(),
             ),
             instances: HashMap::new(),
             policy_checker: GlobalPolicyChecker::new(Arc::clone(&runtime_config)),
@@ -283,7 +284,7 @@ impl ComponentModelForAnalyzer {
             CapabilitySourceInterface::Capability { source_capability, component: weak } => {
                 self.check_protocol_capability_source(&weak.upgrade()?, &source_capability).await
             }
-
+            CapabilitySourceInterface::Builtin { .. } => Ok(()),
             _ => unimplemented![],
         }
     }
@@ -405,6 +406,7 @@ pub struct ComponentInstanceForAnalyzer {
 #[derive(Debug)]
 pub struct TopInstanceForAnalyzer {
     namespace_capabilities: NamespaceCapabilities,
+    builtin_capabilities: BuiltinCapabilities,
 }
 
 #[async_trait]
@@ -455,14 +457,21 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
 }
 
 impl TopInstanceForAnalyzer {
-    fn new(namespace_capabilities: NamespaceCapabilities) -> Arc<Self> {
-        Arc::new(Self { namespace_capabilities })
+    fn new(
+        namespace_capabilities: NamespaceCapabilities,
+        builtin_capabilities: BuiltinCapabilities,
+    ) -> Arc<Self> {
+        Arc::new(Self { namespace_capabilities, builtin_capabilities })
     }
 }
 
 impl TopInstanceInterface for TopInstanceForAnalyzer {
     fn namespace_capabilities(&self) -> &NamespaceCapabilities {
         &self.namespace_capabilities
+    }
+
+    fn builtin_capabilities(&self) -> &BuiltinCapabilities {
+        &self.builtin_capabilities
     }
 }
 

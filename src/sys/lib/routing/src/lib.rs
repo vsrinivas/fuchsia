@@ -35,13 +35,13 @@ use {
         walk_state::WalkState,
     },
     cm_rust::{
-        CapabilityName, DirectoryDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl,
-        ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, OfferDirectoryDecl, OfferEventDecl,
-        OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource,
-        OfferStorageDecl, ProtocolDecl, RegistrationDeclCommon, RegistrationSource, ResolverDecl,
-        ResolverRegistration, RunnerDecl, RunnerRegistration, ServiceDecl, SourceName, StorageDecl,
-        StorageDirectorySource, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl,
-        UseSource, UseStorageDecl,
+        CapabilityName, DirectoryDecl, EventDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
+        ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, OfferDirectoryDecl,
+        OfferEventDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl,
+        OfferSource, OfferStorageDecl, ProtocolDecl, RegistrationDeclCommon, RegistrationSource,
+        ResolverDecl, ResolverRegistration, RunnerDecl, RunnerRegistration, ServiceDecl,
+        SourceName, StorageDecl, StorageDirectorySource, UseDirectoryDecl, UseEventDecl,
+        UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
     },
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMoniker, PartialChildMoniker, RelativeMoniker, RelativeMonikerBase},
@@ -195,7 +195,7 @@ where
 {
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Protocol)
-        .builtin(InternalCapability::Protocol)
+        .builtin()
         .namespace()
         .component()
         .capability();
@@ -287,7 +287,7 @@ where
 {
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Protocol)
-        .builtin(InternalCapability::Protocol)
+        .builtin()
         .namespace()
         .component()
         .capability();
@@ -458,7 +458,6 @@ where
             }
             let allowed_sources = AllowedSourcesBuilder::new()
                 .framework(InternalCapability::Directory)
-                .builtin(InternalCapability::Directory)
                 .namespace()
                 .component();
             let source = RoutingStrategy::new()
@@ -487,7 +486,6 @@ where
     let mut state = DirectoryState { rights: WalkState::new(), subdir: PathBuf::new() };
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Directory)
-        .builtin(InternalCapability::Directory)
         .namespace()
         .component();
     let source = RoutingStrategy::new()
@@ -649,8 +647,7 @@ where
             }
         };
 
-    let allowed_sources =
-        AllowedSourcesBuilder::new().builtin(InternalCapability::Runner).component();
+    let allowed_sources = AllowedSourcesBuilder::new().builtin().component();
     let source = RoutingStrategy::new()
         .registration::<RunnerRegistration>()
         .offer::<OfferRunnerDecl>()
@@ -676,8 +673,7 @@ async fn route_resolver<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
-    let allowed_sources =
-        AllowedSourcesBuilder::new().builtin(InternalCapability::Resolver).component();
+    let allowed_sources = AllowedSourcesBuilder::new().builtin().component();
 
     let source = RoutingStrategy::new()
         .registration::<ResolverRegistration>()
@@ -718,7 +714,7 @@ impl OfferVisitor for EventState {
 }
 
 impl CapabilityVisitor for EventState {
-    type CapabilityDecl = ();
+    type CapabilityDecl = EventDecl;
 }
 
 /// Routes an Event capability from `target` to its source, starting from `use_decl`.
@@ -734,9 +730,8 @@ where
         modes_state: WalkState::at(EventModeSet::new(use_decl.mode.clone())),
     };
 
-    let allowed_sources = AllowedSourcesBuilder::<()>::new()
-        .framework(InternalCapability::Event)
-        .builtin(InternalCapability::Event);
+    let allowed_sources =
+        AllowedSourcesBuilder::new().framework(InternalCapability::Event).builtin();
     let source = RoutingStrategy::new()
         .use_::<UseEventDecl>()
         .offer::<OfferEventDecl>()

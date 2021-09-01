@@ -13,12 +13,12 @@ use {
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, DirectoryDecl,
-        ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl,
-        ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl, OfferEventDecl,
-        OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource,
-        OfferStorageDecl, ProtocolDecl, RegistrationSource, ResolverDecl, RunnerDecl, ServiceDecl,
-        StorageDecl, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl,
-        UseSource, UseStorageDecl,
+        EventDecl, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl,
+        ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
+        OfferEventDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl,
+        OfferSource, OfferStorageDecl, ProtocolDecl, RegistrationSource, ResolverDecl, RunnerDecl,
+        ServiceDecl, StorageDecl, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
+        UseServiceDecl, UseSource, UseStorageDecl,
     },
     derivative::Derivative,
     from_enum::FromEnum,
@@ -218,6 +218,7 @@ pub enum InternalCapability {
     Runner(CapabilityName),
     Event(CapabilityName),
     Resolver(CapabilityName),
+    Storage(CapabilityName),
 }
 
 impl InternalCapability {
@@ -240,6 +241,7 @@ impl InternalCapability {
             InternalCapability::Runner(_) => CapabilityTypeName::Runner,
             InternalCapability::Event(_) => CapabilityTypeName::Event,
             InternalCapability::Resolver(_) => CapabilityTypeName::Resolver,
+            InternalCapability::Storage(_) => CapabilityTypeName::Storage,
         }
     }
 
@@ -251,6 +253,7 @@ impl InternalCapability {
             InternalCapability::Runner(name) => &name,
             InternalCapability::Event(name) => &name,
             InternalCapability::Resolver(name) => &name,
+            InternalCapability::Storage(name) => &name,
         }
     }
 
@@ -269,6 +272,48 @@ impl fmt::Display for InternalCapability {
     }
 }
 
+impl From<ServiceDecl> for InternalCapability {
+    fn from(service: ServiceDecl) -> Self {
+        Self::Service(service.name)
+    }
+}
+
+impl From<ProtocolDecl> for InternalCapability {
+    fn from(protocol: ProtocolDecl) -> Self {
+        Self::Protocol(protocol.name)
+    }
+}
+
+impl From<DirectoryDecl> for InternalCapability {
+    fn from(directory: DirectoryDecl) -> Self {
+        Self::Directory(directory.name)
+    }
+}
+
+impl From<RunnerDecl> for InternalCapability {
+    fn from(runner: RunnerDecl) -> Self {
+        Self::Runner(runner.name)
+    }
+}
+
+impl From<ResolverDecl> for InternalCapability {
+    fn from(resolver: ResolverDecl) -> Self {
+        Self::Resolver(resolver.name)
+    }
+}
+
+impl From<EventDecl> for InternalCapability {
+    fn from(event: EventDecl) -> Self {
+        Self::Event(event.name)
+    }
+}
+
+impl From<StorageDecl> for InternalCapability {
+    fn from(storage: StorageDecl) -> Self {
+        Self::Storage(storage.name)
+    }
+}
+
 /// A capability being routed from a component.
 #[derive(FromEnum, Clone, Debug, PartialEq, Eq)]
 pub enum ComponentCapability {
@@ -283,6 +328,7 @@ pub enum ComponentCapability {
     Runner(RunnerDecl),
     Resolver(ResolverDecl),
     Service(ServiceDecl),
+    Event(EventDecl),
 }
 
 impl ComponentCapability {
@@ -345,6 +391,7 @@ impl ComponentCapability {
             ComponentCapability::Runner(_) => CapabilityTypeName::Runner,
             ComponentCapability::Resolver(_) => CapabilityTypeName::Resolver,
             ComponentCapability::Service(_) => CapabilityTypeName::Service,
+            ComponentCapability::Event(_) => CapabilityTypeName::Event,
         }
     }
 
@@ -370,6 +417,7 @@ impl ComponentCapability {
             ComponentCapability::Runner(runner) => Some(&runner.name),
             ComponentCapability::Resolver(resolver) => Some(&resolver.name),
             ComponentCapability::Service(service) => Some(&service.name),
+            ComponentCapability::Event(event) => Some(&event.name),
             ComponentCapability::Use(use_) => match use_ {
                 UseDecl::Protocol(UseProtocolDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Directory(UseDirectoryDecl { source_name, .. }) => Some(source_name),
@@ -454,6 +502,9 @@ impl EnvironmentCapability {
 
 /// The list of declarations for capabilities from component manager's namespace.
 pub type NamespaceCapabilities = Vec<CapabilityDecl>;
+
+/// The list of declarations for capabilities offered by component manager as built-in capabilities.
+pub type BuiltinCapabilities = Vec<CapabilityDecl>;
 
 #[cfg(test)]
 mod tests {

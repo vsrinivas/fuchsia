@@ -429,17 +429,12 @@ where
 
 /// A trait for extracting the source of a capability.
 pub trait Sources: Clone + Send + Sync {
-    /// The supported capability declaration type for namespace and component sources.
-    /// Can be `()` if namespace and component sources are not supported.
+    /// The supported capability declaration type for namespace, component and built-in sources.
     type CapabilityDecl;
 
     /// Return the [`InternalCapability`] representing this framework capability source, or
     /// [`RoutingError::UnsupportedRouteSource`] if unsupported.
     fn framework_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError>;
-
-    /// Return the [`InternalCapability`] representing this built-in capability source, or
-    /// [`RoutingError::UnsupportedRouteSource`] if unsupported.
-    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError>;
 
     /// Checks whether capability sources are supported, returning [`RoutingError::UnsupportedRouteSource`]
     /// if they are not.
@@ -465,6 +460,18 @@ pub trait Sources: Clone + Send + Sync {
     where
         V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>;
 
+    /// Looks for a built-in capability in the list of capability sources.
+    /// If found, the capability's name is wrapped in an [`InternalCapability`].
+    /// Returns [`RoutingError::UnsupportedRouteSource`] if built-in capabilities are unsupported.
+    fn find_builtin_source<V>(
+        &self,
+        name: &CapabilityName,
+        capabilities: &[CapabilityDecl],
+        visitor: &mut V,
+    ) -> Result<Option<InternalCapability>, RoutingError>
+    where
+        V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>;
+
     /// Looks for a component capability in the list of capability sources.
     /// If found, the declaration is visited by `visitor` and the declaration is wrapped
     /// in a [`ComponentCapability`].
@@ -482,22 +489,36 @@ pub trait Sources: Clone + Send + Sync {
 /// Defines which capability source types are supported.
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""))]
-pub struct AllowedSourcesBuilder<CapabilityDecl = ()> {
+pub struct AllowedSourcesBuilder<C>
+where
+    C: CapabilityDeclCommon
+        + FromEnum<CapabilityDecl>
+        + Into<ComponentCapability>
+        + Into<InternalCapability>
+        + Clone,
+{
     framework: Option<fn(CapabilityName) -> InternalCapability>,
-    builtin: Option<fn(CapabilityName) -> InternalCapability>,
+    builtin: bool,
     capability: bool,
     collection: bool,
     namespace: bool,
     component: bool,
-    _decl: PhantomData<CapabilityDecl>,
+    _decl: PhantomData<C>,
 }
 
-impl<C> AllowedSourcesBuilder<C> {
+impl<
+        C: CapabilityDeclCommon
+            + FromEnum<CapabilityDecl>
+            + Into<ComponentCapability>
+            + Into<InternalCapability>
+            + Clone,
+    > AllowedSourcesBuilder<C>
+{
     /// Creates a new [`AllowedSourcesBuilder`] that does not allow any capability source types.
     pub fn new() -> Self {
         Self {
             framework: None,
-            builtin: None,
+            builtin: false,
             capability: false,
             collection: false,
             namespace: false,
@@ -511,12 +532,6 @@ impl<C> AllowedSourcesBuilder<C> {
         Self { framework: Some(builder), ..self }
     }
 
-    /// Allows built-in capability source types (`from: "parent"` in `CML` where the parent component_instance is
-    /// component_manager).
-    pub fn builtin(self, builder: fn(CapabilityName) -> InternalCapability) -> Self {
-        Self { builtin: Some(builder), ..self }
-    }
-
     /// Allows capability source types that originate from other capabilities (`from: "#storage"` in
     /// `CML`).
     pub fn capability(self) -> Self {
@@ -527,12 +542,7 @@ impl<C> AllowedSourcesBuilder<C> {
     pub fn collection(self) -> Self {
         Self { collection: true, ..self }
     }
-}
 
-impl<C> AllowedSourcesBuilder<Allow<C>>
-where
-    C: CapabilityDeclCommon,
-{
     /// Allows namespace capability source types, which are capabilities that are installed in
     /// component_manager's incoming namespace.
     pub fn namespace(self) -> Self {
@@ -543,81 +553,23 @@ where
     pub fn component(self) -> Self {
         Self { component: true, ..self }
     }
-}
 
-/// Marker that differentiates an [`AllowedSourcesBuilder`] that allows namespace or component
-/// source types from one that does not.
-pub struct Allow<C>(PhantomData<C>);
-
-// Implementation of `Sources` that does not allow namespace or component source types, which means
-// the `CapabilityDecl` type is not needed.
-impl Sources for AllowedSourcesBuilder<()> {
-    type CapabilityDecl = ();
-
-    fn framework_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError> {
-        self.framework
-            .as_ref()
-            .map(|b| b(name))
-            .ok_or_else(|| RoutingError::unsupported_route_source("framework"))
-    }
-
-    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError> {
-        self.builtin
-            .as_ref()
-            .map(|b| b(name))
-            .ok_or_else(|| RoutingError::unsupported_route_source("built-in"))
-    }
-
-    fn capability_source(&self) -> Result<(), RoutingError> {
-        if self.capability {
-            Ok(())
-        } else {
-            Err(RoutingError::unsupported_route_source("capability"))
-        }
-    }
-
-    fn collection_source(&self) -> Result<(), RoutingError> {
-        if self.collection {
-            Ok(())
-        } else {
-            Err(RoutingError::unsupported_route_source("collection"))
-        }
-    }
-
-    fn is_namespace_supported(&self) -> bool {
-        false
-    }
-
-    fn find_namespace_source<V>(
-        &self,
-        _: &CapabilityName,
-        _: &[CapabilityDecl],
-        _: &mut V,
-    ) -> Result<Option<ComponentCapability>, RoutingError>
-    where
-        V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>,
-    {
-        Err(RoutingError::unsupported_route_source("namespace"))
-    }
-
-    fn find_component_source<V>(
-        &self,
-        _: &CapabilityName,
-        _: &[CapabilityDecl],
-        _: &mut V,
-    ) -> Result<ComponentCapability, RoutingError>
-    where
-        V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>,
-    {
-        Err(RoutingError::unsupported_route_source("component"))
+    /// Allows built-in capability source types (`from: "parent"` in `CML` where the parent component_instance is
+    /// component_manager).
+    pub fn builtin(self) -> Self {
+        Self { builtin: true, ..self }
     }
 }
 
-/// Implementation of `Sources` that allows namespace and component source types, which means
-/// the `CapabilityDecl` must satisfy some specific type constraints.
-impl<C> Sources for AllowedSourcesBuilder<Allow<C>>
+// Implementation of `Sources` that allows namespace, component, and/or built-in source
+// types.
+impl<C> Sources for AllowedSourcesBuilder<C>
 where
-    C: CapabilityDeclCommon + FromEnum<CapabilityDecl> + Into<ComponentCapability> + Clone,
+    C: CapabilityDeclCommon
+        + FromEnum<CapabilityDecl>
+        + Into<ComponentCapability>
+        + Into<InternalCapability>
+        + Clone,
 {
     type CapabilityDecl = C;
 
@@ -626,13 +578,6 @@ where
             .as_ref()
             .map(|b| b(name))
             .ok_or_else(|| RoutingError::unsupported_route_source("framework"))
-    }
-
-    fn builtin_source(&self, name: CapabilityName) -> Result<InternalCapability, RoutingError> {
-        self.builtin
-            .as_ref()
-            .map(|b| b(name))
-            .ok_or_else(|| RoutingError::unsupported_route_source("built-in"))
     }
 
     fn capability_source(&self) -> Result<(), RoutingError> {
@@ -678,6 +623,32 @@ where
             }
         } else {
             Err(RoutingError::unsupported_route_source("namespace"))
+        }
+    }
+
+    fn find_builtin_source<V>(
+        &self,
+        name: &CapabilityName,
+        capabilities: &[CapabilityDecl],
+        visitor: &mut V,
+    ) -> Result<Option<InternalCapability>, RoutingError>
+    where
+        V: CapabilityVisitor<CapabilityDecl = Self::CapabilityDecl>,
+    {
+        if self.builtin {
+            if let Some(decl) = capabilities
+                .iter()
+                .flat_map(FromEnum::from_enum)
+                .find(|decl: &&C| decl.name() == name)
+                .cloned()
+            {
+                visitor.visit(&decl)?;
+                Ok(Some(decl.into()))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Err(RoutingError::unsupported_route_source("built-in"))
         }
     }
 
@@ -769,10 +740,19 @@ where
                             ));
                         }
                     }
-                    Ok(UseResult::Source(CapabilitySourceInterface::<C>::Builtin {
-                        capability: sources.builtin_source(use_.source_name().clone())?,
-                        top_instance: Arc::downgrade(&top_instance),
-                    }))
+                    if let Some(capability) = sources.find_builtin_source(
+                        use_.source_name(),
+                        top_instance.builtin_capabilities(),
+                        visitor,
+                    )? {
+                        return Ok(UseResult::Source(CapabilitySourceInterface::<C>::Builtin {
+                            capability,
+                            top_instance: Arc::downgrade(&top_instance),
+                        }));
+                    }
+                    Err(RoutingError::use_from_component_manager_not_found(
+                        use_.source_name().to_string(),
+                    ))
                 }
                 ExtendedInstanceInterface::<C>::Component(parent_component) => {
                     let parent_offer: O = {
@@ -879,10 +859,21 @@ where
                             ));
                         }
                     }
-                    Ok(RegistrationResult::Source(CapabilitySourceInterface::<C>::Builtin {
-                        capability: sources.builtin_source(registration.source_name().clone())?,
-                        top_instance: Arc::downgrade(&top_instance),
-                    }))
+                    if let Some(capability) = sources.find_builtin_source(
+                        registration.source_name(),
+                        top_instance.builtin_capabilities(),
+                        visitor,
+                    )? {
+                        return Ok(RegistrationResult::Source(
+                            CapabilitySourceInterface::<C>::Builtin {
+                                capability,
+                                top_instance: Arc::downgrade(&top_instance),
+                            },
+                        ));
+                    }
+                    Err(RoutingError::use_from_component_manager_not_found(
+                        registration.source_name().to_string(),
+                    ))
                 }
                 ExtendedInstanceInterface::<C>::Component(parent_component) => {
                     let parent_offer: O = {
@@ -1017,12 +1008,20 @@ where
                                     ));
                                 }
                             }
-                            return Ok(OfferResult::Source(
-                                CapabilitySourceInterface::<C>::Builtin {
-                                    capability: sources
-                                        .builtin_source(offer.source_name().clone())?,
-                                    top_instance: Arc::downgrade(&top_instance),
-                                },
+                            if let Some(capability) = sources.find_builtin_source(
+                                offer.source_name(),
+                                top_instance.builtin_capabilities(),
+                                visitor,
+                            )? {
+                                return Ok(OfferResult::Source(
+                                    CapabilitySourceInterface::<C>::Builtin {
+                                        capability,
+                                        top_instance: Arc::downgrade(&top_instance),
+                                    },
+                                ));
+                            }
+                            return Err(RoutingError::offer_from_component_manager_not_found(
+                                offer.source_name().to_string(),
                             ));
                         }
                         ExtendedInstanceInterface::<C>::Component(component) => component,
@@ -1252,7 +1251,7 @@ pub trait ExposeVisitor {
 /// type.
 pub trait CapabilityVisitor {
     /// The concrete declaration type. Can be `()` if the capability type does not support
-    /// namespace or component source types.
+    /// namespace, component, or built-in source types.
     type CapabilityDecl;
 
     /// Visit a variant of [`CapabilityDecl`] specific to the capability.
@@ -1340,7 +1339,10 @@ macro_rules! make_noop_visitor {
             impl $crate::router::CapabilityVisitor for $name {
                 type CapabilityDecl = $cap_decl;
 
-                fn visit(&mut self, _decl: &Self::CapabilityDecl) -> Result<(), $crate::error::RoutingError> {
+                fn visit(
+                    &mut self,
+                    _decl: &Self::CapabilityDecl
+                ) -> Result<(), $crate::error::RoutingError> {
                     Ok(())
                 }
             }

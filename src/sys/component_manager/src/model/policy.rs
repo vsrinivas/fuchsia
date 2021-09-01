@@ -35,7 +35,7 @@ mod tests {
 
     impl GlobalPolicyCheckerTest<ComponentInstance> for GlobalPolicyCheckerTestForCm {
         fn make_component(&self, abs_moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
-            let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+            let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
             ComponentInstance::new(
                 Arc::new(Environment::new_root(
                     &top_instance,
