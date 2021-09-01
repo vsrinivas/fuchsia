@@ -77,7 +77,6 @@ fuzzer("usb-cdc-ecm-descriptor-fuzzer") {
     ":usb-cdc-ecm-lib",
     "//sdk/lib/fdio",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
   ]
 }
 
