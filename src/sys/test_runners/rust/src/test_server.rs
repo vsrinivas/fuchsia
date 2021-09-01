@@ -491,7 +491,7 @@ where
         bin_path: &component.binary,
         process_name: &component.name,
         job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
-        ns: component.ns.clone().map_err(NamespaceError::Clone)?,
+        ns: component.ns.clone(),
         args: Some(args),
         name_infos: None,
         environs: environ,

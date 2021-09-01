@@ -39,7 +39,7 @@ pub async fn handle_suite_requests(
             }
             ftest::SuiteRequest::Run { tests, options: _options, listener, .. } => {
                 let starnix_runner = connect_to_protocol::<ComponentRunnerMarker>()?;
-                let namespace = namespace.clone()?;
+                let namespace = namespace.clone();
                 let program = program.clone();
                 run_test_cases(tests, test_url, program, listener, namespace, starnix_runner)
                     .await?;
@@ -104,7 +104,7 @@ async fn run_test_cases(
 
         let (component_controller, component_controller_server_end) =
             create_proxy::<ComponentControllerMarker>()?;
-        let ns = Some(ComponentNamespace::try_into(namespace.clone()?)?);
+        let ns = Some(ComponentNamespace::try_into(namespace.clone())?);
         let numbered_handles =
             Some(vec![stdin_handle_info, stdout_handle_info, stderr_handle_info]);
         let start_info = ComponentStartInfo {

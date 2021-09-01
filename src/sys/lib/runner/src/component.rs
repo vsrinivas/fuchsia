@@ -173,9 +173,6 @@ impl<C: Controllable> Controller<C> {
 /// An error encountered trying convert Vec<fcrunner::ComponentNamespaceEntry>
 #[derive(Debug, Error)]
 pub enum ComponentNamespaceError {
-    #[error("cannot clone directory for cloning namespace: {:?}", _0)]
-    DirectoryClone(anyhow::Error),
-
     #[error("cannot convert directory handle to proxy: {}.", _0)]
     IntoProxy(fidl::Error),
 
@@ -232,17 +229,31 @@ impl TryFrom<Vec<fcrunner::ComponentNamespaceEntry>> for ComponentNamespace {
     }
 }
 
-impl ComponentNamespace {
-    pub fn clone(&self) -> Result<Self, ComponentNamespaceError> {
+impl Clone for ComponentNamespace {
+    fn clone(&self) -> Self {
         let mut ns = Self { items: Vec::with_capacity(self.items.len()) };
         for (path, proxy) in &self.items {
-            let client_proxy = io_util::clone_directory(proxy, fio::CLONE_FLAG_SAME_RIGHTS)
-                .map_err(ComponentNamespaceError::DirectoryClone)?;
-            ns.items.push((path.clone(), client_proxy));
+            // The test runner needs to be able to clone the namespace, so it can hand out a valid
+            // namespace to different invocations of the test, but the test runner is not
+            // responsible for nor capable of fixing namespaces that hold invalid caapability
+            // routes. If the test component uses some directory and the routing for that
+            // capability is bad, then this clone operation may fail.
+            //
+            // While the exact semantics are technically different, practically a namespace holding
+            // a closed channel for a path has the same impact on a component as a namespace
+            // lacking a channel for that path entirely. Thus if we encounter any errors cloning
+            // here, we opt to omit the path we failed to clone from the namespace, as that's
+            // simpler than generating some handle to put in the namespace that we'd need to then
+            // later close.
+            if let Ok(client_proxy) = io_util::clone_directory(proxy, fio::CLONE_FLAG_SAME_RIGHTS) {
+                ns.items.push((path.clone(), client_proxy));
+            }
         }
-        Ok(ns)
+        ns
     }
+}
 
+impl ComponentNamespace {
     pub fn items(&self) -> &Vec<(String, fio::DirectoryProxy)> {
         &self.items
     }

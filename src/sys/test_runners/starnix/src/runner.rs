@@ -98,7 +98,7 @@ async fn serve_test_suite(
             TestComponentExposedServices::Suite(stream) => {
                 let test_url = test_url.to_string();
                 let program = program.clone();
-                match handle_suite_requests(&test_url, Some(program), namespace.clone()?, stream)
+                match handle_suite_requests(&test_url, Some(program), namespace.clone(), stream)
                     .await
                 {
                     Ok(_) => fuchsia_syslog::fx_log_info!("Finished serving test suite requests."),
