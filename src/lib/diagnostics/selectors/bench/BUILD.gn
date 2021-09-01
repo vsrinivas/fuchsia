@@ -17,8 +17,9 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_shell_package("selectors-benchmarks") {
+fuchsia_package_with_single_component("selectors-benchmarks") {
   deps = [ ":bin" ]
+  manifest = "meta/selectors-benchmarks.cmx"
 }
 
 group("bench") {

@@ -147,6 +147,7 @@ group("cmx_allowlist") {
     "//src/lib/diagnostics/inspect/*",
     "//src/lib/diagnostics/log/*",
     "//src/lib/diagnostics/reader/*",
+    "//src/lib/diagnostics/selectors/bench/*",
     "//src/lib/diagnostics/testing/*",
     "//src/lib/digest/test/*",
     "//src/lib/elfldltl/*",
