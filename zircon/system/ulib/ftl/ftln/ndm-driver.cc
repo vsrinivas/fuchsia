@@ -95,8 +95,7 @@ int WritePages(uint32_t page, uint32_t count, const uint8_t* data, uint8_t* spar
                void* dev) {
   NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
   for (uint32_t i = 0; i < count; i++) {
-    FtlnSetSpareValidity(&spare[i * device->SpareSize()], &data[i * device->PageSize()],
-                         device->PageSize());
+    FtlnSetSpareValidity(&spare[i * device->SpareSize()]);
   }
   return device->NandWrite(page, count, data, spare);
 }
@@ -379,7 +378,7 @@ uint32_t NdmBaseDriver::PageSize() { return ndm_->page_size; }
 uint8_t NdmBaseDriver::SpareSize() { return ndm_->eb_size; }
 
 bool NdmBaseDriver::IncompletePageWrite(uint8_t* spare, uint8_t* data) {
-  return FtlnIncompleteWrite(spare, data, PageSize());
+  return FtlnIncompleteWrite(spare);
 }
 
 __EXPORT

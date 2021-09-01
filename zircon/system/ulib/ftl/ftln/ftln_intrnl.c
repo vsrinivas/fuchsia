@@ -984,38 +984,23 @@ int FtlnRecycleMapBlk(FTLN ftl, ui32 recycle_b) {
 
 //  FtlnCalculateSpareValidity: Returns a validity byte for the spare using
 //                              a bitwise check where each bit covers 2
-//                              bytes of the spare and 1/8th of the page data.
-//                              1 if all bytes are 0xffff and 0 otherwise.
-//                              When performing this, we ensure that the byte
-//                              this will write out to is read as 0, ensuring a
-//                              non-0xff result.
+//                              bytes of the spare. 1 if all bytes are 0xffff
+//                              and 0 otherwise. When performing this, we ensure
+//                              that the byte this will write out to is read as
+//                              0, ensuring a non-0xff result.
 //
 //              Inputs: spare_buf = The pointer to the spare data to be read and
 //                                  validated.
 //
-//                       data_buf = The pointer to the page data to be
-//                                  validated.
-//
-//                      page_size = The size of the data page in bytes.
-//
 //              Returns: The calculated validity byte.
-ui8 FtlnCalculateSpareValidity(const ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
+ui8 FtlnCalculateSpareValidity(const ui8* spare_buf) {
   ui16* oob_to_check = (ui16*)spare_buf;
   ui8 result = 0;
-  const ui32 page_chunk = page_size / 8;
 
   // Only check 7/8 byte pairs and shift at the end. Since we interpret
   // where this check byte goes as zero, so it will always be a zero.
   for (ui32 i = 0; i < 7; i++) {
     if (oob_to_check[i] == 0xffff) {
-      // Breaking 32 bit constraint here, because fuchsia expects at least 64
-      // bit support anyways. Allows us to move at 8 byte strides.
-      uint64_t* data_to_check = (uint64_t*)&data_buf[page_chunk * i];
-      for (ui32 j = 0; j < page_chunk / 8; j++) {
-        if (data_to_check[j] != 0xffffffffffffffff) {
-          break;
-        }
-      }
       result |= 1;
     }
     result <<= 1;
@@ -1029,14 +1014,7 @@ ui8 FtlnCalculateSpareValidity(const ui8* spare_buf, const ui8* data_buf, ui32 p
 //              Inputs: spare_buf = The pointer to the spare data to be read and
 //                                  updated.
 //
-//                       data_buf = The pointer to the page data to be
-//                                  validated.
-//
-//                      page_size = The size of the data page in bytes.
-//
-void FtlnSetSpareValidity(ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
-  spare_buf[14] = FtlnCalculateSpareValidity(spare_buf, data_buf, page_size);
-}
+void FtlnSetSpareValidity(ui8* spare_buf) { spare_buf[14] = FtlnCalculateSpareValidity(spare_buf); }
 
 //  FtlnSetSpareValidity: Verifies that the last validity byte of the spare is
 //                        the result of FtlnCalculateSpareValidity.
@@ -1044,15 +1022,10 @@ void FtlnSetSpareValidity(ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
 //              Inputs: spare_buf = The pointer to the spare data to be read and
 //                                  validated.
 //
-//                       data_buf = The pointer to the page data to be
-//                                  validated.
-//
-//                      page_size = The size of the data page in bytes.
-//
 //              Returns: 1 if true, and 0 if false.
 //
-int FtlnCheckSpareValidity(const ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
-  return spare_buf[14] == FtlnCalculateSpareValidity(spare_buf, data_buf, page_size);
+int FtlnCheckSpareValidity(const ui8* spare_buf) {
+  return spare_buf[14] == FtlnCalculateSpareValidity(spare_buf);
 }
 
 //  FtlnIncompleteWrite: Verifies a complete write by checking the validity
@@ -1065,16 +1038,11 @@ int FtlnCheckSpareValidity(const ui8* spare_buf, const ui8* data_buf, ui32 page_
 //              Inputs: spare_buf = The pointer to the spare data to be read and
 //                                  validated.
 //
-//                       data_buf = The pointer to the page data to be
-//                                  validated.
-//
-//                      page_size = The size of the data page in bytes.
-//
 //              Returns: 1 if incomplete write detected, and 0 if otherwise.
 //
-int FtlnIncompleteWrite(const ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
+int FtlnIncompleteWrite(const ui8* spare_buf) {
   if (spare_buf[14] != 0xff) {
-    return !FtlnCheckSpareValidity(spare_buf, data_buf, page_size);
+    return !FtlnCheckSpareValidity(spare_buf);
   } else {
     return GET_SA_WC(spare_buf) == 0xfffffff ? 1 : 0;
   }

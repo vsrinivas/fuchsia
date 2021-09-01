@@ -249,10 +249,10 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt);
 int FtlnRecNeeded(CFTLN ftl, int wr_cnt);
 int FtlnRdPage(FTLN ftl, ui32 pn, void* buf);
 
-ui8 FtlnCalculateSpareValidity(const ui8* spare_buf, const ui8* data_buf, ui32 page_size);
-void FtlnSetSpareValidity(ui8* spare_buf, const ui8* data_buf, ui32 page_size);
-int FtlnCheckSpareValidity(const ui8* spare_bu, const ui8* data_buf, ui32 page_size);
-int FtlnIncompleteWrite(const ui8* spare_buf, const ui8* data_buf, ui32 page_size);
+ui8 FtlnCalculateSpareValidity(const ui8* spare_buf);
+void FtlnSetSpareValidity(ui8* spare_buf);
+int FtlnCheckSpareValidity(const ui8* spare_bu);
+int FtlnIncompleteWrite(const ui8* spare_buf);
 int FtlnMapWr(void* vol, ui32 mpn, void* buf);
 int FtlnMetaWr(FTLN ftl, ui32 type);
 
