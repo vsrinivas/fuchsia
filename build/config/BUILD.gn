@@ -540,10 +540,6 @@ config("default_warnings") {
     # TODO(fxbug.dev/38640): Keep this flag here while it is enabled in ZN to keep the
     # flags unified.
     "-Wno-deprecated-copy",
-
-    # TODO(fxbug.dev/56202): Temporarily disable this warning until we roll toolchain,
-    # then come back and fix the instances this appears after rolling.
-    "-Wno-suggest-override",
   ]
 }
 
