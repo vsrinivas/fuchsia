@@ -106,7 +106,7 @@ fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
         capabilities: document
             .capabilities
             .as_ref()
-            .map(translate::translate_capabilities)
+            .map(|c| translate::translate_capabilities(c, false))
             .transpose()?,
         children: document.children.as_ref().map(translate_children).transpose()?,
         collections: document.collections.as_ref().map(translate_collections).transpose()?,

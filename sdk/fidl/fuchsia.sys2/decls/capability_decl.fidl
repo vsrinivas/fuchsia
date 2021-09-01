@@ -14,6 +14,7 @@ type CapabilityDecl = flexible union {
     4: storage StorageDecl;
     5: runner RunnerDecl;
     6: resolver ResolverDecl;
+    7: event EventDecl;
 };
 
 /// Declares a service capability backed by this component.
@@ -109,4 +110,13 @@ type ResolverDecl = table {
 
     /// The path to the resolver protocol in the component's outgoing directory
     2: source_path string:fuchsia.component.MAX_PATH_LENGTH;
+};
+
+/// Declares an event capability which component instances may subscribe to.
+/// This type cannot be used in `fuchsia.sys2.ComponentDecl`. It is only used for
+/// the framework's built-in capabilities declared in `fuchsia.component.internal.Config`.
+type EventDecl = table {
+    /// The name of this event.
+    /// Must be non-empty, unique among built-in capabilities.
+    1: name fuchsia.component.name;
 };

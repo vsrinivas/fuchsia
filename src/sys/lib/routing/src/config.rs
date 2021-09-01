@@ -66,6 +66,9 @@ pub struct RuntimeConfig {
     /// The list of capabilities offered from component manager's namespace.
     pub namespace_capabilities: Vec<cm_rust::CapabilityDecl>,
 
+    /// The list of capabilities offered from component manager as built-in capabilities.
+    pub builtin_capabilities: Vec<cm_rust::CapabilityDecl>,
+
     /// Which builtin resolver to use for the fuchsia-pkg scheme. If not supplied this defaults to
     /// the NONE option.
     pub builtin_pkg_resolver: BuiltinPkgResolver,
@@ -208,6 +211,7 @@ impl Default for RuntimeConfig {
             maintain_utc_clock: false,
             num_threads: 1,
             namespace_capabilities: vec![],
+            builtin_capabilities: vec![],
             builtin_pkg_resolver: BuiltinPkgResolver::None,
             out_dir_contents: OutDirContents::None,
             root_component_url: Default::default(),
@@ -239,7 +243,15 @@ impl RuntimeConfig {
         }) {
             return Err(format_err!("Type unsupported for namespace capability: {:?}", c));
         }
-        cm_fidl_validator::validate_capabilities(&capabilities)?;
+        cm_fidl_validator::validate_capabilities(&capabilities, false)?;
+        Ok(capabilities.into_iter().map(FidlIntoNative::fidl_into_native).collect())
+    }
+
+    fn translate_builtin_capabilities(
+        capabilities: Option<Vec<fsys::CapabilityDecl>>,
+    ) -> Result<Vec<cm_rust::CapabilityDecl>, Error> {
+        let capabilities = capabilities.unwrap_or(vec![]);
+        cm_fidl_validator::validate_capabilities(&capabilities, true)?;
         Ok(capabilities.into_iter().map(FidlIntoNative::fidl_into_native).collect())
     }
 }
@@ -356,6 +368,9 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             security_policy,
             namespace_capabilities: Self::translate_namespace_capabilities(
                 config.namespace_capabilities,
+            )?,
+            builtin_capabilities: Self::translate_builtin_capabilities(
+                config.builtin_capabilities,
             )?,
             debug: config.debug.unwrap_or(default.debug),
             use_builtin_process_launcher: config
@@ -602,6 +617,7 @@ mod tests {
             use_builtin_process_launcher: None,
             num_threads: None,
             namespace_capabilities: None,
+            builtin_capabilities: None,
             builtin_pkg_resolver: None,
             out_dir_contents: None,
             root_component_url: None,
@@ -627,6 +643,7 @@ mod tests {
             }),
             num_threads: Some(10),
             namespace_capabilities: None,
+            builtin_capabilities: None,
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
@@ -737,6 +754,17 @@ mod tests {
                         ..fsys::DirectoryDecl::EMPTY
                     }),
                 ]),
+                builtin_capabilities: Some(vec![
+                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                        name: Some("foo_protocol".into()),
+                        source_path: None,
+                        ..fsys::ProtocolDecl::EMPTY
+                    }),
+                   fsys::CapabilityDecl::Event(fsys::EventDecl {
+                       name: Some("bar_event".into()),
+                        ..fsys::EventDecl::EMPTY
+                    }),
+                ]),
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
@@ -832,6 +860,15 @@ mod tests {
                         rights: fio2::Operations::Connect,
                     }),
                 ],
+                builtin_capabilities: vec![
+                    cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
+                        name: "foo_protocol".into(),
+                        source_path: None,
+                    }),
+                    cm_rust::CapabilityDecl::Event(cm_rust::EventDecl {
+                        name: "bar_event".into(),
+                    }),
+                ],
                 builtin_pkg_resolver: BuiltinPkgResolver::None,
                 out_dir_contents: OutDirContents::Svc,
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
@@ -864,6 +901,7 @@ mod tests {
             }),
             num_threads: None,
             namespace_capabilities: None,
+            builtin_capabilities: None,
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
@@ -896,6 +934,7 @@ mod tests {
             }),
             num_threads: None,
             namespace_capabilities: None,
+            builtin_capabilities: None,
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
@@ -924,6 +963,7 @@ mod tests {
         }),
         num_threads: None,
         namespace_capabilities: None,
+        builtin_capabilities: None,
         out_dir_contents: None,
         root_component_url: None,
         component_id_index_path: None,
@@ -939,6 +979,7 @@ mod tests {
         security_policy: None,
         num_threads: None,
         namespace_capabilities: None,
+        builtin_capabilities: None,
         out_dir_contents: None,
         root_component_url: Some("invalid url".to_string()),
         component_id_index_path: None,
@@ -980,6 +1021,7 @@ mod tests {
                 list_children_batch_size: Some(42),
                 security_policy: None,
                 namespace_capabilities: None,
+                builtin_capabilities: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
                 num_threads: None,

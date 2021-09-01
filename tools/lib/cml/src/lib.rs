@@ -236,6 +236,12 @@ impl CapabilityId {
                 None,
                 capability.capability_type(),
             )?));
+        } else if let Some(n) = capability.event() {
+            return Ok(Self::events_from(Self::get_one_or_many_names(
+                n,
+                None,
+                capability.capability_type(),
+            )?));
         }
 
         // Unsupported capability type.
@@ -1064,12 +1070,14 @@ pub struct Capability {
     pub storage: Option<Name>,
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
+    pub event: Option<Name>,
     pub from: Option<CapabilityFromRef>,
     pub path: Option<Path>,
     pub rights: Option<Rights>,
     pub backing_dir: Option<Name>,
     pub subdir: Option<RelativePath>,
     pub storage_id: Option<StorageId>,
+    pub mode: Option<EventMode>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -1332,7 +1340,7 @@ impl CapabilityClause for Capability {
         self.resolver.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
     fn event(&self) -> Option<OneOrMany<Name>> {
-        None
+        self.event.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
     fn event_stream(&self) -> Option<Name> {
         None
@@ -1350,6 +1358,8 @@ impl CapabilityClause for Capability {
             "runner"
         } else if self.resolver.is_some() {
             "resolver"
+        } else if self.event.is_some() {
+            "event"
         } else {
             panic!("Missing capability name")
         }
@@ -1358,7 +1368,7 @@ impl CapabilityClause for Capability {
         "capability"
     }
     fn supported(&self) -> &[&'static str] {
-        &["service", "protocol", "directory", "storage", "runner", "resolver"]
+        &["service", "protocol", "directory", "storage", "runner", "resolver", "event"]
     }
 }
 

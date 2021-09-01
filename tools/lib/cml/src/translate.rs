@@ -13,44 +13,66 @@ use {
 
 pub fn translate_capabilities(
     capabilities_in: &Vec<Capability>,
+    as_builtin: bool,
 ) -> Result<Vec<fsys::CapabilityDecl>, Error> {
     let mut out_capabilities = vec![];
     for capability in capabilities_in {
         if let Some(service) = &capability.service {
             for n in service.to_vec() {
-                let source_path = capability
-                    .path
-                    .clone()
-                    .unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
+                let source_path = match as_builtin {
+                    true => None,
+                    false => Some(
+                        capability
+                            .path
+                            .clone()
+                            .unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap())
+                            .into(),
+                    ),
+                };
                 out_capabilities.push(fsys::CapabilityDecl::Service(fsys::ServiceDecl {
                     name: Some(n.clone().into()),
-                    source_path: Some(source_path.into()),
+                    source_path: source_path,
                     ..fsys::ServiceDecl::EMPTY
                 }));
             }
         } else if let Some(protocol) = &capability.protocol {
             for n in protocol.to_vec() {
-                let source_path = capability
-                    .path
-                    .clone()
-                    .unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
+                let source_path = match as_builtin {
+                    true => None,
+                    false => Some(
+                        capability
+                            .path
+                            .clone()
+                            .unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap())
+                            .into(),
+                    ),
+                };
                 out_capabilities.push(fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
                     name: Some(n.clone().into()),
-                    source_path: Some(source_path.into()),
+                    source_path: source_path,
                     ..fsys::ProtocolDecl::EMPTY
                 }));
             }
         } else if let Some(n) = &capability.directory {
-            let source_path =
-                capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
+            let source_path = match as_builtin {
+                true => None,
+                false => {
+                    Some(capability.path.as_ref().expect("missing source path").clone().into())
+                }
+            };
             let rights = extract_required_rights(capability, "capability")?;
             out_capabilities.push(fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
                 name: Some(n.clone().into()),
-                source_path: Some(source_path.into()),
+                source_path: source_path,
                 rights: Some(rights),
                 ..fsys::DirectoryDecl::EMPTY
             }));
         } else if let Some(n) = &capability.storage {
+            if as_builtin {
+                return Err(Error::internal(format!(
+                    "built-in storage capabilities are not supported"
+                )));
+            }
             let backing_dir = capability
                 .backing_dir
                 .as_ref()
@@ -72,19 +94,41 @@ pub fn translate_capabilities(
                 ..fsys::StorageDecl::EMPTY
             }));
         } else if let Some(n) = &capability.runner {
+            let source_path = match as_builtin {
+                true => None,
+                false => {
+                    Some(capability.path.as_ref().expect("missing source path").clone().into())
+                }
+            };
             out_capabilities.push(fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                 name: Some(n.clone().into()),
-                source_path: Some(capability.path.clone().expect("missing path").into()),
+                source_path: source_path,
                 ..fsys::RunnerDecl::EMPTY
             }));
         } else if let Some(n) = &capability.resolver {
+            let source_path = match as_builtin {
+                true => None,
+                false => {
+                    Some(capability.path.as_ref().expect("missing source path").clone().into())
+                }
+            };
             out_capabilities.push(fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
                 name: Some(n.clone().into()),
-                source_path: Some(capability.path.clone().expect("missing path").into()),
+                source_path: source_path,
                 ..fsys::ResolverDecl::EMPTY
             }));
+        } else if let Some(n) = &capability.event {
+            if !as_builtin {
+                return Err(Error::internal(format!(
+                    "event capabilities may only be declared as built-in capabilities"
+                )));
+            }
+            out_capabilities.push(fsys::CapabilityDecl::Event(fsys::EventDecl {
+                name: Some(n.clone().into()),
+                ..fsys::EventDecl::EMPTY
+            }));
         } else {
-            return Err(Error::internal(format!("no capability in use declaration")));
+            return Err(Error::internal(format!("no capability declaration recognized")));
         }
     }
     Ok(out_capabilities)

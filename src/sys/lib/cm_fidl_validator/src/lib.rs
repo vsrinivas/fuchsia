@@ -33,6 +33,8 @@ pub enum Error {
     InvalidField(DeclField),
     #[error("{}'s {} is too long", .0.decl, .0.field)]
     FieldTooLong(DeclField),
+    #[error("\"{0}\" cannot declare a capability of type {1}")]
+    InvalidCapabilityType(DeclField, String),
     #[error("\"{0}\" target \"{1}\" is same as source")]
     OfferTargetEqualsSource(String, String),
     #[error("\"{1}\" is referenced in {0} but it does not appear in children")]
@@ -55,6 +57,8 @@ pub enum Error {
     DependencyCycle(String),
     #[error("{} \"{}\" path overlaps with {} \"{}\"", decl, path, other_decl, other_path)]
     InvalidPathOverlap { decl: DeclField, path: String, other_decl: DeclField, other_path: String },
+    #[error("built-in capability decl {0} should not specify a source path, found \"{1}\"")]
+    ExtraneousSourcePath(DeclField, String),
 }
 
 impl Error {
@@ -87,6 +91,17 @@ impl Error {
 
     pub fn field_too_long(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
         Error::FieldTooLong(DeclField { decl: decl_type.into(), field: keyword.into() })
+    }
+
+    pub fn invalid_capability_type(
+        decl_type: impl Into<String>,
+        keyword: impl Into<String>,
+        type_name: impl Into<String>,
+    ) -> Self {
+        Error::InvalidCapabilityType(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            type_name.into(),
+        )
     }
 
     pub fn offer_target_equals_source(decl: impl Into<String>, target: impl Into<String>) -> Self {
@@ -201,6 +216,13 @@ impl Error {
             other_path: other_path.into(),
         }
     }
+
+    pub fn extraneous_source_path(decl_type: impl Into<String>, path: impl Into<String>) -> Self {
+        Error::ExtraneousSourcePath(
+            DeclField { decl: decl_type.into(), field: "source_path".to_string() },
+            path.into(),
+        )
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -252,10 +274,13 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
 }
 
 /// Validates a list of CapabilityDecls independently.
-pub fn validate_capabilities(capabilities: &Vec<fsys::CapabilityDecl>) -> Result<(), ErrorList> {
+pub fn validate_capabilities(
+    capabilities: &Vec<fsys::CapabilityDecl>,
+    as_builtin: bool,
+) -> Result<(), ErrorList> {
     let mut ctx = ValidationContext::default();
     for capability in capabilities {
-        ctx.validate_capability_decl(capability);
+        ctx.validate_capability_decl(capability, as_builtin);
     }
     if ctx.errors.is_empty() {
         Ok(())
@@ -371,7 +396,7 @@ impl<'a> ValidationContext<'a> {
         // Validate "capabilities" and build the set of all capabilities.
         if let Some(capabilities) = decl.capabilities.as_ref() {
             for capability in capabilities {
-                self.validate_capability_decl(capability);
+                self.validate_capability_decl(capability, false);
             }
         }
 
@@ -425,16 +450,61 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_capability_decl(&mut self, capability: &'a fsys::CapabilityDecl) {
+    /// Validates an individual capability declaration as either a built-in capability or (if
+    /// `as_builtin = false`) as a component or namespace capability.
+    // Storage capabilities are not currently allowed as built-ins, but there's no deep reason for this.
+    // Update this method to allow built-in storage capabilities as needed.
+    fn validate_capability_decl(&mut self, capability: &'a fsys::CapabilityDecl, as_builtin: bool) {
         match capability {
-            fsys::CapabilityDecl::Service(service) => self.validate_service_decl(&service),
-            fsys::CapabilityDecl::Protocol(protocol) => self.validate_protocol_decl(&protocol),
-            fsys::CapabilityDecl::Directory(directory) => self.validate_directory_decl(&directory),
-            fsys::CapabilityDecl::Storage(storage) => self.validate_storage_decl(&storage),
-            fsys::CapabilityDecl::Runner(runner) => self.validate_runner_decl(&runner),
-            fsys::CapabilityDecl::Resolver(resolver) => self.validate_resolver_decl(&resolver),
+            fsys::CapabilityDecl::Service(service) => {
+                self.validate_service_decl(&service, as_builtin)
+            }
+            fsys::CapabilityDecl::Protocol(protocol) => {
+                self.validate_protocol_decl(&protocol, as_builtin)
+            }
+            fsys::CapabilityDecl::Directory(directory) => {
+                self.validate_directory_decl(&directory, as_builtin)
+            }
+            fsys::CapabilityDecl::Storage(storage) => {
+                if as_builtin {
+                    self.errors.push(Error::invalid_capability_type(
+                        "RuntimeConfig",
+                        "capability",
+                        "storage",
+                    ))
+                } else {
+                    self.validate_storage_decl(&storage)
+                }
+            }
+            fsys::CapabilityDecl::Runner(runner) => self.validate_runner_decl(&runner, as_builtin),
+            fsys::CapabilityDecl::Resolver(resolver) => {
+                self.validate_resolver_decl(&resolver, as_builtin)
+            }
+            fsys::CapabilityDecl::Event(event) => {
+                if as_builtin {
+                    self.validate_event_decl(&event)
+                } else {
+                    self.errors.push(Error::invalid_capability_type(
+                        "ComponentDecl",
+                        "capability",
+                        "event",
+                    ))
+                }
+            }
             fsys::CapabilityDeclUnknown!() => {
-                self.errors.push(Error::invalid_field("ComponentDecl", "capability"));
+                if as_builtin {
+                    self.errors.push(Error::invalid_capability_type(
+                        "RuntimeConfig",
+                        "capability",
+                        "unknown",
+                    ));
+                } else {
+                    self.errors.push(Error::invalid_capability_type(
+                        "ComponentDecl",
+                        "capability",
+                        "unknown",
+                    ));
+                }
             }
         }
     }
@@ -965,7 +1035,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_service_decl(&mut self, service: &'a fsys::ServiceDecl) {
+    fn validate_service_decl(&mut self, service: &'a fsys::ServiceDecl, as_builtin: bool) {
         if check_name(service.name.as_ref(), "ServiceDecl", "name", &mut self.errors) {
             let name = service.name.as_ref().unwrap();
             if !self.all_capability_ids.insert(name) {
@@ -973,10 +1043,24 @@ impl<'a> ValidationContext<'a> {
             }
             self.all_services.insert(name);
         }
-        check_path(service.source_path.as_ref(), "ServiceDecl", "source_path", &mut self.errors);
+        match as_builtin {
+            true => {
+                if let Some(path) = service.source_path.as_ref() {
+                    self.errors.push(Error::extraneous_source_path("ServiceDecl", path))
+                }
+            }
+            false => {
+                check_path(
+                    service.source_path.as_ref(),
+                    "ServiceDecl",
+                    "source_path",
+                    &mut self.errors,
+                );
+            }
+        }
     }
 
-    fn validate_protocol_decl(&mut self, protocol: &'a fsys::ProtocolDecl) {
+    fn validate_protocol_decl(&mut self, protocol: &'a fsys::ProtocolDecl, as_builtin: bool) {
         if check_name(protocol.name.as_ref(), "ProtocolDecl", "name", &mut self.errors) {
             let name = protocol.name.as_ref().unwrap();
             if !self.all_capability_ids.insert(name) {
@@ -984,10 +1068,24 @@ impl<'a> ValidationContext<'a> {
             }
             self.all_protocols.insert(name);
         }
-        check_path(protocol.source_path.as_ref(), "ProtocolDecl", "source_path", &mut self.errors);
+        match as_builtin {
+            true => {
+                if let Some(path) = protocol.source_path.as_ref() {
+                    self.errors.push(Error::extraneous_source_path("ProtocolDecl", path))
+                }
+            }
+            false => {
+                check_path(
+                    protocol.source_path.as_ref(),
+                    "ProtocolDecl",
+                    "source_path",
+                    &mut self.errors,
+                );
+            }
+        }
     }
 
-    fn validate_directory_decl(&mut self, directory: &'a fsys::DirectoryDecl) {
+    fn validate_directory_decl(&mut self, directory: &'a fsys::DirectoryDecl, as_builtin: bool) {
         if check_name(directory.name.as_ref(), "DirectoryDecl", "name", &mut self.errors) {
             let name = directory.name.as_ref().unwrap();
             if !self.all_capability_ids.insert(name) {
@@ -995,12 +1093,21 @@ impl<'a> ValidationContext<'a> {
             }
             self.all_directories.insert(name);
         }
-        check_path(
-            directory.source_path.as_ref(),
-            "DirectoryDecl",
-            "source_path",
-            &mut self.errors,
-        );
+        match as_builtin {
+            true => {
+                if let Some(path) = directory.source_path.as_ref() {
+                    self.errors.push(Error::extraneous_source_path("DirectoryDecl", path))
+                }
+            }
+            false => {
+                check_path(
+                    directory.source_path.as_ref(),
+                    "DirectoryDecl",
+                    "source_path",
+                    &mut self.errors,
+                );
+            }
+        }
         if directory.rights.is_none() {
             self.errors.push(Error::missing_field("DirectoryDecl", "rights"));
         }
@@ -1036,7 +1143,7 @@ impl<'a> ValidationContext<'a> {
         check_name(storage.backing_dir.as_ref(), "StorageDecl", "backing_dir", &mut self.errors);
     }
 
-    fn validate_runner_decl(&mut self, runner: &'a fsys::RunnerDecl) {
+    fn validate_runner_decl(&mut self, runner: &'a fsys::RunnerDecl, as_builtin: bool) {
         if check_name(runner.name.as_ref(), "RunnerDecl", "name", &mut self.errors) {
             let name = runner.name.as_ref().unwrap();
             if !self.all_capability_ids.insert(name) {
@@ -1044,10 +1151,24 @@ impl<'a> ValidationContext<'a> {
             }
             self.all_runners.insert(name);
         }
-        check_path(runner.source_path.as_ref(), "RunnerDecl", "source_path", &mut self.errors);
+        match as_builtin {
+            true => {
+                if let Some(path) = runner.source_path.as_ref() {
+                    self.errors.push(Error::extraneous_source_path("RunnerDecl", path))
+                }
+            }
+            false => {
+                check_path(
+                    runner.source_path.as_ref(),
+                    "RunnerDecl",
+                    "source_path",
+                    &mut self.errors,
+                );
+            }
+        }
     }
 
-    fn validate_resolver_decl(&mut self, resolver: &'a fsys::ResolverDecl) {
+    fn validate_resolver_decl(&mut self, resolver: &'a fsys::ResolverDecl, as_builtin: bool) {
         if check_name(resolver.name.as_ref(), "ResolverDecl", "name", &mut self.errors) {
             let name = resolver.name.as_ref().unwrap();
             if !self.all_capability_ids.insert(name) {
@@ -1055,7 +1176,30 @@ impl<'a> ValidationContext<'a> {
             }
             self.all_resolvers.insert(name);
         }
-        check_path(resolver.source_path.as_ref(), "ResolverDecl", "source_path", &mut self.errors);
+        match as_builtin {
+            true => {
+                if let Some(path) = resolver.source_path.as_ref() {
+                    self.errors.push(Error::extraneous_source_path("ResolverDecl", path))
+                }
+            }
+            false => {
+                check_path(
+                    resolver.source_path.as_ref(),
+                    "ResolverDecl",
+                    "source_path",
+                    &mut self.errors,
+                );
+            }
+        }
+    }
+
+    fn validate_event_decl(&mut self, event: &'a fsys::EventDecl) {
+        if check_name(event.name.as_ref(), "EventDecl", "name", &mut self.errors) {
+            let name = event.name.as_ref().unwrap();
+            if !self.all_capability_ids.insert(name) {
+                self.errors.push(Error::duplicate_field("EventDecl", "name", name.as_str()));
+            }
+        }
     }
 
     fn validate_source_child(&mut self, child: &fsys::ChildRef, decl_type: &str) {
@@ -2085,8 +2229,12 @@ mod tests {
         );
     }
 
-    fn validate_capabilities_test(input: Vec<CapabilityDecl>, expected_res: Result<(), ErrorList>) {
-        let res = validate_capabilities(&input);
+    fn validate_capabilities_test(
+        input: Vec<CapabilityDecl>,
+        as_builtin: bool,
+        expected_res: Result<(), ErrorList>,
+    ) {
+        let res = validate_capabilities(&input, as_builtin);
         assert_eq!(res, expected_res);
     }
 
@@ -2189,6 +2337,7 @@ mod tests {
             $(
                 $test_name:ident => {
                     input = $input:expr,
+                    as_builtin = $as_builtin:expr,
                     result = $result:expr,
                 },
             )+
@@ -2196,7 +2345,7 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    validate_capabilities_test($input, $result);
+                    validate_capabilities_test($input, $as_builtin, $result);
                 }
             )+
         }
@@ -6257,6 +6406,7 @@ mod tests {
                     ..DirectoryDecl::EMPTY
                 }),
             ],
+            as_builtin = false,
             result = Ok(()),
         },
         test_validate_capabilities_individually_err => {
@@ -6272,13 +6422,109 @@ mod tests {
                     rights: None,
                     ..DirectoryDecl::EMPTY
                 }),
+                CapabilityDecl::Event(EventDecl {
+                    name: None,
+                    ..EventDecl::EMPTY
+                }),
             ],
+            as_builtin = false,
             result = Err(ErrorList::new(vec![
                 Error::missing_field("ProtocolDecl", "name"),
                 Error::missing_field("ProtocolDecl", "source_path"),
                 Error::missing_field("DirectoryDecl", "name"),
                 Error::missing_field("DirectoryDecl", "source_path"),
                 Error::missing_field("DirectoryDecl", "rights"),
+                Error::invalid_capability_type("ComponentDecl", "capability", "event")
+            ])),
+        },
+        test_validate_builtin_capabilities_individually_ok => {
+            input = vec![
+                CapabilityDecl::Protocol(ProtocolDecl {
+                    name: Some("foo_protocol".into()),
+                    source_path: None,
+                    ..ProtocolDecl::EMPTY
+                }),
+                CapabilityDecl::Directory(DirectoryDecl {
+                    name: Some("foo_dir".into()),
+                    source_path: None,
+                    rights: Some(fio2::Operations::Connect),
+                    ..DirectoryDecl::EMPTY
+                }),
+                CapabilityDecl::Service(ServiceDecl {
+                    name: Some("foo_svc".into()),
+                    source_path: None,
+                    ..ServiceDecl::EMPTY
+                }),
+                CapabilityDecl::Runner(RunnerDecl {
+                    name: Some("foo_runner".into()),
+                    source_path: None,
+                    ..RunnerDecl::EMPTY
+                }),
+                CapabilityDecl::Resolver(ResolverDecl {
+                    name: Some("foo_resolver".into()),
+                    source_path: None,
+                    ..ResolverDecl::EMPTY
+                }),
+                CapabilityDecl::Event(EventDecl {
+                    name: Some("foo_event".into()),
+                    ..EventDecl::EMPTY
+                }),
+            ],
+            as_builtin = true,
+            result = Ok(()),
+        },
+        test_validate_builtin_capabilities_individually_err => {
+            input = vec![
+                CapabilityDecl::Protocol(ProtocolDecl {
+                    name: None,
+                    source_path: Some("/svc/foo".into()),
+                    ..ProtocolDecl::EMPTY
+                }),
+                CapabilityDecl::Directory(DirectoryDecl {
+                    name: None,
+                    source_path: Some("/foo".into()),
+                    rights: None,
+                    ..DirectoryDecl::EMPTY
+                }),
+                CapabilityDecl::Service(ServiceDecl {
+                    name: None,
+                    source_path: Some("/svc/foo".into()),
+                    ..ServiceDecl::EMPTY
+                }),
+                CapabilityDecl::Runner(RunnerDecl {
+                    name: None,
+                    source_path:  Some("/foo".into()),
+                    ..RunnerDecl::EMPTY
+                }),
+                CapabilityDecl::Resolver(ResolverDecl {
+                    name: None,
+                    source_path:  Some("/foo".into()),
+                    ..ResolverDecl::EMPTY
+                }),
+                CapabilityDecl::Event(EventDecl {
+                    name: None,
+                    ..EventDecl::EMPTY
+                }),
+                CapabilityDecl::Storage(StorageDecl {
+                    name: None,
+                    ..StorageDecl::EMPTY
+                }),
+            ],
+            as_builtin = true,
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ProtocolDecl", "name"),
+                Error::extraneous_source_path("ProtocolDecl", "/svc/foo"),
+                Error::missing_field("DirectoryDecl", "name"),
+                Error::extraneous_source_path("DirectoryDecl", "/foo"),
+                Error::missing_field("DirectoryDecl", "rights"),
+                Error::missing_field("ServiceDecl", "name"),
+                Error::extraneous_source_path("ServiceDecl", "/svc/foo"),
+                Error::missing_field("RunnerDecl", "name"),
+                Error::extraneous_source_path("RunnerDecl", "/foo"),
+                Error::missing_field("ResolverDecl", "name"),
+                Error::extraneous_source_path("ResolverDecl", "/foo"),
+                Error::missing_field("EventDecl", "name"),
+                Error::invalid_capability_type("RuntimeConfig", "capability", "storage"),
             ])),
         },
     }

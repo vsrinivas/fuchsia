@@ -26,6 +26,7 @@ struct Config {
     list_children_batch_size: Option<u32>,
     security_policy: Option<SecurityPolicy>,
     namespace_capabilities: Option<Vec<cml::Capability>>,
+    builtin_capabilities: Option<Vec<cml::Capability>>,
     use_builtin_process_launcher: Option<bool>,
     maintain_utc_clock: Option<bool>,
     num_threads: Option<u32>,
@@ -234,7 +235,14 @@ impl TryFrom<Config> for component_internal::Config {
         if let Some(capabilities) = config.namespace_capabilities.as_ref() {
             let mut used_ids = HashSet::new();
             for capability in capabilities {
-                Config::validate_capability(capability, &mut used_ids)?;
+                Config::validate_namespace_capability(capability, &mut used_ids)?;
+            }
+        }
+        // Validate "builtin_capabilities".
+        if let Some(capabilities) = config.builtin_capabilities.as_ref() {
+            let mut used_ids = HashSet::new();
+            for capability in capabilities {
+                Config::validate_builtin_capability(capability, &mut used_ids)?;
             }
         }
 
@@ -251,7 +259,12 @@ impl TryFrom<Config> for component_internal::Config {
             namespace_capabilities: config
                 .namespace_capabilities
                 .as_ref()
-                .map(|c| cml::translate::translate_capabilities(c))
+                .map(|c| cml::translate::translate_capabilities(c, false))
+                .transpose()?,
+            builtin_capabilities: config
+                .builtin_capabilities
+                .as_ref()
+                .map(|c| cml::translate::translate_capabilities(c, true))
                 .transpose()?,
             num_threads: config.num_threads,
             out_dir_contents: match config.out_dir_contents {
@@ -388,6 +401,7 @@ impl Config {
         extend_if_unset!(self, another, list_children_batch_size);
         extend_if_unset!(self, another, security_policy);
         extend_if_unset!(self, another, namespace_capabilities);
+        extend_if_unset!(self, another, builtin_capabilities);
         extend_if_unset!(self, another, num_threads);
         extend_if_unset!(self, another, builtin_pkg_resolver);
         extend_if_unset!(self, another, out_dir_contents);
@@ -401,7 +415,7 @@ impl Config {
         Ok(self)
     }
 
-    fn validate_capability(
+    fn validate_namespace_capability(
         capability: &cml::Capability,
         used_ids: &mut HashSet<String>,
     ) -> Result<(), Error> {
@@ -420,6 +434,39 @@ impl Config {
         if capability.resolver.is_some() {
             return Err(Error::validate(
                 "\"resolver\" is not supported for namespace capabilities",
+            ));
+        }
+        if capability.event.is_some() {
+            return Err(Error::validate("\"event\" is not supported for namespace capabilities"));
+        }
+
+        // Disallow multiple capability ids of the same name.
+        let capability_ids = cml::CapabilityId::from_capability(capability)?;
+        for capability_id in capability_ids {
+            if !used_ids.insert(capability_id.to_string()) {
+                return Err(Error::validate(format!(
+                    "\"{}\" is a duplicate \"capability\" name",
+                    capability_id,
+                )));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_builtin_capability(
+        capability: &cml::Capability,
+        used_ids: &mut HashSet<String>,
+    ) -> Result<(), Error> {
+        if capability.storage.is_some() {
+            return Err(Error::validate("\"storage\" is not supported for built-in capabilities"));
+        }
+        if capability.directory.is_some() && capability.rights.is_none() {
+            return Err(Error::validate("\"rights\" should be present with \"directory\""));
+        }
+        if capability.path.is_some() {
+            return Err(Error::validate(
+                "\"path\" should not be present for built-in capabilities",
             ));
         }
 
@@ -541,6 +588,27 @@ mod tests {
                     rights: [ "connect" ],
                 },
             ],
+            builtin_capabilities: [
+                {
+                    protocol: "foo_protocol",
+                },
+                {
+                    directory: "foo_dir",
+                    rights: [ "connect" ],
+                },
+                {
+                    service: "foo_svc",
+                },
+                {
+                    runner: "foo_runner",
+                },
+                {
+                    resolver: "foo_resolver",
+                },
+                {
+                    event: "foo_event",
+                },
+            ],
             num_threads: 321,
             out_dir_contents: "svc",
             root_component_url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx",
@@ -639,6 +707,38 @@ mod tests {
                         ..fsys::DirectoryDecl::EMPTY
                     }),
                 ]),
+                builtin_capabilities: Some(vec![
+                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                        name: Some("foo_protocol".into()),
+                        source_path: None,
+                        ..fsys::ProtocolDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                        name: Some("foo_dir".into()),
+                        source_path: None,
+                        rights: Some(fio2::Operations::Connect),
+                        ..fsys::DirectoryDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                        name: Some("foo_svc".into()),
+                        source_path: None,
+                        ..fsys::ServiceDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
+                        name: Some("foo_runner".into()),
+                        source_path: None,
+                        ..fsys::RunnerDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
+                        name: Some("foo_resolver".into()),
+                        source_path: None,
+                        ..fsys::ResolverDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Event(fsys::EventDecl {
+                        name: Some("foo_event".into()),
+                        ..fsys::EventDecl::EMPTY
+                    }),
+                ]),
                 num_threads: Some(321),
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_string()),
@@ -704,6 +804,86 @@ mod tests {
                 compile_str(input),
                 Err(Error::Validate { schema_name: None, err, .. } )
                     if &err == "\"path\" should be present with \"directory\""
+            );
+        }
+        {
+            let input = r#"{
+            namespace_capabilities: [
+                {
+                    event: "foo",
+                },
+            ],
+        }"#;
+            assert_matches!(
+                compile_str(input),
+                Err(Error::Validate { schema_name: None, err, .. } )
+                    if &err == "\"event\" is not supported for namespace capabilities"
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_builtin_capabilities() {
+        {
+            let input = r#"{
+            builtin_capabilities: [
+                {
+                    protocol: "foo",
+                },
+                {
+                    directory: "foo",
+                    rights: [ "connect" ],
+                },
+            ],
+        }"#;
+            assert_matches!(
+                compile_str(input),
+                Err(Error::Validate { schema_name: None, err, .. } )
+                    if &err == "\"foo\" is a duplicate \"capability\" name"
+            );
+        }
+        {
+            let input = r#"{
+            builtin_capabilities: [
+                {
+                    directory: "foo",
+                    path: "/foo",
+                },
+            ],
+        }"#;
+            assert_matches!(
+                compile_str(input),
+                Err(Error::Validate { schema_name: None, err, .. } )
+                    if &err == "\"rights\" should be present with \"directory\""
+            );
+        }
+        {
+            let input = r#"{
+            builtin_capabilities: [
+                {
+                    storage: "foo",
+                },
+            ],
+        }"#;
+            assert_matches!(
+                compile_str(input),
+                Err(Error::Validate { schema_name: None, err, .. } )
+                    if &err == "\"storage\" is not supported for built-in capabilities"
+            );
+        }
+        {
+            let input = r#"{
+            builtin_capabilities: [
+                {
+                    runner: "foo",
+                    path: "/foo",
+                },
+            ],
+        }"#;
+            assert_matches!(
+                compile_str(input),
+                Err(Error::Validate { schema_name: None, err, .. } )
+                    if &err == "\"path\" should not be present for built-in capabilities"
             );
         }
     }

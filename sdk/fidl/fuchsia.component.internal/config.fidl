@@ -29,6 +29,9 @@ type Config = table {
     /// Capabilities offered from component manager's namespace.
     4: namespace_capabilities vector<fuchsia.sys2.CapabilityDecl>:MAX;
 
+    /// Capabilities offered from component manager as built-in capabilities.
+   17: builtin_capabilities vector<fuchsia.sys2.CapabilityDecl>:MAX;
+
     /// If true, component_manager will serve an instance of fuchsia.process.Launcher and use this
     /// launcher for the built-in ELF component runner. The root component can additionally
     /// use and/or offer this service using `/builtin/fuchsia.process.Launcher` from realm.

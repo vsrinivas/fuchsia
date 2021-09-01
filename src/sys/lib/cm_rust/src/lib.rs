@@ -595,6 +595,7 @@ pub enum CapabilityDecl {
     Storage(StorageDecl),
     Runner(RunnerDecl),
     Resolver(ResolverDecl),
+    Event(EventDecl),
 }
 
 impl CapabilityDeclCommon for CapabilityDecl {
@@ -606,6 +607,7 @@ impl CapabilityDeclCommon for CapabilityDecl {
             Self::Storage(c) => c.name(),
             Self::Runner(c) => c.name(),
             Self::Resolver(c) => c.name(),
+            Self::Event(c) => c.name(),
         }
     }
 }
@@ -669,6 +671,13 @@ pub struct RunnerDecl {
 pub struct ResolverDecl {
     pub name: CapabilityName,
     pub source_path: Option<CapabilityPath>,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::EventDecl")]
+pub struct EventDecl {
+    pub name: CapabilityName,
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -1030,7 +1039,7 @@ impl NativeIntoFidl<fdata::Dictionary> for HashMap<String, DictionaryValue> {
 
 impl FidlIntoNative<CapabilityPath> for String {
     fn fidl_into_native(self) -> CapabilityPath {
-        self.as_str().parse().expect("invalid capability path")
+        self.as_str().parse().unwrap()
     }
 }
 
