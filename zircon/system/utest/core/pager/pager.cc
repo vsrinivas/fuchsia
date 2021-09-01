@@ -2794,4 +2794,253 @@ TEST(Pager, CloneCommitRandomBatches) {
   EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 }
 
+// Tests that the ZX_VMO_OP_ALWAYS_NEED hint works as expected.
+TEST(Pager, EvictionHintAlwaysNeed) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 30;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  // Hint ALWAYS_NEED on 5 pages starting at page 10. This will commit those pages and we should
+  // see pager requests.
+  TestThread t([vmo]() -> bool {
+    return vmo->vmo().op_range(ZX_VMO_OP_ALWAYS_NEED, 10 * zx_system_get_page_size(),
+                               5 * zx_system_get_page_size(), nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // Verify read requests for pages [10,15).
+  for (uint64_t i = 10; i < 15; i++) {
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, i, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, i, 1));
+  }
+
+  // The thread should now successfully terminate.
+  ASSERT_TRUE(t.Wait());
+}
+
+// Tests that the ZX_VMO_OP_DONT_NEED hint works as expected.
+TEST(Pager, EvictionHintDontNeed) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 30;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  // Hint DONT_NEED and verify that it does not fail. We will test for eviction if the root resource
+  // is available.
+  // Commit some pages first.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 20, 2));
+
+  // Verify that the pager vmo has 2 committed pages now.
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  ASSERT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+
+  // Hint DONT_NEED on a range spanning both committed and uncommitted pages.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_DONT_NEED, 20 * zx_system_get_page_size(),
+                                5 * zx_system_get_page_size(), nullptr, 0));
+
+  // No page requests are seen for the uncommitted pages.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+  if (!&get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  // Trigger reclamation of only oldest evictable memory. This will include the pages we hinted
+  // DONT_NEED.
+  constexpr char k_command_reclaim[] = "scanner reclaim 1 only_old";
+  ASSERT_OK(
+      zx_debug_send_command(get_root_resource(), k_command_reclaim, strlen(k_command_reclaim)));
+
+  // Eviction is asynchronous. Poll in a loop until we see the committed page count drop. In case
+  // we're left polling forever, the external test timeout will kick in.
+  while (true) {
+    zx::nanosleep(zx::deadline_after(zx::msec(50)));
+    printf("polling page count...\n");
+
+    // Verify that the vmo has no committed pages after eviction.
+    ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+    if (info.committed_bytes == 0) {
+      break;
+    }
+    printf("page count %zu\n", info.committed_bytes);
+  }
+
+  ASSERT_EQ(0, info.committed_bytes);
+}
+
+// Tests that the zx_vmo_op_range() API succeeds and fails as expected for hints.
+TEST(Pager, EvictionHintsOpRange) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 20;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 10));
+
+  // Trivial success cases.
+  ASSERT_OK(
+      vmo->vmo().op_range(ZX_VMO_OP_ALWAYS_NEED, 0, 10 * zx_system_get_page_size(), nullptr, 0));
+  ASSERT_OK(
+      vmo->vmo().op_range(ZX_VMO_OP_DONT_NEED, 0, 20 * zx_system_get_page_size(), nullptr, 0));
+
+  // Verify that offsets get aligned to page boundaries.
+  TestThread t([vmo]() -> bool {
+    return vmo->vmo().op_range(ZX_VMO_OP_ALWAYS_NEED, 15 * zx_system_get_page_size() - 8u, 16u,
+                               nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see read requests for pages 14 and 15.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 14, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 14, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 15, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 15, 1));
+
+  ASSERT_TRUE(t.Wait());
+
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_DONT_NEED, 32u, 20 * zx_system_get_page_size() - 64u,
+                                nullptr, 0));
+
+  // Hinting an invalid range should fail.
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo->vmo().op_range(ZX_VMO_OP_ALWAYS_NEED, 15 * zx_system_get_page_size(),
+                                10 * zx_system_get_page_size(), nullptr, 0));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo->vmo().op_range(ZX_VMO_OP_DONT_NEED, kNumPages * zx_system_get_page_size(),
+                                20 * zx_system_get_page_size(), nullptr, 0));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo->vmo().op_range(ZX_VMO_OP_ALWAYS_NEED, zx_system_get_page_size(), UINT64_MAX,
+                                nullptr, 0));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, vmo->vmo().op_range(ZX_VMO_OP_DONT_NEED, zx_system_get_page_size(),
+                                                     UINT64_MAX, nullptr, 0));
+
+  // Hinting trivially succeeds for non-pager VMOs too. It will have no effect internally.
+  zx::vmo vmo2;
+  ASSERT_OK(zx::vmo::create(kNumPages, 0, &vmo2));
+  ASSERT_OK(
+      vmo2.op_range(ZX_VMO_OP_ALWAYS_NEED, 0, kNumPages * zx_system_get_page_size(), nullptr, 0));
+  ASSERT_OK(
+      vmo2.op_range(ZX_VMO_OP_DONT_NEED, 0, kNumPages * zx_system_get_page_size(), nullptr, 0));
+}
+
+// Tests that hints work when indicated via VMO clones too (where applicable).
+TEST(Pager, EvictionHintsWithClones) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 40;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  // Create a clone.
+  auto clone = vmo->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  // Supply a page in the parent, and fork it in the clone.
+  pager.SupplyPages(vmo, 25, 1);
+  uint8_t data = 0xc;
+  clone->vmo().write(&data, 25 * zx_system_get_page_size(), sizeof(data));
+
+  // Hint ALWAYS_NEED on a range including the forked page.
+  TestThread t1([clone = clone.get()]() -> bool {
+    return clone->vmo().op_range(ZX_VMO_OP_ALWAYS_NEED, 23 * zx_system_get_page_size(),
+                                 4 * zx_system_get_page_size(), nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t1.Start());
+
+  // Verify read requests for all pages in the range [23,27) except the forked page 25.
+  for (uint64_t i = 23; i < 25; i++) {
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, i, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, i, 1));
+  }
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 26, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 26, 1));
+
+  // The thread should now successfully terminate.
+  ASSERT_TRUE(t1.Wait());
+
+  // Create a second level clone.
+  auto clone2 = clone->Clone();
+  ASSERT_NOT_NULL(clone2);
+
+  // Fork another page in the intermediate clone.
+  pager.SupplyPages(vmo, 30, 1);
+  clone->vmo().write(&data, 30 * zx_system_get_page_size(), sizeof(data));
+
+  // Hinting should work through the second level clone too.
+  TestThread t2([clone = clone2.get()]() -> bool {
+    return clone->vmo().op_range(ZX_VMO_OP_ALWAYS_NEED, 29 * zx_system_get_page_size(),
+                                 3 * zx_system_get_page_size(), nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t2.Start());
+
+  // We should see read requests only for pages 29 and 31. Page 30 has been forked.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 29, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 29, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 31, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 31, 1));
+
+  // The thread should now successfully terminate.
+  ASSERT_TRUE(t2.Wait());
+
+  // Verify that we can hint DONT_NEED through both the clones without failing or generating new
+  // page requests. Whether DONT_NEED pages are evicted is tested separately.
+  ASSERT_OK(clone2->vmo().op_range(ZX_VMO_OP_DONT_NEED, 20 * zx_system_get_page_size(),
+                                   8 * zx_system_get_page_size(), nullptr, 0));
+  ASSERT_OK(clone->vmo().op_range(ZX_VMO_OP_DONT_NEED, 28 * zx_system_get_page_size(),
+                                  10 * zx_system_get_page_size(), nullptr, 0));
+
+  // No page requests are seen for the uncommitted pages.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Tests that the ALWAYS_NEED hint works as expected with a racing VMO resize.
+TEST(Pager, EvictionHintsWithResize) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 20;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  // Hint ALWAYS_NEED on 10 pages starting at page 10. This will try to commit those pages and we
+  // should see pager requests.
+  TestThread t([vmo]() -> bool {
+    return vmo->vmo().op_range(ZX_VMO_OP_ALWAYS_NEED, 10 * zx_system_get_page_size(),
+                               10 * zx_system_get_page_size(), nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // Supply a couple of pages, and then resize down across the hinted range, cutting it short.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 10, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 10, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 11, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 11, 1));
+  ASSERT_OK(vmo->vmo().set_size(12 * zx_system_get_page_size()));
+
+  // The hinting range should terminate now.
+  ASSERT_TRUE(t.Wait());
+
+  // No more page requests are seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
 }  // namespace pager_tests

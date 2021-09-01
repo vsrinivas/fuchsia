@@ -107,6 +107,27 @@ Requires the **ZX_RIGHT_READ** right.
 **ZX_VMO_OP_CACHE_CLEAN_INVALIDATE** - Performs cache clean and invalidate operations together.
 Requires the **ZX_RIGHT_READ** right.
 
+**ZX_VMO_OP_DONT_NEED** - Hints that pages in the specified range are not needed anymore and should
+be considered for memory reclamation. Intended to be used with VMOs created with
+[`zx_pager_create_vmo()`](/docs/reference/syscalls/pager_create_vmo.md); trivially succeeds for
+other VMOs.
+
+This only applies to pages in the given range that are already committed, i.e. no new pages will be
+committed as a result of this op. If required, *offset* will be rounded down to the previous page
+boundary and *offset*+*size* will be rounded up to the next page boundary.
+
+**ZX_VMO_OP_ALWAYS_NEED** - Hints that pages in the specified range are important and should be
+protected from memory reclamation. The kernel may decide to override this hint when the system is
+under extreme memory pressure. This hint also does not prevent pages from being freed by means other
+than memory reclamation (e.g. a decommit, VMO resize, or VMO destruction). Intended to be used with
+VMOs created with [`zx_pager_create_vmo()`](/docs/reference/syscalls/pager_create_vmo.md); trivially
+succeeds for other VMOs.
+
+This may commit pages in the given range where applicable, e.g. if the VMO is directly backed by a
+pager, its pages will be committed, or in the case of a clone, pages in the parent that are visible
+to the clone will be committed. If required, *offset* will be rounded down to the previous page
+boundary and *offset*+*size* will be rounded up to the next page boundary.
+
 
 ## RIGHTS
 
