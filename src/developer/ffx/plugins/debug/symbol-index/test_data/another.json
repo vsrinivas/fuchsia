@@ -1,0 +1,8 @@
+{
+  "includes": [
+    "./main.json"
+  ],
+  "gcs_flat": [
+    { "url": "gs://internal-bucket/debug", "require_authentication": true }
+  ]
+}

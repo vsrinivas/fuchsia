@@ -7,7 +7,43 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 ffx_plugin("ffx_debug_symbol_index") {
   version = "0.1.0"
   edition = "2018"
-  deps = [ "//third_party/rust_crates:serde_json" ]
+  with_unit_tests = true
 
-  sources = [ "src/args.rs" ]
+  deps = [
+    "//third_party/rust_crates:glob",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  test_deps = [
+    ":test_data",
+    "//third_party/rust_crates:tempfile",
+  ]
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+    "src/symbol_index.rs",
+  ]
+}
+
+# Use $root_build_dir instead of $root_out_dir so that
+# 1. Only one copy of test_data will be copied.
+# 2. The test_data will be placed at a fixed location for all host architectures.
+if (current_toolchain == default_toolchain) {
+  host_test_data("test_data") {
+    sources = [
+      "test_data/another.json",
+      "test_data/main.json",
+    ]
+    outputs = [
+      "$root_build_dir/test_data/ffx_debug_symbol_index/{{source_file_part}}",
+    ]
+  }
+} else {
+  group("test_data") {
+    testonly = true
+
+    deps = [ ":test_data($default_toolchain)" ]
+  }
 }

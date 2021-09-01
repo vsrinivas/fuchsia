@@ -1,0 +1,16 @@
+{
+  "includes": [
+    "./another.*",
+    "./nonexistent.json"
+  ],
+  "build_id_dirs": [
+    { "path": "/home/someone/.fuchsia/debug/symbol-cache" }
+  ],
+  "ids_txts": [
+    { "path": "ids.txt", "build_dir": "../build_dir" }
+  ],
+  "gcs_flat": [
+    { "url": "gs://public-bucket/debug" }
+  ],
+  "invalid_key_is_ignored": "for the best compatibility"
+}

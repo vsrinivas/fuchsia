@@ -83,7 +83,6 @@ template("ffx_plugin") {
   if (defined(invoker.name)) {
     output_name = invoker.name
   }
-  suite_name = output_name + "_suite"
 
   tests_deps = []
   if (defined(invoker.test_deps)) {
@@ -287,6 +286,7 @@ template("ffx_plugin") {
       }
     }
 
+    suite_name = output_name + "_suite"
     rustc_library(suite_name) {
       source_root = "$target_gen_dir/plugins.rs"
 
@@ -307,6 +307,8 @@ template("ffx_plugin") {
                                "with_unit_tests",
                              ])
     }
+  } else {
+    not_needed(invoker, "*")
   }
 
   if (defined(invoker.plugin_deps)) {

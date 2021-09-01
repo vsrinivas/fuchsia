@@ -29,8 +29,12 @@ pub enum SymbolIndexSubCommand {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "list", description = "list aggregated symbol index")]
-pub struct ListCommand {}
+#[argh(subcommand, name = "list", description = "show the content in symbol index")]
+pub struct ListCommand {
+    /// show the aggregated symbol index
+    #[argh(switch, short = 'a')]
+    pub aggregated: bool,
+}
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(
@@ -41,7 +45,6 @@ pub struct ListCommand {}
   - A build-id directory, with an optional build directory.
   - An ids.txt file, with an optional build directory.
   - A file that ends with .symbol-index.json.
-  - A directory containing .symbol-index.json file.
   - A <package_name>.far file with a corresponding
     <package_name>.symbol-index.json.
 
@@ -93,19 +96,23 @@ pub struct CleanCommand {}
 <package_name>.symbol-index.json."
 )]
 pub struct GenerateCommand {
-    #[argh(option, short = 'o')]
     /// output filename
+    #[argh(option, short = 'o')]
     pub output: String,
 
-    #[argh(option)]
     /// add a .build-id directory
+    #[argh(option)]
     pub build_id_dir: Vec<String>,
 
-    #[argh(option)]
     /// add an ids.txt file
+    #[argh(option)]
     pub ids_txt: Vec<String>,
 
-    #[argh(option)]
     /// add another symbol-index.json file
+    #[argh(option)]
     pub symbol_index_json: Vec<String>,
+
+    /// associated build_dir for all .build-id directories and ids.txt.
+    #[argh(option)]
+    pub build_dir: Option<String>,
 }
