@@ -96,7 +96,7 @@ zx_status_t PciBackend::ConfigureIrqMode() {
   }
   irq_mode() = mode;
   zxlogf(DEBUG, "%s: using %s IRQ mode (irq_cnt = %u)", tag(),
-         (irq_mode() == PCI_IRQ_MODE_MSI_X ? "MSI-X" : "INTx"), irq_cnt);
+         (irq_mode() == PCI_IRQ_MODE_MSI_X ? "MSI-X" : "legacy"), irq_cnt);
   return ZX_OK;
 }
 

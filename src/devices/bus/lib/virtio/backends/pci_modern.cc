@@ -172,18 +172,6 @@ zx_status_t PciModernBackend::Init() {
     return ZX_ERR_BAD_STATE;
   }
 
-  // Configuration of MSI-X varies depending on the legacy or modern interface
-  // to Virtio so the config vector is handled here and the queue vectors are
-  // handled in PciModern::SetRing.
-  if (irq_mode() == PCI_IRQ_MODE_MSI_X) {
-    uint16_t vector = 0;
-    MmioRead(&common_cfg_->msix_config, &vector);
-    ZX_DEBUG_ASSERT(vector == PciBackend::kVirtioMsiNoVector);
-    MmioWrite(&common_cfg_->msix_config, PciBackend::kMsiConfigVector);
-    MmioRead(&common_cfg_->msix_config, &vector);
-    ZX_DEBUG_ASSERT(vector == PciBackend::kMsiConfigVector);
-  }
-
   zxlogf(TRACE, "virtio: modern pci backend successfully initialized");
   return ZX_OK;
 }
@@ -329,10 +317,13 @@ zx_status_t PciModernBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t
 
   if (irq_mode() == PCI_IRQ_MODE_MSI_X) {
     uint16_t vector = 0;
-    MmioRead(&common_cfg_->queue_msix_vector, &vector);
-    if (vector != PciBackend::kVirtioMsiNoVector) {
-      zxlogf(WARNING, "MSI-X queue vector has invalid reset value: %#x", vector);
+    MmioWrite(&common_cfg_->config_msix_vector, PciBackend::kMsiConfigVector);
+    MmioRead(&common_cfg_->config_msix_vector, &vector);
+    if (vector != PciBackend::kMsiConfigVector) {
+      zxlogf(ERROR, "MSI-X config vector in invalid state after write: %#x", vector);
+      return ZX_ERR_BAD_STATE;
     }
+
     MmioWrite(&common_cfg_->queue_msix_vector, PciBackend::kMsiQueueVector);
     MmioRead(&common_cfg_->queue_msix_vector, &vector);
     if (vector != PciBackend::kMsiQueueVector) {

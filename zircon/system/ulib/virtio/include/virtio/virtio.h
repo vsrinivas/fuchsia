@@ -84,7 +84,7 @@ typedef struct virtio_pci_common_cfg {
   uint32_t device_feature;
   uint32_t driver_feature_select;
   uint32_t driver_feature;
-  uint16_t msix_config;
+  uint16_t config_msix_vector;
   uint16_t num_queues;
   uint8_t device_status;
   uint8_t config_generation;

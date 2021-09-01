@@ -117,7 +117,7 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
     auto& common_cfg_cap = kCapabilities[4];
     zx::unowned_vmo bar = fake_pci().GetBar(common_cfg_cap.bar);
     uint16_t msix_config_val = 0xFFFF;  // Set to no MSI-X vector allocated.
-    uint32_t msix_offset = offsetof(virtio_pci_common_cfg_t, msix_config);
+    uint32_t msix_offset = offsetof(virtio_pci_common_cfg_t, config_msix_vector);
     bar->write(&msix_config_val, common_cfg_cap.offset + msix_offset, sizeof(msix_config_val));
   }
 
