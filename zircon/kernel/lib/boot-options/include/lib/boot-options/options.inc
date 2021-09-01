@@ -519,7 +519,7 @@ This option only has an effect if `kernel.page-scanner.page-table-eviction-polic
 )""")
 
 DEFINE_OPTION("kernel.page-scanner.min-aging-interval", uint32_t,
-page_scanner_min_aging_interval, {5}, R"""(
+page_scanner_min_aging_interval, {2}, R"""(
 Sets the minimum time, in seconds, between successive aging events. Higher values here will provide
 a more stable active set with less chance of thrashing like behavior and less time spent harvesting
 page access information. Lower values will allow for smaller active sets, increasing opportunities
@@ -529,7 +529,7 @@ This value should be less than or equal to `kernel.page-scanner.max-aging-interv
 )""")
 
 DEFINE_OPTION("kernel.page-scanner.max-aging-interval", uint32_t,
-page_scanner_max_aging_interval, {5}, R"""(
+page_scanner_max_aging_interval, {15}, R"""(
 Sets the maximum time, in seconds, between successive aging events. This time is the potential worst
 case coarseness of page age information, and higher values can result in not having sufficient age
 information to perform eviction if system behavior rapidly changes. Lower values will cause pages to
@@ -540,7 +540,7 @@ This value should be greater than or equal to `kernel.page-scanner.min-aging-int
 )""")
 
 DEFINE_OPTION("kernel.page-scanner.active-ratio-multiplier", uint32_t,
-page_scanner_active_ratio_multiplier, {0}, R"""(
+page_scanner_active_ratio_multiplier, {2}, R"""(
 Controls the allowable ratio of active pages, compared to inactive pages, before aging is triggered.
 The ratio is represented as a multiplier to simplify the kernel algorithm which is
 `should_age = active_page_count * active_ratio_multiplier > inactive_page_count`. Higher multipliers
