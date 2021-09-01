@@ -132,13 +132,15 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsHappy) {
   // Make the call from client side and ensure callback gets called:
   EXPECT_TRUE(client_bound());
   bool called = false;
-  auto result_async = bootstrap_client()->ImportSettings(
+  bootstrap_client()->ImportSettings(
       std::move(buffer),
-      [&called](fidl::WireResponse<fuchsia_lowpan_bootstrap::Thread::ImportSettings>* response) {
+      [&called](
+          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>&& result) {
+        EXPECT_TRUE(result.ok());
+        EXPECT_EQ(result.status(), ZX_OK);
         called = true;
       });
 
-  EXPECT_TRUE(result_async.ok());
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
@@ -171,18 +173,19 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailUnreadable) {
 
   // Make the call from client side:
   EXPECT_TRUE(client_bound());
-  bool called = false;
-  auto result_async = bootstrap_client()->ImportSettings(
+  bool errored = false;
+  bootstrap_client()->ImportSettings(
       std::move(buffer),
-      [&called](fidl::WireResponse<fuchsia_lowpan_bootstrap::Thread::ImportSettings>* response) {
-        called = true;
+      [&errored](
+          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>&& result) {
+        // Confirm that the call failed:
+        ASSERT_EQ(result.status(), ZX_ERR_IO);
+        ASSERT_EQ(result.reason(), fidl::Reason::kPeerClosed);
+        errored = true;
       });
 
-  EXPECT_TRUE(result_async.ok());
   RunLoopUntilIdle();
-
-  // Confirm that callback wasn't called:
-  EXPECT_FALSE(called);
+  EXPECT_TRUE(errored);
 
   // Confirm that channel was closed with error:
   EXPECT_FALSE(client_bound());
@@ -205,17 +208,19 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailNonWritable) {
 
   // Make the call from client side:
   EXPECT_TRUE(client_bound());
-  bool called = false;
-  auto result_async = bootstrap_client()->ImportSettings(
+  bool errored = false;
+  bootstrap_client()->ImportSettings(
       std::move(buffer),
-      [&called](fidl::WireResponse<fuchsia_lowpan_bootstrap::Thread::ImportSettings>* response) {
-        called = true;
+      [&errored](
+          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>&& result) {
+        // Confirm that the call failed:
+        ASSERT_EQ(result.status(), ZX_ERR_IO);
+        ASSERT_EQ(result.reason(), fidl::Reason::kPeerClosed);
+        errored = true;
       });
 
-  EXPECT_TRUE(result_async.ok());
   RunLoopUntilIdle();
-  // Confirm that callback wasn't called:
-  EXPECT_FALSE(called);
+  EXPECT_TRUE(errored);
 
   // Confirm that channel was closed with error:
   EXPECT_FALSE(client_bound());
