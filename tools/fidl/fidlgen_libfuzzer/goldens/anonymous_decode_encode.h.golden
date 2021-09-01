@@ -24,10 +24,10 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 7>
                 ::fidl_test_anonymous::wire::TableMember>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl_test_anonymous::wire::BinOp",
+            .fidl_type_name = "::fidl_test_anonymous::wire::OverrideTest",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_anonymous::wire::BinOp>,
+                ::fidl_test_anonymous::wire::OverrideTest>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =

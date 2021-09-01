@@ -223,11 +223,11 @@ bool Attribute::HasArg(std::string_view arg_name) const {
   return false;
 }
 
-MaybeConstantValue Attribute::GetArg(std::string_view arg_name) const {
+MaybeConstant Attribute::GetArg(std::string_view arg_name) const {
   // TODO(fxbug.dev/74955): ensure that argument names are canonicalized.
   for (const auto& arg : args) {
     if (arg->name == arg_name) {
-      return arg->value->Value();
+      return *arg->value;
     }
   }
   return std::nullopt;
@@ -265,8 +265,8 @@ bool AttributeList::HasAttributeArg(std::string_view attribute_name,
   return attribute.value().get().HasArg(arg_name);
 }
 
-MaybeConstantValue AttributeList::GetAttributeArg(std::string_view attribute_name,
-                                                  std::string_view arg_name) const {
+MaybeConstant AttributeList::GetAttributeArg(std::string_view attribute_name,
+                                             std::string_view arg_name) const {
   auto attribute = GetAttribute(attribute_name);
   if (!attribute)
     return std::nullopt;
@@ -291,8 +291,8 @@ bool Decl::HasAttributeArg(std::string_view attribute_name, std::string_view arg
   return attributes->HasAttributeArg(attribute_name, arg_name);
 }
 
-MaybeConstantValue Decl::GetAttributeArg(std::string_view attribute_name,
-                                         std::string_view arg_name) const {
+MaybeConstant Decl::GetAttributeArg(std::string_view attribute_name,
+                                    std::string_view arg_name) const {
   if (!attributes)
     return std::nullopt;
   return attributes->GetAttributeArg(attribute_name, arg_name);
@@ -1784,7 +1784,7 @@ AttributeSchema AttributeSchema::Deprecated() {
 
 void AttributeSchema::ValidatePlacement(Reporter* reporter,
                                         const std::unique_ptr<Attribute>& attribute,
-                                        AttributePlacement placement) const {
+                                        const Attributable* attributable) const {
   if (allowed_placements_.size() == 0)
     return;
 
@@ -1794,7 +1794,26 @@ void AttributeSchema::ValidatePlacement(Reporter* reporter,
     return;
   }
 
-  auto iter = allowed_placements_.find(placement);
+  if (allowed_placements_.size() == 1 &&
+      *allowed_placements_.cbegin() == AttributePlacement::kAnonymousLayout) {
+    switch (attributable->placement) {
+      case AttributePlacement::kBitsDecl:
+      case AttributePlacement::kEnumDecl:
+      case AttributePlacement::kStructDecl:
+      case AttributePlacement::kTableDecl:
+      case AttributePlacement::kUnionDecl: {
+        const auto* decl = static_cast<const Decl*>(attributable);
+        if (decl->name.as_anonymous() == nullptr)
+          reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
+        return;
+      }
+      default:
+        reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
+        return;
+    }
+  }
+
+  auto iter = allowed_placements_.find(attributable->placement);
   if (iter != allowed_placements_.end())
     return;
   reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
@@ -1811,9 +1830,10 @@ void AttributeSchema::ValidateValue(Reporter* reporter,
   std::string attribute_value;
   auto arg_constant = attribute->GetArg();
   if (arg_constant.has_value()) {
-    if (arg_constant.value().get().kind != flat::ConstantValue::Kind::kString)
+    if (arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString)
       assert(false && "non-string attribute arguments not yet supported");
-    auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+    auto arg_value =
+        static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
     attribute_value = arg_value.MakeContents();
   }
 
@@ -1839,9 +1859,10 @@ void AttributeSchema::ValidateConstraint(Reporter* reporter,
     std::string attribute_value;
     auto arg_constant = attribute->GetArg();
     if (arg_constant.has_value()) {
-      if (arg_constant.value().get().kind != flat::ConstantValue::Kind::kString)
+      if (arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString)
         assert(false && "non-string attribute arguments not yet supported");
-      auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+      auto arg_value =
+          static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
       attribute_value = arg_value.MakeContents();
     }
 
@@ -1907,15 +1928,33 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
   return true;
 }
 
+bool OverrideNameConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+                            const Attributable* attributable) {
+  auto arg_constant = attribute->GetArg();
+  if (!arg_constant.has_value()) {
+    reporter->Report(ErrEmptyAttributeArg, attribute->span(), attribute.get());
+    return false;
+  }
+  auto arg_value =
+      static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
+
+  if (!utils::IsValidIdentifierComponent(arg_value.MakeContents())) {
+    reporter->Report(ErrInvalidNameOverride, attribute->span());
+    return false;
+  }
+  return true;
+}
+
 bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                         const Attributable* attributable) {
   assert(attributable);
   auto arg_constant = attribute->GetArg();
   if (!arg_constant.has_value() ||
-      arg_constant.value().get().kind != flat::ConstantValue::Kind::kString) {
+      arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString) {
     assert(false && "non-string attribute arguments not yet supported");
   }
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+  auto arg_value =
+      static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
 
   uint32_t bound;
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
@@ -1956,11 +1995,12 @@ bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& 
   assert(attributable);
   auto arg_constant = attribute->GetArg();
   if (!arg_constant.has_value() ||
-      arg_constant.value().get().kind != flat::ConstantValue::Kind::kString) {
+      arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString) {
     reporter->Report(ErrInvalidAttributeType, attribute->span(), attribute.get());
     assert(false && "non-string attribute arguments not yet supported");
   }
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+  auto arg_value =
+      static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
 
   uint32_t bound;
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
@@ -2054,9 +2094,10 @@ bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& a
     reporter->Report(ErrInvalidTransportType, method->name, std::string(), *kValidTransports);
     return false;
   }
-  if (arg_constant.value().get().kind != flat::ConstantValue::Kind::kString)
+  if (arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString)
     assert(false && "non-string attribute arguments not yet supported");
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+  auto arg_value =
+      static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
 
   // Parse comma separated transports
   const std::string& value = arg_value.MakeContents();
@@ -2108,6 +2149,11 @@ Libraries::Libraries() {
     "",
   },
   SimpleLayoutConstraint));
+  AddAttributeSchema("generated_name", AttributeSchema({
+    AttributePlacement::kAnonymousLayout,
+  }, {
+    /* any value */
+  }, OverrideNameConstraint)),
   AddAttributeSchema("max_bytes", AttributeSchema({
     AttributePlacement::kProtocolDecl,
     AttributePlacement::kMethod,
@@ -2376,14 +2422,14 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
   return false;
 }
 
-void Library::ValidateAttributesPlacement(AttributePlacement placement,
+void Library::ValidateAttributesPlacement(const Attributable* attributable,
                                           const AttributeList* attributes) {
   if (attributes == nullptr)
     return;
   for (const auto& attribute : attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax);
     if (schema != nullptr) {
-      schema->ValidatePlacement(reporter_, attribute, placement);
+      schema->ValidatePlacement(reporter_, attribute, attributable);
       schema->ValidateValue(reporter_, attribute);
     }
   }
@@ -3002,23 +3048,36 @@ void Library::ConsumeProtocolDeclaration(
 
       std::shared_ptr<NamingContext> result_context, success_variant_context, err_variant_context;
       if (has_error) {
-        // The error syntax desugars to the following type:
+        // The error syntax for protocol P and method M desugars to the following type:
         //
-        // struct { // the "response"
-        //   result union { // the "result"
-        //     response [user specified response type]; // the "success variant"
-        //     err [user specified error type]; // the "error variant"
+        // // the "response"
+        // struct {
+        //   // the "result"
+        //   result @generated_name("P_M_Result") union {
+        //     // the "success variant"
+        //     response @generated_name("P_M_Response") [user specified response type];
+        //     // the "error variant"
+        //     err @generated_name("P_M_Error") [user specified error type];
         //   };
         // };
         //
         // Note that this can lead to ambiguity with the success variant, since its member
         // name within the union is "response". The naming convention within fidlc
-        // is to refer to each type using the name provided in inline comments
+        // is to refer to each type using the name provided in the comments
         // above (i.e. "response" refers to the top level struct, not the success variant).
-        result_context = response_context->EnterResult(GeneratedSimpleName("result"));
-        success_variant_context =
-            result_context->EnterSuccessVariant(GeneratedSimpleName("response"));
-        err_variant_context = result_context->EnterErrorVariant(GeneratedSimpleName("err"));
+        //
+        // The naming scheme for the result type and the success variant in a response
+        // with an error type predates the design of the anonymous name flattening
+        // algorithm, and we therefore they are overridden to be backwards compatible.
+        result_context = response_context->EnterMember(GeneratedSimpleName("result"));
+        result_context->set_name_override(
+            utils::StringJoin({protocol_name.decl_name(), method_name.data(), "Result"}, "_"));
+        success_variant_context = result_context->EnterMember(GeneratedSimpleName("response"));
+        success_variant_context->set_name_override(
+            utils::StringJoin({protocol_name.decl_name(), method_name.data(), "Response"}, "_"));
+        err_variant_context = result_context->EnterMember(GeneratedSimpleName("err"));
+        err_variant_context->set_name_override(
+            utils::StringJoin({protocol_name.decl_name(), method_name.data(), "Error"}, "_"));
       }
 
       // The context for the user specified type within the response part of the method
@@ -3082,7 +3141,6 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<Namin
     if (!ConsumeTypeConstructor(std::move(parameter->type_ctor),
                                 context->EnterMember(parameter->span()), &type_ctor))
       return false;
-    ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
     members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
                          /* maybe_default_value=*/nullptr, std::move(attributes));
   }
@@ -3332,6 +3390,22 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
                                        union_declaration->resourceness));
 }
 
+namespace {
+
+// Sets the naming context's generated name override to the @generated_name attribute's
+// value if it is present in the input attribute list, or does nothing otherwise.
+void MaybeOverrideName(const AttributeList& attributes, NamingContext* context) {
+  auto override_attr = attributes.GetAttributeArg("generated_name");
+  if (!override_attr.has_value())
+    return;
+  const auto& attr_span = override_attr.value().get().span;
+  assert(attr_span.data().size() > 2 && "expected attribute arg to at least have quotes");
+  // remove the quotes from string literal
+  context->set_name_override(std::string(attr_span.data().substr(1, attr_span.data().size() - 2)));
+}
+
+}  // namespace
+
 // TODO(fxbug.dev/77853): these conversion methods may need to be refactored
 //  once the new flat AST lands, and such coercion  is no longer needed.
 template <typename T, typename M>
@@ -3412,6 +3486,7 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
   if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
     return false;
   }
+  MaybeOverrideName(*attributes, context.get());
 
   auto strictness = types::Strictness::kFlexible;
   if (layout->modifiers != nullptr)
@@ -3458,6 +3533,7 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
   if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
     return false;
   }
+  MaybeOverrideName(*attributes, context.get());
 
   auto resourceness = types::Resourceness::kValue;
   if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
@@ -3639,20 +3715,20 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   if (raw::IsAttributeListDefined(file->library_decl->attributes)) {
-    std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &attributes)) {
+    std::unique_ptr<AttributeList> consumed_attributes;
+    if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &consumed_attributes)) {
       return false;
     }
-    ValidateAttributesPlacement(AttributePlacement::kLibrary, attributes.get());
-    if (!attributes_) {
-      attributes_ = std::move(attributes);
+    ValidateAttributesPlacement(this, consumed_attributes.get());
+    if (!attributes) {
+      attributes = std::move(consumed_attributes);
     } else {
-      AttributesBuilder attributes_builder(reporter_, std::move(attributes_->attributes));
-      for (auto& attribute : attributes->attributes) {
+      AttributesBuilder attributes_builder(reporter_, std::move(attributes->attributes));
+      for (auto& attribute : consumed_attributes->attributes) {
         if (!attributes_builder.Insert(std::move(attribute)))
           return false;
       }
-      attributes_ = std::make_unique<AttributeList>(attributes_builder.Done());
+      attributes = std::make_unique<AttributeList>(attributes_builder.Done());
     }
   }
 
@@ -4631,10 +4707,9 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kBits: {
       auto bits_declaration = static_cast<const Bits*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kBitsDecl,
-                                  bits_declaration->attributes.get());
+      ValidateAttributesPlacement(bits_declaration, bits_declaration->attributes.get());
       for (const auto& member : bits_declaration->members) {
-        ValidateAttributesPlacement(AttributePlacement::kBitsMember, member.attributes.get());
+        ValidateAttributesPlacement(&member, member.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4645,16 +4720,15 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<const Const*>(decl);
       // Attributes: for const declarations, we only check placement.
-      ValidateAttributesPlacement(AttributePlacement::kConstDecl, const_decl->attributes.get());
+      ValidateAttributesPlacement(const_decl, const_decl->attributes.get());
       break;
     }
     case Decl::Kind::kEnum: {
       auto enum_declaration = static_cast<const Enum*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kEnumDecl,
-                                  enum_declaration->attributes.get());
+      ValidateAttributesPlacement(enum_declaration, enum_declaration->attributes.get());
       for (const auto& member : enum_declaration->members) {
-        ValidateAttributesPlacement(AttributePlacement::kEnumMember, member.attributes.get());
+        ValidateAttributesPlacement(&member, member.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4665,10 +4739,9 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kProtocol: {
       auto protocol_declaration = static_cast<const Protocol*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kProtocolDecl,
-                                  protocol_declaration->attributes.get());
+      ValidateAttributesPlacement(protocol_declaration, protocol_declaration->attributes.get());
       for (const auto& method_with_info : protocol_declaration->all_methods) {
-        ValidateAttributesPlacement(AttributePlacement::kMethod,
+        ValidateAttributesPlacement(method_with_info.method,
                                     method_with_info.method->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
@@ -4686,11 +4759,9 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kResource: {
       auto resource_declaration = static_cast<const Resource*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kResourceDecl,
-                                  resource_declaration->attributes.get());
+      ValidateAttributesPlacement(resource_declaration, resource_declaration->attributes.get());
       for (const auto& property : resource_declaration->properties) {
-        ValidateAttributesPlacement(AttributePlacement::kResourceProperty,
-                                    property.attributes.get());
+        ValidateAttributesPlacement(&property, property.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4701,9 +4772,9 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kService: {
       auto service_decl = static_cast<const Service*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kServiceDecl, service_decl->attributes.get());
+      ValidateAttributesPlacement(service_decl, service_decl->attributes.get());
       for (const auto& member : service_decl->members) {
-        ValidateAttributesPlacement(AttributePlacement::kServiceMember, member.attributes.get());
+        ValidateAttributesPlacement(&member, member.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
@@ -4714,12 +4785,14 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kStruct: {
       auto struct_declaration = static_cast<const Struct*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kStructDecl,
-                                  struct_declaration->attributes.get());
+      ValidateAttributesPlacement(struct_declaration, struct_declaration->attributes.get());
       for (const auto& member : struct_declaration->members) {
-        ValidateAttributesPlacement(AttributePlacement::kStructMember, member.attributes.get());
+        ValidateAttributesPlacement(&member, member.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
+        for (const auto& member : struct_declaration->members) {
+          ValidateAttributesConstraints(&member, member.attributes.get());
+        }
         // Attributes: check constraint.
         ValidateAttributesConstraints(struct_declaration, struct_declaration->attributes.get());
       }
@@ -4728,15 +4801,19 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kTable: {
       auto table_declaration = static_cast<const Table*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kTableDecl,
-                                  table_declaration->attributes.get());
+      ValidateAttributesPlacement(table_declaration, table_declaration->attributes.get());
       for (const auto& member : table_declaration->members) {
         if (!member.maybe_used)
           continue;
-        ValidateAttributesPlacement(AttributePlacement::kTableMember,
-                                    member.maybe_used->attributes.get());
+        ValidateAttributesPlacement(member.maybe_used.get(), member.maybe_used->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
+        for (const auto& member : table_declaration->members) {
+          if (!member.maybe_used)
+            continue;
+          ValidateAttributesConstraints(member.maybe_used.get(),
+                                        member.maybe_used->attributes.get());
+        }
         // Attributes: check constraint.
         ValidateAttributesConstraints(table_declaration, table_declaration->attributes.get());
       }
@@ -4745,15 +4822,19 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kUnion: {
       auto union_declaration = static_cast<const Union*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kUnionDecl,
-                                  union_declaration->attributes.get());
+      ValidateAttributesPlacement(union_declaration, union_declaration->attributes.get());
       for (const auto& member : union_declaration->members) {
         if (!member.maybe_used)
           continue;
-        ValidateAttributesPlacement(AttributePlacement::kUnionMember,
-                                    member.maybe_used->attributes.get());
+        ValidateAttributesPlacement(member.maybe_used.get(), member.maybe_used->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
+        for (const auto& member : union_declaration->members) {
+          if (!member.maybe_used)
+            continue;
+          ValidateAttributesConstraints(member.maybe_used.get(),
+                                        member.maybe_used->attributes.get());
+        }
         // Attributes: check constraint.
         ValidateAttributesConstraints(union_declaration, union_declaration->attributes.get());
       }
@@ -4762,8 +4843,7 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kTypeAlias: {
       auto type_alias_declaration = static_cast<const TypeAlias*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributePlacement::kTypeAliasDecl,
-                                  type_alias_declaration->attributes.get());
+      ValidateAttributesPlacement(type_alias_declaration, type_alias_declaration->attributes.get());
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
         ValidateAttributesConstraints(type_alias_declaration,
@@ -5521,7 +5601,7 @@ bool Library::CompileTypeAlias(TypeAlias* type_alias) {
 }
 
 bool Library::Compile() {
-  if (!CompileAttributeList(attributes_.get())) {
+  if (!CompileAttributeList(attributes.get())) {
     return false;
   }
 
@@ -5877,9 +5957,9 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
 }
 
 bool Library::HasAttribute(std::string_view name) const {
-  if (!attributes_)
+  if (!attributes)
     return false;
-  return attributes_->HasAttribute(std::string(name));
+  return attributes->HasAttribute(std::string(name));
 }
 
 const std::set<Library*>& Library::dependencies() const { return dependencies_.dependencies(); }

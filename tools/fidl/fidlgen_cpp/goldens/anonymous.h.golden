@@ -17,7 +17,7 @@ using SomeProtocol_SomeMethod_Error =
 
 using Op = ::fidl::test::anonymous::Op;
 
-using BinOp = ::fidl::test::anonymous::BinOp;
+using OverrideTest = ::fidl::test::anonymous::OverrideTest;
 
 using Flags = ::fidl::test::anonymous::Flags;
 

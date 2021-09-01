@@ -462,14 +462,16 @@ constexpr const ::fidl::test::anonymous::Op Op::DIV =
     ::fidl::test::anonymous::Op(3u);
 #endif  // (__cplusplus < 201703)
 
-extern "C" const fidl_type_t fidl_test_anonymous_BinOpTable;
-const fidl_type_t* BinOp::FidlType = &fidl_test_anonymous_BinOpTable;
+extern "C" const fidl_type_t fidl_test_anonymous_OverrideTestTable;
+const fidl_type_t* OverrideTest::FidlType =
+    &fidl_test_anonymous_OverrideTestTable;
 
-void BinOp::Encode(
+void OverrideTest::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<BinOp>::value) {
-    memcpy(_encoder->template GetPtr<BinOp>(_offset), this, sizeof(BinOp));
+  if (::fidl::IsMemcpyCompatible<OverrideTest>::value) {
+    memcpy(_encoder->template GetPtr<OverrideTest>(_offset), this,
+           sizeof(OverrideTest));
   } else {
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &op, _offset + 0);
@@ -484,9 +486,11 @@ void BinOp::Encode(
   }
 }
 
-void BinOp::Decode(::fidl::Decoder* _decoder, BinOp* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<BinOp>::value) {
-    memcpy(_value, _decoder->template GetPtr<BinOp>(_offset), sizeof(BinOp));
+void OverrideTest::Decode(::fidl::Decoder* _decoder, OverrideTest* _value,
+                          size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<OverrideTest>::value) {
+    memcpy(_value, _decoder->template GetPtr<OverrideTest>(_offset),
+           sizeof(OverrideTest));
   } else {
     ::fidl::Decode(_decoder, &_value->op, _offset + 0);
     ::fidl::Decode(_decoder, &_value->left, _offset + 8);
@@ -494,7 +498,7 @@ void BinOp::Decode(::fidl::Decoder* _decoder, BinOp* _value, size_t _offset) {
   }
 }
 
-zx_status_t BinOp::Clone(BinOp* _result) const {
+zx_status_t OverrideTest::Clone(OverrideTest* _result) const {
   zx_status_t _status = ::fidl::Clone(op, &_result->op);
   if (_status != ZX_OK) return _status;
   _status = ::fidl::Clone(left, &_result->left);
@@ -917,7 +921,7 @@ Expression::Expression(Expression&& other) : tag_(other.tag_) {
       value_ = std::move(other.value_);
       break;
     case ::fidl::test::anonymous::Expression::Tag::kBinOp:
-      new (&bin_op_)::fidl::test::anonymous::BinOp();
+      new (&bin_op_)::fidl::test::anonymous::OverrideTest();
       bin_op_ = std::move(other.bin_op_);
       break;
     case ::fidl::test::anonymous::Expression::Tag::kFunctionApplication:
@@ -944,7 +948,7 @@ Expression& Expression::operator=(Expression&& other) {
         value_ = std::move(other.value_);
         break;
       case ::fidl::test::anonymous::Expression::Tag::kBinOp:
-        new (&bin_op_)::fidl::test::anonymous::BinOp();
+        new (&bin_op_)::fidl::test::anonymous::OverrideTest();
         bin_op_ = std::move(other.bin_op_);
         break;
       case ::fidl::test::anonymous::Expression::Tag::kFunctionApplication:
@@ -969,7 +973,7 @@ Expression Expression::WithValue(uint64_t&& val) {
   result.set_value(std::move(val));
   return result;
 }
-Expression Expression::WithBinOp(::fidl::test::anonymous::BinOp&& val) {
+Expression Expression::WithBinOp(::fidl::test::anonymous::OverrideTest&& val) {
   Expression result;
   result.set_bin_op(std::move(val));
   return result;
@@ -1045,8 +1049,9 @@ void Expression::Encode(
           ::fidl::Encode(
               encoder, &bin_op_,
               encoder->Alloc(
-                  ::fidl::EncodingInlineSize<::fidl::test::anonymous::BinOp,
-                                             ::fidl::Encoder>(encoder)));
+                  ::fidl::EncodingInlineSize<
+                      ::fidl::test::anonymous::OverrideTest, ::fidl::Encoder>(
+                      encoder)));
 
           fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
           xunion->tag = tag_;
@@ -1058,7 +1063,7 @@ void Expression::Encode(
           break;
         }
         case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<::fidl::test::anonymous::BinOp>(
+          if (::fidl::EncodingInlineSize<::fidl::test::anonymous::OverrideTest>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &bin_op_,
                            offset + offsetof(fidl_xunion_v2_t, envelope));
@@ -1075,8 +1080,9 @@ void Expression::Encode(
           ::fidl::Encode(
               encoder, &bin_op_,
               encoder->Alloc(
-                  ::fidl::EncodingInlineSize<::fidl::test::anonymous::BinOp,
-                                             ::fidl::Encoder>(encoder)));
+                  ::fidl::EncodingInlineSize<
+                      ::fidl::test::anonymous::OverrideTest, ::fidl::Encoder>(
+                      encoder)));
 
           fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
           xunion->tag = tag_;
@@ -1174,7 +1180,7 @@ void Expression::Decode(::fidl::Decoder* _decoder, Expression* value,
       break;
     }
     case ::fidl::test::anonymous::Expression::Tag::kBinOp: {
-      new (&value->bin_op_)::fidl::test::anonymous::BinOp();
+      new (&value->bin_op_)::fidl::test::anonymous::OverrideTest();
       ::fidl::Decode(_decoder, &value->bin_op_, value_offset);
       break;
     }
@@ -1203,7 +1209,7 @@ zx_status_t Expression::Clone(Expression* result) const {
     case ::fidl::test::anonymous::Expression::Tag::kValue:
       return ::fidl::Clone(value_, &result->value_);
     case ::fidl::test::anonymous::Expression::Tag::kBinOp:
-      new (&result->bin_op_)::fidl::test::anonymous::BinOp();
+      new (&result->bin_op_)::fidl::test::anonymous::OverrideTest();
       return ::fidl::Clone(bin_op_, &result->bin_op_);
     case ::fidl::test::anonymous::Expression::Tag::kFunctionApplication:
       new (&result->function_application_)::fidl::test::anonymous::
@@ -1223,7 +1229,8 @@ Expression& Expression::set_value(uint64_t value) {
   return *this;
 }
 
-Expression& Expression::set_bin_op(::fidl::test::anonymous::BinOp value) {
+Expression& Expression::set_bin_op(
+    ::fidl::test::anonymous::OverrideTest value) {
   EnsureStorageInitialized(::fidl::test::anonymous::Expression::Tag::kBinOp);
   bin_op_ = std::move(value);
   return *this;
@@ -1277,7 +1284,7 @@ void Expression::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         new (&value_) uint64_t();
         break;
       case ::fidl::test::anonymous::Expression::Tag::kBinOp:
-        new (&bin_op_)::fidl::test::anonymous::BinOp();
+        new (&bin_op_)::fidl::test::anonymous::OverrideTest();
         break;
       case ::fidl::test::anonymous::Expression::Tag::kFunctionApplication:
         new (&function_application_)::fidl::test::anonymous::

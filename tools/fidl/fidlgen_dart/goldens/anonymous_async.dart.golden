@@ -502,7 +502,7 @@ class Expression extends $fidl.XUnion {
       : _ordinal = 1,
         _data = value;
 
-  const Expression.withBinOp(BinOp value)
+  const Expression.withBinOp(OverrideTest value)
       : _ordinal = 2,
         _data = value;
 
@@ -529,7 +529,7 @@ class Expression extends $fidl.XUnion {
     return _data;
   }
 
-  BinOp? get binOp {
+  OverrideTest? get binOp {
     if (_ordinal != 2) {
       return null;
     }
@@ -587,7 +587,7 @@ const $fidl.UnionType<Expression> kExpression_Type =
     $fidl.UnionType<Expression>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint64Type(),
-    2: kBinOp_Type,
+    2: kOverrideTest_Type,
     3: kFunctionApplication_Type,
   },
   ctor: Expression._ctor,
@@ -600,7 +600,7 @@ const $fidl.NullableUnionType<Expression> kExpression_OptType =
     $fidl.NullableUnionType<Expression>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint64Type(),
-    2: kBinOp_Type,
+    2: kOverrideTest_Type,
     3: kFunctionApplication_Type,
   },
   ctor: Expression._ctor,
@@ -740,14 +740,14 @@ const $fidl.StructType<SomeProtocolSomeMethodResponse>
   structDecode: SomeProtocolSomeMethodResponse._structDecode,
 );
 
-class BinOp extends $fidl.Struct {
-  const BinOp({
+class OverrideTest extends $fidl.Struct {
+  const OverrideTest({
     required this.op,
     this.left,
     this.right,
   });
-  BinOp.clone(
-    BinOp $orig, {
+  OverrideTest.clone(
+    OverrideTest $orig, {
     Op? op,
     Expression? left,
     Expression? right,
@@ -757,8 +757,8 @@ class BinOp extends $fidl.Struct {
           right: right ?? $orig.right,
         );
 
-  BinOp.cloneWithout(
-    BinOp $orig, {
+  OverrideTest.cloneWithout(
+    OverrideTest $orig, {
     bool left = false,
     bool right = false,
   }) : this(
@@ -804,7 +804,7 @@ class BinOp extends $fidl.Struct {
 
   @override
   String toString() {
-    return r'BinOp' r'(op: ' +
+    return r'OverrideTest' r'(op: ' +
         op.toString() +
         r', left: ' +
         left.toString() +
@@ -813,15 +813,16 @@ class BinOp extends $fidl.Struct {
         r')';
   }
 
-  static BinOp _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+  static OverrideTest _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return BinOp(
+        return OverrideTest(
             op: $fieldType0.decode($decoder, $offset + 0, $depth),
             left: $fieldType1.decode($decoder, $offset + 8, $depth),
             right: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
-        return BinOp(
+        return OverrideTest(
             op: $fieldType0.decode($decoder, $offset + 0, $depth),
             left: $fieldType1.decode($decoder, $offset + 8, $depth),
             right: $fieldType2.decode($decoder, $offset + 24, $depth));
@@ -833,10 +834,11 @@ class BinOp extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<BinOp> kBinOp_Type = $fidl.StructType<BinOp>(
+const $fidl.StructType<OverrideTest> kOverrideTest_Type =
+    $fidl.StructType<OverrideTest>(
   inlineSizeV1: 56,
   inlineSizeV2: 40,
-  structDecode: BinOp._structDecode,
+  structDecode: OverrideTest._structDecode,
 );
 
 class TableMember extends $fidl.Table {

@@ -219,17 +219,17 @@ func (msg *SomeProtocolSomeMethodResponse) Marshaler() _bindings.Marshaler {
 	return _mSomeProtocolSomeMethodResponse
 }
 
-type BinOp struct {
+type OverrideTest struct {
 	_     struct{}    `fidl:"s" fidl_size_v1:"56" fidl_alignment_v1:"8" fidl_size_v2:"40" fidl_alignment_v2:"8"`
 	Op    Op          `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 	Left  *Expression `fidl_offset_v1:"8" fidl_offset_v2:"8"`
 	Right *Expression `fidl_offset_v1:"32" fidl_offset_v2:"24"`
 }
 
-var _mBinOp = _bindings.CreateLazyMarshaler(BinOp{})
+var _mOverrideTest = _bindings.CreateLazyMarshaler(OverrideTest{})
 
-func (msg *BinOp) Marshaler() _bindings.Marshaler {
-	return _mBinOp
+func (msg *OverrideTest) Marshaler() _bindings.Marshaler {
+	return _mOverrideTest
 }
 
 type someProtocolWithCtxSomeMethodRequest struct {
@@ -376,7 +376,7 @@ type Expression struct {
 	I_expressionTag     `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData       interface{}
 	Value               uint64              `fidl_ordinal:"1"`
-	BinOp               BinOp               `fidl_ordinal:"2"`
+	BinOp               OverrideTest        `fidl_ordinal:"2"`
 	FunctionApplication FunctionApplication `fidl_ordinal:"3"`
 }
 
@@ -386,7 +386,7 @@ func (_m *Expression) reset() {
 		var _zeroed uint64
 		_m.Value = _zeroed
 	case 2:
-		var _zeroed BinOp
+		var _zeroed OverrideTest
 		_m.BinOp = _zeroed
 	case 3:
 		var _zeroed FunctionApplication
@@ -426,13 +426,13 @@ func ExpressionWithValue(value uint64) Expression {
 	return _u
 }
 
-func (_m *Expression) SetBinOp(binOp BinOp) {
+func (_m *Expression) SetBinOp(binOp OverrideTest) {
 	_m.reset()
 	_m.I_expressionTag = ExpressionBinOp
 	_m.BinOp = binOp
 }
 
-func ExpressionWithBinOp(binOp BinOp) Expression {
+func ExpressionWithBinOp(binOp OverrideTest) Expression {
 	var _u Expression
 	_u.SetBinOp(binOp)
 	return _u

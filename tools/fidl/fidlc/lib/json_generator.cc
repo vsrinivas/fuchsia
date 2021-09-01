@@ -984,7 +984,7 @@ std::ostringstream JSONGenerator::Produce() {
 
     GenerateObjectMember("name", LibraryName(library_, "."));
 
-    if (auto attributes = library_->attributes(); attributes) {
+    if (auto attributes = library_->GetAttributes(); attributes) {
       GenerateObjectMember("maybe_attributes", *attributes);
     }
 

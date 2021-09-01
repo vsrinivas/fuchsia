@@ -68,22 +68,6 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     return Push(method_name, ElementKind::kMethodResponse);
   }
 
-  std::shared_ptr<NamingContext> EnterResult(SourceSpan span) {
-    assert((kind_ == ElementKind::kMethodRequest || kind_ == ElementKind::kMethodResponse) &&
-           "result must follow method");
-    return Push(span, ElementKind::kMethodResult);
-  }
-
-  std::shared_ptr<NamingContext> EnterSuccessVariant(SourceSpan span) {
-    assert(kind_ == ElementKind::kMethodResult && "success must follow result");
-    return Push(span, ElementKind::kMethodSuccessVariant);
-  }
-
-  std::shared_ptr<NamingContext> EnterErrorVariant(SourceSpan span) {
-    assert(kind_ == ElementKind::kMethodResult && "error must follow result");
-    return Push(span, ElementKind::kMethodErrorVariant);
-  }
-
   std::shared_ptr<NamingContext> EnterMember(SourceSpan member_name) {
     return Push(member_name, ElementKind::kLayoutMember);
   }
@@ -95,7 +79,12 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     return parent_;
   }
 
+  void set_name_override(std::string value) { name_override_ = std::move(value); }
+
   std::string FlattenedName() const {
+    if (name_override_.has_value())
+      return name_override_.value();
+
     switch (kind_) {
       case ElementKind::kDecl:
         return std::string(name_.data());
@@ -114,23 +103,6 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
         // the success variant of the result type, if this method has an error.
         result.append("TopResponse");
         return result;
-      }
-      // The naming contexts associated with method results are handled specially
-      // (see ElementKind)
-      case ElementKind::kMethodResult: {
-        auto method_name = parent()->name_.data();
-        auto protocol_name = parent()->parent()->name_.data();
-        return utils::StringJoin({protocol_name, method_name, "Result"}, "_");
-      }
-      case ElementKind::kMethodSuccessVariant: {
-        auto method_name = parent()->parent()->name_.data();
-        auto protocol_name = parent()->parent()->parent()->name_.data();
-        return utils::StringJoin({protocol_name, method_name, "Response"}, "_");
-      }
-      case ElementKind::kMethodErrorVariant: {
-        auto method_name = parent()->parent()->name_.data();
-        auto protocol_name = parent()->parent()->parent()->name_.data();
-        return utils::StringJoin({protocol_name, method_name, "Error"}, "_");
       }
     }
   }
@@ -187,15 +159,6 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     kLayoutMember,
     kMethodRequest,
     kMethodResponse,
-    // The naming scheme for the result type and the success variant in a response
-    // with an error type predates the design of the anonymous name flattening
-    // algorithm, and we therefore need to handle these names specially to ensure
-    // backwards compatibility with the existing names (errors are handled specially
-    // to be consistent with the rest). This requires distinguishing them as separate
-    // cases in ElementKind, rather than just as ordinary kLayoutMembers
-    kMethodResult,
-    kMethodSuccessVariant,
-    kMethodErrorVariant,
   };
   struct Element {
     SourceSpan name;
@@ -218,6 +181,7 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   }
 
   SourceSpan name_;
+  std::optional<std::string> name_override_;
   ElementKind kind_;
   std::shared_ptr<NamingContext> parent_ = nullptr;
 };

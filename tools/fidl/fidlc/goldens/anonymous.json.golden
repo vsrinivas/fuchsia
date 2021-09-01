@@ -666,7 +666,7 @@
       }
     },
     {
-      "name": "fidl.test.anonymous/BinOp",
+      "name": "fidl.test.anonymous/OverrideTest",
       "naming_context": [
         "Expression",
         "bin_op"
@@ -674,19 +674,39 @@
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
         "line": 7,
-        "column": 15,
+        "column": 37,
         "length": 184
       },
       "is_request_or_response": false,
       "maybe_attributes": [
         {
-          "name": "on_binop",
-          "arguments": [],
+          "name": "generated_name",
+          "arguments": [
+            {
+              "name": "value",
+              "value": {
+                "kind": "literal",
+                "value": "OverrideTest",
+                "expression": "\"OverrideTest\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "OverrideTest",
+                  "expression": "\"OverrideTest\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+                "line": 7,
+                "column": 21,
+                "length": 14
+              }
+            }
+          ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
             "line": 7,
             "column": 5,
-            "length": 9
+            "length": 31
           }
         }
       ],
@@ -762,7 +782,7 @@
       "type_shape_v1": {
         "inline_size": 56,
         "alignment": 8,
-        "depth": 4294967295,
+        "depth": 6,
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
@@ -771,7 +791,7 @@
       "type_shape_v2": {
         "inline_size": 40,
         "alignment": 8,
-        "depth": 4294967295,
+        "depth": 6,
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
@@ -930,7 +950,7 @@
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
-        "depth": 4294967295,
+        "depth": 8,
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
@@ -939,7 +959,7 @@
       "type_shape_v2": {
         "inline_size": 16,
         "alignment": 8,
-        "depth": 4294967295,
+        "depth": 8,
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
@@ -1130,7 +1150,7 @@
           "name": "bin_op",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/BinOp",
+            "identifier": "fidl.test.anonymous/OverrideTest",
             "nullable": false
           },
           "location": {
@@ -1162,7 +1182,7 @@
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
-        "depth": 4294967295,
+        "depth": 6,
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
@@ -1171,7 +1191,7 @@
       "type_shape_v2": {
         "inline_size": 16,
         "alignment": 8,
-        "depth": 4294967295,
+        "depth": 6,
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
@@ -1186,7 +1206,7 @@
     "fidl.test.anonymous/TableMember",
     "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
     "fidl.test.anonymous/Op",
-    "fidl.test.anonymous/BinOp",
+    "fidl.test.anonymous/OverrideTest",
     "fidl.test.anonymous/Flags",
     "fidl.test.anonymous/FunctionApplication",
     "fidl.test.anonymous/Expression",
@@ -1205,7 +1225,7 @@
     "fidl.test.anonymous/SomeProtocolSomeMethodRequest": "struct",
     "fidl.test.anonymous/SomeProtocol_SomeMethod_Response": "struct",
     "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse": "struct",
-    "fidl.test.anonymous/BinOp": "struct",
+    "fidl.test.anonymous/OverrideTest": "struct",
     "fidl.test.anonymous/TableMember": "table",
     "fidl.test.anonymous/FunctionApplication": "table",
     "fidl.test.anonymous/UnionMember": "union",

@@ -9,7 +9,7 @@ __LOCAL extern const struct FidlCodedStruct fidl_test_anonymous_TableDataTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_anonymous_TableMemberTable;
 __LOCAL extern const struct FidlCodedEnum fidl_test_anonymous_SomeProtocol_SomeMethod_ErrorTable;
 __LOCAL extern const struct FidlCodedEnum fidl_test_anonymous_OpTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_anonymous_BinOpTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_anonymous_OverrideTestTable;
 __LOCAL extern const struct FidlCodedBits fidl_test_anonymous_FlagsTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_anonymous_FunctionApplicationTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_anonymous_ExpressionTable;
@@ -61,13 +61,13 @@ const struct FidlCodedEnum fidl_test_anonymous_SomeProtocol_SomeMethod_ErrorTabl
 
 const struct FidlCodedEnum fidl_test_anonymous_OpTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="fidl.test.anonymous/Op"};
 
-static const struct FidlStructElement Fields25fidl_test_anonymous_BinOp[] = {
+static const struct FidlStructElement Fields32fidl_test_anonymous_OverrideTest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&fidl_test_anonymous_OpTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=8u, .offset_v2=8u, .field_type=(fidl_type_t*)(&fidl_test_anonymous_ExpressionNullableRefTable)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=32u, .offset_v2=24u, .field_type=(fidl_type_t*)(&fidl_test_anonymous_ExpressionNullableRefTable)}}
 };
-const struct FidlCodedStruct fidl_test_anonymous_BinOpTable = {.tag=kFidlTypeStruct, .elements=Fields25fidl_test_anonymous_BinOp, .element_count=4u, .size_v1=56u, .size_v2=40u, .name="fidl.test.anonymous/BinOp"};
+const struct FidlCodedStruct fidl_test_anonymous_OverrideTestTable = {.tag=kFidlTypeStruct, .elements=Fields32fidl_test_anonymous_OverrideTest, .element_count=4u, .size_v1=56u, .size_v2=40u, .name="fidl.test.anonymous/OverrideTest"};
 
 const struct FidlCodedBits fidl_test_anonymous_FlagsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint16, .strictness=kFidlStrictness_Flexible, .mask=1ul, .name="fidl.test.anonymous/Flags"};
 
@@ -80,13 +80,13 @@ const struct FidlCodedTable fidl_test_anonymous_FunctionApplicationTable = {.tag
 
 static const struct FidlXUnionField Fields30fidl_test_anonymous_Expression[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint64Table)},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_anonymous_BinOpTable)},
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_anonymous_OverrideTestTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_anonymous_FunctionApplicationTable)}
 };
 const struct FidlCodedXUnion fidl_test_anonymous_ExpressionTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields30fidl_test_anonymous_Expression, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.anonymous/Expression", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields41fidl_test_anonymous_ExpressionNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint64Table)},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_anonymous_BinOpTable)},
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_anonymous_OverrideTestTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_anonymous_FunctionApplicationTable)}
 };
 const struct FidlCodedXUnion fidl_test_anonymous_ExpressionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields41fidl_test_anonymous_ExpressionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.anonymous/Expression", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};

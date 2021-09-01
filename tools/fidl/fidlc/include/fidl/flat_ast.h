@@ -76,7 +76,7 @@ struct AttributeArg final {
   SourceSpan span_;
 };
 
-using MaybeConstantValue = std::optional<std::reference_wrapper<const ConstantValue>>;
+using MaybeConstant = std::optional<std::reference_wrapper<const Constant>>;
 
 struct Attribute final {
   // A constructor for synthetic attributes like "Result."
@@ -90,7 +90,7 @@ struct Attribute final {
       : name(std::move(name)), syntax(syntax), args(std::move(args)), span_(span) {}
 
   bool HasArg(std::string_view arg_name) const;
-  MaybeConstantValue GetArg(std::string_view arg_name = kDefaultAttributeArg) const;
+  MaybeConstant GetArg(std::string_view arg_name = kDefaultAttributeArg) const;
   SourceSpan span() const { return span_; }
 
   const std::string name;
@@ -109,8 +109,8 @@ struct AttributeList final {
   MaybeAttribute GetAttribute(std::string_view attribute_name) const;
   bool HasAttributeArg(std::string_view attribute_name,
                        std::string_view arg_name = kDefaultAttributeArg) const;
-  MaybeConstantValue GetAttributeArg(std::string_view attribute_name,
-                                     std::string_view arg_name = kDefaultAttributeArg) const;
+  MaybeConstant GetAttributeArg(std::string_view attribute_name,
+                                std::string_view arg_name = kDefaultAttributeArg) const;
 
   std::vector<std::unique_ptr<Attribute>> attributes;
 };
@@ -138,7 +138,13 @@ enum class AttributePlacement {
   kTypeAliasDecl,
   kUnionDecl,
   kUnionMember,
+  // The below are "special" placements that don't correspond specifically to a
+  // single placement. They exist to emulate generic validation behavior (see
+  // AttributeSchema::ValidatePlacement), and should be used as the sole
+  // AttributePlacement value in a list of valid placements passed to an
+  // AttributeSchema.
   kDeprecated,
+  kAnonymousLayout,
 };
 
 struct Attributable {
@@ -205,8 +211,8 @@ struct Decl : public Attributable {
   bool HasAttribute(std::string_view attribute_name) const;
   MaybeAttribute GetAttribute(std::string_view attribute_name) const;
   bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name = "value") const;
-  MaybeConstantValue GetAttributeArg(std::string_view attribute_name,
-                                     std::string_view arg_name = "value") const;
+  MaybeConstant GetAttributeArg(std::string_view attribute_name,
+                                std::string_view arg_name = "value") const;
   std::string GetName() const;
 
   bool compiling = false;
@@ -1126,7 +1132,7 @@ class AttributeSchema {
   static AttributeSchema Deprecated();
 
   void ValidatePlacement(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                         AttributePlacement placement) const;
+                         const Attributable* attributable) const;
 
   void ValidateValue(Reporter* reporter, const std::unique_ptr<Attribute>& attribute) const;
 
@@ -1231,7 +1237,7 @@ using MethodHasher = fit::function<raw::Ordinal64(
 
 struct LibraryComparator;
 
-class Library {
+class Library : Attributable {
   friend StepBase;
   friend ConsumeStep;
   friend CompileStep;
@@ -1241,7 +1247,8 @@ class Library {
  public:
   Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
           MethodHasher method_hasher, ExperimentalFlags experimental_flags)
-      : all_libraries_(all_libraries),
+      : Attributable(AttributePlacement::kLibrary, nullptr),
+        all_libraries_(all_libraries),
         reporter_(reporter),
         typespace_(typespace),
         method_hasher_(std::move(method_hasher)),
@@ -1252,7 +1259,7 @@ class Library {
   std::set<const Library*, LibraryComparator> DirectDependencies() const;
 
   const std::vector<std::string_view>& name() const { return library_name_; }
-  const AttributeList* attributes() const { return attributes_.get(); }
+  const AttributeList* GetAttributes() const { return attributes.get(); }
 
  private:
   bool Fail(std::unique_ptr<Diagnostic> err);
@@ -1270,7 +1277,8 @@ class Library {
     return Fail(err, decl.name, args...);
   }
 
-  void ValidateAttributesPlacement(AttributePlacement placement, const AttributeList* attributes);
+  void ValidateAttributesPlacement(const Attributable* attributable,
+                                   const AttributeList* attributes);
   void ValidateAttributesConstraints(const Attributable* attributable,
                                      const AttributeList* attributes);
 
@@ -1480,7 +1488,7 @@ class Library {
   const Name kSizeTypeName = Name::CreateIntrinsic("uint32");
   const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
 
-  std::unique_ptr<AttributeList> attributes_;
+  // std::unique_ptr<AttributeList> attributes_;
 
   Dependencies dependencies_;
   const Libraries* all_libraries_;

@@ -19,7 +19,7 @@ using TableMember = ::fidl::test::anonymous::TableMember;
 using SomeProtocol_SomeMethod_Error =
     ::fidl::test::anonymous::SomeProtocol_SomeMethod_Error;
 using Op = ::fidl::test::anonymous::Op;
-using BinOp = ::fidl::test::anonymous::BinOp;
+using OverrideTest = ::fidl::test::anonymous::OverrideTest;
 using Flags = ::fidl::test::anonymous::Flags;
 using FunctionApplication = ::fidl::test::anonymous::FunctionApplication;
 using Expression = ::fidl::test::anonymous::Expression;
@@ -149,7 +149,7 @@ struct Allocate<Op> {
   }
 };
 template <>
-struct MinSize<BinOp> {
+struct MinSize<OverrideTest> {
   operator size_t() {
     return MinSize<::fidl::test::anonymous::Op>() +
            MinSize<::std::unique_ptr<::fidl::test::anonymous::Expression>>() +
@@ -157,11 +157,11 @@ struct MinSize<BinOp> {
   }
 };
 template <>
-struct Allocate<BinOp> {
-  BinOp operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<BinOp>());
-    BinOp out;
-    const size_t slack_per_member = (*size - MinSize<BinOp>()) / 3;
+struct Allocate<OverrideTest> {
+  OverrideTest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<OverrideTest>());
+    OverrideTest out;
+    const size_t slack_per_member = (*size - MinSize<OverrideTest>()) / 3;
     size_t out_size;
     out_size = MinSize<::fidl::test::anonymous::Op>() + slack_per_member;
     out.op = Allocate<::fidl::test::anonymous::Op>{}(src, &out_size);
@@ -226,7 +226,7 @@ template <>
 struct MinSize<Expression> {
   operator size_t() {
     size_t sizes[] = {0, MinSize<uint64_t>(),
-                      MinSize<::fidl::test::anonymous::BinOp>(),
+                      MinSize<::fidl::test::anonymous::OverrideTest>(),
                       MinSize<::fidl::test::anonymous::FunctionApplication>()};
     return 1 + *std::max_element(sizes, sizes + 3 + 1);
   }
@@ -249,7 +249,8 @@ struct Allocate<Expression> {
         break;
       }
       case 1: {
-        out.set_bin_op(Allocate<::fidl::test::anonymous::BinOp>{}(src, size));
+        out.set_bin_op(
+            Allocate<::fidl::test::anonymous::OverrideTest>{}(src, size));
         break;
       }
       case 2: {

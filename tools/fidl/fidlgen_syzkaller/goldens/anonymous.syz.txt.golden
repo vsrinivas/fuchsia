@@ -26,15 +26,15 @@ fidl_test_anonymous_SomeProtocol_SomeMethod_ResponseOutOfLine {
 fidl_test_anonymous_SomeProtocol_SomeMethod_ResponseHandles {
        void void
 } [packed]
-fidl_test_anonymous_BinOpInLine {
+fidl_test_anonymous_OverrideTestInLine {
        op flags[fidl_test_anonymous_Op, int32]
        leftInLine fidl_test_anonymous_ExpressionInLine
        rightInLine fidl_test_anonymous_ExpressionInLine
 } [packed]
-fidl_test_anonymous_BinOpOutOfLine {
+fidl_test_anonymous_OverrideTestOutOfLine {
        void void
 } [packed]
-fidl_test_anonymous_BinOpHandles {
+fidl_test_anonymous_OverrideTestHandles {
        void void
 } [packed]
 fidl_test_anonymous_UnionMemberInLine [
@@ -58,14 +58,14 @@ fidl_test_anonymous_SomeProtocol_SomeMethod_ResultHandles [
 ][varlen]
 fidl_test_anonymous_ExpressionInLine [
        value fidl_union_member[1, int64]
-       bin_opInLine fidl_union_member[2, fidl_test_anonymous_BinOpInLine]
+       bin_opInLine fidl_union_member[2, fidl_test_anonymous_OverrideTestInLine]
         fidl_union_member[3, ]
 ]
 fidl_test_anonymous_ExpressionOutOfLine [
-       bin_opOutOfLine fidl_test_anonymous_BinOpOutOfLine
+       bin_opOutOfLine fidl_test_anonymous_OverrideTestOutOfLine
 ][varlen]
 fidl_test_anonymous_ExpressionHandles [
-       bin_op fidl_test_anonymous_BinOpHandles
+       bin_op fidl_test_anonymous_OverrideTestHandles
 ][varlen]
 
 

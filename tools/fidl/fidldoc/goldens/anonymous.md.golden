@@ -47,14 +47,14 @@
 
 ## **STRUCTS**
 
-### BinOp  {#BinOp data-text="BinOp"}
+### OverrideTest  {#OverrideTest data-text="OverrideTest"}
 *Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=7)*
 
 
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="BinOp.op">
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="OverrideTest.op">
             <td><code>op</code></td>
             <td>
                 <code><a class='link' href='#Op'>Op</a></code>
@@ -62,7 +62,7 @@
             <td>
 </td>
             <td>No default</td>
-        </tr><tr id="BinOp.left">
+        </tr><tr id="OverrideTest.left">
             <td><code>left</code></td>
             <td>
                 <code><a class='link' href='#Expression'>Expression</a>?</code>
@@ -70,7 +70,7 @@
             <td>
 </td>
             <td>No default</td>
-        </tr><tr id="BinOp.right">
+        </tr><tr id="OverrideTest.right">
             <td><code>right</code></td>
             <td>
                 <code><a class='link' href='#Expression'>Expression</a>?</code>
@@ -264,7 +264,7 @@ Type: <code>uint32</code>
         </tr><tr id="Expression.bin_op">
             <td><code>bin_op</code></td>
             <td>
-                <code><a class='link' href='#BinOp'>BinOp</a></code>
+                <code><a class='link' href='#OverrideTest'>OverrideTest</a></code>
             </td>
             <td>
 </td>

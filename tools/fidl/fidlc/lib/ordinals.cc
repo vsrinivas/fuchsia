@@ -17,9 +17,9 @@ namespace ordinals {
 std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name) {
   auto selector_constant = attributes->GetAttributeArg("selector");
   if (selector_constant.has_value() &&
-      selector_constant.value().get().kind == flat::ConstantValue::Kind::kString) {
+      selector_constant.value().get().Value().kind == flat::ConstantValue::Kind::kString) {
     auto selector_string_constant =
-        static_cast<const flat::StringConstantValue&>(selector_constant.value().get());
+        static_cast<const flat::StringConstantValue&>(selector_constant.value().get().Value());
     return selector_string_constant.MakeContents();
   }
   return std::string(name.data().data(), name.data().size());

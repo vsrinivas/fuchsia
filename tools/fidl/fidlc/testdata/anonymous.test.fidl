@@ -4,7 +4,7 @@ library fidl.test.anonymous;
 type Expression = flexible union {
     1: value uint64;
     2: bin_op 
-    @on_binop struct {
+    @generated_name("OverrideTest") struct {
         op flexible enum {
             ADD = 1;
             MUL = 2;

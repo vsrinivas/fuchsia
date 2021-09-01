@@ -302,7 +302,7 @@ fidl_union! {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Value(u64),
-    BinOp(BinOp),
+    BinOp(OverrideTest),
     FunctionApplication(FunctionApplication),
     #[deprecated = "Use `Expression::unknown()` to construct and `ExpressionUnknown!()` to exhaustively match."]
     #[doc(hidden)]
@@ -355,7 +355,7 @@ fidl_union! {
             ordinal: 1,
         },
         BinOp {
-            ty: BinOp,
+            ty: OverrideTest,
             ordinal: 2,
         },
         FunctionApplication {
@@ -418,16 +418,16 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BinOp {
+pub struct OverrideTest {
     pub op: Op,
     pub left: Option<Box<Expression>>,
     pub right: Option<Box<Expression>>,
 }
 
-impl fidl::encoding::Persistable for BinOp {}
+impl fidl::encoding::Persistable for OverrideTest {}
 
 fidl_struct! {
-  name: BinOp,
+  name: OverrideTest,
   members: [
     op {
       ty: Op,

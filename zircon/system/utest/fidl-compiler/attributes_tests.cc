@@ -158,7 +158,11 @@ type ExampleEnum = strict enum {
 /// For ExampleStruct
 @max_bytes("1234")
 @max_handles("5678")
-type ExampleStruct = resource struct {};
+type ExampleStruct = resource struct {
+  data @generated_name("CustomName") table {
+    1: a uint8;
+  };
+};
 
 /// For ExampleProtocol
 @discoverable
@@ -191,11 +195,11 @@ service ExampleService {
   EXPECT_TRUE(example_const->attributes->HasAttribute("no_doc"));
   EXPECT_TRUE(example_const->HasAttributeArg("doc"));
   auto const_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_const->GetAttributeArg("doc").value().get());
+      example_const->GetAttributeArg("doc").value().get().Value());
   EXPECT_STR_EQ(const_doc_value.MakeContents(), " For EXAMPLE_CONSTANT\n");
   EXPECT_TRUE(example_const->HasAttributeArg("deprecated"));
   auto const_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_const->GetAttributeArg("deprecated").value().get());
+      example_const->GetAttributeArg("deprecated").value().get().Value());
   EXPECT_STR_EQ(const_str_value.MakeContents(), "Note");
 
   auto example_enum = library.LookupEnum("ExampleEnum");
@@ -203,11 +207,11 @@ service ExampleService {
   EXPECT_TRUE(example_enum->attributes->HasAttribute("transitional"));
   EXPECT_TRUE(example_enum->HasAttributeArg("doc"));
   auto enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_enum->GetAttributeArg("doc").value().get());
+      example_enum->GetAttributeArg("doc").value().get().Value());
   EXPECT_STR_EQ(enum_doc_value.MakeContents(), " For ExampleEnum\n");
   EXPECT_TRUE(example_enum->HasAttributeArg("deprecated"));
   auto enum_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_enum->GetAttributeArg("deprecated").value().get());
+      example_enum->GetAttributeArg("deprecated").value().get().Value());
   EXPECT_STR_EQ(enum_str_value.MakeContents(), "Reason");
   EXPECT_TRUE(example_enum->members.back().attributes->HasAttribute("unknown"));
 
@@ -215,16 +219,23 @@ service ExampleService {
   ASSERT_NOT_NULL(example_struct);
   EXPECT_TRUE(example_struct->HasAttributeArg("doc"));
   auto struct_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_struct->GetAttributeArg("doc").value().get());
+      example_struct->GetAttributeArg("doc").value().get().Value());
   EXPECT_STR_EQ(struct_doc_value.MakeContents(), " For ExampleStruct\n");
   EXPECT_TRUE(example_struct->HasAttributeArg("max_bytes"));
   auto struct_str_value1 = static_cast<const fidl::flat::StringConstantValue&>(
-      example_struct->GetAttributeArg("max_bytes").value().get());
+      example_struct->GetAttributeArg("max_bytes").value().get().Value());
   EXPECT_STR_EQ(struct_str_value1.MakeContents(), "1234");
   EXPECT_TRUE(example_struct->HasAttributeArg("max_handles"));
   auto struct_str_value2 = static_cast<const fidl::flat::StringConstantValue&>(
-      example_struct->GetAttributeArg("max_handles").value().get());
+      example_struct->GetAttributeArg("max_handles").value().get().Value());
   EXPECT_STR_EQ(struct_str_value2.MakeContents(), "5678");
+
+  auto example_anon = library.LookupTable("CustomName");
+  ASSERT_NOT_NULL(example_anon);
+  EXPECT_TRUE(example_anon->HasAttributeArg("generated_name"));
+  auto generated_name_value = static_cast<const fidl::flat::StringConstantValue&>(
+      example_anon->GetAttributeArg("generated_name").value().get().Value());
+  EXPECT_STR_EQ(generated_name_value.MakeContents(), "CustomName");
 
   auto example_protocol = library.LookupProtocol("ExampleProtocol");
   ASSERT_NOT_NULL(example_protocol);
@@ -232,11 +243,11 @@ service ExampleService {
   EXPECT_TRUE(example_protocol->attributes->HasAttribute("for_deprecated_c_bindings"));
   EXPECT_TRUE(example_protocol->HasAttributeArg("doc"));
   auto protocol_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_protocol->GetAttributeArg("doc").value().get());
+      example_protocol->GetAttributeArg("doc").value().get().Value());
   EXPECT_STR_EQ(protocol_doc_value.MakeContents(), " For ExampleProtocol\n");
   EXPECT_TRUE(example_protocol->HasAttributeArg("transport"));
   auto protocol_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_protocol->GetAttributeArg("transport").value().get());
+      example_protocol->GetAttributeArg("transport").value().get().Value());
   EXPECT_STR_EQ(protocol_str_value.MakeContents(), "Syscall");
 
   auto& example_method = example_protocol->methods.front();
@@ -244,11 +255,11 @@ service ExampleService {
   EXPECT_TRUE(example_method.attributes->HasAttribute("transitional"));
   EXPECT_TRUE(example_method.attributes->HasAttributeArg("doc"));
   auto method_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_method.attributes->GetAttributeArg("doc").value().get());
+      example_method.attributes->GetAttributeArg("doc").value().get().Value());
   EXPECT_STR_EQ(method_doc_value.MakeContents(), " For ExampleMethod\n");
   EXPECT_TRUE(example_method.attributes->HasAttributeArg("selector"));
   auto method_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_method.attributes->GetAttributeArg("selector").value().get());
+      example_method.attributes->GetAttributeArg("selector").value().get().Value());
   EXPECT_STR_EQ(method_str_value.MakeContents(), "Bar");
 
   auto example_service = library.LookupService("ExampleService");
@@ -256,22 +267,22 @@ service ExampleService {
   EXPECT_TRUE(example_service->attributes->HasAttribute("no_doc"));
   EXPECT_TRUE(example_service->HasAttributeArg("doc"));
   auto service_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_service->GetAttributeArg("doc").value().get());
+      example_service->GetAttributeArg("doc").value().get().Value());
   EXPECT_STR_EQ(service_doc_value.MakeContents(), " For ExampleService\n");
   EXPECT_TRUE(example_service->HasAttributeArg("foo"));
   auto service_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_service->GetAttributeArg("foo").value().get());
+      example_service->GetAttributeArg("foo").value().get().Value());
   EXPECT_STR_EQ(service_str_value.MakeContents(), "ExampleService");
 
   auto& example_service_member = example_service->members.front();
   EXPECT_TRUE(example_service_member.attributes->HasAttribute("no_doc"));
   EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("doc"));
   auto service_member_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_service_member.attributes->GetAttributeArg("doc").value().get());
+      example_service_member.attributes->GetAttributeArg("doc").value().get().Value());
   EXPECT_STR_EQ(service_member_doc_value.MakeContents(), " For ExampleProtocol\n");
   EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("foo"));
   auto service_member_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_service_member.attributes->GetAttributeArg("foo").value().get());
+      example_service_member.attributes->GetAttributeArg("foo").value().get().Value());
   EXPECT_STR_EQ(service_member_str_value.MakeContents(), "ExampleProtocol");
 }
 
@@ -893,4 +904,94 @@ protocol MyProtocol {
   EXPECT_TRUE(inner->attributes->HasAttribute("qux"));
 }
 
+TEST(AttributesTests, BadOverrideAttributePlacements) {
+  {
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+@generated_name("Good")
+type Bad = struct {};
+
+)FIDL");
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
+  }
+  {
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+type Bad = @generated_name("Good") struct {};
+
+)FIDL");
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
+  }
+
+  {
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+type MetaVars = enum {
+  FOO = 1;
+  @generated_name("BAZ")
+  BAR = 2;
+}
+
+)FIDL");
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
+  }
+
+  {
+    TestLibrary library(R"FIDL(
+library fidl.test;
+
+protocol Foo {};
+
+service Bar {
+  @generated_name("One")
+  bar_one client_end:Bar;
+}
+
+)FIDL");
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
+  }
+}
+
+TEST(AttributesTests, BadMissingOverrideArg) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+type Foo = struct {
+  bad @generated_name struct {};
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyAttributeArg);
+}
+
+TEST(AttributesTests, BadOverrideValue) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+type Foo = struct {
+  bad @generated_name("ez$") struct {};
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidNameOverride);
+}
+
+TEST(AttributesTests, BadOverrideCausesNameConflict) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+type Foo = struct {
+  foo @generated_name("Baz") struct {};
+};
+
+type Baz = struct {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
+}
 }  // namespace

@@ -121,7 +121,7 @@ constexpr const ::fidl_test_anonymous::wire::Op Op::kMul =
 constexpr const ::fidl_test_anonymous::wire::Op Op::kDiv =
     ::fidl_test_anonymous::wire::Op(3u);
 
-struct BinOp;
+struct OverrideTest;
 
 // |Flags| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
@@ -975,7 +975,7 @@ extern "C" const fidl_type_t fidl_test_anonymous_ExpressionTable;
 class Expression {
  public:
   using FunctionApplication = fidl_test_anonymous::wire::FunctionApplication;
-  using BinOp = fidl_test_anonymous::wire::BinOp;
+  using BinOp = fidl_test_anonymous::wire::OverrideTest;
 
   Expression()
       : ordinal_(::fidl_test_anonymous::wire::Expression::Ordinal::Invalid),
@@ -1045,7 +1045,7 @@ class Expression {
   }
 
   static Expression WithBinOp(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::BinOp> val) {
+      ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> val) {
     Expression result;
     result.set_bin_op(val);
     return result;
@@ -1054,12 +1054,14 @@ class Expression {
   template <typename... Args>
   static Expression WithBinOp(::fidl::AnyArena& allocator, Args&&... args) {
     Expression result;
-    result.set_bin_op(::fidl::ObjectView<::fidl_test_anonymous::wire::BinOp>(
-        allocator, std::forward<Args>(args)...));
+    result.set_bin_op(
+        ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest>(
+            allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_bin_op(::fidl::ObjectView<::fidl_test_anonymous::wire::BinOp> elem) {
+  void set_bin_op(
+      ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> elem) {
     ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
@@ -1068,20 +1070,20 @@ class Expression {
   template <typename... Args>
   void set_bin_op(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
-    set_bin_op(::fidl::ObjectView<::fidl_test_anonymous::wire::BinOp>(
+    set_bin_op(::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_anonymous::wire::BinOp& mutable_bin_op() {
+  ::fidl_test_anonymous::wire::OverrideTest& mutable_bin_op() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp);
-    return *static_cast<::fidl_test_anonymous::wire::BinOp*>(
+    return *static_cast<::fidl_test_anonymous::wire::OverrideTest*>(
         envelope_.data.get());
   }
-  const ::fidl_test_anonymous::wire::BinOp& bin_op() const {
+  const ::fidl_test_anonymous::wire::OverrideTest& bin_op() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp);
-    return *static_cast<::fidl_test_anonymous::wire::BinOp*>(
+    return *static_cast<::fidl_test_anonymous::wire::OverrideTest*>(
         envelope_.data.get());
   }
 
@@ -1479,10 +1481,11 @@ struct TableData {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_anonymous_BinOpTable;
+extern "C" const fidl_type_t fidl_test_anonymous_OverrideTestTable;
 
-struct BinOp {
-  static constexpr const fidl_type_t* Type = &fidl_test_anonymous_BinOpTable;
+struct OverrideTest {
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_anonymous_OverrideTestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1498,11 +1501,11 @@ struct BinOp {
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          BinOp* value)
+                          OverrideTest* value)
         : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
                                 backing_buffer, backing_buffer_size, value) {}
     UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size, BinOp* value)
+                          uint32_t backing_buffer_size, OverrideTest* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
               .iovec_capacity = iovec_capacity,
@@ -1510,7 +1513,7 @@ struct BinOp {
               .backing_buffer_capacity = backing_buffer_size,
           }) {
       ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<BinOp>(value);
+      message_.Encode<OverrideTest>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1539,12 +1542,13 @@ struct BinOp {
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(BinOp* value)
+    explicit OwnedEncodedMessage(OverrideTest* value)
         : message_(1u, backing_buffer_.data(),
                    static_cast<uint32_t>(backing_buffer_.size()), value) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, BinOp* value)
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        OverrideTest* value)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
                    static_cast<uint32_t>(backing_buffer_.size()), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
@@ -1576,9 +1580,9 @@ struct BinOp {
   };
 
   class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<BinOp> {
+      : public ::fidl::internal::DecodedMessageBase<OverrideTest> {
    public:
-    using DecodedMessageBase<BinOp>::DecodedMessageBase;
+    using DecodedMessageBase<OverrideTest>::DecodedMessageBase;
 
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
@@ -1613,9 +1617,9 @@ struct BinOp {
                          c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
     }
 
-    BinOp* PrimaryObject() {
+    OverrideTest* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<BinOp*>(bytes());
+      return reinterpret_cast<OverrideTest*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
@@ -2577,16 +2581,18 @@ template <>
 struct IsFidlType<::fidl_test_anonymous::wire::Op> : public std::true_type {};
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::BinOp> : public std::true_type {
-};
+struct IsFidlType<::fidl_test_anonymous::wire::OverrideTest>
+    : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_anonymous::wire::BinOp> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_anonymous::wire::BinOp>);
-static_assert(offsetof(::fidl_test_anonymous::wire::BinOp, op) == 0);
-static_assert(offsetof(::fidl_test_anonymous::wire::BinOp, left) == 8);
-static_assert(offsetof(::fidl_test_anonymous::wire::BinOp, right) == 32);
-static_assert(sizeof(::fidl_test_anonymous::wire::BinOp) ==
-              ::fidl_test_anonymous::wire::BinOp::PrimarySize);
+struct IsStruct<::fidl_test_anonymous::wire::OverrideTest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_anonymous::wire::OverrideTest>);
+static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, op) == 0);
+static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, left) == 8);
+static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, right) == 32);
+static_assert(sizeof(::fidl_test_anonymous::wire::OverrideTest) ==
+              ::fidl_test_anonymous::wire::OverrideTest::PrimarySize);
 
 template <>
 struct IsFidlType<::fidl_test_anonymous::wire::Flags> : public std::true_type {
