@@ -327,10 +327,7 @@ TEST(NodeMgrTest, NodePage) {
   unittest_lib::Unmount(std::move(fs), &bc);
 }
 
-// TODO(fxbug.dev/83831) This test takes >1 minute to run on ASAN in some configurations such as ARM
-// on the buildbot. We should configure the test so there is a longer timeout and re-enable.
-#if !__has_feature(address_sanitizer)
-TEST(NodeMgrTest, Truncate) {
+TEST(NodeMgrTest, TruncateDoubleIndirect) {
   std::unique_ptr<Bcache> bc;
   unittest_lib::MkfsOnFakeDev(&bc);
 
@@ -362,7 +359,7 @@ TEST(NodeMgrTest, Truncate) {
   //                `- indirect node
   //                      `- direct node
 
-  // Fill double indirect node (level 3)
+  // Alloc a double indirect node (level 3)
   const pgoff_t direct_blks = kAddrsPerBlock;
   const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
   const pgoff_t direct_index = kAddrsPerInode + 1;
@@ -377,70 +374,32 @@ TEST(NodeMgrTest, Truncate) {
   NmInfo *nm_i = GetNmInfo(&sbi);
   uint64_t initial_free_nid_cnt = nm_i->fcnt;
 
-  // Fill Dnodes
+  // Alloc a direct node at double_indirect_index
   SetNewDnode(&dn, vnode.get(), nullptr, nullptr, 0);
-  for (pgoff_t i = 0; i < double_indirect_index; i++) {
-    ASSERT_EQ(fs->Nodemgr().GetDnodeOfData(&dn, i, 0), ZX_OK);
-    if (dn.ofs_in_node == 0) {
-      nids.push_back(dn.nid);
-    }
-    F2fsPutDnode(&dn);
-  }
+  ASSERT_EQ(fs->Nodemgr().GetDnodeOfData(&dn, double_indirect_index, 0), ZX_OK);
+  nids.push_back(dn.nid);
+  F2fsPutDnode(&dn);
 
-  uint32_t indirect_node_cnt = 3;
-  uint32_t direct_node_cnt = direct_blks * 2 + 3;
-  uint32_t double_indirect_node_cnt = 1;
-  uint32_t node_cnt = inode_cnt + direct_node_cnt + indirect_node_cnt + double_indirect_node_cnt;
-  uint32_t alloc_dnode_cnt = node_cnt - inode_cnt;
+  // # of alloc nodes = 1 double indirect + 1 indirect + 1 direct
+  uint32_t alloc_node_cnt = 3;
+  uint32_t node_cnt = inode_cnt + alloc_node_cnt;
 
-  ASSERT_EQ(nids.size(), node_cnt - indirect_node_cnt - double_indirect_node_cnt -
-                             1);  // Direct node - root inode
+  // alloc_dnode cnt should be one
+  ASSERT_EQ(nids.size(), 1UL);
   ASSERT_EQ(sbi.total_valid_inode_count, inode_cnt);
   ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
 
-  // Truncate double indirect nodes
+  // Truncate double the indirect node
   ASSERT_EQ(fs->Nodemgr().TruncateInodeBlocks(vnode.get(), double_indirect_index), ZX_OK);
-  indirect_node_cnt--;
-  direct_node_cnt--;
-  node_cnt = inode_cnt + direct_node_cnt + indirect_node_cnt;
-  ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
-
-  unittest_lib::RemoveTruncatedNode(nm_i, nids);
-  ASSERT_EQ(nids.size(), node_cnt - indirect_node_cnt - 1);  // Direct node - root inode
-
-  // Truncate indirect nodes
-  ASSERT_EQ(fs->Nodemgr().TruncateInodeBlocks(vnode.get(), indirect_index), ZX_OK);
-  indirect_node_cnt -= 2;
-  direct_node_cnt -= direct_blks * 2;
-  node_cnt = inode_cnt + direct_node_cnt;
-  ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
-
-  unittest_lib::RemoveTruncatedNode(nm_i, nids);
-  ASSERT_EQ(nids.size(), node_cnt - 1);  // Direct node - root inode
-
-  // Valid nodes:
-  // Inode block (nid = 4)
-  //   |- direct node (nid = 5)
-  //   |- direct node (nid = 6)
-  ASSERT_EQ(nids[0], static_cast<nid_t>(4));
-  ASSERT_EQ(nids[1], static_cast<nid_t>(5));
-  ASSERT_EQ(nids[2], static_cast<nid_t>(6));
-
-  // Truncate direct nodes
-  ASSERT_EQ(fs->Nodemgr().TruncateInodeBlocks(vnode.get(), direct_index), ZX_OK);
   node_cnt = inode_cnt;
   ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
 
   unittest_lib::RemoveTruncatedNode(nm_i, nids);
-  ASSERT_EQ(nids.size(), node_cnt - 1);  // Direct node - root inode
+  ASSERT_EQ(nids.size(), 0UL);
 
-  // Valid nodes:
-  // Inode block (nid = 4)
-  ASSERT_EQ(nids[0], static_cast<nid_t>(4));
-  ASSERT_EQ(sbi.total_valid_inode_count, inode_cnt);
-
-  ASSERT_EQ(nm_i->fcnt, initial_free_nid_cnt - alloc_dnode_cnt);
+  ASSERT_EQ(nm_i->fcnt, initial_free_nid_cnt - alloc_node_cnt);
   fs->WriteCheckpoint(false, false);
+  // After checkpoint, we can reuse the removed nodes
   ASSERT_EQ(nm_i->fcnt, initial_free_nid_cnt);
 
   ASSERT_EQ(vnode->Close(), ZX_OK);
@@ -450,7 +409,97 @@ TEST(NodeMgrTest, Truncate) {
 
   unittest_lib::Unmount(std::move(fs), &bc);
 }
-#endif
+
+TEST(NodeMgrTest, TruncateIndirect) {
+  std::unique_ptr<Bcache> bc;
+  unittest_lib::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  unittest_lib::CreateRoot(fs.get(), &root);
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  // Alloc Inode
+  fbl::RefPtr<VnodeF2fs> vnode;
+  unittest_lib::VnodeWithoutParent(fs.get(), S_IFREG, vnode);
+  ASSERT_EQ(fs->Nodemgr().NewInodePage(root_dir.get(), vnode.get()), ZX_OK);
+
+  DnodeOfData dn;
+  SbInfo &sbi = fs->GetSbInfo();
+
+  // Inode block
+  //   |- direct node
+  //   |- direct node
+  //   |- indirect node
+  //   |            `- direct node
+
+  // Fill indirect node (level 2)
+  const pgoff_t direct_blks = kAddrsPerBlock;
+  const pgoff_t direct_index = kAddrsPerInode + 1;
+  const pgoff_t indirect_index = direct_index + direct_blks * 2;
+  const uint32_t inode_cnt = 2;
+
+  ASSERT_EQ(sbi.total_valid_inode_count, inode_cnt);
+  ASSERT_EQ(sbi.total_valid_node_count, inode_cnt);
+
+  std::vector<nid_t> nids;
+  NmInfo *nm_i = GetNmInfo(&sbi);
+  uint64_t initial_free_nid_cnt = nm_i->fcnt;
+
+  SetNewDnode(&dn, vnode.get(), nullptr, nullptr, 0);
+  // Start from kAddrsPerInode to alloc new dnodes
+  for (pgoff_t i = kAddrsPerInode; i <= indirect_index; i += kAddrsPerBlock) {
+    ASSERT_EQ(fs->Nodemgr().GetDnodeOfData(&dn, i, 0), ZX_OK);
+    nids.push_back(dn.nid);
+    F2fsPutDnode(&dn);
+  }
+
+  uint32_t indirect_node_cnt = 1;
+  uint32_t direct_node_cnt = 3;
+  uint32_t node_cnt = inode_cnt + direct_node_cnt + indirect_node_cnt;
+  uint32_t alloc_node_cnt = indirect_node_cnt + direct_node_cnt;
+
+  ASSERT_EQ(nids.size(), direct_node_cnt);
+  ASSERT_EQ(sbi.total_valid_inode_count, inode_cnt);
+  ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
+
+  // Truncate indirect nodes
+  ASSERT_EQ(fs->Nodemgr().TruncateInodeBlocks(vnode.get(), indirect_index), ZX_OK);
+  indirect_node_cnt--;
+  direct_node_cnt--;
+  node_cnt = inode_cnt + direct_node_cnt + indirect_node_cnt;
+  ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
+
+  unittest_lib::RemoveTruncatedNode(nm_i, nids);
+  ASSERT_EQ(nids.size(), direct_node_cnt);
+
+  // Truncate direct nodes
+  ASSERT_EQ(fs->Nodemgr().TruncateInodeBlocks(vnode.get(), direct_index), ZX_OK);
+  direct_node_cnt -= 2;
+  node_cnt = inode_cnt + direct_node_cnt + indirect_node_cnt;
+  ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
+
+  unittest_lib::RemoveTruncatedNode(nm_i, nids);
+  ASSERT_EQ(nids.size(), direct_node_cnt);
+
+  ASSERT_EQ(sbi.total_valid_inode_count, inode_cnt);
+
+  ASSERT_EQ(nm_i->fcnt, initial_free_nid_cnt - alloc_node_cnt);
+  fs->WriteCheckpoint(false, false);
+  // After checkpoint, we can reuse the removed nodes
+  ASSERT_EQ(nm_i->fcnt, initial_free_nid_cnt);
+
+  ASSERT_EQ(vnode->Close(), ZX_OK);
+  vnode.reset();
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir.reset();
+
+  unittest_lib::Unmount(std::move(fs), &bc);
+}
 
 }  // namespace
 }  // namespace f2fs
