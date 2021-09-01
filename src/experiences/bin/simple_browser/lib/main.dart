@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_logger/logger.dart';
-import 'package:fuchsia_scenic/views.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 
 import 'app.dart';
@@ -25,7 +25,7 @@ import 'src/utils/tld_checker.dart';
 final _handler = MethodChannel('flutter_driver/handler');
 
 void main() {
-  setupLogger(name: 'Browser');
+  setupLogger(name: 'simple_browser');
   final _context = createWebContext();
   TldChecker().prefetchTlds();
   ComponentContext.createAndServe();
@@ -51,6 +51,7 @@ void main() {
         popupHandler: (tab) => tabsBloc.request.add(
           AddTabAction(tab: tab),
         ),
+        onLoaded: () => tabsBloc.currentTab!.request.add(SetFocusAction()),
       );
 
       // Enables the web console log only for debug.
@@ -75,6 +76,9 @@ void main() {
   );
 
   runApp(App(appModel));
+
+  // Moves focus to the webview whenever the browser gets focused.
+  FocusState.instance.stream().listen(appModel.onFocus);
 
   // This call is used only when flutter driver is enabled.
   if (TestDefaultBinaryMessengerBinding.instance != null) {

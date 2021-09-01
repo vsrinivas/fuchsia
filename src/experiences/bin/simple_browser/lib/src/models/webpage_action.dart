@@ -9,7 +9,7 @@ class WebPageAction {
 }
 
 // Operations allowed for browsing
-enum WebPageActionType { goForward, goBack, refresh, navigateTo }
+enum WebPageActionType { goForward, goBack, refresh, navigateTo, setFocus }
 
 // Instructs to go to the next page.
 class GoForwardAction extends WebPageAction {
@@ -30,4 +30,9 @@ class RefreshAction extends WebPageAction {
 class NavigateToAction extends WebPageAction {
   final String url;
   NavigateToAction({required this.url}) : super(WebPageActionType.navigateTo);
+}
+
+// Instructs to set focus on webview.
+class SetFocusAction extends WebPageAction {
+  const SetFocusAction() : super(WebPageActionType.setFocus);
 }

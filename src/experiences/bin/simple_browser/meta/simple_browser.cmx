@@ -15,6 +15,7 @@
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
+            "fuchsia.media.ProfileProvider",
             "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
