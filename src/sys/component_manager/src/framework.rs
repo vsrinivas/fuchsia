@@ -106,7 +106,7 @@ impl RealmCapabilityHost {
         stream: fsys::RealmRequestStream,
     ) -> Result<(), fidl::Error> {
         stream
-            .try_for_each_concurrent(None, |request| async {
+            .try_for_each(|request| async {
                 let method_name = request.method_name();
                 let res = self.handle_request(request, &component).await;
                 if let Err(e) = &res {
@@ -561,37 +561,26 @@ mod tests {
 
         // Create children "a" and "b" in collection. Expect a Discovered event for each.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let mut create_a = fasync::Task::spawn(test.realm_proxy.create_child(
-            &mut collection_ref,
-            child_decl("a"),
-            empty_child_args(),
-        ));
-        let event_a = event_stream
-            .wait_until(EventType::Discovered, vec!["system:0", "coll:a:1"].into())
-            .await
-            .unwrap();
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let mut create_b = fasync::Task::spawn(test.realm_proxy.create_child(
-            &mut collection_ref,
-            child_decl("b"),
-            empty_child_args(),
-        ));
-        let event_b = event_stream
-            .wait_until(EventType::Discovered, vec!["system:0", "coll:b:2"].into())
-            .await
-            .unwrap();
+        for (name, moniker) in [("a", "coll:a:1"), ("b", "coll:b:2")] {
+            let mut create = fasync::Task::spawn(test.realm_proxy.create_child(
+                &mut collection_ref,
+                child_decl(name),
+                empty_child_args(),
+            ));
+            let event = event_stream
+                .wait_until(EventType::Discovered, vec!["system:0", moniker].into())
+                .await
+                .unwrap();
 
-        // Give create requests time to be processed. Ensure they don't return before
-        // Discover action completes.
-        fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(5))).await;
-        assert_matches!(poll!(&mut create_a), Poll::Pending);
-        assert_matches!(poll!(&mut create_b), Poll::Pending);
+            // Give create requests time to be processed. Ensure they don't return before
+            // Discover action completes.
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(5))).await;
+            assert_matches!(poll!(&mut create), Poll::Pending);
 
-        // Unblock Discovered and wait for requests to complete.
-        event_a.resume();
-        event_b.resume();
-        let _ = create_a.await.unwrap().unwrap();
-        let _ = create_b.await.unwrap().unwrap();
+            // Unblock Discovered and wait for request to complete.
+            event.resume();
+            let _ = create.await.unwrap().unwrap();
+        }
 
         // Verify that the component topology matches expectations.
         let actual_children = get_live_children(test.component()).await;

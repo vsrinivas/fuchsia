@@ -13,7 +13,11 @@ const MAX_HANDLE_COUNT uint32 = 128;
 /// A protocol used by a component instance to manage its own realm, such as for
 /// binding to its children.
 ///
-/// The component manager provides this service to components that use
+/// Requests to this protocol are processed in the order they are received.
+/// Clients that wish to send requests in parallel should open multiple
+/// connections.
+///
+/// The component framework provides this service to components that use
 /// `fuchsia.sys2.Realm`.
 @discoverable
 protocol Realm {
@@ -30,10 +34,6 @@ protocol Realm {
     ///
     /// For example, if the child exposes a protocol named `example.Echo` then
     /// `exposed_dir` will contain that protocol at `/example.Echo`.
-    ///
-    /// NOTE: `BindChild` does not support pipelining with `CreateChild`. If
-    /// `BindChild` is called on an instance before `CreateChild` successfully
-    /// returns, it may return `INSTANCE_NOT_FOUND`.
     ///
     /// Errors:
     /// - `INVALID_ARGUMENTS`: `child` is not a valid child reference.  -
@@ -56,10 +56,6 @@ protocol Realm {
     /// to one of the capabilities contained within `exposed_dir`.
     ///
     /// `exposed_dir` is open as long as `child` exists.
-    ///
-    /// NOTE: `OpenExposedDir` does not support pipelining with `CreateChild`.
-    /// If `OpenExposedDir` is called on an instance before `CreateChild`
-    /// successfully returns, it may return `INSTANCE_NOT_FOUND`.
     ///
     /// Errors:
     /// - `INVALID_ARGUMENTS`: `child` is not a valid child reference.
