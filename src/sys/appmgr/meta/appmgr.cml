@@ -67,6 +67,7 @@
                 "fuchsia.process.Resolver",
                 "fuchsia.settings.Audio",
                 "fuchsia.settings.Input",
+                "fuchsia.settings.Privacy",
                 "fuchsia.stash.SecureStore",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
@@ -470,6 +471,20 @@
             path: "/svc_for_sys/fuchsia.buildinfo.Provider",
         },
 
+        // From cobalt
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            path: "/svc_for_sys/fuchsia.cobalt.LoggerFactory",
+        },
+        {
+            protocol: "fuchsia.cobalt.SystemDataUpdater",
+            path: "/svc_for_sys/fuchsia.cobalt.SystemDataUpdater",
+        },
+        {
+            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
+            path: "/svc_for_sys/fuchsia.metrics.MetricEventLoggerFactory",
+        },
+
         // From diagnostics-persistence
         {
             protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
@@ -638,6 +653,7 @@
                 "fuchsia.process.Resolver",
                 "fuchsia.settings.Audio",
                 "fuchsia.settings.Input",
+                "fuchsia.settings.Privacy",
                 "fuchsia.stash.SecureStore",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",

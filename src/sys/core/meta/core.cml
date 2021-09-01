@@ -42,6 +42,10 @@
             environment: "#universe-resolver-env",
         },
         {
+            name: "cobalt",
+            url: "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cm",
+        },
+        {
             name: "detect",
             url: "fuchsia-pkg://fuchsia.com/triage-detect#meta/triage-detect.cm",
         },
@@ -234,7 +238,10 @@
                 "fuchsia.ui.activity.Tracker",
             ],
             from: "#activity",
-            to: "#appmgr",
+            to: [
+                "#appmgr",
+                "#cobalt",
+            ],
         },
         {
             protocol: "fuchsia.ui.brightness.Control",
@@ -277,12 +284,6 @@
             to: "#appmgr",
         },
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#appmgr",
-            to: "#sampler",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#pkg-resolver",
             to: "#universe-resolver",
@@ -296,10 +297,7 @@
             to: "#pkg-cache",
         },
         {
-            protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "#appmgr",
             to: "#pkg-cache",
             dependency: "weak_for_migration",
@@ -327,7 +325,6 @@
         },
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.tracing.provider.Registry",
@@ -403,14 +400,6 @@
             ],
         },
         {
-            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
-            from: "#appmgr",
-            to: [
-                "#log-stats",
-                "#sampler",
-            ],
-        },
-        {
             protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],
             from: "parent",
             to: [ "#sampler" ],
@@ -431,6 +420,7 @@
                 "#appmgr",
                 "#brightness_manager",
                 "#bt-avrcp",
+                "#cobalt",
                 "#debug_serial",
                 "#detect",
                 "#device_settings",
@@ -617,6 +607,7 @@
             directory: "root-ssl-certificates",
             from: "parent",
             to: [
+                "#cobalt",
                 "#http-client",
                 "#pkg-resolver",
             ],
@@ -644,6 +635,12 @@
             from: "parent",
             to: "#system-update-committer",
             subdir: "system-update-committer",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#cobalt",
+            subdir: "cobalt",
         },
         {
             protocol: [
@@ -711,7 +708,6 @@
         },
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
@@ -748,6 +744,7 @@
             from: "#http-client",
             to: [
                 "#appmgr",
+                "#cobalt",
                 "#emergency",
             ],
         },
@@ -774,12 +771,6 @@
             protocol: "fuchsia.net.dhcp.Server",
             from: "#dhcpd",
             to: "#appmgr",
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#appmgr",
-            to: [ "#emergency" ],
             dependency: "weak_for_migration",
         },
         {
@@ -887,6 +878,56 @@
             from: "#appmgr",
             to: "#bt-avrcp",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "#cobalt",
+            to: [
+                "#appmgr",
+                "#emergency",
+                "#pkg-cache",
+                "#pkg-resolver",
+                "#sampler",
+                "#session-manager",
+            ],
+        },
+        {
+            protocol: "fuchsia.cobalt.SystemDataUpdater",
+            from: "#cobalt",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
+            from: "#cobalt",
+            to: [
+                "#appmgr",
+                "#log-stats",
+                "#sampler",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.settings.Privacy",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#appmgr",
+            to: "#cobalt",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysinfo.SysInfo",
+            ],
+            from: "parent",
+            to: "#cobalt",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#cobalt",
         },
     ],
     expose: [

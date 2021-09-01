@@ -51,7 +51,7 @@ const std::vector<BucketMatch> kBucketMatches = {
     {"Pkgfs", "pkgfs", ".*", MemoryMetricDimensionBucket::Pkgfs},
     {"Cast", "cast_agent.cmx", ".*", MemoryMetricDimensionBucket::Cast},
     {"Archivist", "archivist.cm", ".*", MemoryMetricDimensionBucket::Archivist},
-    {"Cobalt", "cobalt.cmx", ".*", MemoryMetricDimensionBucket::Cobalt},
+    {"Cobalt", "cobalt.cm", ".*", MemoryMetricDimensionBucket::Cobalt},
     {"Audio", "audio_core.cmx", ".*", MemoryMetricDimensionBucket::Audio},
     {"Context", "context_provider.cmx", ".*", MemoryMetricDimensionBucket::Context},
 };
@@ -126,7 +126,7 @@ class MetricsUnitTest : public gtest::RealLoopFixture {
                 {.koid = 14, .name = "pkgfs", .vmos = {16}},
                 {.koid = 15, .name = "cast_agent.cmx", .vmos = {17}},
                 {.koid = 16, .name = "archivist.cm", .vmos = {18}},
-                {.koid = 17, .name = "cobalt.cmx", .vmos = {19}},
+                {.koid = 17, .name = "cobalt.cm", .vmos = {19}},
                 {.koid = 18, .name = "audio_core.cmx", .vmos = {20}},
                 {.koid = 19, .name = "context_provider.cmx", .vmos = {21}},
                 {.koid = 20, .name = "new", .vmos = {22}},

@@ -1,0 +1,34 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/cobalt_app_unittests",
+    },
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    offer: [
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#coll",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#coll",
+        },
+    ],
+}
