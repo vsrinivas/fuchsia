@@ -5,7 +5,7 @@
 #ifndef LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_
 #define LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fit/function.h>
 

@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_REGISTERS_DRIVERS_REGISTERS_REGISTERS_H_
 #define SRC_DEVICES_REGISTERS_DRIVERS_REGISTERS_REGISTERS_H_
 
+#include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
-#include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/platform-defs.h>

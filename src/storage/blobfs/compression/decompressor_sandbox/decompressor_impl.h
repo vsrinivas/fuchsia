@@ -5,8 +5,8 @@
 #ifndef SRC_STORAGE_BLOBFS_COMPRESSION_DECOMPRESSOR_SANDBOX_DECOMPRESSOR_IMPL_H_
 #define SRC_STORAGE_BLOBFS_COMPRESSION_DECOMPRESSOR_SANDBOX_DECOMPRESSOR_IMPL_H_
 
+#include <fidl/fuchsia.blobfs.internal/cpp/wire.h>
 #include <fuchsia/blobfs/internal/cpp/fidl.h>
-#include <fuchsia/blobfs/internal/llcpp/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <zircon/types.h>
 

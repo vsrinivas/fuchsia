@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <limits.h>
 #include <string.h>
 #include <zircon/assert.h>

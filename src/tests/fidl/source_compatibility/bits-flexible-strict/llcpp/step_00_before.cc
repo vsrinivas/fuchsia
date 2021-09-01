@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/bitsflexiblestrict/llcpp/fidl.h>  // nogncheck
+#include <fidl/fidl.test.bitsflexiblestrict/cpp/wire.h>  // nogncheck
 namespace fidl_test = fidl_test_bitsflexiblestrict;
 
 // [START contents]

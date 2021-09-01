@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/service/llcpp/service.h>

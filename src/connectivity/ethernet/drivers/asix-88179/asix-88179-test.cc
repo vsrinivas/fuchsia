@@ -4,8 +4,8 @@
 
 #include <endian.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/ax88179/llcpp/fidl.h>
-#include <fuchsia/hardware/ethernet/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ax88179/cpp/wire.h>
+#include <fidl/fuchsia.hardware.ethernet/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>

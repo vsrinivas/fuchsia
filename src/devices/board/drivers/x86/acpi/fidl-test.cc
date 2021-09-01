@@ -4,7 +4,7 @@
 
 #include "src/devices/board/drivers/x86/acpi/fidl.h"
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/fidl/llcpp/vector_view.h>
 
 #include <zxtest/zxtest.h>

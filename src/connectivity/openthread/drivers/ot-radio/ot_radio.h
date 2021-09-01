@@ -8,9 +8,9 @@
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #endif
+#include <fidl/fuchsia.lowpan.spinel/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/spi/cpp/banjo.h>
-#include <fuchsia/lowpan/spinel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/sync/completion.h>

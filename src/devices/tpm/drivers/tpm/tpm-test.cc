@@ -4,7 +4,7 @@
 
 #include "src/devices/tpm/drivers/tpm/tpm.h"
 
-#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sync/condition.h>
 

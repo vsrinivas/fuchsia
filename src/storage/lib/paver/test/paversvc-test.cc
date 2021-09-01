@@ -4,12 +4,12 @@
 
 #include <endian.h>
 #include <fcntl.h>
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/fshost/llcpp/fidl.h>
-#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
-#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/abr/data.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

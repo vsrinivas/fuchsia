@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_RAM_BIN_RAM_INFO_RAM_INFO_H_
 #define SRC_DEVICES_RAM_BIN_RAM_INFO_RAM_INFO_H_
 
-#include <fuchsia/hardware/ram/metrics/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ram.metrics/cpp/wire.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
 

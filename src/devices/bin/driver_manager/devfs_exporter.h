@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_EXPORTER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_EXPORTER_H_
 
-#include <fuchsia/device/fs/llcpp/fidl.h>
+#include <fidl/fuchsia.device.fs/cpp/wire.h>
 
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

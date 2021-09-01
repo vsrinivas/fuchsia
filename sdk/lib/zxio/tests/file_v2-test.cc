@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io2/llcpp/fidl.h>
-#include <fuchsia/io2/llcpp/fidl_test_base.h>
+#include <fidl/fuchsia.io2/cpp/wire.h>
+#include <fidl/fuchsia.io2/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>

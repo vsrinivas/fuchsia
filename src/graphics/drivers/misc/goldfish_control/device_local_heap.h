@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_DEVICE_LOCAL_HEAP_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_DEVICE_LOCAL_HEAP_H_
 
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>

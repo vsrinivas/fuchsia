@@ -4,7 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/btitest/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.btitest/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>

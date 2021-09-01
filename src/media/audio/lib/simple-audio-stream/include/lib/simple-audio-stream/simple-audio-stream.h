@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_SIMPLE_AUDIO_STREAM_INCLUDE_LIB_SIMPLE_AUDIO_STREAM_SIMPLE_AUDIO_STREAM_H_
 #define SRC_MEDIA_AUDIO_LIB_SIMPLE_AUDIO_STREAM_INCLUDE_LIB_SIMPLE_AUDIO_STREAM_SIMPLE_AUDIO_STREAM_H_
 
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>

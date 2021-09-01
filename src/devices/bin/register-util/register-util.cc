@@ -5,7 +5,7 @@
 #include "register-util.h"
 
 #include <fcntl.h>
-#include <fuchsia/hardware/registers/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>

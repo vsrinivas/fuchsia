@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_MISC_DRIVERS_VIRTIO_SOCKET_SOCKET_H_
 #define SRC_DEVICES_MISC_DRIVERS_VIRTIO_SOCKET_SOCKET_H_
 
-#include <fuchsia/hardware/vsock/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.vsock/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>

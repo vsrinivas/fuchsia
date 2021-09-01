@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_H_
 
-#include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ftdi/cpp/wire.h>
 #include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/ddk/device.h>

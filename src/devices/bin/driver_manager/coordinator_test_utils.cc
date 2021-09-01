@@ -4,7 +4,7 @@
 
 #include "coordinator_test_utils.h"
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>

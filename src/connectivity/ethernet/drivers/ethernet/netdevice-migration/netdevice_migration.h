@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERNET_NETDEVICE_MIGRATION_NETDEVICE_MIGRATION_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERNET_NETDEVICE_MIGRATION_NETDEVICE_MIGRATION_H_
 
+#include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
-#include <fuchsia/hardware/network/llcpp/fidl.h>
 #include <zircon/system/public/zircon/compiler.h>
 
 #include <ddktl/device.h>

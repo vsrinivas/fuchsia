@@ -4,7 +4,7 @@
 
 #include "src/devices/block/drivers/block-verity/device-manager.h"
 
-#include <fuchsia/hardware/block/verified/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>

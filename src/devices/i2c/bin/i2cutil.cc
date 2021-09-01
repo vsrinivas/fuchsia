@@ -4,7 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <stdio.h>

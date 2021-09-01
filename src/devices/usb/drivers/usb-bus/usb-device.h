@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_DEVICE_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.usb.device/cpp/wire.h>
 #include <fuchsia/hardware/usb/bus/cpp/banjo.h>
 #include <fuchsia/hardware/usb/cpp/banjo.h>
-#include <fuchsia/hardware/usb/device/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/hci/cpp/banjo.h>
 #include <fuchsia/hardware/usb/hub/cpp/banjo.h>
 #include <lib/sync/completion.h>

@@ -29,7 +29,7 @@
 #include "src/storage/minfs/allocator_reservation.h"
 #include "src/storage/minfs/writeback.h"
 #ifdef __Fuchsia__
-#include <fuchsia/minfs/llcpp/fidl.h>
+#include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/cksum.h>
 #include <lib/fit/defer.h>

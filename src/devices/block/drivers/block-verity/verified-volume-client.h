@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_VERIFIED_VOLUME_CLIENT_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_VERIFIED_VOLUME_CLIENT_H_
 
-#include <fuchsia/hardware/block/verified/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 #include <fbl/unique_fd.h>

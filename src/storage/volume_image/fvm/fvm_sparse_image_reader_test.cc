@@ -5,7 +5,7 @@
 #include "src/storage/volume_image/fvm/fvm_sparse_image_reader.h"
 
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <zircon/hw/gpt.h>

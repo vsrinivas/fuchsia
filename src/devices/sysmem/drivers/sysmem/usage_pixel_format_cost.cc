@@ -4,7 +4,7 @@
 
 #include "usage_pixel_format_cost.h"
 
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/image-format/image_format.h>

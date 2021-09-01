@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/backlight/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.backlight/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.examples.echo/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -18,8 +19,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-
-#include <fidl/examples/echo/llcpp/fidl.h>
 
 struct ConnectRequestContext {
   bool quiet;

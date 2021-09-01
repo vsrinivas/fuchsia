@@ -5,8 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_HIDCTL_HIDCTL_H_
 #define SRC_UI_INPUT_DRIVERS_HIDCTL_HIDCTL_H_
 
+#include <fidl/fuchsia.hardware.hidctl/cpp/wire.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
-#include <fuchsia/hardware/hidctl/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/socket.h>
 #include <threads.h>

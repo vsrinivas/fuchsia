@@ -4,8 +4,8 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_TEST_PAVER_TEST_COMMON_H_
 #define SRC_BRINGUP_BIN_NETSVC_TEST_PAVER_TEST_COMMON_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/paver/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>

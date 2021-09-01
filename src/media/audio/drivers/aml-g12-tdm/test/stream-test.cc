@@ -2,7 +2,7 @@
 // this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>

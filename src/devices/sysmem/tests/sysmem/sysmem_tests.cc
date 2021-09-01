@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/hw/arch_ops.h>

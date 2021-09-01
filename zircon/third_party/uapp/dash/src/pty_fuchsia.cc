@@ -4,7 +4,7 @@
 
 #include "pty_fuchsia.h"
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 
 namespace fpty = fuchsia_hardware_pty;
 

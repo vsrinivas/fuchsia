@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_DRIVER2_NAMESPACE_H_
 #define SRC_DEVICES_LIB_DRIVER2_NAMESPACE_H_
 
-#include <fuchsia/component/runner/llcpp/fidl.h>
+#include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <lib/fdio/namespace.h>
 #include <zircon/device/vfs.h>
 

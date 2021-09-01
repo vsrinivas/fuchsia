@@ -4,7 +4,7 @@
 
 #include "src/devices/misc/drivers/chromeos-acpi/chromeos_acpi.h"
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/ddk/debug.h>
 
 #include "src/devices/misc/drivers/chromeos-acpi/chromeos_acpi-bind.h"

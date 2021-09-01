@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_PERF_MON_H_
 #define SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_PERF_MON_H_
 
-#include <fuchsia/perfmon/cpu/llcpp/fidl.h>
+#include <fidl/fuchsia.perfmon.cpu/cpp/wire.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/zx/bti.h>

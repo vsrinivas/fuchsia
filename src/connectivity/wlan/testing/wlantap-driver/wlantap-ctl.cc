@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/wlan/device/llcpp/fidl.h>
-#include <fuchsia/wlan/tap/llcpp/fidl.h>
+#include <fidl/fuchsia.wlan.device/cpp/wire.h>
+#include <fidl/fuchsia.wlan.tap/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>

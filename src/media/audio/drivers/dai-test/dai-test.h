@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_DAI_TEST_DAI_TEST_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_DAI_TEST_DAI_TEST_H_
 
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 

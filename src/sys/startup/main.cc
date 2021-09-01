@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/appmgr/llcpp/fidl.h>
-#include <fuchsia/sessionmanager/llcpp/fidl.h>
+#include <fidl/fuchsia.appmgr/cpp/wire.h>
+#include <fidl/fuchsia.sessionmanager/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>

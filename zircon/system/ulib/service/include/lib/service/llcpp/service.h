@@ -5,7 +5,7 @@
 #ifndef LIB_SERVICE_LLCPP_SERVICE_H_
 #define LIB_SERVICE_LLCPP_SERVICE_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fpromise/result.h>

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <getopt.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

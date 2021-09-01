@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/closure-queue/closure_queue.h>

@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_RAMDISK_RAMDISK_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_RAMDISK_RAMDISK_H_
 
+#include <fidl/fuchsia.hardware.ramdisk/cpp/wire.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
-#include <fuchsia/hardware/ramdisk/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/operation/block.h>

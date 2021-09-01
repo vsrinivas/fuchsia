@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_
 #define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_
 
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/ddk/platform-defs.h>
 

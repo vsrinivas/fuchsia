@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/io2/llcpp/fidl.h>
+#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/fdio/unsafe.h>
 #include <poll.h>
 #include <sys/eventfd.h>

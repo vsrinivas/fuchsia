@@ -4,7 +4,7 @@
 
 #include "sy-buck.h"
 
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>

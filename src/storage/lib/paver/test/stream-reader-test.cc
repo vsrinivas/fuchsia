@@ -5,7 +5,7 @@
 #include "src/storage/lib/paver/stream-reader.h"
 
 #include <fcntl.h>
-#include <fuchsia/paver/llcpp/fidl.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>

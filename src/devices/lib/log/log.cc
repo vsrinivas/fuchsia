@@ -4,7 +4,7 @@
 
 #include "log.h"
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/service/llcpp/service.h>

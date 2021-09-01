@@ -27,7 +27,7 @@
 #include <zxtest/zxtest.h>
 
 // Interface under test
-#include <fidl/test/llcpp/controlflow/llcpp/fidl.h>
+#include <fidl/fidl.test.llcpp.controlflow/cpp/wire.h>
 
 // Control flow tests: manually interact with a server and test for epitaph and shutdown.
 namespace {

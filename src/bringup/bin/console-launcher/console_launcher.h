@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_CONSOLE_LAUNCHER_H_
 #define SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_CONSOLE_LAUNCHER_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/status.h>

@@ -6,7 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <string.h>

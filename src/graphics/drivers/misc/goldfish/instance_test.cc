@@ -4,11 +4,11 @@
 
 #include "src/graphics/drivers/misc/goldfish/instance.h"
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/acpi/cpp/banjo-mock.h>
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo-mock.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>

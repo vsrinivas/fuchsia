@@ -5,7 +5,7 @@
 #ifndef LIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_
 #define LIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_
 
-#include <fuchsia/io2/llcpp/fidl.h>
+#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/zxio/ops.h>
 
 // Conversion adaptors between zxio and FIDL types.

@@ -4,9 +4,9 @@
 
 #include "skip-block.h"
 
+#include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
-#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fidl-helper.h>
 #include <lib/fidl/llcpp/connect_service.h>

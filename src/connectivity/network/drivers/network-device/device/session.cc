@@ -4,7 +4,7 @@
 
 #include "session.h"
 
-#include <fuchsia/hardware/network/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fit/defer.h>
 #include <zircon/device/network.h>

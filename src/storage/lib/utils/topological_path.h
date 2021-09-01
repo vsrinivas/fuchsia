@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_LIB_UTILS_TOPOLOGICAL_PATH_H_
 #define SRC_STORAGE_LIB_UTILS_TOPOLOGICAL_PATH_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 

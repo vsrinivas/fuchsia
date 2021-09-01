@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_FAKE_DRIVER_INDEX_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_FAKE_DRIVER_INDEX_H_
 
-#include <fuchsia/driver/framework/llcpp/fidl.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/fit/function.h>
 #include <lib/zx/status.h>
 #include <zircon/errors.h>

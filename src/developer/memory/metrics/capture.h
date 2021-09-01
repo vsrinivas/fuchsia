@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_MEMORY_METRICS_CAPTURE_H_
 #define SRC_DEVELOPER_MEMORY_METRICS_CAPTURE_H_
 
-#include <fuchsia/kernel/llcpp/fidl.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <zircon/syscalls.h>

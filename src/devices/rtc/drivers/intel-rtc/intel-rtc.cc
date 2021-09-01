@@ -4,7 +4,7 @@
 
 #include "src/devices/rtc/drivers/intel-rtc/intel-rtc.h"
 
-#include <fuchsia/hardware/rtc/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/inout.h>
 #include <librtc.h>

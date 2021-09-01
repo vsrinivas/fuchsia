@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_LIB_DRIVER2_START_ARGS_H_
 #define SRC_DEVICES_LIB_DRIVER2_START_ARGS_H_
 
-#include <fuchsia/component/runner/llcpp/fidl.h>
-#include <fuchsia/data/llcpp/fidl.h>
-#include <fuchsia/driver/framework/llcpp/fidl.h>
+#include <fidl/fuchsia.component.runner/cpp/wire.h>
+#include <fidl/fuchsia.data/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/zx/status.h>
 
 namespace driver {

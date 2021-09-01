@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/radar/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.radar/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>

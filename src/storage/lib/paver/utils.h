@@ -4,10 +4,10 @@
 #ifndef SRC_STORAGE_LIB_PAVER_UTILS_H_
 #define SRC_STORAGE_LIB_PAVER_UTILS_H_
 
-#include <fuchsia/fshost/llcpp/fidl.h>
-#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
-#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 

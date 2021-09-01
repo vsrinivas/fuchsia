@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_DRIVER2_DEVFS_EXPORTER_H_
 #define SRC_DEVICES_LIB_DRIVER2_DEVFS_EXPORTER_H_
 
-#include <fuchsia/device/fs/llcpp/fidl.h>
+#include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <lib/fpromise/promise.h>
 
 #include <fbl/ref_ptr.h>

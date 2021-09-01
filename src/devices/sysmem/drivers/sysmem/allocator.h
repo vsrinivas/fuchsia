@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_ALLOCATOR_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_ALLOCATOR_H_
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 #include "device.h"

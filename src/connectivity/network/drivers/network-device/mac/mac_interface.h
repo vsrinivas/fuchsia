@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_MAC_MAC_INTERFACE_H_
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_MAC_MAC_INTERFACE_H_
 
-#include <fuchsia/hardware/network/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/server.h>

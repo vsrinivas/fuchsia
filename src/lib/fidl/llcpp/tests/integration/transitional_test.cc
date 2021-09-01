@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/llcpptest.transitional.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
@@ -10,7 +11,6 @@
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
-#include <llcpptest/transitional/test/llcpp/fidl.h>
 
 namespace test = ::llcpptest_transitional_test;
 

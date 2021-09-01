@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_EXAMPLES_TONES_MIDI_KEYBOARD_H_
 #define SRC_MEDIA_AUDIO_EXAMPLES_TONES_MIDI_KEYBOARD_H_
 
-#include <fuchsia/hardware/midi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.midi/cpp/wire.h>
 #include <lib/async/default.h>
 
 #include <memory>

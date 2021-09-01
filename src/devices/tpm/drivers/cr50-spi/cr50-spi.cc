@@ -4,8 +4,8 @@
 
 #include "src/devices/tpm/drivers/cr50-spi/cr50-spi.h"
 
+#include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
 #include <fuchsia/hardware/spi/cpp/banjo.h>
-#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

@@ -4,7 +4,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_SKIP_BLOCK_H_
 #define SRC_STORAGE_LIB_PAVER_SKIP_BLOCK_H_
 
-#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
 
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/device-partitioner.h"

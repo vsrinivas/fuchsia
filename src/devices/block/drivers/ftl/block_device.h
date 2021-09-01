@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/hardware/badblock/c/banjo.h>
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
-#include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/ftl/volume.h>

@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>

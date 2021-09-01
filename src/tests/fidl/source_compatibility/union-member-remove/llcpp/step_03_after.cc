@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.test.unionmemberremove/cpp/wire.h>  // nogncheck
+
 #include <cstdint>
 #include <optional>
 #include <string>
-
-#include <fidl/test/unionmemberremove/llcpp/fidl.h>  // nogncheck
 namespace fidl_test = fidl_test_unionmemberremove;
 
 std::optional<int32_t> parse_as_int(const std::string& s) {

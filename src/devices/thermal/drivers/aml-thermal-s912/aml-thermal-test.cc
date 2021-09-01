@@ -4,9 +4,9 @@
 
 #include "aml-thermal.h"
 
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/scpi/cpp/banjo-mock.h>
-#include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>

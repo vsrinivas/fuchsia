@@ -2,8 +2,8 @@
 // this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/adc/llcpp/fidl.h>
-#include <fuchsia/hardware/temperature/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.adc/cpp/wire.h>
+#include <fidl/fuchsia.hardware.temperature/cpp/wire.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <cmath>

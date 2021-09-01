@@ -4,7 +4,7 @@
 
 #include "performance-domain.h"
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 

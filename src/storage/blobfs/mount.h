@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_MOUNT_H_
 #define SRC_STORAGE_BLOBFS_MOUNT_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/resource.h>
 

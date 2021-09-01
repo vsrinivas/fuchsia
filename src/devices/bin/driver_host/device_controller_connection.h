@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_DEVICE_CONTROLLER_CONNECTION_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_DEVICE_CONTROLLER_CONNECTION_H_
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
 
 #include <fbl/ref_ptr.h>
 

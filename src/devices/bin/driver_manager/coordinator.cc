@@ -7,10 +7,10 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/pkg/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.pkg/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>

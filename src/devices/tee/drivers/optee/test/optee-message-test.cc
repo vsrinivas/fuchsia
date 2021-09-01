@@ -4,7 +4,7 @@
 
 #include "optee-message.h"
 
-#include <fuchsia/hardware/tee/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.tee/cpp/wire.h>
 
 #include <memory>
 #include <numeric>

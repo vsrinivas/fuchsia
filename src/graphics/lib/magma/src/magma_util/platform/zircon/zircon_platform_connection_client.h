@@ -5,7 +5,7 @@
 #ifndef ZIRCON_PLATFORM_CONNECTION_CLIENT_H
 #define ZIRCON_PLATFORM_CONNECTION_CLIENT_H
 
-#include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fidl/fuchsia.gpu.magma/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 

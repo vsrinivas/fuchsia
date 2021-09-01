@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>

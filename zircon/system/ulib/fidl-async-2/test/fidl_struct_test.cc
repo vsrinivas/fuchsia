@@ -4,14 +4,14 @@
 
 #include "lib/fidl-async-2/fidl_struct.h"
 
+#include <fidl/fidl.types.test/cpp/wire.h>
+#include <fidl/types/test/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/event.h>
 
 #include <type_traits>
 
-#include <fidl/types/test/c/fidl.h>
-#include <fidl/types/test/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 namespace {

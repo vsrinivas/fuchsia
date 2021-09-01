@@ -4,7 +4,7 @@
 
 #include "aml-clk.h"
 
-#include <fuchsia/hardware/clock/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.clock/cpp/wire.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_LIB_DESIGNWARE_INCLUDE_LIB_HDMI_DW_HDMI_DW_H_
 #define SRC_GRAPHICS_DISPLAY_LIB_DESIGNWARE_INCLUDE_LIB_HDMI_DW_HDMI_DW_H_
 
-#include <fuchsia/hardware/hdmi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.hdmi/cpp/wire.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/hdmi/base.h>
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.examples.echo/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -15,8 +16,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include <fidl/examples/echo/llcpp/fidl.h>
 
 int main(int argc, const char** argv) {
   std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_llcpp#meta/echo_server_llcpp.cmx";

@@ -4,8 +4,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_DEFAULTS_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_DEFAULTS_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/ddk/device.h>
 
 namespace internal {

@@ -4,7 +4,7 @@
 
 #include "src/sys/appmgr/dynamic_library_loader.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/directory.h>

@@ -4,8 +4,8 @@
 
 #include "src/devices/tpm/drivers/cr50-spi/cr50-spi.h"
 
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
-#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/debug.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>

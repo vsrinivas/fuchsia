@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_HANDLER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_HANDLER_H_
 
-#include <fuchsia/fshost/llcpp/fidl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 
 #include "suspend_matching_task.h"
 #include "suspend_task.h"

@@ -4,8 +4,8 @@
 
 #include "src/devices/tpm/drivers/tpm/tpm.h"
 
+#include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
 #include <fuchsia/hardware/tpmimpl/cpp/banjo.h>
-#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/fit/defer.h>
 #include <zircon/errors.h>

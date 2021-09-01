@@ -5,8 +5,8 @@
 #ifndef SRC_UI_LIGHT_DRIVERS_GPIO_LIGHT_GPIO_LIGHT_H_
 #define SRC_UI_LIGHT_DRIVERS_GPIO_LIGHT_GPIO_LIGHT_H_
 
+#include <fidl/fuchsia.hardware.light/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
-#include <fuchsia/hardware/light/llcpp/fidl.h>
 #include <threads.h>
 
 #include <ddktl/device.h>

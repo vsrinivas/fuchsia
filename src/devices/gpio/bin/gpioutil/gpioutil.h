@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_GPIO_BIN_GPIOUTIL_GPIOUTIL_H_
 #define SRC_DEVICES_GPIO_BIN_GPIOUTIL_GPIOUTIL_H_
 
-#include <fuchsia/hardware/gpio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.gpio/cpp/wire.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
 

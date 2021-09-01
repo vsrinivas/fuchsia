@@ -5,7 +5,7 @@
 #include "src/devices/bus/drivers/platform/platform-bus.h"
 
 #include <assert.h>
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

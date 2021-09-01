@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_ACPI_OBJECT_H_
 #define SRC_DEVICES_LIB_ACPI_OBJECT_H_
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 
 namespace acpi {
 

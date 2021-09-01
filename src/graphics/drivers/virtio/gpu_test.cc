@@ -4,8 +4,8 @@
 
 #include "gpu.h"
 
+#include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>

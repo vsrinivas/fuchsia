@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_
 #define SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_
 
+#include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
-#include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
 #include <fuchsia/hardware/usb/phy/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>

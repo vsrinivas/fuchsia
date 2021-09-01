@@ -6,7 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/encrypted/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>

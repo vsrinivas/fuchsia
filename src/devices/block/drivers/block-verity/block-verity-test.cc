@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/block/verified/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/driver-integration-test/fixture.h>

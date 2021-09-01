@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/perfmon/cpu/llcpp/fidl.h>
+#include <fidl/fuchsia.perfmon.cpu/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>

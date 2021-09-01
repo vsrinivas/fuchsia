@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_TELEPHONY_DRIVERS_QMI_USB_TRANSPORT_QMI_USB_TRANSPORT_H_
 #define SRC_CONNECTIVITY_TELEPHONY_DRIVERS_QMI_USB_TRANSPORT_QMI_USB_TRANSPORT_H_
 
+#include <fidl/fuchsia.hardware.telephony.transport/cpp/wire.h>
+#include <fidl/fuchsia.telephony.snoop/cpp/wire.h>
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
-#include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
-#include <fuchsia/telephony/snoop/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

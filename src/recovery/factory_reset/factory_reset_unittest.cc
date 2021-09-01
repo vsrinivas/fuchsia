@@ -5,7 +5,7 @@
 #include "factory_reset.h"
 
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>

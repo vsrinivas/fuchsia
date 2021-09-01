@@ -4,7 +4,7 @@
 
 #include "serial.h"
 
-#include <fuchsia/hardware/serial/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.serial/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/debug.h>

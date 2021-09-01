@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>

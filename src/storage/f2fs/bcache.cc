@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>

@@ -8,7 +8,7 @@
 #include <string>
 
 #ifndef SYSLOG_STATIC
-#include <fuchsia/logger/llcpp/fidl.h>
+#include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/syslog/cpp/macros.h>
 #endif
 

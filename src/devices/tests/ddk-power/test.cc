@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/device/power/test/llcpp/fidl.h>
-#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
-#include <fuchsia/process/lifecycle/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.device.power.test/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>

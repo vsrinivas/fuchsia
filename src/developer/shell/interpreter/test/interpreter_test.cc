@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "fuchsia/shell/llcpp/fidl.h"
+#include "fidl/fuchsia.shell/cpp/wire.h"
 #include "fuchsia/sys/cpp/fidl.h"
 #include "lib/async-loop/default.h"
 #include "zircon/status.h"

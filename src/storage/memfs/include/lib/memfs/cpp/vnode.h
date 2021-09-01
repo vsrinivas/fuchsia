@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_CPP_VNODE_H_
 #define SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_CPP_VNODE_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>

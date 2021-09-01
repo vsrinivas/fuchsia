@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.test.example.codingtables/cpp/wire.h>
 #include <lib/fidl/internal.h>
 
-#include <fidl/test/example/codingtables/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 TEST(SomeStruct, CodingTable) {

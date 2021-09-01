@@ -4,7 +4,7 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/device_local_heap.h"
 
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>

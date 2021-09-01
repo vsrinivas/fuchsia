@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 
+#include <fidl/fuchsia.hardware.gpio/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
-#include <fuchsia/hardware/gpio/llcpp/fidl.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/thread_annotations.h>

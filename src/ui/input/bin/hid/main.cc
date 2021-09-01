@@ -6,7 +6,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/input/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.input/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>

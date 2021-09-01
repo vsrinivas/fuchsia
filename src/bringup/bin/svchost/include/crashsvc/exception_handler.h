@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_EXCEPTION_HANDLER_H_
 #define SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_EXCEPTION_HANDLER_H_
 
-#include <fuchsia/exception/llcpp/fidl.h>
+#include <fidl/fuchsia.exception/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/server_end.h>

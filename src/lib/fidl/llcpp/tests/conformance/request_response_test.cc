@@ -5,7 +5,8 @@
 // This file contains manual test cases that should be migrated to GIDL
 // and be generated as part of conformance_test.cc in the future.
 
-#include <fidl/llcpp/types/test/llcpp/fidl.h>
+#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+
 #include <gtest/gtest.h>
 
 TEST(FidlHost, Request) {

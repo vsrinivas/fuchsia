@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_PACKAGE_RESOLVER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_PACKAGE_RESOLVER_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/pkg/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.pkg/cpp/wire.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>

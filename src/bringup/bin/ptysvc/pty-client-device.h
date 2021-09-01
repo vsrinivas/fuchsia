@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_DEVICE_H_
 #define SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_DEVICE_H_
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 #include <fbl/ref_ptr.h>

@@ -5,9 +5,9 @@
 #include "filesystem-mounter.h"
 
 #include <dirent.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/sys2/llcpp/fidl.h>
-#include <fuchsia/update/verify/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.sys2/cpp/wire.h>
+#include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>

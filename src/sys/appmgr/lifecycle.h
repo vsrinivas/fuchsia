@@ -5,7 +5,7 @@
 #ifndef SRC_SYS_APPMGR_LIFECYCLE_H_
 #define SRC_SYS_APPMGR_LIFECYCLE_H_
 
-#include <fuchsia/process/lifecycle/llcpp/fidl.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>

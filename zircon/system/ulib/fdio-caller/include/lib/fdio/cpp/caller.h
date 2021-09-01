@@ -5,7 +5,7 @@
 #ifndef LIB_FDIO_CPP_CALLER_H_
 #define LIB_FDIO_CPP_CALLER_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl/llcpp/client_end.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_SYSMEM_SECURE_MEM_SERVER_H_
 #define SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_SYSMEM_SECURE_MEM_SERVER_H_
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/closure-queue/closure_queue.h>
 #include <threads.h>

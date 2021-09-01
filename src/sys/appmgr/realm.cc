@@ -5,7 +5,7 @@
 #include "src/sys/appmgr/realm.h"
 
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

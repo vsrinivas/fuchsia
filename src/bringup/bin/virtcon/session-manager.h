@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_VIRTCON_SESSION_MANAGER_H_
 #define SRC_BRINGUP_BIN_VIRTCON_SESSION_MANAGER_H_
 
-#include <fuchsia/virtualconsole/llcpp/fidl.h>
+#include <fidl/fuchsia.virtualconsole/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/status.h>
 

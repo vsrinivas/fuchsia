@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_FIDL_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_FIDL_H_
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 
 #include <forward_list>
 

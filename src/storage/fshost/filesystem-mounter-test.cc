@@ -4,7 +4,7 @@
 
 #include "filesystem-mounter.h"
 
-#include <fuchsia/io/llcpp/fidl_test_base.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>

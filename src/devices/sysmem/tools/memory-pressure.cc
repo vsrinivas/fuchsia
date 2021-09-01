@@ -4,7 +4,7 @@
 
 #include "memory-pressure.h"
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <stdlib.h>

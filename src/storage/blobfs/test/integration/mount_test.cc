@@ -5,7 +5,7 @@
 #include "src/storage/blobfs/mount.h"
 
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>

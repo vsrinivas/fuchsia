@@ -4,8 +4,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

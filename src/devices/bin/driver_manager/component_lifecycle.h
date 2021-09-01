@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_COMPONENT_LIFECYCLE_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COMPONENT_LIFECYCLE_H_
 
-#include <fuchsia/process/lifecycle/llcpp/fidl.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 

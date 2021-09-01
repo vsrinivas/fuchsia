@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CLIENT_H_
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CLIENT_H_
 
-#include <fuchsia/hardware/rpmb/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/tee/llcpp/fidl.h>
-#include <fuchsia/tee/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.rpmb/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.tee.manager/cpp/wire.h>
+#include <fidl/fuchsia.tee/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 #include <atomic>

@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.test.protocolmethodremove/cpp/wire.h>  // nogncheck
 #include <lib/fidl/llcpp/client.h>
-
-#include <fidl/test/protocolmethodremove/llcpp/fidl.h>  // nogncheck
 namespace fidl_test = fidl_test_protocolmethodremove;
 
 // [START contents]

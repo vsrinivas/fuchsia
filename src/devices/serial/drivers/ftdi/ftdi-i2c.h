@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_I2C_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_I2C_H_
 
-#include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ftdi/cpp/wire.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <threads.h>
 

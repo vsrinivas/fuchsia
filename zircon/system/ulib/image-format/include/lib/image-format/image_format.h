@@ -5,9 +5,9 @@
 #ifndef LIB_IMAGE_FORMAT_IMAGE_FORMAT_H_
 #define LIB_IMAGE_FORMAT_IMAGE_FORMAT_H_
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <zircon/pixelformat.h>
 
 // Iff this returns true, the two pixel formats are equal.

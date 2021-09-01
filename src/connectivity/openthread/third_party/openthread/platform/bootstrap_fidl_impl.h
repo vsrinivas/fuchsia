@@ -1,7 +1,7 @@
 #ifndef SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_BOOTSTRAP_FIDL_IMPL_H_
 #define SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_BOOTSTRAP_FIDL_IMPL_H_
 
-#include <fuchsia/lowpan/bootstrap/llcpp/fidl.h>
+#include <fidl/fuchsia.lowpan.bootstrap/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/server.h>

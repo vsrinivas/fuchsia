@@ -4,9 +4,9 @@
 
 #include "device.h"
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>

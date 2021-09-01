@@ -53,7 +53,7 @@ headers are generated from FIDL definitions of these contracts.
 ###### Examples
 
 - `#include <fuchsia/sys/cpp/fidl.h>`
-- `#include <fuchsia/sysmem/llcpp/fidl.h>`
+- `#include <fidl/fuchsia.sysmem/cpp/wire.h>`
 
 #### Library headers
 

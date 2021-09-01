@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>

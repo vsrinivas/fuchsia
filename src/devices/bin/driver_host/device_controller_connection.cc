@@ -4,7 +4,7 @@
 
 #include "device_controller_connection.h"
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>

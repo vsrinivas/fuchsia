@@ -5,7 +5,7 @@
 #include "src/lib/storage/vfs/cpp/connection.h"
 
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/txn_header.h>

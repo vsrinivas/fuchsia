@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/acpi/client.h"
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/llcpp/arena.h>
 

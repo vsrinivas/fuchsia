@@ -5,8 +5,8 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <inttypes.h>

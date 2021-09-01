@@ -5,7 +5,7 @@
 #ifndef LIB_ZXIO_TESTS_TEST_DIRECTORY_SERVER_BASE_H_
 #define LIB_ZXIO_TESTS_TEST_DIRECTORY_SERVER_BASE_H_
 
-#include <fuchsia/io/llcpp/fidl_test_base.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 
 #include <zxtest/zxtest.h>
 

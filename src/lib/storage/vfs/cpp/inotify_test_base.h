@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_INOTIFY_TEST_BASE_H_
 #define SRC_LIB_STORAGE_VFS_CPP_INOTIFY_TEST_BASE_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>

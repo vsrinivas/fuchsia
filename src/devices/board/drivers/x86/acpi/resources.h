@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_RESOURCES_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_RESOURCES_H_
 
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <zircon/types.h>
 
 #include <acpica/acpi.h>

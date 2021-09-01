@@ -4,9 +4,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/fshost/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/ldsvc/c/fidl.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>

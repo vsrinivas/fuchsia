@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_SPI_DRIVERS_SPI_SPI_CHILD_H_
 #define SRC_DEVICES_SPI_DRIVERS_SPI_SPI_CHILD_H_
 
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <fuchsia/hardware/spi/cpp/banjo.h>
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 
 #include <ddktl/device.h>

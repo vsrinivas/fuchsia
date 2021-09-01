@@ -6,14 +6,14 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/fs/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fuchsia/hardware/block/volume/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>

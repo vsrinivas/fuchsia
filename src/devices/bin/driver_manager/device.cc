@@ -4,9 +4,9 @@
 
 #include "device.h"
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/driver/test/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.driver.test/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>

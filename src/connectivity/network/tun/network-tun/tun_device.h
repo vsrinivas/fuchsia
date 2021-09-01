@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_DEVICE_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_DEVICE_H_
 
-#include <fuchsia/net/tun/llcpp/fidl.h>
+#include <fidl/fuchsia.net.tun/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include <queue>

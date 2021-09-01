@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/kernel/llcpp/fidl.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <getopt.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/log_settings.h>

@@ -9,7 +9,7 @@
 #error "Fuchsia-only header"
 #endif
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include "lib/fit/function.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"

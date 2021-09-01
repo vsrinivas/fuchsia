@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/llcpptest.handleraii.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
@@ -18,7 +19,6 @@
 #include <cstdint>
 
 #include <gtest/gtest.h>
-#include <llcpptest/handleraii/test/llcpp/fidl.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
 namespace test = ::llcpptest_handleraii_test;

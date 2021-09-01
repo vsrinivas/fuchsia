@@ -5,8 +5,8 @@
 #ifndef LIB_IMAGE_FORMAT_LLCPP_IMAGE_FORMAT_LLCPP_H_
 #define LIB_IMAGE_FORMAT_LLCPP_IMAGE_FORMAT_LLCPP_H_
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/image-format/image_format.h>
 
 #include <optional>

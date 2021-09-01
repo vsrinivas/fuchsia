@@ -5,10 +5,10 @@
 #include "intel-i915.h"
 
 #include <assert.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/intelgpucore/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

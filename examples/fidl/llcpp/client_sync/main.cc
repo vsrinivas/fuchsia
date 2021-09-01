@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // [START includes]
-#include <fuchsia/examples/llcpp/fidl.h>
+#include <fidl/fuchsia.examples/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/assert.h>
 

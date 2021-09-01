@@ -6,7 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>

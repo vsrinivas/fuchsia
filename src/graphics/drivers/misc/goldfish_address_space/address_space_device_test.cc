@@ -4,8 +4,8 @@
 
 #include "src/graphics/drivers/misc/goldfish_address_space/address_space_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/pci/cpp/banjo-mock.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>

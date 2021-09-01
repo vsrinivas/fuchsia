@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
 
-#include <fuchsia/hardware/block/encrypted/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block.encrypted/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <stddef.h>
 #include <stdint.h>

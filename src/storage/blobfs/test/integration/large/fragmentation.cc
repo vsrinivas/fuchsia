@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <sys/stat.h>
 
 #include <algorithm>

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_FDIO_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_FDIO_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>

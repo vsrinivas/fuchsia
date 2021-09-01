@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.llcpp.linearized.test/cpp/wire.h>
 #include <lib/fidl/llcpp/message.h>
 
-#include <fidl/llcpp/linearized/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
 namespace fidl_linearized = ::fidl_llcpp_linearized_test;

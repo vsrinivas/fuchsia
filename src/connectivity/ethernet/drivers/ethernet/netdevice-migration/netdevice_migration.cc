@@ -4,7 +4,7 @@
 
 #include "netdevice_migration.h"
 
-#include <fuchsia/hardware/ethernet/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ethernet/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <zircon/system/public/zircon/assert.h>
 

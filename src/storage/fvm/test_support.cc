@@ -6,9 +6,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/message.h>

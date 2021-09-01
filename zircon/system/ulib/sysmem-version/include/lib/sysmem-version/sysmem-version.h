@@ -5,9 +5,9 @@
 #ifndef LIB_SYSMEM_VERSION_SYSMEM_VERSION_H_
 #define LIB_SYSMEM_VERSION_SYSMEM_VERSION_H_
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
 
 namespace sysmem {
 

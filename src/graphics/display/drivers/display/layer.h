@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_LAYER_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_LAYER_H_
 
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 

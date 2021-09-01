@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

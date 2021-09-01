@@ -4,7 +4,7 @@
 
 #include "src/graphics/drivers/misc/goldfish_sync/sync_device.h"
 
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>

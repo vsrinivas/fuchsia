@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>

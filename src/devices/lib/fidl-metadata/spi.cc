@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #include "src/devices/lib/fidl-metadata/spi.h"
 
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 
 namespace fidl_metadata::spi {
 zx::status<std::vector<uint8_t>> SpiChannelsToFidl(const cpp20::span<const Channel> channels) {

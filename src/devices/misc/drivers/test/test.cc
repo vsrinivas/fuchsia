@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/test/llcpp/fidl.h>
+#include <fidl/fuchsia.device.test/cpp/wire.h>
 #include <fuchsia/hardware/test/cpp/banjo.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>

@@ -5,8 +5,8 @@
 #ifndef STORAGE_METRICS_BLOCK_METRICS_H_
 #define STORAGE_METRICS_BLOCK_METRICS_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 

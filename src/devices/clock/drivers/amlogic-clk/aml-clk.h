@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_H_
 #define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_H_
 
-#include <fuchsia/hardware/clock/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.clock/cpp/wire.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/device.h>

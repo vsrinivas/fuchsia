@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_LOADER_SERVICE_LOADER_SERVICE_H_
 #define SRC_LIB_LOADER_SERVICE_LOADER_SERVICE_H_
 
-#include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <fidl/fuchsia.ldsvc/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>

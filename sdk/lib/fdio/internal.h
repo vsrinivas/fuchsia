@@ -5,9 +5,9 @@
 #ifndef LIB_FDIO_INTERNAL_H_
 #define LIB_FDIO_INTERNAL_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/posix/socket/llcpp/fidl.h>
-#include <fuchsia/posix/socket/raw/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>

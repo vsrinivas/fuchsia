@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_OPENTHREAD_OT_STACK_SRC_APP_H_
 #define SRC_CONNECTIVITY_OPENTHREAD_OT_STACK_SRC_APP_H_
 
-#include <fuchsia/lowpan/spinel/llcpp/fidl.h>
-#include <fuchsia/openthread/devmgr/llcpp/fidl.h>
+#include <fidl/fuchsia.lowpan.spinel/cpp/wire.h>
+#include <fidl/fuchsia.openthread.devmgr/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

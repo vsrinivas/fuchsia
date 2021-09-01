@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_RAM_DRIVERS_AML_RAM_AML_RAM_H_
 #define SRC_DEVICES_RAM_DRIVERS_AML_RAM_AML_RAM_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/ram/metrics/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.ram.metrics/cpp/wire.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>

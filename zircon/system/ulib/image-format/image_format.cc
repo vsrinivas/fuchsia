@@ -4,8 +4,8 @@
 
 #include "lib/image-format/image_format.h"
 
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <zircon/assert.h>
 #include <zircon/pixelformat.h>

@@ -5,7 +5,7 @@
 #ifndef LIB_SYSCONFIG_SYNC_CLIENT_H_
 #define LIB_SYSCONFIG_SYNC_CLIENT_H_
 
-#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>

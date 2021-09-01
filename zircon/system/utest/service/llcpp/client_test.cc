@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.service.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -10,7 +11,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 
-#include <fidl/service/test/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

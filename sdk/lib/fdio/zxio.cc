@@ -4,7 +4,7 @@
 
 #include "zxio.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/zxio/cpp/create_with_type.h>

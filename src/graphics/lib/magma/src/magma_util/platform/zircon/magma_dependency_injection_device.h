@@ -5,8 +5,8 @@
 #ifndef SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_MAGMA_DEPENDENCY_INJECTION_DEVICE_H_
 #define SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_MAGMA_DEPENDENCY_INJECTION_DEVICE_H_
 
-#include <fuchsia/gpu/magma/llcpp/fidl.h>
-#include <fuchsia/memorypressure/llcpp/fidl.h>
+#include <fidl/fuchsia.gpu.magma/cpp/wire.h>
+#include <fidl/fuchsia.memorypressure/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include <ddktl/device.h>

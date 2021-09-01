@@ -5,7 +5,7 @@
 #ifndef SRC_UI_TOOLS_PRINT_INPUT_REPORT_PRINTER_H_
 #define SRC_UI_TOOLS_PRINT_INPUT_REPORT_PRINTER_H_
 
-#include <fuchsia/input/report/llcpp/fidl.h>
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <stdarg.h>
 #include <stdio.h>
 

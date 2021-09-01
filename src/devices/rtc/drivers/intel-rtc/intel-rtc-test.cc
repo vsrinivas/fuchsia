@@ -10,7 +10,7 @@
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>
 
-#include "fuchsia/hardware/rtc/llcpp/fidl.h"
+#include "fidl/fuchsia.hardware.rtc/cpp/wire.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 class IntelRtcTest;

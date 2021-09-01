@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_
 #define SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_
 
-#include <fuchsia/fxfs/llcpp/fidl.h>
+#include <fidl/fuchsia.fxfs/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>

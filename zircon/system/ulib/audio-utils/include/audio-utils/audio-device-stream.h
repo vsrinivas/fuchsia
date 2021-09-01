@@ -5,7 +5,7 @@
 #ifndef AUDIO_UTILS_AUDIO_DEVICE_STREAM_H_
 #define AUDIO_UTILS_AUDIO_DEVICE_STREAM_H_
 
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/audio.h>

@@ -4,7 +4,7 @@
 
 #include "../usb-device.h"
 
-#include <fuchsia/hardware/usb/device/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.usb.device/cpp/wire.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 
@@ -14,6 +14,7 @@
 #include <usb/request-cpp.h>
 #include <utf_conversion/utf_conversion.h>
 #include <zxtest/zxtest.h>
+
 #include "lib/ddk/driver.h"
 
 namespace usb_bus {

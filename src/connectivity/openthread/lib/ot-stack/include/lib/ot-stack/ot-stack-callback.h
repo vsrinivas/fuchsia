@@ -4,7 +4,7 @@
 
 #ifndef SRC_CONNECTIVITY_OPENTHREAD_LIB_OT_STACK_INCLUDE_LIB_OT_STACK_OT_STACK_CALLBACK_H_
 #define SRC_CONNECTIVITY_OPENTHREAD_LIB_OT_STACK_INCLUDE_LIB_OT_STACK_OT_STACK_CALLBACK_H_
-#include <fuchsia/lowpan/spinel/llcpp/fidl.h>
+#include <fidl/fuchsia.lowpan.spinel/cpp/wire.h>
 
 #include <vector>
 

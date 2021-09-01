@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_STREAM_READER_H_
 #define SRC_STORAGE_LIB_PAVER_STREAM_READER_H_
 
-#include <fuchsia/paver/llcpp/fidl.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>

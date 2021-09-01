@@ -4,7 +4,7 @@
 
 #ifndef LIB_MIPI_DSI_MIPI_DSI_H_
 #define LIB_MIPI_DSI_MIPI_DSI_H_
-#include <fuchsia/hardware/dsi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.dsi/cpp/wire.h>
 #include <fuchsia/hardware/dsiimpl/c/banjo.h>
 #include <lib/zx/status.h>
 #include <stddef.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_TEMPERATURE_DRIVERS_TMP112_TMP112_H_
 #define SRC_DEVICES_TEMPERATURE_DRIVERS_TMP112_TMP112_H_
 
-#include <fuchsia/hardware/temperature/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.temperature/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
 

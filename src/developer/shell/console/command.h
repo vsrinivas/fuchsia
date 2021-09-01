@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "fuchsia/shell/llcpp/fidl.h"
+#include "fidl/fuchsia.shell/cpp/wire.h"
 #include "src/developer/shell/common/ast_builder.h"
 #include "src/developer/shell/common/err.h"
 

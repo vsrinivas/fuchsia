@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_ZX_DEVICE_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_ZX_DEVICE_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

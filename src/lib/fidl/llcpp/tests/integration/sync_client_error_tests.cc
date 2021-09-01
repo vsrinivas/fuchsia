@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/llcpptest.protocol.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
@@ -11,7 +12,6 @@
 #include <thread>
 
 #include <gtest/gtest.h>
-#include <llcpptest/protocol/test/llcpp/fidl.h>
 
 namespace test = ::llcpptest_protocol_test;
 

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_UTILS_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_UTILS_H_
 
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 
 bool IsWriteUsage(const fuchsia_sysmem2::wire::BufferUsage& buffer_usage);
 

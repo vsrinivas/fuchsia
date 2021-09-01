@@ -4,7 +4,7 @@
 
 #include "aml-gpu.h"
 
-#include <fuchsia/hardware/gpu/amlogic/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.gpu.amlogic/cpp/wire.h>
 #include <fuchsia/hardware/iommu/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>

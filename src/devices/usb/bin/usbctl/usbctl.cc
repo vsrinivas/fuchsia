@@ -4,8 +4,8 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
 #include <fuchsia/hardware/usb/modeswitch/c/banjo.h>
-#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

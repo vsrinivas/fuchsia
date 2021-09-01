@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/scpi/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/cpp/banjo.h>
-#include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>

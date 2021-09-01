@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <sys/stat.h>
 
 #include <string_view>

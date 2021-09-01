@@ -12,8 +12,8 @@
 #include <zircon/types.h>
 
 #define _ALL_SOURCE
-#include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
-#include <fuchsia/telephony/snoop/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.telephony.transport/cpp/wire.h>
+#include <fidl/fuchsia.telephony.snoop/cpp/wire.h>
 #include <threads.h>
 
 #include <src/connectivity/telephony/tests/fake-drivers/fake-transport-base/fake-transport-base.h>

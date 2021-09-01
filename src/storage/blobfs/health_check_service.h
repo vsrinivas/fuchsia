@@ -9,7 +9,7 @@
 #error Fuchsia-only Header
 #endif
 
-#include <fuchsia/update/verify/llcpp/fidl.h>
+#include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 
 #include "src/lib/storage/vfs/cpp/service.h"

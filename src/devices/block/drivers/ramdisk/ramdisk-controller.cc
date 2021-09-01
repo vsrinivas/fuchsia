@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/ramdisk/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ramdisk/cpp/wire.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/status.h>

@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_TI_INA231_TI_INA231_H_
 #define SRC_DEVICES_POWER_DRIVERS_TI_INA231_TI_INA231_H_
 
+#include <fidl/fuchsia.hardware.power.sensor/cpp/wire.h>
 #include <fuchsia/hardware/power/sensor/cpp/banjo.h>
-#include <fuchsia/hardware/power/sensor/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/zircon-internal/thread_annotations.h>

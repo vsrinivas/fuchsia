@@ -4,7 +4,7 @@
 
 #include "fifo.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include <fbl/auto_lock.h>
 

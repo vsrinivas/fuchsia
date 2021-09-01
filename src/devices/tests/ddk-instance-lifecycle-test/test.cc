@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/instancelifecycle/test/llcpp/fidl.h>
+#include <fidl/fuchsia.device.instancelifecycle.test/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>

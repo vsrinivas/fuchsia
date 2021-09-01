@@ -5,7 +5,7 @@
 #ifndef SRC_COBALT_BIN_SYSTEM_METRICS_CPU_STATS_FETCHER_IMPL_H_
 #define SRC_COBALT_BIN_SYSTEM_METRICS_CPU_STATS_FETCHER_IMPL_H_
 
-#include <fuchsia/kernel/llcpp/fidl.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/zx/resource.h>
 
 #include <chrono>

@@ -4,9 +4,9 @@
 
 #include "image.h"
 
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-#include <fuchsia/hardware/display/llcpp/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>

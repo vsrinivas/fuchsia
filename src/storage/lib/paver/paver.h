@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_PAVER_H_
 #define SRC_STORAGE_LIB_PAVER_PAVER_H_
 
-#include <fuchsia/paver/llcpp/fidl.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/minfs/llcpp/fidl.h>
+#include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 
 #include <fbl/unique_fd.h>

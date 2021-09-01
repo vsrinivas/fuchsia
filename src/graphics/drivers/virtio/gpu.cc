@@ -4,7 +4,7 @@
 
 #include "gpu.h"
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/fit/defer.h>

@@ -6,7 +6,7 @@
 
 #include <assert.h>
 #include <cpuid.h>
-#include <fuchsia/hardware/cpu/insntrace/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.cpu.insntrace/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>

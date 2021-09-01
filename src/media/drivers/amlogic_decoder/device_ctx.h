@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_CTX_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_CTX_H_
 
-#include <fuchsia/hardware/mediacodec/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.mediacodec/cpp/wire.h>
 #include <lib/zx/thread.h>
 
 #include <ddktl/device.h>

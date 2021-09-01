@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 #define SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/device.h>

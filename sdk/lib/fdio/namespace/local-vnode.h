@@ -5,7 +5,7 @@
 #ifndef LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
 #define LIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <limits.h>

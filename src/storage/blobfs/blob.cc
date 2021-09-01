@@ -6,8 +6,8 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>

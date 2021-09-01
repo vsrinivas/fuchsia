@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_AML_PWM_REGULATOR_AML_PWM_REGULATOR_H_
 #define SRC_DEVICES_POWER_DRIVERS_AML_PWM_REGULATOR_AML_PWM_REGULATOR_H_
 
+#include <fidl/fuchsia.hardware.vreg/cpp/wire.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <fuchsia/hardware/vreg/cpp/banjo.h>
-#include <fuchsia/hardware/vreg/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 
 #include <ddktl/device.h>

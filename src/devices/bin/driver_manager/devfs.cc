@@ -5,7 +5,7 @@
 #include "devfs.h"
 
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_TESTS_DDK_INSTANCE_LIFECYCLE_TEST_TEST_DRIVER_CHILD_H_
 #define SRC_DEVICES_TESTS_DDK_INSTANCE_LIFECYCLE_TEST_TEST_DRIVER_CHILD_H_
 
-#include <fuchsia/device/instancelifecycle/test/llcpp/fidl.h>
+#include <fidl/fuchsia.device.instancelifecycle.test/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 #include <ddktl/device.h>

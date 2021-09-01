@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/llcpptest.dispatcher.handle.ownership.test/cpp/wire.h>
+#include <fidl/llcpptest.dispatcher.handle.ownership.test/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/client.h>
@@ -9,8 +11,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <llcpptest/dispatcher/handle/ownership/test/llcpp/fidl.h>
-#include <llcpptest/dispatcher/handle/ownership/test/llcpp/fidl_test_base.h>
 #include <zxtest/zxtest.h>
 
 // These tests verify that the dispatchers properly close any unused handles

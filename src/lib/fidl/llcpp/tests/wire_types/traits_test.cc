@@ -4,7 +4,7 @@
 
 #include "lib/fidl/llcpp/traits.h"
 
-#include <fidl/llcpp/types/test/llcpp/fidl.h>
+#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
 
 #include "gtest/gtest.h"
 

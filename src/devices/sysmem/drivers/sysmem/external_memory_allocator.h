@@ -4,7 +4,7 @@
 
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_EXTERNAL_MEMORY_ALLOCATOR_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_EXTERNAL_MEMORY_ALLOCATOR_H_
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/zx/event.h>
 
 #include "allocator.h"

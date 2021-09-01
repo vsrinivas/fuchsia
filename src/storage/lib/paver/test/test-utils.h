@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #ifndef SRC_STORAGE_LIB_PAVER_TEST_TEST_UTILS_H_
 #define SRC_STORAGE_LIB_PAVER_TEST_TEST_UTILS_H_
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/service/llcpp/service.h>

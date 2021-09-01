@@ -6,10 +6,10 @@
 
 #include <dirent.h>
 #include <endian.h>
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/paver/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/abr/abr.h>
 #include <lib/cksum.h>
 #include <lib/fdio/cpp/caller.h>

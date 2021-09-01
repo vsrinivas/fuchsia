@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_FSHOST_BOOT_ARGS_H_
 #define SRC_STORAGE_FSHOST_FSHOST_BOOT_ARGS_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <zircon/status.h>

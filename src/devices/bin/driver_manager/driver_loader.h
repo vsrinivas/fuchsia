@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_LOADER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_LOADER_H_
 
-#include <fuchsia/driver/framework/llcpp/fidl.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <threads.h>
 
 #include <fbl/intrusive_double_list.h>

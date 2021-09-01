@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_LIB_ACPI_CLIENT_H_
 #define SRC_DEVICES_LIB_ACPI_CLIENT_H_
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/status.h>
 

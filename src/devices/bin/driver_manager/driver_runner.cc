@@ -4,8 +4,8 @@
 
 #include "src/devices/bin/driver_manager/driver_runner.h"
 
-#include <fuchsia/driver/framework/llcpp/fidl.h>
-#include <fuchsia/process/llcpp/fidl.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>

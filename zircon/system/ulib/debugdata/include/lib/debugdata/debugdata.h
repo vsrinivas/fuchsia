@@ -5,7 +5,7 @@
 #ifndef LIB_DEBUGDATA_DEBUGDATA_H_
 #define LIB_DEBUGDATA_DEBUGDATA_H_
 
-#include <fuchsia/debugdata/llcpp/fidl.h>
+#include <fidl/fuchsia.debugdata/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>

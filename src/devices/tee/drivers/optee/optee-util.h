@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_UTIL_H_
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_UTIL_H_
 
+#include <fidl/fuchsia.tee/cpp/wire.h>
 #include <fuchsia/hardware/tee/c/banjo.h>
-#include <fuchsia/tee/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 
 #include <array>

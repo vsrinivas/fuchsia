@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_NODE_PROPERTIES_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_NODE_PROPERTIES_H_
 
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/fit/function.h>
 #include <stdint.h>
 

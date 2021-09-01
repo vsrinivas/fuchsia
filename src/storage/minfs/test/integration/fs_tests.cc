@@ -5,7 +5,7 @@
 // Tests for MinFS-specific behavior.
 
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/vfs.h>

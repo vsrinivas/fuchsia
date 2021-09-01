@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/dsi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.dsi/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/mipi-dsi/mipi-dsi.h>

@@ -4,8 +4,8 @@
 
 #include <endian.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/gpio/llcpp/fidl.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.gpio/cpp/wire.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>

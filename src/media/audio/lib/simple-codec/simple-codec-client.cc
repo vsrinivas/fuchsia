@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <zircon/threads.h>

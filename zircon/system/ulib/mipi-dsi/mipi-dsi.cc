@@ -4,7 +4,7 @@
 
 #include "lib/mipi-dsi/mipi-dsi.h"
 
-#include <fuchsia/hardware/dsi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.dsi/cpp/wire.h>
 
 #include <algorithm>
 #include <cstdint>

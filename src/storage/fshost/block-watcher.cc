@@ -5,10 +5,10 @@
 #include "block-watcher.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>

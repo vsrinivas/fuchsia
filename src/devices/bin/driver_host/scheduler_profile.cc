@@ -4,7 +4,7 @@
 
 #include "scheduler_profile.h"
 
-#include <fuchsia/scheduler/llcpp/fidl.h>
+#include <fidl/fuchsia.scheduler/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>

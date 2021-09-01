@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
-#include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/profile.h>

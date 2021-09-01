@@ -5,8 +5,8 @@
 #include "lib/abr/abr.h"
 
 #include <endian.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/cksum.h>

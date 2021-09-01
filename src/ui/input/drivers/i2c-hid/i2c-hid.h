@@ -5,8 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_
 #define SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_
 
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>

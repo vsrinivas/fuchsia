@@ -4,7 +4,7 @@
 
 #include "ftdi-i2c.h"
 
-#include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ftdi/cpp/wire.h>
 #include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/fake_ddk/fake_ddk.h>

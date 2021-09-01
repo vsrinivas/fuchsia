@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_DEVICE_NAME_PROVIDER_ARGS_H_
 #define SRC_BRINGUP_BIN_DEVICE_NAME_PROVIDER_ARGS_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include <string>
 

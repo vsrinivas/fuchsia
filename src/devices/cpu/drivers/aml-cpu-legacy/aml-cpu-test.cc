@@ -4,9 +4,9 @@
 
 #include "aml-cpu.h"
 
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/cpp/banjo.h>
-#include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>

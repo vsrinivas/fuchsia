@@ -5,8 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_CLIENT_H_
 #define SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_CLIENT_H_
 
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <fuchsia/hardware/audio/cpp/banjo.h>
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/client.h>

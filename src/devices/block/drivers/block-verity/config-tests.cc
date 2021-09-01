@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/block/verified/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
 
 #include <zxtest/zxtest.h>
 

@@ -23,7 +23,7 @@
 #include <zxtest/zxtest.h>
 
 // Interface under test
-#include <fidl/test/llcpp/basictypes/llcpp/fidl.h>
+#include <fidl/fidl.test.llcpp.basictypes/cpp/wire.h>
 
 namespace basictypes = fidl_test_llcpp_basictypes;
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.nand/cpp/wire.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
-#include <fuchsia/nand/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>

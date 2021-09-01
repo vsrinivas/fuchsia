@@ -5,7 +5,7 @@
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"
 
 #include <errno.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <string.h>

@@ -4,7 +4,7 @@
 
 #include "fidl-handler.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/txn_header.h>
 #include <stdio.h>

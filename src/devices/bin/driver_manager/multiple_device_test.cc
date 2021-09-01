@@ -4,7 +4,7 @@
 
 #include "multiple_device_test.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/errors.h>
 

@@ -7,7 +7,7 @@
 #include "magma_util/status.h"
 
 #if defined(__Fuchsia__)
-#include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fidl/fuchsia.gpu.magma/cpp/wire.h>
 using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 static FidlStatus Convert(magma_status_t status) {

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_RTC_LIB_RTC_INCLUDE_LIBRTC_LLCPP_H_
 #define SRC_DEVICES_RTC_LIB_RTC_INCLUDE_LIBRTC_LLCPP_H_
 
-#include <fuchsia/hardware/rtc/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
 
 namespace rtc {
 

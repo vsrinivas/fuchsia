@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_
 #define SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.cpu.ctrl/cpp/wire.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
-#include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <lib/inspect/cpp/inspector.h>
 

@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_H_
 #define SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/sync/completion.h>
 
 #include <map>

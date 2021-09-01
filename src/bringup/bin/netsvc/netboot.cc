@@ -7,9 +7,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>

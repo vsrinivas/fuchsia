@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_VMO_READER_H_
 #define SRC_STORAGE_LIB_PAVER_VMO_READER_H_
 
-#include <fuchsia/mem/llcpp/fidl.h>
+#include <fidl/fuchsia.mem/cpp/wire.h>
 #include <lib/zx/vmo.h>
 
 #include <algorithm>

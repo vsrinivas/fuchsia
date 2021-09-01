@@ -5,7 +5,7 @@
 #include "socket.h"
 
 #include <assert.h>
-#include <fuchsia/hardware/vsock/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.vsock/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/io-buffer.h>

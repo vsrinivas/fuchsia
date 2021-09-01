@@ -5,7 +5,7 @@
 #ifndef INTEL_HDA_CODEC_UTILS_STREAM_BASE_H_
 #define INTEL_HDA_CODEC_UTILS_STREAM_BASE_H_
 
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <fuchsia/hardware/intelhda/codec/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>

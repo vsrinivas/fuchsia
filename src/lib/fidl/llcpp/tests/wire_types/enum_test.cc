@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/llcpp/types/test/llcpp/fidl.h>
+#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+
 #include <gtest/gtest.h>
 
 using fidl_llcpp_types_test::wire::FlexibleEnum;

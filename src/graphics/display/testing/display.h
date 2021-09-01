@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_TESTING_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_TESTING_DISPLAY_H_
 
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/pixelformat.h>
 

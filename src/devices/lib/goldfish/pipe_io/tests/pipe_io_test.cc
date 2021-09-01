@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
 
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 
 #include <ddktl/device.h>

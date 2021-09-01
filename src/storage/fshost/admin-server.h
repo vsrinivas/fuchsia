@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_ADMIN_SERVER_H_
 #define SRC_STORAGE_FSHOST_ADMIN_SERVER_H_
 
-#include <fuchsia/fshost/llcpp/fidl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <lib/async-loop/default.h>
 
 #include <thread>

@@ -5,8 +5,8 @@
 #include "nand-broker.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/nand/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

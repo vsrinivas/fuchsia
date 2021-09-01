@@ -4,7 +4,7 @@
 
 #include "radarutil.h"
 
-#include <fuchsia/hardware/radar/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.radar/cpp/wire.h>
 #include <lib/async/time.h>
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/zx/status.h>

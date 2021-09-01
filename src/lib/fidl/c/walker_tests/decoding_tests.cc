@@ -10,9 +10,10 @@
 #include <zircon/syscalls.h>
 #endif
 
+#include <fidl/fidl.test.coding/cpp/wire.h>
+
 #include <memory>
 
-#include <fidl/test/coding/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 #include "fidl_coded_types.h"

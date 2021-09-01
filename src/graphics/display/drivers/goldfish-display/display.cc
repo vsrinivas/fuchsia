@@ -4,7 +4,7 @@
 
 #include "display.h"
 
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>

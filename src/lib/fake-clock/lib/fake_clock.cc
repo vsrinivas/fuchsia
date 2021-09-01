@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/testing/deadline/llcpp/fidl.h>
-#include <fuchsia/testing/llcpp/fidl.h>
+#include <fidl/fuchsia.testing.deadline/cpp/wire.h>
+#include <fidl/fuchsia.testing/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/port.h>

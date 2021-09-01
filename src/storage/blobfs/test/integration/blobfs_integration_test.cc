@@ -5,9 +5,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/blobfs/c/fidl.h>
-#include <fuchsia/fs/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>

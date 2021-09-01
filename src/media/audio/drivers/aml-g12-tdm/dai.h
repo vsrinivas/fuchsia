@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_DAI_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_DAI_H_
 
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

@@ -5,8 +5,8 @@
 #ifndef STORAGE_METRICS_STORAGE_METRICS_H_
 #define STORAGE_METRICS_STORAGE_METRICS_H_
 
+#include <fidl/fuchsia.storage.metrics/cpp/wire.h>
 #include <fuchsia/storage/metrics/c/fidl.h>
-#include <fuchsia/storage/metrics/llcpp/fidl.h>
 #include <stdio.h>
 
 #include <atomic>

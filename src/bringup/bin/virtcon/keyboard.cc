@@ -5,8 +5,8 @@
 #include "keyboard.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/input/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>

@@ -26,7 +26,7 @@
 #include <zxtest/zxtest.h>
 
 // Interface under test.
-#include <fidl/test/llcpp/dirent/llcpp/fidl.h>
+#include <fidl/fidl.test.llcpp.dirent/cpp/wire.h>
 
 // Namespace shorthand for bindings generated code
 namespace gen = ::fidl_test_llcpp_dirent;

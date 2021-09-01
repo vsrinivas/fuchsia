@@ -13,7 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "fuchsia/shell/llcpp/fidl.h"
+#include "fidl/fuchsia.shell/cpp/wire.h"
 #include "fuchsia/sys/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/sys/cpp/component_context.h"

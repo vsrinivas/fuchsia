@@ -4,8 +4,8 @@
 
 #include "src/devices/lib/driver2/devfs_exporter.h"
 
+#include <fidl/fuchsia.logger/cpp/wire.h>
 #include <fuchsia/device/fs/cpp/fidl_test_base.h>
-#include <fuchsia/logger/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>

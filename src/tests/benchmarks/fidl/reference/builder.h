@@ -7,7 +7,7 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_BUILDER_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_BUILDER_H_
 
-#include <benchmarkfidl/llcpp/fidl.h>
+#include <fidl/benchmarkfidl/cpp/wire.h>
 
 namespace benchmark_suite {
 

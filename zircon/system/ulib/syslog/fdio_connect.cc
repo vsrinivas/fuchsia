@@ -4,7 +4,7 @@
 
 #include "fdio_connect.h"
 
-#include <fuchsia/logger/llcpp/fidl.h>
+#include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>

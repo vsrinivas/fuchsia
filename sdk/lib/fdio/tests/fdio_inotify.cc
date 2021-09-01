@@ -19,8 +19,8 @@
 #endif
 
 #if defined(__Fuchsia__)
-#include <fuchsia/io/llcpp/fidl_test_base.h>
-#include <fuchsia/io2/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
+#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>

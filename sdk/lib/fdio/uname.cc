@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <string.h>
 #include <sys/utsname.h>
 #include <zircon/types.h>

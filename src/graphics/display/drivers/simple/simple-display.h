@@ -11,9 +11,9 @@
 
 #if __cplusplus
 
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/llcpp/server.h>

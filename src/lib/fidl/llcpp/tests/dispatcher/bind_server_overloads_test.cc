@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/sync/completion.h>
 
-#include <fidl/test/coding/fuchsia/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 namespace {

@@ -5,8 +5,8 @@
 #ifndef SRC_BRINGUP_BIN_CONSOLE_CONSOLE_H_
 #define SRC_BRINGUP_BIN_CONSOLE_CONSOLE_H_
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
-#include <fuchsia/logger/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
+#include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>

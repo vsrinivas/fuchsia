@@ -5,7 +5,7 @@
 #ifndef LIB_USB_PERIPHERAL_UTILS_EVENT_WATCHER_H_
 #define LIB_USB_PERIPHERAL_UTILS_EVENT_WATCHER_H_
 
-#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <zircon/types.h>

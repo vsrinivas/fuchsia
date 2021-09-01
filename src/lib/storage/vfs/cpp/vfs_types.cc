@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fit/function.h>
 

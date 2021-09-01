@@ -8,7 +8,7 @@
 
 #include "src/storage/blobfs/compression/decompressor_sandbox/decompressor_impl.h"
 
-#include <fuchsia/blobfs/internal/llcpp/fidl.h>
+#include <fidl/fuchsia.blobfs.internal/cpp/wire.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>

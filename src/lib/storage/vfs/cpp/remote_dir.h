@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_REMOTE_DIR_H_
 #define SRC_LIB_STORAGE_VFS_CPP_REMOTE_DIR_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include <fbl/macros.h>
 

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_HDMI_HOST_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_HDMI_HOST_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_HDMI_HOST_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_HDMI_HOST_H_
 
+#include <fidl/fuchsia.hardware.hdmi/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/hdmi/cpp/banjo.h>
-#include <fuchsia/hardware/hdmi/llcpp/fidl.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -145,4 +145,4 @@ class HdmiHost {
 
 }  // namespace amlogic_display
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_HDMI_HOST_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_HDMI_HOST_H_

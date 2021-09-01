@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.exception/cpp/wire.h>
+#include <fidl/fuchsia.power.manager/cpp/wire.h>
+#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/exception/llcpp/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
-#include <fuchsia/power/manager/llcpp/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
-#include <fuchsia/sys2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>

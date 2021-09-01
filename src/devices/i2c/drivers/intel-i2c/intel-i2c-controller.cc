@@ -7,10 +7,10 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/fidl.h>
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/debug.h>

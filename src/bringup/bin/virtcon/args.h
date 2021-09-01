@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_VIRTCON_ARGS_H_
 #define SRC_BRINGUP_BIN_VIRTCON_ARGS_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/gfx-font-data/gfx-font-data.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>

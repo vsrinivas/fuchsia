@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
 #define SRC_DEVICES_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
 
+#include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
-#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/operation/nand.h>
 #include <lib/zircon-internal/thread_annotations.h>

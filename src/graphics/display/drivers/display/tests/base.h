@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TESTS_BASE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TESTS_BASE_H_
 
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>

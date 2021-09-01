@@ -5,9 +5,9 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AML_HDMI_AML_HDMI_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AML_HDMI_AML_HDMI_H_
 
+#include <fidl/fuchsia.hardware.hdmi/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/hdmi/cpp/banjo.h>
-#include <fuchsia/hardware/hdmi/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/pdev.h>

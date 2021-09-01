@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_BLOB_CORRUPTION_NOTIFIER_H_
 #define SRC_STORAGE_BLOBFS_BLOB_CORRUPTION_NOTIFIER_H_
 
-#include <fuchsia/blobfs/llcpp/fidl.h>
+#include <fidl/fuchsia.blobfs/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

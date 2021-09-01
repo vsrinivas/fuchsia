@@ -4,7 +4,7 @@
 
 #include "ft_device.h"
 
-#include <fuchsia/input/report/llcpp/fidl.h>
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/hw/arch_ops.h>

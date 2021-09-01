@@ -7,7 +7,7 @@
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
-#include "fuchsia/acpi/chromeos/llcpp/fidl.h"
+#include "fidl/fuchsia.acpi.chromeos/cpp/wire.h"
 #include "src/devices/lib/acpi/mock/mock-acpi.h"
 #include "src/devices/misc/drivers/chromeos-acpi/chromeos_acpi.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"

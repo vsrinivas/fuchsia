@@ -5,8 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_FT8201_FT8201_H_
 #define SRC_UI_INPUT_DRIVERS_FT8201_FT8201_H_
 
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
-#include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/i2c-channel.h>

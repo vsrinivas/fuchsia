@@ -4,8 +4,8 @@
 
 #include "src/storage/blobfs/runner.h"
 
-#include <fuchsia/fs/llcpp/fidl.h>
-#include <fuchsia/update/verify/llcpp/fidl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
+#include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 

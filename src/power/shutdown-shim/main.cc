@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/process/lifecycle/llcpp/fidl.h>
-#include <fuchsia/sys2/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
+#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>

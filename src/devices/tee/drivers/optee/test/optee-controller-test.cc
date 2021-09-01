@@ -4,8 +4,8 @@
 
 #include "../optee-controller.h"
 
+#include <fidl/fuchsia.hardware.rpmb/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
-#include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

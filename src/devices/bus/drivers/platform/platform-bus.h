@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
 
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
@@ -12,7 +13,6 @@
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>

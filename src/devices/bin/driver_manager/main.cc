@@ -39,7 +39,7 @@
 #include "driver_host_loader_service.h"
 #include "driver_runner.h"
 #include "fdio.h"
-#include "fuchsia/io/llcpp/fidl.h"
+#include "fidl/fuchsia.io/cpp/wire.h"
 #include "src/devices/bin/driver_manager/devfs_exporter.h"
 #include "src/devices/bin/driver_manager/device_watcher.h"
 #include "src/devices/lib/log/log.h"

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_X86_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_X86_H_
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

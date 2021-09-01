@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fidl/fuchsia.gpu.magma/cpp/wire.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #include "amlogic-display.h"
 
-#include <fuchsia/sysmem/llcpp/fidl_test_base.h>
+#include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>

@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 
 #include <zxtest/zxtest.h>
 

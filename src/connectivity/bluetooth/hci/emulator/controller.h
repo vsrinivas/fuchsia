@@ -4,7 +4,7 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_CONTROLLER_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_CONTROLLER_H_
 
-#include <fuchsia/hardware/bluetooth/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.bluetooth/cpp/wire.h>
 #include <lib/ddk/driver.h>
 
 #include <ddktl/device.h>

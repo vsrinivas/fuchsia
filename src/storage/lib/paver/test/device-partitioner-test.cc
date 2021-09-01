@@ -6,8 +6,8 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

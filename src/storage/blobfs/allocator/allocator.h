@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_ALLOCATOR_ALLOCATOR_H_
 #define SRC_STORAGE_BLOBFS_ALLOCATOR_ALLOCATOR_H_
 
-#include <fuchsia/blobfs/llcpp/fidl.h>
+#include <fidl/fuchsia.blobfs/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>

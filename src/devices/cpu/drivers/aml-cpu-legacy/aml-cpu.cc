@@ -21,7 +21,7 @@
 #include <ddktl/fidl.h>
 #include <soc/aml-common/aml-cpu-metadata.h>
 
-#include "fuchsia/hardware/thermal/llcpp/fidl.h"
+#include "fidl/fuchsia.hardware.thermal/cpp/wire.h"
 #include "src/devices/cpu/drivers/aml-cpu-legacy/aml-cpu-legacy-bind.h"
 
 namespace {

@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_PORT_WATCHER_H_
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_PORT_WATCHER_H_
 
-#include <fuchsia/hardware/network/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/server.h>
 

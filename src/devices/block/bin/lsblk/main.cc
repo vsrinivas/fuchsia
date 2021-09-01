@@ -4,10 +4,10 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/block/llcpp/fidl.h>
-#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
-#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>

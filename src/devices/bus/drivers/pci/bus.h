@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 
-#include <fuchsia/hardware/pci/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pci/cpp/wire.h>
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/device.h>

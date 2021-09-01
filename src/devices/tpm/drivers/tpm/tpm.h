@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_TPM_DRIVERS_TPM_TPM_H_
 #define SRC_DEVICES_TPM_DRIVERS_TPM_TPM_H_
 
-#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
-#include <fuchsia/tpm/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
+#include <fidl/fuchsia.tpm/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/inspect/cpp/inspector.h>
 

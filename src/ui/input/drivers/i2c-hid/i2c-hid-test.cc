@@ -5,7 +5,7 @@
 #include "i2c-hid.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/debug.h>

@@ -5,8 +5,8 @@
 #include "fs-manager.h"
 
 #include <fcntl.h>
-#include <fuchsia/feedback/llcpp/fidl.h>
-#include <fuchsia/fshost/llcpp/fidl.h>
+#include <fidl/fuchsia.feedback/cpp/wire.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -39,8 +39,8 @@
 
 #include "admin-server.h"
 #include "block-watcher.h"
+#include "fidl/fuchsia.ldsvc/cpp/wire.h"
 #include "fshost-boot-args.h"
-#include "fuchsia/ldsvc/llcpp/fidl.h"
 #include "lib/async/cpp/task.h"
 #include "lifecycle.h"
 #include "metrics.h"

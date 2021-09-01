@@ -5,8 +5,8 @@
 #ifndef SRC_STORAGE_FSHOST_FS_MANAGER_H_
 #define SRC_STORAGE_FSHOST_FS_MANAGER_H_
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/process/lifecycle/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>

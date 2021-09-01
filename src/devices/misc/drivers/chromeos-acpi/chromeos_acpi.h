@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_MISC_DRIVERS_CHROMEOS_ACPI_CHROMEOS_ACPI_H_
 #define SRC_DEVICES_MISC_DRIVERS_CHROMEOS_ACPI_CHROMEOS_ACPI_H_
 
-#include <fuchsia/acpi/chromeos/llcpp/fidl.h>
+#include <fidl/fuchsia.acpi.chromeos/cpp/wire.h>
 #include <lib/inspect/cpp/inspect.h>
 
 #include <unordered_set>

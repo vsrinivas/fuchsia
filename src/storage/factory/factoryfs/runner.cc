@@ -4,7 +4,7 @@
 
 #include "src/storage/factory/factoryfs/runner.h"
 
-#include <fuchsia/fs/llcpp/fidl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <fbl/auto_lock.h>

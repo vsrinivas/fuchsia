@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMISTOR_THERMISTOR_CHANNEL_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMISTOR_THERMISTOR_CHANNEL_H_
 
-#include <fuchsia/hardware/adc/llcpp/fidl.h>
-#include <fuchsia/hardware/temperature/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.adc/cpp/wire.h>
+#include <fidl/fuchsia.hardware.temperature/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/thermal/ntc.h>

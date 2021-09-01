@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_TESTS_MOCK_DEVICE_FIDL_H_
 #define SRC_DEVICES_TESTS_MOCK_DEVICE_FIDL_H_
 
-#include <fuchsia/device/mock/llcpp/fidl.h>
+#include <fidl/fuchsia.device.mock/cpp/wire.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/channel.h>
 

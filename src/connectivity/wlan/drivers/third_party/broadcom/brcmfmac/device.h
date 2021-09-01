@@ -14,7 +14,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
 
-#include <fuchsia/factory/wlan/llcpp/fidl.h>
+#include <fidl/fuchsia.factory.wlan/cpp/wire.h>
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/ddk/device.h>

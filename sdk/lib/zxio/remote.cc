@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/io2/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/vector.h>

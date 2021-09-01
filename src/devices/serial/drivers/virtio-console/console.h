@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_VIRTIO_CONSOLE_CONSOLE_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_VIRTIO_CONSOLE_CONSOLE_H_
 
-#include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.virtioconsole/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/device.h>

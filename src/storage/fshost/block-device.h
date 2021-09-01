@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_BLOCK_DEVICE_H_
 #define SRC_STORAGE_FSHOST_BLOCK_DEVICE_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
 

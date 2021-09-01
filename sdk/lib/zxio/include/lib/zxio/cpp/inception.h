@@ -5,9 +5,9 @@
 #ifndef LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_INCEPTION_H_
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_INCEPTION_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/posix/socket/llcpp/fidl.h>
-#include <fuchsia/posix/socket/raw/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
 #include <threads.h>

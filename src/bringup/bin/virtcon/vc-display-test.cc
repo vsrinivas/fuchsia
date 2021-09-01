@@ -5,9 +5,9 @@
 #include "vc-display.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-#include <fuchsia/hardware/display/llcpp/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>

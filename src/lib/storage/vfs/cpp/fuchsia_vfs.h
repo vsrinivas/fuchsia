@@ -5,8 +5,8 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_FUCHSIA_VFS_H_
 #define SRC_LIB_STORAGE_VFS_CPP_FUCHSIA_VFS_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/io2/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/function.h>

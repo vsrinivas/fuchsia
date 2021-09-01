@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/mediacodec/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.mediacodec/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>

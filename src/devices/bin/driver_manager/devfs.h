@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>

@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_SPI_DRIVERS_INTEL_GSPI_INTEL_GSPI_H_
 #define SRC_DEVICES_SPI_DRIVERS_INTEL_GSPI_INTEL_GSPI_H_
 
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/inspect/cpp/inspect.h>

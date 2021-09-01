@@ -4,8 +4,8 @@
 
 #include "src/graphics/drivers/misc/goldfish_sync/sync_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fuchsia/hardware/acpi/cpp/banjo-mock.h>
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>

@@ -4,7 +4,7 @@
 
 #include "src/storage/fshost/pkgfs-launcher.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>

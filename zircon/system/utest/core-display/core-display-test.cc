@@ -7,11 +7,11 @@
 
 // clang-format off
 // Required because banjo defines some macros that conflict with LLCPP.
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 // clang-format on
-#include <fuchsia/sysinfo/llcpp/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>

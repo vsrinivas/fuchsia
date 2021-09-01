@@ -4,7 +4,7 @@
 
 #include "manager.h"
 
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
 

@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_SYSINFO_SYSINFO_H_
 #define SRC_BRINGUP_BIN_SYSINFO_SYSINFO_H_
 
-#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>

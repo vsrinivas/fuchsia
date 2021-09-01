@@ -102,7 +102,7 @@ static_library("cpp") {
       "watcher.cc",
     ]
     public_deps += [
-      # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
+      # <fs/vnode.h> has #include <fidl/fuchsia.io/cpp/wire.h>.
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
       "//sdk/lib/file-lock:cpp",

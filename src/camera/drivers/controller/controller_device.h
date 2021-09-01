@@ -11,7 +11,7 @@
 #include <threads.h>
 #endif
 
-#include <fuchsia/hardware/camera/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.camera/cpp/wire.h>
 #include <fuchsia/hardware/gdc/cpp/banjo.h>
 #include <fuchsia/hardware/ge2d/cpp/banjo.h>
 #include <fuchsia/hardware/isp/cpp/banjo.h>

@@ -5,8 +5,8 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.cpu.ctrl/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>

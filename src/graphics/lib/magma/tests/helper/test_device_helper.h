@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_LIB_MAGMA_TESTS_HELPER_TEST_DEVICE_HELPER_H_
 #define SRC_GRAPHICS_LIB_MAGMA_TESTS_HELPER_TEST_DEVICE_HELPER_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/service/llcpp/service.h>

@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/vfs/cpp/service.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>

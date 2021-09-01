@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_RTC_DRIVERS_INTEL_RTC_INTEL_RTC_H_
 #define SRC_DEVICES_RTC_DRIVERS_INTEL_RTC_INTEL_RTC_H_
 
-#include <fuchsia/hardware/nvram/llcpp/fidl.h>
-#include <fuchsia/hardware/rtc/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.nvram/cpp/wire.h>
+#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <librtc_llcpp.h>
 

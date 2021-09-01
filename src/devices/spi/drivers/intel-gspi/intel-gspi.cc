@@ -4,8 +4,8 @@
 
 #include "intel-gspi.h"
 
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <fuchsia/hardware/syscalls/pci/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>

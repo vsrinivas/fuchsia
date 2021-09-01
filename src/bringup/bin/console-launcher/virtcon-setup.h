@@ -5,8 +5,8 @@
 #ifndef SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_VIRTCON_SETUP_H_
 #define SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_VIRTCON_SETUP_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/virtualconsole/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.virtualconsole/cpp/wire.h>
 #include <lib/zx/status.h>
 
 namespace console_launcher {

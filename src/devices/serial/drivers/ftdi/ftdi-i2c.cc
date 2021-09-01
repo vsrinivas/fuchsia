@@ -4,8 +4,8 @@
 
 #include "ftdi-i2c.h"
 
-#include <fuchsia/hardware/ftdi/llcpp/fidl.h>
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ftdi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

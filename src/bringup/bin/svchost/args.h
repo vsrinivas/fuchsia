@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_SVCHOST_ARGS_H_
 #define SRC_BRINGUP_BIN_SVCHOST_ARGS_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 
 namespace svchost {
 

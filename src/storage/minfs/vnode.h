@@ -13,8 +13,8 @@
 #include <utility>
 
 #ifdef __Fuchsia__
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/minfs/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 

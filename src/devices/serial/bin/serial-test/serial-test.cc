@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/serial/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.serial/cpp/wire.h>
 #include <lib/fdio/unsafe.h>
 #include <stdio.h>
 #include <stdlib.h>

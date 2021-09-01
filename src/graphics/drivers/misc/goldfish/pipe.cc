@@ -4,7 +4,7 @@
 
 #include "src/graphics/drivers/misc/goldfish/pipe.h"
 
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zx/bti.h>

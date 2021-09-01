@@ -5,8 +5,8 @@
 #include "src/bringup/bin/console-launcher/console_launcher.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.virtioconsole/cpp/wire.h>
 #include <fuchsia/boot/cpp/fidl.h>
-#include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>

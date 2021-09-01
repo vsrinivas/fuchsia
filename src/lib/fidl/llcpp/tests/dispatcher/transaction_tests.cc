@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/sync/completion.h>
@@ -11,7 +12,6 @@
 #include <thread>
 #include <type_traits>
 
-#include <fidl/test/coding/fuchsia/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 namespace {

@@ -5,7 +5,7 @@
 #include "src/lib/storage/vfs/cpp/remote_file_connection.h"
 
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zircon-internal/debug.h>

@@ -15,8 +15,8 @@
 
 #ifdef __Fuchsia__
 
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/io2/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io2/cpp/wire.h>
 
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
 

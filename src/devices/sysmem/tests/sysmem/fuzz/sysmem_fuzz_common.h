@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_SYSMEM_TESTS_SYSMEM_FUZZ_SYSMEM_FUZZ_COMMON_H_
 #define SRC_DEVICES_SYSMEM_TESTS_SYSMEM_FUZZ_SYSMEM_FUZZ_COMMON_H_
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"

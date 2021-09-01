@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_SERIAL_ASYNC_SERIAL_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_SERIAL_ASYNC_SERIAL_H_
 
+#include <fidl/fuchsia.hardware.serial/cpp/wire.h>
 #include <fuchsia/hardware/serial/cpp/banjo.h>
-#include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <fuchsia/hardware/serialimpl/async/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/driver.h>

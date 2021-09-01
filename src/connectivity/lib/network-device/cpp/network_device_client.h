@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_LIB_NETWORK_DEVICE_CPP_NETWORK_DEVICE_CLIENT_H_
 #define SRC_CONNECTIVITY_LIB_NETWORK_DEVICE_CPP_NETWORK_DEVICE_CLIENT_H_
 
-#include <fuchsia/hardware/network/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fzl/vmo-mapper.h>

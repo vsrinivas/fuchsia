@@ -4,7 +4,7 @@
 
 #include "ram-nand-ctl.h"
 
-#include <fuchsia/hardware/nand/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/zx/vmo.h>
 #include <stdlib.h>

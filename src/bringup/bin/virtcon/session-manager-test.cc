@@ -4,7 +4,7 @@
 
 #include "src/bringup/bin/virtcon/session-manager.h"
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include <memory>

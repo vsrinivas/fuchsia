@@ -5,7 +5,7 @@
 #ifndef LIB_FS_PTY_TTY_CONNECTION_INTERNAL_H_
 #define LIB_FS_PTY_TTY_CONNECTION_INTERNAL_H_
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 
 namespace fs_pty::internal {
 

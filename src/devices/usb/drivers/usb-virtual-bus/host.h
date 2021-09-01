@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_HOST_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_HOST_H_
 
+#include <fidl/fuchsia.hardware.usb.virtualbustest/cpp/wire.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
-#include <fuchsia/hardware/usb/virtualbustest/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 
 #include <thread>

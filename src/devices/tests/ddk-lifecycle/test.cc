@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/device/lifecycle/test/llcpp/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/serial/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.device.lifecycle.test/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.serial/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>

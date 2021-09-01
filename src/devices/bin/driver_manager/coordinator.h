@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/driver/development/llcpp/fidl.h>
-#include <fuchsia/driver/registrar/llcpp/fidl.h>
-#include <fuchsia/fshost/llcpp/fidl.h>
-#include <fuchsia/power/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.driver.development/cpp/wire.h>
+#include <fidl/fuchsia.driver.registrar/cpp/wire.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.power.manager/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/device.h>
@@ -40,9 +40,9 @@
 #include "driver_host.h"
 #include "driver_loader.h"
 #include "fbl/auto_lock.h"
-#include "fuchsia/device/manager/llcpp/fidl.h"
-#include "fuchsia/driver/framework/llcpp/fidl.h"
-#include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
+#include "fidl/fuchsia.device.manager/cpp/wire.h"
+#include "fidl/fuchsia.driver.framework/cpp/wire.h"
+#include "fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h"
 #include "init_task.h"
 #include "inspect.h"
 #include "metadata.h"

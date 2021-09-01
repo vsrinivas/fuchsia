@@ -5,8 +5,8 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>

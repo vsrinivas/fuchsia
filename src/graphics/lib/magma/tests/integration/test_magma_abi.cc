@@ -17,7 +17,7 @@
 
 #include <filesystem>
 
-#include "fuchsia/gpu/magma/llcpp/fidl.h"
+#include "fidl/fuchsia.gpu.magma/cpp/wire.h"
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma_sysmem.h"
 #include "platform_logger.h"

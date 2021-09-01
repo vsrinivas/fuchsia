@@ -4,9 +4,9 @@
 
 #include "device.h"
 
+#include <fidl/fuchsia.wlan.device/cpp/wire.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
-#include <fuchsia/wlan/device/llcpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <net/ethernet.h>

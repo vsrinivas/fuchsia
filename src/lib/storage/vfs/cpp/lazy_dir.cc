@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/vfs/cpp/lazy_dir.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include <algorithm>
 #include <string_view>

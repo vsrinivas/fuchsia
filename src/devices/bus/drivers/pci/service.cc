@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <fuchsia/hardware/pci/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pci/cpp/wire.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <zircon/hw/pci.h>
 

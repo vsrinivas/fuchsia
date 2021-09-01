@@ -4,7 +4,7 @@
 
 #include "include/lib/spi/spi.h"
 
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 
 __BEGIN_CDECLS
 

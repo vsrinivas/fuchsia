@@ -11,8 +11,8 @@
 #error Fuchsia-only Header
 #endif
 
-#include <fuchsia/blobfs/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.blobfs/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include <string_view>
 

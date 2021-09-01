@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_BIN_SDIO_SDIO_H_
 #define SRC_DEVICES_BLOCK_BIN_SDIO_SDIO_H_
 
-#include <fuchsia/hardware/sdio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.sdio/cpp/wire.h>
 
 namespace sdio {
 

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_SHELL_INTERPRETER_SRC_SERVER_H_
 #define SRC_DEVELOPER_SHELL_INTERPRETER_SRC_SERVER_H_
 
-#include <fuchsia/shell/llcpp/fidl.h>
+#include <fidl/fuchsia.shell/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/stdcompat/optional.h>
 #include <zircon/status.h>

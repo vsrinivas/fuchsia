@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.telephony.transport/cpp/wire.h>
+#include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
+#include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
 #include <lib/gtest/real_loop_fixture.h>

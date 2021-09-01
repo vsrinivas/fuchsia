@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/inspect/test/llcpp/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device.inspect.test/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>

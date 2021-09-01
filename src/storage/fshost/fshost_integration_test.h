@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_
 #define SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_
 
-#include <fuchsia/fshost/llcpp/fidl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 

@@ -5,8 +5,8 @@
 #ifndef SRC_STORAGE_BLOBFS_COMPRESSION_EXTERNAL_DECOMPRESSOR_H_
 #define SRC_STORAGE_BLOBFS_COMPRESSION_EXTERNAL_DECOMPRESSOR_H_
 
+#include <fidl/fuchsia.blobfs.internal/cpp/wire.h>
 #include <fuchsia/blobfs/internal/cpp/fidl.h>
-#include <fuchsia/blobfs/internal/llcpp/fidl.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>

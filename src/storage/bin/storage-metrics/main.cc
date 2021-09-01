@@ -4,9 +4,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
-#include <fuchsia/minfs/llcpp/fidl.h>
 #include <fuchsia/storage/metrics/c/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/cpp/caller.h>

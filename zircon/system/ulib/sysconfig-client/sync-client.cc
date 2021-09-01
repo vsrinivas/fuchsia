@@ -9,7 +9,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/cksum.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>

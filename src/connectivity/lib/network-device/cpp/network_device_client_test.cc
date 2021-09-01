@@ -4,7 +4,7 @@
 
 #include "src/connectivity/lib/network-device/cpp/network_device_client.h"
 
-#include <fuchsia/net/tun/llcpp/fidl.h>
+#include <fidl/fuchsia.net.tun/cpp/wire.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/service/llcpp/service.h>

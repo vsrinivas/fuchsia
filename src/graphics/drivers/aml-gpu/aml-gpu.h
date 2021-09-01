@@ -4,11 +4,11 @@
 #ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 
-#include <fuchsia/hardware/gpu/clock/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.gpu.clock/cpp/wire.h>
+#include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <fuchsia/hardware/gpu/mali/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
-#include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspect.h>

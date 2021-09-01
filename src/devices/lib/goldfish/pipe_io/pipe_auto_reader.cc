@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/goldfish/pipe_io/pipe_auto_reader.h"
 
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 

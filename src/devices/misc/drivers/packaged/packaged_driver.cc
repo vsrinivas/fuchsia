@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/driver/framework/llcpp/fidl.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/svc/outgoing.h>
 
 #include "src/devices/lib/driver2/inspect.h"

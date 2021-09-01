@@ -4,7 +4,7 @@
 
 #include "debuglog.h"
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/clock.h>

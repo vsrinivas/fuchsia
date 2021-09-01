@@ -4,7 +4,7 @@
 
 #include "src/devices/board/drivers/x86/acpi/fidl.h"
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/ddk/debug.h>
 
 #include "lib/fidl/llcpp/message.h"

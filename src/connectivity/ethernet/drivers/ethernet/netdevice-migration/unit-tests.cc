@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/ethernet/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ethernet/cpp/wire.h>
 
 #include <array>
 

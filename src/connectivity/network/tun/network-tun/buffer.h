@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_BUFFER_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_BUFFER_H_
 
+#include <fidl/fuchsia.net.tun/cpp/wire.h>
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
-#include <fuchsia/net/tun/llcpp/fidl.h>
 
 #include <array>
 

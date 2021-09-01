@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_PAYLOAD_STREAMER_H_
 #define SRC_BRINGUP_BIN_NETSVC_PAYLOAD_STREAMER_H_
 
-#include <fuchsia/paver/llcpp/fidl.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>

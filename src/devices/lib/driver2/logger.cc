@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/driver2/logger.h"
 
-#include <fuchsia/logger/llcpp/fidl.h>
+#include <fidl/fuchsia.logger/cpp/wire.h>
 
 namespace driver {
 

@@ -4,7 +4,7 @@
 
 #include "tcs3400.h"
 
-#include <fuchsia/input/report/llcpp/fidl.h>
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>

@@ -4,9 +4,9 @@
 
 #include "usb-device.h"
 
+#include <fidl/fuchsia.hardware.usb.device/cpp/wire.h>
 #include <fuchsia/hardware/usb/bus/c/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
-#include <fuchsia/hardware/usb/device/llcpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>

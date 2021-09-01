@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_HDA_STREAM_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_HDA_STREAM_H_
 
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>

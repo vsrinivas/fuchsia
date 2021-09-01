@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/llcpptest.v2integration.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/message.h>
@@ -10,7 +11,6 @@
 #include <thread>
 
 #include <gtest/gtest.h>
-#include <llcpptest/v2integration/test/llcpp/fidl.h>
 
 typedef struct {
   uint64_t ordinal;

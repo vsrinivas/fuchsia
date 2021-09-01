@@ -4,8 +4,8 @@
 
 #include "system_instance.h"
 
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/kernel/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>

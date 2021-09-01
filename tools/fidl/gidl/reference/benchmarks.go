@@ -19,7 +19,7 @@ import (
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
-#include <benchmarkfidl/llcpp/fidl.h>
+#include <fidl/benchmarkfidl/cpp/wire.h>
 
 namespace benchmark_suite {
 

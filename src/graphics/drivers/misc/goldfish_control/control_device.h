@@ -5,9 +5,9 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/ddk/device.h>

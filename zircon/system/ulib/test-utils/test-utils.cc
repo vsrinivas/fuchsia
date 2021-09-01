@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/process/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/backtrace-request/backtrace-request.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>

@@ -32,10 +32,10 @@ zx_library("devmgr-integration-test") {
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/zx/channel.h>.
     "//zircon/public/lib/zx",
 
-    # <lib/devmgr-integration-test/fixture.h> has #include <fuchsia/io/llcpp/fidl.h>
+    # <lib/devmgr-integration-test/fixture.h> has #include <fidl/fuchsia.io/cpp/wire.h>
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
 
-    # <lib/devmgr-integration-test/fixture.h> has #include <fuchsia/process/lifecycle/llcpp/fidl.h>
+    # <lib/devmgr-integration-test/fixture.h> has #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
   ]
   deps = [

@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_WATCHER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_WATCHER_H_
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <zircon/errors.h>

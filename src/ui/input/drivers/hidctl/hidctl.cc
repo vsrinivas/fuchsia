@@ -4,7 +4,7 @@
 
 #include "hidctl.h"
 
-#include <fuchsia/hardware/hidctl/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.hidctl/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>

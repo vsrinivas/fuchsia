@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_CROS_EC_USB_PD_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_CROS_EC_USB_PD_H_
 
-#include <fuchsia/hardware/power/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.power/cpp/wire.h>
 #include <lib/zx/event.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_OPENTHREAD_TESTS_FAKE_DRIVERS_FAKE_OT_RADIO_FAKE_OT_RADIO_H_
 #define SRC_CONNECTIVITY_OPENTHREAD_TESTS_FAKE_DRIVERS_FAKE_OT_RADIO_FAKE_OT_RADIO_H_
 
-#include <fuchsia/lowpan/spinel/llcpp/fidl.h>
+#include <fidl/fuchsia.lowpan.spinel/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/fidl/llcpp/server.h>

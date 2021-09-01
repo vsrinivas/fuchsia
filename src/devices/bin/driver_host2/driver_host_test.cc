@@ -4,7 +4,7 @@
 
 #include "src/devices/bin/driver_host2/driver_host.h"
 
-#include <fuchsia/driverhost/test/llcpp/fidl.h>
+#include <fidl/fuchsia.driverhost.test/cpp/wire.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

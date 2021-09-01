@@ -4,7 +4,7 @@
 
 #include "mexec.h"
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/memory.h>

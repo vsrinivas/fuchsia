@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_DEVICE_ADAPTER_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_DEVICE_ADAPTER_H_
 
-#include <fuchsia/hardware/network/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.network/cpp/wire.h>
 
 #include <array>
 #include <queue>

@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_PAVER_H_
 #define SRC_BRINGUP_BIN_NETSVC_PAVER_H_
 
-#include <fuchsia/paver/llcpp/fidl.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>

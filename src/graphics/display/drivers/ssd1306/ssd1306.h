@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.dotmatrixdisplay/cpp/wire.h>
 #include <fuchsia/hardware/dotmatrixdisplay/cpp/banjo.h>
-#include <fuchsia/hardware/dotmatrixdisplay/llcpp/fidl.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/i2c.h>

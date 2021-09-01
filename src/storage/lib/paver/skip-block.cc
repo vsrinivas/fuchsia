@@ -4,8 +4,8 @@
 
 #include "src/storage/lib/paver/skip-block.h"
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>

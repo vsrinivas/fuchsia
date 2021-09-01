@@ -4,7 +4,7 @@
 
 #include "src/storage/lib/utils/topological_path.h"
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
 
 namespace storage {

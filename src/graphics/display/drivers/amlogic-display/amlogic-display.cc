@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 #include "amlogic-display.h"
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>

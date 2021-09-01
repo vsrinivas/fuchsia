@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
 
+#include <fidl/fuchsia.hardware.rpmb/cpp/wire.h>
+#include <fidl/fuchsia.hardware.tee/cpp/wire.h>
+#include <fidl/fuchsia.tee.manager/cpp/wire.h>
 #include <fuchsia/hardware/rpmb/cpp/banjo.h>
-#include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/hardware/tee/cpp/banjo.h>
-#include <fuchsia/hardware/tee/llcpp/fidl.h>
-#include <fuchsia/tee/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>

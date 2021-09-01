@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_
 #define SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_
 
-#include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <stdint.h>
 
 namespace minfs_micro_benchmark {

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.test/cpp/wire.h>
 #include <fuchsia/hardware/test/c/fidl.h>
-#include <fuchsia/hardware/test/llcpp/fidl.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>

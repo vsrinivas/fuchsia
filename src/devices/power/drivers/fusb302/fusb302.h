@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_FUSB302_FUSB302_H_
 #define SRC_DEVICES_POWER_DRIVERS_FUSB302_FUSB302_H_
 
-#include <fuchsia/hardware/power/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.power/cpp/wire.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <threads.h>
 

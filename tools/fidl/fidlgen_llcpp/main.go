@@ -47,8 +47,8 @@ var flags = flagsDef{
 			"the output path for the generated C++ implementation."),
 		IncludeBase: flag.String("include-base", "",
 			"[optional] the directory relative to which includes will be computed. "+
-				"If omitted, assumes #include <fidl/library/name/llcpp/fidl.h>"),
-		IncludeStem: flag.String("include-stem", "llcpp/fidl",
+				"If omitted, assumes #include <fidl/library.name/cpp/wire.h>"),
+		IncludeStem: flag.String("include-stem", "cpp/wire",
 			"[optional] the suffix after library path when referencing includes. "+
 				"Includes will be of the form <my/library/{include-stem}.h>. "),
 		ClangFormatPath: flag.String("clang-format-path", "",

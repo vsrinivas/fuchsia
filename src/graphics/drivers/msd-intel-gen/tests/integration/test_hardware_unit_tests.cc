@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.gpu.magma/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <magma_intel_gen_defs.h>

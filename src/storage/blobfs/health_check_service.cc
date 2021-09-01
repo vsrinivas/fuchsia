@@ -4,7 +4,7 @@
 
 #include "src/storage/blobfs/health_check_service.h"
 
-#include <fuchsia/update/verify/llcpp/fidl.h>
+#include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/syslog/cpp/macros.h>

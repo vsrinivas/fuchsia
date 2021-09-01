@@ -12,9 +12,9 @@
 #error Fuchsia-only Header
 #endif
 
-#include <fuchsia/blobfs/llcpp/fidl.h>
+#include <fidl/fuchsia.blobfs/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>

@@ -5,8 +5,8 @@
 #ifndef LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 #define LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/process/lifecycle/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fit/function.h>

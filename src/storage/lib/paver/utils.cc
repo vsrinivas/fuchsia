@@ -7,9 +7,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
-#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <fidl/fuchsia.hardware.skipblock/cpp/wire.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>

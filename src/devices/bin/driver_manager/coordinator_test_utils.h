@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_UTILS_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_UTILS_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/binding.h>

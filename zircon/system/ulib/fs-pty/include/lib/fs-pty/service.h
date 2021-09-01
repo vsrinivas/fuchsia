@@ -5,8 +5,8 @@
 #ifndef LIB_FS_PTY_SERVICE_H_
 #define LIB_FS_PTY_SERVICE_H_
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fs-pty/tty-connection-internal.h>
 #include <lib/zx/eventpair.h>
 

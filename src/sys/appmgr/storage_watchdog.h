@@ -5,7 +5,7 @@
 #ifndef SRC_SYS_APPMGR_STORAGE_WATCHDOG_H_
 #define SRC_SYS_APPMGR_STORAGE_WATCHDOG_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_DEVFS_VNODE_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_DEVFS_VNODE_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fidl/llcpp/transaction.h>
 
 #include <variant>

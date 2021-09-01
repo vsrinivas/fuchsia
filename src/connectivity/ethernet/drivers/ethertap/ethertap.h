@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERTAP_ETHERTAP_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERTAP_ETHERTAP_H_
 
+#include <fidl/fuchsia.hardware.ethertap/cpp/wire.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/ethertap/c/fidl.h>
-#include <fuchsia/hardware/ethertap/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>

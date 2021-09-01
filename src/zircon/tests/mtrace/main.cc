@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <cpuid.h>
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/service/llcpp/service.h>

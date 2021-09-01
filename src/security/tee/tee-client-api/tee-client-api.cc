@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/tee/llcpp/fidl.h>
-#include <fuchsia/tee/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.tee/cpp/wire.h>
+#include <fidl/fuchsia.tee/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>

@@ -5,8 +5,8 @@
 #ifndef SRC_UI_BACKLIGHT_DRIVERS_TI_LP8556_TI_LP8556_H_
 #define SRC_UI_BACKLIGHT_DRIVERS_TI_LP8556_TI_LP8556_H_
 
-#include <fuchsia/hardware/backlight/llcpp/fidl.h>
-#include <fuchsia/hardware/power/sensor/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.backlight/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.sensor/cpp/wire.h>
 #include <lib/ddk/hw/reg.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/inspect/cpp/inspect.h>

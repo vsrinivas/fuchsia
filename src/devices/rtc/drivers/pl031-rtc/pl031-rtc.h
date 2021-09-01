@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_RTC_DRIVERS_PL031_RTC_PL031_RTC_H_
 #define SRC_DEVICES_RTC_DRIVERS_PL031_RTC_PL031_RTC_H_
 
-#include <fuchsia/hardware/rtc/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/mmio/mmio.h>
 

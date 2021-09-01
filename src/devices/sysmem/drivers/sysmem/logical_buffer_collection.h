@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl-async-2/fidl_struct.h>

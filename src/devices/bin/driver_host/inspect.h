@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_INSPECT_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_INSPECT_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/ddk/driver.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/clock.h>

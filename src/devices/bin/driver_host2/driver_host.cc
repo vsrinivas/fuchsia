@@ -4,7 +4,7 @@
 
 #include "src/devices/bin/driver_host2/driver_host.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/function.h>

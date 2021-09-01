@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_MULTIPLE_DEVICE_TEST_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_MULTIPLE_DEVICE_TEST_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/fshost/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <zircon/status.h>
 

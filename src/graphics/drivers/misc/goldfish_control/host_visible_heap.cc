@@ -4,8 +4,8 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/host_visible_heap.h"
 
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>

@@ -5,7 +5,7 @@
 #ifndef LIB_SVC_OUTGOING_H_
 #define LIB_SVC_OUTGOING_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

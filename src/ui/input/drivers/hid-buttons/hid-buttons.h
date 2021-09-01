@@ -5,7 +5,7 @@
 #ifndef SRC_UI_INPUT_DRIVERS_HID_BUTTONS_HID_BUTTONS_H_
 #define SRC_UI_INPUT_DRIVERS_HID_BUTTONS_HID_BUTTONS_H_
 
-#include <fuchsia/buttons/llcpp/fidl.h>
+#include <fidl/fuchsia.buttons/cpp/wire.h>
 #include <fuchsia/hardware/buttons/c/banjo.h>
 #include <fuchsia/hardware/buttons/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>

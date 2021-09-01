@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_LIB_ACPI_MOCK_MOCK_ACPI_H_
 #define SRC_DEVICES_LIB_ACPI_MOCK_MOCK_ACPI_H_
 
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 
 #include <functional>
 

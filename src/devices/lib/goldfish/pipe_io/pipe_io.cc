@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
 
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/result.h>

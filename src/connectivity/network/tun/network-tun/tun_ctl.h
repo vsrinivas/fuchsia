@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_CTL_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_CTL_H_
 
-#include <fuchsia/net/tun/llcpp/fidl.h>
+#include <fidl/fuchsia.net.tun/cpp/wire.h>
 
 #include "tun_device.h"
 #include "tun_pair.h"

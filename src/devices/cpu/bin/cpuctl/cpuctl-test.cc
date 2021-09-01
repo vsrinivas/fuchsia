@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.cpu.ctrl/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fidl-helper.h>

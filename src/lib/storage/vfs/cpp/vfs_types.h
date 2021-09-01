@@ -11,7 +11,7 @@
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>

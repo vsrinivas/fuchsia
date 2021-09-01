@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/driverhost/test/llcpp/fidl.h>
+#include <fidl/fuchsia.driverhost.test/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/service/llcpp/service.h>

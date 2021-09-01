@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_BLOCK_WATCHER_H_
 #define SRC_STORAGE_FSHOST_BLOCK_WATCHER_H_
 
-#include <fuchsia/fshost/llcpp/fidl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 
 #include <condition_variable>
 #include <memory>

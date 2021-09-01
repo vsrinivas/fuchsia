@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DEVICE_MANAGER_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DEVICE_MANAGER_H_
 
-#include <fuchsia/hardware/block/verified/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <stddef.h>
 #include <stdint.h>

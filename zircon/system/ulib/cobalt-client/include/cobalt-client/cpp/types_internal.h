@@ -5,7 +5,7 @@
 #ifndef COBALT_CLIENT_CPP_TYPES_INTERNAL_H_
 #define COBALT_CLIENT_CPP_TYPES_INTERNAL_H_
 
-#include <fuchsia/cobalt/llcpp/fidl.h>
+#include <fidl/fuchsia.cobalt/cpp/wire.h>
 #include <string.h>
 #include <unistd.h>
 

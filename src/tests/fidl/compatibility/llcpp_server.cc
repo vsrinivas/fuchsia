@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.test.compatibility/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -16,8 +17,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-
-#include <fidl/test/compatibility/llcpp/fidl.h>
 
 constexpr const char kEchoInterfaceName[] = "fidl.test.compatibility.Echo";
 

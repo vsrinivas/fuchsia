@@ -4,7 +4,7 @@
 
 #include "src/lib/loader_service/loader_service.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl-async/cpp/bind.h>

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 
 namespace fidl_metadata::i2c {
 zx::status<std::vector<uint8_t>> I2CChannelsToFidl(const cpp20::span<const Channel> channels) {

@@ -5,8 +5,8 @@
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/sysinfo/llcpp/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
@@ -33,7 +33,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
-#include "fuchsia/hardware/display/llcpp/fidl.h"
+#include "fidl/fuchsia.hardware.display/cpp/wire.h"
 #include "lib/ddk/driver.h"
 #include "lib/fdio/directory.h"
 #include "lib/fzl/vmo-mapper.h"

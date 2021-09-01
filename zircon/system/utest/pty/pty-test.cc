@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>

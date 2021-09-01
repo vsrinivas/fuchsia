@@ -4,11 +4,11 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
 #include <lib/fake_ddk/fake_ddk.h>

@@ -4,7 +4,7 @@
 
 #include "src/storage/fshost/pkgfs-loader-service.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>

@@ -4,7 +4,7 @@
 
 #include "virtual-layer.h"
 
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <math.h>
 #include <stdio.h>
 #include <zircon/pixelformat.h>

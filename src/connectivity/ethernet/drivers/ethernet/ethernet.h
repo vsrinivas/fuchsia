@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERNET_ETHERNET_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERNET_ETHERNET_H_
 
+#include <fidl/fuchsia.hardware.ethernet/cpp/wire.h>
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
-#include <fuchsia/hardware/ethernet/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

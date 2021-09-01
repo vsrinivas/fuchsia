@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TESTS_FIDL_CLIENT_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TESTS_FIDL_CLIENT_H_
 
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/pixelformat.h>

@@ -4,11 +4,11 @@
 
 // To get drivermanager to run in a test environment, we need to fake boot-arguments & root-job.
 
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/driver/framework/llcpp/fidl.h>
-#include <fuchsia/kernel/llcpp/fidl.h>
-#include <fuchsia/power/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
+#include <fidl/fuchsia.power.manager/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>

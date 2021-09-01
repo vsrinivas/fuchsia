@@ -5,8 +5,8 @@
 #ifndef SRC_LIB_ISOLATED_DEVMGR_USB_VIRTUAL_BUS_H_
 #define SRC_LIB_ISOLATED_DEVMGR_USB_VIRTUAL_BUS_H_
 
-#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
+#include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/types.h>

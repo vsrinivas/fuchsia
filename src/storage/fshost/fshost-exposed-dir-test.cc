@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/update/verify/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <sys/statfs.h>
 #include <zircon/device/block.h>

@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_NELSON_BROWNOUT_PROTECTION_NELSON_BROWNOUT_PROTECTION_H_
 #define SRC_DEVICES_POWER_DRIVERS_NELSON_BROWNOUT_PROTECTION_NELSON_BROWNOUT_PROTECTION_H_
 
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
-#include <fuchsia/hardware/power/sensor/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.sensor/cpp/wire.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>

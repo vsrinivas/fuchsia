@@ -4,7 +4,7 @@
 
 #include "logical_buffer_collection.h"
 
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/fidl/llcpp/arena.h>

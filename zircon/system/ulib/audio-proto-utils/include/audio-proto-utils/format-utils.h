@@ -5,7 +5,7 @@
 #ifndef AUDIO_PROTO_UTILS_FORMAT_UTILS_H_
 #define AUDIO_PROTO_UTILS_FORMAT_UTILS_H_
 
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/device/audio.h>

@@ -6,7 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/cmdline/args_parser.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/llcpp/vector_view.h>

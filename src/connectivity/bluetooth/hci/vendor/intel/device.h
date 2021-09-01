@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_DEVICE_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_DEVICE_H_
 
-#include <fuchsia/hardware/bluetooth/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.bluetooth/cpp/wire.h>
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <fuchsia/hardware/bt/hci/cpp/banjo.h>
 #include <lib/ddk/driver.h>

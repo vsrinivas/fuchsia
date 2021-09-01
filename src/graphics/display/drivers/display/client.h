@@ -5,8 +5,8 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CLIENT_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CLIENT_H_
 
-#include <fuchsia/hardware/display/llcpp/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>

@@ -5,8 +5,8 @@
 #ifndef SRC_UI_LIGHT_DRIVERS_AML_LIGHT_AML_LIGHT_H_
 #define SRC_UI_LIGHT_DRIVERS_AML_LIGHT_AML_LIGHT_H_
 
+#include <fidl/fuchsia.hardware.light/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
-#include <fuchsia/hardware/light/llcpp/fidl.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <threads.h>

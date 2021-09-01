@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_LOADER_SERVICE_LOADER_SERVICE_TEST_FIXTURE_H_
 #define SRC_LIB_LOADER_SERVICE_LOADER_SERVICE_TEST_FIXTURE_H_
 
-#include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <fidl/fuchsia.ldsvc/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/memfs/cpp/vnode.h>

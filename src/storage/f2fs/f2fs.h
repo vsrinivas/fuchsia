@@ -15,7 +15,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <fuchsia/fs/llcpp/fidl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <lib/async-loop/default.h>
 
 #include <fbl/algorithm.h>

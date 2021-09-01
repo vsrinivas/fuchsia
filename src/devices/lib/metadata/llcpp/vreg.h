@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_METADATA_LLCPP_VREG_H_
 #define SRC_DEVICES_LIB_METADATA_LLCPP_VREG_H_
 
-#include <fuchsia/hardware/vreg/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.vreg/cpp/wire.h>
 
 #include <vector>
 

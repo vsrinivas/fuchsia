@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_DEVICE_H_
 #define SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.securemem/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
-#include <fuchsia/hardware/securemem/llcpp/fidl.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/hardware/tee/cpp/banjo.h>

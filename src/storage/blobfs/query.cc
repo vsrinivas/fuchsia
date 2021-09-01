@@ -4,7 +4,7 @@
 
 #include "src/storage/blobfs/query.h"
 
-#include <fuchsia/fs/llcpp/fidl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <lib/fidl-async/cpp/bind.h>
 
 #include "src/storage/blobfs/blobfs.h"

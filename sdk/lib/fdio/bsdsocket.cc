@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/net/llcpp/fidl.h>
-#include <fuchsia/net/name/llcpp/fidl.h>
-#include <fuchsia/posix/socket/raw/llcpp/fidl.h>
+#include <fidl/fuchsia.net.name/cpp/wire.h>
+#include <fidl/fuchsia.net/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <ifaddrs.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>

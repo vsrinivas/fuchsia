@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/ax88179/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.ax88179/cpp/wire.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>

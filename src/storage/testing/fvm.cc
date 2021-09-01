@@ -4,7 +4,7 @@
 
 #include "src/storage/testing/fvm.h"
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>

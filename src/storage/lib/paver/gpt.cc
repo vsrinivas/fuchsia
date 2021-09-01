@@ -5,7 +5,7 @@
 #include "src/storage/lib/paver/gpt.h"
 
 #include <dirent.h>
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fit/defer.h>
 
 #include <string_view>

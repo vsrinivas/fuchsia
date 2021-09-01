@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/posix/socket/llcpp/fidl_test_base.h>
-#include <fuchsia/posix/socket/raw/llcpp/fidl_test_base.h>
+#include <fidl/fuchsia.posix.socket.raw/cpp/wire_test_base.h>
+#include <fidl/fuchsia.posix.socket/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/eventpair.h>

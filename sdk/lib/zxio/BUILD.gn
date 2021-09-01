@@ -43,13 +43,13 @@ library_headers("inception") {
   public_deps = [
     ":headers",
 
-    # <lib/zxio/cpp/inception.h> has #include <fuchsia/io/llcpp/fidl.h>.
+    # <lib/zxio/cpp/inception.h> has #include <fidl/fuchsia.io/cpp/wire.h>.
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
 
-    # <lib/zxio/inception.h> has #include <fuchsia/posix/socket/llcpp/fidl.h>.
+    # <lib/zxio/inception.h> has #include <fidl/fuchsia.posix.socket/cpp/wire.h>.
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
 
-    # <lib/zxio/inception.h> has #include <fuchsia/posix/socket/raw/llcpp/fidl.h>.
+    # <lib/zxio/inception.h> has #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>.
     "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
   ]
 

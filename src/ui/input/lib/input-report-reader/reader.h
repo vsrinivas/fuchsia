@@ -5,7 +5,7 @@
 #ifndef SRC_UI_INPUT_LIB_INPUT_REPORT_READER_READER_H_
 #define SRC_UI_INPUT_LIB_INPUT_REPORT_READER_READER_H_
 
-#include <fuchsia/input/report/llcpp/fidl.h>
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zircon-internal/thread_annotations.h>
 

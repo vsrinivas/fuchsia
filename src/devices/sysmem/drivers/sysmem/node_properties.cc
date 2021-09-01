@@ -8,7 +8,7 @@
 
 #include <vector>
 
-#include "fuchsia/sysmem2/llcpp/fidl.h"
+#include "fidl/fuchsia.sysmem2/cpp/wire.h"
 #include "logical_buffer_collection.h"
 
 namespace sysmem_driver {

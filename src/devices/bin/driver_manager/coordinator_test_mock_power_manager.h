@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_MOCK_POWER_MANAGER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_MOCK_POWER_MANAGER_H_
 
-#include <fuchsia/power/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.power.manager/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 class MockPowerManager : public fidl::WireServer<fuchsia_power_manager::DriverManagerRegistration> {

@@ -4,7 +4,7 @@
 
 #include "aml-gpu.h"
 
-#include <fuchsia/hardware/gpu/amlogic/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.gpu.amlogic/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/vmo.h>

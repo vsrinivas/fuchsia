@@ -4,8 +4,8 @@
 
 #include "phy-device.h"
 
+#include <fidl/fuchsia.wlan.device/cpp/wire.h>
 #include <fuchsia/hardware/wlanphy/c/banjo.h>
-#include <fuchsia/wlan/device/llcpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>

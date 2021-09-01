@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_BASE_PACKAGE_RESOLVER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_BASE_PACKAGE_RESOLVER_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "zircon/errors.h"

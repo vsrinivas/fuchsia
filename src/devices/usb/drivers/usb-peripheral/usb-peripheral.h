@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_PERIPHERAL_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_PERIPHERAL_H_
 
+#include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
 #include <fuchsia/hardware/usb/dci/cpp/banjo.h>
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
-#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include <vector>

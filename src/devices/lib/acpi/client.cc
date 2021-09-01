@@ -4,8 +4,8 @@
 
 #include "src/devices/lib/acpi/client.h"
 
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <zircon/types.h>

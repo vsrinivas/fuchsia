@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/enummemberadd/llcpp/fidl.h>  // nogncheck
+#include <fidl/fidl.test.enummemberadd/cpp/wire.h>  // nogncheck
 namespace fidl_test = fidl_test_enummemberadd;
 
 // [START contents]

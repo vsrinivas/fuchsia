@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
 #define SRC_DEVICES_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
 
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
-#include <fuchsia/hardware/nand/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>

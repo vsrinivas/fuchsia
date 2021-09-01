@@ -5,12 +5,13 @@
 // This file contains manual test cases that should be migrated to GIDL
 // and be generated as part of conformance_test.cc in the future.
 
+#include <fidl/fidl.test.misc/cpp/wire.h>
+
 #include <iostream>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <fidl/test/misc/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/fidl/llcpp/tests/conformance/conformance_utils.h"

@@ -13,7 +13,7 @@
 #include <string_view>
 
 #ifdef __Fuchsia__
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 

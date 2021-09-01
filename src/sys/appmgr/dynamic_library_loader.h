@@ -5,7 +5,7 @@
 #ifndef SRC_SYS_APPMGR_DYNAMIC_LIBRARY_LOADER_H_
 #define SRC_SYS_APPMGR_DYNAMIC_LIBRARY_LOADER_H_
 
-#include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <fidl/fuchsia.ldsvc/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>

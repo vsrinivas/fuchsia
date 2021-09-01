@@ -4,8 +4,8 @@
 
 #include "src/devices/bin/driver_manager/package_resolver.h"
 
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/pkg/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.pkg/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
 

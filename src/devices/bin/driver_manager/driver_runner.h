@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_RUNNER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_RUNNER_H_
 
-#include <fuchsia/component/runner/llcpp/fidl.h>
-#include <fuchsia/driver/framework/llcpp/fidl.h>
-#include <fuchsia/sys2/llcpp/fidl.h>
+#include <fidl/fuchsia.component.runner/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fit/function.h>

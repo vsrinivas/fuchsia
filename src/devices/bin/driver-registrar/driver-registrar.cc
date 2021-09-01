@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/driver/registrar/llcpp/fidl.h>
+#include <fidl/fuchsia.driver.registrar/cpp/wire.h>
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>

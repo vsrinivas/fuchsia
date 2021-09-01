@@ -5,8 +5,8 @@
 #ifndef LIB_USB_VIRTUAL_BUS_LAUNCHER_USB_VIRTUAL_BUS_LAUNCHER_H_
 #define LIB_USB_VIRTUAL_BUS_LAUNCHER_USB_VIRTUAL_BUS_LAUNCHER_H_
 
-#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
+#include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/usb-virtual-bus-launcher-helper/usb-virtual-bus-launcher-helper.h>
 #include <zircon/types.h>

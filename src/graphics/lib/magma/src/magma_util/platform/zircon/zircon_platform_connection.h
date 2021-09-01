@@ -5,7 +5,7 @@
 #ifndef ZIRCON_PLATFORM_CONNECTION_H
 #define ZIRCON_PLATFORM_CONNECTION_H
 
-#include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fidl/fuchsia.gpu.magma/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>

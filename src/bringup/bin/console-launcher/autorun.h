@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_AUTORUN_H_
 #define SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_AUTORUN_H_
 
-#include <fuchsia/boot/llcpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/zx/job.h>
 #include <zircon/status.h>
 

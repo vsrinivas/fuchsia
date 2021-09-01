@@ -4,8 +4,8 @@
 
 #include "usb-dfu.h"
 
+#include <fidl/fuchsia.mem/cpp/wire.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
-#include <fuchsia/mem/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/vmo.h>

@@ -4,7 +4,7 @@
 
 #define _ALL_SOURCE  // Expose the MTX_INIT extension.
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>

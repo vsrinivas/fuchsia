@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_PSEUDO_DIR_H_
 #define SRC_LIB_STORAGE_VFS_CPP_PSEUDO_DIR_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include <memory>
 #include <mutex>

@@ -4,8 +4,8 @@
 
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEVICE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEVICE_H_
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
-#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/binding.h>

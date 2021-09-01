@@ -5,8 +5,8 @@
 #ifndef SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_H_
 #define SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <lib/zx/eventpair.h>
 
 #include <fbl/intrusive_double_list.h>

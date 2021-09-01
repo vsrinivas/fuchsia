@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_
 
-#include <fuchsia/driver/framework/llcpp/fidl.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/status.h>

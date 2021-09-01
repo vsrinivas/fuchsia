@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_FUNCTION_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_FUNCTION_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.sdio/cpp/wire.h>
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
-#include <fuchsia/hardware/sdio/llcpp/fidl.h>
 
 #include <atomic>
 #include <memory>

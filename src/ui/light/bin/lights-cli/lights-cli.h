@@ -5,7 +5,7 @@
 #ifndef SRC_UI_LIGHT_BIN_LIGHTS_CLI_LIGHTS_CLI_H_
 #define SRC_UI_LIGHT_BIN_LIGHTS_CLI_LIGHTS_CLI_H_
 
-#include <fuchsia/hardware/light/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.light/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 #include <memory>

@@ -5,7 +5,7 @@
 #include "register-util.h"
 
 #include <errno.h>
-#include <fuchsia/hardware/registers/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/directory.h>

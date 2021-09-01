@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_DFU_USB_DFU_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_DFU_USB_DFU_H_
 
-#include <fuchsia/hardware/usb/fwloader/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.usb.fwloader/cpp/wire.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/usb/dfu.h>
 

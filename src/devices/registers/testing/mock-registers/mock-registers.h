@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_REGISTERS_TESTING_MOCK_REGISTERS_MOCK_REGISTERS_H_
 #define SRC_DEVICES_REGISTERS_TESTING_MOCK_REGISTERS_MOCK_REGISTERS_H_
 
+#include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
-#include <fuchsia/hardware/registers/llcpp/fidl.h>
 
 #include <map>
 #include <queue>

@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_CONFIG_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_CONFIG_H_
 
-#include <fuchsia/net/llcpp/fidl.h>
-#include <fuchsia/net/tun/llcpp/fidl.h>
+#include <fidl/fuchsia.net.tun/cpp/wire.h>
+#include <fidl/fuchsia.net/cpp/wire.h>
 
 namespace network {
 namespace tun {

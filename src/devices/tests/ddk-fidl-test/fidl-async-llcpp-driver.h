@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_TESTS_DDK_FIDL_TEST_FIDL_ASYNC_LLCPP_DRIVER_H_
 #define SRC_DEVICES_TESTS_DDK_FIDL_TEST_FIDL_ASYNC_LLCPP_DRIVER_H_
 
-#include <fuchsia/hardware/test/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/driver.h>
 #include <lib/zircon-internal/thread_annotations.h>

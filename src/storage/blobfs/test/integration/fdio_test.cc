@@ -4,8 +4,8 @@
 
 #include "src/storage/blobfs/test/integration/fdio_test.h"
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/inspect/cpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

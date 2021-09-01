@@ -4,7 +4,7 @@
 
 #include "contiguous_pooled_memory_allocator.h"
 
-#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zx/clock.h>
 

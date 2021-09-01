@@ -6,7 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>

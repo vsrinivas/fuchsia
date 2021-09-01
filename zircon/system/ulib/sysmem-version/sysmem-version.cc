@@ -4,9 +4,9 @@
 
 #include "lib/sysmem-version/sysmem-version.h"
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
-#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <zircon/assert.h>

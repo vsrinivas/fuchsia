@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 
 // [START include]
-#include <fuchsia/examples/llcpp/fidl.h>
+#include <fidl/fuchsia.examples/cpp/wire.h>
 // [END include]
 
 namespace {

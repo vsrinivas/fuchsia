@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_FS_METRICS_H_
-#define ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_FS_METRICS_H_
+#ifndef STORAGE_METRICS_FS_METRICS_H_
+#define STORAGE_METRICS_FS_METRICS_H_
 
+#include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <fuchsia/minfs/c/fidl.h>
-#include <fuchsia/minfs/llcpp/fidl.h>
 #include <stdio.h>
 
 #include <atomic>
@@ -114,4 +114,4 @@ class FsMetrics : public Metrics {
 };
 
 }  // namespace storage_metrics
-#endif  // ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_FS_METRICS_H_
+#endif  // STORAGE_METRICS_FS_METRICS_H_

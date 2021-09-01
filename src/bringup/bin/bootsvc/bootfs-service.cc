@@ -5,7 +5,7 @@
 #include "bootfs-service.h"
 
 #include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/items/bootfs.h>

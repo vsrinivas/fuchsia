@@ -5,7 +5,7 @@
 #include "src/virtualization/bin/guest/vshc.h"
 
 #include <fcntl.h>
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_SYSTEM_STATE_MANAGER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_SYSTEM_STATE_MANAGER_H_
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <lib/zx/channel.h>
 
 class Coordinator;

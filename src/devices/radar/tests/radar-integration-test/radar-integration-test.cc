@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <endian.h>
-#include <fuchsia/hardware/radar/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.radar/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>

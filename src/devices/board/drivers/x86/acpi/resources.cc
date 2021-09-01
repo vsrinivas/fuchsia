@@ -4,8 +4,8 @@
 
 #include "src/devices/board/drivers/x86/acpi/resources.h"
 
-#include <fuchsia/hardware/i2c/llcpp/fidl.h>
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
 #include "src/devices/board/drivers/x86/acpi/status.h"

@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_MINFS_COSTS_H_
 #define SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_MINFS_COSTS_H_
 
-#include <fuchsia/storage/metrics/llcpp/fidl.h>
+#include <fidl/fuchsia.storage.metrics/cpp/wire.h>
 
 #include <fs-management/mount.h>
 

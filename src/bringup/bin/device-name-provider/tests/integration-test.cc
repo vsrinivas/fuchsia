@@ -4,7 +4,7 @@
 
 // These tests should run without any network interface (except loopback).
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
 #include <sys/utsname.h>
 

@@ -4,7 +4,7 @@
 
 #include "remote_v2.h"
 
-#include <fuchsia/io2/llcpp/fidl.h>
+#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/vector.h>

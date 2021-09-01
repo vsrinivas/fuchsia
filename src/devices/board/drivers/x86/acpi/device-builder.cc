@@ -4,7 +4,7 @@
 
 #include "src/devices/board/drivers/x86/acpi/device-builder.h"
 
-#include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 

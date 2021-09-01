@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/zx/channel.h>
 
@@ -9,7 +10,6 @@
 #include <optional>
 #include <utility>
 
-#include <fidl/llcpp/types/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
 using ::fidl_llcpp_types_test::TypesTest;

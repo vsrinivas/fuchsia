@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fidl.service.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -17,7 +18,6 @@
 #include <iostream>
 
 #include <fbl/unique_fd.h>
-#include <fidl/service/test/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 namespace {

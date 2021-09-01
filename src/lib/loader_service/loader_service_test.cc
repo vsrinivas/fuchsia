@@ -4,7 +4,7 @@
 
 #include "src/lib/loader_service/loader_service.h"
 
-#include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <fidl/fuchsia.ldsvc/cpp/wire.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>

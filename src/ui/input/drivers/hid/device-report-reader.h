@@ -5,7 +5,7 @@
 #ifndef SRC_UI_INPUT_DRIVERS_HID_DEVICE_REPORT_READER_H_
 #define SRC_UI_INPUT_DRIVERS_HID_DEVICE_REPORT_READER_H_
 
-#include <fuchsia/hardware/input/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.input/cpp/wire.h>
 
 #include <optional>
 

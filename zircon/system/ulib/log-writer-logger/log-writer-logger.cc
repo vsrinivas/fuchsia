@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/logger/llcpp/fidl.h>
+#include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/log-writer-logger/log-writer-logger.h>
 #include <lib/log-writer-logger/wire_format.h>

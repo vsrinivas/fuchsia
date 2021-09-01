@@ -4,10 +4,10 @@
 
 #include "lib/framebuffer/framebuffer.h"
 
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 // FIDL must come before banjo
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fit/defer.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>

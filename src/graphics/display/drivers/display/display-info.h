@@ -8,7 +8,7 @@
 // NOTE: this header is included first on purpose to avoid clashing with
 // Banjo-generated ones below.
 // clang-format off
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 
 #include <fuchsia/hardware/audiotypes/c/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>

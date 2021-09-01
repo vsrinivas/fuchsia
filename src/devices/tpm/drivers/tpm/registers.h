@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_TPM_DRIVERS_TPM_REGISTERS_H_
 #define SRC_DEVICES_TPM_DRIVERS_TPM_REGISTERS_H_
 
-#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/zx/status.h>
 

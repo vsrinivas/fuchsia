@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.tee/cpp/wire.h>
 #include <fuchsia/hardware/tee/c/banjo.h>
-#include <fuchsia/hardware/tee/llcpp/fidl.h>
 
 #include <zxtest/zxtest.h>
 

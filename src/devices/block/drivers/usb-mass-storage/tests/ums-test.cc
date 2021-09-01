@@ -5,10 +5,10 @@
 #include <dirent.h>
 #include <endian.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/peripheral/block/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
-#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <fidl/fuchsia.hardware.usb.peripheral.block/cpp/wire.h>
+#include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
+#include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>

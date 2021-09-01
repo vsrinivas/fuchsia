@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fuchsia/posix/llcpp/fidl.h>
+#include <fidl/fuchsia.posix/cpp/wire.h>
 
 // This file asserts that the errno definitions in fuchsia.posix/Errno match the ones in errno.h.
 

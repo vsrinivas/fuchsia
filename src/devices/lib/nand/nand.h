@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_NAND_NAND_H_
 #define SRC_DEVICES_LIB_NAND_NAND_H_
 
-#include <fuchsia/hardware/nand/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <fuchsia/hardware/nandinfo/c/banjo.h>
 
 namespace nand {

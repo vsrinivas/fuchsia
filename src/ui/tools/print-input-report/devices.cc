@@ -4,7 +4,7 @@
 
 #include "src/ui/tools/print-input-report/devices.h"
 
-#include <fuchsia/input/report/llcpp/fidl.h>
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/trace/event.h>
 #include <zircon/status.h>

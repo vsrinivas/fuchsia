@@ -4,8 +4,8 @@
 
 #include "magma_image.h"
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
-#include <fuchsia/ui/composition/llcpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.ui.composition/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/service/llcpp/service.h>

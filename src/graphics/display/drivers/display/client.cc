@@ -4,9 +4,9 @@
 
 #include "client.h"
 
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-#include <fuchsia/hardware/display/llcpp/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>

@@ -6,7 +6,7 @@
 #define SRC_DEVICES_TPM_DRIVERS_TPM_COMMANDS_H_
 
 #include <endian.h>
-#include <fuchsia/tpm/llcpp/fidl.h>
+#include <fidl/fuchsia.tpm/cpp/wire.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

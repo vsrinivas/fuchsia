@@ -4,7 +4,7 @@
 
 #include "src/devices/block/drivers/zxcrypt/device-manager.h"
 
-#include <fuchsia/hardware/block/encrypted/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.block.encrypted/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_UI_BACKLIGHT_DRIVERS_SG_MICRO_SGM37603A_H_
 #define SRC_UI_BACKLIGHT_DRIVERS_SG_MICRO_SGM37603A_H_
 
-#include <fuchsia/hardware/backlight/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.backlight/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 

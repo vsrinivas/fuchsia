@@ -4,8 +4,8 @@
 
 #include "ti-lp8556.h"
 
-#include <fuchsia/hardware/backlight/llcpp/fidl.h>
-#include <fuchsia/hardware/power/sensor/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.backlight/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.sensor/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>

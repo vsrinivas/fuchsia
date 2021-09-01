@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zircon-internal/thread_annotations.h>

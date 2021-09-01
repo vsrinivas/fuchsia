@@ -7,7 +7,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <zircon/status.h>
 
-#include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
+#include "fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h"
 #include "src/devices/lib/log/log.h"
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;

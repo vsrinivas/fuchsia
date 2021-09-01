@@ -9,7 +9,7 @@
 #error "Fuchsia-only header"
 #endif
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include "src/lib/storage/vfs/cpp/connection.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
