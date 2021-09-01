@@ -19,7 +19,7 @@ use {
 
 pub(crate) trait FileResolver {
     fn manifest(&self) -> &Path;
-    fn get_file<W: Write + Send>(&mut self, writer: &mut W, file: &str) -> Result<String>;
+    fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String>;
 }
 
 pub(crate) struct Resolver {
@@ -41,7 +41,7 @@ impl FileResolver for Resolver {
         self.manifest_path.as_path()
     }
 
-    fn get_file<W: Write + Send>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+    fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
         if PathBuf::from(file).is_absolute() {
             Ok(file.to_string())
         } else if let Some(p) = self.manifest().parent() {
@@ -66,7 +66,7 @@ pub(crate) struct ArchiveResolver {
 }
 
 impl ArchiveResolver {
-    pub(crate) fn new<W: Write + Send>(writer: &mut W, path: PathBuf) -> Result<Self> {
+    pub(crate) fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
         let temp_dir = tempdir()?;
         let file = File::open(path.clone())
             .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
@@ -123,7 +123,7 @@ impl FileResolver for ArchiveResolver {
         self.manifest_path.as_path()
     }
 
-    fn get_file<W: Write + Send>(&mut self, writer: &mut W, file: &str) -> Result<String> {
+    fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String> {
         let mut file = match self.internal_manifest_path.parent() {
             Some(p) => {
                 let mut path = PathBuf::new();
@@ -171,7 +171,7 @@ pub(crate) struct TarResolver {
 }
 
 impl TarResolver {
-    pub(crate) fn new<W: Write + Send>(writer: &mut W, path: PathBuf) -> Result<Self> {
+    pub(crate) fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
         let temp_dir = tempdir()?;
         let file = File::open(path.clone())
             .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
@@ -210,7 +210,7 @@ impl FileResolver for TarResolver {
         self.manifest_path.as_path()
     }
 
-    fn get_file<W: Write + Send>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+    fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
         if let Some(p) = self.manifest().parent() {
             let mut parent = p.to_path_buf();
             parent.push(file);

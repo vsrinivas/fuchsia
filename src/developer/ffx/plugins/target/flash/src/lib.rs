@@ -3,19 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        file::{ArchiveResolver, FileResolver, Resolver, TarResolver},
-        manifest::{Flash, FlashManifest},
-    },
-    anyhow::{Context, Result},
+    crate::manifest::{flash_from_path, flash_from_sdk},
+    anyhow::Result,
     errors::ffx_bail,
-    ffx_config::file,
+    ffx_config::{file, sdk::SdkVersion},
     ffx_core::ffx_plugin,
     ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
-    std::fs::File,
-    std::io::{stdout, BufReader, Write},
-    std::path::{Path, PathBuf},
+    std::io::{stdout, Write},
+    std::path::Path,
 };
 
 mod file;
@@ -28,16 +24,11 @@ pub async fn flash(fastboot_proxy: FastbootProxy, cmd: FlashCommand) -> Result<(
     flash_plugin_impl(fastboot_proxy, cmd, &mut stdout()).await
 }
 
-pub async fn flash_plugin_impl<W: Write + Send>(
+pub async fn flash_plugin_impl<W: Write>(
     fastboot_proxy: FastbootProxy,
     mut cmd: FlashCommand,
     writer: &mut W,
 ) -> Result<()> {
-    let mut path = PathBuf::new();
-    path.push(&cmd.manifest);
-    if !path.is_file() {
-        ffx_bail!("Manifest \"{}\" is not a file.", cmd.manifest);
-    }
     match cmd.ssh_key.as_ref() {
         Some(ssh) => {
             let ssh_file = Path::new(ssh);
@@ -65,32 +56,32 @@ pub async fn flash_plugin_impl<W: Write + Send>(
             }
         }
     }
-    match path.extension() {
-        Some(ext) => {
-            if ext == "zip" {
-                let r = ArchiveResolver::new(writer, path)?;
-                flash_impl(writer, r, fastboot_proxy, cmd).await
-            } else if ext == "tgz" || ext == "tar.gz" || ext == "tar" {
-                let r = TarResolver::new(writer, path)?;
-                flash_impl(writer, r, fastboot_proxy, cmd).await
-            } else {
-                flash_impl(writer, Resolver::new(path)?, fastboot_proxy, cmd).await
-            }
-        }
-        _ => flash_impl(writer, Resolver::new(path)?, fastboot_proxy, cmd).await,
-    }
-}
 
-async fn flash_impl<W: Write + Send, F: FileResolver + Send + Sync>(
-    writer: &mut W,
-    mut file_resolver: F,
-    fastboot_proxy: FastbootProxy,
-    cmd: FlashCommand,
-) -> Result<()> {
-    let reader = File::open(file_resolver.manifest())
-        .context("opening file for read")
-        .map(BufReader::new)?;
-    FlashManifest::load(reader)?.flash(writer, &mut file_resolver, fastboot_proxy, cmd).await
+    match &cmd.manifest {
+        Some(manifest) => {
+            if !manifest.is_file() {
+                ffx_bail!("Manifest \"{}\" is not a file.", manifest.display());
+            }
+            flash_from_path(writer, manifest.to_path_buf(), fastboot_proxy, cmd).await
+        }
+        None => {
+            let sdk = ffx_config::get_sdk().await?;
+            if !matches!(sdk.get_version(), SdkVersion::InTree) {
+                // Currently SDK flashing only works for InTree.
+                // TODO(fxb/82166) - Make SDK flashing work for out of tree use case.
+                ffx_bail!("No manifest path was given, and no manifest was found in the configured SDK root ({})", 
+                          sdk.get_path_prefix().display());
+            }
+            let mut path = sdk.get_path_prefix().to_path_buf();
+            path.push("flash.json"); // Not actually used, placeholder value needed.
+            writeln!(
+                writer,
+                "No manifest path was given, using SDK from {}.",
+                sdk.get_path_prefix().display()
+            )?;
+            flash_from_sdk(writer, path, fastboot_proxy, cmd).await
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -99,8 +90,10 @@ async fn flash_impl<W: Write + Send, F: FileResolver + Send + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::file::FileResolver;
     use fidl_fuchsia_developer_bridge::FastbootRequest;
     use std::default::Default;
+    use std::path::PathBuf;
     use std::sync::{Arc, Mutex};
     use tempfile::NamedTempFile;
 
@@ -129,7 +122,7 @@ mod test {
             self.manifest.as_path()
         }
 
-        fn get_file<W: Write + Send>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+        fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
             Ok(file.to_owned())
         }
     }
@@ -188,7 +181,10 @@ mod test {
     async fn test_nonexistent_file_throws_err() {
         assert!(flash(
             setup().1,
-            FlashCommand { manifest: "ffx_test_does_not_exist".to_string(), ..Default::default() }
+            FlashCommand {
+                manifest: Some(PathBuf::from("ffx_test_does_not_exist")),
+                ..Default::default()
+            }
         )
         .await
         .is_err())
@@ -201,7 +197,7 @@ mod test {
         assert!(flash(
             setup().1,
             FlashCommand {
-                manifest: tmp_file_name,
+                manifest: Some(PathBuf::from(tmp_file_name)),
                 ssh_key: Some("ssh_does_not_exist".to_string()),
                 ..Default::default()
             }

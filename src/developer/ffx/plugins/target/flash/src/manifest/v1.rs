@@ -19,9 +19,6 @@ use {
 const REBOOT_ERR: &str = "Failed to reboot your device.  \
                           Power cycle the device manually and try again.";
 pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
-pub(crate) const MULTIPLE_PRODUCT: &str =
-    "Multiple products found in manifest. Please specify a product";
-pub(crate) const DEFAULT_PRODUCT: &str = "fuchsia";
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Product {
@@ -79,24 +76,12 @@ impl Flash for FlashManifest {
         cmd: FlashCommand,
     ) -> Result<()>
     where
-        W: Write + Send,
-        F: FileResolver + Send + Sync,
+        W: Write,
+        F: FileResolver + Sync,
     {
-        let product = match cmd.product {
-            Some(p) => match self.0.iter().find(|product| product.name == p) {
-                Some(res) => res,
-                None => ffx_bail!("{} {}", MISSING_PRODUCT, p),
-            },
-            None => {
-                if self.0.len() == 1 {
-                    &self.0[0]
-                } else {
-                    match self.0.iter().find(|product| product.name == DEFAULT_PRODUCT) {
-                        Some(res) => res,
-                        None => ffx_bail!("{}", MULTIPLE_PRODUCT),
-                    }
-                }
-            }
+        let product = match self.0.iter().find(|product| product.name == cmd.product) {
+            Some(res) => res,
+            None => ffx_bail!("{} {}", MISSING_PRODUCT, cmd.product),
         };
         flash_partitions(writer, file_resolver, &product.bootloader_partitions, &fastboot_proxy)
             .await?;
@@ -118,7 +103,7 @@ impl Flash for FlashManifest {
     }
 }
 
-pub(crate) async fn stage_oem_files<W: Write + Send, F: FileResolver + Send + Sync>(
+pub(crate) async fn stage_oem_files<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     resolve: bool,
@@ -135,7 +120,7 @@ pub(crate) async fn stage_oem_files<W: Write + Send, F: FileResolver + Send + Sy
     Ok(())
 }
 
-pub(crate) async fn flash_partitions<W: Write + Send, F: FileResolver + Send + Sync>(
+pub(crate) async fn flash_partitions<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     partitions: &Vec<Partition>,
@@ -179,11 +164,12 @@ mod test {
     use crate::test::{setup, TestResolver};
     use regex::Regex;
     use serde_json::from_str;
+    use std::path::PathBuf;
     use tempfile::NamedTempFile;
 
     const SIMPLE_MANIFEST: &'static str = r#"[
             {
-                "name": "zedboot",
+                "name": "fuchsia",
                 "bootloader_partitions": [],
                 "partitions": [
                     ["test1", "path1"],
@@ -216,7 +202,7 @@ mod test {
             ]
         },
         {
-            "name": "product",
+            "name": "fuchsia",
             "bootloader_partitions": [],
             "partitions": [
                 ["test10", "path10"],
@@ -270,7 +256,7 @@ mod test {
             assert_eq!(zedboot.oem_files[x].file(), oem_files_expected[x][1]);
         }
         let product: &Product = &v.0[1];
-        assert_eq!("product", product.name);
+        assert_eq!("fuchsia", product.name);
         assert_eq!(0, product.bootloader_partitions.len());
         assert_eq!(3, product.partitions.len());
         let expected2 = [["test10", "path10"], ["test20", "path20"], ["test30", "path30"]];
@@ -283,42 +269,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_no_product_should_succeed_if_one_product() -> Result<()> {
-        let v: FlashManifest = from_str(SIMPLE_MANIFEST)?;
-        let tmp_file = NamedTempFile::new().expect("tmp access failed");
-        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
-        let (_, proxy) = setup();
-        let mut writer = Vec::<u8>::new();
-        v.flash(
-            &mut writer,
-            &mut TestResolver::new(),
-            proxy,
-            FlashCommand { manifest: tmp_file_name, ..Default::default() },
-        )
-        .await
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_no_product_should_fail_if_multiple_products() -> Result<()> {
-        let v: FlashManifest = from_str(MANIFEST)?;
-        let tmp_file = NamedTempFile::new().expect("tmp access failed");
-        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
-        let (_, proxy) = setup();
-        let mut writer = Vec::<u8>::new();
-        assert!(v
-            .flash(
-                &mut writer,
-                &mut TestResolver::new(),
-                proxy,
-                FlashCommand { manifest: tmp_file_name, ..Default::default() },
-            )
-            .await
-            .is_err());
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_no_product_should_fail_if_product_missing() -> Result<()> {
+    async fn test_should_fail_if_product_missing() -> Result<()> {
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let v: FlashManifest = from_str(MANIFEST)?;
@@ -330,8 +281,8 @@ mod test {
                 &mut TestResolver::new(),
                 proxy,
                 FlashCommand {
-                    manifest: tmp_file_name,
-                    product: Some("Unknown".to_string()),
+                    manifest: Some(PathBuf::from(tmp_file_name)),
+                    product: "Unknown".to_string(),
                     ..Default::default()
                 }
             )
@@ -352,8 +303,8 @@ mod test {
             &mut TestResolver::new(),
             proxy,
             FlashCommand {
-                manifest: tmp_file_name,
-                product: Some("product".to_string()),
+                manifest: Some(PathBuf::from(tmp_file_name)),
+                product: "fuchsia".to_string(),
                 ..Default::default()
             },
         )
@@ -384,7 +335,8 @@ mod test {
             &mut TestResolver::new(),
             proxy,
             FlashCommand {
-                manifest: manifest_file_name,
+                manifest: Some(PathBuf::from(manifest_file_name)),
+                product: "fuchsia".to_string(),
                 oem_stage: vec![test_staged_file],
                 ..Default::default()
             },
@@ -415,8 +367,8 @@ mod test {
             &mut TestResolver::new(),
             proxy,
             FlashCommand {
-                manifest: tmp_file_name,
-                product: Some("zedboot".to_string()),
+                manifest: Some(PathBuf::from(tmp_file_name)),
+                product: "zedboot".to_string(),
                 ..Default::default()
             },
         )
@@ -427,7 +379,6 @@ mod test {
             let path_listing = Regex::new(&partition.file()).expect("test regex");
             let expected = if i == 1 { 1 } else { 0 };
             assert_eq!(name_listing.find_iter(&output).count(), expected);
-            println!("{}", partition.file());
             assert_eq!(path_listing.find_iter(&output).count(), expected);
         }
         Ok(())
@@ -445,8 +396,8 @@ mod test {
             &mut TestResolver::new(),
             proxy,
             FlashCommand {
-                manifest: tmp_file_name,
-                product: Some("product".to_string()),
+                manifest: Some(PathBuf::from(tmp_file_name)),
+                product: "fuchsia".to_string(),
                 no_bootloader_reboot: true,
                 ..Default::default()
             },

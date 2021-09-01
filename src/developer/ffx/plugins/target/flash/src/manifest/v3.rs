@@ -40,22 +40,22 @@ pub(crate) struct Product {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Partition {
-    name: String,
-    path: String,
+    pub(crate) name: String,
+    pub(crate) path: String,
     #[serde(default)]
-    condition: Option<Condition>,
+    pub(crate) condition: Option<Condition>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Condition {
-    variable: String,
-    value: String,
+    pub(crate) variable: String,
+    pub(crate) value: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ExplicitOemFile {
-    command: String,
-    path: String,
+    pub(crate) command: String,
+    pub(crate) path: String,
 }
 
 impl From<&ExplicitOemFile> for OemFile {
@@ -105,8 +105,8 @@ impl Flash for FlashManifest {
         cmd: FlashCommand,
     ) -> Result<()>
     where
-        W: Write + Send,
-        F: FileResolver + Send + Sync,
+        W: Write,
+        F: FileResolver + Sync,
     {
         let v2: FlashManifestV2 = self.into();
         v2.flash(writer, file_resolver, fastboot_proxy, cmd).await
@@ -120,6 +120,7 @@ mod test {
     use super::*;
     use crate::test::{setup, TestResolver};
     use serde_json::from_str;
+    use std::path::PathBuf;
     use tempfile::NamedTempFile;
 
     const MINIMUM_MANIFEST: &'static str = r#"{
@@ -190,7 +191,11 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand { manifest: tmp_file_name, ..Default::default() },
+            FlashCommand {
+                manifest: Some(PathBuf::from(tmp_file_name)),
+                product: "zedboot".to_string(),
+                ..Default::default()
+            },
         )
         .await
     }
@@ -207,7 +212,11 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand { manifest: tmp_file_name, ..Default::default() },
+            FlashCommand {
+                manifest: Some(PathBuf::from(tmp_file_name)),
+                product: "zedboot".to_string(),
+                ..Default::default()
+            },
         )
         .await
     }

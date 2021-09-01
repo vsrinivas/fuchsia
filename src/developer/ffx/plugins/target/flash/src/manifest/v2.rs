@@ -32,8 +32,8 @@ impl Flash for FlashManifest {
         cmd: FlashCommand,
     ) -> Result<()>
     where
-        W: Write + Send,
-        F: FileResolver + Send + Sync,
+        W: Write,
+        F: FileResolver + Sync,
     {
         if !cmd.skip_verify {
             verify_hardware(&self.hw_revision, &fastboot_proxy).await?;
@@ -50,6 +50,7 @@ mod test {
     use super::*;
     use crate::test::{setup, TestResolver};
     use serde_json::from_str;
+    use std::path::PathBuf;
     use tempfile::NamedTempFile;
 
     const MANIFEST: &'static str = r#"{
@@ -100,7 +101,11 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand { manifest: tmp_file_name, ..Default::default() },
+            FlashCommand {
+                manifest: Some(PathBuf::from(tmp_file_name)),
+                product: "zedboot".to_string(),
+                ..Default::default()
+            },
         )
         .await
     }
@@ -117,7 +122,11 @@ mod test {
                 &mut writer,
                 &mut TestResolver::new(),
                 proxy,
-                FlashCommand { manifest: tmp_file_name, ..Default::default() }
+                FlashCommand {
+                    manifest: Some(PathBuf::from(tmp_file_name)),
+                    product: "zedboot".to_string(),
+                    ..Default::default()
+                }
             )
             .await
             .is_err());

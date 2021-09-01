@@ -7,7 +7,7 @@ use {
     argh::FromArgs,
     ffx_core::ffx_command,
     serde::{Deserialize, Serialize},
-    std::path::Path,
+    std::path::{Path, PathBuf},
 };
 
 pub(crate) const OEM_FILE_ERROR_MSG: &str =
@@ -28,7 +28,7 @@ To include SSH keys as well:
     $ ffx target flash
     --ssh-key ~/fuchsia/.ssh/authorized_keys
     ~/fuchsia/out/default/flash.json
-     fuchsia",
+    --product fuchsia",
     note = "Flashes an image to a target device using the fastboot protocol.
 Requires a specific <manifest> file and <product> name as an input.
 
@@ -47,13 +47,19 @@ The format for the `--oem-stage` parameter is a comma separated pair:
 '<OEM_COMMAND>,<FILE_TO_STAGE>'"
 )]
 pub struct FlashCommand {
-    //path to flashing manifest or zip file containing images and manifest
-    #[argh(positional)]
-    pub manifest: String,
+    #[argh(
+        positional,
+        description = "path to flashing manifest or zip file containing images and manifest"
+    )]
+    pub manifest: Option<PathBuf>,
 
-    //product to flash
-    #[argh(positional)]
-    pub product: Option<String>,
+    #[argh(
+        option,
+        short = 'p',
+        description = "product entry in manifest - defaults to `fuchsia`",
+        default = "String::from(\"fuchsia\")"
+    )]
+    pub product: String,
 
     #[argh(option, description = "oem staged file - can be supplied multiple times")]
     pub oem_stage: Vec<OemFile>,
