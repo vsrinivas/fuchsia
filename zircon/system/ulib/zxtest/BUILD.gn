@@ -16,6 +16,7 @@ zx_library("zxtest") {
     "zxtest/base/message.h",
     "zxtest/base/observer.h",
     "zxtest/base/parameterized-value-impl.h",
+    "zxtest/base/parameterized-value.h",
     "zxtest/base/reporter.h",
     "zxtest/base/runner.h",
     "zxtest/base/test-case.h",
