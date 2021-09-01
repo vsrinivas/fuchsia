@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 77,
+    "next-free-ordinal": 79,
     "exports": [
       {
         "ordinal": 4,
@@ -1086,7 +1086,7 @@
         "ordinal": 68,
         "name": "magma_internal_map",
         "type": "magma_status_t",
-        "description": "Maps the given buffer's memory into the virtmagma VMAR.",
+        "description": "DEPRECATED. Maps the given buffer's memory into the virtmagma VMAR.",
         "arguments": [
           {
             "name": "connection",
@@ -1114,7 +1114,7 @@
         "ordinal": 69,
         "name": "magma_internal_unmap",
         "type": "magma_status_t",
-        "description": "Releases the VMAR mapping for the given buffer. Should be paired with each call to magma_internal_map.",
+        "description": "DEPRECATED. Releases the VMAR mapping for the given buffer. Should be paired with each call to magma_internal_map.",
         "arguments": [
           {
             "name": "connection",
@@ -1143,6 +1143,47 @@
             "name": "handle",
             "type": "magma_handle_t",
             "description": "A valid handle."
+          }
+        ]
+      },
+      {
+        "ordinal": 77,
+        "name": "magma_internal_map2",
+        "type": "magma_status_t",
+        "description": "Maps the given buffer handle into the virtmagma VMAR.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_handle_t",
+            "description": "A valid buffer handle."
+          },
+          {
+            "name": "length",
+            "type": "uint64_t",
+            "description": "Page-aligned number of bytes to be mapped."
+          },
+          {
+            "name": "address_out",
+            "type": "void**",
+            "description": "The returned CPU virtual address for the start of the buffer."
+          }
+        ]
+      },
+      {
+        "ordinal": 78,
+        "name": "magma_internal_unmap2",
+        "type": "magma_status_t",
+        "description": "Releases the VMAR mapping for the given buffer handle. Should be paired with each call to magma_internal_map2.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_handle_t",
+            "description": "A valid buffer handle."
+          },
+          {
+            "name": "address",
+            "type": "void*",
+            "description": "The mapped address."
           }
         ]
       }

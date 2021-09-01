@@ -323,6 +323,72 @@ zx_status_t VirtioMagma::Handle_internal_unmap(const virtio_magma_internal_unmap
   return ZX_OK;
 }
 
+zx_status_t VirtioMagma::Handle_internal_map2(const virtio_magma_internal_map2_ctrl_t* request,
+                                              virtio_magma_internal_map2_resp_t* response) {
+  FX_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_INTERNAL_MAP2);
+
+  response->address_out = 0;
+  response->hdr.type = VIRTIO_MAGMA_RESP_INTERNAL_MAP2;
+
+  // Buffer handle must have been stored.
+  auto iter = std::find(stored_handles_.begin(), stored_handles_.end(), request->buffer);
+  if (iter == stored_handles_.end()) {
+    response->result_return = MAGMA_STATUS_INVALID_ARGS;
+    return ZX_OK;
+  }
+
+  const uint64_t length = request->length;
+  zx::unowned_vmo vmo(request->buffer);
+
+  zx_vaddr_t zx_vaddr;
+  zx_status_t zx_status = vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0 /*vmar_offset*/, *vmo,
+                                    0 /* vmo_offset */, length, &zx_vaddr);
+  if (zx_status != ZX_OK) {
+    FX_LOGS(ERROR) << "vmar map (length " << length << ") failed: " << zx_status;
+    response->result_return = MAGMA_STATUS_INVALID_ARGS;
+    return zx_status;
+  }
+
+  buffer_maps2_.emplace(zx_vaddr, std::pair<zx_handle_t, size_t>(request->buffer, length));
+
+  response->address_out = zx_vaddr;
+
+  return ZX_OK;
+}
+
+zx_status_t VirtioMagma::Handle_internal_unmap2(const virtio_magma_internal_unmap2_ctrl_t* request,
+                                                virtio_magma_internal_unmap2_resp_t* response) {
+  FX_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_INTERNAL_UNMAP2);
+
+  response->hdr.type = VIRTIO_MAGMA_RESP_INTERNAL_UNMAP2;
+
+  const uintptr_t address = request->address;
+
+  auto iter = buffer_maps2_.find(address);
+  if (iter == buffer_maps2_.end()) {
+    response->result_return = MAGMA_STATUS_INVALID_ARGS;
+    return ZX_OK;
+  }
+
+  const auto& mapping = iter->second;
+  const zx_handle_t buffer_handle = mapping.first;
+  const size_t length = mapping.second;
+
+  if (buffer_handle != request->buffer) {
+    response->result_return = MAGMA_STATUS_INVALID_ARGS;
+    return ZX_OK;
+  }
+
+  buffer_maps2_.erase(iter);
+
+  zx_status_t zx_status = vmar_.unmap(address, length);
+  if (zx_status != ZX_OK)
+    return zx_status;
+
+  response->result_return = MAGMA_STATUS_OK;
+  return ZX_OK;
+}
+
 zx_status_t VirtioMagma::Handle_internal_release_handle(
     const virtio_magma_internal_release_handle_ctrl_t* request,
     virtio_magma_internal_release_handle_resp_t* response) {

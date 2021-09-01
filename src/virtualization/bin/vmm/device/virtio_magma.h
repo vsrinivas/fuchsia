@@ -62,6 +62,10 @@ class VirtioMagma : public VirtioMagmaGeneric,
                                   virtio_magma_internal_map_resp_t* response) override;
   zx_status_t Handle_internal_unmap(const virtio_magma_internal_unmap_ctrl_t* request,
                                     virtio_magma_internal_unmap_resp_t* response) override;
+  zx_status_t Handle_internal_map2(const virtio_magma_internal_map2_ctrl_t* request,
+                                   virtio_magma_internal_map2_resp_t* response) override;
+  zx_status_t Handle_internal_unmap2(const virtio_magma_internal_unmap2_ctrl_t* request,
+                                     virtio_magma_internal_unmap2_resp_t* response) override;
   zx_status_t Handle_internal_release_handle(
       const virtio_magma_internal_release_handle_ctrl_t* request,
       virtio_magma_internal_release_handle_resp_t* response) override;
@@ -84,6 +88,7 @@ class VirtioMagma : public VirtioMagmaGeneric,
   VirtioQueue out_queue_;
   fuchsia::virtualization::hardware::VirtioWaylandImporterSyncPtr wayland_importer_;
   std::unordered_multimap<zx_koid_t, std::pair<zx_vaddr_t, size_t>> buffer_maps_;
+  std::unordered_map<zx_vaddr_t, std::pair<zx_handle_t, size_t>> buffer_maps2_;
 
   // We store handles that are returned to the client to keep them alive.
   std::list<zx::handle> stored_handles_;

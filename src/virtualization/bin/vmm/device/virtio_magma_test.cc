@@ -640,7 +640,7 @@ TEST_F(VirtioMagmaTest, InternalMapAndUnmap) {
   ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
 }
 
-TEST_F(VirtioMagmaTest, BufferHandle) {
+TEST_F(VirtioMagmaTest, BufferHandleMapAndUnmap) {
   magma_device_t device{};
   ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
 
@@ -651,6 +651,7 @@ TEST_F(VirtioMagmaTest, BufferHandle) {
   ASSERT_NO_FATAL_FAILURE(CreateBuffer(connection, &buffer));
 
   magma_handle_t buffer_handle;
+  uint64_t buffer_size;
   {
     virtio_magma_get_buffer_handle2_ctrl_t request{};
     request.hdr.type = VIRTIO_MAGMA_CMD_GET_BUFFER_HANDLE2;
@@ -677,7 +678,6 @@ TEST_F(VirtioMagmaTest, BufferHandle) {
     EXPECT_NE(response.handle_out, 0u);
     ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
 
-    uint64_t buffer_size;
     memcpy(&buffer_size, reinterpret_cast<uint8_t*>(response_ptr) + sizeof(response),
            sizeof(buffer_size));
     EXPECT_EQ(buffer_size, kBufferSize);
@@ -688,6 +688,64 @@ TEST_F(VirtioMagmaTest, BufferHandle) {
 
   // Releasing the buffer has no effect because VirtioMagma maintains a copy of the handle.
   ASSERT_NO_FATAL_FAILURE(ReleaseBuffer(connection, buffer));
+
+  std::array<uintptr_t, 2> map_lengths = {kBufferSize / 2, kBufferSize};
+  std::array<uintptr_t, 2> addr;
+
+  for (size_t i = 0; i < map_lengths.size(); i++) {
+    virtio_magma_internal_map2_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_INTERNAL_MAP2;
+    request.buffer = buffer_handle;
+    request.length = buffer_size;
+    virtio_magma_internal_map2_resp_t response{};
+    uint16_t descriptor_id{};
+    void* response_ptr;
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(&request, sizeof(request))
+                  .AppendWritableDescriptor(&response_ptr, sizeof(response))
+                  .Build(&descriptor_id),
+              ZX_OK);
+    magma_->NotifyQueue(0);
+
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(response));
+
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_INTERNAL_MAP2);
+    EXPECT_EQ(response.hdr.flags, 0u);
+    EXPECT_NE(response.address_out, 0u);
+    ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
+
+    addr[i] = response.address_out;
+  }
+
+  for (size_t i = 0; i < map_lengths.size(); i++) {
+    virtio_magma_internal_unmap2_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_INTERNAL_UNMAP2;
+    request.buffer = buffer_handle;
+    request.address = addr[i];
+    virtio_magma_internal_unmap2_resp_t response{};
+    uint16_t descriptor_id{};
+    void* response_ptr;
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(&request, sizeof(request))
+                  .AppendWritableDescriptor(&response_ptr, sizeof(response))
+                  .Build(&descriptor_id),
+              ZX_OK);
+    magma_->NotifyQueue(0);
+
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(response));
+
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_INTERNAL_UNMAP2);
+    EXPECT_EQ(response.hdr.flags, 0u);
+    ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
+  }
 
   {
     virtio_magma_internal_release_handle_ctrl_t request{};
