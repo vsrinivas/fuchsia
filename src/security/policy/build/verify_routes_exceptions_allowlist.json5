@@ -2,12 +2,16 @@
     // List of all directory capabilities that are exempt from the verify
     // routes checker. Only add to this list if you cannot remove the
     // unused route.
-    {
-        capability_type: "directory",
-        results: {
-            errors: [],
-        },
-    },
+    //
+    // Format:
+    //     {
+    //         capability_type: "directory",
+    //         results: {
+    //             errors: [ ...as other lists below... ]
+    //         }
+    //     },
+    //
+    // This list is currently empty.
 
     // List of all protocol capabilities that are exempt from the verify
     // routes checker. Only add to this list if you cannot remove the
@@ -19,62 +23,170 @@
                 {
                     capability: "fuchsia.power.BatteryManager",
                     using_node: "/core/appmgr",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.power.BatteryManager",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.power.test.BatterySimulator",
                     using_node: "/core/appmgr",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.power.test.BatterySimulator",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.net.interfaces.State",
                     using_node: "/core/last_reboot",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.net.interfaces.State",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.pkg.LocalMirror",
                     using_node: "/core/pkg-resolver",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.pkg.LocalMirror",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.bluetooth.a2dp.AudioMode",
                     using_node: "/core/appmgr",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.bluetooth.a2dp.AudioMode",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.bluetooth.internal.a2dp.Controller",
                     using_node: "/core/appmgr",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.bluetooth.internal.a2dp.Controller",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.device.Controller",
                     using_node: "/core/temperature-logger",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/",
+                                "fuchsia.device.Controller",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.hardware.temperature.Device",
                     using_node: "/core/temperature-logger",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/",
+                                "fuchsia.hardware.temperature.Device",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.device.Controller",
                     using_node: "/core/system-metrics-logger",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.device.Controller",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.hardware.power.Source",
                     using_node: "/core/battery_manager",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.hardware.power.Source",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.component.runner.ComponentRunner",
                     using_node: "/core/starnix_manager/starnix_runner",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core/starnix_manager",
+                                "fuchsia.component.runner.ComponentRunner",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.component.runner.ComponentRunner",
                     using_node: "/core/test_manager/starnix_test_runner/starnix_runner",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core/test_manager/starnix_test_runner",
+                                "fuchsia.component.runner.ComponentRunner",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.sys2.Realm",
                     using_node: "/core/test_manager/starnix_test_runner/starnix_runner",
-                },
-                {
-                    capability: "fuchsia.logger.LogSink",
-                    using_node: "/core/build-info",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core/test_manager/starnix_test_runner",
+                                "fuchsia.sys2.Realm",
+                            ],
+                        },
+                    },
                 },
                 {
                     capability: "fuchsia.memorypressure.Provider",
                     using_node: "/core/vulkan_loader",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.memorypressure.Provider",
+                            ],
+                        },
+                    },
                 },
             ],
         },

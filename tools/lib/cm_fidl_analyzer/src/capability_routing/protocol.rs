@@ -206,7 +206,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            capability_routing::testing::*,
+            capability_routing::{route::RouteSegment, testing::*},
             component_tree::{BuildTreeResult, ComponentTreeBuilder, NodePath},
         },
         cm_rust::{CapabilityPath, DependencyType, ExposeSource, OfferSource, UseSource},
@@ -250,7 +250,7 @@ mod tests {
     fn new_protocol_decl(name: CapabilityName) -> ProtocolDecl {
         ProtocolDecl {
             name,
-            source_path: Some(CapabilityPath { dirname: "".to_string(), basename: "".to_string() }),
+            source_path: None,
         }
     }
 
@@ -364,10 +364,38 @@ mod tests {
         let child_node =
             tree.get_node(&NodePath::new(vec![PartialChildMoniker::new(child_name, None)]))?;
         let route = verifier.verify_route(&tree, &child_use_protocol, &child_node)?;
-        assert_eq!(route.len(), 3);
-        assert_eq!(route[0].to_string(), "use by `/child` as `protocol_name` from parent");
-        assert_eq!(route[1].to_string(), "offer by `/` as `protocol_name` from self");
-        assert_eq!(route[2].to_string(), "declare by `/` as `protocol_name`");
+        assert_eq!(
+            route,
+            vec![
+                RouteSegment::UseBy {
+                    node_path: node_path(vec!["child"]),
+                    capability: UseProtocolDecl {
+                        source_name: "protocol_name".into(),
+                        ..default_use_protocol()
+                    }
+                    .into(),
+                },
+                RouteSegment::OfferBy {
+                    node_path: node_path(vec![]),
+                    capability: OfferProtocolDecl {
+                        source: OfferSource::Self_,
+                        source_name: "protocol_name".into(),
+                        target: OfferTarget::Child("child".to_string()),
+                        target_name: "protocol_name".into(),
+                        ..default_offer_protocol()
+                    }
+                    .into(),
+                },
+                RouteSegment::DeclareBy {
+                    node_path: node_path(vec![]),
+                    capability: ProtocolDecl {
+                        name: "protocol_name".into(),
+                        ..default_declare_protocol()
+                    }
+                    .into(),
+                },
+            ]
+        );
 
         Ok(())
     }
@@ -469,18 +497,57 @@ mod tests {
 
         if let UseDecl::Protocol(use_protocol_decl) = use_decl {
             let route = verifier.verify_route(&tree, &use_protocol_decl, &using_node)?;
-            assert_eq!(route.len(), 5);
             assert_eq!(
-                route[0].to_string(),
-                "use by `/foo/baz` as `baz_protocol_name` from parent"
+                route,
+                vec![
+                    RouteSegment::UseBy {
+                        node_path: node_path(vec!["foo", "baz"]),
+                        capability: UseProtocolDecl {
+                            source_name: "baz_protocol_name".into(),
+                            ..default_use_protocol()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::OfferBy {
+                        node_path: node_path(vec!["foo"]),
+                        capability: OfferProtocolDecl {
+                            source_name: "foo_protocol_name".into(),
+                            target: OfferTarget::Child("baz".to_string()),
+                            target_name: "baz_protocol_name".into(),
+                            ..default_offer_protocol()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::OfferBy {
+                        node_path: node_path(vec![]),
+                        capability: OfferProtocolDecl {
+                            source: OfferSource::Child("bar".to_string()),
+                            source_name: "root_protocol_name".into(),
+                            target: OfferTarget::Child("foo".to_string()),
+                            target_name: "foo_protocol_name".into(),
+                            ..default_offer_protocol()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::ExposeBy {
+                        node_path: node_path(vec!["bar"]),
+                        capability: ExposeProtocolDecl {
+                            source_name: "bar_protocol_name".into(),
+                            target_name: "root_protocol_name".into(),
+                            ..default_expose_protocol()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::DeclareBy {
+                        node_path: node_path(vec!["bar"]),
+                        capability: ProtocolDecl {
+                            name: "bar_protocol_name".into(),
+                            ..default_declare_protocol()
+                        }
+                        .into(),
+                    },
+                ]
             );
-            assert_eq!(route[1].to_string(), "offer by `/foo` as `baz_protocol_name` from parent");
-            assert_eq!(
-                route[2].to_string(),
-                "offer by `/` as `foo_protocol_name` from child `bar`"
-            );
-            assert_eq!(route[3].to_string(), "expose by `/bar` as `root_protocol_name` from self");
-            assert_eq!(route[4].to_string(), "declare by `/bar` as `bar_protocol_name`");
             Ok(())
         } else {
             panic!["Failed precondition: expected UseDecl of type Protocol"]
@@ -538,10 +605,38 @@ mod tests {
         assert_eq!(good_result.capability, good_protocol_name);
         assert!(good_result.result.is_ok());
         let good_route = good_result.result.as_ref().unwrap();
-        assert_eq!(good_route.len(), 3);
-        assert_eq!(good_route[0].to_string(), "use by `/child` as `good_protocol` from parent");
-        assert_eq!(good_route[1].to_string(), "offer by `/` as `good_protocol` from self");
-        assert_eq!(good_route[2].to_string(), "declare by `/` as `good_protocol`");
+        assert_eq!(
+            good_route,
+            &vec![
+                RouteSegment::UseBy {
+                    node_path: node_path(vec!["child"]),
+                    capability: UseProtocolDecl {
+                        source_name: "good_protocol".into(),
+                        ..default_use_protocol()
+                    }
+                    .into(),
+                },
+                RouteSegment::OfferBy {
+                    node_path: node_path(vec![]),
+                    capability: OfferProtocolDecl {
+                        source: OfferSource::Self_,
+                        source_name: "good_protocol".into(),
+                        target: OfferTarget::Child("child".to_string()),
+                        target_name: "good_protocol".into(),
+                        ..default_offer_protocol()
+                    }
+                    .into(),
+                },
+                RouteSegment::DeclareBy {
+                    node_path: node_path(vec![]),
+                    capability: ProtocolDecl {
+                        name: "good_protocol".into(),
+                        ..default_declare_protocol()
+                    }
+                    .into(),
+                },
+            ]
+        );
 
         assert_eq!(bad_result.using_node.to_string(), "/child");
         assert_eq!(bad_result.capability, bad_protocol_name);

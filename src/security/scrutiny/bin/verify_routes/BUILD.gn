@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
     "//third_party/rust_crates:simplelog",
+    "//tools/lib/cm_fidl_analyzer",
   ]
 
   non_rust_deps = [ "//src/lib/chunked-compression" ]

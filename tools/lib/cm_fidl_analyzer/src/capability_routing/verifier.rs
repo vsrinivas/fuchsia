@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::capability_routing::{
-        error::CapabilityRouteError, route::RouteSegment, source::CapabilitySourceType,
+    crate::{
+        capability_routing::{
+            error::CapabilityRouteError, route::RouteSegment, source::CapabilitySourceType,
+        },
+        component_tree::{ComponentNode, ComponentTree, NodePath},
     },
-    crate::component_tree::{ComponentNode, ComponentTree, NodePath},
-    cm_rust::CapabilityName,
+    cm_rust::{CapabilityDecl, CapabilityName, ExposeDecl, OfferDecl, UseDecl},
     moniker::PartialChildMoniker,
 };
 
@@ -31,6 +33,7 @@ pub struct CapabilityRouteState<'a, T> {
 }
 
 /// A summary of a specific capability route and the outcome of verification.
+#[derive(Clone)]
 pub struct VerifyRouteResult {
     pub using_node: NodePath,
     pub capability: CapabilityName,
@@ -46,10 +49,10 @@ pub trait CapabilityRouteVerifier<'a> {
     // some minor modifications to those traits, most of the
     // capability-type-specific implementation could be moved into
     // this trait definition.
-    type UseDeclType: 'a;
-    type OfferDeclType: 'a;
-    type ExposeDeclType: 'a;
-    type CapabilityDeclType: 'a;
+    type UseDeclType: 'a + Clone + Into<UseDecl>;
+    type OfferDeclType: 'a + Clone + Into<OfferDecl>;
+    type ExposeDeclType: 'a + Clone + Into<ExposeDecl>;
+    type CapabilityDeclType: 'a + Clone + Into<CapabilityDecl>;
     type FieldsType;
 
     /// Verifies that a specific capability is routed and used correctly.
@@ -167,7 +170,10 @@ pub trait CapabilityRouteVerifier<'a> {
                 node: using_node,
                 name: name.clone(),
                 source_type: source_type.clone(),
-                route: vec![RouteSegment::UseBy(using_node.node_path(), name, source_type)],
+                route: vec![RouteSegment::UseBy {
+                    node_path: using_node.node_path(),
+                    capability: use_decl.clone().into(),
+                }],
                 fields: self.fields_from_use(&use_decl)?,
             }),
         }
@@ -181,14 +187,13 @@ pub trait CapabilityRouteVerifier<'a> {
         offer_decl: &'a Self::OfferDeclType,
         offering_node: &'a ComponentNode,
     ) -> Result<CapabilityRouteState<'a, Self::FieldsType>, CapabilityRouteError> {
-        let (target_name, source_name, source_type) = self.get_offer_info(offer_decl);
+        let (_target_name, source_name, source_type) = self.get_offer_info(offer_decl);
 
         let mut route = target_state.route.clone();
-        route.push(RouteSegment::OfferBy(
-            offering_node.node_path(),
-            target_name,
-            source_type.clone(),
-        ));
+        route.push(RouteSegment::OfferBy {
+            node_path: offering_node.node_path(),
+            capability: offer_decl.clone().into(),
+        });
 
         Ok(CapabilityRouteState::<Self::FieldsType> {
             tree: target_state.tree,
@@ -208,7 +213,7 @@ pub trait CapabilityRouteVerifier<'a> {
         expose_decl: &'a Self::ExposeDeclType,
         exposing_node: &'a ComponentNode,
     ) -> Result<CapabilityRouteState<'a, Self::FieldsType>, CapabilityRouteError> {
-        let (target_name, source_name, source_type) = self.get_expose_info(expose_decl);
+        let (_target_name, source_name, source_type) = self.get_expose_info(expose_decl);
 
         if let CapabilitySourceType::Capability(_) = source_type {
             return Err(CapabilityRouteError::ValidationNotImplemented(
@@ -217,11 +222,10 @@ pub trait CapabilityRouteVerifier<'a> {
         }
 
         let mut route = target_state.route.clone();
-        route.push(RouteSegment::ExposeBy(
-            exposing_node.node_path(),
-            target_name,
-            source_type.clone(),
-        ));
+        route.push(RouteSegment::ExposeBy {
+            node_path: exposing_node.node_path(),
+            capability: expose_decl.clone().into(),
+        });
 
         Ok(CapabilityRouteState::<Self::FieldsType> {
             tree: target_state.tree,
@@ -243,7 +247,10 @@ pub trait CapabilityRouteVerifier<'a> {
         let name = self.get_declare_info(capability_decl);
 
         let mut route = route_state.route.clone();
-        route.push(RouteSegment::DeclareBy(route_state.node.node_path(), name.clone()));
+        route.push(RouteSegment::DeclareBy {
+            node_path: route_state.node.node_path(),
+            capability: capability_decl.clone().into(),
+        });
 
         Ok(CapabilityRouteState::<Self::FieldsType> {
             tree: route_state.tree,

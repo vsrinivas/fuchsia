@@ -37,6 +37,7 @@ rustc_library("cm_fidl_analyzer") {
     "src/component_model.rs",
     "src/component_tree.rs",
     "src/lib.rs",
+    "src/serde_ext.rs",
   ]
 }
 

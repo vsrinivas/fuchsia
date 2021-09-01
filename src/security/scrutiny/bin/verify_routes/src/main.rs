@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Result},
+    anyhow::{bail, Context, Result},
     clap::{App, Arg},
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
-    serde::{Deserialize, Serialize},
+    scrutiny_plugins::verify::{ResultsBySeverity, ResultsForCapabilityType},
     serde_json,
     std::{env, fs},
 };
@@ -16,26 +16,6 @@ pub struct VerifyRoutes {
     stamp_path: String,
     depfile_path: String,
     allowlist_path: String,
-}
-
-/// A serde compatible structure for AnalysisEntrys that are used by both
-/// allowlist entries and the results from the analysis.
-#[derive(Serialize, Deserialize, Debug)]
-struct AnalysisEntry {
-    capability_type: String,
-    results: AnalysisResults,
-}
-
-#[derive(Serialize, Deserialize, Default, Debug)]
-struct AnalysisResults {
-    errors: Vec<AnalysisError>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct AnalysisError {
-    capability: String,
-    using_node: String,
-    error: Option<String>,
 }
 
 /// Paths required for depfile generation. Both these locations are touched
@@ -70,13 +50,18 @@ impl VerifyRoutes {
                 .build(),
             vec!["CorePlugin", "VerifyPlugin"],
         );
-        config.runtime.model.build_path = env::current_dir()?;
-        config.runtime.model.repository_path = env::current_dir()?.join(AMBER_PATH);
+        let current_dir = env::current_dir().context("get current directory")?;
+        config.runtime.model.build_path = current_dir.clone();
+        config.runtime.model.repository_path = current_dir.join(AMBER_PATH);
         config.runtime.logging.silent_mode = true;
-        let route_analysis: Vec<AnalysisEntry> =
-            serde_json5::from_str(&launcher::launch_from_config(config)?)?;
-        let allowlist: Vec<AnalysisEntry> =
-            serde_json5::from_str(&fs::read_to_string(&self.allowlist_path)?)?;
+
+        let results = &launcher::launch_from_config(config).context("scrutiny launch")?;
+        let route_analysis: Vec<ResultsForCapabilityType> =
+            serde_json5::from_str(results).context("deserialize verify routes results")?;
+        let allowlist: Vec<ResultsForCapabilityType> = serde_json5::from_str(
+            &fs::read_to_string(&self.allowlist_path).context("read allowlist")?,
+        )
+        .context("deserialize allowlist")?;
         let filtered_analysis = VerifyRoutes::filter_analysis(route_analysis, allowlist);
         for entry in filtered_analysis.iter() {
             if !entry.results.errors.is_empty() {
@@ -98,43 +83,61 @@ Verification Errors:
             }
         }
 
-        fs::write(&self.stamp_path, "Verified\n")?;
+        fs::write(&self.stamp_path, "Verified\n").context("write stamp file")?;
         Ok(())
     }
 
     /// Removes entries defined in the file located at the `allowlist_path`
     /// from the route analysis.
     fn filter_analysis(
-        route_analysis: Vec<AnalysisEntry>,
-        allowlist: Vec<AnalysisEntry>,
-    ) -> Vec<AnalysisEntry> {
-        let mut filtered_analysis: Vec<AnalysisEntry> = Vec::new();
-        for entry in route_analysis.iter() {
-            let mut filtered_entry = AnalysisEntry {
-                capability_type: entry.capability_type.clone(),
-                results: AnalysisResults::default(),
-            };
-            match allowlist.iter().find(|e| e.capability_type == entry.capability_type) {
-                Some(filter) => {
-                    for error in entry.results.errors.iter() {
-                        if filter
+        route_analysis: Vec<ResultsForCapabilityType>,
+        allowlist: Vec<ResultsForCapabilityType>,
+    ) -> Vec<ResultsForCapabilityType> {
+        route_analysis
+            .iter()
+            .map(|analysis_item| {
+                // Entry for every `capability_type` in `route_analysis`.
+                ResultsForCapabilityType {
+                    capability_type: analysis_item.capability_type.clone(),
+                    // Retain error when:
+                    // 1. `allowlist` does not have results for
+                    //    `capability_type` (i.e., nothing allowed for
+                    //    `capability_type`), OR
+                    // 2. `allowlist` does not have an identical `allow_error`
+                    //    in its `capability_type` results.
+                    results: ResultsBySeverity {
+                        errors: analysis_item
                             .results
                             .errors
                             .iter()
-                            .find(|e| {
-                                e.capability == error.capability && e.using_node == error.using_node
+                            .filter_map(|analysis_error| {
+                                match allowlist.iter().find(|&allow_item| {
+                                    allow_item.capability_type == analysis_item.capability_type
+                                }) {
+                                    Some(allow_item) => {
+                                        match allow_item
+                                            .results
+                                            .errors
+                                            .iter()
+                                            .find(|&allow_error| analysis_error == allow_error)
+                                        {
+                                            Some(_matching_allowlist_error) => None,
+                                            // No allowlist error match; report
+                                            // error from within `filter_map`.
+                                            None => Some(analysis_error.clone()),
+                                        }
+                                    }
+                                    // No allowlist defined for capability type;
+                                    // report error from within `filter_map`.
+                                    None => Some(analysis_error.clone()),
+                                }
                             })
-                            .is_none()
-                        {
-                            filtered_entry.results.errors.push(error.clone());
-                        }
-                    }
+                            .collect(),
+                        ..Default::default()
+                    },
                 }
-                None => {}
-            }
-            filtered_analysis.push(filtered_entry);
-        }
-        filtered_analysis
+            })
+            .collect()
     }
 
     /// Generates a list of all files that this compiled_action touches. This is

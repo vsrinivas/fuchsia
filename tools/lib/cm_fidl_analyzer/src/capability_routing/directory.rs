@@ -222,10 +222,11 @@ mod tests {
     use {
         super::*,
         crate::{
-            capability_routing::testing::*,
+            capability_routing::{route::RouteSegment, testing::*},
             component_tree::{BuildTreeResult, ComponentTreeBuilder, NodePath},
         },
         cm_rust::{CapabilityPath, DependencyType, ExposeSource, OfferSource, UseSource},
+        fidl_fuchsia_io2 as fio2,
         moniker::PartialChildMoniker,
         std::collections::HashMap,
     };
@@ -276,7 +277,7 @@ mod tests {
     fn new_directory_decl(name: CapabilityName, rights: Operations) -> DirectoryDecl {
         DirectoryDecl {
             name,
-            source_path: Some(CapabilityPath { dirname: "".to_string(), basename: "".to_string() }),
+            source_path: None,
             rights,
         }
     }
@@ -408,10 +409,35 @@ mod tests {
         let child_node =
             tree.get_node(&NodePath::new(vec![PartialChildMoniker::new(child_name, None)]))?;
         let route = verifier.verify_route(&tree, &child_use_dir, &child_node)?;
-        assert_eq!(route.len(), 3);
-        assert_eq!(route[0].to_string(), "use by `/child` as `dir_name` from parent");
-        assert_eq!(route[1].to_string(), "offer by `/` as `dir_name` from self");
-        assert_eq!(route[2].to_string(), "declare by `/` as `dir_name`");
+        assert_eq!(
+            route,
+            vec![
+                RouteSegment::UseBy {
+                    node_path: node_path(vec!["child"]),
+                    capability: UseDirectoryDecl {
+                        source_name: "dir_name".into(),
+                        ..default_use_dir()
+                    }
+                    .into(),
+                },
+                RouteSegment::OfferBy {
+                    node_path: node_path(vec![]),
+                    capability: OfferDirectoryDecl {
+                        source: OfferSource::Self_,
+                        source_name: "dir_name".into(),
+                        target: OfferTarget::Child("child".to_string()),
+                        target_name: "dir_name".into(),
+                        ..default_offer_dir()
+                    }
+                    .into(),
+                },
+                RouteSegment::DeclareBy {
+                    node_path: node_path(vec![]),
+                    capability: DirectoryDecl { name: "dir_name".into(), ..default_declare_dir() }
+                        .into(),
+                },
+            ]
+        );
 
         Ok(())
     }
@@ -558,12 +584,57 @@ mod tests {
 
         if let UseDecl::Directory(use_dir_decl) = use_decl {
             let route = verifier.verify_route(&tree, &use_dir_decl, &using_node)?;
-            assert_eq!(route.len(), 5);
-            assert_eq!(route[0].to_string(), "use by `/foo/baz` as `baz_dir_name` from parent");
-            assert_eq!(route[1].to_string(), "offer by `/foo` as `baz_dir_name` from parent");
-            assert_eq!(route[2].to_string(), "offer by `/` as `foo_dir_name` from child `bar`");
-            assert_eq!(route[3].to_string(), "expose by `/bar` as `root_dir_name` from self");
-            assert_eq!(route[4].to_string(), "declare by `/bar` as `bar_dir_name`");
+            assert_eq!(
+                route,
+                vec![
+                    RouteSegment::UseBy {
+                        node_path: node_path(vec!["foo", "baz"]),
+                        capability: UseDirectoryDecl {
+                            source_name: "baz_dir_name".into(),
+                            ..default_use_dir()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::OfferBy {
+                        node_path: node_path(vec!["foo"]),
+                        capability: OfferDirectoryDecl {
+                            source_name: "foo_dir_name".into(),
+                            target: OfferTarget::Child("baz".to_string()),
+                            target_name: "baz_dir_name".into(),
+                            ..default_offer_dir()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::OfferBy {
+                        node_path: node_path(vec![]),
+                        capability: OfferDirectoryDecl {
+                            source: OfferSource::Child("bar".to_string()),
+                            source_name: "root_dir_name".into(),
+                            target: OfferTarget::Child("foo".to_string()),
+                            target_name: "foo_dir_name".into(),
+                            ..default_offer_dir()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::ExposeBy {
+                        node_path: node_path(vec!["bar"]),
+                        capability: ExposeDirectoryDecl {
+                            source_name: "bar_dir_name".into(),
+                            target_name: "root_dir_name".into(),
+                            ..default_expose_dir()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::DeclareBy {
+                        node_path: node_path(vec!["bar"]),
+                        capability: DirectoryDecl {
+                            name: "bar_dir_name".into(),
+                            ..default_declare_dir()
+                        }
+                        .into(),
+                    },
+                ]
+            );
             Ok(())
         } else {
             panic!["Failed precondition: expected UseDecl of type Directory"]
@@ -584,21 +655,67 @@ mod tests {
         assert!(build_tree_result.tree.is_some());
         let tree = build_tree_result.tree.unwrap();
 
-        let using_node = tree.get_node(&NodePath::new(vec![
-            PartialChildMoniker::new("foo".to_string(), None),
-            PartialChildMoniker::new("baz".to_string(), None),
-        ]))?;
+        let using_node = tree.get_node(&node_path(vec!["foo", "baz"]))?;
         assert_eq!(using_node.decl.uses.len(), 1);
         let use_decl = &using_node.decl.uses[0];
 
         if let UseDecl::Directory(use_dir_decl) = use_decl {
             let route = verifier.verify_route(&tree, &use_dir_decl, &using_node)?;
-            assert_eq!(route.len(), 5);
-            assert_eq!(route[0].to_string(), "use by `/foo/baz` as `baz_dir_name` from parent");
-            assert_eq!(route[1].to_string(), "offer by `/foo` as `baz_dir_name` from parent");
-            assert_eq!(route[2].to_string(), "offer by `/` as `foo_dir_name` from child `bar`");
-            assert_eq!(route[3].to_string(), "expose by `/bar` as `root_dir_name` from self");
-            assert_eq!(route[4].to_string(), "declare by `/bar` as `bar_dir_name`");
+            assert_eq!(
+                route,
+                vec![
+                    RouteSegment::UseBy {
+                        node_path: node_path(vec!["foo", "baz"]),
+                        capability: UseDirectoryDecl {
+                            source_name: "baz_dir_name".into(),
+                            ..default_use_dir()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::OfferBy {
+                        node_path: node_path(vec!["foo"]),
+                        capability: OfferDirectoryDecl {
+                            source_name: "foo_dir_name".into(),
+                            target: OfferTarget::Child("baz".to_string()),
+                            target_name: "baz_dir_name".into(),
+                            rights: None,
+                            ..default_offer_dir()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::OfferBy {
+                        node_path: node_path(vec![]),
+                        capability: OfferDirectoryDecl {
+                            source: OfferSource::Child("bar".to_string()),
+                            source_name: "root_dir_name".into(),
+                            target: OfferTarget::Child("foo".to_string()),
+                            target_name: "foo_dir_name".into(),
+                            rights: None,
+                            ..default_offer_dir()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::ExposeBy {
+                        node_path: node_path(vec!["bar"]),
+                        capability: ExposeDirectoryDecl {
+                            source_name: "bar_dir_name".into(),
+                            target_name: "root_dir_name".into(),
+                            rights: Some(fio2::Operations::Connect | fio2::Operations::ReadBytes),
+                            ..default_expose_dir()
+                        }
+                        .into(),
+                    },
+                    RouteSegment::DeclareBy {
+                        node_path: node_path(vec!["bar"]),
+                        capability: DirectoryDecl {
+                            name: "bar_dir_name".into(),
+                            rights: fio2::Operations::Connect | fio2::Operations::ReadBytes,
+                            ..default_declare_dir()
+                        }
+                        .into(),
+                    },
+                ]
+            );
             Ok(())
         } else {
             panic!["Failed precondition: expected UseDecl of type Directory"]
@@ -701,11 +818,35 @@ mod tests {
         assert_eq!(good_result.capability, good_dir_name);
         assert!(good_result.result.is_ok());
         let good_route = good_result.result.as_ref().unwrap();
-        assert_eq!(good_route.len(), 3);
-        assert_eq!(good_route[0].to_string(), "use by `/child` as `good_dir` from parent");
-        assert_eq!(good_route[1].to_string(), "offer by `/` as `good_dir` from self");
-        assert_eq!(good_route[2].to_string(), "declare by `/` as `good_dir`");
-
+        assert_eq!(
+            good_route,
+            &vec![
+                RouteSegment::UseBy {
+                    node_path: node_path(vec!["child"]),
+                    capability: UseDirectoryDecl {
+                        source_name: "good_dir".into(),
+                        ..default_use_dir()
+                    }
+                    .into(),
+                },
+                RouteSegment::OfferBy {
+                    node_path: node_path(vec![]),
+                    capability: OfferDirectoryDecl {
+                        source: OfferSource::Self_,
+                        source_name: "good_dir".into(),
+                        target: OfferTarget::Child("child".to_string()),
+                        target_name: "good_dir".into(),
+                        ..default_offer_dir()
+                    }
+                    .into(),
+                },
+                RouteSegment::DeclareBy {
+                    node_path: node_path(vec![]),
+                    capability: DirectoryDecl { name: "good_dir".into(), ..default_declare_dir() }
+                        .into(),
+                },
+            ]
+        );
         assert_eq!(bad_result.using_node.to_string(), "/child");
         assert_eq!(bad_result.capability, bad_dir_name);
         assert!(bad_result.result.is_err());

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Result,
     cm_rust::{ChildDecl, ComponentDecl, EnvironmentDecl},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
     routing::environment::{DebugRegistry, EnvironmentExtends, RunnerRegistry},
@@ -17,7 +18,8 @@ use {
 };
 
 /// Errors that may occur while building or operating on a `ComponentTree`.
-#[derive(Debug, Error, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Error, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ComponentTreeError {
     #[error("no component declaration found for url `{0}` requested by node `{1}`")]
     ComponentDeclNotFound(String, String),
@@ -133,11 +135,30 @@ impl NodePath {
         node_path
     }
 
+    /// Construct NodePath from string references that correspond to parsable
+    /// `ChildMoniker` instances.
+    pub fn absolute_from_vec(vec: Vec<&str>) -> Self {
+        let abs_moniker: AbsoluteMoniker = vec.into();
+        Self::new(
+            abs_moniker
+                .path()
+                .into_iter()
+                .map(|child_moniker| child_moniker.to_partial())
+                .collect(),
+        )
+    }
+
     /// Returns a new `NodePath` which extends `self` by appending `moniker` at the end of the path.
     pub fn extended(&self, moniker: PartialChildMoniker) -> Self {
         let mut node_path = NodePath::new(self.0.clone());
         node_path.0.push(moniker);
         node_path
+    }
+
+    /// Construct string references that correspond to underlying
+    /// `ChildMoniker` instances.
+    pub fn as_vec(&self) -> Vec<&str> {
+        self.0.iter().map(|moniker| moniker.as_str()).collect()
     }
 }
 

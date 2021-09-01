@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::verify::collection::V2ComponentTree,
-    anyhow::{anyhow, Result},
+    crate::verify::{
+        collection::V2ComponentTree, ErrorResult, OkResult, ResultsBySeverity,
+        ResultsForCapabilityType, WarningResult,
+    },
+    anyhow::{anyhow, Context, Result},
     cm_fidl_analyzer::capability_routing::{
         directory::DirectoryCapabilityRouteVerifier,
         error::CapabilityRouteError,
         protocol::ProtocolCapabilityRouteVerifier,
-        route::RouteSegment,
         verifier::{CapabilityRouteVerifier, VerifyRouteResult},
     },
     cm_fidl_analyzer::component_tree::{
@@ -22,6 +24,63 @@ use {
     serde_json::{json, value::Value},
     std::{collections::HashSet, sync::Arc},
 };
+
+/// Generic verification result type. Variants implement serialization.
+enum ResultBySeverity {
+    Error(ErrorResult),
+    Warning(WarningResult),
+    Ok(OkResult),
+}
+
+impl From<VerifyRouteResult> for ResultBySeverity {
+    fn from(verify_route_result: VerifyRouteResult) -> Self {
+        match verify_route_result.result {
+            Ok(route) => OkResult {
+                using_node: verify_route_result.using_node,
+                capability: verify_route_result.capability,
+                route,
+            }
+            .into(),
+            Err(error) => {
+                match error {
+                    // It is expected that some components in a build may have
+                    // children that are not included in the build.
+                    CapabilityRouteError::ComponentNotFound(_)
+                    | CapabilityRouteError::ValidationNotImplemented(_) => WarningResult {
+                        using_node: verify_route_result.using_node,
+                        capability: verify_route_result.capability,
+                        warning: error.into(),
+                    }
+                    .into(),
+                    _ => ErrorResult {
+                        using_node: verify_route_result.using_node,
+                        capability: verify_route_result.capability,
+                        error: error.into(),
+                    }
+                    .into(),
+                }
+            }
+        }
+    }
+}
+
+impl From<OkResult> for ResultBySeverity {
+    fn from(ok_result: OkResult) -> Self {
+        Self::Ok(ok_result)
+    }
+}
+
+impl From<WarningResult> for ResultBySeverity {
+    fn from(warning_result: WarningResult) -> Self {
+        Self::Warning(warning_result)
+    }
+}
+
+impl From<ErrorResult> for ResultBySeverity {
+    fn from(error_result: ErrorResult) -> Self {
+        Self::Error(error_result)
+    }
+}
 
 // TreeMappingController
 //
@@ -149,120 +208,29 @@ impl VerifierWithResults {
         self.results.append(&mut results);
     }
 
-    fn report_ok_routes(&self) -> Value {
-        let mut ok_routes = Vec::<Value>::new();
+    fn split_ok_warn_error_results(&self) -> (Vec<OkResult>, Vec<WarningResult>, Vec<ErrorResult>) {
+        let mut ok_results = vec![];
+        let mut warning_results = vec![];
+        let mut error_results = vec![];
 
-        let ok_results: Vec<&VerifyRouteResult> =
-            self.results.iter().filter(|r| r.result.is_ok()).collect();
-
-        for result in ok_results {
-            ok_routes.push(json!({"using_node": result.using_node.to_string(),
-                                  "capability": result.capability.str(),
-                                  "route": Self::format_route(&result.result.as_ref().unwrap())}));
+        for result in self.results.iter() {
+            match result.clone().into() {
+                ResultBySeverity::Ok(ok_result) => ok_results.push(ok_result),
+                ResultBySeverity::Warning(warning_result) => warning_results.push(warning_result),
+                ResultBySeverity::Error(error_result) => error_results.push(error_result),
+            }
         }
-
-        json!(ok_routes)
+        (ok_results, warning_results, error_results)
     }
 
-    fn report_warnings(&self) -> Value {
-        let mut warnings = Vec::<Value>::new();
-
-        let warn_results: Vec<&VerifyRouteResult> = self
-            .results
-            .iter()
-            .filter(|r| {
-                r.result.is_err() && Self::report_as_warning(&r.result.as_ref().err().unwrap())
-            })
-            .collect();
-
-        for result in warn_results {
-            warnings.push(json!({"using_node": result.using_node.to_string(),
-                                 "capability": result.capability.str(),
-                                 "warning": &result.result.as_ref().err().unwrap().to_string()}));
-        }
-
-        json!(warnings)
-    }
-
-    fn report_errors(&self) -> Value {
-        let mut errors = Vec::<Value>::new();
-
-        let err_results: Vec<&VerifyRouteResult> = self
-            .results
-            .iter()
-            .filter(|r| {
-                r.result.is_err() && !Self::report_as_warning(&r.result.as_ref().err().unwrap())
-            })
-            .collect();
-
-        for result in err_results {
-            errors.push(json!({"using_node": result.using_node.to_string(),
-                               "capability": result.capability.str(),
-                               "error": &result.result.as_ref().err().unwrap().to_string()}));
-        }
-
-        json!(errors)
-    }
-
-    fn report_results(&self, level: &ResponseLevel) -> Value {
-        let results: Value;
-
-        match level {
-            ResponseLevel::Error => results = json!({"errors": self.report_errors()}),
-            ResponseLevel::Warn => {
-                results = json!({"errors": self.report_errors(),
-                                 "warnings": self.report_warnings()})
-            }
-            ResponseLevel::All => {
-                results = json!({"errors": self.report_errors(),
-                                 "warnings": self.report_warnings(),
-                                 "ok": self.report_ok_routes()})
-            }
-        }
-
-        json!({"capability_type": self.capability_type.to_string(), "results": results })
-    }
-
-    fn format_route_segment(segment: &RouteSegment) -> Value {
-        match segment {
-            RouteSegment::UseBy(node, name, source) => {
-                json!({"action": "use", "by": node.to_string(),"as": name.str(), "from": source.to_string()})
-            }
-            RouteSegment::OfferBy(node, name, source) => {
-                json!({"action": "offer", "by": node.to_string(), "as": name.str(), "from": source.to_string()})
-            }
-            RouteSegment::ExposeBy(node, name, source) => {
-                json!({"action": "expose", "by": node.to_string(),"as": name.str(), "from": source.to_string()})
-            }
-            RouteSegment::DeclareBy(node, name) => {
-                json!({"action": "declare", "as": name.str(), "by": node.to_string()})
-            }
-            RouteSegment::RouteFromFramework => {
-                json!({"action": "offer", "by": "framework"})
-            }
-            RouteSegment::RouteFromRootParent => {
-                json!({"action": "offer", "by": "root parent"})
-            }
-        }
-    }
-
-    fn format_route(route: &Vec<RouteSegment>) -> Value {
-        let mut segments = Vec::<Value>::new();
-        for segment in route {
-            segments.push(Self::format_route_segment(&segment))
-        }
-        json!(segments)
-    }
-
-    // Selects some error types to report as warnings rather than as errors.
-    fn report_as_warning(error: &CapabilityRouteError) -> bool {
-        match error {
-            // It is expected that some components in a build may have children
-            // that are not included in the build.
-            CapabilityRouteError::ComponentNotFound(_) => true,
-            CapabilityRouteError::ValidationNotImplemented(_) => true,
-            _ => false,
-        }
+    fn report_results(&self, level: &ResponseLevel) -> ResultsForCapabilityType {
+        let (ok, warnings, errors) = self.split_ok_warn_error_results();
+        let results = match level {
+            ResponseLevel::Error => ResultsBySeverity { errors, ..Default::default() },
+            ResponseLevel::Warn => ResultsBySeverity { errors, warnings, ..Default::default() },
+            ResponseLevel::All => ResultsBySeverity { errors, warnings, ok },
+        };
+        ResultsForCapabilityType { capability_type: self.capability_type.clone(), results }
     }
 }
 
@@ -283,12 +251,8 @@ impl<'a> CapabilityRouteVisitor<'a> {
         Self { tree, verifiers }
     }
 
-    fn report_results(&self, level: &ResponseLevel) -> Value {
-        let mut results = Vec::<Value>::new();
-        for verifier in self.verifiers.iter() {
-            results.push(verifier.report_results(level));
-        }
-        Value::Array(results)
+    fn report_results(&self, level: &ResponseLevel) -> Vec<ResultsForCapabilityType> {
+        self.verifiers.iter().map(|verifier| verifier.report_results(level)).collect()
     }
 }
 
@@ -340,12 +304,20 @@ impl CapabilityRouteController {
 
 impl DataController for CapabilityRouteController {
     fn query(&self, model: Arc<DataModel>, request: Value) -> Result<Value> {
-        let (capability_types, response_level) = Self::parse_request(request)?;
-        let tree = &model.get::<V2ComponentTree>()?.tree;
-        let mut walker = BreadthFirstWalker::new(&tree)?;
+        let (capability_types, response_level) = Self::parse_request(request)
+            .context("Failed to parse CapabilityRouteController request")?;
+        let tree = &model
+            .get::<V2ComponentTree>()
+            .context("Failed to get V2ComponentTree from CapabilityRouteController model")?
+            .tree;
+        let mut walker = BreadthFirstWalker::new(&tree)
+            .context("Failed to initialize BreadthFirstWalker from V2ComponentTree")?;
         let mut visitor = CapabilityRouteVisitor::new(&tree, &capability_types);
-        walker.walk(&tree, &mut visitor)?;
-        Ok(visitor.report_results(&response_level))
+        walker.walk(&tree, &mut visitor).context(
+            "Failed to walk V2ComponentTree with BreadthFirstWalker and CapabilityRouteVisitor",
+        )?;
+        let results = visitor.report_results(&response_level);
+        Ok(json!(results))
     }
 
     fn description(&self) -> String {
@@ -360,7 +332,7 @@ impl DataController for CapabilityRouteController {
          Required parameters:
          --capability_types: a space-separated list of capability types to verify.
          --response_level: one of `error` (return errors only), `warn` (return errors
-                           and warnings) and `all` (return errors, warnings, and a 
+                           and warnings) and `all` (return errors, warnings, and a
                            summary of each valid route)."
             .to_string()
     }
