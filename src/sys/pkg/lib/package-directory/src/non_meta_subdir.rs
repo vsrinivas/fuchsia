@@ -178,10 +178,7 @@ mod tests {
     use {
         super::*,
         fidl::{AsyncChannel, Channel},
-        fidl_fuchsia_io::{
-            DirectoryMarker, FileMarker, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NO_REMOTE,
-            OPEN_RIGHT_READABLE,
-        },
+        fidl_fuchsia_io::{DirectoryMarker, FileMarker, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         matches::assert_matches,
@@ -355,7 +352,6 @@ mod tests {
             OPEN_FLAG_CREATE_IF_ABSENT,
             OPEN_FLAG_TRUNCATE,
             OPEN_FLAG_APPEND,
-            OPEN_FLAG_NO_REMOTE,
         ] {
             let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
             DirectoryEntry::open(
