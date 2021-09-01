@@ -326,6 +326,7 @@ executable("device_tests") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/graphics/drivers/msd-intel-gen/include:include",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/include/virtio:headers",
     "//src/lib/fsl",

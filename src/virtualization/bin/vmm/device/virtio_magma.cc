@@ -209,6 +209,43 @@ zx_status_t VirtioMagma::HandleCommandDescriptors(VirtioDescriptor* request_desc
 
       return ZX_OK;
     }
+
+    // Returns the buffer size after the response struct.
+    case VIRTIO_MAGMA_CMD_QUERY_RETURNS_BUFFER2: {
+      auto request =
+          reinterpret_cast<virtio_magma_query_returns_buffer2_ctrl_t*>(request_desc->addr);
+
+      virtio_magma_get_buffer_handle2_resp_t response = {
+          .hdr.type = VIRTIO_MAGMA_RESP_QUERY_RETURNS_BUFFER2,
+      };
+
+      const auto device = request->device;
+      const auto id = request->id;
+
+      zx::vmo vmo;
+      response.result_return = magma_query_returns_buffer2(device, id, vmo.reset_and_get_address());
+      response.handle_out = vmo.get();
+
+      memcpy(response_desc->addr, &response, sizeof(response));
+      *used_out = sizeof(response);
+
+      if (response.result_return == MAGMA_STATUS_OK) {
+        uint64_t buffer_size;
+        zx_status_t status = vmo.get_size(&buffer_size);
+        if (status != ZX_OK)
+          return status;
+
+        void* buffer_size_ptr =
+            reinterpret_cast<virtio_magma_query_returns_buffer2_resp_t*>(response_desc->addr) + 1;
+        memcpy(buffer_size_ptr, &buffer_size, sizeof(buffer_size));
+        *used_out += sizeof(buffer_size);
+
+        // Keep the handle alive while the guest is referencing it.
+        stored_handles_.push_back(std::move(vmo));
+      }
+
+      return ZX_OK;
+    }
   }
 
   return ZX_ERR_NOT_SUPPORTED;

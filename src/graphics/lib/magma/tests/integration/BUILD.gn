@@ -24,6 +24,7 @@ executable("magma_abi_conformance_tests") {
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/libmagma",
     "$magma_build_root/tests/helper:magma_map_cpu",
+    "//src/graphics/drivers/msd-intel-gen/include",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
@@ -66,6 +67,7 @@ executable("virtmagma_abi_conformance_tests") {
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/libmagma_linux",
     "$magma_build_root/tests/helper:magma_map_cpu",
+    "//src/graphics/drivers/msd-intel-gen/include",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]

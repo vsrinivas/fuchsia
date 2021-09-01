@@ -14,6 +14,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/vmar.h>
 
 #include <filesystem>
 
@@ -24,11 +25,17 @@
 #include "platform_trace_provider.h"
 #endif
 
+#if defined(__linux__)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
 #include <gtest/gtest.h>
 
 #include "helper/magma_map_cpu.h"
 #include "magma.h"
 #include "magma_common_defs.h"
+#include "magma_intel_gen_defs.h"
 
 extern "C" {
 #include "test_magma_abi.h"
@@ -728,14 +735,53 @@ class TestConnection {
     EXPECT_NE(0u, vendor_id);
   }
 
-  void QueryReturnsBufferImported() {
+  void QueryReturnsBufferImported(bool leaky) {
     ASSERT_TRUE(device_);
+    ASSERT_TRUE(connection_);
 
-    uint32_t handle_out = 0;
-    // Drivers shouldn't allow this value to be queried through this entrypoint.
-    EXPECT_NE(MAGMA_STATUS_OK,
-              magma_query_returns_buffer2(device_, MAGMA_QUERY_DEVICE_ID, &handle_out));
-    EXPECT_EQ(0u, handle_out);
+    uint64_t query_id = 0;
+    {
+      uint64_t vendor_id;
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
+      switch (vendor_id) {
+        case 0x8086:
+          query_id = kMagmaIntelGenQueryTimestamp;
+          break;
+        default:
+          GTEST_SKIP();
+      }
+    }
+
+    uint32_t buffer_handle = 0;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_query_returns_buffer2(device_, query_id, &buffer_handle));
+    ASSERT_NE(0u, buffer_handle);
+
+#if defined(__Fuchsia__)
+    zx::vmo vmo(buffer_handle);
+
+    zx_vaddr_t zx_vaddr;
+    EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                                0,  // vmar_offset,
+                                                vmo, 0 /*offset*/, page_size(), &zx_vaddr));
+
+    zx_handle_close(buffer_handle);
+
+    if (!leaky) {
+      EXPECT_EQ(ZX_OK, zx::vmar::root_self()->unmap(zx_vaddr, page_size()));
+    }
+#elif defined(__linux__)
+    int fd = buffer_handle;
+
+    void* addr = mmap(nullptr, page_size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0 /*offset*/);
+    EXPECT_NE(MAP_FAILED, addr);
+
+    close(fd);
+
+    if (!leaky) {
+      if (addr != MAP_FAILED)
+        munmap(addr, page_size());
+    }
+#endif
   }
 
   void QueryTestRestartSupported() {
@@ -887,7 +933,12 @@ TEST(MagmaAbi, VendorId) {
 
 TEST(MagmaAbi, QueryReturnsBuffer) {
   TestConnection test;
-  test.QueryReturnsBufferImported();
+  test.QueryReturnsBufferImported(/*leaky*/ false);
+}
+
+TEST(MagmaAbi, QueryReturnsBufferLeaky) {
+  TestConnection test;
+  test.QueryReturnsBufferImported(/*leaky*/ true);
 }
 
 TEST(MagmaAbi, QueryTestRestartSupported) {
