@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Error,
-    fuchsia_component::client::{launcher, AppBuilder},
-};
+use anyhow::Error;
+use fuchsia_component::client::{launcher, AppBuilder};
 
 const SETUI_CLIENT_PATH: &str = "fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx";
 const EXPECTED_OUT_NAME: &str = "setui_client";

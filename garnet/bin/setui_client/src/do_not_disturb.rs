@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::utils::{self, Either, WatchOrSetResult},
-    fidl_fuchsia_settings::{DoNotDisturbProxy, DoNotDisturbSettings},
-};
+use crate::utils::{self, Either, WatchOrSetResult};
+use fidl_fuchsia_settings::{DoNotDisturbProxy, DoNotDisturbSettings};
 
 pub async fn command(
     proxy: DoNotDisturbProxy,

@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::utils::{watch_to_stream, Either, WatchOrSetResult},
-    fidl_fuchsia_settings::{AudioInput, AudioProxy, AudioSettings, AudioStreamSettings, Volume},
-    fuchsia_syslog::fx_log_info,
-};
+use crate::utils::{watch_to_stream, Either, WatchOrSetResult};
+use fidl_fuchsia_settings::{AudioInput, AudioProxy, AudioSettings, AudioStreamSettings, Volume};
+use fuchsia_syslog::fx_log_info;
 
 pub async fn command(
     proxy: AudioProxy,

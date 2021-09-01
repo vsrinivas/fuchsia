@@ -2,39 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_intl::{LocaleId, TemperatureUnit, TimeZoneId},
-    fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_settings::*,
-    fidl_fuchsia_settings_policy::{
-        PolicyParameters, Property, Target, Transform, Volume as PolicyVolume,
-        VolumePolicyControllerMarker, VolumePolicyControllerRequest,
-        VolumePolicyControllerRequestStream,
-    },
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    futures::prelude::*,
-    parking_lot::RwLock,
-    setui_client_lib::accessibility,
-    setui_client_lib::audio,
-    setui_client_lib::display,
-    setui_client_lib::do_not_disturb,
-    setui_client_lib::factory_reset,
-    setui_client_lib::input,
-    setui_client_lib::intl,
-    setui_client_lib::light,
-    setui_client_lib::night_mode,
-    setui_client_lib::privacy,
-    setui_client_lib::setup,
-    setui_client_lib::utils,
-    setui_client_lib::volume_policy,
-    setui_client_lib::{
-        AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions,
-        VolumePolicyCommands, VolumePolicyOptions,
-    },
-    std::sync::Arc,
+use anyhow::{Context as _, Error};
+use fidl_fuchsia_intl::{LocaleId, TemperatureUnit, TimeZoneId};
+use fidl_fuchsia_media::AudioRenderUsage;
+use fidl_fuchsia_settings::*;
+use fidl_fuchsia_settings_policy::{
+    PolicyParameters, Property, Target, Transform, Volume as PolicyVolume,
+    VolumePolicyControllerMarker, VolumePolicyControllerRequest,
+    VolumePolicyControllerRequestStream,
 };
+use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
+use futures::prelude::*;
+use parking_lot::RwLock;
+use setui_client_lib::{
+    accessibility, audio, display, do_not_disturb, factory_reset, input, intl, light, night_mode,
+    privacy, setup, utils, volume_policy, AccessibilityOptions, CaptionCommands, CaptionFontStyle,
+    CaptionOptions, VolumePolicyCommands, VolumePolicyOptions,
+};
+use std::sync::Arc;
 
 /// Validate that the results of the call are successful, and in the case of watch,
 /// that the first item can be retrieved, but do not analyze the result.

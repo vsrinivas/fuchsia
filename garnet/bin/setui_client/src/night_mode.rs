@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::utils::{self, Either, WatchOrSetResult},
-    fidl_fuchsia_settings::{NightModeProxy, NightModeSettings},
-};
+use crate::utils::{self, Either, WatchOrSetResult};
+use fidl_fuchsia_settings::{NightModeProxy, NightModeSettings};
 
 pub async fn command(proxy: NightModeProxy, night_mode_enabled: Option<bool>) -> WatchOrSetResult {
     Ok(if let Some(night_mode_enabled_value) = night_mode_enabled {

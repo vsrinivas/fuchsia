@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue, Theme},
-    fuchsia_component::client::connect_to_protocol,
-    structopt::StructOpt,
-};
+use anyhow::{Context as _, Error};
+use fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue, Theme};
+use fuchsia_component::client::connect_to_protocol;
+use structopt::StructOpt;
 
 pub mod accessibility;
 pub mod audio;

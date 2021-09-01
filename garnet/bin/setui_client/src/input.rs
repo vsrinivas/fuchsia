@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::utils::{self, Either, WatchOrSetResult},
-    anyhow::format_err,
-    fidl_fuchsia_settings::{
-        DeviceState, DeviceType, InputDeviceSettings, InputProxy, InputState, Microphone,
-    },
+use crate::utils::{self, Either, WatchOrSetResult};
+use anyhow::format_err;
+use fidl_fuchsia_settings::{
+    DeviceState, DeviceType, InputDeviceSettings, InputProxy, InputState, Microphone,
 };
 
 // TODO(fxbug.dev/65686): Remove when clients are ported to new interface.
