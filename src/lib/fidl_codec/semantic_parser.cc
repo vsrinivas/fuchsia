@@ -13,6 +13,7 @@
 #include <string>
 
 #include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
 namespace fidl_codec {
 namespace semantic {
@@ -326,6 +327,51 @@ void SemanticParser::ParseMethod(InterfaceMethod* method) {
           display = method->short_display();
         }
         display->AddResult(std::move(expression));
+      }
+      if (!ParseSemicolon()) {
+        SkipSemicolon();
+      }
+    } else if (Is("print")) {
+      // Parses something like:
+      //   print flags as directory_open_flags;
+      NextLexicalToken();
+      if (!IsIdentifier()) {
+        AddError() << "Field name expected.\n";
+      } else {
+        method->Decode();
+        StructMember* member = method->SearchMember(current_string_);
+        if (member == nullptr) {
+          AddError() << "Field <" << current_string_ << "> not found.\n";
+          NextLexicalToken();
+        } else if (member->type() == nullptr) {
+          AddError() << "Type not defined for field <" << current_string_ << ">.\n";
+          NextLexicalToken();
+        } else {
+          NextLexicalToken();
+          Parse("as");
+          if (!IsIdentifier()) {
+            AddError() << "Decode function expected.\n";
+          } else {
+            if (current_string_ == "directory_open_flags") {
+              Uint32Type* type = member->type()->AsUint32Type();
+              if (type == nullptr) {
+                AddError() << "<" << member->name() << "> should be an Uint32.\n";
+              } else {
+                type->set_kind(Uint32Type::Kind::kDirectoryOpenFlags);
+              }
+            } else if (current_string_ == "directory_open_mode") {
+              Uint32Type* type = member->type()->AsUint32Type();
+              if (type == nullptr) {
+                AddError() << "<" << member->name() << "> should be an Uint32.\n";
+              } else {
+                type->set_kind(Uint32Type::Kind::kDirectoryOpenMode);
+              }
+            } else {
+              AddError() << "Print type <" << current_string_ << "> not found.\n";
+            }
+            NextLexicalToken();
+          }
+        }
       }
       if (!ParseSemicolon()) {
         SkipSemicolon();

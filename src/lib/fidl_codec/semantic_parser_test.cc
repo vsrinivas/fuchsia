@@ -14,6 +14,7 @@
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/list_test_data.h"
 #include "src/lib/fidl_codec/semantic_parser_test.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
 namespace fidl_codec {
 namespace semantic {
@@ -67,6 +68,54 @@ TEST_F(SemanticParserTest, GlobalExample) {
   method->semantic()->Dump(ss);
   std::string result = ss.str();
   ASSERT_EQ(result, "request.object = handle / request.path\n");
+}
+
+TEST_F(SemanticParserTest, GlobalPrintExample) {
+  // Checks that Directory::Open exists in fuchsia.io.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.io/Directory", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("Open");
+  ASSERT_NE(method, nullptr);
+
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print flags as directory_open_flags;\n"
+      "    print mode as directory_open_mode;\n"
+      "  }\n"
+      "}\n";
+  ParserErrors parser_errors;
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  StructMember* flags = method->SearchMember("flags");
+  ASSERT_NE(flags, nullptr);
+  Uint32Type* flags_type = flags->type()->AsUint32Type();
+  ASSERT_NE(flags_type, nullptr);
+  ASSERT_EQ(flags_type->kind(), Uint32Type::Kind::kDirectoryOpenFlags);
+
+  StructMember* mode = method->SearchMember("mode");
+  ASSERT_NE(mode, nullptr);
+  Uint32Type* mode_type = mode->type()->AsUint32Type();
+  ASSERT_NE(mode_type, nullptr);
+  ASSERT_EQ(mode_type->kind(), Uint32Type::Kind::kDirectoryOpenMode);
+
+  // Checks that the fields are printed correctly.
+  std::stringstream out;
+  PrettyPrinter printer(out, WithoutColors, false, "", 100, false);
+  IntegerValue flags_value(8912896, /*negative=*/false);
+  flags->type()->PrettyPrint(&flags_value, printer);
+  out << '\n';
+  IntegerValue mode_value(16384, /*negative=*/false);
+  mode->type()->PrettyPrint(&mode_value, printer);
+  out << '\n';
+  ASSERT_EQ(out.str(),
+            "OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE\n"
+            "MODE_TYPE_DIRECTORY\n");
 }
 
 TEST_F(SemanticParserTest, CheckAssignments) {
@@ -634,6 +683,222 @@ TEST_F(SemanticParserTest, RightParenthesisExpected) {
             "   request.controller = HandleDescription('server-control', request.launch_info.url;\n"
             "                                                                                   ^\n"
             "3:84: Symbol ')' expected.\n");
+}
+
+TEST_F(SemanticParserTest, MissingFieldName) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print;\n"
+            "         ^\n"
+            "3:10: Field name expected.\n");
+}
+
+TEST_F(SemanticParserTest, BadFieldName) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print xx as directory_open_flags;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print xx as directory_open_flags;\n"
+            "          ^\n"
+            "3:11: Field <xx> not found.\n"
+            "    print xx as directory_open_flags;\n"
+            "             ^\n"
+            "3:14: Symbol ';' expected.\n");
+}
+
+TEST_F(SemanticParserTest, TypeNotDefined) {
+  // Checks that Directory::Open exists in fuchsia.io.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.io/Directory", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("Open");
+  ASSERT_NE(method, nullptr);
+  method->Decode();
+  StructMember* flags = method->SearchMember("flags");
+  ASSERT_NE(flags, nullptr);
+
+  // Reset the type to trigger the error.
+  flags->reset_type();
+
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print flags as directory_open_flags;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print flags as directory_open_flags;\n"
+            "          ^\n"
+            "3:11: Type not defined for field <flags>.\n"
+            "    print flags as directory_open_flags;\n"
+            "                ^\n"
+            "3:17: Symbol ';' expected.\n");
+}
+
+TEST_F(SemanticParserTest, MissingDecodeFunction) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print flags as;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print flags as;\n"
+            "                  ^\n"
+            "3:19: Decode function expected.\n");
+}
+
+TEST_F(SemanticParserTest, BadFieldType1) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print path as directory_open_flags;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print path as directory_open_flags;\n"
+            "                  ^\n"
+            "3:19: <path> should be an Uint32.\n");
+}
+
+TEST_F(SemanticParserTest, BadFieldType2) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print path as directory_open_mode;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print path as directory_open_mode;\n"
+            "                  ^\n"
+            "3:19: <path> should be an Uint32.\n");
+}
+
+TEST_F(SemanticParserTest, MissingAs) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print flags directory_open_flags;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print flags directory_open_flags;\n"
+            "                ^\n"
+            "3:17: Keyword 'as' expected.\n");
+}
+
+TEST_F(SemanticParserTest, BadPrintType) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print flags as xxx;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print flags as xxx;\n"
+            "                   ^\n"
+            "3:20: Print type <xxx> not found.\n");
+}
+
+TEST_F(SemanticParserTest, SemicolonExpected2) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Directory::Open {\n"
+      "    print flags as directory_open_flags\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "  }\n"
+            "  ^\n"
+            "4:3: Symbol ';' expected.\n");
+}
+
+// Checks that we can access response fields.
+TEST_F(SemanticParserTest, ResponseField) {
+  std::string text =
+      "library fuchsia.io {\n"
+      "  Node::OnOpen {\n"
+      "    print info as directory_open_flags\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "    print info as directory_open_flags\n"
+            "                  ^\n"
+            "3:19: <info> should be an Uint32.\n"
+            "  }\n"
+            "  ^\n"
+            "4:3: Symbol ';' expected.\n");
 }
 
 }  // namespace semantic

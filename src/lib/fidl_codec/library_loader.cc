@@ -167,6 +167,8 @@ StructMember::StructMember(std::string_view name, std::unique_ptr<Type> type, ui
 
 StructMember::~StructMember() = default;
 
+void StructMember::reset_type() { type_ = nullptr; }
+
 Struct::Struct(Library* enclosing_library, const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
 
@@ -308,6 +310,19 @@ std::string InterfaceMethod::fully_qualified_name() const {
   fqn.append(".");
   fqn.append(name());
   return fqn;
+}
+
+StructMember* InterfaceMethod::SearchMember(std::string_view name) const {
+  if (request_ != nullptr) {
+    StructMember* member = request_->SearchMember(name);
+    if (member != nullptr) {
+      return member;
+    }
+  }
+  if (response_ != nullptr) {
+    return response_->SearchMember(name);
+  }
+  return nullptr;
 }
 
 void Interface::AddMethodsToIndex(LibraryLoader* library_loader) {

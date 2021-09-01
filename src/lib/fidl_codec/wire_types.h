@@ -25,6 +25,7 @@ class StructType;
 class TableType;
 class TypeVisitor;
 class UnionType;
+class Uint32Type;
 
 // A FIDL type.  Provides methods for generating instances of this type.
 class Type {
@@ -38,6 +39,7 @@ class Type {
   // Returns a detailed representation of the type.
   std::string ToString(bool expand = false) const;
 
+  virtual Uint32Type* AsUint32Type() { return nullptr; }
   virtual const UnionType* AsUnionType() const { return nullptr; }
   virtual const StructType* AsStructType() const { return nullptr; }
   virtual const TableType* AsTableType() const { return nullptr; }
@@ -251,6 +253,8 @@ class Uint32Type : public IntegralType<uint32_t> {
     kChannelOption,
     kClock,
     kDecimal,
+    kDirectoryOpenFlags,
+    kDirectoryOpenMode,
     kExceptionChannelType,
     kExceptionState,
     kFeatureKind,
@@ -292,6 +296,11 @@ class Uint32Type : public IntegralType<uint32_t> {
   };
 
   explicit Uint32Type(Kind kind = Kind::kDecimal) : kind_(kind) {}
+
+  Kind kind() const { return kind_; }
+  void set_kind(Kind kind) { kind_ = kind; }
+
+  Uint32Type* AsUint32Type() override { return this; }
 
   std::string Name() const override;
   void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;

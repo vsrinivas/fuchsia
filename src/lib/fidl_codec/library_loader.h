@@ -219,7 +219,8 @@ class StructMember {
   ~StructMember();
 
   const std::string& name() const { return name_; }
-  const Type* type() const { return type_.get(); }
+  Type* type() const { return type_.get(); }
+  void reset_type();
   uint8_t id() const { return id_; }
 
   uint64_t Offset(WireVersion version) const {
@@ -381,6 +382,17 @@ class InterfaceMethod {
   }
 
   std::string fully_qualified_name() const;
+
+  void Decode() {
+    if (request_ != nullptr) {
+      request_->DecodeRequestTypes();
+    }
+    if (response_ != nullptr) {
+      response_->DecodeResponseTypes();
+    }
+  }
+
+  StructMember* SearchMember(std::string_view name) const;
 
   InterfaceMethod(const InterfaceMethod& other) = delete;
   InterfaceMethod& operator=(const InterfaceMethod&) = delete;
