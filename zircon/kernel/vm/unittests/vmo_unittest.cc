@@ -910,7 +910,7 @@ static bool vmo_move_pages_on_access_test() {
 
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Our page should now be in a pager backed page queue.
@@ -975,7 +975,7 @@ static bool vmo_move_inactive_pages_test() {
   // Create a pager-backed VMO with a single page.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
   vmo->set_user_id(0xff);
 
@@ -1045,9 +1045,9 @@ static bool vmo_eviction_test() {
   fbl::RefPtr<VmObjectPaged> vmo2;
   vm_page_t* page;
   vm_page_t* page2;
-  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
-  status = make_committed_pager_vmo(&page2, &vmo2);
+  status = make_committed_pager_vmo(1, &page2, &vmo2);
   ASSERT_EQ(ZX_OK, status);
 
   // Shouldn't be able to evict pages from the wrong VMO.
@@ -1339,7 +1339,7 @@ static bool vmo_attribution_evict_test() {
 
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   uint64_t expected_gen_count = 2;

@@ -114,7 +114,11 @@ class StubPageProvider : public PageProvider {
 // Helper function to allocate memory in a user address space.
 zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inout_ptr<void>* ptr);
 
-zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObjectPaged>* out_vmo);
+// Create a pager-backed VMO |out_vmo| with size equals |num_pages| pages, and commit all its pages.
+// Return pointers to the pages committed in |out_pages|, so that tests can examine their state.
+// Allows tests to work with pager-backed VMOs without blocking on page faults.
+zx_status_t make_committed_pager_vmo(size_t num_pages, vm_page_t** out_pages,
+                                     fbl::RefPtr<VmObjectPaged>* out_vmo);
 
 uint32_t test_rand(uint32_t seed);
 
