@@ -163,7 +163,6 @@ class MockDirectoryAdminOpener : public fidl::WireServer<fio::DirectoryAdmin> {
 
   // fuchsia.io/Directory:
   void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {}
-  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) override {}
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override {
   }
   void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override {}

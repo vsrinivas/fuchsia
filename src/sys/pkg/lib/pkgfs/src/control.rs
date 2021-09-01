@@ -76,7 +76,7 @@ impl Client {
     /// Performs a garbage collection
     pub async fn gc(&self) -> Result<(), GcError> {
         self.proxy
-            .unlink2("do-not-use-this-garbage", UnlinkOptions::EMPTY)
+            .unlink("do-not-use-this-garbage", UnlinkOptions::EMPTY)
             .await
             .map_err(GcError::Fidl)?
             .map_err(|s| GcError::UnlinkError(Status::from_raw(s)))
@@ -108,7 +108,7 @@ mod tests {
         let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
         fasync::Task::spawn(async move {
             match stream.try_next().await.unwrap().unwrap() {
-                DirectoryRequest::Unlink2 { name, options: _, responder } => {
+                DirectoryRequest::Unlink { name, options: _, responder } => {
                     assert_eq!(name, "do-not-use-this-garbage");
                     responder.send(&mut Ok(())).unwrap();
                 }

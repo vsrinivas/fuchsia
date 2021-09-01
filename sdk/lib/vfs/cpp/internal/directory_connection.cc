@@ -59,13 +59,9 @@ void DirectoryConnection::Open(uint32_t flags, uint32_t mode, std::string path,
             binding_.dispatcher());
 }
 
-void DirectoryConnection::Unlink(std::string path, UnlinkCallback callback) {
-  callback(ZX_ERR_NOT_SUPPORTED);
-}
-
-void DirectoryConnection::Unlink2(std::string name, fuchsia::io2::UnlinkOptions options,
-                                  Unlink2Callback callback) {
-  callback(fuchsia::io::Directory_Unlink2_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+void DirectoryConnection::Unlink(std::string name, fuchsia::io2::UnlinkOptions options,
+                                 UnlinkCallback callback) {
+  callback(fuchsia::io::Directory_Unlink_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
 }
 
 void DirectoryConnection::ReadDirents(uint64_t max_bytes, ReadDirentsCallback callback) {

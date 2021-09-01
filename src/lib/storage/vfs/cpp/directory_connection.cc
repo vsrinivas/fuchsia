@@ -248,23 +248,6 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
 
 void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(),
-                        ", path: ", request->path.data());
-
-  if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE);
-    return;
-  }
-  if (!options().rights.write) {
-    completer.Reply(ZX_ERR_BAD_HANDLE);
-    return;
-  }
-  zx_status_t status =
-      vfs()->Unlink(vnode(), std::string_view(request->path.data(), request->path.size()));
-  completer.Reply(status);
-}
-
-void DirectoryConnection::Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink2] our options: ", options(),
                         ", path: ", request->name.data());
 
   if (options().flags.node_reference) {

@@ -167,10 +167,7 @@ impl MutableConnection {
         request: DirectoryAdminRequest,
     ) -> Result<Either<ConnectionState, DirectoryAdminRequest>, Error> {
         match request {
-            DirectoryAdminRequest::Unlink { path, responder } => {
-                self.handle_unlink(path, None, |status| responder.send(status.into_raw())).await?;
-            }
-            DirectoryAdminRequest::Unlink2 { name, options, responder } => {
+            DirectoryAdminRequest::Unlink { name, options, responder } => {
                 self.handle_unlink(name, Some(options), |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
@@ -655,7 +652,7 @@ mod tests {
         let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         proxy
-            .unlink2("test", UnlinkOptions::EMPTY)
+            .unlink("test", UnlinkOptions::EMPTY)
             .await
             .expect("fidl call failed")
             .expect("unlink failed");

@@ -50,7 +50,6 @@ class DirectoryConnection final : public Connection,
 
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) final;
   void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) final;
-  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) final;
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) final;
   void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) final;
   void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) final;

@@ -1548,16 +1548,17 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
 
   std::string filename = path.filename().string();
   auto result =
-      fidl::WireCall(storage_dir.value().borrow()).Unlink(fidl::StringView::FromExternal(filename));
+      fidl::WireCall(storage_dir.value().borrow())
+          .Unlink(fidl::StringView::FromExternal(filename), fuchsia_io2::wire::UnlinkOptions{});
   if (!result.ok()) {
     LOG(ERROR, "failed to remove file (FIDL status: %s)", result.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return result.status();
   }
-  if (result->s != ZX_OK) {
-    LOG(ERROR, "failed to remove file (IO status: %d)", result->s);
+  if (result->result.is_err()) {
+    LOG(ERROR, "failed to remove file (IO status: %d)", result->result.err());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return result->s;
+    return result->result.err();
   }
 
   message->set_return_code(TEEC_SUCCESS);

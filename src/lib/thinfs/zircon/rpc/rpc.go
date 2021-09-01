@@ -104,14 +104,14 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) {
 
 type directoryWrapper struct {
 	io.DirectoryWithCtxTransitionalBase // TODO(fuchsia.io2): Remove once transitions are complete.
-	vfs     *ThinVFS
-	token   key
-	cancel  context.CancelFunc
-	dir     fs.Directory
-	dirents []fs.Dirent
-	reading bool
-	e       zx.Event
-	cookies map[uint64]uint64
+	vfs                                 *ThinVFS
+	token                               key
+	cancel                              context.CancelFunc
+	dir                                 fs.Directory
+	dirents                             []fs.Dirent
+	reading                             bool
+	e                                   zx.Event
+	cookies                             map[uint64]uint64
 }
 
 func getKoid(h zx.Handle) uint64 {
@@ -260,16 +260,12 @@ func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path str
 	return nil
 }
 
-func (d *directoryWrapper) Unlink(_ fidl.Context, path string) (int32, error) {
-	return int32(errorToZx(d.dir.Unlink(path))), nil
-}
-
-func (d *directoryWrapper) Unlink2(_ fidl.Context, name string, _ io2.UnlinkOptions) (io.DirectoryUnlink2Result, error) {
+func (d *directoryWrapper) Unlink(_ fidl.Context, name string, _ io2.UnlinkOptions) (io.DirectoryUnlinkResult, error) {
 	status := int32(errorToZx(d.dir.Unlink(name)))
 	if status == 0 {
-		return io.DirectoryUnlink2ResultWithResponse(io.DirectoryUnlink2Response{}), nil
+		return io.DirectoryUnlinkResultWithResponse(io.DirectoryUnlinkResponse{}), nil
 	} else {
-		return io.DirectoryUnlink2ResultWithErr(status), nil
+		return io.DirectoryUnlinkResultWithErr(status), nil
 	}
 }
 
@@ -452,9 +448,9 @@ func (d *directoryWrapper) NodeSetFlags(fidl.Context, uint32) (int32, error) {
 
 type fileWrapper struct {
 	io.FileWithCtxTransitionalBase // TODO(fuchsia.io2): Remove once transitions are complete.
-	vfs    *ThinVFS
-	cancel context.CancelFunc
-	file   fs.File
+	vfs                            *ThinVFS
+	cancel                         context.CancelFunc
+	file                           fs.File
 }
 
 func (f *fileWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInterfaceRequest) error {

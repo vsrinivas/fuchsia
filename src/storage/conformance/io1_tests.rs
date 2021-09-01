@@ -1168,7 +1168,7 @@ async fn unlink_file_with_sufficient_rights() {
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
 
         src_dir
-            .unlink2("file.txt", UnlinkOptions::EMPTY)
+            .unlink("file.txt", UnlinkOptions::EMPTY)
             .await
             .expect("unlink fidl failed")
             .expect("unlink failed");
@@ -1194,7 +1194,7 @@ async fn unlink_file_with_insufficient_rights() {
 
         assert_eq!(
             src_dir
-                .unlink2("file.txt", UnlinkOptions::EMPTY)
+                .unlink("file.txt", UnlinkOptions::EMPTY)
                 .await
                 .expect("unlink fidl failed")
                 .expect_err("unlink succeeded"),
@@ -1219,7 +1219,7 @@ async fn unlink_directory_with_sufficient_rights() {
         // Re-open dir with flags being tested.
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
 
-        dir.unlink2("src", UnlinkOptions::EMPTY)
+        dir.unlink("src", UnlinkOptions::EMPTY)
             .await
             .expect("unlink fidl failed")
             .expect("unlink failed");
@@ -1240,7 +1240,7 @@ async fn unlink_directory_with_insufficient_rights() {
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
 
         assert_eq!(
-            dir.unlink2("src", UnlinkOptions::EMPTY)
+            dir.unlink("src", UnlinkOptions::EMPTY)
                 .await
                 .expect("unlink fidl failed")
                 .expect_err("unlink succeeded"),
@@ -1263,13 +1263,13 @@ async fn unlink_must_be_directory() {
     let must_be_directory =
         UnlinkOptions { flags: Some(UnlinkFlags::MustBeDirectory), ..UnlinkOptions::EMPTY };
     test_dir
-        .unlink2("dir", must_be_directory.clone())
+        .unlink("dir", must_be_directory.clone())
         .await
         .expect("unlink fidl failed")
         .expect("unlink dir failed");
     assert_eq!(
         test_dir
-            .unlink2("file", must_be_directory)
+            .unlink("file", must_be_directory)
             .await
             .expect("unlink fidl failed")
             .expect_err("unlink file succeeded"),

@@ -32,8 +32,7 @@ protocol/member fuchsia.io/Directory.Rename2(string:255 src,zx/handle:EVENT dst_
 protocol/member fuchsia.io/Directory.Rewind() -> (int32 s)
 protocol/member fuchsia.io/Directory.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/Directory.Sync() -> (int32 s)
-protocol/member fuchsia.io/Directory.Unlink(string:4096 path) -> (int32 s)
-protocol/member fuchsia.io/Directory.Unlink2(string:255 name,fuchsia.io2/UnlinkOptions options) -> (fuchsia.io/Directory_Unlink2_Result result)
+protocol/member fuchsia.io/Directory.Unlink(string:255 name,fuchsia.io2/UnlinkOptions options) -> (fuchsia.io/Directory_Unlink_Result result)
 protocol/member fuchsia.io/Directory.Watch(uint32 mask,uint32 options,zx/handle:CHANNEL watcher) -> (int32 s)
 protocol fuchsia.io/Directory
 protocol/member fuchsia.io/DirectoryAdmin.AddInotifyFilter(string:4095 path,fuchsia.io2/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
@@ -58,8 +57,7 @@ protocol/member fuchsia.io/DirectoryAdmin.Rename2(string:255 src,zx/handle:EVENT
 protocol/member fuchsia.io/DirectoryAdmin.Rewind() -> (int32 s)
 protocol/member fuchsia.io/DirectoryAdmin.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/DirectoryAdmin.Sync() -> (int32 s)
-protocol/member fuchsia.io/DirectoryAdmin.Unlink(string:4096 path) -> (int32 s)
-protocol/member fuchsia.io/DirectoryAdmin.Unlink2(string:255 name,fuchsia.io2/UnlinkOptions options) -> (fuchsia.io/Directory_Unlink2_Result result)
+protocol/member fuchsia.io/DirectoryAdmin.Unlink(string:255 name,fuchsia.io2/UnlinkOptions options) -> (fuchsia.io/Directory_Unlink_Result result)
 protocol/member fuchsia.io/DirectoryAdmin.Unmount() -> (int32 s)
 protocol/member fuchsia.io/DirectoryAdmin.UnmountNode() -> (int32 s,client_end:<fuchsia.io/Directory,optional> remote)
 protocol/member fuchsia.io/DirectoryAdmin.Watch(uint32 mask,uint32 options,zx/handle:CHANNEL watcher) -> (int32 s)
@@ -71,10 +69,10 @@ struct fuchsia.io/Directory_Rename2_Response
 union/member fuchsia.io/Directory_Rename2_Result.err int32
 union/member fuchsia.io/Directory_Rename2_Result.response fuchsia.io/Directory_Rename2_Response
 strict union fuchsia.io/Directory_Rename2_Result
-struct fuchsia.io/Directory_Unlink2_Response
-union/member fuchsia.io/Directory_Unlink2_Result.err int32
-union/member fuchsia.io/Directory_Unlink2_Result.response fuchsia.io/Directory_Unlink2_Response
-strict union fuchsia.io/Directory_Unlink2_Result
+struct fuchsia.io/Directory_Unlink_Response
+union/member fuchsia.io/Directory_Unlink_Result.err int32
+union/member fuchsia.io/Directory_Unlink_Result.response fuchsia.io/Directory_Unlink_Response
+strict union fuchsia.io/Directory_Unlink_Result
 const fuchsia.io/FILE_SIGNAL_READABLE uint32 16777216
 const fuchsia.io/FILE_SIGNAL_WRITABLE uint32 33554432
 protocol/member fuchsia.io/File.AdvisoryLock(fuchsia.io2/AdvisoryLockRequest request) -> (fuchsia.io2/AdvisoryLocking_AdvisoryLock_Result result)

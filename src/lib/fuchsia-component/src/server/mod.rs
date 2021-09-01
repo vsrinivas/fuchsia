@@ -1246,8 +1246,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             DirectoryRequest::SetAttr { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Sync { responder } => unsupported!(responder)?,
-            DirectoryRequest::Unlink { responder, .. } => unsupported!(responder)?,
-            DirectoryRequest::Unlink2 { responder, .. } => {
+            DirectoryRequest::Unlink { responder, .. } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
             }
             DirectoryRequest::ReadDirents { max_bytes, responder } => {

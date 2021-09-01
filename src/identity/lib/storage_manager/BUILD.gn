@@ -13,6 +13,7 @@ rustc_library("storage_manager") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//src/identity/lib/account_common",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

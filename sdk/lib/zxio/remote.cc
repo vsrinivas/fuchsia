@@ -840,7 +840,7 @@ zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, int flags) {
     options.set_flags(fidl::ObjectView<decltype(io_flags)>::FromExternal(&io_flags));
   }
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    .Unlink2(fidl::StringView::FromExternal(name), options);
+                    .Unlink(fidl::StringView::FromExternal(name), options);
   if (result.status() != ZX_OK) {
     return result.status();
   }

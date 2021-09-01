@@ -111,9 +111,6 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {}
   void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override;

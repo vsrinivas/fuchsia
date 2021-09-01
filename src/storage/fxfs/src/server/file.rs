@@ -805,7 +805,7 @@ mod tests {
                     )
                     .await;
                     assert_eq!(file.close().await.expect("FIDL call failed"), 0);
-                    root.unlink2("foo", UnlinkOptions::EMPTY)
+                    root.unlink("foo", UnlinkOptions::EMPTY)
                         .await
                         .expect("FIDL call failed")
                         .expect("unlink failed");

@@ -642,40 +642,6 @@ protocol Directory {
         socket zx.handle:SOCKET;
     }) -> ();
 
-    /// Detaches an object from this directory object.
-    ///
-    /// The underlying object may or may not be deleted after this method
-    /// completes: although the link will be removed from the containing directory,
-    /// objects with multiple references (such as files which are still open)
-    /// will not actually be destroyed until all references are removed.
-    ///
-    /// If a directory is unlinked while it still has an open reference,
-    /// it must become read-only, preventing new entries from being created
-    /// until all references close and the directory is destroyed.
-    ///
-    /// `path` identifies the file which should be detached.
-    /// If `path` contains multiple segments, separated by "/" characters,
-    /// then the directory is traversed, one segment at a time, relative to the
-    /// originally accessed Directory.
-    ///
-    /// Returns:
-    ///   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
-    ///     allow writable access.
-    ///   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
-    ///   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
-    ///   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
-    ///   `ZX_ERR_UNAVAILABLE` if `path` is ".".
-    ///
-    /// Other errors may be returned for filesystem-specific reasons.
-    ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
-    /// `ZX_ERR_BAD_HANDLE`.
-    Unlink(struct {
-        path string:MAX_PATH;
-    }) -> (struct {
-        s zx.status;
-    });
-
     /// Removes a child node from the this directory's list of entries.
     ///
     /// Note: this does not guarantee that the underlying object is destroyed.
@@ -702,7 +668,7 @@ protocol Directory {
     /// * [`Rights.MODIFY_DIRECTORY`]
     @selector("fuchsia.io/Directory.Unlink")
     @transitional
-    Unlink2(struct {
+    Unlink(struct {
         name fuchsia.io2.Name;
         options fuchsia.io2.UnlinkOptions;
     }) -> (struct {}) error zx.status;

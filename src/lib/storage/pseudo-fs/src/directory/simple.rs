@@ -206,10 +206,7 @@ impl<'entries> Simple<'entries> {
                 // once, we may attach a connected to a child node.
                 may_affect_children = true;
             }
-            DirectoryRequest::Unlink { path: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            DirectoryRequest::Unlink2 { responder, .. } => {
+            DirectoryRequest::Unlink { responder, .. } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             DirectoryRequest::ReadDirents { max_bytes, responder } => {

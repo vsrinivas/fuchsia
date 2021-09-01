@@ -6,6 +6,7 @@
 use {
     crate::*,
     blobfs_ramdisk::BlobfsRamdisk,
+    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async as fasync,
     fuchsia_merkle::Hash,
     fuchsia_pkg::{OpenRights, PackageDirectory},
@@ -1797,13 +1798,11 @@ async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
     .expect("open meta dir");
 
     // Delete the meta.far blob of the open pkg dir
-    Status::ok(
-        blobfs_proxy
-            .unlink(&package_to_corrupt.meta_far_merkle_root().to_string())
-            .await
-            .expect("unlink fidl"),
-    )
-    .expect("unlink status");
+    blobfs_proxy
+        .unlink(&package_to_corrupt.meta_far_merkle_root().to_string(), UnlinkOptions::EMPTY)
+        .await
+        .expect("unlink fidl")
+        .expect("unlink status");
 
     // Opening the meta/ directory should fail
     assert_matches!(

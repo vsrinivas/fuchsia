@@ -740,7 +740,7 @@ macro_rules! assert_get_buffer_err {
 macro_rules! assert_unlink {
     ($proxy:expr, $path:expr) => {{
         $proxy
-            .unlink2($path, fidl_fuchsia_io2::UnlinkOptions::EMPTY)
+            .unlink($path, fidl_fuchsia_io2::UnlinkOptions::EMPTY)
             .await
             .expect("fidl failed")
             .expect("unlink failed");
@@ -756,7 +756,7 @@ macro_rules! assert_unlink_err {
         assert_eq!(
             Status::from_raw(
                 $proxy
-                    .unlink2($path, fidl_fuchsia_io2::UnlinkOptions::EMPTY)
+                    .unlink($path, fidl_fuchsia_io2::UnlinkOptions::EMPTY)
                     .await
                     .expect("fidl failed")
                     .expect_err("unlink succeeded")

@@ -4,6 +4,7 @@
 
 use {
     fidl_fuchsia_io::{DirectoryProxy, FileProxy, SeekOrigin, CLONE_FLAG_SAME_RIGHTS},
+    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_zircon::{Event, Status},
     io_util::{directory::*, file::*, node::OpenError},
     log::debug,
@@ -101,8 +102,11 @@ impl Directory {
 
     // Delete a file from the directory
     pub async fn remove(&self, filename: &str) -> Result<(), Status> {
-        match self.proxy.unlink(filename).await {
-            Ok(raw_status_code) => Status::ok(raw_status_code),
+        match self.proxy.unlink(filename, UnlinkOptions::EMPTY).await {
+            Ok(result) => Status::ok(match result {
+                Ok(()) => 0,
+                Err(status) => status,
+            }),
             Err(e) => {
                 if e.is_closed() {
                     Err(Status::PEER_CLOSED)

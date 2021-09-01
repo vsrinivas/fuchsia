@@ -328,7 +328,7 @@ pub async fn remove_dir_recursive(root_dir: &DirectoryProxy, name: &str) -> Resu
         .map_err(|e| Error::Fidl("open", e))?;
     remove_dir_contents(dir).await?;
     root_dir
-        .unlink2(
+        .unlink(
             name,
             UnlinkOptions { flags: Some(UnlinkFlags::MustBeDirectory), ..UnlinkOptions::EMPTY },
         )
@@ -357,7 +357,7 @@ fn remove_dir_contents(dir: DirectoryProxy) -> BoxFuture<'static, Result<(), Err
                 }
                 _ => {}
             }
-            dir.unlink2(&dirent.name, UnlinkOptions::EMPTY)
+            dir.unlink(&dirent.name, UnlinkOptions::EMPTY)
                 .await
                 .map_err(|e| Error::Fidl("unlink", e))?
                 .map_err(|s| Error::Unlink(zx_status::Status::from_raw(s)))?;

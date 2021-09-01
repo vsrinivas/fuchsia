@@ -273,10 +273,7 @@ where
             DirectoryAdminRequest::GetDevicePath { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?
             }
-            DirectoryAdminRequest::Unlink { path: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            DirectoryAdminRequest::Unlink2 { responder, .. } => {
+            DirectoryAdminRequest::Unlink { responder, .. } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             DirectoryAdminRequest::GetToken { responder } => {

@@ -8,8 +8,8 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use fidl_fuchsia_identity_account::Error as ApiError;
 use fidl_fuchsia_io::{DirectoryProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
+use fidl_fuchsia_io2::UnlinkOptions;
 use files_async::{DirEntry, DirentKind};
-use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
 use std::path::Path;
@@ -144,11 +144,14 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
                         ))
                     })?;
 
-                let remove_status = self.managed_dir.unlink(KEY_FILE_PATH).await.map_err(|e| {
-                    AccountManagerError::new(ApiError::Resource)
-                        .with_cause(format_err!("Failed to destroy keyfile: {:?}", e))
-                })?;
-                if remove_status != zx::Status::OK.into_raw() {
+                let remove_result =
+                    self.managed_dir.unlink(KEY_FILE_PATH, UnlinkOptions::EMPTY).await.map_err(
+                        |e| {
+                            AccountManagerError::new(ApiError::Resource)
+                                .with_cause(format_err!("Failed to destroy keyfile: {:?}", e))
+                        },
+                    )?;
+                if let Err(remove_status) = remove_result {
                     return Err(AccountManagerError::new(ApiError::Resource).with_cause(
                         format_err!("Failed to destroy keyfile: {:?}", remove_status),
                     ));

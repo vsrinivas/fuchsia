@@ -15,6 +15,7 @@ use {
         OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
+    fidl_fuchsia_io2::UnlinkOptions,
     files_async::{DirEntry, DirentKind},
     fuchsia_zircon as zx,
     futures::{future::Future, StreamExt},
@@ -979,8 +980,8 @@ async fn assert_unsupported_directory_calls(
 
     // Verify unlink() is not supported.
     assert_eq!(
-        zx::Status::from_raw(parent.unlink(child_base_path).await.unwrap()),
-        zx::Status::NOT_SUPPORTED
+        parent.unlink(child_base_path, UnlinkOptions::EMPTY).await.unwrap(),
+        Err(zx::Status::NOT_SUPPORTED.into_raw())
     );
 
     // Verify link() is not supported.

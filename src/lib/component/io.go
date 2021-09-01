@@ -254,12 +254,8 @@ func (dirState *directoryState) AddInotifyFilter(ctx fidl.Context, path string, 
 	return nil
 }
 
-func (dirState *directoryState) Unlink(_ fidl.Context, path string) (int32, error) {
-	return int32(zx.ErrNotSupported), nil
-}
-
-func (dirState *directoryState) Unlink2(_ fidl.Context, name string, _ fidlio2.UnlinkOptions) (fidlio.DirectoryUnlink2Result, error) {
-	return fidlio.DirectoryUnlink2ResultWithErr(int32(zx.ErrNotSupported)), nil
+func (dirState *directoryState) Unlink(_ fidl.Context, name string, _ fidlio2.UnlinkOptions) (fidlio.DirectoryUnlinkResult, error) {
+	return fidlio.DirectoryUnlinkResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (dirState *directoryState) ReadDirents(ctx fidl.Context, maxOut uint64) (int32, []uint8, error) {

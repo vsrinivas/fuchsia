@@ -563,10 +563,7 @@ async fn serve_failing_blobfs(
                 responder.send().context("failing addinotifyfilter")?
             }
             DirectoryAdminRequest::Unlink { responder, .. } => {
-                responder.send(zx::Status::IO.into_raw()).context("failing unlink")?
-            }
-            DirectoryAdminRequest::Unlink2 { responder, .. } => {
-                responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing unlink2")?
+                responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing unlink")?
             }
             DirectoryAdminRequest::ReadDirents { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw(), &[]).context("failing readdirents")?
