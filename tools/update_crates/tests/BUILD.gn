@@ -1,0 +1,94 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+if (is_host) {
+  # NOTE(fxbug.dev/83456): until this test is on in CQ you can run it locally by modifying this
+  # variable to point to your local development copy and removing the `--disable` flag below.
+  prebuilt_cargo_outdated = "//prebuilt/third_party/rust_cargo_outdated/${host_platform}/cargo-outdated"
+  test_output_dir = "$root_out_dir/test_data/tools/update_crates/tests"
+  update_crates_path = "$host_tools_dir/update_crates"
+
+  host_test("update_crates_test_with_local_registry") {
+    binary_path = "$root_out_dir/update_crates_test_bin"
+
+    # host tests are invoked with cwd=root_build_dir, so rebase all paths relative to that
+    args = [
+      "--test-base-dir",
+      rebase_path(test_output_dir, root_build_dir),
+      "--rust-bin-dir",
+      rebase_path("//prebuilt/third_party/rust/$host_platform/bin",
+                  root_build_dir),
+      "--cargo-outdated",
+      rebase_path(prebuilt_cargo_outdated, root_build_dir),
+      "--update-crates",
+      rebase_path(update_crates_path, root_build_dir),
+
+      # TODO(fxbug.dev/83456) remove this flag when cargo-outdated supports offline registries
+      "--disable",
+    ]
+
+    deps = [
+      ":update_crates_cargo_outdated",
+      ":update_crates_for_test",
+      ":update_crates_test_bin",
+      ":uses_local_registry_test_data",
+      "//build/rust:prebuilt_toolchain_host_test_data",
+    ]
+  }
+
+  rustc_binary("update_crates_test_bin") {
+    source_root = "with_local_registry.rs"
+    sources = [ "with_local_registry.rs" ]
+
+    deps = [
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:once_cell",
+      "//third_party/rust_crates:rust-crypto",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:toml",
+      "//third_party/rust_crates:walkdir",
+    ]
+  }
+
+  host_test_data("update_crates_cargo_outdated") {
+    sources = [ prebuilt_cargo_outdated ]
+  }
+
+  host_test_data("update_crates_for_test") {
+    sources = [ update_crates_path ]
+    deps = [ "..:install_update_crates" ]
+  }
+
+  host_test_data("uses_local_registry_test_data") {
+    sources = [
+      "local_registry_sources/test_dep_a_1/Cargo.toml",
+      "local_registry_sources/test_dep_a_1/src/lib.rs",
+      "local_registry_sources/test_dep_a_2/Cargo.toml",
+      "local_registry_sources/test_dep_a_2/src/lib.rs",
+      "local_registry_sources/test_dep_b_1/Cargo.toml",
+      "local_registry_sources/test_dep_b_1/src/lib.rs",
+      "local_registry_sources/test_dep_b_2/Cargo.toml",
+      "local_registry_sources/test_dep_b_2/src/lib.rs",
+      "local_registry_sources/test_dep_c_1/Cargo.toml",
+      "local_registry_sources/test_dep_c_1/src/lib.rs",
+      "local_registry_sources/test_dep_c_2/Cargo.toml",
+      "local_registry_sources/test_dep_c_2/src/lib.rs",
+      "uses_local_registry/Cargo.expected.toml",
+      "uses_local_registry/Cargo.toml",
+      "uses_local_registry/outdated.toml",
+      "uses_local_registry/src/lib.rs",
+    ]
+    outputs = [ "$test_output_dir/{{source_target_relative}}" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":update_crates_test_with_local_registry($host_toolchain)" ]
+}

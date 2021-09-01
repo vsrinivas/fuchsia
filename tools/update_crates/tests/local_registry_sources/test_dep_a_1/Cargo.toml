@@ -1,0 +1,12 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "test_dep_a"
+version = "1.0.0"
+edition = "2018"
+description = "used for testing cargo workflow integrations"
+license = "BSD-3-Clause"
+
+[dependencies]

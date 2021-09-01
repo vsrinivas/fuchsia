@@ -40,6 +40,7 @@ if (is_host) {
       ":cargo_gnaw_golden_integration_test",
       ":cargo_gnaw_prebuilt_bin_libs",
       ":cargo_gnaw_tests",
+      "//build/rust:prebuilt_toolchain_host_test_data",
     ]
   }
 
@@ -148,11 +149,6 @@ if (is_host) {
   }
 
   host_test_data("cargo_gnaw_prebuilt_bin_libs") {
-    sources = [
-      "//prebuilt/third_party/gn/${host_platform}/gn",
-      "//prebuilt/third_party/rust/${host_platform}/bin/cargo",
-      "//prebuilt/third_party/rust/${host_platform}/bin/rustc",
-      "//prebuilt/third_party/rust/${host_platform}/lib",
-    ]
+    sources = [ "//prebuilt/third_party/gn/${host_platform}/gn" ]
   }
 }

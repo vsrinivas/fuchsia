@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/host_test_data.gni")
 import("//build/toolchain/basic_toolchain.gni")
 
 group("disable_strict_sources_check_allowlist") {
@@ -104,6 +105,20 @@ group("rust_test_metadata") {
           services = [ "fuchsia.process.Launcher" ]
         }
       },
+    ]
+  }
+}
+
+# Multiple integration tests rely on having a Rust toolchain available on the host test runner,
+# and host_test_data does not appear to support multiple definitions of the same output path in
+# the same build, so we provide a central target here to be used by integration tests that need
+# cargo or rustc.
+if (is_host) {
+  host_test_data("prebuilt_toolchain_host_test_data") {
+    sources = [
+      "//prebuilt/third_party/rust/${host_platform}/bin/cargo",
+      "//prebuilt/third_party/rust/${host_platform}/bin/rustc",
+      "//prebuilt/third_party/rust/${host_platform}/lib",
     ]
   }
 }

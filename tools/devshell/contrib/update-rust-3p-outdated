@@ -1,0 +1,89 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Source tree
+### updates external Rust dependencies with latest from crates.io
+
+## usage: fx update-rust-3p-outdated
+## Updates third_party/rust_crates/Cargo.toml based on the latest versions from
+## crates.io and configuration in //third_party/rust_crates/outdated.toml.
+##
+## See https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party.md
+## for more details.
+##
+## Flags:
+##
+## --no-build      Don't build update_crates or cargo-gnaw, use cached versions.
+## --no-vendor     Don't run `fx update-rustc-third-party` after updating crate versions.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+# Parse arguments
+while [[ $# -ge 1 ]]; do
+  case "$1" in
+    -h|--help)
+      fx-command-help
+      exit 0
+      ;;
+    --no-build)
+      SKIP_BUILD="true"
+      SKIP_BUILD_ARG="--no-build"
+      ;;
+    --no-vendor)
+      SKIP_VENDOR="true"
+      ;;
+    -*)
+      echo "Cannot understand option $1"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+declare -x PATH="$PREBUILT_CMAKE_DIR/cmake/bin:$PATH"
+
+UPDATE_CRATES_TARGET="host-tools/update_crates"
+UPDATE_CRATES_BIN="${FUCHSIA_BUILD_DIR}/${UPDATE_CRATES_TARGET}"
+
+if [[ -n "$SKIP_BUILD" ]]; then
+  if [ ! -f "$UPDATE_CRATES_BIN" ]; then
+    fx-error "--no-build was specified, but $UPDATE_CRATES_BIN does not exist."
+    fx-error "Rerun without --no-build to build update_crates."
+    exit 1
+  fi
+else
+  fx-command-run build ${UPDATE_CRATES_TARGET} || ( \
+    fx-error "Failed to build update_crates, see previous error message."; \
+    fx-error "To retry an old build of update_crates, specify --no-build."; \
+    exit 1
+  )
+fi
+
+# run cargo-outdated and update Cargo.toml with output
+echo "Running update_crates..."
+(cd "$FUCHSIA_DIR"; "$UPDATE_CRATES_BIN" \
+   --manifest-path "${FUCHSIA_DIR}/third_party/rust_crates/Cargo.toml" \
+   --overrides "$FUCHSIA_DIR/third_party/rust_crates/outdated.toml" \
+   update \
+   --cargo "$PREBUILT_RUST_DIR/bin/cargo" \
+   --outdated-dir "$PREBUILT_RUST_CARGO_OUTDATED_DIR" \
+   --config-path "${FUCHSIA_DIR}/third_party/rust_crates/.cargo/config.toml")
+
+# run the vendor script
+if [[ -z "$SKIP_VENDOR" ]]; then
+  fx-command-run update-rustc-third-party $SKIP_BUILD_ARG || ( \
+      fx-error "Failed to run fx update-rustc-third-party.";
+      exit 1
+    )
+fi
+
+echo "Running update_crates again to check..."
+(cd "$FUCHSIA_DIR"; "$UPDATE_CRATES_BIN" \
+   --manifest-path "${FUCHSIA_DIR}/third_party/rust_crates/Cargo.toml" \
+   --overrides "$FUCHSIA_DIR/third_party/rust_crates/outdated.toml" \
+   check)
