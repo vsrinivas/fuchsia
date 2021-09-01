@@ -45,7 +45,8 @@ group("drivers") {
 fuzzers_package("audio_fuzzers") {
   fuzzers = [
     "audio_core:audio_core_fuzzer",
-    "audio_core/test/api/fuzzer:api-fuzzer",
+    # TODO(fxbug.dev/83868) Migrate this fuzzer to component fuzzing framework and re-enable.
+    # "audio_core/test/api/fuzzer:api-fuzzer",
   ]
 }
 
