@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/ae18ecc971c32ce1c9029ec5ec921fa01fc8a543/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/d4645fc40703e78efc19e2e3fa978c3ec74ee86c/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/ae18ecc971c32ce1c9029ec5ec921fa01fc8a543/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/d4645fc40703e78efc19e2e3fa978c3ec74ee86c/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -3193,7 +3193,7 @@ From //build/security.gni:36
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/2916d3cc5209ec247cc50dfe77488699727e41ab/BUILD.gn#14)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/f1108273fcef473e5c59525c84caf05a045b84ad/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
