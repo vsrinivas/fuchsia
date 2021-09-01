@@ -102,6 +102,7 @@ fuchsia_base = {
   # zbi arguments
   if (custom_signing_script != "") {
     zbi_signing_script = custom_signing_script
+    deps = custom_signing_script_deps
   } else if (use_vboot) {
     zbi_signing_script = vboot_action.script
     zbi_signing_args = vboot_action.args
