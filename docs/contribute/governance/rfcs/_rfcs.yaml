@@ -1616,3 +1616,16 @@
     'schilit@google.com']
   submitted: '2021-03-30'
   reviewed: '2021-08-30'
+
+- name: 'RFC-0125'
+  title: 'Shortlinks on Fuchsia.dev'
+  short_description: 'Allow redirecting fuchsia.dev/go/<keyword> to specific Fuchsia artifacts.'
+  authors: ['nickvander@google.com', 'curtisgalloway@google.com']
+  file: '0125_shortlink_fuchsia_dev.md'
+  area: ['Developer']
+  issue: ['']
+  gerrit_change_id: ['553175']
+  status: 'Accepted'
+  reviewers: ['curtisgalloway@google.com', 'mkearney@google.com', 'tkilbourn@google.com']
+  submitted: '2021-07-09'
+  reviewed: '2021-09-01'
