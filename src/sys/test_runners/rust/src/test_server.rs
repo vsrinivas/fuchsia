@@ -387,6 +387,22 @@ impl TestServer {
     }
 
     pub fn validate_args(args: &Vec<String>) -> Result<(), ArgumentError> {
+        // check that arg do not contain test names for filter.
+        let mut test_names = vec![];
+        for arg in args {
+            if args.is_empty() {
+                continue;
+            }
+            if !arg.starts_with("-") {
+                test_names.push(arg.clone())
+            } else {
+                // break on first flag arg
+                break;
+            }
+        }
+        if test_names.len() > 0 {
+            return Err(ArgumentError::RestrictedArg(test_names.join(", ")));
+        }
         let restricted_flags = args
             .iter()
             .filter(|arg| {
@@ -534,7 +550,22 @@ mod tests {
             }
         }
 
-        let allowed_flags = vec!["--bench", "--anyflag", "--test", "--mycustomflag"];
+        // fail when client passes rust test filter.
+        let mut args =
+            vec!["test_name1".to_string(), "test_name2".to_string(), "--flag".to_string()];
+        let err = TestServer::validate_args(&args)
+            .expect_err(&format!("should error out for flags: {:?}", args));
+        args.pop(); //remove last valid flag
+        match err {
+            ArgumentError::RestrictedArg(f) => assert_eq!(f, args.join(", ")),
+        }
+
+        // succeed when client passes args to flags.
+        let args = vec!["--flag1".to_string(), "flag1_arg".to_string(), "--flag".to_string()];
+        TestServer::validate_args(&args)
+            .expect(&format!("should not error out for flags: {:?}", args));
+
+        let allowed_flags = vec!["--bench", "--anyflag", "--test", "--mycustomflag", "-e", "-a"];
 
         for flag in allowed_flags {
             let args = vec![flag.to_string()];
