@@ -51,6 +51,10 @@ impl Deserializer {
     pub fn take_u8(&mut self) -> Result<u8, DeserializeError> {
         Ok(self.take(1)?[0])
     }
+
+    pub fn available(&self) -> usize {
+        self.data.len() - self.pos
+    }
 }
 
 /// A helper to make serialising TPM commands a bit nicer.
@@ -104,9 +108,13 @@ mod tests {
     fn deserializer_take_data() {
         let data = vec![0xd0, 0x0d, 0xfe, 0xed, 0xfa, 0xce, 0xaa];
         let mut d = Deserializer::new(data);
+        assert_eq!(d.available(), 7);
         assert_eq!(d.take_be_u32().unwrap(), 0xd00dfeed);
+        assert_eq!(d.available(), 3);
         assert_eq!(d.take_be_u16().unwrap(), 0xface);
+        assert_eq!(d.available(), 1);
         assert_eq!(d.take_u8().unwrap(), 0xaa);
+        assert_eq!(d.available(), 0);
         assert_eq!(d.take_u8().unwrap_err(), DeserializeError::NotEnoughBytes);
     }
 }

@@ -7,6 +7,7 @@ using zx;
 using fuchsia.tpm;
 
 const CCD_CAPABILITY_COUNT_MAX uint32 = 32;
+const CCD_PASSWORD_MAX uint32 = 512;
 
 /// Vendor-specific TPM response codes.
 type Cr50Status = flexible enum : uint8 {
@@ -189,9 +190,65 @@ protocol Cr50 {
         info CcdInfo:optional;
     }) error zx.status;
 
+    /// Lock case-closed debugging.
+    CcdLock() -> (struct {
+        rc Cr50Rc;
+    }) error zx.status;
+
+    /// Put case-closed debugging into the OPEN state.
+    /// See |CcdState| for a description of what each state means.
+    CcdOpen(struct {
+        password string:<CCD_PASSWORD_MAX, optional>;
+    }) -> (resource struct {
+        rc Cr50Rc;
+        presence_checker client_end:<PhysicalPresenceNotifier, optional>;
+    }) error zx.status;
+
+    /// Put case-closed debugging into the UNLOCKED state.
+    /// See |CcdState| for a description of what each state means.
+    CcdUnlock(struct {
+        password string:<CCD_PASSWORD_MAX, optional>;
+    }) -> (resource struct {
+        rc Cr50Rc;
+        presence_checker client_end:<PhysicalPresenceNotifier, optional>;
+    }) error zx.status;
+
     /// Get the current state of the AP BIOS flash write protect.
     WpGetState() -> (struct {
         rc Cr50Rc;
         state WpState;
     }) error zx.status;
+};
+
+type PhysicalPresenceState = flexible enum {
+    /// Physical presence check timed out, or there isn't one currently running.
+    CLOSED = 0;
+    /// TPM is ready to receive next press.
+    AWAITING_PRESS = 1;
+    /// TPM is waiting - not ready to receive a press yet.
+    BETWEEN_PRESSES = 2;
+    /// Physical presence check succeeded and CCD is unlocked/open.
+    DONE = 3;
+};
+
+/// Union passed to OnChange() event handler of |PhysicalPresenceNotifier|.
+type PhysicalPresenceEvent = flexible union {
+    /// An error occurred while polling the TPM.
+    1: err zx.status;
+    /// Physical presence status.
+    2: state PhysicalPresenceState;
+};
+
+/// Protocol used to notify client of a pending physical presence event.
+/// This protocol has no form of backpressure because it is not expected to
+/// generate a large number of messages. An unlock or open will usually result in less
+/// than 20 messages.
+protocol PhysicalPresenceNotifier {
+    /// Called when the PP check has changed state.
+    /// If CLOSED is the first event sent, it means that no PP check was necessary
+    /// (i.e. CCD is already open). However, if CLOSED isn't the first event
+    /// sent, then CLOSED indicates that the PP check timed out.
+    -> OnChange(struct {
+        event PhysicalPresenceEvent;
+    });
 };

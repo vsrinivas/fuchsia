@@ -14,7 +14,7 @@ pub enum ExecuteError {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TpmStatus(Cr50Rc);
+pub struct TpmStatus(pub Cr50Rc);
 
 impl TpmStatus {
     pub fn is_ok(&self) -> bool {

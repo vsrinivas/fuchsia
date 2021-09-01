@@ -4,8 +4,12 @@
 
 use anyhow::{Context, Error};
 use argh::FromArgs;
-use fidl_fuchsia_tpm_cr50::{Cr50Marker, Cr50Rc, Cr50Status, WpState};
+use fidl_fuchsia_tpm_cr50::{
+    Cr50Marker, Cr50Proxy, Cr50Rc, Cr50Status, PhysicalPresenceEvent,
+    PhysicalPresenceNotifierEvent, PhysicalPresenceNotifierProxy, PhysicalPresenceState, WpState,
+};
 use fuchsia_zircon as zx;
+use futures::TryStreamExt;
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// A tool to interact with the Cr50 TPM.
@@ -34,12 +38,30 @@ struct CcdSubCommand {
 /// command to use.
 enum CcdCommand {
     GetInfo(GetInfo),
+    Lock(CcdLock),
+    Unlock(CcdUnlock),
+    Open(CcdOpen),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "get-info")]
 /// get info about CCD.
 struct GetInfo {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "lock")]
+/// lock CCD.
+struct CcdLock {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "open")]
+/// open CCD.
+struct CcdOpen {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "unlock")]
+/// unlock CCD.
+struct CcdUnlock {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "wp")]
@@ -54,11 +76,46 @@ async fn main() {
     });
 }
 
-async fn run_cmd(args: Args) -> Result<(), Error> {
-    let proxy = fuchsia_component::client::connect_to_protocol::<Cr50Marker>()
-        .context("Connecting to firmware parameter service")?;
-    match args.cmd {
-        SubCommand::Ccd(CcdSubCommand { cmd: CcdCommand::GetInfo(_) }) => {
+async fn handle_pp(client: PhysicalPresenceNotifierProxy) -> Result<(), Error> {
+    let mut started = false;
+    while let Some(event) =
+        client.take_event_stream().try_next().await.context("Getting next event")?
+    {
+        match event {
+            PhysicalPresenceNotifierEvent::OnChange { event } => match event {
+                PhysicalPresenceEvent::State(PhysicalPresenceState::Done) => {
+                    println!("Success!");
+                    return Ok(());
+                }
+                PhysicalPresenceEvent::State(PhysicalPresenceState::Closed) => {
+                    if started {
+                        println!("Timed out, try again.");
+                    } else {
+                        println!("Done");
+                    }
+                    return Ok(());
+                }
+                PhysicalPresenceEvent::State(PhysicalPresenceState::AwaitingPress) => {
+                    println!("Press the power button NOW!")
+                }
+                PhysicalPresenceEvent::State(PhysicalPresenceState::BetweenPresses) => {
+                    println!("Waiting - another press will be needed soon...")
+                }
+                PhysicalPresenceEvent::Err(_) => {
+                    println!("Internal error while polling for physical presence, try again?")
+                }
+                _ => unimplemented!(),
+            },
+        }
+        started = true;
+    }
+
+    Ok(())
+}
+
+async fn run_ccd(proxy: Cr50Proxy, cmd: CcdCommand) -> Result<(), Error> {
+    match cmd {
+        CcdCommand::GetInfo(_) => {
             let (rc, info) = proxy
                 .ccd_get_info()
                 .await
@@ -88,6 +145,63 @@ async fn run_cmd(args: Args) -> Result<(), Error> {
                 println!("Error: {:?}", rc);
             }
         }
+        CcdCommand::Lock(_) => {
+            let rc = proxy
+                .ccd_lock()
+                .await
+                .context("Locking CCD (Sending FIDL request)")?
+                .map_err(zx::Status::from_raw)
+                .context("Locking CCD (Server-side failure)")?;
+            if rc == Cr50Rc::Cr50(Cr50Status::Success) {
+                println!("CCD locked");
+            } else {
+                println!("Failed to lock CCD: {:?}", rc);
+            }
+        }
+        CcdCommand::Open(_) => {
+            let (rc, client) = proxy
+                .ccd_open(None)
+                .await
+                .context("Opening CCD (Sending FIDL request)")?
+                .map_err(zx::Status::from_raw)
+                .context("Opening CCD (Server-side failure)")?;
+
+            match rc {
+                Cr50Rc::Cr50(Cr50Status::Success) | Cr50Rc::Cr50(Cr50Status::InProgress) => {
+                    handle_pp(client.unwrap().into_proxy().context("Making proxy")?)
+                        .await
+                        .context("Handling PP")?;
+                }
+                err => println!("Failed to open: {:?}", err),
+            }
+        }
+        CcdCommand::Unlock(_) => {
+            let (rc, client) = proxy
+                .ccd_unlock(None)
+                .await
+                .context("Unlocking CCD (Sending FIDL request)")?
+                .map_err(zx::Status::from_raw)
+                .context("Unlocking CCD (Server-side failure)")?;
+
+            match rc {
+                Cr50Rc::Cr50(Cr50Status::Success) | Cr50Rc::Cr50(Cr50Status::InProgress) => {
+                    handle_pp(client.unwrap().into_proxy().context("Making proxy")?)
+                        .await
+                        .context("Handling PP")?
+                }
+                err => println!("Failed to unlock: {:?}", err),
+            }
+        }
+    };
+
+    Ok(())
+}
+
+async fn run_cmd(args: Args) -> Result<(), Error> {
+    let proxy = fuchsia_component::client::connect_to_protocol::<Cr50Marker>()
+        .context("Connecting to firmware parameter service")?;
+    match args.cmd {
+        SubCommand::Ccd(CcdSubCommand { cmd }) => run_ccd(proxy, cmd).await?,
         SubCommand::Wp(_) => {
             let (rc, state) = proxy
                 .wp_get_state()

@@ -6,7 +6,9 @@ use crate::{
     cr50::command::{Deserializable, Header, Serializable, Subcommand, TpmRequest},
     util::{DeserializeError, Deserializer, Serializer},
 };
-use fidl_fuchsia_tpm_cr50::{CcdCapability, CcdCapabilitySetting, CcdCapabilityState};
+use fidl_fuchsia_tpm_cr50::{
+    CcdCapability, CcdCapabilitySetting, CcdCapabilityState, PhysicalPresenceState,
+};
 use num_derive::FromPrimitive;
 use std::{
     ffi::{CString, NulError},
@@ -117,6 +119,42 @@ impl Deserializable for CcdGetInfoResponse {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[repr(C, packed)]
+/// Response to CmdPpPoll* commands.
+pub struct CcdPhysicalPresenceResponse {
+    header: Header,
+    state: u8,
+}
+
+impl Deserializable for CcdPhysicalPresenceResponse {
+    fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        let header = Header::deserialize(deserializer)?;
+        Ok(CcdPhysicalPresenceResponse { header, state: deserializer.take_u8()? })
+    }
+}
+
+impl CcdPhysicalPresenceResponse {
+    pub fn get_state(&self) -> PhysicalPresenceState {
+        PhysicalPresenceState::from_primitive_allow_unknown(self.state.into())
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct CcdOpenResponse {
+    header: Header,
+    ec_rc: Option<u8>,
+}
+
+impl Deserializable for CcdOpenResponse {
+    fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        let header = Header::deserialize(deserializer)?;
+        let ec_rc =
+            if deserializer.available() >= 1 { Some(deserializer.take_u8()?) } else { None };
+        Ok(CcdOpenResponse { header, ec_rc })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,6 +212,16 @@ mod tests {
                 ccd_forced_disabled: 1,
                 ccd_indicator_bitmap: 1,
             }
+        );
+    }
+
+    #[test]
+    fn test_ccd_poll_pp_deserialize() {
+        let vec = vec![0x00, 0x22, 0x1];
+        let mut response = Deserializer::new(vec);
+        assert_eq!(
+            CcdPhysicalPresenceResponse::deserialize(&mut response).unwrap().get_state(),
+            PhysicalPresenceState::AwaitingPress
         );
     }
 }

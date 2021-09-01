@@ -7,18 +7,24 @@ mod status;
 
 use crate::cr50::{
     command::{
-        ccd::{CcdCommand, CcdGetInfoResponse, CcdRequest},
+        ccd::{
+            CcdCommand, CcdGetInfoResponse, CcdOpenResponse, CcdPhysicalPresenceResponse,
+            CcdRequest,
+        },
         wp::WpInfoRequest,
         TpmCommand,
     },
-    status::ExecuteError,
+    status::{ExecuteError, TpmStatus},
 };
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{
     CcdCapability, CcdFlags, CcdIndicator, CcdInfo, CcdState, Cr50Rc, Cr50Request,
-    Cr50RequestStream, Cr50Status, WpState,
+    Cr50RequestStream, Cr50Status, PhysicalPresenceEvent, PhysicalPresenceNotifierMarker,
+    PhysicalPresenceState, WpState,
 };
+use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
@@ -65,10 +71,103 @@ impl Cr50 {
                         WpState::empty(),
                     ))
                     .context("Replying to request")?,
+                Cr50Request::CcdLock { responder } => responder
+                    .send(
+                        &mut Self::make_response(
+                            "CcdLock",
+                            self.ccd_command(CcdCommand::Lock, None).await,
+                            (),
+                        )
+                        .map(|(rc, _)| rc),
+                    )
+                    .context("Replying to request")?,
+                Cr50Request::CcdOpen { password, responder } => responder
+                    .send(&mut Self::make_response(
+                        "CcdOpen",
+                        self.handle_open_or_unlock(CcdCommand::Open, password).await.map(Some),
+                        None,
+                    ))
+                    .context("Replying to request")?,
+                Cr50Request::CcdUnlock { password, responder } => responder
+                    .send(&mut Self::make_response(
+                        "CcdUnlock",
+                        self.handle_open_or_unlock(CcdCommand::Open, password).await.map(Some),
+                        None,
+                    ))
+                    .context("Replying to request")?,
             };
         }
 
         Ok(())
+    }
+
+    async fn handle_open_or_unlock(
+        &self,
+        cmd: CcdCommand,
+        password: Option<String>,
+    ) -> Result<fidl::endpoints::ClientEnd<PhysicalPresenceNotifierMarker>, ExecuteError> {
+        let poll_cmd = match cmd {
+            CcdCommand::Open => CcdCommand::CmdPpPollOpen,
+            CcdCommand::Unlock => CcdCommand::CmdPpPollUnlock,
+            _ => panic!("Expected open or unlock"),
+        };
+        match self.ccd_command(cmd, password).await {
+            Ok(()) | Err(ExecuteError::Tpm(TpmStatus(Cr50Rc::Cr50(Cr50Status::InProgress)))) => {
+                // Need physical presence check. If no check is required (e.g. battery
+                // disconnected), handle_physical_presence will indicate that to the client.
+                match self.handle_physical_presence(poll_cmd) {
+                    Ok(client) => Ok(client),
+                    Err(e) => Err(ExecuteError::Other(Error::new(e).context("Creating endpoints"))),
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Spawn a task that does polls for physical presence check updates.
+    /// Returns a client which will receive events when physical presence check state
+    /// changes.
+    fn handle_physical_presence(
+        &self,
+        cmd: CcdCommand,
+    ) -> Result<fidl::endpoints::ClientEnd<PhysicalPresenceNotifierMarker>, fidl::Error> {
+        let (client, server) =
+            fidl::endpoints::create_request_stream::<PhysicalPresenceNotifierMarker>()?;
+        let proxy = self.proxy.clone();
+
+        fasync::Task::spawn(async move {
+            let handle = server.control_handle();
+            let mut last_pp = None;
+            while last_pp != Some(PhysicalPresenceState::Done)
+                && last_pp != Some(PhysicalPresenceState::Closed)
+            {
+                let request = CcdRequest::<CcdPhysicalPresenceResponse>::new(cmd);
+                let pp = match request.execute(&proxy).await {
+                    Ok(pp) => pp,
+                    Err(e) => {
+                        fx_log_warn!("Physical presence check failed: {:?}", e);
+                        handle
+                            .send_on_change(&mut PhysicalPresenceEvent::Err(
+                                zx::Status::INTERNAL.into_raw(),
+                            ))
+                            .unwrap_or_else(|e| fx_log_warn!("Error sending on change: {:?}", e));
+                        return;
+                    }
+                };
+                if Some(pp.get_state()) != last_pp {
+                    last_pp = Some(pp.get_state());
+                    handle
+                        .send_on_change(&mut PhysicalPresenceEvent::State(pp.get_state()))
+                        .unwrap_or_else(|e| fx_log_warn!("Error sending on change: {:?}", e));
+                }
+
+                // Wait 10ms before checking again.
+                fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+            }
+        })
+        .detach();
+
+        Ok(client)
     }
 
     pub async fn get_info(&self) -> Result<CcdInfo, ExecuteError> {
@@ -90,6 +189,22 @@ impl Cr50 {
             indicator: CcdIndicator::from_bits_truncate(result.ccd_indicator_bitmap),
             force_disabled: result.ccd_forced_disabled > 0,
         })
+    }
+
+    pub async fn ccd_command(
+        &self,
+        cmd: CcdCommand,
+        password: Option<String>,
+    ) -> Result<(), ExecuteError> {
+        let req: CcdRequest<CcdOpenResponse> = match password {
+            None => CcdRequest::new(cmd),
+            Some(password) => CcdRequest::new_with_password(cmd, &password)
+                .map_err(|_| ExecuteError::Other(anyhow!("Invalid password")))?,
+        };
+
+        req.execute(&self.proxy).await?;
+
+        Ok(())
     }
 
     pub async fn wp_get_state(&self) -> Result<WpState, ExecuteError> {
