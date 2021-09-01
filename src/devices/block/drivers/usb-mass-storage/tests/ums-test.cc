@@ -72,7 +72,6 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 void USBVirtualBus::InitUMS(fbl::String* devpath) {
   using ConfigurationDescriptor =
       ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-  // auto device_desc = GetDeviceDescriptor();
   usb_peripheral::wire::FunctionDescriptor ums_function_desc = {
       .interface_class = USB_CLASS_MSC,
       .interface_subclass = USB_SUBCLASS_MSC_SCSI,
@@ -109,7 +108,6 @@ class BlockDeviceController {
   void Connect() {
     using ConfigurationDescriptor =
         ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-    // auto device_desc = GetDeviceDescriptor();
     usb_peripheral::wire::FunctionDescriptor ums_function_desc = {
         .interface_class = USB_CLASS_MSC,
         .interface_subclass = USB_SUBCLASS_MSC_SCSI,
