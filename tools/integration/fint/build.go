@@ -68,6 +68,19 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		return nil, err
 	}
 
+	runner := ninjaRunner{
+		runner:    &subprocess.Runner{},
+		ninjaPath: thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja"),
+		buildDir:  contextSpec.BuildDir,
+		jobCount:  int(contextSpec.GomaJobCount),
+	}
+
+	// Let Ninja determine whether it's necessary to run `gn gen` again first,
+	// because later steps will consume GN-generated files.
+	if err := ninjaGNGen(ctx, runner); err != nil {
+		return nil, err
+	}
+
 	modules, err := build.NewModules(contextSpec.BuildDir)
 	if err != nil {
 		return nil, err
@@ -84,13 +97,6 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	// Initialize the map, otherwise it will be nil and attempts to set keys
 	// will fail.
 	artifacts.LogFiles = make(map[string]string)
-
-	runner := ninjaRunner{
-		runner:    &subprocess.Runner{},
-		ninjaPath: thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja"),
-		buildDir:  contextSpec.BuildDir,
-		jobCount:  int(contextSpec.GomaJobCount),
-	}
 
 	if staticSpec.Incremental && !staticSpec.NoCleandead {
 		// If we're building incrementally, we need to clean out any stale files
