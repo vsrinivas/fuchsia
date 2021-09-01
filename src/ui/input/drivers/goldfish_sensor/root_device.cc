@@ -31,6 +31,7 @@ const char* kTag = "goldfish-sensor";
 const std::map<uint64_t, InputDeviceInfo> kInputDevices = {
     {0x0001, {"acceleration", AccelerationInputDevice::Create}},
     {0x0002, {"gyroscope", GyroscopeInputDevice::Create}},
+    {0x8000, {"rgbc-light", RgbcLightInputDevice::Create}},
 };
 
 }  // namespace

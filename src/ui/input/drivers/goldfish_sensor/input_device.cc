@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdint>
 
+#include "lib/fidl/llcpp/arena.h"
 #include "src/ui/input/drivers/goldfish_sensor/parser.h"
 #include "src/ui/input/drivers/goldfish_sensor/root_device.h"
 
@@ -119,7 +120,9 @@ void AccelerationInputDevice::GetDescriptor(GetDescriptorRequestView request,
       static_cast<uint32_t>(fir_fidl::VendorGoogleProductId::kGoldfishAccelerationSensor);
 
   fidl::VectorView<fir_fidl::SensorAxis> sensor_axes(allocator, 3);
-  sensor_axes[0].axis = sensor_axes[1].axis = sensor_axes[2].axis = kAxis;
+  sensor_axes[0].axis = kAxis;
+  sensor_axes[1].axis = kAxis;
+  sensor_axes[2].axis = kAxis;
   sensor_axes[0].type = fir_fidl::SensorType::kAccelerometerX;
   sensor_axes[1].type = fir_fidl::SensorType::kAccelerometerY;
   sensor_axes[2].type = fir_fidl::SensorType::kAccelerometerZ;
@@ -231,7 +234,9 @@ void GyroscopeInputDevice::GetDescriptor(GetDescriptorRequestView request,
       static_cast<uint32_t>(fir_fidl::VendorGoogleProductId::kGoldfishGyroscopeSensor);
 
   fidl::VectorView<fir_fidl::SensorAxis> sensor_axes(allocator, 3);
-  sensor_axes[0].axis = sensor_axes[1].axis = sensor_axes[2].axis = kAxis;
+  sensor_axes[0].axis = kAxis;
+  sensor_axes[1].axis = kAxis;
+  sensor_axes[2].axis = kAxis;
   sensor_axes[0].type = fir_fidl::SensorType::kGyroscopeX;
   sensor_axes[1].type = fir_fidl::SensorType::kGyroscopeY;
   sensor_axes[2].type = fir_fidl::SensorType::kGyroscopeZ;
@@ -250,6 +255,123 @@ void GyroscopeInputDevice::GetDescriptor(GetDescriptorRequestView request,
 }
 
 void GyroscopeInputDevice::GetInputReportsReader(GetInputReportsReaderRequestView request,
+                                                 GetInputReportsReaderCompleter::Sync& completer) {
+  zx_status_t status = input_report_readers_.CreateReader(dispatcher(), std::move(request->reader));
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+}
+
+void RgbcLightInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputReport& input_report,
+                                                          fidl::AnyArena& allocator) {
+  fir_fidl::SensorInputReport sensor_report(allocator);
+  fidl::VectorView<int64_t> values(allocator, 4);
+  values[0] = static_cast<int64_t>(r);
+  values[1] = static_cast<int64_t>(g);
+  values[2] = static_cast<int64_t>(b);
+  values[3] = static_cast<int64_t>(c);
+  sensor_report.set_values(allocator, std::move(values));
+
+  input_report.set_event_time(allocator, event_time.get());
+  input_report.set_sensor(allocator, std::move(sensor_report));
+}
+
+fit::result<InputDevice*, zx_status_t> RgbcLightInputDevice::Create(
+    RootDevice* sensor, async_dispatcher_t* dispatcher) {
+  // Parent device (sensor) is guaranteed to outlive the child input device
+  // (dev), so it's safe to use raw pointers here.
+  auto device = std::make_unique<RgbcLightInputDevice>(
+      sensor->zxdev(), dispatcher,
+      [sensor](InputDevice* dev) { sensor->input_devices()->RemoveDevice(dev); });
+  zx_status_t status;
+
+  if ((status = device->DdkAdd("goldfish-sensor-rgbclight")) != ZX_OK) {
+    return fit::error(status);
+  }
+
+  // Device will be owned by devmgr.
+  return fit::ok(device.release());
+}
+
+zx_status_t RgbcLightInputDevice::OnReport(const SensorReport& rpt) {
+  InputReport input_report;
+  input_report.event_time = zx::clock::get_monotonic();
+
+  if (rpt.data.size() != 4) {
+    zxlogf(ERROR, "RgbcLightInputDevice: invalid data size: %lu", rpt.data.size());
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (auto p = std::get_if<Numeric>(&rpt.data[0]); p != nullptr) {
+    input_report.r = static_cast<float>(p->Double());
+  } else {
+    zxlogf(ERROR, "RgbcLightInputDevice: invalid r");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (auto p = std::get_if<Numeric>(&rpt.data[1]); p != nullptr) {
+    input_report.g = static_cast<float>(p->Double());
+  } else {
+    zxlogf(ERROR, "RgbcLightInputDevice: invalid g");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (auto p = std::get_if<Numeric>(&rpt.data[2]); p != nullptr) {
+    input_report.b = static_cast<float>(p->Double());
+  } else {
+    zxlogf(ERROR, "RgbcLightInputDevice: invalid b");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (auto p = std::get_if<Numeric>(&rpt.data[3]); p != nullptr) {
+    input_report.c = static_cast<float>(p->Double());
+  } else {
+    zxlogf(ERROR, "RgbcLightInputDevice: invalid c");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  input_report_readers_.SendReportToAllReaders(input_report);
+  return ZX_OK;
+}
+
+void RgbcLightInputDevice::GetDescriptor(GetDescriptorRequestView request,
+                                         GetDescriptorCompleter::Sync& completer) {
+  constexpr size_t kDescriptorBufferSize = 512;
+
+  constexpr fir_fidl::Axis kAxis = {
+      .range = {.min = 0, .max = UINT16_MAX},
+      .unit = {.type = fir_fidl::UnitType::kNone},
+  };
+
+  fidl::Arena<kDescriptorBufferSize> allocator;
+
+  fir_fidl::DeviceInfo device_info;
+  device_info.vendor_id = static_cast<uint32_t>(fir_fidl::VendorId::kGoogle);
+  device_info.product_id =
+      static_cast<uint32_t>(fir_fidl::VendorGoogleProductId::kGoldfishRgbcLightSensor);
+
+  fidl::VectorView<fir_fidl::SensorAxis> sensor_axes(allocator, 4);
+  sensor_axes[0].axis = kAxis;
+  sensor_axes[1].axis = kAxis;
+  sensor_axes[2].axis = kAxis;
+  sensor_axes[3].axis = kAxis;
+  sensor_axes[0].type = fir_fidl::SensorType::kLightRed;
+  sensor_axes[1].type = fir_fidl::SensorType::kLightGreen;
+  sensor_axes[2].type = fir_fidl::SensorType::kLightBlue;
+  sensor_axes[3].type = fir_fidl::SensorType::kLightIlluminance;
+
+  fir_fidl::SensorInputDescriptor sensor_input_descriptor(allocator);
+  sensor_input_descriptor.set_values(allocator, std::move(sensor_axes));
+
+  fir_fidl::SensorDescriptor sensor_descriptor(allocator);
+  sensor_descriptor.set_input(allocator, std::move(sensor_input_descriptor));
+
+  fir_fidl::DeviceDescriptor descriptor(allocator);
+  descriptor.set_device_info(allocator, std::move(device_info));
+  descriptor.set_sensor(allocator, std::move(sensor_descriptor));
+
+  completer.Reply(std::move(descriptor));
+}
+
+void RgbcLightInputDevice::GetInputReportsReader(GetInputReportsReaderRequestView request,
                                                  GetInputReportsReaderCompleter::Sync& completer) {
   zx_status_t status = input_report_readers_.CreateReader(dispatcher(), std::move(request->reader));
   ZX_DEBUG_ASSERT(status == ZX_OK);

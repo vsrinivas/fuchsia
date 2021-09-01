@@ -202,6 +202,7 @@ enum/member fuchsia.input.report/VendorGoogleProductId.AMS_LIGHT_SENSOR 65538
 enum/member fuchsia.input.report/VendorGoogleProductId.FOCALTECH_TOUCHSCREEN 65537
 enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_ACCELERATION_SENSOR 2417819649
 enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_GYROSCOPE_SENSOR 2417819650
+enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_RGBC_LIGHT_SENSOR 2417819651
 strict enum fuchsia.input.report/VendorGoogleProductId uint32
 enum/member fuchsia.input.report/VendorId.GOOGLE 6353
 strict enum fuchsia.input.report/VendorId uint32
