@@ -14,6 +14,7 @@ group("drivers") {
     "drivers/focaltech",
     "drivers/focaltech:focaltech-sherlock",
     "drivers/ft8201:ft8201-module",
+    "drivers/goldfish_sensor:sensor_driver",
     "drivers/goodix",
     "drivers/gt6853:gt6853-module",
     "drivers/hid",
