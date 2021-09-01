@@ -11,12 +11,16 @@
             url: "fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm",
             startup: "eager",
         },
+        {
+            name: "element_manager",
+            url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+        },
     ],
     capabilities: [
         {
             protocol: [
+                "fuchsia.element.Manager",
                 "fuchsia.input.injection.InputDeviceRegistry",
-                "fuchsia.session.ElementManager",
                 "fuchsia.ui.accessibility.view.Registry",
             ],
         },
@@ -89,16 +93,43 @@
             to: [ "#workstation_session" ],
         },
         {
-            directory: "config-data",
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys.Launcher",
+                "fuchsia.ui.scenic.Scenic",
+            ],
             from: "parent",
+            to: [ "#element_manager" ],
+        },
+
+        // The session manually proxies protocols between #element_manager and the shell.
+        // TODO(fxbug.dev/83819) This will be unnecessary once the shell is a V2 component.
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+            from: "#element_manager",
             to: [ "#workstation_session" ],
-            subdir: "workstation_session",
+        },
+
+        // The session manually proxies protocols between #element_manager and the shell.
+        // TODO(fxbug.dev/83819) This will be unnecessary once the shell is a V2 component.
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "#workstation_session",
+            to: [ "#element_manager" ],
+
+            // A circular dependency exists because protocols are routed in both directions between
+            // #workstation_session and #element_manager; a weak reference is uses to "break" this
+            // cycle.  NOTE: this isn't just because the shell is a V1 component; when it becomes a
+            // V2 component, the circular dependency will still exist, except it will be between
+            // #element_manager and the shell, since the session will no longer need to manually
+            // proxy protocols between them.
+            dependency: 'weak',
         },
     ],
     expose: [
         {
-            protocol: [ "fuchsia.session.ElementManager" ],
-            from: "#workstation_session",
+            protocol: [ "fuchsia.element.Manager" ],
+            from: "#element_manager",
         },
         {
             protocol: [

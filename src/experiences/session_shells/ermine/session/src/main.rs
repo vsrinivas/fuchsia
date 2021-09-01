@@ -5,20 +5,17 @@
 // This declaration is required to support the `select!`.
 #![recursion_limit = "256"]
 
-#[macro_use]
-mod element_repository;
-
 use {
-    crate::element_repository::{ElementEventHandler, ElementManagerServer, ElementRepository},
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, Proxy},
-    fidl_fuchsia_session::{
-        ElementManagerMarker, ElementManagerRequestStream, GraphicalPresenterMarker,
+    fidl_fuchsia_element::{
+        GraphicalPresenterMarker, GraphicalPresenterProxy, GraphicalPresenterRequest,
+        GraphicalPresenterRequestStream, ManagerMarker as ElementManagerMarker,
+        ManagerProxy as ElementManagerProxy, ManagerRequest as ElementManagerRequest,
+        ManagerRequestStream as ElementManagerRequestStream,
     },
-    fidl_fuchsia_session_scene,
-    fidl_fuchsia_session_scene::ManagerMarker,
+    fidl_fuchsia_session_scene::ManagerMarker as SceneManagerMarker,
     fidl_fuchsia_sys::LauncherMarker,
-    fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_ui_app::ViewProviderMarker,
     fidl_fuchsia_ui_views as ui_views,
     fidl_fuchsia_ui_views::ViewRefInstalledMarker,
@@ -27,10 +24,9 @@ use {
         client::{connect_to_protocol, launch_with_options, App, LaunchOptions},
         server::ServiceFs,
     },
+    fuchsia_syslog::macros::fx_log_err,
     fuchsia_zircon as zx,
-    futures::try_join,
-    futures::StreamExt,
-    legacy_element_management::SimpleElementManager,
+    futures::{try_join, StreamExt, TryStreamExt},
     std::fs,
     std::rc::Rc,
     std::sync::{Arc, Weak},
@@ -38,6 +34,7 @@ use {
 
 enum ExposedServices {
     ElementManager(ElementManagerRequestStream),
+    GraphicalPresenter(GraphicalPresenterRequestStream),
 }
 
 /// The maximum number of open requests to this component.
@@ -70,31 +67,96 @@ async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
 }
 
 async fn expose_services(
-    element_server: ElementManagerServer<SimpleElementManager>,
-    server_chan: zx::Channel,
+    graphical_presenter: GraphicalPresenterProxy,
+    element_manager: ElementManagerProxy,
+    ermine_services_server_end: zx::Channel,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     // Add services for component outgoing directory.
-    fs.dir("svc").add_fidl_service(ExposedServices::ElementManager);
+    fs.dir("svc").add_fidl_service(ExposedServices::GraphicalPresenter);
     fs.take_and_serve_directory_handle()?;
 
-    // Add services served over `server_chan`.
+    // Add services served to Ermine over `ermine_services_server_end`.
     fs.add_fidl_service_at(ElementManagerMarker::PROTOCOL_NAME, ExposedServices::ElementManager);
-    fs.serve_connection(server_chan).unwrap();
+    fs.serve_connection(ermine_services_server_end).unwrap();
 
-    // create a reference so that we can use this within the `for_each_concurrent` generator.
-    // If we do not create a ref we will run into issues with the borrow checker.
-    let element_server_ref = &element_server;
-    fs.for_each_concurrent(NUM_CONCURRENT_REQUESTS, |service_request: ExposedServices| async {
-        match service_request {
-            ExposedServices::ElementManager(request_stream) => {
-                // TODO(47079): handle error
-                let _ = element_server_ref.handle_request(request_stream).await;
+    let graphical_presenter = Rc::new(graphical_presenter);
+    let element_manager = Rc::new(element_manager);
+
+    fs.for_each_concurrent(NUM_CONCURRENT_REQUESTS, |service_request: ExposedServices| {
+        // It's a bit unforunate to clone both of these for each service request, since each service
+        // requires only one of the two.  However, as long as we have an "async move" block, we must
+        // clone the refs before they are moved into it.
+        let graphical_presenter = graphical_presenter.clone();
+        let element_manager = element_manager.clone();
+
+        async move {
+            match service_request {
+                ExposedServices::ElementManager(request_stream) => {
+                    run_proxy_element_manager_service(element_manager, request_stream)
+                        .await
+                        .unwrap_or_else(|e| fx_log_err!("Failure in element manager proxy: {}", e));
+                }
+                ExposedServices::GraphicalPresenter(request_stream) => {
+                    run_proxy_graphical_presenter_service(graphical_presenter, request_stream)
+                        .await
+                        .unwrap_or_else(|e| {
+                            fx_log_err!("Failure in graphical presenter proxy: {}", e)
+                        });
+                }
             }
         }
     })
     .await;
+
+    Ok(())
+}
+
+async fn run_proxy_element_manager_service(
+    element_manager: Rc<ElementManagerProxy>,
+    mut request_stream: ElementManagerRequestStream,
+) -> Result<(), Error> {
+    while let Some(request) =
+        request_stream.try_next().await.context("Failed to obtain next request from stream")?
+    {
+        match request {
+            ElementManagerRequest::ProposeElement { spec, controller, responder } => {
+                // TODO(fxbug.dev/47079): handle error
+                let mut result = element_manager
+                    .propose_element(spec, controller)
+                    .await
+                    .context("Failed to forward proxied request")?;
+                let _ = responder.send(&mut result);
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn run_proxy_graphical_presenter_service(
+    graphical_presenter: Rc<GraphicalPresenterProxy>,
+    mut request_stream: GraphicalPresenterRequestStream,
+) -> Result<(), Error> {
+    while let Some(request) =
+        request_stream.try_next().await.context("Failed to obtain next request from stream")?
+    {
+        match request {
+            GraphicalPresenterRequest::PresentView {
+                view_spec,
+                annotation_controller,
+                view_controller_request,
+                responder,
+            } => {
+                // TODO(fxbug.dev/47079): handle error
+                let mut result = graphical_presenter
+                    .present_view(view_spec, annotation_controller, view_controller_request)
+                    .await
+                    .context("Failed to forward proxied request")?;
+                let _ = responder.send(&mut result);
+            }
+        }
+    }
     Ok(())
 }
 
@@ -132,37 +194,29 @@ async fn set_view_focus(
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["workstation_session"]).expect("Failed to initialize logger.");
-    let realm = connect_to_protocol::<fsys::RealmMarker>()
-        .context("Could not connect to Realm service.")?;
-    let element_manager = SimpleElementManager::new(realm);
 
-    let mut element_repository = ElementRepository::new(Rc::new(element_manager));
-
-    let (app, element_channel) = launch_ermine().await?;
+    let (app, ermine_services_server_end) = launch_ermine().await?;
     let view_provider = app.connect_to_protocol::<ViewProviderMarker>()?;
 
-    let presenter = app.connect_to_protocol::<GraphicalPresenterMarker>()?;
-    let mut handler = ElementEventHandler::new(presenter);
+    let scene_manager = Arc::new(connect_to_protocol::<SceneManagerMarker>().unwrap());
 
-    let scene_manager = Arc::new(connect_to_protocol::<ManagerMarker>().unwrap());
-
-    let scene_channel: ClientEnd<ViewProviderMarker> = view_provider
+    let shell_view_provider: ClientEnd<ViewProviderMarker> = view_provider
         .into_channel()
         .expect("no other users of the wrapped channel")
         .into_zx_channel()
         .into();
-    let view_ref = scene_manager.set_root_view(scene_channel.into()).await.unwrap();
+    let view_ref = scene_manager.set_root_view(shell_view_provider.into()).await.unwrap();
 
     let set_focus_fut = set_view_focus(Arc::downgrade(&scene_manager), view_ref);
-
-    let services_fut = expose_services(element_repository.make_server(), element_channel);
-    let element_manager_fut = element_repository.run_with_handler(&mut handler);
     let focus_fut = input_pipeline::focus_listening::handle_focus_changes();
 
-    //TODO(47080) monitor the futures to see if they complete in an error.
-    let _ = try_join!(element_manager_fut, focus_fut, services_fut, set_focus_fut);
+    let graphical_presenter = app.connect_to_protocol::<GraphicalPresenterMarker>()?;
+    let element_manager = connect_to_protocol::<ElementManagerMarker>()?;
+    let services_fut =
+        expose_services(graphical_presenter, element_manager, ermine_services_server_end);
 
-    element_repository.shutdown()?;
+    //TODO(fxbug.dev/47080) monitor the futures to see if they complete in an error.
+    let _ = try_join!(focus_fut, set_focus_fut, services_fut);
 
     Ok(())
 }

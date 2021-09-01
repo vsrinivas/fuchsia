@@ -2,39 +2,42 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl_fuchsia_session/fidl_async.dart';
+import 'package:fidl_fuchsia_element/fidl_async.dart';
 import 'package:fuchsia_services/services.dart';
 
-typedef ElementControllerClosedCallback = void Function(String id);
+typedef ControllerClosedCallback = void Function(String id);
+
+// Namespace for annotations set by ermine.
+const String ermineNamespace = 'ermine';
 
 /// Defines a service to launch applications given their [url] using the
 /// [ElementManager.proposeElement] API.
 class LaunchService {
-  late final ElementControllerClosedCallback onControllerClosed;
+  late final ControllerClosedCallback onControllerClosed;
 
-  Future<ElementControllerProxy> launch(String title, String url) async {
-    final elementController = ElementControllerProxy();
-    final proxy = ElementManagerProxy();
+  Future<ControllerProxy> launch(String title, String url) async {
+    final elementController = ControllerProxy();
+    final proxy = ManagerProxy();
 
     final incoming = Incoming.fromSvcPath()..connectToService(proxy);
 
     final id = '${DateTime.now().millisecondsSinceEpoch}';
-    final annotations = Annotations(customAnnotations: [
+    final annotations = [
       Annotation(
-        key: 'id',
-        value: Value.withText(id),
+        key: AnnotationKey(namespace: ermineNamespace, value: 'id'),
+        value: AnnotationValue.withText(id),
       ),
       Annotation(
-        key: 'url',
-        value: Value.withText(url),
+        key: AnnotationKey(namespace: ermineNamespace, value: 'url'),
+        value: AnnotationValue.withText(url),
       ),
       Annotation(
-        key: 'name',
-        value: Value.withText(title),
+        key: AnnotationKey(namespace: ermineNamespace, value: 'name'),
+        value: AnnotationValue.withText(title),
       ),
-    ]);
+    ];
 
-    final spec = ElementSpec(componentUrl: url, annotations: annotations);
+    final spec = Spec(componentUrl: url, annotations: annotations);
     await proxy.proposeElement(spec, elementController.ctrl.request());
 
     proxy.ctrl.close();

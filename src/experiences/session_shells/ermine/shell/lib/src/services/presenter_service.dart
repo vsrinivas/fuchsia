@@ -10,11 +10,14 @@ import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/states/view_state_impl.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_session/fidl_async.dart';
+import 'package:fidl_fuchsia_element/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
+
+// Namespace for annotations set by ermine.
+const String ermineNamespace = 'ermine';
 
 typedef ViewPresentedCallback = bool Function(ViewState viewState);
 typedef ViewDismissedCallback = void Function(ViewState viewState);
@@ -34,61 +37,73 @@ class PresenterService extends GraphicalPresenter {
   }
 
   @override
-  Future<void> presentView(ViewSpec viewSpec,
+  Future<void> presentView(
+      ViewSpec viewSpec,
+      InterfaceHandle<AnnotationController>? annotationController,
       InterfaceRequest<ViewController>? viewControllerRequest) async {
     late ViewStateImpl viewState;
     final viewController = _ViewControllerImpl(() => onViewDismissed(viewState))
       ..bind(viewControllerRequest);
 
-    const nullAnnotation = Annotation(key: '__null__');
+    // TODO(fxbug.dev/83106): presumably we want to use nullAnnotation even when
+    // `viewSpec.annotations` is null.  This currently doesn't happen.
+    const nullAnnotation = Annotation(
+        key: AnnotationKey(namespace: '__null__', value: '__null__'),
+        value: AnnotationValue.withText('__null__'));
     // Check to see if we have an id that we included in the annotation.
-    final id = viewSpec.annotations?.customAnnotations
-        ?.firstWhere((a) => a.key == 'id', orElse: () => nullAnnotation)
+    final id = viewSpec.annotations
+        ?.firstWhere(
+            (a) => a.key.namespace == ermineNamespace && a.key.value == 'id',
+            orElse: () => nullAnnotation)
         .value
-        ?.text;
-    final url = viewSpec.annotations?.customAnnotations
-        ?.firstWhere((a) => a.key == 'url', orElse: () => nullAnnotation)
+        .text;
+    final url = viewSpec.annotations
+        ?.firstWhere(
+            (a) => a.key.namespace == ermineNamespace && a.key.value == 'url',
+            orElse: () => nullAnnotation)
         .value
-        ?.text;
-    final name = viewSpec.annotations?.customAnnotations
-        ?.firstWhere((a) => a.key == 'name', orElse: () => nullAnnotation)
+        .text;
+    final name = viewSpec.annotations
+        ?.firstWhere(
+            (a) => a.key.namespace == ermineNamespace && a.key.value == 'name',
+            orElse: () => nullAnnotation)
         .value
-        ?.text;
+        .text;
 
     // Build title from one of: name, url, id or ''.
     final title = name ?? (url?.startsWith('http') == true ? url : id ?? '');
 
     final viewHolderToken = viewSpec.viewHolderToken;
     final viewRef = viewSpec.viewRef;
-    if (viewHolderToken != null && viewRef != null) {
-      final viewConnection = FuchsiaViewConnection(
-        viewHolderToken,
-        viewRef: viewRef,
-        onViewConnected: (_) => viewState.viewConnected(),
-        onViewStateChanged: (_, state) {
-          viewState.viewStateChanged(state: state ?? false);
-        },
-      );
-
-      final viewRefDup =
-          ViewRef(reference: viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
-
-      viewState = ViewStateImpl(
-        viewConnection: viewConnection,
-        view: ViewHandle(viewRefDup),
-        id: id,
-        title: title!,
-        url: url,
-        onClose: viewController.close,
-      );
-      onViewPresented(viewState);
-    } else {
-      final error = ViewControllerEpitaph.invalidViewSpec;
+    if (viewHolderToken == null || viewRef == null) {
       if (url != null) {
-        onError(url, error.toString());
+        onError(url, 'presentView spec has null ViewHolderToken or ViewRef');
       }
-      viewController.close(error);
+      viewController.close();
+      throw MethodException(PresentViewError.invalidArgs);
     }
+
+    final viewConnection = FuchsiaViewConnection(
+      viewHolderToken,
+      viewRef: viewRef,
+      onViewConnected: (_) => viewState.viewConnected(),
+      onViewStateChanged: (_, state) {
+        viewState.viewStateChanged(state: state ?? false);
+      },
+    );
+
+    final viewRefDup =
+        ViewRef(reference: viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
+
+    viewState = ViewStateImpl(
+      viewConnection: viewConnection,
+      view: ViewHandle(viewRefDup),
+      id: id,
+      title: title!,
+      url: url,
+      onClose: viewController.close,
+    );
+    onViewPresented(viewState);
   }
 
   // Holds the fidl binding to this implementation of [GraphicalPresenter].
@@ -124,16 +139,11 @@ class _ViewControllerImpl extends ViewController {
     _binding.bind(this, interfaceRequest!);
   }
 
-  void close([ViewControllerEpitaph? e]) {
+  void close([int epitaph = 0]) {
     if (_binding.isBound) {
-      _binding.close(e?.$value ?? 0);
+      _binding.close(epitaph);
     }
     _onPresentedStreamController.close();
-  }
-
-  @override
-  Future<void> annotate(Annotations annotations) async {
-    //TODO(47791) need to implement this method
   }
 
   @override
