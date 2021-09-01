@@ -352,11 +352,6 @@ config("default_warnings") {
       # https://reviews.llvm.org/D59754. After the new Clang toolchain lands
       # and we do some cleanup, this will be re-enabled.
       "-Wno-c99-designator",
-
-      # TODO(fxbug.dev/77973): Temporarily disable this warning until we address the
-      # issues in first party code and suppress the warning in third party code.
-      "-Wno-unused-but-set-parameter",
-      "-Wno-unused-but-set-variable",
     ]
   }
 }
