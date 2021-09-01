@@ -126,7 +126,12 @@ kernel_cmdline("x64-reduced-perf-variation") {
 }
 
 kernel_cmdline("gce") {
-  args = [ "kernel.serial=legacy" ]
+  args = [
+    "kernel.serial=legacy",
+
+    # Disable virtcon on GCE until display support has been added.
+    "virtcon.disable=true",
+  ]
 }
 
 kernel_cmdline("vim3") {
