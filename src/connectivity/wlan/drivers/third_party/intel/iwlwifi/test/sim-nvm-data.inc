@@ -22,6 +22,8 @@ struct NvmSection {
 namespace {
 
 // A big blob of NVM data from an Eve. We use this as golden sample to test the NVM parsing code.
+//
+// Note that in the returned vector, each <target, type> pair is unique (not duplicated).
 std::vector<NvmSection> GetDefaultNvmSections() {
   static const std::vector<NvmSection> kDefaultNvmSections = {
       {

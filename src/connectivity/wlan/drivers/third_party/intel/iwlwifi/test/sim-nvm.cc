@@ -26,15 +26,16 @@ std::vector<uint8_t> SimNvm::HandleChunkRead(uint8_t target, uint16_t type, uint
       continue;
     }
 
-    // Handle the boundary cases.
-    size_t size = iter.data.size();
     // Offsetting a null pointer is undefined behavior, even if the offset is zero. Passing a null
     // pointer to memcpy (or any similar function) is also undefined behavior.
     if (iter.data.data() == nullptr) {
-      // It is not clear that breaking here rather than continuing is correct. We do so to preserve
-      // preexisting behavior while avoiding undefined behavior.
-      break;
+      // There is no other <target, type> pair existing so that we can have early return. See the
+      // comment of GetDefaultNvmSections().
+      return {};
     }
+
+    // Handle the boundary cases.
+    size_t size = iter.data.size();
     if (offset > size) {
       offset = size;
     }
