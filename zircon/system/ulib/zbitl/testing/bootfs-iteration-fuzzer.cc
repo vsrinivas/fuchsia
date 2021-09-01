@@ -39,7 +39,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   if ((dirname.empty() || (dirname.front() != '/' && dirname.back() != '/')) &&
       (filename.empty() || filename.front() != '/')) {
-    if (auto it = bootfs.find(filename, dirname); it != bootfs.end()) {
+    if (auto it = bootfs.find({dirname, filename}); it != bootfs.end()) {
       std::string expected(dirname);
       if (!expected.empty()) {
         expected += '/';

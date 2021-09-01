@@ -20,7 +20,7 @@ zx::vmo Bootfs::Open(std::string_view root, std::string_view filename, std::stri
          static_cast<int>(filename.size()), filename.data(),  //
          static_cast<int>(purpose.size()), purpose.data());
 
-  auto it = bootfs_.find(filename, root);
+  auto it = root.empty() ? bootfs_.find(filename) : bootfs_.find({root, filename});
   if (auto result = bootfs_.take_error(); result.is_error()) {
     Fail(result.error_value());
   }

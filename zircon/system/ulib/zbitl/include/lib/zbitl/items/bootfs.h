@@ -12,6 +12,7 @@
 #include <zircon/assert.h>
 #include <zircon/boot/bootfs.h>
 
+#include <initializer_list>
 #include <string_view>
 #include <type_traits>
 #include <variant>
@@ -372,27 +373,29 @@ class BootfsView {
 
   iterator end() { return {this, /*is_end=*/true}; }
 
-  /// Looks up a file by filename within a given directory namespace. The
-  /// filename is taken to be relative to the directory and the directory is
-  /// expected to neither have a leading nor trailing '/'. If there is a match,
-  /// a valid iterator pointing to that file will be returned; else, in the
-  /// event of mismatch or iteration failure, end() is returned.
+  /// Looks up a file by a decomposition of its path. If joining the parts with
+  /// separators (i.e., '/') matches the path of an entry, an iterator pointing
+  /// to that entry is returned; else, end() is. The path parts are expected to
+  /// be given according to directory hierarchy (so that parent directories are
+  /// given first). Individual parts must be nonempty, and may contain
+  /// separators themselves, but not at the beginning or end.
   ///
   /// Like begin(), find() resets the internal error state and it is the
   /// responsibility of the caller to take or ignore that error before calling
   /// this method. end() is returned if there is no match or an error occurred
   /// during iteration.
-  iterator find(std::string_view filename, std::string_view dirname = {}) {
-    ZX_ASSERT(filename.empty() || filename.front() != '/');
-    ZX_ASSERT(dirname.empty() || (dirname.front() != '/' && dirname.back() != '/'));
-
+  iterator find(std::initializer_list<std::string_view> path_parts) {
+    cpp20::span<const std::string_view> parts(path_parts.begin(), path_parts.end());
     for (auto it = begin(); it != end(); ++it) {
-      if (HasDirAndName(it->name, dirname, filename)) {
+      if (HasPathParts(it->name, parts)) {
         return it;
       }
     }
     return end();
   }
+
+  // Similar to the above, though with the whole path provided.
+  iterator find(std::string_view filename) { return find({filename}); }
 
  private:
   static constexpr bool kCanOneShotRead = Traits::template CanOneShotRead<std::byte, false>();
@@ -422,16 +425,30 @@ class BootfsView {
     error_ = std::move(error);
   }
 
-  constexpr bool HasDirAndName(std::string_view path, std::string_view dirname,
-                               std::string_view filename) {
-    if (dirname.empty()) {
-      return path == filename;
-    }
+  bool HasPathParts(std::string_view path, cpp20::span<const std::string_view> parts) {
+    for (size_t i = 0; i < parts.size(); ++i) {
+      std::string_view part = parts[i];
 
-    return path.size() == dirname.size() + 1 + filename.size() &&  //
-           path[dirname.size()] == '/' &&                          //
-           cpp20::starts_with(path, dirname) &&                    //
-           cpp20::ends_with(path, filename);
+      ZX_ASSERT_MSG(!part.empty(), "path part may not be empty");
+      ZX_ASSERT_MSG(!cpp20::starts_with(part, '/'), "path part %.*s may not begin with a '/'",
+                    static_cast<int>(part.size()), part.data());
+      ZX_ASSERT_MSG(!cpp20::ends_with(part, '/'), "path part %.*s may not end with a '/'",
+                    static_cast<int>(part.size()), part.data());
+
+      if (!cpp20::starts_with(path, part)) {
+        return false;
+      }
+      path.remove_prefix(part.size());
+
+      // Unless this is the last file part, a separator should follow.
+      if (i < parts.size() - 1) {
+        if (!cpp20::starts_with(path, '/')) {
+          return false;
+        }
+        path.remove_prefix(1);
+      }
+    }
+    return path.empty();
   }
 
   uint32_t dir_end_offset() const { return sizeof(zbi_bootfs_header_t) + dir_.size(); }
