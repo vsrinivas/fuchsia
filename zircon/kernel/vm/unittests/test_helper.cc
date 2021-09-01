@@ -6,6 +6,8 @@
 
 #include "test_helper.h"
 
+#include <lib/fit/defer.h>
+
 namespace vm_unittest {
 
 void TestPageRequest::WaitForAvailable(uint64_t* expected_off, uint64_t* expected_len,
@@ -81,8 +83,9 @@ zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inou
   return ZX_OK;
 }
 
-zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObjectPaged>* out_vmo) {
-  // Create a pager backed VMO and jump through some hoops to pre-fill a page for it so we do not
+zx_status_t make_committed_pager_vmo(size_t num_pages, vm_page_t** out_pages,
+                                     fbl::RefPtr<VmObjectPaged>* out_vmo) {
+  // Create a pager backed VMO and jump through some hoops to pre-fill pages for it so we do not
   // actually take any page faults.
   fbl::AllocChecker ac;
   ktl::unique_ptr<StubPageProvider> pager = ktl::make_unique<StubPageProvider>(&ac);
@@ -96,30 +99,47 @@ zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObjectP
   }
 
   fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(src), 0, PAGE_SIZE, &vmo);
+  zx_status_t status =
+      VmObjectPaged::CreateExternal(ktl::move(src), 0, num_pages * PAGE_SIZE, &vmo);
   if (status != ZX_OK) {
     return status;
   }
 
   VmPageList pl;
   pl.InitializeSkew(0, 0);
-  vm_page_t* page;
-  status = pmm_alloc_page(0, &page);
+  auto cleanup = fit::defer([&pl]() {
+    list_node_t list;
+    list_initialize(&list);
+    // Free any pages we could not move over to the pager backed VMO.
+    pl.RemoveAllPages([&list](vm_page_t* p) { list_add_tail(&list, &p->queue_node); });
+    if (!list_is_empty(&list)) {
+      pmm_free(&list);
+    }
+  });
+
+  for (size_t n = 0; n < num_pages; n++) {
+    vm_page_t* page;
+    status = pmm_alloc_page(0, &page);
+    if (status != ZX_OK) {
+      return status;
+    }
+    page->set_state(vm_page_state::OBJECT);
+    VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(n * PAGE_SIZE);
+    if (!page_or_marker) {
+      // Free the page we just allocated. Other pages we've allocated so far will be cleaned up by
+      // the deferred cleanup when exiting the function scope.
+      pmm_free_page(page);
+      return ZX_ERR_NO_MEMORY;
+    }
+    out_pages[n] = page;
+    *page_or_marker = VmPageOrMarker::Page(page);
+  }
+
+  VmPageSpliceList splice_list = pl.TakePages(0, num_pages * PAGE_SIZE);
+  status = vmo->SupplyPages(0, num_pages * PAGE_SIZE, &splice_list);
   if (status != ZX_OK) {
     return status;
   }
-  page->set_state(vm_page_state::OBJECT);
-  VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(0);
-  if (!page_or_marker) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  *page_or_marker = VmPageOrMarker::Page(page);
-  VmPageSpliceList splice_list = pl.TakePages(0, PAGE_SIZE);
-  status = vmo->SupplyPages(0, PAGE_SIZE, &splice_list);
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out_page = page;
   *out_vmo = ktl::move(vmo);
   return ZX_OK;
 }
