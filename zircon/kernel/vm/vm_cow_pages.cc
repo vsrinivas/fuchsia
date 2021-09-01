@@ -1701,6 +1701,12 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
     return ZX_OK;
   }
 
+  // From here we must allocate additional pages, which we may only do if acting on a software or
+  // hardware fault.
+  if ((pf_flags & VMM_PF_FLAG_FAULT_MASK) == 0) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
   vm_page_t* res_page;
   if (!page_owner->is_hidden_locked() || p == vm_get_zero_page()) {
     // If the vmo isn't hidden, we can't move the page. If the page is the zero

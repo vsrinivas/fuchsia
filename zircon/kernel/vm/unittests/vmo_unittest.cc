@@ -1989,6 +1989,37 @@ static bool vmo_lookup_pages_test() {
   END_TEST;
 }
 
+static bool vmo_write_does_not_commit_test() {
+  BEGIN_TEST;
+
+  // Create a vmo and commit a page to it.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
+  ASSERT_OK(status);
+
+  uint64_t val = 42;
+  EXPECT_OK(vmo->Write(&val, 0, sizeof(val)));
+
+  // Create a CoW clone of the vmo.
+  fbl::RefPtr<VmObject> clone;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, PAGE_SIZE, false,
+                            &clone);
+
+  // Querying the page for read in the clone should return it.
+  EXPECT_OK(clone->GetPage(0, 0, nullptr, nullptr, nullptr, nullptr));
+
+  // Querying for write, without any fault flags, should not work as the page is not committed in
+  // the clone.
+  EXPECT_EQ(ZX_ERR_NOT_FOUND,
+            clone->GetPage(0, VMM_PF_FLAG_WRITE, nullptr, nullptr, nullptr, nullptr));
+
+  // Adding a fault flag should cause the lookup to succeed.
+  EXPECT_OK(clone->GetPage(0, VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr,
+                           nullptr));
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -2027,6 +2058,7 @@ VM_UNITTEST(vmo_discard_test)
 VM_UNITTEST(vmo_discard_failure_test)
 VM_UNITTEST(vmo_discardable_counts_test)
 VM_UNITTEST(vmo_lookup_pages_test)
+VM_UNITTEST(vmo_write_does_not_commit_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest
