@@ -7,23 +7,26 @@ use {
     async_trait::async_trait,
     cm_fidl_analyzer::{
         component_model::{
-            ComponentInstanceForAnalyzer, ComponentModelForAnalyzer, ModelBuilderForAnalyzer,
+            AnalyzerModelError, ComponentInstanceForAnalyzer, ComponentModelForAnalyzer,
+            ModelBuilderForAnalyzer,
         },
         component_tree::{ComponentTreeBuilder, NodePath},
     },
     cm_rust::{
-        CapabilityDecl, CapabilityPath, ComponentDecl, DependencyType, ExposeDecl,
+        CapabilityDecl, CapabilityName, CapabilityPath, ComponentDecl, DependencyType, ExposeDecl,
         ExposeDeclCommon, ExposeServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
-        OfferServiceDecl, OfferSource, OfferTarget, ServiceDecl, UseDecl, UseServiceDecl,
-        UseSource,
+        OfferServiceDecl, OfferSource, OfferTarget, RegistrationSource, RunnerDecl,
+        RunnerRegistration, ServiceDecl, UseDecl, UseServiceDecl, UseSource,
     },
-    cm_rust_testing::ComponentDeclBuilder,
+    cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
+    matches::assert_matches,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     routing::{
         component_instance::ComponentInstanceInterface,
         config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
+        error::RoutingError,
     },
     routing_test_helpers::{CheckUse, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder},
     std::{
@@ -583,5 +586,135 @@ mod tests {
                 },
             )
             .await
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///      \
+    ///       c
+    ///
+    /// a: declares runner "elf" as service "/svc/runner" from self.
+    /// a: registers runner "elf" from realm in environment as "hobbit".
+    /// b: creates environment extending from realm.
+    /// c: uses runner "hobbit" in its ProgramDecl.
+    #[fuchsia::test]
+    async fn check_program_runner_from_inherited_environment() {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env").build())
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env")
+                            .extends(fsys::EnvironmentExtends::Realm)
+                            .add_runner(RunnerRegistration {
+                                source_name: "elf".into(),
+                                source: RegistrationSource::Self_,
+                                target_name: "hobbit".into(),
+                            })
+                            .build(),
+                    )
+                    .runner(RunnerDecl {
+                        name: "elf".into(),
+                        source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
+                    })
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env").build())
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env")
+                            .extends(fsys::EnvironmentExtends::Realm)
+                            .build(),
+                    )
+                    .build(),
+            ),
+            ("c", ComponentDeclBuilder::new_empty_component().add_program("hobbit").build()),
+        ];
+
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let c_component =
+            test.look_up_instance(&vec!["b:0", "c:0"].into()).await.expect("c instance");
+
+        assert!(test
+            .model
+            .check_program_runner(
+                &c_component
+                    .decl()
+                    .await
+                    .expect("failed to get component decl")
+                    .program
+                    .expect("missing program decl"),
+                &c_component
+            )
+            .await
+            .is_ok());
+    }
+
+    ///  a
+    ///   \
+    ///    b
+    ///
+    /// a: declares runner "elf" with service "/svc/runner" from "self".
+    /// a: registers runner "elf" from self in environment as "hobbit".
+    /// b: uses runner "hobbit" in its ProgramDecl. Fails because "hobbit" was not in environment.
+    #[fuchsia::test]
+    async fn check_program_runner_from_environment_not_found() {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env").build())
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env")
+                            .extends(fsys::EnvironmentExtends::Realm)
+                            .add_runner(RunnerRegistration {
+                                source_name: "elf".into(),
+                                source: RegistrationSource::Self_,
+                                target_name: "dwarf".into(),
+                            })
+                            .build(),
+                    )
+                    .runner(RunnerDecl {
+                        name: "elf".into(),
+                        source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
+                    })
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new_empty_component().add_program("hobbit").build()),
+        ];
+
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let check_result = test
+            .model
+            .check_program_runner(
+                &b_component
+                    .decl()
+                    .await
+                    .expect("failed to get component decl")
+                    .program
+                    .expect("missing program decl"),
+                &b_component,
+            )
+            .await;
+
+        assert_matches!(
+            check_result,
+            Err(AnalyzerModelError::RoutingError(RoutingError::UseFromEnvironmentNotFound {
+                    moniker,
+                    capability_type,
+                    capability_name,
+            }))
+                if moniker == b_component.abs_moniker().clone() &&
+                capability_type == "runner" &&
+                capability_name == CapabilityName("hobbit".to_string())
+        );
     }
 }

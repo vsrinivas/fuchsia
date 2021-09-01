@@ -50,7 +50,7 @@ pub struct ComponentNode {
 }
 
 /// The environment of a v2 component.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct NodeEnvironment {
     /// The name of this environment as defined by its creator. Should be `None` for the root
     /// environment.

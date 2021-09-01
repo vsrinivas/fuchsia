@@ -107,7 +107,7 @@ impl PolicyError {
 /// components to prevent high privilleged capabilities from being routed to
 /// components outside of the list defined in the runtime configs security
 /// policy.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct GlobalPolicyChecker {
     /// The runtime configuration containing the security policy to apply.
     config: Arc<RuntimeConfig>,

@@ -114,7 +114,7 @@ impl From<fsys::EnvironmentExtends> for EnvironmentExtends {
 /// The set of runners available in a realm's environment.
 ///
 /// [`RunnerRegistration`]: fidl_fuchsia_sys2::RunnerRegistration
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RunnerRegistry {
     runners: HashMap<CapabilityName, RunnerRegistration>,
 }

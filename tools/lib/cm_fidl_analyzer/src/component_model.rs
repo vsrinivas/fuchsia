@@ -5,7 +5,7 @@
 use {
     crate::component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
     async_trait::async_trait,
-    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
+    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, ProgramDecl, UseDecl},
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::{
@@ -236,6 +236,29 @@ impl ComponentModelForAnalyzer {
         }
     }
 
+    /// Given a `ProgramDecl` for a component instance, checks whether the specified runner has
+    /// a valid capability route.
+    pub async fn check_program_runner(
+        self: &Arc<Self>,
+        program_decl: &ProgramDecl,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        match program_decl.runner {
+            Some(ref runner_name) => {
+                match route_capability::<ComponentInstanceForAnalyzer>(
+                    RouteRequest::Runner(runner_name.clone()),
+                    target,
+                )
+                .await
+                {
+                    Ok(_) => Ok(()),
+                    Err(err) => Err(AnalyzerModelError::RoutingError(err)),
+                }
+            }
+            None => Ok(()),
+        }
+    }
+
     /// Checks properties of a capability source that are necessary to use the capability
     /// and that are possible to verify statically.
     async fn check_use_source(
@@ -391,6 +414,7 @@ impl ComponentModelForAnalyzer {
 }
 
 /// A representation of a v2 component instance.
+#[derive(Debug)]
 pub struct ComponentInstanceForAnalyzer {
     abs_moniker: AbsoluteMoniker,
     decl: ComponentDecl,
@@ -477,6 +501,7 @@ impl TopInstanceInterface for TopInstanceForAnalyzer {
 
 /// A representation of a v2 component instance's environment and its relationship to the
 /// parent realm's environment.
+#[derive(Debug)]
 pub struct EnvironmentForAnalyzer {
     environment: NodeEnvironment,
     parent: WeakExtendedInstanceInterface<ComponentInstanceForAnalyzer>,
