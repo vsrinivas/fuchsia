@@ -1,8 +1,31 @@
 {
   debug: false,
-  maintain_utc_clock: true,
-  use_builtin_process_launcher: true,
+  maintain_utc_clock: false,
+  use_builtin_process_launcher: false,
   builtin_pkg_resolver: "appmgr_bridge",
   num_threads: 2,
   out_dir_contents: "hub",
+  namespace_capabilities: [
+        {
+            protocol: [
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+  ],
+  builtin_capabilities: [
+        {
+            protocol: [
+                "fuchsia.sys2.CrashIntrospect",
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.SystemController",
+                "fuchsia.sys2.WorkSchedulerControl",
+            ],
+        },
+        {
+            runner: "elf",
+        },
+        {
+            resolver: "pkg_resolver",
+        },
+    ],
 }

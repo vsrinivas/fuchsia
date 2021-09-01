@@ -21,4 +21,17 @@
             ],
         },
     ],
+    builtin_capabilities: [
+        {
+            protocol: [
+                "fuchsia.sys2.CrashIntrospect",
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.SystemController",
+                "fuchsia.sys2.WorkSchedulerControl",
+            ],
+        },
+        {
+            runner: "elf",
+        },
+    ],
 }
