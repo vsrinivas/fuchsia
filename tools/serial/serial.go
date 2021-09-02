@@ -22,7 +22,7 @@ const (
 	defaultBaudRate = 115200
 
 	// Printed to the serial console when ready to accept user input.
-	consoleCursor = "\n$"
+	consoleCursor = "$ "
 
 	// Timeout for reads and writes from a SerialSocket.
 	defaultSocketIOTimeout = 2 * time.Minute
