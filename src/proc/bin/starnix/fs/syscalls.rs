@@ -258,7 +258,7 @@ pub fn sys_openat(
     mode: FileMode,
 ) -> Result<SyscallResult, Errno> {
     let file = open_file_at(&ctx.task, dir_fd, user_path, flags, mode)?;
-    let fd_flags = if flags & O_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
+    let fd_flags = get_fd_flags(flags);
     Ok(ctx.task.files.add_with_flags(file, fd_flags)?.into())
 }
 
@@ -714,9 +714,11 @@ pub fn sys_dup3(
     if oldfd == newfd {
         return error!(EINVAL);
     }
-    let valid_flags = FdFlags::from_bits(flags).ok_or(errno!(EINVAL))?;
-
-    ctx.task.files.duplicate(oldfd, Some(newfd), valid_flags)?;
+    if flags & !O_CLOEXEC != 0 {
+        return error!(EINVAL);
+    }
+    let fd_flags = get_fd_flags(flags);
+    ctx.task.files.duplicate(oldfd, Some(newfd), fd_flags)?;
     Ok(newfd.into())
 }
 
@@ -964,14 +966,14 @@ mod tests {
         let files = &task_owner.task.files;
         let oldfd = files.add(file_handle)?;
         let newfd = FdNumber::from_raw(2);
-        sys_dup3(&ctx, oldfd, newfd, FdFlags::CLOEXEC.bits())?;
+        sys_dup3(&ctx, oldfd, newfd, O_CLOEXEC)?;
 
         assert_ne!(oldfd, newfd);
         assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(newfd).unwrap()));
         assert_eq!(files.get_fd_flags(oldfd).unwrap(), FdFlags::empty());
         assert_eq!(files.get_fd_flags(newfd).unwrap(), FdFlags::CLOEXEC);
 
-        assert_eq!(sys_dup3(&ctx, oldfd, oldfd, FdFlags::CLOEXEC.bits()), error!(EINVAL));
+        assert_eq!(sys_dup3(&ctx, oldfd, oldfd, O_CLOEXEC), error!(EINVAL));
 
         // Pass invalid flags.
         let invalid_flags = 1234;
@@ -983,7 +985,7 @@ mod tests {
             task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
         let different_file_fd = files.add(second_file_handle)?;
         assert!(!Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(different_file_fd).unwrap()));
-        sys_dup3(&ctx, oldfd, different_file_fd, FdFlags::CLOEXEC.bits())?;
+        sys_dup3(&ctx, oldfd, different_file_fd, O_CLOEXEC)?;
         assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(different_file_fd).unwrap()));
 
         Ok(())
