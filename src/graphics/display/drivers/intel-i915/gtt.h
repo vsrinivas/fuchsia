@@ -54,7 +54,7 @@ class Gtt {
  public:
   Gtt();
   ~Gtt();
-  zx_status_t Init(Controller* controller);
+  zx_status_t Init(Controller* controller, uint32_t fb_offset);
   zx_status_t AllocRegion(uint32_t length, uint32_t align_pow2,
                           std::unique_ptr<GttRegion>* region_out);
   void SetupForMexec(uintptr_t stolen_fb, uint32_t length);

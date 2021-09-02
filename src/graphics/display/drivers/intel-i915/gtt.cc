@@ -50,7 +50,7 @@ Gtt::~Gtt() {
   }
 }
 
-zx_status_t Gtt::Init(Controller* controller) {
+zx_status_t Gtt::Init(Controller* controller, uint32_t fb_offset) {
   controller_ = controller;
 
   zx_status_t status = pci_get_bti(controller->pci(), 0, bti_.reset_and_get_address());
@@ -93,16 +93,19 @@ zx_status_t Gtt::Init(Controller* controller) {
 
   scratch_buffer_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, PAGE_SIZE, nullptr, 0);
 
-  // Populate the gtt with the scratch buffer.
+  // Populate the gtt with the scratch buffer. If we've been given an offset for the bootloader
+  // framebuffer, then leave the range up to |fb_offset| unchanged, as the bootloader framebuffer
+  // gets allocated out of stolen memory.
+  uint32_t offset = ZX_ROUNDUP(fb_offset, PAGE_SIZE);
   uint64_t pte = gen_pte_encode(scratch_buffer_paddr_);
   unsigned i;
-  for (i = 0; i < gtt_size / sizeof(uint64_t); i++) {
+  for (i = offset / PAGE_SIZE; i < gtt_size / sizeof(uint64_t); i++) {
     controller_->mmio_space()->Write<uint64_t>(pte, get_pte_offset(i));
   }
-  controller_->mmio_space()->Read<uint32_t>(get_pte_offset(i - i));  // Posting read
+  controller_->mmio_space()->Read<uint32_t>(get_pte_offset(i - 1));  // Posting read
 
   gfx_mem_size_ = gtt_size / sizeof(uint64_t) * PAGE_SIZE;
-  return region_allocator_.AddRegion({.base = 0, .size = gfx_mem_size_});
+  return region_allocator_.AddRegion({.base = offset, .size = gfx_mem_size_ - offset});
 }
 
 zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,

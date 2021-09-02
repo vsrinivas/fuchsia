@@ -130,6 +130,31 @@ static void get_posttransform_width(const layer_t& layer, uint32_t* width, uint3
   }
 }
 
+struct FramebufferInfo {
+  uint32_t size;
+  uint32_t width;
+  uint32_t height;
+  uint32_t stride;
+  uint32_t format;
+};
+
+// The bootloader (UEFI and Depthcharge) informs zircon of the framebuffer information using a
+// ZBI_TYPE_FRAMEBUFFER entry. We assume this information to be valid and unmodified by an
+// unauthorized call to zx_framebuffer_set_range(), however this is potentially an issue.
+// See fxbug.dev/77501.
+zx::status<FramebufferInfo> GetFramebufferInfo() {
+  FramebufferInfo info;
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+  zx_status_t status = zx_framebuffer_get_info(get_root_resource(), &info.format, &info.width,
+                                               &info.height, &info.stride);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  info.size = info.stride * info.height * ZX_PIXEL_FORMAT_BYTES(info.format);
+  return zx::ok(info);
+}
+
 }  // namespace
 
 namespace i915 {
@@ -1975,9 +2000,8 @@ zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
 void Controller::DdkSuspend(ddk::SuspendTxn txn) {
   // TODO(fxbug.dev/43204): Implement the suspend hook based on suspendtxn
   if (txn.suspend_reason() == DEVICE_SUSPEND_REASON_MEXEC) {
-    uint32_t format, width, height, stride;
-    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-    if (zx_framebuffer_get_info(get_root_resource(), &format, &width, &height, &stride) != ZX_OK) {
+    zx::status<FramebufferInfo> fb_status = GetFramebufferInfo();
+    if (fb_status.is_error()) {
       txn.Reply(ZX_OK, txn.requested_state());
       return;
     }
@@ -1997,18 +2021,17 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
     // The Intel docs say that the first page should be reserved for the gfx
     // hardware, but a lot of BIOSes seem to ignore that.
     uintptr_t fb = bdsm_reg.base_phys_addr() << bdsm_reg.base_phys_addr_shift;
-    uint32_t fb_size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
-
+    const auto& fb_info = fb_status.value();
     {
       fbl::AutoLock lock(&gtt_lock_);
-      gtt_.SetupForMexec(fb, fb_size);
+      gtt_.SetupForMexec(fb, fb_info.size);
     }
 
     // Try to map the framebuffer and clear it. If not, oh well.
     mmio_buffer_t mmio;
     if (pci_map_bar_buffer(&pci_, 2, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio) == ZX_OK) {
       // TODO(fxbug.dev/56253): Add MMIO_PTR to cast.
-      memset((void*)mmio.vaddr, 0, fb_size);
+      memset((void*)mmio.vaddr, 0, fb_info.size);
       mmio_buffer_release(&mmio);
     }
 
@@ -2022,7 +2045,7 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
         registers::PipeRegs pipe_regs(display->pipe()->pipe());
 
         auto plane_stride = pipe_regs.PlaneSurfaceStride(0).ReadFrom(mmio_space());
-        plane_stride.set_stride(width_in_tiles(IMAGE_TYPE_SIMPLE, width, format));
+        plane_stride.set_stride(width_in_tiles(IMAGE_TYPE_SIMPLE, fb_info.width, fb_info.format));
         plane_stride.WriteTo(mmio_space());
 
         auto plane_surface = pipe_regs.PlaneSurface(0).ReadFrom(mmio_space());
@@ -2169,9 +2192,18 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
 
   zxlogf(TRACE, "Mapping gtt");
   {
+    // The bootloader framebuffer is located at the start of the BAR that gets mapped by GTT.
+    // Prevent clients from allocating memory in this region by telling |gtt_| to exclude it from
+    // the region allocator.
+    auto fb = GetFramebufferInfo();
+    if (fb.is_error()) {
+      zxlogf(ERROR, "Failed to obtain framebuffer size (%s)", fb.status_string());
+      return fb.error_value();
+    }
+
     fbl::AutoLock lock(&gtt_lock_);
-    if ((status = gtt_.Init(this)) != ZX_OK) {
-      zxlogf(ERROR, "Failed to init gtt (%d)", status);
+    if ((status = gtt_.Init(this, fb.value().size)) != ZX_OK) {
+      zxlogf(ERROR, "Failed to init gtt (%s)", zx_status_get_string(status));
       return status;
     }
   }
