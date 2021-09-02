@@ -8,6 +8,7 @@
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 
+#include <future>
 #include <string>
 #include <thread>
 
@@ -160,13 +161,14 @@ TEST(Guest, VcpuUseAfterThreadExits) {
 
 // Delete a VCPU from a thread different to the one it last ran on.
 TEST(Guest, VcpuDeleteFromOtherThread) {
-  std::atomic<bool> child_ready = false;
-  std::atomic<bool> child_should_exit = false;
-
   TestCase test;
+  std::promise<void> ready_barrier;
+  auto ready_future = ready_barrier.get_future();
+  std::promise<void> exit_barrier;
 
   // Create and run a VCPU on a different thread.
-  std::thread t([&test, &child_ready, &child_should_exit]() {
+  std::thread t([&test, ready_barrier = std::move(ready_barrier),
+                 exit_future = exit_barrier.get_future()]() mutable {
     // Start the guest.
     ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_always_exit_start, vcpu_always_exit_end));
     ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_MEM, TRAP_ADDR, PAGE_SIZE, zx::port(), kTrapKey),
@@ -179,22 +181,20 @@ TEST(Guest, VcpuDeleteFromOtherThread) {
       zx_port_packet_t packet;
       test.vcpu.resume(&packet);
     }
-    child_ready.store(true);
+    ready_barrier.set_value();
 
     // Don't exit until the main thread has completed its test.
-    while (!child_should_exit.load()) {
-    }
+    exit_future.wait();
   });
 
   // Wait for the child thread to start running its guest.
-  while (!child_ready.load()) {
-  }
+  ready_future.wait();
 
   // Delete the VCPU.
   test.vcpu.reset();
 
   // Stop the child thread.
-  child_should_exit.store(true);
+  exit_barrier.set_value();
   t.join();
 }
 
