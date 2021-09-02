@@ -168,7 +168,7 @@ impl MutableConnection {
     ) -> Result<Either<ConnectionState, DirectoryAdminRequest>, Error> {
         match request {
             DirectoryAdminRequest::Unlink { name, options, responder } => {
-                self.handle_unlink(name, Some(options), |status| {
+                self.handle_unlink(name, options, |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
@@ -226,7 +226,7 @@ impl MutableConnection {
     async fn handle_unlink<R>(
         &mut self,
         name: String,
-        options: Option<UnlinkOptions>,
+        options: UnlinkOptions,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
@@ -236,34 +236,20 @@ impl MutableConnection {
             return responder(Status::BAD_HANDLE);
         }
 
-        if name == "/" || name.is_empty() || name == "." || name == ".." || name == "./" {
+        if name.is_empty() || name.contains('/') || name == "." || name == ".." {
             return responder(Status::INVALID_ARGS);
         }
 
-        let path = match Path::validate_and_split(name) {
-            Ok(path) => path,
-            Err(status) => return responder(status),
-        };
-
-        if path.is_empty() {
-            return responder(Status::INVALID_ARGS);
-        }
-
-        if !path.is_single_component() {
-            return responder(Status::INVALID_ARGS);
-        }
-
-        let must_be_directory = match options {
-            None => path.is_dir(),
-            Some(options) => {
-                if path.as_ref().contains('/') {
-                    return responder(Status::INVALID_ARGS);
-                }
-                options.flags.map(|f| f.contains(UnlinkFlags::MustBeDirectory)).unwrap_or(false)
-            }
-        };
-
-        match self.base.directory.clone().unlink(path.peek().unwrap(), must_be_directory).await {
+        match self
+            .base
+            .directory
+            .clone()
+            .unlink(
+                &name,
+                options.flags.map(|f| f.contains(UnlinkFlags::MustBeDirectory)).unwrap_or(false),
+            )
+            .await
+        {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }

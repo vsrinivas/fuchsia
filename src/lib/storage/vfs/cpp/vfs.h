@@ -67,13 +67,9 @@ class Vfs {
   OpenResult Open(fbl::RefPtr<Vnode> vn, std::string_view path, VnodeConnectionOptions options,
                   Rights parent_rights, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
 
-  // Automatically deduces whether the caller wants to unlink a directory by the presence of a
-  // trailing slash. Forwards to Unlink() with the result.
-  zx_status_t Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) __TA_EXCLUDES(vfs_lock_);
-
   // Implements Unlink for a pre-validated and trimmed name.
-  virtual zx_status_t UnlinkValidated(fbl::RefPtr<Vnode> vn, std::string_view path,
-                                      bool must_be_dir) __TA_EXCLUDES(vfs_lock_);
+  virtual zx_status_t Unlink(fbl::RefPtr<Vnode> vn, std::string_view name, bool must_be_dir)
+      __TA_EXCLUDES(vfs_lock_);
 
   // Calls readdir on the Vnode while holding the vfs_lock, preventing path modification operations
   // for the duration of the operation.

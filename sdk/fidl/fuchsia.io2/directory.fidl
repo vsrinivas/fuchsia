@@ -102,10 +102,6 @@ protocol Directory {
     /// * [`Rights.ENUMERATE`]
     /// * [`Rights.MODIFY_DIRECTORY`]
     Unlink(struct {
-        path Path;
-    }) -> (struct {}) error zx.status;
-    @transitional
-    Unlink2(struct {
         name Name;
         options UnlinkOptions;
     }) -> (struct {}) error zx.status;

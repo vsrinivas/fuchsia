@@ -87,9 +87,8 @@ void FuchsiaVfs::SetDispatcher(async_dispatcher_t* dispatcher) {
   dispatcher_ = dispatcher;
 }
 
-zx_status_t FuchsiaVfs::UnlinkValidated(fbl::RefPtr<Vnode> vndir, std::string_view name,
-                                        bool must_be_dir) {
-  if (zx_status_t s = Vfs::UnlinkValidated(vndir, name, must_be_dir); s != ZX_OK)
+zx_status_t FuchsiaVfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool must_be_dir) {
+  if (zx_status_t s = Vfs::Unlink(vndir, name, must_be_dir); s != ZX_OK)
     return s;
 
   vndir->Notify(name, fio::wire::kWatchEventRemoved);

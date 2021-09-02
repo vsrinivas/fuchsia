@@ -202,8 +202,7 @@ Vfs::TraversePathResult Vfs::TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vnd
   return TraversePathResult::Ok{.vnode = std::move(vn)};
 }
 
-zx_status_t Vfs::UnlinkValidated(fbl::RefPtr<Vnode> vndir, std::string_view name,
-                                 bool must_be_dir) {
+zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool must_be_dir) {
   {
     std::lock_guard lock(vfs_lock_);
     if (ReadonlyLocked()) {
@@ -215,17 +214,6 @@ zx_status_t Vfs::UnlinkValidated(fbl::RefPtr<Vnode> vndir, std::string_view name
     }
   }
   return ZX_OK;
-}
-
-zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) {
-  bool must_be_dir;
-  if (zx_status_t status = TrimName(path, &path, &must_be_dir); status != ZX_OK)
-    return status;
-
-  if (!IsValidName(path))
-    return ZX_ERR_INVALID_ARGS;
-
-  return UnlinkValidated(vndir, path, must_be_dir);
 }
 
 void Vfs::RegisterVnode(Vnode* vnode) {

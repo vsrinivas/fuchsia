@@ -49,8 +49,8 @@ class FuchsiaVfs : public Vfs {
   virtual bool IsTerminating() const = 0;
 
   // Vfs overrides.
-  zx_status_t UnlinkValidated(fbl::RefPtr<Vnode> vn, std::string_view path,
-                              bool must_be_dir) override __TA_EXCLUDES(vfs_lock_);
+  zx_status_t Unlink(fbl::RefPtr<Vnode> vn, std::string_view name, bool must_be_dir) override
+      __TA_EXCLUDES(vfs_lock_);
 
   void TokenDiscard(zx::event ios_token) __TA_EXCLUDES(vfs_lock_);
   zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token, zx::event* out)

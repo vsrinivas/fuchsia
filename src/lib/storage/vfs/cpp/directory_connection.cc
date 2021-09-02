@@ -248,7 +248,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
 
 void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(),
-                        ", path: ", request->name.data());
+                        ", name: ", request->name.data());
 
   if (options().flags.node_reference) {
     completer.ReplyError(ZX_ERR_BAD_HANDLE);
@@ -263,12 +263,12 @@ void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Syn
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
-  zx_status_t status = vfs()->UnlinkValidated(
-      vnode(), name_str,
-      request->options.has_flags()
-          ? static_cast<bool>(
-                (request->options.flags() & fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
-          : false);
+  zx_status_t status =
+      vfs()->Unlink(vnode(), name_str,
+                    request->options.has_flags()
+                        ? static_cast<bool>((request->options.flags() &
+                                             fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
+                        : false);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
