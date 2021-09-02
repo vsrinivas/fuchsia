@@ -85,6 +85,10 @@ zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inou
 
 zx_status_t make_committed_pager_vmo(size_t num_pages, vm_page_t** out_pages,
                                      fbl::RefPtr<VmObjectPaged>* out_vmo) {
+  // Disable the scanner so we can safely submit our aux vmo and query pages without eviction
+  // happening.
+  AutoVmScannerDisable scanner_disable;
+
   // Create a pager backed VMO and jump through some hoops to pre-fill pages for it so we do not
   // actually take any page faults.
   fbl::AllocChecker ac;
@@ -105,41 +109,35 @@ zx_status_t make_committed_pager_vmo(size_t num_pages, vm_page_t** out_pages,
     return status;
   }
 
-  VmPageList pl;
-  pl.InitializeSkew(0, 0);
-  auto cleanup = fit::defer([&pl]() {
-    list_node_t list;
-    list_initialize(&list);
-    // Free any pages we could not move over to the pager backed VMO.
-    pl.RemoveAllPages([&list](vm_page_t* p) { list_add_tail(&list, &p->queue_node); });
-    if (!list_is_empty(&list)) {
-      pmm_free(&list);
-    }
-  });
-
-  for (size_t n = 0; n < num_pages; n++) {
-    vm_page_t* page;
-    status = pmm_alloc_page(0, &page);
-    if (status != ZX_OK) {
-      return status;
-    }
-    page->set_state(vm_page_state::OBJECT);
-    VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(n * PAGE_SIZE);
-    if (!page_or_marker) {
-      // Free the page we just allocated. Other pages we've allocated so far will be cleaned up by
-      // the deferred cleanup when exiting the function scope.
-      pmm_free_page(page);
-      return ZX_ERR_NO_MEMORY;
-    }
-    out_pages[n] = page;
-    *page_or_marker = VmPageOrMarker::Page(page);
+  fbl::RefPtr<VmObjectPaged> aux_vmo;
+  status = VmObjectPaged::Create(0, 0, num_pages * PAGE_SIZE, &aux_vmo);
+  if (status != ZX_OK) {
+    return status;
   }
 
-  VmPageSpliceList splice_list = pl.TakePages(0, num_pages * PAGE_SIZE);
+  status = aux_vmo->CommitRange(0, num_pages * PAGE_SIZE);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  VmPageSpliceList splice_list;
+  status = aux_vmo->TakePages(0, num_pages * PAGE_SIZE, &splice_list);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   status = vmo->SupplyPages(0, num_pages * PAGE_SIZE, &splice_list);
   if (status != ZX_OK) {
     return status;
   }
+
+  for (uint64_t i = 0; i < num_pages; i++) {
+    status = vmo->GetPage(i * PAGE_SIZE, 0, nullptr, nullptr, &out_pages[i], nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   *out_vmo = ktl::move(vmo);
   return ZX_OK;
 }
