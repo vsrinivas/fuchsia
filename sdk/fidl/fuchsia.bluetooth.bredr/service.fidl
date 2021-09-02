@@ -140,7 +140,8 @@ type ServiceClassProfileIdentifier = strict enum : uint16 {
     MPS_PROFILE = 0x113A;
     MPS_CLASS = 0x113B;
     // Calendar, Task, and Notes Profile omitted (unsupported)
-    // Device ID claimed by Fuchsia
+    /// Device Identification Profile (DI)
+    PNP_INFORMATION = 0x1200;
     /// Generic Networking
     GENERIC_NETWORKING = 0x1201;
     /// Generic File Transfer
