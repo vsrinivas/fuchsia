@@ -5,6 +5,7 @@
 #include "tas27xx.h"
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/async/cpp/task.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fit/defer.h>
@@ -60,6 +61,7 @@ Tas27xx::Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClie
     zxlogf(DEBUG, "device_get_metadata failed %d", status);
   }
   driver_inspect_ = inspect().GetRoot().CreateChild("tas27xx");
+  resets_count_ = driver_inspect_.CreateUint("resets_count", 0);
 }
 
 void Tas27xx::ReportState(State& state, const char* description) {
@@ -113,13 +115,33 @@ int Tas27xx::Thread() {
       return thrd_error;
     }
     if (status == ZX_ERR_TIMED_OUT) {
-      if (InErrorState()) {
-        zxlogf(ERROR, "codec in error state");
-        ReportState(state_after_error_, "error");
-        hardware_state_check_timeout = zx::time::infinite();  // Stop after error.
-      } else {
-        ReportState(state_after_timer_, "timer");
-      }
+      // It is safe to capture "this" here, the dispatcher's loop is guaranteed to be shutdown
+      // before this object is destroyed.
+      async::PostTask(dispatcher(), [this]() {
+        if (InErrorState()) {
+          zxlogf(ERROR, "codec in error state");
+          if (errors_count_ == 0) {
+            int64_t secs = zx::nsec(zx::clock::get_monotonic().get()).to_secs();
+            first_error_secs_ = driver_inspect_.CreateInt("seconds_until_first_error", secs);
+          }
+          errors_count_++;
+
+          ReportState(state_after_error_, "error");
+
+          constexpr uint32_t kMaxRetries = 8;  // We don't want to reset forever.
+          if (errors_count_ <= kMaxRetries) {
+            resets_count_.Add(1);
+            Reset();
+            SetGainStateInternal(gain_state_);
+            if (format_.has_value()) {
+              __UNUSED auto format_info = SetDaiFormatInternal(*format_);
+            }
+            Start();
+          }
+        } else {
+          ReportState(state_after_timer_, "timer");
+        }
+      });
     } else {
       switch (packet.key) {
         case kCodecShutdown:
@@ -213,6 +235,11 @@ GainFormat Tas27xx::GetGainFormat() {
 GainState Tas27xx::GetGainState() { return gain_state_; }
 
 void Tas27xx::SetGainState(GainState gain_state) {
+  gain_state_ = gain_state;
+  SetGainStateInternal(gain_state);
+}
+
+void Tas27xx::SetGainStateInternal(GainState gain_state) {
   gain_state.gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(-gain_state.gain / kGainStep);
   WriteReg(PB_CFG2, gain_reg);
@@ -220,7 +247,6 @@ void Tas27xx::SetGainState(GainState gain_state) {
     zxlogf(ERROR, "tas27xx: AGC enable not supported");
     gain_state.agc_enabled = false;
   }
-  gain_state_ = gain_state;
   UpdatePowerControl();
 }
 
@@ -373,9 +399,7 @@ zx_status_t Tas27xx::Reinitialize() {
   if (status != ZX_OK) {
     return status;
   }
-  constexpr float kDefaultGainDb = -30.f;
-  GainState gain_state = {.gain = kDefaultGainDb, .muted = true};
-  SetGainState(std::move(gain_state));
+  SetGainStateInternal(kDefaultGainState);
   return ZX_OK;
 }
 
@@ -439,6 +463,11 @@ void Tas27xx::SetBridgedMode(bool enable_bridged_mode) {
 DaiSupportedFormats Tas27xx::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx::status<CodecFormatInfo> Tas27xx::SetDaiFormat(const DaiFormat& format) {
+  format_.emplace(format);
+  return SetDaiFormatInternal(format);
+}
+
+zx::status<CodecFormatInfo> Tas27xx::SetDaiFormatInternal(const DaiFormat& format) {
   zx_status_t status = SetRate(format.frame_rate);
   if (status != ZX_OK) {
     return zx::error(status);

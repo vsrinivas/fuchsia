@@ -149,6 +149,116 @@ TEST_F(Tas27xxTest, CodecReset) {
   mock_fault.VerifyAndClear();
 }
 
+// This test is disabled because it relies on a timeout expectation that would create flakes.
+TEST_F(Tas27xxTest, DISABLED_CodecResetDueToErrorState) {
+  zx::interrupt irq;
+  ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
+
+  mock_i2c::MockI2c mock_i2c;
+
+  // Set gain state.
+  mock_i2c
+      .ExpectWriteStop({0x05, 0x40})   // -32dB.
+      .ExpectWriteStop({0x02, 0x0d});  // PWR_CTL stopped.
+
+  // Set DAI format.
+  mock_i2c
+      .ExpectWriteStop({0x0a, 0x07})   // SetRate 48k.
+      .ExpectWriteStop({0x0c, 0x22});  // SetTdmSlots right.
+
+  // Start.
+  mock_i2c.ExpectWriteStop({0x02, 0x00});  // PWR_CTL started.
+
+  // Check for error state.
+  mock_i2c.ExpectWrite({0x02}).ExpectReadStop({0x02});  // PRW_CTL in shutdown.
+
+  // Read state to report.
+  mock_i2c.ExpectWrite({0x24})
+      .ExpectReadStop({0x00})  // INT_LTCH0.
+      .ExpectWrite({0x25})
+      .ExpectReadStop({0x00})  // INT_LTCH1.
+      .ExpectWrite({0x26})
+      .ExpectReadStop({0x00})  // INT_LTCH2.
+      .ExpectWrite({0x29})
+      .ExpectReadStop({0x00})  // TEMP_MSB.
+      .ExpectWrite({0x2a})
+      .ExpectReadStop({0x00})  // TEMP_LSB.
+      .ExpectWrite({0x27})
+      .ExpectReadStop({0x00})  // VBAT_MSB.
+      .ExpectWrite({0x28})
+      .ExpectReadStop({0x00});  // VBAT_LSB.
+
+  // Reset.
+  mock_i2c
+      .ExpectWriteStop({0x01, 0x01}, ZX_OK)  // SW_RESET.
+      .ExpectWriteStop({0x02, 0x0d})         // PRW_CTL stopped.
+      .ExpectWriteStop({0x3c, 0x10})         // CLOCK_CFG.
+      .ExpectWriteStop({0x0a, 0x07})         // SetRate.
+      .ExpectWriteStop({0x0c, 0x22})         // TDM_CFG2.
+      .ExpectWriteStop({0x0e, 0x02})         // TDM_CFG4.
+      .ExpectWriteStop({0x0f, 0x44})         // TDM_CFG5.
+      .ExpectWriteStop({0x10, 0x40})         // TDM_CFG6.
+      .ExpectWrite({0x24})
+      .ExpectReadStop({0x00})  // INT_LTCH0.
+      .ExpectWrite({0x25})
+      .ExpectReadStop({0x00})  // INT_LTCH1.
+      .ExpectWrite({0x26})
+      .ExpectReadStop({0x00})          // INT_LTCH2.
+      .ExpectWriteStop({0x20, 0xf8})   // INT_MASK0.
+      .ExpectWriteStop({0x21, 0xff})   // INT_MASK1.
+      .ExpectWriteStop({0x30, 0x01})   // INT_CFG.
+      .ExpectWriteStop({0x05, 0x3c})   // -30dB, default.
+      .ExpectWriteStop({0x02, 0x0d});  // PWR_CTL stopped.
+
+  // Set gain state.
+  mock_i2c
+      .ExpectWriteStop({0x05, 0x40})   // -32dB, old gain_state_.
+      .ExpectWriteStop({0x02, 0x0d});  // PWR_CTL stopped.
+
+  // Set DAI format.
+  mock_i2c
+      .ExpectWriteStop({0x0a, 0x07})   // SetRate 48k.
+      .ExpectWriteStop({0x0c, 0x22});  // SetTdmSlots right.
+
+  // Start.
+  mock_i2c.ExpectWriteStop({0x02, 0x00});  // PWR_CTL started.
+
+  ddk::MockGpio mock_fault;
+  mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
+
+  auto codec = SimpleCodecServer::Create<Tas27xxCodec>(mock_i2c.GetProto(), mock_fault.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  client.SetGainState({
+      .gain = -32.f,
+      .muted = false,
+      .agc_enabled = false,
+  });
+
+  DaiFormat format = GetDefaultDaiFormat();
+  format.frame_rate = 48'000;
+  ASSERT_OK(client.SetDaiFormat(std::move(format)));
+
+  // Get into started state, so we can be in error state after the timeout.
+  [[maybe_unused]] auto unused = client.Start();
+
+  // Wait for the timeout to occur.
+  constexpr int64_t kTimeoutSeconds = 30;
+  zx::nanosleep(zx::deadline_after(zx::sec(kTimeoutSeconds)));
+
+  // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
+  [[maybe_unused]] auto unused2 = client.GetInfo();
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c.VerifyAndClear();
+  mock_fault.VerifyAndClear();
+}
+
 TEST_F(Tas27xxTest, ExternalConfig) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));

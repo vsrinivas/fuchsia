@@ -61,6 +61,8 @@ static constexpr uint8_t INT_MASK0_TDM_CLOCK_ERROR = (1 << 2);
 static constexpr uint8_t INT_MASK0_OVER_CURRENT_ERROR = (1 << 1);
 static constexpr uint8_t INT_MASK0_OVER_TEMP_ERROR = (1 << 0);
 
+static constexpr GainState kDefaultGainState = {.gain = -30.f, .muted = true};
+
 class Tas27xx : public SimpleCodecServer {
  public:
   explicit Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio,
@@ -118,17 +120,23 @@ class Tas27xx : public SimpleCodecServer {
   zx_status_t UpdatePowerControl();
   zx_status_t GetTemperature(float* temperature);
   zx_status_t GetVbat(float* voltage);
+  zx::status<CodecFormatInfo> SetDaiFormatInternal(const DaiFormat& format);
+  void SetGainStateInternal(GainState state);
   bool InErrorState();
   void ReportState(State& registers, const char* description);
 
   bool started_ = false;
-  GainState gain_state_ = {};
+  GainState gain_state_ = kDefaultGainState;
+  std::optional<DaiFormat> format_;
+  uint64_t errors_count_ = 0;
   thrd_t thread_;
   metadata::ti::TasConfig metadata_ = {};
   zx::port port_;
 
   uint8_t channels_to_use_bitmask_ = 1;  // Right channel if I2S.
   inspect::Node driver_inspect_;
+  inspect::IntProperty first_error_secs_;
+  inspect::UintProperty resets_count_;
   State state_after_interrupt_;
   State state_after_error_;
   State state_after_timer_;
