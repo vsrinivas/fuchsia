@@ -27,9 +27,6 @@ import("//build/components.gni")
 #       includes the fuzzer binary. It may also include the fuzzer corpus and dictionary, when
 #       present.
 #
-#   features, services (optional)
-#     [list of strings] Extra (v1) sandbox features/services for the fuzzer and test components.
-#
 #   options (optional)
 #     [list of strings] Key-value pairs representing libFuzzer options, e.g. "foo=bar". See
 #       See https://llvm.org/docs/LibFuzzer.html#options.
@@ -61,7 +58,6 @@ template("fuzzer_component") {
       test_component_manifest_cmx = [
         {
           forward_variables_from(invoker, [ "include" ])
-
           program = {
             if (defined(invoker.options)) {
               args = []
@@ -69,14 +65,6 @@ template("fuzzer_component") {
                 args += [ "-$option" ]
               }
             }
-          }
-
-          sandbox = {
-            forward_variables_from(invoker,
-                                   [
-                                     "features",
-                                     "services",
-                                   ])
           }
         },
       ]

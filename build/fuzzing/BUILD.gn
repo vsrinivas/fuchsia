@@ -8,13 +8,7 @@ config("fuzzing_verbose_logging") {
   defines = [ "FUZZING_VERBOSE_LOGGING" ]
 }
 
-# All fuzzer components and tests should depend on this
-expect_includes("base_includes") {
-  includes = [ "fuzzer_base.shard.cmx" ]
-}
-
 # All fuzzer components should depend on this
 expect_includes("fuzzer_includes") {
-  includes = [ "fuzzer.shard.cmx" ]
-  deps = [ ":base_includes" ]
+  includes = [ "fuzzer.shard.cml" ]
 }

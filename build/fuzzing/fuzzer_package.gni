@@ -243,7 +243,7 @@ template("fuzzer_package") {
       test_spec_target = "${target_name}_${fuzzer.name}_test_spec"
       test_spec(test_spec_target) {
         target = get_label_info(fuzzer.label, "label_with_toolchain")
-        package_url = "$_package_url#meta/${fuzzer.output_name}_test.cmx"
+        package_url = "$_package_url#meta/${fuzzer.output_name}_test.cm"
         package_label =
             get_label_info(":${invoker.target_name}", "label_with_toolchain")
         if (is_fuchsia) {
