@@ -496,6 +496,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
       dprintf(CRITICAL, "VM exit handler for %u (%s) in EL%u at %#lx returned %d\n",
               static_cast<uint32_t>(syndrome.ec), exception_class_name(syndrome.ec),
               guest_state->el(), guest_state->system_state.elr_el2, status);
+      break;
   }
   return status;
 }

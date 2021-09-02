@@ -1249,11 +1249,17 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       status = ZX_ERR_NOT_SUPPORTED;
       break;
   }
-  if (status != ZX_OK && status != ZX_ERR_NEXT && status != ZX_ERR_CANCELED) {
-    dprintf(CRITICAL, "VM exit handler for %s (%u) returned %d\n",
-            exit_reason_name(exit_info.exit_reason), static_cast<uint32_t>(exit_info.exit_reason),
-            status);
-    dump_guest_state(*guest_state, exit_info);
+  switch (status) {
+    case ZX_OK:
+    case ZX_ERR_NEXT:
+    case ZX_ERR_CANCELED:
+      break;
+    default:
+      dprintf(CRITICAL, "VM exit handler for %s (%u) returned %d\n",
+              exit_reason_name(exit_info.exit_reason), static_cast<uint32_t>(exit_info.exit_reason),
+              status);
+      dump_guest_state(*guest_state, exit_info);
+      break;
   }
   return status;
 }
