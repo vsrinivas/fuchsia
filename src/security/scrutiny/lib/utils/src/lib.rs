@@ -7,6 +7,7 @@ pub mod bootfs;
 pub mod env;
 pub mod fvm;
 pub mod golden;
+pub mod key_value;
 pub mod usage;
 pub mod zbi;
 pub mod zstd;

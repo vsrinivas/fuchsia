@@ -214,6 +214,8 @@ impl From<String> for LoggingVerbosity {
 /// should be tracked here so it is easy to modify all collectors if these
 /// paths or urls change in future releases.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
+// TODO(fxbug.dev/83871): Borrow instead of clone() and allow clients to clone
+// only when necessary.
 pub struct ModelConfig {
     /// Path to the model data.
     pub uri: String,
@@ -227,6 +229,8 @@ pub struct ModelConfig {
     pub update_package_url: String,
     /// The URL of the Fuchsia config-data package.
     pub config_data_package_url: String,
+    /// The path to the device manager configuration.
+    pub devmgr_config_path: String,
 }
 
 impl ModelConfig {
@@ -244,6 +248,7 @@ impl ModelConfig {
             repository_blobs_path,
             update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
             config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
+            devmgr_config_path: "config/devmgr".to_string(),
         }
     }
     pub fn minimal() -> ModelConfig {
@@ -272,6 +277,10 @@ impl ModelConfig {
     /// The Fuchsia package url of the config data package.
     pub fn config_data_package_url(&self) -> String {
         self.config_data_package_url.clone()
+    }
+    /// The path to the device manager configuration file in bootfs.
+    pub fn devmgr_config_path(&self) -> String {
+        self.devmgr_config_path.clone()
     }
 }
 

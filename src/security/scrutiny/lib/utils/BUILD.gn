@@ -37,6 +37,7 @@ if (is_host) {
       "src/env.rs",
       "src/fvm.rs",
       "src/golden.rs",
+      "src/key_value.rs",
       "src/lib.rs",
       "src/usage.rs",
       "src/zbi.rs",

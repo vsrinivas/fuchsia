@@ -6,8 +6,9 @@ mod controller;
 
 use {
     crate::toolkit::controller::{
-        blobfs::BlobFsExtractController, fvm::FvmExtractController, zbi::ZbiExtractController,
-        zbi_bootfs::ZbiListBootfsController, zbi_cmdline::ZbiExtractCmdlineController,
+        blobfs::BlobFsExtractController, far::FarMetaExtractController, fvm::FvmExtractController,
+        zbi::ZbiExtractController, zbi_bootfs::ZbiListBootfsController,
+        zbi_cmdline::ZbiExtractCmdlineController, zbi_devmgr::ZbiExtractDevmgrConfigController,
     },
     scrutiny::prelude::*,
     std::sync::Arc,
@@ -19,9 +20,11 @@ plugin!(
         collectors! {},
         controllers! {
             "/tool/blobfs/extract" => BlobFsExtractController::default(),
+            "/tool/far/extract/meta" => FarMetaExtractController::default(),
             "/tool/fvm/extract" => FvmExtractController::default(),
             "/tool/zbi/extract" => ZbiExtractController::default(),
             "/tool/zbi/extract/cmdline" => ZbiExtractCmdlineController::default(),
+            "/tool/zbi/extract/devmgr" => ZbiExtractDevmgrConfigController::default(),
             "/tool/zbi/list/bootfs" => ZbiListBootfsController::default(),
         }
     ),
