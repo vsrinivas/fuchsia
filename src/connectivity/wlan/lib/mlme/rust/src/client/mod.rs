@@ -918,14 +918,20 @@ impl<'a> BoundClient<'a> {
 
         for (id, body) in Reader::new(elements) {
             match id {
-                Id::SUPPORTED_RATES => {
-                    // safe to unwrap because supported rate is 1-byte long thus always aligned
-                    assoc_conf.rates.extend_from_slice(&body);
-                }
-                Id::EXTENDED_SUPPORTED_RATES => {
-                    // safe to unwrap because supported rate is 1-byte thus always aligned
-                    assoc_conf.rates.extend_from_slice(&body);
-                }
+                Id::SUPPORTED_RATES => match ie::parse_supported_rates(body) {
+                    Err(e) => error!("invalid Supported Rates: {}", e),
+                    Ok(supported_rates) => {
+                        // safe to unwrap because supported rate is 1-byte long thus always aligned
+                        assoc_conf.rates.extend(supported_rates.iter().map(|r| r.0));
+                    }
+                },
+                Id::EXTENDED_SUPPORTED_RATES => match ie::parse_extended_supported_rates(body) {
+                    Err(e) => error!("invalid Extended Supported Rates: {}", e),
+                    Ok(supported_rates) => {
+                        // safe to unwrap because supported rate is 1-byte long thus always aligned
+                        assoc_conf.rates.extend(supported_rates.iter().map(|r| r.0));
+                    }
+                },
                 Id::HT_CAPABILITIES => match ie::parse_ht_capabilities(body) {
                     Err(e) => error!("invalid HT Capabilities: {}", e),
                     Ok(ht_cap) => {

@@ -126,7 +126,7 @@ impl Context {
         listen_interval: u16,
         ssid: Option<Ssid>,
         capabilities: mac::CapabilityInfo,
-        rates: Vec<u8>,
+        rates: Vec<ie::SupportedRate>,
         rsne: Option<Vec<u8>>,
     ) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
@@ -135,7 +135,7 @@ impl Context {
                 listen_interval,
                 ssid: ssid.map(|s| s.into()),
                 capability_info: capabilities.raw(),
-                rates,
+                rates: rates.iter().map(|r| r.0).collect(),
                 rsne,
                 // TODO(fxbug.dev/37891): Send everything else (e.g. HT capabilities).
             })
@@ -579,7 +579,7 @@ mod test {
             1,
             Some(Ssid::from("coolnet")),
             mac::CapabilityInfo(0),
-            vec![1, 2, 3],
+            vec![ie::SupportedRate(1), ie::SupportedRate(2), ie::SupportedRate(3)],
             None,
         )
         .expect("expected OK");

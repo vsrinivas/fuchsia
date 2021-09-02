@@ -9,6 +9,8 @@ use {
     zerocopy::ByteSlice,
 };
 
+// TODO(fxbug.dev/83633): Should probably remove Reader in favor of
+// IeSummaryIter everywhere.
 pub struct Reader<B>(BufferReader<B>);
 
 impl<B: ByteSlice> Reader<B> {

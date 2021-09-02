@@ -119,7 +119,7 @@ pub struct BssDescription {
     // in 0.5 Mbps, with MSB indicating basic rate. See Table 9-78 for 126, 127.
     // The rates here may include both the basic rates and extended rates, which are not
     // continuous slices, hence we cannot use `Range`.
-    rates: Vec<u8>,
+    rates: Vec<ie::SupportedRate>,
     tim_range: Option<Range<usize>>,
     country_range: Option<Range<usize>>,
     rsne_range: Option<Range<usize>>,
@@ -132,7 +132,7 @@ pub struct BssDescription {
 }
 
 impl BssDescription {
-    pub fn rates(&self) -> &[u8] {
+    pub fn rates(&self) -> &[ie::SupportedRate] {
         &self.rates[..]
     }
 
@@ -329,7 +329,7 @@ impl BssDescription {
         } else if self.ht_cap().is_some() && self.ht_op().is_some() {
             Standard::Dot11N
         } else if self.channel.primary <= 14 {
-            if self.rates.iter().any(|r| match ie::SupportedRate(*r).rate() {
+            if self.rates.iter().any(|r| match r.rate() {
                 12 | 18 | 24 | 36 | 48 | 72 | 96 | 108 => true,
                 _ => false,
             }) {
@@ -492,8 +492,11 @@ impl TryFrom<fidl_internal::BssDescription> for BssDescription {
                     ie::parse_ssid(body)?;
                     ssid_range = Some(range);
                 }
-                IeType::SUPPORTED_RATES | IeType::EXTENDED_SUPPORTED_RATES => {
-                    rates.get_or_insert(vec![]).extend_from_slice(body);
+                IeType::SUPPORTED_RATES => {
+                    rates.get_or_insert(vec![]).extend(&*ie::parse_supported_rates(body)?);
+                }
+                IeType::EXTENDED_SUPPORTED_RATES => {
+                    rates.get_or_insert(vec![]).extend(&*ie::parse_extended_supported_rates(body)?);
                 }
                 IeType::TIM => {
                     ie::parse_tim(body)?;
@@ -1038,7 +1041,17 @@ mod tests {
                 .set(IeType::VHT_OPERATION, vht_op.clone())
         );
         assert_eq!(bss.ssid, Ssid::from("ssidie"));
-        assert_eq!(bss.rates(), &[0x81, 0x82, 0x83, 4, 5, 6]);
+        assert_eq!(
+            bss.rates(),
+            &[
+                ie::SupportedRate(0x81),
+                ie::SupportedRate(0x82),
+                ie::SupportedRate(0x83),
+                ie::SupportedRate(4),
+                ie::SupportedRate(5),
+                ie::SupportedRate(6)
+            ]
+        );
         assert_eq!(bss.country(), Some(&[1, 2, 3][..]));
         assert_eq!(bss.rsne(), Some(&fake_wpa2_rsne()[..]));
         assert_variant!(bss.ht_cap(), Some(capability_info) => {

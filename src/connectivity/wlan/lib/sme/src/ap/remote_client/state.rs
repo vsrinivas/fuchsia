@@ -29,7 +29,6 @@ use {
         NegotiatedProtection, ProtectionInfo,
     },
     wlan_statemachine::*,
-    zerocopy::AsBytes,
 };
 
 // This is not specified by 802.11, but we need some way of kicking out clients that authenticate
@@ -119,7 +118,7 @@ struct AssociationError {
 struct Association {
     aid: Aid,
     capabilities: CapabilityInfo,
-    rates: Vec<u8>,
+    rates: Vec<SupportedRate>,
     rsna_link_state: Option<RsnaLinkState>,
 }
 
@@ -141,7 +140,7 @@ impl Authenticated {
         ap_capabilities: CapabilityInfo,
         client_capablities: u16,
         ap_rates: &[SupportedRate],
-        client_rates: &[u8],
+        client_rates: &[SupportedRate],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
     ) -> Result<Association, AssociationError> {
@@ -185,27 +184,27 @@ impl Authenticated {
                 // mismatch the AP rates at this point: the client should have already determined
                 // the appropriate rates via the beacon or probe response frames. However, just to
                 // be safe, we intersect these rates here.
-                let rates =
-                    intersect::intersect_rates(intersect::ApRates(ap_rates), client_rates.into())
-                        .map_err(|error| AssociationError {
-                            error: format_err!(
-                                "could not intersect rates ({:?} + {:?}): {:?}",
-                                ap_rates,
-                                client_rates,
-                                error
-                            ),
-                            result_code: match error {
-                                intersect::IntersectRatesError::BasicRatesMismatch => {
-                                    fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch
-                                }
-                                intersect::IntersectRatesError::NoApRatesSupported => {
-                                    fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch
-                                }
-                            },
-                            reason_code: fidl_ieee80211::ReasonCode::ReasonInvalidElement,
-                        })?
-                        .as_bytes()
-                        .to_vec();
+                let rates = intersect::intersect_rates(
+                    intersect::ApRates(ap_rates),
+                    intersect::ClientRates(client_rates),
+                )
+                .map_err(|error| AssociationError {
+                    error: format_err!(
+                        "could not intersect rates ({:?} + {:?}): {:?}",
+                        ap_rates,
+                        client_rates,
+                        error
+                    ),
+                    result_code: match error {
+                        intersect::IntersectRatesError::BasicRatesMismatch => {
+                            fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch
+                        }
+                        intersect::IntersectRatesError::NoApRatesSupported => {
+                            fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch
+                        }
+                    },
+                    reason_code: fidl_ieee80211::ReasonCode::ReasonInvalidElement,
+                })?;
 
                 (capabilities, rates)
             } else {
@@ -607,7 +606,7 @@ impl States {
         ap_capabilities: CapabilityInfo,
         client_capablities: u16,
         ap_rates: &[SupportedRate],
-        client_rates: &[u8],
+        client_rates: &[SupportedRate],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
     ) -> States {
@@ -928,7 +927,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             None,
         );
@@ -1036,7 +1035,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             None,
         );
@@ -1084,7 +1083,7 @@ mod tests {
                 .with_radio_measurement(true)
                 .raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             None,
         );
@@ -1131,7 +1130,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000), SupportedRate(0b01111001)][..],
-            &[0b11111000, 0b01111010][..],
+            &[SupportedRate(0b11111000), SupportedRate(0b01111010)][..],
             &None,
             None,
         );
@@ -1165,7 +1164,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[][..],
-            &[0b11111000, 0b01111010][..],
+            &[SupportedRate(0b11111000), SupportedRate(0b01111010)][..],
             &None,
             None,
         );
@@ -1197,7 +1196,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111001)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             None,
         );
@@ -1285,7 +1284,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             None,
         );
@@ -1336,7 +1335,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             Some(s_rsne_vec),
         );
@@ -1400,7 +1399,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &Some(rsn_cfg),
             Some(s_rsne_vec),
         );
@@ -1452,7 +1451,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &Some(rsn_cfg),
             Some(s_rsne_vec),
         );
@@ -1507,7 +1506,7 @@ mod tests {
                 .with_radio_measurement(true),
             CapabilityInfo(0).with_short_preamble(true).with_spectrum_mgmt(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &Some(rsn_cfg),
             Some(s_rsne_vec),
         );

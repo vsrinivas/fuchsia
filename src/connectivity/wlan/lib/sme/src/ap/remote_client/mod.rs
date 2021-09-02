@@ -66,7 +66,7 @@ impl RemoteClient {
         ap_capabilities: CapabilityInfo,
         client_capabilities: u16,
         ap_rates: &[SupportedRate],
-        client_rates: &[u8],
+        client_rates: &[SupportedRate],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
     ) {
@@ -135,14 +135,14 @@ impl RemoteClient {
         result_code: fidl_mlme::AssociateResultCode,
         aid: Aid,
         capabilities: CapabilityInfo,
-        rates: Vec<u8>,
+        rates: Vec<SupportedRate>,
     ) {
         ctx.mlme_sink.send(MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address: self.addr.clone(),
             result_code,
             association_id: aid,
             capability_info: capabilities.0,
-            rates,
+            rates: rates.into_iter().map(|r| r.0).collect(),
         }))
     }
 
@@ -263,7 +263,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             None,
         );
@@ -282,7 +282,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             None,
         );
@@ -302,7 +302,7 @@ mod tests {
             CapabilityInfo(0).with_short_preamble(true),
             CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
-            &[0b11111000][..],
+            &[SupportedRate(0b11111000)][..],
             &None,
             None,
         );
@@ -358,7 +358,7 @@ mod tests {
             fidl_mlme::AssociateResultCode::RefusedApOutOfMemory,
             1,
             CapabilityInfo(0).with_short_preamble(true),
-            vec![1, 2, 3],
+            vec![SupportedRate(1), SupportedRate(2), SupportedRate(3)],
         );
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {

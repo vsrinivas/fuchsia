@@ -652,7 +652,7 @@ impl InfraBss {
             self.capabilities,
             ind.capability_info,
             &self.rates,
-            &ind.rates,
+            &ind.rates.into_iter().map(|r| SupportedRate(r)).collect::<Vec<_>>()[..],
             &self.rsn_cfg,
             ind.rsne,
         );

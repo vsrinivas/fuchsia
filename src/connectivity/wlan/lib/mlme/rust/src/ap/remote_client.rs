@@ -17,6 +17,7 @@ use {
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::{MacAddr, Ssid},
+    log::warn,
     std::collections::VecDeque,
     wlan_common::{
         appendable::Appendable,
@@ -595,7 +596,7 @@ impl RemoteClient {
         capabilities: mac::CapabilityInfo,
         listen_interval: u16,
         ssid: Option<Ssid>,
-        rates: Vec<u8>,
+        rates: Vec<ie::SupportedRate>,
         rsne: Option<Vec<u8>>,
     ) -> Result<(), ClientRejection> {
         ctx.send_mlme_assoc_ind(self.addr.clone(), listen_interval, ssid, capabilities, rates, rsne)
@@ -923,15 +924,26 @@ impl RemoteClient {
                 let mut rates = vec![];
                 let mut rsne = None;
 
+                // TODO(fxbug.dev/83633): This should probably use IeSummaryIter instead.
                 for (id, ie_body) in ie::Reader::new(&elements[..]) {
                     match id {
-                        ie::Id::SUPPORTED_RATES | ie::Id::EXTENDED_SUPPORTED_RATES => {
-                            // We don't try too hard to verify if supported rates are supplied
-                            // before extended rates: extended rates are only present when supported
-                            // rates run out of space, so they can always be extracted from this
-                            // combined vector by slicing the first 8 elements out, if required
-                            // (that is, as long as if client is doing something sensible).
-                            rates.extend(ie_body.to_vec());
+                        // We don't try too hard to verify the supported rates and extended
+                        // supported rates provided. A warning is logged if parsing of either
+                        // did not succeed, but otherwise whatever rates are parsed, even if
+                        // none, are passed on to SME.
+                        ie::Id::SUPPORTED_RATES => {
+                            match ie::parse_supported_rates(ie_body) {
+                                Ok(supported_rates) => rates.extend(&*supported_rates),
+                                Err(e) => warn!("{:?}", e),
+                            };
+                        }
+                        ie::Id::EXTENDED_SUPPORTED_RATES => {
+                            match ie::parse_extended_supported_rates(ie_body) {
+                                Ok(extended_supported_rates) => {
+                                    rates.extend(&*extended_supported_rates)
+                                }
+                                Err(e) => warn!("{:?}", e),
+                            };
                         }
                         ie::Id::RSNE => {
                             rsne = Some({
@@ -1092,6 +1104,7 @@ mod tests {
             timer::{FakeScheduler, Scheduler, Timer},
         },
         ieee80211::Bssid,
+        test_case::test_case,
         wlan_common::{assert_variant, mac::CapabilityInfo, test_utils::fake_frames::*},
     };
 
@@ -1578,7 +1591,7 @@ mod tests {
                 CapabilityInfo(0).with_short_preamble(true),
                 1,
                 Some(Ssid::from("coolnet")),
-                vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].iter().map(|r| ie::SupportedRate(*r)).collect(),
                 None,
             )
             .expect("expected OK");
@@ -2275,6 +2288,69 @@ mod tests {
                 capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: Some(vec![48, 2, 77, 88]),
+            },
+        );
+    }
+
+    #[test_case(vec![1, 0],
+                vec![50, 2, 9, 10],
+                vec![9, 10] ; "when no supported rates")]
+    #[test_case(vec![1, 8, 1, 2, 3, 4, 5, 6, 7, 8],
+                vec![50, 0],
+                vec![1, 2, 3, 4, 5, 6, 7, 8] ; "when no extended supported rates")]
+    #[test_case(vec![1, 0],
+                vec![50, 0],
+                vec![] ; "when no rates")]
+    #[test_case(vec![1, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                vec![50, 9, 10],
+                vec![] ; "when too many supported rates")]
+    #[fuchsia::test]
+    fn assoc_req_with_bad_rates_still_passed_to_sme(
+        supported_rates_ie: Vec<u8>,
+        extended_supported_rates_ie: Vec<u8>,
+        expected_rates: Vec<u8>,
+    ) {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Authenticated);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut ies = vec![
+            0, 0, // Capability info
+            10, 0, // Listen interval
+        ];
+        ies.extend(supported_rates_ie);
+        ies.extend(extended_supported_rates_ie);
+
+        r_sta
+            .handle_mgmt_frame(
+                &mut ctx,
+                mac::CapabilityInfo(0),
+                Some(Ssid::from("coolnet")),
+                mac::MgmtHdr {
+                    frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
+                    duration: 0,
+                    addr1: [1; 6],
+                    addr2: [2; 6],
+                    addr3: [3; 6],
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                &ies[..],
+            )
+            .expect("parsing should not fail");
+
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::AssociateIndication>()
+            .expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::AssociateIndication {
+                peer_sta_address: CLIENT_ADDR,
+                listen_interval: 10,
+                ssid: Some(Ssid::from("coolnet").into()),
+                capability_info: CapabilityInfo(0).raw(),
+                rates: expected_rates,
+                rsne: None,
             },
         );
     }

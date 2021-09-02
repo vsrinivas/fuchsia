@@ -73,7 +73,7 @@ fn override_capability_info(capability_info: CapabilityInfo) -> CapabilityInfo {
 pub(crate) fn derive_join_channel_and_capabilities(
     bss_channel: Channel,
     user_cbw: Option<Cbw>,
-    bss_rates: &[u8],
+    bss_rates: &[SupportedRate],
     device_info: &fidl_mlme::DeviceInfo,
 ) -> Result<(Channel, ClientCapabilities), Error> {
     // Step 1 - Extract iface capabilities for this particular band we are joining
@@ -86,8 +86,7 @@ pub(crate) fn derive_join_channel_and_capabilities(
     // Step 2.2 - Derive data rates
     // Both are safe to unwrap because SupportedRate is one byte and will not cause alignment issue.
     let client_rates = band_info.rates.iter().map(|&r| SupportedRate(r)).collect::<Vec<_>>();
-    let ap_rates = bss_rates.iter().map(|&r| SupportedRate(r)).collect::<Vec<_>>();
-    let rates = intersect_rates(ApRates(&ap_rates), ClientRates(&client_rates))
+    let rates = intersect_rates(ApRates(bss_rates), ClientRates(&client_rates))
         .map_err(|error| format_err!("could not intersect rates: {:?}", error))
         .context(format!("deriving rates: {:?} + {:?}", band_info.rates, bss_rates))?;
 
