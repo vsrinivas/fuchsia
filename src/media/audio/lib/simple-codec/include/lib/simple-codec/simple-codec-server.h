@@ -92,6 +92,8 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   virtual void SetGainState(GainState state) = 0;
 
   zx_status_t CodecConnect(zx::channel(channel));
+  // The dispatcher's loop is guaranteed to be shutdown before "this" is deleted.
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
  protected:
   explicit SimpleCodecServer(zx_device_t* parent)
