@@ -1097,7 +1097,9 @@ static bool vmo_eviction_hints_test() {
   EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // We should be able to evict the page when told to override the hint.
-  EXPECT_TRUE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Ignore));
+  ASSERT_TRUE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Ignore));
+
+  pmm_free_page(page);
 
   END_TEST;
 }
@@ -1267,7 +1269,7 @@ static bool vmo_eviction_test() {
 
   // Eviction should actually drop the number of committed pages.
   EXPECT_EQ(1u, vmo2->AttributedPages());
-  EXPECT_TRUE(
+  ASSERT_TRUE(
       vmo2->DebugGetCowPages()->EvictPage(page2, 0, VmCowPages::EvictionHintAction::Follow));
   EXPECT_EQ(0u, vmo2->AttributedPages());
   pmm_free_page(page2);
@@ -1558,7 +1560,8 @@ static bool vmo_attribution_evict_test() {
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 1u));
 
   // Evicting the page should increment the generation count.
-  vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow);
+  ASSERT_TRUE(vmo->DebugGetCowPages()->EvictPage(page, 0, VmCowPages::EvictionHintAction::Follow));
+  pmm_free_page(page);
   ++expected_gen_count;
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
 
