@@ -12,8 +12,7 @@ use fidl_fuchsia_hardware_display::{
 use fidl_fuchsia_sysmem::{ImageFormatConstraints, PixelFormatType};
 use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
 use fuchsia_zircon::{
-    self as zx, sys::ZX_TIME_INFINITE, AsHandleRef, DurationNum, Event, HandleBased, Signals,
-    Status, Vmo, VmoOp,
+    self as zx, AsHandleRef, DurationNum, Event, HandleBased, Signals, Status, Vmo, VmoOp,
 };
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use mapped_vmo::Mapping;
@@ -751,10 +750,13 @@ impl FrameBuffer {
             format!("/dev/class/display-controller/{:03}", index)
         } else {
             // If the caller did not supply a display index, we watch the
-            // display-controller and use the first display that appears.
+            // display-controller directory and use the first controller
+            // that appears.
             let mut first_path = None;
             let dir = OpenOptions::new().read(true).open("/dev/class/display-controller")?;
-            watch_directory(&dir, ZX_TIME_INFINITE, |event, path| {
+            const DEADLINE_IN_SECONDS: i64 = 10;
+            let deadline = zx::Time::after(zx::Duration::from_seconds(DEADLINE_IN_SECONDS));
+            watch_directory(&dir, deadline.into_nanos(), |event, path| {
                 if event == fdio::WatchEvent::AddFile {
                     first_path = Some(format!("/dev/class/display-controller/{}", path.display()));
                     Err(zx::Status::STOP)
@@ -762,7 +764,7 @@ impl FrameBuffer {
                     Ok(())
                 }
             });
-            first_path.unwrap()
+            first_path.ok_or_else(|| format_err!("No display controller available"))?
         };
         let file = OpenOptions::new().read(true).write(true).open(device_path)?;
 
