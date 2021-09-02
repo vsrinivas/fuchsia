@@ -26,7 +26,6 @@ product_system_image_deps = [
   # products that have limited storage.
   # TODO(fxbug.dev/3150): Move to a regular package.
   "//src/graphics/lib/magma/tests:test-drivers",
-  "//src/sys/pkg:pkgfs-disable-executability-restrictions",
 ]
 
 core_realm_package_name = "core"
@@ -100,8 +99,6 @@ base_package_labels += [
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
   "//src/sys/pkg:system-update-checker",
-  "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
-  "//src/sys/pkg/bin/pkg-resolver:persisted_repos_dir",
   "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
   "//src/sys/stash:pkg",
   "//src/sys/time/httpsdate_time_source:httpsdate-time-source",
