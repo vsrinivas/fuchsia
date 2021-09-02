@@ -6,7 +6,6 @@
 #include <iomanip>
 #include <iostream>
 #include <set>
-#include <sstream>
 #include <stack>
 
 #include <zxtest/zxtest.h>
@@ -373,15 +372,16 @@ struct TestCase {
 const std::vector<TestCase> test_cases = {
     {ElementType::AttributeArg,
      {
-         R"FIDL(library x; @attr(«"foo"») const bool MY_BOOL = false;)FIDL",
+         R"FIDL(library x; @attr(«"foo"») const MY_BOOL bool = false;)FIDL",
+         R"FIDL(library x; @attr(«a="foo"»,«b="bar"») const MY_BOOL bool = false;)FIDL",
      }},
     {ElementType::AttributeNew,
      {
-         R"FIDL(library x; «@foo("foo")» «@bar» const bool MY_BOOL = false;)FIDL",
+         R"FIDL(library x; «@foo("foo")» «@bar» const MY_BOOL bool = false;)FIDL",
          R"FIDL(library x;
           «@foo("foo")»
           «@bar»
-          const bool MY_BOOL = false;
+          const MY_BOOL bool = false;
          )FIDL",
          R"FIDL(library x;
           protocol Foo {
@@ -620,6 +620,13 @@ const std::vector<TestCase> test_cases = {
             1: intval int64;
           }:optional»;
          )FIDL",
+     }},
+
+    // The following tests "duplicate" some of the auto-converted old syntax test cases above for
+    // situations specific only to the new syntax.
+    {ElementType::StringLiteral,
+     {
+         R"FIDL(library x; @attr(a=«"foo"»,b=«"bar"») const MY_BOOL bool = false;)FIDL",
      }},
     {ElementType::Identifier,
      {

@@ -214,24 +214,38 @@ uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
   }
 }
 
-bool Attribute::HasArg(std::string_view arg_name) const {
-  // TODO(fxbug.dev/74955): ensure that argument names are canonicalized.
-  for (const auto& arg : args) {
-    if (arg->name == arg_name)
-      return true;
-  }
-  return false;
-}
+bool Attribute::HasArg(std::string_view arg_name) const { return GetArg(arg_name).has_value(); }
 
-MaybeConstant Attribute::GetArg(std::string_view arg_name) const {
-  // TODO(fxbug.dev/74955): ensure that argument names are canonicalized.
+MaybeAttributeArg Attribute::GetArg(std::string_view arg_name) const {
+  std::string name = utils::canonicalize(arg_name);
   for (const auto& arg : args) {
-    if (arg->name == arg_name) {
-      return *arg->value;
+    if (arg->name == name) {
+      return *arg;
     }
   }
   return std::nullopt;
 }
+
+bool Attribute::HasStandaloneAnonymousArg() const {
+  return GetStandaloneAnonymousArg().has_value();
+}
+
+MaybeAttributeArg Attribute::GetStandaloneAnonymousArg() const {
+  MaybeAttributeArg anon_arg;
+  [[maybe_unused]] size_t named_args = 0;
+  for (const auto& arg : args) {
+    if (!arg->name.has_value()) {
+      assert(!anon_arg.has_value() && "multiple anonymous arguments is a parser error");
+      anon_arg = *arg;
+    } else {
+      named_args += 1;
+    }
+  }
+
+  assert(!(anon_arg.has_value() && named_args > 0) &&
+         "an attribute with both anonymous and named arguments is a parser error");
+  return anon_arg;
+};
 
 bool AttributeList::HasAttribute(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
@@ -265,8 +279,8 @@ bool AttributeList::HasAttributeArg(std::string_view attribute_name,
   return attribute.value().get().HasArg(arg_name);
 }
 
-MaybeConstant AttributeList::GetAttributeArg(std::string_view attribute_name,
-                                             std::string_view arg_name) const {
+MaybeAttributeArg AttributeList::GetAttributeArg(std::string_view attribute_name,
+                                                 std::string_view arg_name) const {
   auto attribute = GetAttribute(attribute_name);
   if (!attribute)
     return std::nullopt;
@@ -291,8 +305,8 @@ bool Decl::HasAttributeArg(std::string_view attribute_name, std::string_view arg
   return attributes->HasAttributeArg(attribute_name, arg_name);
 }
 
-MaybeConstant Decl::GetAttributeArg(std::string_view attribute_name,
-                                    std::string_view arg_name) const {
+MaybeAttributeArg Decl::GetAttributeArg(std::string_view attribute_name,
+                                        std::string_view arg_name) const {
   if (!attributes)
     return std::nullopt;
   return attributes->GetAttributeArg(attribute_name, arg_name);
@@ -1772,26 +1786,41 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   return root_typespace;
 }
 
+AttributeArgSchema::AttributeArgSchema(std::string name,
+                                       AttributeArgSchema::Optionality optionality)
+    : name_(name), optionality_(optionality) {}
+
+void AttributeArgSchema::ValidateValue(Reporter* reporter, const MaybeAttributeArg maybe_arg,
+                                       const std::unique_ptr<Attribute>& attribute) const {
+  // This argument was not specified - is that allowed?
+  if (!maybe_arg.has_value()) {
+    if (!IsOptional()) {
+      reporter->Report(ErrMissingRequiredAttributeArg, attribute->span(), attribute.get(), name_);
+    }
+  }
+}
+
 AttributeSchema::AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
-                                 const std::set<std::string> allowed_values, Constraint constraint)
+                                 const std::map<std::string, AttributeArgSchema>& arg_schemas,
+                                 Constraint constraint)
     : allowed_placements_(allowed_placements),
-      allowed_values_(allowed_values),
+      arg_schemas_(arg_schemas),
       constraint_(std::move(constraint)) {}
 
 AttributeSchema AttributeSchema::Deprecated() {
-  return AttributeSchema({AttributePlacement::kDeprecated}, {});
+  return AttributeSchema({AttributePlacement::kDeprecated});
 }
 
-void AttributeSchema::ValidatePlacement(Reporter* reporter,
+bool AttributeSchema::ValidatePlacement(Reporter* reporter,
                                         const std::unique_ptr<Attribute>& attribute,
                                         const Attributable* attributable) const {
-  if (allowed_placements_.size() == 0)
-    return;
+  if (allowed_placements_.empty()) {
+    return true;
+  }
 
-  if (allowed_placements_.size() == 1 &&
-      *allowed_placements_.cbegin() == AttributePlacement::kDeprecated) {
+  if (IsDeprecated()) {
     reporter->Report(ErrDeprecatedAttribute, attribute->span(), attribute.get());
-    return;
+    return false;
   }
 
   if (allowed_placements_.size() == 1 &&
@@ -1803,48 +1832,93 @@ void AttributeSchema::ValidatePlacement(Reporter* reporter,
       case AttributePlacement::kTableDecl:
       case AttributePlacement::kUnionDecl: {
         const auto* decl = static_cast<const Decl*>(attributable);
-        if (decl->name.as_anonymous() == nullptr)
+        if (decl->name.as_anonymous() == nullptr) {
           reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
-        return;
+          return false;
+        }
+        return true;
       }
       default:
         reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
-        return;
+        return false;
     }
   }
 
   auto iter = allowed_placements_.find(attributable->placement);
   if (iter != allowed_placements_.end())
-    return;
+    return true;
   reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
+  return false;
 }
 
-void AttributeSchema::ValidateValue(Reporter* reporter,
-                                    const std::unique_ptr<Attribute>& attribute) const {
-  if (allowed_values_.size() == 0)
-    return;
-
-  // TODO(fxbug.dev/74955): this currently assumes a single string argument, as
-  //  is the case in the old syntax. This error reporting will need to be
-  //  changed to handle other cases (multiple args, different arg types, etc).
-  std::string attribute_value;
-  auto arg_constant = attribute->GetArg();
-  if (arg_constant.has_value()) {
-    if (arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString)
-      assert(false && "non-string attribute arguments not yet supported");
-    auto arg_value =
-        static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
-    attribute_value = arg_value.MakeContents();
+bool AttributeSchema::ValidateArgs(Reporter* reporter,
+                                   const std::unique_ptr<Attribute>& attribute) const {
+  // An attribute that has already been resolved (for example, on a composed method that is
+  // referenced via pointer by its compositor) is assumed to be valid, since that prior resolution
+  // would have needed to have successfully called ValidateArgs already.
+  if (attribute->resolved) {
+    return true;
   }
 
-  auto iter = allowed_values_.find(attribute_value);
-  if (iter != allowed_values_.end())
-    return;
-  reporter->Report(ErrInvalidAttributeValue, attribute->span(), attribute.get(), attribute_value,
-                   allowed_values_);
+  bool ok = true;
+  // If this attribute is deprecated, this fact would have already been caught and reported when
+  // its placement was validated, so we can just return silently.
+  if (IsDeprecated()) {
+    return true;
+  }
+
+  // There are two distinct cases to handle here: a single, unnamed argument (`@foo("abc")`), and
+  // zero or more named arguments (`@foo`, `@foo(bar="abc")` or `@foo(bar="abc",baz="def")`).
+  MaybeAttributeArg anon_arg = attribute->GetStandaloneAnonymousArg();
+  if (anon_arg.has_value()) {
+    // Error if the user supplied an anonymous argument, like `@foo("abc")` for an attribute whose
+    // schema specifies multiple arguments (and therefore requires that they always be named).
+    if (arg_schemas_.size() == 0) {
+      reporter->Report(ErrAttributeDisallowsArgs, attribute->span(), attribute.get());
+      ok = false;
+    } else if (arg_schemas_.size() > 1) {
+      reporter->Report(ErrAttributeArgNotNamed, attribute->span(), &anon_arg.value().get());
+      ok = false;
+    }
+
+    // We've verified that we are expecting a single argument, and that we have a single anonymous
+    // argument that we can validate as an instance of it.
+    for (const auto& arg_schema : arg_schemas_) {
+      const auto& schema = arg_schema.second;
+      schema.ValidateValue(reporter, anon_arg, attribute);
+    }
+  } else {
+    // If we have a single-arg official attribute its argument must always be anonymous, like
+    // `@transport("foo")`. Check if the user wrote this as a named argument, and error if they did.
+    if (arg_schemas_.size() == 1 && attribute->args.size() == 1) {
+      reporter->Report(ErrAttributeArgMustNotBeNamed, attribute->span());
+      ok = false;
+    }
+
+    // All of the arguments should be named - compare each argument schema against its (possible)
+    // value.
+    for (const auto& arg_schema : arg_schemas_) {
+      const auto& name = arg_schema.first;
+      const auto& schema = arg_schema.second;
+      MaybeAttributeArg arg = attribute->GetArg(name);
+      schema.ValidateValue(reporter, arg, attribute);
+    }
+
+    // Make sure that no arguments not specified by the schema sneak through.
+    for (const auto& arg : attribute->args) {
+      assert(arg->name.has_value() && "anonymous arguments should not be seen here");
+      auto schema = arg_schemas_.find(arg->name.value());
+      if (schema == arg_schemas_.end()) {
+        reporter->Report(ErrUnknownAttributeArg, attribute->span(), attribute.get(),
+                         arg->name.value());
+        ok = false;
+      }
+    }
+  }
+  return ok;
 }
 
-void AttributeSchema::ValidateConstraint(Reporter* reporter,
+bool AttributeSchema::ValidateConstraint(Reporter* reporter,
                                          const std::unique_ptr<Attribute>& attribute,
                                          const Attributable* attributable) const {
   assert(attributable);
@@ -1852,23 +1926,33 @@ void AttributeSchema::ValidateConstraint(Reporter* reporter,
   auto passed = constraint_(reporter, attribute, attributable);
   if (passed) {
     assert(check.NoNewErrors() && "cannot add errors and pass");
-  } else if (check.NoNewErrors()) {
-    // TODO(fxbug.dev/74955): this currently assumes a single string argument, as
-    //  is the case in the old syntax. This error reporting will need to be
-    //  changed to handle other cases (multiple args, different arg types, etc).
-    std::string attribute_value;
-    auto arg_constant = attribute->GetArg();
-    if (arg_constant.has_value()) {
-      if (arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString)
-        assert(false && "non-string attribute arguments not yet supported");
-      auto arg_value =
-          static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
-      attribute_value = arg_value.MakeContents();
-    }
-
-    reporter->Report(ErrAttributeConstraintNotSatisfied, attribute->span(), attribute.get(),
-                     attribute_value);
+    return true;
   }
+  if (check.NoNewErrors()) {
+    reporter->Report(ErrAttributeConstraintNotSatisfied, attribute->span(), attribute.get());
+  }
+  return false;
+}
+
+void AttributeSchema::ResolveArgs(Reporter* reporter, std::unique_ptr<Attribute>& attribute) const {
+  if (attribute->resolved) {
+    return;
+  }
+
+  if (attribute->HasStandaloneAnonymousArg()) {
+    assert(arg_schemas_.size() == 1 && "expected a schema with only one value");
+    for (const auto& arg_schema : arg_schemas_) {
+      attribute->args[0]->name = arg_schema.first;
+    }
+  }
+
+  // TODO(fxbug.dev/81390): apply inferred types to inline constants here.
+
+  attribute->resolved = true;
+}
+
+bool AttributeSchema::HasAttributeArgSchema(std::string const& name) const {
+  return arg_schemas_.find(name) != arg_schemas_.end();
 }
 
 bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attr,
@@ -1930,13 +2014,12 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
 
 bool OverrideNameConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                             const Attributable* attributable) {
-  auto arg_constant = attribute->GetArg();
-  if (!arg_constant.has_value()) {
-    reporter->Report(ErrEmptyAttributeArg, attribute->span(), attribute.get());
+  auto arg = attribute->GetArg("value");
+  if (!arg.has_value()) {
+    reporter->Report(ErrMissingRequiredAnonymousAttributeArg, attribute->span(), attribute.get());
     return false;
   }
-  auto arg_value =
-      static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
 
   if (!utils::IsValidIdentifierComponent(arg_value.MakeContents())) {
     reporter->Report(ErrInvalidNameOverride, attribute->span());
@@ -1948,13 +2031,12 @@ bool OverrideNameConstraint(Reporter* reporter, const std::unique_ptr<Attribute>
 bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                         const Attributable* attributable) {
   assert(attributable);
-  auto arg_constant = attribute->GetArg();
-  if (!arg_constant.has_value() ||
-      arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString) {
+  auto arg = attribute->GetArg("value");
+  if (!arg.has_value() ||
+      arg.value().get().value->Value().kind != flat::ConstantValue::Kind::kString) {
     assert(false && "non-string attribute arguments not yet supported");
   }
-  auto arg_value =
-      static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
 
   uint32_t bound;
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
@@ -1993,14 +2075,13 @@ bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& at
 bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                           const Attributable* attributable) {
   assert(attributable);
-  auto arg_constant = attribute->GetArg();
-  if (!arg_constant.has_value() ||
-      arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString) {
+  auto arg = attribute->GetArg("value");
+  if (!arg.has_value() ||
+      arg.value().get().value->Value().kind != flat::ConstantValue::Kind::kString) {
     reporter->Report(ErrInvalidAttributeType, attribute->span(), attribute.get());
     assert(false && "non-string attribute arguments not yet supported");
   }
-  auto arg_value =
-      static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
 
   uint32_t bound;
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
@@ -2089,15 +2170,14 @@ bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& a
       "Syscall",
   };
 
-  auto arg_constant = attribute->GetArg();
-  if (!arg_constant.has_value()) {
-    reporter->Report(ErrInvalidTransportType, method->name, std::string(), *kValidTransports);
+  auto arg = attribute->GetArg("value");
+  if (!arg.has_value()) {
+    reporter->Report(ErrInvalidTransportType, method->name, std::string("''"), *kValidTransports);
     return false;
   }
-  if (arg_constant.value().get().Value().kind != flat::ConstantValue::Kind::kString)
+  if (arg.value().get().value->Value().kind != flat::ConstantValue::Kind::kString)
     assert(false && "non-string attribute arguments not yet supported");
-  auto arg_value =
-      static_cast<const flat::StringConstantValue&>(arg_constant.value().get().Value());
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
 
   // Parse comma separated transports
   const std::string& value = arg_value.MakeContents();
@@ -2133,76 +2213,50 @@ Libraries::Libraries() {
   // clang-format off
   AddAttributeSchema("discoverable", AttributeSchema({
     AttributePlacement::kProtocolDecl,
-  }, {
-    "",
   }));
   AddAttributeSchema("doc", AttributeSchema({
     /* any placement */
-  }, {
-    /* any value */
-  }));
+  }, AttributeArgSchema("text")));
   AddAttributeSchema("layout", AttributeSchema::Deprecated()),
   AddAttributeSchema("for_deprecated_c_bindings", AttributeSchema({
     AttributePlacement::kProtocolDecl,
     AttributePlacement::kStructDecl,
-  }, {
-    "",
-  },
-  SimpleLayoutConstraint));
+  }, SimpleLayoutConstraint));
   AddAttributeSchema("generated_name", AttributeSchema({
     AttributePlacement::kAnonymousLayout,
-  }, {
-    /* any value */
-  }, OverrideNameConstraint)),
+  }, AttributeArgSchema(), OverrideNameConstraint)),
   AddAttributeSchema("max_bytes", AttributeSchema({
     AttributePlacement::kProtocolDecl,
     AttributePlacement::kMethod,
     AttributePlacement::kStructDecl,
     AttributePlacement::kTableDecl,
     AttributePlacement::kUnionDecl,
-  }, {
-      /* any value */
-  },
-  MaxBytesConstraint));
+  }, AttributeArgSchema(), MaxBytesConstraint));
   AddAttributeSchema("max_handles", AttributeSchema({
     AttributePlacement::kProtocolDecl,
     AttributePlacement::kMethod,
     AttributePlacement::kStructDecl,
     AttributePlacement::kTableDecl,
     AttributePlacement::kUnionDecl,
-  }, {
-    /* any value */
-  },
-  MaxHandlesConstraint));
+  }, AttributeArgSchema(), MaxHandlesConstraint));
   AddAttributeSchema("result", AttributeSchema({
     AttributePlacement::kUnionDecl,
-  }, {
-      "",
-  },
-  ResultShapeConstraint));
+  }, ResultShapeConstraint));
   AddAttributeSchema("selector", AttributeSchema({
     AttributePlacement::kMethod,
-  }, {
-      /* any value */
-  }));
+  }, AttributeArgSchema()));
   AddAttributeSchema("transitional", AttributeSchema({
     AttributePlacement::kMethod,
     AttributePlacement::kBitsDecl,
     AttributePlacement::kEnumDecl,
     AttributePlacement::kUnionDecl,
-  }, {
-    /* any value */
-  }));
+  }, AttributeArgSchema("reason", AttributeArgSchema::Optionality::kOptional)));
   AddAttributeSchema("transport", AttributeSchema({
     AttributePlacement::kProtocolDecl,
-  }, {
-    /* any value */
-  }, TransportConstraint));
+  }, AttributeArgSchema("types"), TransportConstraint));
   AddAttributeSchema("unknown", AttributeSchema({
     AttributePlacement::kEnumMember,
     AttributePlacement::kUnionMember,
-  }, {
-    ""
   }));
   // clang-format on
 }
@@ -2265,8 +2319,8 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
 }
 
 const AttributeSchema* Libraries::RetrieveAttributeSchema(
-    Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-    fidl::utils::Syntax syntax) const {
+    Reporter* reporter, const std::unique_ptr<Attribute>& attribute, fidl::utils::Syntax syntax,
+    bool warn_on_typo) const {
   auto attribute_name = attribute->name;
 
   // TODO(fxbug.dev/70247): once the migration is complete, we no longer need to
@@ -2282,8 +2336,9 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(
   }
 
   // Skip typo check?
-  if (reporter == nullptr)
+  if (reporter == nullptr || !warn_on_typo) {
     return nullptr;
+  }
 
   // Match against all known attributes.
   for (const auto& name_and_schema : attribute_schemas_) {
@@ -2301,7 +2356,6 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(
     auto edit_distance = EditDistance(supplied_name, suspected_name);
     if (0 < edit_distance && edit_distance < 2) {
       reporter->Report(WarnAttributeTypo, attribute->span(), supplied_name, suspected_name);
-      return nullptr;
     }
   }
 
@@ -2422,28 +2476,60 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
   return false;
 }
 
-void Library::ValidateAttributesPlacement(const Attributable* attributable,
-                                          const AttributeList* attributes) {
+void Library::ResolveAttributeArgs(AttributeList* attributes) {
   if (attributes == nullptr)
     return;
-  for (const auto& attribute : attributes->attributes) {
+  for (auto& attribute : attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax);
     if (schema != nullptr) {
-      schema->ValidatePlacement(reporter_, attribute, attributable);
-      schema->ValidateValue(reporter_, attribute);
+      schema->ResolveArgs(reporter_, attribute);
+    } else if (attribute->args.size() == 1) {
+      attribute->args[0]->name = "value";
     }
+    attribute->resolved = true;
   }
 }
 
-void Library::ValidateAttributesConstraints(const Attributable* attributable,
+bool Library::ValidateAttributesPlacement(const Attributable* attributable,
+                                          const AttributeList* attributes) {
+  if (attributes == nullptr)
+    return true;
+  for (const auto& attribute : attributes->attributes) {
+    auto schema =
+        all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax, true);
+
+    // Check for duplicate args, and return early if we find them.
+    std::set<std::string> seen;
+    for (const auto& arg : attribute->args) {
+      if (arg->name.has_value() && !seen.insert(utils::canonicalize(arg->name.value())).second) {
+        Fail(ErrDuplicateAttributeArg, attribute->span(), attribute.get(), arg->name.value());
+        return false;
+      }
+    }
+
+    if (schema != nullptr) {
+      // Ensure that both validation functions run, even if the first fails, to report as many
+      // recoverable errors as possible.
+      bool errored = !schema->ValidatePlacement(reporter_, attribute, attributable);
+      if (!schema->ValidateArgs(reporter_, attribute) || errored) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool Library::ValidateAttributesConstraints(const Attributable* attributable,
                                             const AttributeList* attributes) {
   if (attributes == nullptr)
-    return;
+    return true;
   for (const auto& attribute : attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute, attribute->syntax);
-    if (schema != nullptr)
-      schema->ValidateConstraint(reporter_, attribute, attributable);
+    if (schema != nullptr && !schema->ValidateConstraint(reporter_, attribute, attributable)) {
+      return false;
+    }
   }
+  return true;
 }
 
 bool Library::LookupDependency(std::string_view filename, const std::vector<std::string_view>& name,
@@ -2636,7 +2722,7 @@ bool Library::ConsumeAttributeListOld(std::unique_ptr<raw::AttributeListOld> raw
       std::vector<std::unique_ptr<AttributeArg>> args;
       if (raw_attribute.value) {
         auto constant = std::make_unique<LiteralConstant>(std::move(raw_attribute.value));
-        args.emplace_back(std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant),
+        args.emplace_back(std::make_unique<AttributeArg>(std::nullopt, std::move(constant),
                                                          raw_attribute.span()));
       }
       auto attribute = std::make_unique<Attribute>(raw_attribute.name, fidl::utils::Syntax::kOld,
@@ -2655,15 +2741,12 @@ bool Library::ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw
   AttributesBuilder<Attribute> attributes_builder(reporter_);
   if (raw_attribute_list != nullptr) {
     for (auto& raw_attribute : raw_attribute_list->attributes) {
-      // TODO(fxbug.dev/74955): use AttributesBuilder (renamed) here instead of
-      //  a regular vector, to check for duplicates, when enabling multiple
-      //  arguments.
       std::vector<std::unique_ptr<AttributeArg>> args;
       for (auto& raw_arg : raw_attribute->args) {
         std::unique_ptr<LiteralConstant> constant;
         constant = std::make_unique<LiteralConstant>(std::move(raw_arg->value));
-        args.emplace_back(std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant),
-                                                         raw_arg->span()));
+        args.emplace_back(
+            std::make_unique<AttributeArg>(raw_arg->name, std::move(constant), raw_arg->span()));
       }
       auto attribute = std::make_unique<Attribute>(raw_attribute->name, fidl::utils::Syntax::kNew,
                                                    raw_attribute->span(), std::move(args));
@@ -3392,13 +3475,17 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 
 namespace {
 
-// Sets the naming context's generated name override to the @generated_name attribute's
-// value if it is present in the input attribute list, or does nothing otherwise.
+// Sets the naming context's generated name override to the @generated_name attribute's value if it
+// is present in the input attribute list, or does nothing otherwise.
 void MaybeOverrideName(const AttributeList& attributes, NamingContext* context) {
-  auto override_attr = attributes.GetAttributeArg("generated_name");
+  auto override_attr = attributes.GetAttribute("generated_name");
   if (!override_attr.has_value())
     return;
-  const auto& attr_span = override_attr.value().get().span;
+  auto override_name_arg = override_attr.value().get().GetStandaloneAnonymousArg();
+  if (!override_name_arg.has_value())
+    return;
+
+  const auto& attr_span = override_name_arg.value().get().value->span;
   assert(attr_span.data().size() > 2 && "expected attribute arg to at least have quotes");
   // remove the quotes from string literal
   context->set_name_override(std::string(attr_span.data().substr(1, attr_span.data().size() - 2)));
@@ -3719,7 +3806,10 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &consumed_attributes)) {
       return false;
     }
-    ValidateAttributesPlacement(this, consumed_attributes.get());
+    if (ValidateAttributesPlacement(this, consumed_attributes.get())) {
+      ResolveAttributeArgs(attributes.get());
+    }
+
     if (!attributes) {
       attributes = std::move(consumed_attributes);
     } else {
@@ -4218,7 +4308,7 @@ bool Library::ResolveAsOptional(Constant* constant) const {
 bool Library::CompileAttribute(Attribute* attribute) {
   if (!attribute->args.empty()) {
     for (auto& arg : attribute->args) {
-      // TODO(fxbug.dev/74955): this is a hack to hold us over until we can do
+      // TODO(fxbug.dev/81390): this is a hack to hold us over until we can do
       //  proper type resolution on attribute args.  For now, we assume that the
       //  values are always strings, and resolve them as such.  When we fix
       //  this, we should make sure not create the type inline like we do now.
@@ -4707,9 +4797,13 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kBits: {
       auto bits_declaration = static_cast<const Bits*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(bits_declaration, bits_declaration->attributes.get());
+      if (ValidateAttributesPlacement(bits_declaration, bits_declaration->attributes.get())) {
+        ResolveAttributeArgs(bits_declaration->attributes.get());
+      }
       for (const auto& member : bits_declaration->members) {
-        ValidateAttributesPlacement(&member, member.attributes.get());
+        if (ValidateAttributesPlacement(&member, member.attributes.get())) {
+          ResolveAttributeArgs(member.attributes.get());
+        }
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4720,15 +4814,21 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<const Const*>(decl);
       // Attributes: for const declarations, we only check placement.
-      ValidateAttributesPlacement(const_decl, const_decl->attributes.get());
+      if (ValidateAttributesPlacement(const_decl, const_decl->attributes.get())) {
+        ResolveAttributeArgs(const_decl->attributes.get());
+      }
       break;
     }
     case Decl::Kind::kEnum: {
       auto enum_declaration = static_cast<const Enum*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(enum_declaration, enum_declaration->attributes.get());
+      if (ValidateAttributesPlacement(enum_declaration, enum_declaration->attributes.get())) {
+        ResolveAttributeArgs(enum_declaration->attributes.get());
+      }
       for (const auto& member : enum_declaration->members) {
-        ValidateAttributesPlacement(&member, member.attributes.get());
+        if (ValidateAttributesPlacement(&member, member.attributes.get())) {
+          ResolveAttributeArgs(member.attributes.get());
+        }
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4739,10 +4839,20 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kProtocol: {
       auto protocol_declaration = static_cast<const Protocol*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(protocol_declaration, protocol_declaration->attributes.get());
+      if (ValidateAttributesPlacement(protocol_declaration,
+                                      protocol_declaration->attributes.get())) {
+        ResolveAttributeArgs(protocol_declaration->attributes.get());
+      }
+      for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
+        if (ValidateAttributesPlacement(&composed_protocol, composed_protocol.attributes.get())) {
+          ResolveAttributeArgs(composed_protocol.attributes.get());
+        }
+      }
       for (const auto& method_with_info : protocol_declaration->all_methods) {
-        ValidateAttributesPlacement(method_with_info.method,
-                                    method_with_info.method->attributes.get());
+        if (ValidateAttributesPlacement(method_with_info.method,
+                                        method_with_info.method->attributes.get())) {
+          ResolveAttributeArgs(method_with_info.method->attributes.get());
+        }
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4759,9 +4869,14 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kResource: {
       auto resource_declaration = static_cast<const Resource*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(resource_declaration, resource_declaration->attributes.get());
+      if (ValidateAttributesPlacement(resource_declaration,
+                                      resource_declaration->attributes.get())) {
+        ResolveAttributeArgs(resource_declaration->attributes.get());
+      }
       for (const auto& property : resource_declaration->properties) {
-        ValidateAttributesPlacement(&property, property.attributes.get());
+        if (ValidateAttributesPlacement(&property, property.attributes.get())) {
+          ResolveAttributeArgs(property.attributes.get());
+        }
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4772,9 +4887,13 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kService: {
       auto service_decl = static_cast<const Service*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(service_decl, service_decl->attributes.get());
+      if (ValidateAttributesPlacement(service_decl, service_decl->attributes.get())) {
+        ResolveAttributeArgs(service_decl->attributes.get());
+      }
       for (const auto& member : service_decl->members) {
-        ValidateAttributesPlacement(&member, member.attributes.get());
+        if (ValidateAttributesPlacement(&member, member.attributes.get())) {
+          ResolveAttributeArgs(member.attributes.get());
+        }
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
@@ -4785,9 +4904,13 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kStruct: {
       auto struct_declaration = static_cast<const Struct*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(struct_declaration, struct_declaration->attributes.get());
+      if (ValidateAttributesPlacement(struct_declaration, struct_declaration->attributes.get())) {
+        ResolveAttributeArgs(struct_declaration->attributes.get());
+      }
       for (const auto& member : struct_declaration->members) {
-        ValidateAttributesPlacement(&member, member.attributes.get());
+        if (ValidateAttributesPlacement(&member, member.attributes.get())) {
+          ResolveAttributeArgs(member.attributes.get());
+        }
       }
       if (placement_ok.NoNewErrors()) {
         for (const auto& member : struct_declaration->members) {
@@ -4801,19 +4924,18 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kTable: {
       auto table_declaration = static_cast<const Table*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(table_declaration, table_declaration->attributes.get());
+      if (ValidateAttributesPlacement(table_declaration, table_declaration->attributes.get())) {
+        ResolveAttributeArgs(table_declaration->attributes.get());
+      }
       for (const auto& member : table_declaration->members) {
         if (!member.maybe_used)
           continue;
-        ValidateAttributesPlacement(member.maybe_used.get(), member.maybe_used->attributes.get());
+        if (ValidateAttributesPlacement(member.maybe_used.get(),
+                                        member.maybe_used->attributes.get())) {
+          ResolveAttributeArgs(member.maybe_used->attributes.get());
+        }
       }
       if (placement_ok.NoNewErrors()) {
-        for (const auto& member : table_declaration->members) {
-          if (!member.maybe_used)
-            continue;
-          ValidateAttributesConstraints(member.maybe_used.get(),
-                                        member.maybe_used->attributes.get());
-        }
         // Attributes: check constraint.
         ValidateAttributesConstraints(table_declaration, table_declaration->attributes.get());
       }
@@ -4822,11 +4944,16 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kUnion: {
       auto union_declaration = static_cast<const Union*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(union_declaration, union_declaration->attributes.get());
+      if (ValidateAttributesPlacement(union_declaration, union_declaration->attributes.get())) {
+        ResolveAttributeArgs(union_declaration->attributes.get());
+      }
       for (const auto& member : union_declaration->members) {
         if (!member.maybe_used)
           continue;
-        ValidateAttributesPlacement(member.maybe_used.get(), member.maybe_used->attributes.get());
+        if (ValidateAttributesPlacement(member.maybe_used.get(),
+                                        member.maybe_used->attributes.get())) {
+          ResolveAttributeArgs(member.maybe_used->attributes.get());
+        }
       }
       if (placement_ok.NoNewErrors()) {
         for (const auto& member : union_declaration->members) {
@@ -4843,7 +4970,10 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kTypeAlias: {
       auto type_alias_declaration = static_cast<const TypeAlias*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(type_alias_declaration, type_alias_declaration->attributes.get());
+      if (ValidateAttributesPlacement(type_alias_declaration,
+                                      type_alias_declaration->attributes.get())) {
+        ResolveAttributeArgs(type_alias_declaration->attributes.get());
+      }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
         ValidateAttributesConstraints(type_alias_declaration,
@@ -5628,6 +5758,7 @@ bool Library::Compile() {
     return false;
 
   auto verify_attributes_step = StartVerifyAttributesStep();
+  ResolveAttributeArgs(attributes.get());
   for (const Decl* decl : declaration_order_) {
     verify_attributes_step.ForDecl(decl);
   }

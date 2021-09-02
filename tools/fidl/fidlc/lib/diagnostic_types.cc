@@ -61,6 +61,10 @@ std::string Display(const std::vector<std::string_view>& library_name) {
 
 std::string Display(const flat::Attribute* a) { return a->name; }
 
+std::string Display(const flat::AttributeArg* a) {
+  return a->name.has_value() ? a->name.value() : "";
+}
+
 std::string Display(const flat::Constant* c) { return NameFlatConstant(c); }
 
 std::string Display(const flat::Decl* d) {

@@ -293,12 +293,17 @@ class AttributeListOld final : public SourceElement {
 
 class AttributeArg final : public SourceElement {
  public:
+  // Constructor for cases where the arg name has been explicitly defined in the text.
   AttributeArg(SourceElement const& element, std::string name, std::unique_ptr<Literal> value)
       : SourceElement(element), name(std::move(name)), value(std::move(value)) {}
 
+  // Constructor for cases where the arg name is inferred.
+  AttributeArg(SourceElement const& element, std::unique_ptr<Literal> value)
+      : SourceElement(element), name(std::nullopt), value(std::move(value)) {}
+
   void Accept(TreeVisitor* visitor) const;
 
-  const std::string name;
+  const std::optional<std::string> name;
   std::unique_ptr<Literal> value;
 };
 
@@ -309,12 +314,21 @@ class AttributeNew final : public SourceElement {
     kDocComment,
   };
 
-  AttributeNew(SourceElement const& element, Provenance provenance, std::string name,
+  // Constructor for cases where the name of the attribute is explicitly defined in the text.
+  AttributeNew(SourceElement const& element, std::string name,
                std::vector<std::unique_ptr<AttributeArg>> args)
       : SourceElement(element),
-        provenance(provenance),
+        provenance(kDefault),
         name(std::move(name)),
         args(std::move(args)) {}
+
+  // Static constructor for "///"-style doc comments, which always name the attribute "doc."
+  static AttributeNew CreateDocComment(SourceElement const& element,
+                                       std::vector<std::unique_ptr<AttributeArg>> args) {
+    auto attr = AttributeNew(element, "doc", std::move(args));
+    attr.provenance = kDocComment;
+    return attr;
+  }
 
   void Accept(TreeVisitor* visitor) const;
 

@@ -8,6 +8,7 @@
 #include <fidl/parser.h>
 #include <fidl/reporter.h>
 #include <fidl/source_file.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -47,15 +48,21 @@ type ExampleEnum = enum {
 };
 
 @on_protocol
-protocol ExampleProtocol {
+protocol ExampleChildProtocol {
     @on_method
     Method(struct { @on_parameter arg exampleusing.Empty; });
+};
+
+@on_protocol
+protocol ExampleParentProtocol {
+    @on_compose
+    compose ExampleChildProtocol;
 };
 
 @on_service
 service ExampleService {
     @on_service_member
-    member client_end:ExampleProtocol;
+    member client_end:ExampleParentProtocol;
 };
 
 @on_struct
@@ -100,14 +107,20 @@ type ExampleUnion = union {
   EXPECT_TRUE(example_enum->attributes->HasAttribute("on_enum"));
   EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("on_enum_member"));
 
-  auto example_protocol = library.LookupProtocol("ExampleProtocol");
-  ASSERT_NOT_NULL(example_protocol);
-  EXPECT_TRUE(example_protocol->attributes->HasAttribute("on_protocol"));
-  EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("on_method"));
-  ASSERT_NOT_NULL(example_protocol->methods.front().maybe_request_payload);
-  EXPECT_TRUE(example_protocol->methods.front()
+  auto example_child_protocol = library.LookupProtocol("ExampleChildProtocol");
+  ASSERT_NOT_NULL(example_child_protocol);
+  EXPECT_TRUE(example_child_protocol->attributes->HasAttribute("on_protocol"));
+  EXPECT_TRUE(example_child_protocol->methods.front().attributes->HasAttribute("on_method"));
+  ASSERT_NOT_NULL(example_child_protocol->methods.front().maybe_request_payload);
+  EXPECT_TRUE(example_child_protocol->methods.front()
                   .maybe_request_payload->members.front()
                   .attributes->HasAttribute("on_parameter"));
+
+  auto example_parent_protocol = library.LookupProtocol("ExampleParentProtocol");
+  ASSERT_NOT_NULL(example_parent_protocol);
+  EXPECT_TRUE(example_parent_protocol->attributes->HasAttribute("on_protocol"));
+  EXPECT_TRUE(
+      example_parent_protocol->composed_protocols.front().attributes->HasAttribute("on_compose"));
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);
@@ -193,96 +206,103 @@ service ExampleService {
   auto example_const = library.LookupConstant("EXAMPLE_CONSTANT");
   ASSERT_NOT_NULL(example_const);
   EXPECT_TRUE(example_const->attributes->HasAttribute("no_doc"));
-  EXPECT_TRUE(example_const->HasAttributeArg("doc"));
+  EXPECT_TRUE(example_const->HasAttributeArg("doc", "value"));
   auto const_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_const->GetAttributeArg("doc").value().get().Value());
+      example_const->GetAttributeArg("doc", "value").value().get().value->Value());
   EXPECT_STR_EQ(const_doc_value.MakeContents(), " For EXAMPLE_CONSTANT\n");
-  EXPECT_TRUE(example_const->HasAttributeArg("deprecated"));
+  EXPECT_TRUE(example_const->HasAttributeArg("deprecated", "value"));
   auto const_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_const->GetAttributeArg("deprecated").value().get().Value());
+      example_const->GetAttributeArg("deprecated", "value").value().get().value->Value());
   EXPECT_STR_EQ(const_str_value.MakeContents(), "Note");
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
   EXPECT_TRUE(example_enum->attributes->HasAttribute("transitional"));
-  EXPECT_TRUE(example_enum->HasAttributeArg("doc"));
+  EXPECT_TRUE(example_enum->HasAttributeArg("doc", "value"));
   auto enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_enum->GetAttributeArg("doc").value().get().Value());
+      example_enum->GetAttributeArg("doc", "value").value().get().value->Value());
   EXPECT_STR_EQ(enum_doc_value.MakeContents(), " For ExampleEnum\n");
-  EXPECT_TRUE(example_enum->HasAttributeArg("deprecated"));
+  EXPECT_TRUE(example_enum->HasAttributeArg("deprecated", "value"));
   auto enum_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_enum->GetAttributeArg("deprecated").value().get().Value());
+      example_enum->GetAttributeArg("deprecated", "value").value().get().value->Value());
   EXPECT_STR_EQ(enum_str_value.MakeContents(), "Reason");
   EXPECT_TRUE(example_enum->members.back().attributes->HasAttribute("unknown"));
 
   auto example_struct = library.LookupStruct("ExampleStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttributeArg("doc"));
+  EXPECT_TRUE(example_struct->HasAttributeArg("doc", "value"));
   auto struct_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_struct->GetAttributeArg("doc").value().get().Value());
+      example_struct->GetAttributeArg("doc", "value").value().get().value->Value());
   EXPECT_STR_EQ(struct_doc_value.MakeContents(), " For ExampleStruct\n");
-  EXPECT_TRUE(example_struct->HasAttributeArg("max_bytes"));
+  EXPECT_TRUE(example_struct->HasAttributeArg("max_bytes", "value"));
   auto struct_str_value1 = static_cast<const fidl::flat::StringConstantValue&>(
-      example_struct->GetAttributeArg("max_bytes").value().get().Value());
+      example_struct->GetAttributeArg("max_bytes", "value").value().get().value->Value());
   EXPECT_STR_EQ(struct_str_value1.MakeContents(), "1234");
-  EXPECT_TRUE(example_struct->HasAttributeArg("max_handles"));
+  EXPECT_TRUE(example_struct->HasAttributeArg("max_handles", "value"));
   auto struct_str_value2 = static_cast<const fidl::flat::StringConstantValue&>(
-      example_struct->GetAttributeArg("max_handles").value().get().Value());
+      example_struct->GetAttributeArg("max_handles", "value").value().get().value->Value());
   EXPECT_STR_EQ(struct_str_value2.MakeContents(), "5678");
 
   auto example_anon = library.LookupTable("CustomName");
   ASSERT_NOT_NULL(example_anon);
-  EXPECT_TRUE(example_anon->HasAttributeArg("generated_name"));
+  EXPECT_TRUE(example_anon->HasAttribute("generated_name"));
+
   auto generated_name_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_anon->GetAttributeArg("generated_name").value().get().Value());
+      example_anon->GetAttributeArg("generated_name", "value").value().get().value->Value());
   EXPECT_STR_EQ(generated_name_value.MakeContents(), "CustomName");
 
   auto example_protocol = library.LookupProtocol("ExampleProtocol");
   ASSERT_NOT_NULL(example_protocol);
   EXPECT_TRUE(example_protocol->attributes->HasAttribute("discoverable"));
   EXPECT_TRUE(example_protocol->attributes->HasAttribute("for_deprecated_c_bindings"));
-  EXPECT_TRUE(example_protocol->HasAttributeArg("doc"));
+  EXPECT_TRUE(example_protocol->HasAttributeArg("doc", "value"));
   auto protocol_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_protocol->GetAttributeArg("doc").value().get().Value());
+      example_protocol->GetAttributeArg("doc", "value").value().get().value->Value());
   EXPECT_STR_EQ(protocol_doc_value.MakeContents(), " For ExampleProtocol\n");
-  EXPECT_TRUE(example_protocol->HasAttributeArg("transport"));
+  EXPECT_TRUE(example_protocol->HasAttributeArg("transport", "value"));
   auto protocol_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_protocol->GetAttributeArg("transport").value().get().Value());
+      example_protocol->GetAttributeArg("transport", "value").value().get().value->Value());
   EXPECT_STR_EQ(protocol_str_value.MakeContents(), "Syscall");
 
   auto& example_method = example_protocol->methods.front();
   EXPECT_TRUE(example_method.attributes->HasAttribute("internal"));
   EXPECT_TRUE(example_method.attributes->HasAttribute("transitional"));
-  EXPECT_TRUE(example_method.attributes->HasAttributeArg("doc"));
+  EXPECT_TRUE(example_method.attributes->HasAttributeArg("doc", "value"));
   auto method_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_method.attributes->GetAttributeArg("doc").value().get().Value());
+      example_method.attributes->GetAttributeArg("doc", "value").value().get().value->Value());
   EXPECT_STR_EQ(method_doc_value.MakeContents(), " For ExampleMethod\n");
-  EXPECT_TRUE(example_method.attributes->HasAttributeArg("selector"));
+  EXPECT_TRUE(example_method.attributes->HasAttributeArg("selector", "value"));
   auto method_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_method.attributes->GetAttributeArg("selector").value().get().Value());
+      example_method.attributes->GetAttributeArg("selector", "value").value().get().value->Value());
   EXPECT_STR_EQ(method_str_value.MakeContents(), "Bar");
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);
   EXPECT_TRUE(example_service->attributes->HasAttribute("no_doc"));
-  EXPECT_TRUE(example_service->HasAttributeArg("doc"));
+  EXPECT_TRUE(example_service->HasAttributeArg("doc", "value"));
   auto service_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_service->GetAttributeArg("doc").value().get().Value());
+      example_service->GetAttributeArg("doc", "value").value().get().value->Value());
   EXPECT_STR_EQ(service_doc_value.MakeContents(), " For ExampleService\n");
-  EXPECT_TRUE(example_service->HasAttributeArg("foo"));
+  EXPECT_TRUE(example_service->HasAttributeArg("foo", "value"));
   auto service_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_service->GetAttributeArg("foo").value().get().Value());
+      example_service->GetAttributeArg("foo", "value").value().get().value->Value());
   EXPECT_STR_EQ(service_str_value.MakeContents(), "ExampleService");
 
   auto& example_service_member = example_service->members.front();
   EXPECT_TRUE(example_service_member.attributes->HasAttribute("no_doc"));
-  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("doc"));
+  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("doc", "value"));
   auto service_member_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_service_member.attributes->GetAttributeArg("doc").value().get().Value());
+      example_service_member.attributes->GetAttributeArg("doc", "value")
+          .value()
+          .get()
+          .value->Value());
   EXPECT_STR_EQ(service_member_doc_value.MakeContents(), " For ExampleProtocol\n");
-  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("foo"));
+  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("foo", "value"));
   auto service_member_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_service_member.attributes->GetAttributeArg("foo").value().get().Value());
+      example_service_member.attributes->GetAttributeArg("foo", "value")
+          .value()
+          .get()
+          .value->Value());
   EXPECT_STR_EQ(service_member_str_value.MakeContents(), "ExampleProtocol");
 }
 
@@ -397,7 +417,7 @@ protocol A {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAttributeArg);
 }
 
 TEST(AttributesTests, BadBogusTransport) {
@@ -681,9 +701,6 @@ type MyStruct = struct {
                                  {
                                      fidl::flat::AttributePlacement::kStructDecl,
                                  },
-                                 {
-                                     "",
-                                 },
                                  MustHaveThreeMembers));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
@@ -702,9 +719,6 @@ protocol MyProtocol {
                              fidl::flat::AttributeSchema(
                                  {
                                      fidl::flat::AttributePlacement::kMethod,
-                                 },
-                                 {
-                                     "",
                                  },
                                  MustHaveThreeMembers));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
@@ -726,9 +740,6 @@ protocol MyProtocol {
                              fidl::flat::AttributeSchema(
                                  {
                                      fidl::flat::AttributePlacement::kProtocolDecl,
-                                 },
-                                 {
-                                     "",
                                  },
                                  MustHaveThreeMembers));
   // Twice because there are two methods.
@@ -804,7 +815,7 @@ protocol P {
     Method();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributeValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeDisallowsArgs);
 }
 
 TEST(AttributesTests, BadSelectorIncorrectPlacement) {
@@ -964,7 +975,7 @@ type Foo = struct {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyAttributeArg);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAttributeArg);
 }
 
 TEST(AttributesTests, BadOverrideValue) {
@@ -994,4 +1005,396 @@ type Baz = struct {};
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
+
+TEST(AttributesTests, BadNoArgumentsEmptyParens) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@for_deprecated_c_bindings()
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeWithEmptyParens);
+}
+
+// TODO(fxbug.dev/81390): Remove this test.
+TEST(AttributesTests, BadArgumentIsNotStringLiteral) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+const bar string = "bar";
+
+@foo(bar)
+@baz(123)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrAttributeArgMustBeStringLiteral,
+                                      fidl::ErrAttributeArgMustBeStringLiteral);
+}
+
+TEST(AttributesTests, GoodMultipleArguments) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(bar="abc", baz="def")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_TRUE(library.Compile());
+
+  auto example_struct = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(example_struct);
+  EXPECT_TRUE(example_struct->attributes->HasAttribute("foo"));
+  EXPECT_TRUE(example_struct->attributes->HasAttributeArg("foo", "bar"));
+  EXPECT_TRUE(
+      example_struct->attributes->GetAttributeArg("foo", "bar").value().get().value->span.data() ==
+      "\"abc\"");
+  EXPECT_TRUE(example_struct->attributes->HasAttributeArg("foo", "baz"));
+  EXPECT_TRUE(
+      example_struct->attributes->GetAttributeArg("foo", "baz").value().get().value->span.data() ==
+      "\"def\"");
+}
+
+TEST(AttributesTests, BadMultipleArgumentsWithNoNames) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo("abc", "def")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgsMustAllBeNamed);
+}
+
+TEST(AttributesTests, BadMultipleArgumentsDuplicateNames) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(bar="abc", bar="def")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArg);
+}
+
+TEST(AttributesTests, BadMultipleArgumentsDuplicateCanonicalNames) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(bar_baz="abc", bar__baz="def")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArg);
+}
+
+TEST(AttributesTests, GoodSingleArgumentIsNotNamed) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo("bar")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_TRUE(library.Compile());
+}
+
+TEST(AttributesTests, GoodSingleArgumentIsNamedWithoutSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(a="bar")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_TRUE(library.Compile());
+}
+
+TEST(AttributesTests, GoodSingleSchemaArgument) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo("bar")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "foo", fidl::flat::AttributeSchema(
+                 {
+                     fidl::flat::AttributePlacement::kStructDecl,
+                 },
+                 {
+                     {"value", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::AttributeArgSchema::Optionality::kRequired)},
+                 }));
+  ASSERT_TRUE(library.Compile());
+}
+
+TEST(AttributesTests, GoodSingleSchemaArgumentWithInferredName) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo("bar")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "foo", fidl::flat::AttributeSchema(
+                 {
+                     fidl::flat::AttributePlacement::kStructDecl,
+                 },
+                 {
+                     {"inferrable", fidl::flat::AttributeArgSchema(
+                                        fidl::flat::AttributeArgSchema::Optionality::kRequired)},
+                 }));
+  ASSERT_TRUE(library.Compile());
+
+  auto example_struct = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(example_struct);
+  EXPECT_TRUE(example_struct->attributes->HasAttribute("foo"));
+  EXPECT_TRUE(example_struct->attributes->HasAttributeArg("foo", "inferrable"));
+}
+
+// If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that only
+// a single optional argument is allowed, respect both the inclusion and omission of that argument.
+TEST(AttributesTests, GoodSingleSchemaArgumentRespectOptionality) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo("bar")
+type MyStruct = struct {};
+
+@foo
+type MyOtherStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "foo", fidl::flat::AttributeSchema(
+                 {
+                     fidl::flat::AttributePlacement::kStructDecl,
+                 },
+                 {
+                     {"value", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::AttributeArgSchema::Optionality::kOptional)},
+                 }));
+  ASSERT_TRUE(library.Compile());
+}
+
+// If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that only
+// a single argument is allowed, naming that argument is an error.
+TEST(AttributesTests, BadSingleSchemaArgumentIsNamed) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(value="bar")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "foo", fidl::flat::AttributeSchema(
+                 {
+                     fidl::flat::AttributePlacement::kStructDecl,
+                 },
+                 {
+                     {"value", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::AttributeArgSchema::Optionality::kRequired)},
+                 }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgMustNotBeNamed);
+}
+
+// If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that
+// multiple arguments are allowed, a single unnamed argument is an error.
+TEST(AttributesTests, BadSingleSchemaArgumentIsNotNamed) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo("bar")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "foo", fidl::flat::AttributeSchema(
+                 {
+                     fidl::flat::AttributePlacement::kStructDecl,
+                 },
+                 {
+                     {"value", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::AttributeArgSchema::Optionality::kRequired)},
+                     {"other", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::AttributeArgSchema::Optionality::kOptional)},
+                 }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgNotNamed);
+}
+
+TEST(AttributesTests, GoodMultipleSchemaArgumentsRequiredOnly) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@multiple_args(first="foo", second="bar")
+type MyStruct = struct {};
+
+// Order independent.
+@multiple_args(second="bar", first="foo")
+type MyOtherStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "multiple_args",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"first", fidl::flat::AttributeArgSchema(
+                            fidl::flat::AttributeArgSchema::Optionality::kRequired)},
+              {"second", fidl::flat::AttributeArgSchema(
+                             fidl::flat::AttributeArgSchema::Optionality::kRequired)},
+          }));
+  ASSERT_TRUE(library.Compile());
+}
+
+TEST(AttributesTests, GoodMultipleSchemaArgumentsOptionalOnly) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@multiple_args(first="foo", second="bar")
+type MyStruct = struct {};
+
+// Order independent.
+@multiple_args(second="bar", first="foo")
+type MyStruct2 = struct {};
+
+// Only 1 argument present.
+@multiple_args(first="foo")
+type MyStruct3 = struct {};
+@multiple_args(second="bar")
+type MyStruct4 = struct {};
+
+// No arguments at all.
+@multiple_args
+type MyStruct5 = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "multiple_args",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"first", fidl::flat::AttributeArgSchema(
+                            fidl::flat::AttributeArgSchema::Optionality::kOptional)},
+              {"second", fidl::flat::AttributeArgSchema(
+                             fidl::flat::AttributeArgSchema::Optionality::kOptional)},
+          }));
+  ASSERT_TRUE(library.Compile());
+}
+
+TEST(AttributesTests, GoodMultipleSchemaArgumentsRequiredAndOptional) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@multiple_args(first="foo", second="bar")
+type MyStruct = struct {};
+
+// Order independent.
+@multiple_args(second="bar", first="foo")
+type MyStruct2 = struct {};
+
+// Only 1 argument present.
+@multiple_args(first="foo")
+type MyStruct3 = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "multiple_args",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"first", fidl::flat::AttributeArgSchema(
+                            fidl::flat::AttributeArgSchema::Optionality::kRequired)},
+              {"second", fidl::flat::AttributeArgSchema(
+                             fidl::flat::AttributeArgSchema::Optionality::kOptional)},
+          }));
+  ASSERT_TRUE(library.Compile());
+}
+
+TEST(AttributesTests, BadMultipleSchemaArgumentsRequiredMissing) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@multiple_args(optional="foo")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "multiple_args",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"required", fidl::flat::AttributeArgSchema(
+                               fidl::flat::AttributeArgSchema::Optionality::kRequired)},
+              {"optional", fidl::flat::AttributeArgSchema(
+                               fidl::flat::AttributeArgSchema::Optionality::kOptional)},
+          }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAttributeArg);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "multiple_args");
+}
+
 }  // namespace

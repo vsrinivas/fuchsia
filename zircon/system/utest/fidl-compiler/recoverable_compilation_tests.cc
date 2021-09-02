@@ -68,7 +68,7 @@ TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributes) {
   TestLibrary library(R"FIDL(
 library example;
 
-@for_deprecated_c_bindings("True")  // Error: invalid placement & value
+@for_deprecated_c_bindings("True")  // Error: invalid value
 type Union = union {
     1: foo string;
 };
@@ -87,9 +87,29 @@ type Struct = struct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 4);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_ERR(errors[1], fidl::ErrInvalidAttributeValue);
+  ASSERT_ERR(errors[1], fidl::ErrAttributeDisallowsArgs);
   ASSERT_ERR(errors[2], fidl::ErrInvalidAttributePlacement);
   ASSERT_ERR(errors[3], fidl::ErrTooManyBytes);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInAttributeArg) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo("a", "b")                      // Error: unnamed when multiple args
+@bar(true)                          // Error: must be string literal
+type Enum = enum {
+    FOO = 1;
+};
+)FIDL",
+                      experimental_flags);
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrAttributeArgsMustAllBeNamed);
+  ASSERT_ERR(errors[1], fidl::ErrAttributeArgMustBeStringLiteral);
 }
 
 }  // namespace

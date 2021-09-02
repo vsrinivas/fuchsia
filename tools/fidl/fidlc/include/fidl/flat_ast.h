@@ -49,8 +49,6 @@ using diagnostics::Diagnostic;
 using diagnostics::ErrorDef;
 using reporter::Reporter;
 
-constexpr auto kDefaultAttributeArg = "value";
-
 template <typename T>
 struct PtrCompare {
   bool operator()(const T* left, const T* right) const { return *left < *right; }
@@ -66,17 +64,17 @@ bool HasSimpleLayout(const Decl* decl);
 std::string LibraryName(const Library* library, std::string_view separator);
 
 struct AttributeArg final {
-  AttributeArg(std::string name, std::unique_ptr<Constant> value, SourceSpan span)
+  AttributeArg(std::optional<std::string> name, std::unique_ptr<Constant> value, SourceSpan span)
       : name(std::move(name)), value(std::move(value)), span_(span) {}
 
   SourceSpan span() const { return span_; }
 
-  std::string name;
+  std::optional<std::string> name;
   std::unique_ptr<Constant> value;
   SourceSpan span_;
 };
 
-using MaybeConstant = std::optional<std::reference_wrapper<const Constant>>;
+using MaybeAttributeArg = std::optional<std::reference_wrapper<const AttributeArg>>;
 
 struct Attribute final {
   // A constructor for synthetic attributes like "Result."
@@ -90,13 +88,23 @@ struct Attribute final {
       : name(std::move(name)), syntax(syntax), args(std::move(args)), span_(span) {}
 
   bool HasArg(std::string_view arg_name) const;
-  MaybeConstant GetArg(std::string_view arg_name = kDefaultAttributeArg) const;
+  MaybeAttributeArg GetArg(std::string_view arg_name) const;
   SourceSpan span() const { return span_; }
+
+  // This pair of methods return affirmatively if the attribute in question has a single anonymous
+  // argument.  A single non-anonymous argument (ex: `@foo(bar="abc")`) will return false.
+  bool HasStandaloneAnonymousArg() const;
+  MaybeAttributeArg GetStandaloneAnonymousArg() const;
 
   const std::string name;
   const fidl::utils::Syntax syntax;
   std::vector<std::unique_ptr<AttributeArg>> args;
   SourceSpan span_;
+
+  // This member should be set to "true" when the AttributeSchema::ResolveArgs() method has been run
+  // on this attribute.  Every attribute should, by the end of compilation, have this boolean
+  // flipped to true.
+  bool resolved = false;
 };
 
 using MaybeAttribute = std::optional<std::reference_wrapper<const Attribute>>;
@@ -107,10 +115,9 @@ struct AttributeList final {
 
   bool HasAttribute(std::string_view attribute_name) const;
   MaybeAttribute GetAttribute(std::string_view attribute_name) const;
-  bool HasAttributeArg(std::string_view attribute_name,
-                       std::string_view arg_name = kDefaultAttributeArg) const;
-  MaybeConstant GetAttributeArg(std::string_view attribute_name,
-                                std::string_view arg_name = kDefaultAttributeArg) const;
+  bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const;
+  MaybeAttributeArg GetAttributeArg(std::string_view attribute_name,
+                                    std::string_view arg_name) const;
 
   std::vector<std::unique_ptr<Attribute>> attributes;
 };
@@ -210,9 +217,9 @@ struct Decl : public Attributable {
 
   bool HasAttribute(std::string_view attribute_name) const;
   MaybeAttribute GetAttribute(std::string_view attribute_name) const;
-  bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name = "value") const;
-  MaybeConstant GetAttributeArg(std::string_view attribute_name,
-                                std::string_view arg_name = "value") const;
+  bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const;
+  MaybeAttributeArg GetAttributeArg(std::string_view attribute_name,
+                                    std::string_view arg_name) const;
   std::string GetName() const;
 
   bool compiling = false;
@@ -820,11 +827,11 @@ class Protocol final : public TypeDecl {
     const bool is_composed;
   };
 
-  struct ComposedProtocol {
+  struct ComposedProtocol : public Attributable {
     ComposedProtocol(std::unique_ptr<AttributeList> attributes, Name name)
-        : attributes(std::move(attributes)), name(std::move(name)) {}
+        : Attributable(AttributePlacement::kProtocolCompose, std::move(attributes)),
+          name(std::move(name)) {}
 
-    std::unique_ptr<AttributeList> attributes;
     Name name;
   };
 
@@ -1110,10 +1117,46 @@ class Typespace {
   Reporter* reporter_;
 };
 
+// AttributeArgSchema allows for the values for a particular argument of an attribute schema to be
+// constrained by an allowlist, and possibly marked as optional.  The sum of an AttributeSchema's
+// AttributeArgSchema's are sufficient to describe the attribute's "function signature" as
+// experienced by the user in the FIDL language, though there are other aspects of the attribute's
+// schema (placement, constraints, and so on) validated during compilation.
+class AttributeArgSchema {
+ public:
+  enum class Optionality {
+    kOptional,
+    kRequired,
+  };
+
+  using Constraint =
+      fit::function<bool(Reporter* reporter, const std::unique_ptr<AttributeArg>& attribute_arg,
+                         const Attributable* attributable)>;
+
+  explicit AttributeArgSchema(std::string name, Optionality optionality = Optionality::kRequired);
+
+  explicit AttributeArgSchema(Optionality optionality = Optionality::kRequired)
+      : AttributeArgSchema("value", optionality) {}
+
+  bool IsOptional() const { return optionality_ == Optionality::kOptional; }
+
+  void ValidateValue(Reporter* reporter, MaybeAttributeArg maybe_arg,
+                     const std::unique_ptr<Attribute>& attribute) const;
+
+ private:
+  static bool NoOpConstraint(Reporter* reporter, const std::unique_ptr<AttributeArg>& attribute_arg,
+                             const Attributable* attributable) {
+    return true;
+  }
+
+  std::string name_;
+  Optionality optionality_ = Optionality::kRequired;
+};
+
 // AttributeSchema defines a schema for attributes. This includes:
 // - The allowed placement of an attribute (e.g. on a method, on a struct
-//   declaration);
-// - The allowed values which an attribute can take.
+//   declaration).
+// - The allowed schemas for each argument of an attribute.
 // For attributes which may be placed on declarations (e.g. protocol, struct,
 // union, table), a schema may additionally include:
 // - A constraint which must be met by the declaration.
@@ -1123,21 +1166,52 @@ class AttributeSchema {
       fit::function<bool(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                          const Attributable* attributable)>;
 
-  AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
-                  const std::set<std::string> allowed_values,
-                  Constraint constraint = NoOpConstraint);
+  // This constructor is used to build a schema for an attribute that takes multiple arguments.
+  explicit AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
+                           const std::map<std::string, AttributeArgSchema>& arg_schemas,
+                           Constraint constraint = NoOpConstraint);
+
+  // This constructor is used to build a schema for an attribute that takes no arguments.
+  explicit AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
+                           Constraint constraint = NoOpConstraint)
+      : AttributeSchema(allowed_placements, {}, std::move(constraint)) {}
+
+  // This constructor is used to build a schema for an attribute that takes a single argument.
+  explicit AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
+                           AttributeArgSchema arg_schema, Constraint constraint = NoOpConstraint)
+      : AttributeSchema(allowed_placements,
+                        std::map<std::string, AttributeArgSchema>{{"value", arg_schema}},
+                        std::move(constraint)) {}
 
   AttributeSchema(AttributeSchema&& schema) = default;
 
   static AttributeSchema Deprecated();
 
-  void ValidatePlacement(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+  bool HasAttributeArgSchema(const std::string& name) const;
+
+  bool IsDeprecated() const {
+    return allowed_placements_.size() == 1 &&
+           *allowed_placements_.cbegin() == AttributePlacement::kDeprecated;
+  }
+
+  size_t Size() const { return arg_schemas_.size(); }
+
+  bool ValidatePlacement(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                          const Attributable* attributable) const;
 
-  void ValidateValue(Reporter* reporter, const std::unique_ptr<Attribute>& attribute) const;
+  bool ValidateArgs(Reporter* reporter, const std::unique_ptr<Attribute>& attribute) const;
 
-  void ValidateConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+  bool ValidateConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                           const Attributable* attributable) const;
+
+  // Certain properties of an attribute may be inferred from the AttributeSchema onto the attribute
+  // it is processing.  For example, if we have a schema for an attribute `foo` that specifies a
+  // single argument named `bar`, we would write that in FIDL as `@foo("abc")`, with "abc" expected
+  // to be inferred as `bar` at compile time.  This method handles such inferences.
+  //
+  // This method should only be run after AttributeSchema::ValidateArgs() has been successfully
+  // completed.
+  void ResolveArgs(Reporter* reporter, std::unique_ptr<Attribute>& attribute) const;
 
  private:
   static bool NoOpConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
@@ -1146,7 +1220,7 @@ class AttributeSchema {
   }
 
   std::set<AttributePlacement> allowed_placements_;
-  std::set<std::string> allowed_values_;
+  std::map<std::string, AttributeArgSchema> arg_schemas_;
   Constraint constraint_;
 };
 
@@ -1167,7 +1241,8 @@ class Libraries {
 
   const AttributeSchema* RetrieveAttributeSchema(Reporter* reporter,
                                                  const std::unique_ptr<Attribute>& attribute,
-                                                 fidl::utils::Syntax syntax) const;
+                                                 fidl::utils::Syntax syntax,
+                                                 bool warn_on_typo = false) const;
 
   std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
 
@@ -1277,10 +1352,13 @@ class Library : Attributable {
     return Fail(err, decl.name, args...);
   }
 
-  void ValidateAttributesPlacement(const Attributable* attributable,
+  bool ValidateAttributesPlacement(const Attributable* attributable,
                                    const AttributeList* attributes);
-  void ValidateAttributesConstraints(const Attributable* attributable,
+  bool ValidateAttributesConstraints(const Attributable* attributable,
                                      const AttributeList* attributes);
+
+  // Must only run after ValidateAttributesPlacement has succeeded.
+  void ResolveAttributeArgs(AttributeList* attributes);
 
   // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that
@@ -1487,8 +1565,6 @@ class Library : Attributable {
   // TODO(fxbug.dev/76219): Remove when canonicalizing types.
   const Name kSizeTypeName = Name::CreateIntrinsic("uint32");
   const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
-
-  // std::unique_ptr<AttributeList> attributes_;
 
   Dependencies dependencies_;
   const Libraries* all_libraries_;

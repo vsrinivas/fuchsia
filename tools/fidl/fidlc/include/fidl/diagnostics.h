@@ -41,6 +41,12 @@ constexpr ErrorDef ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");
 constexpr ErrorDef ErrInvalidWrappedType("wrapped type for bits/enum must be an identifier");
 constexpr ErrorDef ErrEmptyLayoutParameterList("no layout parameters specified");
+constexpr ErrorDef ErrAttributeWithEmptyParens(
+    "attributes without arguments must omit the trailing empty parentheses");
+constexpr ErrorDef ErrAttributeArgsMustAllBeNamed(
+    "attributes that take multiple arguments must name all of them explicitly");
+constexpr ErrorDef ErrAttributeArgMustBeStringLiteral(
+    "attribute argument must be a string literal");
 // end new_syntax
 
 // TODO(fxbug.dev/65978): This is a misnomer in the new syntax: the ordinal comes
@@ -284,10 +290,22 @@ constexpr ErrorDef<> ErrMustBeTransportSide(
 constexpr ErrorDef<flat::Attribute *> ErrInvalidAttributePlacement(
     "placement of attribute '{}' disallowed here");
 constexpr ErrorDef<flat::Attribute *> ErrDeprecatedAttribute("attribute '{}' is deprecated");
-constexpr ErrorDef<flat::Attribute *, std::string, std::set<std::string>> ErrInvalidAttributeValue(
-    "attribute '{}' has invalid value '{}', should be one of '{}'");
-constexpr ErrorDef<flat::Attribute *, std::string> ErrAttributeConstraintNotSatisfied(
-    "declaration did not satisfy constraint of attribute '{}' with value '{}'");
+constexpr ErrorDef ErrAttributeArgMustNotBeNamed(
+    "attributes that take a single argument must not name that argument");
+constexpr ErrorDef<const flat::AttributeArg *> ErrAttributeArgNotNamed(
+    "attributes that take multiple arguments must name all of them explicitly, but '{}' was not");
+constexpr ErrorDef<flat::Attribute *, std::string> ErrMissingRequiredAttributeArg(
+    "attribute '{}' is missing the required '{}' argument");
+constexpr ErrorDef<flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
+    "attribute '{}' is missing its required argument");
+constexpr ErrorDef<flat::Attribute *, std::string> ErrUnknownAttributeArg(
+    "attribute '{}' does not support the '{}' argument");
+constexpr ErrorDef<flat::Attribute *, std::string> ErrDuplicateAttributeArg(
+    "attribute '{}' declares the '{}' argument multiple times");
+constexpr ErrorDef<flat::Attribute *> ErrAttributeDisallowsArgs(
+    "attribute '{}' does not support arguments");
+constexpr ErrorDef<flat::Attribute *> ErrAttributeConstraintNotSatisfied(
+    "declaration did not satisfy constraint of attribute '{}'");
 constexpr ErrorDef<flat::Name> ErrUnionCannotBeSimple("union '{}' is not allowed to be simple");
 constexpr ErrorDef<std::string_view> ErrMemberMustBeSimple("member '{}' is not simple");
 constexpr ErrorDef<uint32_t, uint32_t> ErrTooManyBytes(
@@ -305,7 +323,6 @@ constexpr ErrorDef<flat::Attribute *, std::string> ErrUnableToParseBound(
     "unable to parse '{}' bound of '{}'");
 constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
-constexpr ErrorDef<flat::Attribute *> ErrEmptyAttributeArg("attribute '{}' requires an argument");
 constexpr ErrorDef<> ErrInvalidNameOverride("name override must be a valid identifier");
 
 // ---------------------------------------------------------------------------

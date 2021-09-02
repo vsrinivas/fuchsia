@@ -17,8 +17,6 @@ namespace fidl {
 
 using reporter::Reporter;
 
-// TODO(fxbug.dev/74955): the name "AttributesBuilder" will need to change when
-//  this templated class is used to handle unique lists of AttributeArgs.
 template <typename T>
 class AttributesBuilder {
  public:

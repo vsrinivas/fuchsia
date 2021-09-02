@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/findings.h>
+#include <fidl/linter.h>
+#include <fidl/raw_ast.h>
+#include <fidl/utils.h>
 #include <lib/fit/function.h>
 
 #include <algorithm>
@@ -9,12 +13,6 @@
 #include <iostream>
 #include <set>
 #include <utility>
-
-#include <fidl/findings.h>
-#include <fidl/linter.h>
-#include <fidl/names.h>
-#include <fidl/raw_ast.h>
-#include <fidl/utils.h>
 
 namespace fidl::linter {
 
@@ -768,7 +766,8 @@ Linter::Linter()
         if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
           if (element.args.empty())
             return;
-          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.args.front()->value.get());
+          auto doc_comment =
+              static_cast<raw::DocCommentLiteral*>(element.args.front()->value.get());
           if (std::regex_search(doc_comment->MakeContents(), copyright_regex)) {
             linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
           }

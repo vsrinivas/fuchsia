@@ -23,6 +23,7 @@ class AttributeListNew;
 
 namespace flat {
 struct Attribute;
+struct AttributeArg;
 struct Constant;
 struct Decl;
 struct IdentifierConstant;
@@ -47,6 +48,7 @@ std::string Display(const raw::AttributeListOld* a);
 std::string Display(const raw::AttributeListNew* a);
 std::string Display(const std::vector<std::string_view>& library_name);
 std::string Display(const flat::Attribute* a);
+std::string Display(const flat::AttributeArg* a);
 std::string Display(const flat::Constant* c);
 std::string Display(const flat::Decl* d);
 std::string Display(const flat::TypeConstructorOld* tc);

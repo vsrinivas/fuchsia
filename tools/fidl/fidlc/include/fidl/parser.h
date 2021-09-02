@@ -369,6 +369,9 @@ class Parser {
 
   // TODO(fxbug.dev/70247): Consolidate the ParseFoo methods.
   // --- start new syntax ---
+  // This method may be used to parse the second attribute argument onward - the first argument in
+  // the list is handled separately in ParseAttributeNew().
+  std::unique_ptr<raw::AttributeArg> ParseSubsequentAttributeArg();
   std::unique_ptr<raw::AttributeNew> ParseAttributeNew();
   std::unique_ptr<raw::AttributeNew> ParseDocCommentNew();
   std::unique_ptr<raw::AttributeListNew> ParseAttributeListNew(
@@ -413,10 +416,12 @@ class Parser {
   //    parsing scope. For example, we just parsed a decl with an error, and
   //    recovered, but are now at the end of the file.
   //    A signal to `break` out of the current parsing loop.
+  RecoverResult RecoverToEndOfAttributeNew();
   RecoverResult RecoverToEndOfDecl();
   RecoverResult RecoverToEndOfMember();
   template <Token::Kind ClosingToken>
   RecoverResult RecoverToEndOfListItem();
+  RecoverResult RecoverToEndOfAttributeArg();
   RecoverResult RecoverToEndOfParam();
   RecoverResult RecoverToEndOfParamList();
 

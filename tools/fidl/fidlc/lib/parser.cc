@@ -293,6 +293,24 @@ std::unique_ptr<raw::Literal> Parser::ParseLiteral() {
   }
 }
 
+std::unique_ptr<raw::AttributeArg> Parser::ParseSubsequentAttributeArg() {
+  ASTScope scope(this);
+  auto name = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+
+  ConsumeToken(OfKind(Token::Kind::kEqual));
+  if (!Ok())
+    return Fail();
+
+  auto literal = ParseLiteral();
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::AttributeArg>(scope.GetSourceElement(),
+                                             std::string(name->span().data()), std::move(literal));
+}
+
 std::unique_ptr<raw::AttributeOld> Parser::ParseAttributeOld() {
   ASTScope scope(this);
   auto name = ParseIdentifier();
@@ -326,27 +344,106 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseAttributeNew() {
 
   std::vector<std::unique_ptr<raw::AttributeArg>> args;
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftParen))) {
-    // TODO(fxbug.dev/74955): for now, assume that this is a lone StringLiteral.
-    //  Alter to use any kind of multiple constants once typed constant support
-    //  is added to attribute args.
-    ASTScope arg_scope(this);
-    auto string_literal = ParseStringLiteral();
-    if (!Ok())
-      return Fail();
-    args.emplace_back(std::make_unique<raw::AttributeArg>(arg_scope.GetSourceElement(), "value",
-                                                          std::move(string_literal)));
+    if (Peek().kind() == Token::Kind::kRightParen) {
+      return Fail(ErrAttributeWithEmptyParens);
+    }
 
-    ConsumeToken(OfKind(Token::Kind::kRightParen));
+    // There are two valid syntaxes for attribute arg lists: single arg lists contain just the
+    // arg constant by itself, like so:
+    //
+    //  @foo("bar") // Literal constant
+    //  @baz(qux)   // Identifier constant
+    //
+    // Conversely, multi-argument lists must name each argument, like so:
+    //
+    //   @foo(a="bar",b=qux)
+    //
+    // To resolve this ambiguity, we will speculatively parse the first token encountered as a
+    // constant.  If it is followed by a close paren, we know that we are in the single-arg case,
+    // and that this parsing is correct.  If is instead followed by an equal sign, we know that this
+    // is the multi-arg case, and we will extract the identifier from the constant to be used as the
+    // name token for the first arg in the list.
+    ASTScope arg_scope(this);
+    auto maybe_constant = ParseConstant();
     if (!Ok())
       return Fail();
+
+    switch (Peek().kind()) {
+      case Token::Kind::kRightParen: {
+        // This attribute has a single, unnamed argument.
+        // TODO(fxbug.dev/81390): Remove this check and the one below it once non-string literal
+        //  attribute args are supported.
+        if (maybe_constant->kind != raw::Constant::Kind::kLiteral) {
+          return Fail(ErrAttributeArgMustBeStringLiteral);
+        }
+
+        auto constant = static_cast<raw::LiteralConstant*>(maybe_constant.get());
+        if (constant->literal->kind != raw::Literal::Kind::kString) {
+          return Fail(ErrAttributeArgMustBeStringLiteral);
+        }
+
+        args.emplace_back(std::make_unique<raw::AttributeArg>(arg_scope.GetSourceElement(),
+                                                              std::move(constant->literal)));
+        ConsumeToken(OfKind(Token::Kind::kRightParen));
+        if (!Ok())
+          return Fail();
+        break;
+      }
+      case Token::Kind::kComma: {
+        // Common error case: multiple arguments, but the first one is not named
+        return Fail(ErrAttributeArgsMustAllBeNamed);
+      }
+      case Token::Kind::kEqual: {
+        // This attribute has multiple arguments.
+        if (maybe_constant->kind != raw::Constant::Kind::kIdentifier) {
+          return Fail(ErrInvalidIdentifier, std::string(maybe_constant->span().data()));
+        }
+        auto constant = static_cast<raw::IdentifierConstant*>(maybe_constant.get());
+        if (constant->identifier->components.size() > 1) {
+          return Fail(ErrInvalidIdentifier, std::string(maybe_constant->span().data()));
+        }
+
+        ConsumeToken(OfKind(Token::Kind::kEqual));
+        if (!Ok())
+          return Fail();
+
+        auto arg_name = std::move(constant->identifier);
+        auto literal = ParseLiteral();
+        if (!Ok())
+          return Fail();
+
+        args.emplace_back(std::make_unique<raw::AttributeArg>(arg_scope.GetSourceElement(),
+                                                              std::string(arg_name->span().data()),
+                                                              std::move(literal)));
+        while (Peek().kind() == Token::Kind::kComma) {
+          ConsumeToken(OfKind(Token::Kind::kComma));
+          if (!Ok())
+            return Fail();
+
+          auto arg = ParseSubsequentAttributeArg();
+          if (!Ok()) {
+            const auto result = RecoverToEndOfAttributeArg();
+            if (result == RecoverResult::Failure) {
+              return Fail();
+            }
+          }
+          args.emplace_back(std::move(arg));
+        }
+        if (!Ok())
+          Fail();
+
+        ConsumeToken(OfKind(Token::Kind::kRightParen));
+        if (!Ok())
+          return Fail();
+        break;
+      }
+      default:
+        return Fail();
+    }
   }
 
-  std::string str_name;
-  if (name)
-    str_name = std::string(name->span().data().data(), name->span().data().size());
-
-  return std::make_unique<raw::AttributeNew>(
-      scope.GetSourceElement(), raw::AttributeNew::Provenance::kDefault, str_name, std::move(args));
+  return std::make_unique<raw::AttributeNew>(scope.GetSourceElement(),
+                                             std::string(name->span().data()), std::move(args));
 }
 
 std::unique_ptr<raw::AttributeListOld> Parser::ParseAttributeListOld(
@@ -383,9 +480,18 @@ std::unique_ptr<raw::AttributeListNew> Parser::ParseAttributeListNew(
 
   for (;;) {
     auto attribute = ParseAttributeNew();
-    if (!Ok())
-      return Fail();
-    attributes.emplace_back(std::move(attribute));
+    if (!Ok()) {
+      auto result = RecoverToEndOfAttributeNew();
+      if (result == RecoverResult::Failure) {
+        return Fail();
+      }
+      if (result == RecoverResult::EndOfScope) {
+        break;
+      }
+    } else {
+      attributes.emplace_back(std::move(attribute));
+    }
+
     if (Peek().kind() != Token::Kind::kAt) {
       break;
     }
@@ -451,10 +557,11 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseDocCommentNew() {
 
   std::vector<std::unique_ptr<raw::AttributeArg>> args;
   args.emplace_back(
-      std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), "value", std::move(literal)));
+      std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), std::move(literal)));
 
-  return std::make_unique<raw::AttributeNew>(
-      scope.GetSourceElement(), raw::AttributeNew::Provenance::kDocComment, "doc", std::move(args));
+  auto doc_comment_attr =
+      raw::AttributeNew::CreateDocComment(scope.GetSourceElement(), std::move(args));
+  return std::make_unique<raw::AttributeNew>(std::move(doc_comment_attr));
 }
 
 std::unique_ptr<raw::AttributeListOld> Parser::MaybeParseAttributeListOld(bool for_parameter) {
@@ -2626,6 +2733,34 @@ bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
   return true;
 }
 
+Parser::RecoverResult Parser::RecoverToEndOfAttributeNew() {
+  if (ConsumedEOF()) {
+    return RecoverResult::Failure;
+  }
+
+  RecoverAllErrors();
+
+  static const auto exit_tokens = std::set<Token::Kind>{
+      Token::Kind::kRightParen,
+      Token::Kind::kEndOfFile,
+  };
+  if (!ConsumeTokensUntil(exit_tokens)) {
+    return RecoverResult::Failure;
+  }
+
+  switch (Peek().combined()) {
+    case CASE_TOKEN(Token::Kind::kRightParen):
+      ConsumeToken(OfKind(Token::Kind::kRightParen));
+      if (!Ok())
+        return RecoverResult::Failure;
+      return RecoverResult::Continue;
+    case CASE_TOKEN(Token::Kind::kEndOfFile):
+      return RecoverResult::EndOfScope;
+    default:
+      return RecoverResult::Failure;
+  }
+}
+
 Parser::RecoverResult Parser::RecoverToEndOfDecl() {
   if (ConsumedEOF()) {
     return RecoverResult::Failure;
@@ -2707,6 +2842,10 @@ Parser::RecoverResult Parser::RecoverToEndOfListItem() {
     default:
       return RecoverResult::Failure;
   }
+}
+
+Parser::RecoverResult Parser::RecoverToEndOfAttributeArg() {
+  return RecoverToEndOfListItem<Token::Kind::kRightParen>();
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfParam() {
