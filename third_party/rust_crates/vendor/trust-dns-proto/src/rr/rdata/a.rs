@@ -35,7 +35,7 @@
 //! records.
 //!
 //! A records cause no additional section processing.  The RDATA section of
-//! an A line in a master file is an Internet address expressed as four
+//! an A line in a Zone File is an Internet address expressed as four
 //! decimal numbers separated by dots without any embedded spaces (e.g.,
 //! "10.2.0.52" or "192.0.5.6").
 //! ```
@@ -46,7 +46,7 @@ use crate::error::*;
 use crate::serialize::binary::*;
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder) -> ProtoResult<Ipv4Addr> {
+pub fn read(decoder: &mut BinDecoder<'_>) -> ProtoResult<Ipv4Addr> {
     Ok(Ipv4Addr::new(
         decoder.pop()?.unverified(/*valid as any u8*/),
         decoder.pop()?.unverified(/*valid as any u8*/),
@@ -56,7 +56,7 @@ pub fn read(decoder: &mut BinDecoder) -> ProtoResult<Ipv4Addr> {
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, address: Ipv4Addr) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, address: Ipv4Addr) -> ProtoResult<()> {
     let segments = address.octets();
 
     encoder.emit(segments[0])?;

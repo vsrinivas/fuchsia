@@ -8,6 +8,9 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use crate::error::*;
 use crate::serialize::binary::*;
 
@@ -92,7 +95,9 @@ use crate::serialize::binary::*;
 ///    This document cannot be updated, only made obsolete and replaced by a
 ///    successor document.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+#[non_exhaustive]
 pub enum Algorithm {
     /// DO NOT USE, SHA1 is a compromised hashing function, it is here for backward compatibility
     RSASHA1,
@@ -113,7 +118,7 @@ pub enum Algorithm {
 }
 
 impl Algorithm {
-    /// http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml
+    /// <http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml>
     pub fn from_u8(value: u8) -> Self {
         match value {
             5 => Algorithm::RSASHA1,
@@ -160,7 +165,7 @@ impl Algorithm {
 }
 
 impl BinEncodable for Algorithm {
-    fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         encoder.emit(u8::from(*self))
     }
 }
@@ -196,7 +201,7 @@ impl From<Algorithm> for u8 {
 }
 
 impl Display for Algorithm {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str(self.as_str())
     }
 }

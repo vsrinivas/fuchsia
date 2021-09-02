@@ -19,4 +19,18 @@ mod tcp_client_stream;
 mod tcp_stream;
 
 pub use self::tcp_client_stream::{TcpClientConnect, TcpClientStream};
-pub use self::tcp_stream::{Connect, TcpStream};
+pub use self::tcp_stream::{Connect, DnsTcpStream, TcpStream};
+
+#[cfg(feature = "tokio-runtime")]
+#[doc(hidden)]
+pub mod tokio {
+    use std::io;
+    use std::net::SocketAddr;
+    use tokio::net::TcpStream as TokioTcpStream;
+
+    pub async fn connect(addr: &SocketAddr) -> Result<TokioTcpStream, io::Error> {
+        let stream = TokioTcpStream::connect(addr).await?;
+        stream.set_nodelay(true)?;
+        Ok(stream)
+    }
+}

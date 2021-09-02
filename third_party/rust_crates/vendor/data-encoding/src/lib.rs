@@ -1,36 +1,33 @@
-//! Efficient and customizable data-encoding functions
+//! Efficient and customizable data-encoding functions like base64, base32, and hex
 //!
 //! This [crate] provides little-endian ASCII base-conversion encodings for
 //! bases of size 2, 4, 8, 16, 32, and 64. It supports:
 //!
-//! - padded and unpadded encodings
-//! - canonical encodings (e.g. trailing bits are checked)
-//! - in-place encoding and decoding functions
-//! - partial decoding functions (e.g. for error recovery)
-//! - character translation (e.g. for case-insensitivity)
-//! - most and least significant bit-order
-//! - ignoring characters when decoding (e.g. for skipping newlines)
-//! - wrapping the output when encoding
+//! - [padding] for streaming
+//! - canonical encodings (e.g. [trailing bits] are checked)
+//! - in-place [encoding] and [decoding] functions
+//! - partial [decoding] functions (e.g. for error recovery)
+//! - character [translation] (e.g. for case-insensitivity)
+//! - most and least significant [bit-order]
+//! - [ignoring] characters when decoding (e.g. for skipping newlines)
+//! - [wrapping] the output when encoding
+//! - no-std environments with `default-features = false, features = ["alloc"]`
+//! - no-alloc environments with `default-features = false`
 //!
-//! The performance of the encoding and decoding functions are similar to
-//! existing implementations (see how to run the benchmarks on [github]).
-//!
-//! This is the library documentation. If you are looking for the [binary], see
-//! the installation instructions on [github].
+//! You may use the [binary] or the [website] to play around.
 //!
 //! # Examples
 //!
-//! This crate provides predefined encodings as [constants]. These constants are
-//! of type [`Encoding`]. This type provides encoding and decoding functions
-//! with in-place or allocating variants. Here is an example using the
-//! allocating encoding function of [base64]:
+//! This crate provides predefined encodings as [constants]. These constants are of type
+//! [`Encoding`]. This type provides encoding and decoding functions with in-place or allocating
+//! variants. Here is an example using the allocating encoding function of [`BASE64`]:
 //!
 //! ```rust
 //! use data_encoding::BASE64;
 //! assert_eq!(BASE64.encode(b"Hello world"), "SGVsbG8gd29ybGQ=");
 //! ```
 //!
-//! Here is an example using the in-place decoding function of [base32]:
+//! Here is an example using the in-place decoding function of [`BASE32`]:
 //!
 //! ```rust
 //! use data_encoding::BASE32;
@@ -40,9 +37,9 @@
 //! assert_eq!(&output[0 .. len], b"Hello world");
 //! ```
 //!
-//! You are not limited to the predefined encodings. You may define your own
-//! encodings (with the same correctness and performance properties as the
-//! predefined ones) using the [`Specification`] type:
+//! You are not limited to the predefined encodings. You may define your own encodings (with the
+//! same correctness and performance properties as the predefined ones) using the [`Specification`]
+//! type:
 //!
 //! ```rust
 //! use data_encoding::Specification;
@@ -54,23 +51,11 @@
 //! assert_eq!(hex.encode(b"hello"), "68656c6c6f");
 //! ```
 //!
-//! If you use the [`lazy_static`] crate, you can define a global encoding:
+//! You may use the [macro] library to define a compile-time custom encoding:
 //!
 //! ```rust,ignore
-//! lazy_static! {
-//!     static ref HEX: Encoding = {
-//!         let mut spec = Specification::new();
-//!         spec.symbols.push_str("0123456789abcdef");
-//!         spec.translate.from.push_str("ABCDEF");
-//!         spec.translate.to.push_str("abcdef");
-//!         spec.encoding().unwrap()
-//!     };
-//! }
-//! ```
-//!
-//! You may also use the [macro] library to define a compile-time custom encoding:
-//!
-//! ```rust,ignore
+//! use data_encoding::Encoding;
+//! use data_encoding_macro::new_encoding;
 //! const HEX: Encoding = new_encoding!{
 //!     symbols: "0123456789abcdef",
 //!     translate_from: "ABCDEF",
@@ -84,91 +69,95 @@
 //!
 //! # Properties
 //!
-//! The [base16], [base32], [base32hex], [base64], and [base64url] predefined
-//! encodings are conform to [RFC4648].
+//! The [`HEXUPPER`], [`BASE32`], [`BASE32HEX`], [`BASE64`], and [`BASE64URL`] predefined encodings
+//! are conform to [RFC4648].
 //!
-//! In general, the encoding and decoding functions satisfy the following
-//! properties:
+//! In general, the encoding and decoding functions satisfy the following properties:
 //!
 //! - They are deterministic: their output only depends on their input
 //! - They have no side-effects: they do not modify a hidden mutable state
 //! - They are correct: encoding then decoding gives the initial data
-//! - They are canonical (unless [`is_canonical`] returns false): decoding then
-//! encoding gives the initial data
+//! - They are canonical (unless [`is_canonical`] returns false): decoding then encoding gives the
+//!   initial data
 //!
-//! This last property is usually not satisfied by common base64 implementations
-//! (like the `rustc-serialize` crate, the `base64` crate, or the `base64` GNU
-//! program). This is a matter of choice and this crate has made the choice to
-//! let the user choose. Support for canonical encoding as described by the
-//! [RFC][canonical] is provided. But it is also possible to disable checking
-//! trailing bits, to add characters translation, to decode concatenated padded
-//! inputs, and to ignore some characters.
+//! This last property is usually not satisfied by base64 implementations. This is a matter of
+//! choice and this crate has made the choice to let the user choose. Support for canonical encoding
+//! as described by the [RFC][canonical] is provided. But it is also possible to disable checking
+//! trailing bits, to add characters translation, to decode concatenated padded inputs, and to
+//! ignore some characters.
 //!
-//! Since the RFC specifies the encoding function on all inputs and the decoding
-//! function on all possible encoded outputs, the differences between
-//! implementations come from the decoding function which may be more or less
-//! permissive. In this crate, the decoding function of canonical encodings
-//! rejects all inputs that are not a possible output of the encoding function.
-//! Here are some concrete examples of decoding differences between this crate,
-//! the `rustc-serialize` crate, the `base64` crate, and the `base64` GNU
-//! program:
+//! Since the RFC specifies the encoding function on all inputs and the decoding function on all
+//! possible encoded outputs, the differences between implementations come from the decoding
+//! function which may be more or less permissive. In this crate, the decoding function of canonical
+//! encodings rejects all inputs that are not a possible output of the encoding function. Here are
+//! some concrete examples of decoding differences between this crate, the `base64` crate, and the
+//! `base64` GNU program:
 //!
-//! | Input      | `data-encoding` | `rustc`  | `base64` | GNU `base64`  |
-//! | ---------- | --------------- | -------- | -------- | ------------- |
-//! | `AAB=`     | `Trailing(2)`   | `[0, 0]` | `[0, 0]` | `\x00\x00`    |
-//! | `AA\nB=`   | `Length(4)`     | `[0, 0]` | `Length` | `\x00\x00`    |
-//! | `AAB`      | `Length(0)`     | `[0, 0]` | `[0, 0]` | Invalid input |
-//! | `A\rA\nB=` | `Length(4)`     | `[0, 0]` | `Err(1)` | Invalid input |
-//! | `-_\r\n`   | `Symbol(0)`     | `[251]`  | `Err(0)` | Invalid input |
-//! | `AA==AA==` | `[0, 0]`        | `Err`    | `Err(2)` | `\x00\x00`    |
+//! | Input      | `data-encoding` | `base64`  | GNU `base64`  |
+//! | ---------- | --------------- | --------- | ------------- |
+//! | `AAB=`     | `Trailing(2)`   | `Last(2)` | `\x00\x00`    |
+//! | `AA\nB=`   | `Length(4)`     | `Length`  | `\x00\x00`    |
+//! | `AAB`      | `Length(0)`     | `Last(2)` | Invalid input |
+//! | `AAA`      | `Length(0)`     | `[0, 0]`  | Invalid input |
+//! | `A\rA\nB=` | `Length(4)`     | `Byte(1)` | Invalid input |
+//! | `-_\r\n`   | `Symbol(0)`     | `Byte(0)` | Invalid input |
+//! | `AA==AA==` | `[0, 0]`        | `Byte(2)` | `\x00\x00`    |
 //!
 //! We can summarize these discrepancies as follows:
 //!
-//! | Discrepancy | `data-encoding` | `rustc` | `base64` | GNU `base64` |
-//! | ----------- | --------------- | ------- | -------- | ------------ |
-//! | Check trailing bits | Yes | No | No | No |
-//! | Ignored characters | None | `\r` and `\n` | None | `\n` |
-//! | Translated characters | None | `-_` mapped to `+/` | None | None |
-//! | Check padding | Yes | No | No | Yes |
-//! | Support concatenated input | Yes | No | No | Yes |
+//! | Discrepancy                | `data-encoding` | `base64` | GNU `base64` |
+//! | -------------------------- | --------------- | -------- | ------------ |
+//! | Check trailing bits        | Yes             | Yes      | No           |
+//! | Ignored characters         | None            | None     | `\n`         |
+//! | Translated characters      | None            | None     | None         |
+//! | Check padding              | Yes             | No       | Yes          |
+//! | Support concatenated input | Yes             | No       | Yes          |
 //!
-//! This crate permits to disable checking trailing bits. It permits to ignore
-//! some characters. It permits to translate characters. It permits to use
-//! unpadded encodings. However, for padded encodings, support for concatenated
-//! inputs cannot be disabled. This is simply because it doesn't make sense to
-//! use padding if it is not to support concatenated inputs.
+//! This crate permits to disable checking trailing bits. It permits to ignore some characters. It
+//! permits to translate characters. It permits to use unpadded encodings. However, for padded
+//! encodings, support for concatenated inputs cannot be disabled. This is simply because it doesn't
+//! make sense to use padding if it is not to support concatenated inputs.
 //!
-//! # Migration
-//!
-//! The [changelog] describes the changes between v1 and v2. Here are the
-//! migration steps for common usage:
-//!
-//! | v1                          | v2                          |
-//! | --------------------------- | --------------------------- |
-//! | `use data_encoding::baseNN` | `use data_encoding::BASENN` |
-//! | `baseNN::function`          | `BASENN.method`             |
-//! | `baseNN::function_nopad`    | `BASENN_NOPAD.method`       |
-//!
+//! [RFC4648]: https://tools.ietf.org/html/rfc4648
+//! [`BASE32HEX`]: constant.BASE32HEX.html
+//! [`BASE32`]: constant.BASE32.html
+//! [`BASE64URL`]: constant.BASE64URL.html
+//! [`BASE64`]: constant.BASE64.html
 //! [`Encoding`]: struct.Encoding.html
+//! [`HEXUPPER`]: constant.HEXUPPER.html
 //! [`Specification`]: struct.Specification.html
 //! [`is_canonical`]: struct.Encoding.html#method.is_canonical
-//! [`lazy_static`]: https://crates.io/crates/lazy_static
-//! [RFC4648]: https://tools.ietf.org/html/rfc4648
-//! [base16]: constant.HEXUPPER.html
-//! [base32]: constant.BASE32.html
-//! [base32hex]: constant.BASE32HEX.html
-//! [base64]: constant.BASE64.html
-//! [base64url]: constant.BASE64URL.html
 //! [binary]: https://crates.io/crates/data-encoding-bin
+//! [bit-order]: struct.Specification.html#structfield.bit_order
 //! [canonical]: https://tools.ietf.org/html/rfc4648#section-3.5
-//! [changelog]:
-//!     https://github.com/ia0/data-encoding/blob/master/lib/CHANGELOG.md
 //! [constants]: index.html#constants
 //! [crate]: https://crates.io/crates/data-encoding
-//! [github]: https://github.com/ia0/data-encoding
+//! [decoding]: struct.Encoding.html#method.decode_mut
+//! [encoding]: struct.Encoding.html#method.encode_mut
+//! [ignoring]: struct.Specification.html#structfield.ignore
 //! [macro]: https://crates.io/crates/data-encoding-macro
+//! [padding]: struct.Specification.html#structfield.padding
+//! [trailing bits]: struct.Specification.html#structfield.check_trailing_bits
+//! [translation]: struct.Specification.html#structfield.translate
+//! [website]: https://data-encoding.rs
+//! [wrapping]: struct.Specification.html#structfield.wrap
 
+#![no_std]
 #![warn(unused_results, missing_docs)]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(feature = "alloc")]
+use alloc::borrow::{Cow, ToOwned};
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+#[cfg(feature = "alloc")]
+use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 macro_rules! check {
     ($e: expr, $c: expr) => {
@@ -205,6 +194,7 @@ define!(N6: usize = 6);
 
 #[derive(Copy, Clone)]
 struct On;
+
 impl<T: Copy> Static<Option<T>> for On {
     fn val(self) -> Option<T> {
         None
@@ -213,6 +203,7 @@ impl<T: Copy> Static<Option<T>> for On {
 
 #[derive(Copy, Clone)]
 struct Os<T>(T);
+
 impl<T: Copy> Static<Option<T>> for Os<T> {
     fn val(self) -> Option<T> {
         Some(self.0)
@@ -221,9 +212,10 @@ impl<T: Copy> Static<Option<T>> for Os<T> {
 
 macro_rules! dispatch {
     (let $var: ident: bool = $val: expr; $($body: tt)*) => {
-        match $val {
-            false => { let $var = Bf; dispatch!($($body)*) },
-            true => { let $var = Bt; dispatch!($($body)*) },
+        if $val {
+            let $var = Bt; dispatch!($($body)*)
+        } else {
+            let $var = Bf; dispatch!($($body)*)
         }
     };
     (let $var: ident: usize = $val: expr; $($body: tt)*) => {
@@ -248,21 +240,25 @@ macro_rules! dispatch {
 
 unsafe fn chunk_unchecked(x: &[u8], n: usize, i: usize) -> &[u8] {
     debug_assert!((i + 1) * n <= x.len());
-    let ptr = x.as_ptr().offset((n * i) as isize);
-    std::slice::from_raw_parts(ptr, n)
+    let ptr = x.as_ptr().add(n * i);
+    core::slice::from_raw_parts(ptr, n)
 }
+
 unsafe fn chunk_mut_unchecked(x: &mut [u8], n: usize, i: usize) -> &mut [u8] {
     debug_assert!((i + 1) * n <= x.len());
-    let ptr = x.as_mut_ptr().offset((n * i) as isize);
-    std::slice::from_raw_parts_mut(ptr, n)
+    let ptr = x.as_mut_ptr().add(n * i);
+    core::slice::from_raw_parts_mut(ptr, n)
 }
+
 unsafe fn as_array(x: &[u8]) -> &[u8; 256] {
     debug_assert_eq!(x.len(), 256);
     &*(x.as_ptr() as *const [u8; 256])
 }
+
 fn div_ceil(x: usize, m: usize) -> usize {
     (x + m - 1) / m
 }
+
 fn floor(x: usize, m: usize) -> usize {
     x / m * m
 }
@@ -283,12 +279,27 @@ fn vectorize<F: FnMut(usize)>(n: usize, bs: usize, mut f: F) {
 pub enum DecodeKind {
     /// Invalid length
     Length,
+
     /// Invalid symbol
     Symbol,
+
     /// Non-zero trailing bits
     Trailing,
+
     /// Invalid padding length
     Padding,
+}
+
+impl core::fmt::Display for DecodeKind {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let description = match self {
+            DecodeKind::Length => "invalid length",
+            DecodeKind::Symbol => "invalid symbol",
+            DecodeKind::Trailing => "non-zero trailing bits",
+            DecodeKind::Padding => "invalid padding length",
+        };
+        write!(f, "{}", description)
+    }
 }
 
 /// Decoding error
@@ -296,26 +307,19 @@ pub enum DecodeKind {
 pub struct DecodeError {
     /// Error position
     ///
-    /// This position is always a valid input position and represents the first
-    /// encountered error.
+    /// This position is always a valid input position and represents the first encountered error.
     pub position: usize,
+
     /// Error kind
     pub kind: DecodeKind,
 }
-impl std::error::Error for DecodeError {
-    fn description(&self) -> &str {
-        match self.kind {
-            DecodeKind::Length => "invalid length",
-            DecodeKind::Symbol => "invalid symbol",
-            DecodeKind::Trailing => "non-zero trailing bits",
-            DecodeKind::Padding => "invalid padding length",
-        }
-    }
-}
-impl std::fmt::Display for DecodeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        use std::error::Error;
-        write!(f, "{} at {}", self.description(), self.position)
+
+#[cfg(feature = "std")]
+impl std::error::Error for DecodeError {}
+
+impl core::fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{} at {}", self.kind, self.position)
     }
 }
 
@@ -324,14 +328,12 @@ impl std::fmt::Display for DecodeError {
 pub struct DecodePartial {
     /// Number of bytes read from input
     ///
-    /// This number does not exceed the error position: `read <=
-    /// error.position`.
+    /// This number does not exceed the error position: `read <= error.position`.
     pub read: usize,
 
     /// Number of bytes written to output
     ///
-    /// This number does not exceed the decoded length: `written <=
-    /// decode_len(read)`.
+    /// This number does not exceed the decoded length: `written <= decode_len(read)`.
     pub written: usize,
 
     /// Decoding error
@@ -349,6 +351,7 @@ fn order(msb: bool, n: usize, i: usize) -> usize {
         i
     }
 }
+
 fn enc(bit: usize) -> usize {
     debug_assert!(1 <= bit && bit <= 6);
     match bit {
@@ -358,6 +361,7 @@ fn enc(bit: usize) -> usize {
         _ => unreachable!(),
     }
 }
+
 fn dec(bit: usize) -> usize {
     enc(bit) * 8 / bit
 }
@@ -365,6 +369,7 @@ fn dec(bit: usize) -> usize {
 fn encode_len<B: Static<usize>>(bit: B, len: usize) -> usize {
     div_ceil(8 * len, bit.val())
 }
+
 fn encode_block<B: Static<usize>, M: Static<bool>>(
     bit: B, msb: M, symbols: &[u8; 256], input: &[u8], output: &mut [u8],
 ) {
@@ -373,14 +378,15 @@ fn encode_block<B: Static<usize>, M: Static<bool>>(
     let bit = bit.val();
     let msb = msb.val();
     let mut x = 0u64;
-    for i in 0 .. input.len() {
-        x |= (input[i] as u64) << 8 * order(msb, enc(bit), i);
+    for (i, input) in input.iter().enumerate() {
+        x |= u64::from(*input) << (8 * order(msb, enc(bit), i));
     }
-    for i in 0 .. output.len() {
-        let y = x >> bit * order(msb, dec(bit), i);
-        output[i] = symbols[y as usize % 256];
+    for (i, output) in output.iter_mut().enumerate() {
+        let y = x >> (bit * order(msb, dec(bit), i));
+        *output = symbols[y as usize % 256];
     }
 }
+
 fn encode_mut<B: Static<usize>, M: Static<bool>>(
     bit: B, msb: M, symbols: &[u8; 256], input: &[u8], output: &mut [u8],
 ) {
@@ -414,13 +420,14 @@ fn decode_block<B: Static<usize>, M: Static<bool>>(
     for j in 0 .. input.len() {
         let y = values[input[j] as usize];
         check!(j, y < 1 << bit);
-        x |= (y as u64) << bit * order(msb, dec(bit), j);
+        x |= u64::from(y) << (bit * order(msb, dec(bit), j));
     }
-    for j in 0 .. output.len() {
-        output[j] = (x >> 8 * order(msb, enc(bit), j)) as u8;
+    for (j, output) in output.iter_mut().enumerate() {
+        *output = (x >> (8 * order(msb, enc(bit), j))) as u8;
     }
     Ok(())
 }
+
 // Fails if an input character does not translate to a symbol. The error `pos`
 // is the lowest index of such character. The output is valid up to `pos / dec *
 // enc` excluded.
@@ -439,6 +446,7 @@ fn decode_mut<B: Static<usize>, M: Static<bool>>(
     decode_block(bit, msb, values, &input[dec * n ..], &mut output[enc * n ..])
         .map_err(|e| dec * n + e)
 }
+
 // Fails if there are non-zero trailing bits.
 fn check_trail<B: Static<usize>, M: Static<bool>>(
     bit: B, msb: M, ctb: bool, values: &[u8; 256], input: &[u8],
@@ -457,6 +465,7 @@ fn check_trail<B: Static<usize>, M: Static<bool>>(
     check!((), values[input[input.len() - 1] as usize] & mask == 0);
     Ok(())
 }
+
 // Fails if the padding length is invalid. The error is the index of the first
 // padding character.
 fn check_pad<B: Static<usize>>(bit: B, values: &[u8; 256], input: &[u8]) -> Result<usize, usize> {
@@ -472,6 +481,7 @@ fn check_pad<B: Static<usize>>(bit: B, values: &[u8; 256], input: &[u8]) -> Resu
 fn encode_base_len<B: Static<usize>>(bit: B, len: usize) -> usize {
     encode_len(bit, len)
 }
+
 fn encode_base<B: Static<usize>, M: Static<bool>>(
     bit: B, msb: M, symbols: &[u8; 256], input: &[u8], output: &mut [u8],
 ) {
@@ -485,6 +495,7 @@ fn encode_pad_len<B: Static<usize>, P: Static<Option<u8>>>(bit: B, pad: P, len: 
         Some(_) => div_ceil(len, enc(bit.val())) * dec(bit.val()),
     }
 }
+
 fn encode_pad<B: Static<usize>, M: Static<bool>, P: Static<Option<u8>>>(
     bit: B, msb: M, symbols: &[u8; 256], spad: P, input: &[u8], output: &mut [u8],
 ) {
@@ -495,8 +506,8 @@ fn encode_pad<B: Static<usize>, M: Static<bool>, P: Static<Option<u8>>>(
     debug_assert_eq!(output.len(), encode_pad_len(bit, spad, input.len()));
     let olen = encode_base_len(bit, input.len());
     encode_base(bit, msb, symbols, input, &mut output[.. olen]);
-    for i in olen .. output.len() {
-        output[i] = pad;
+    for output in output.iter_mut().skip(olen) {
+        *output = pad;
     }
 }
 
@@ -514,6 +525,7 @@ fn encode_wrap_len<
         Some((col, end)) => olen + end.len() * div_ceil(olen, col),
     }
 }
+
 fn encode_wrap_mut<
     'a,
     B: Static<usize>,
@@ -575,6 +587,7 @@ fn decode_pad_len<B: Static<usize>, P: Static<bool>>(
 fn decode_base_len<B: Static<usize>>(bit: B, len: usize) -> Result<usize, DecodeError> {
     decode_pad_len(bit, Bf, len)
 }
+
 // Fails with Symbol if an input character does not translate to a symbol. The
 // error is the lowest index of such character.
 // Fails with Trailing if there are non-zero trailing bits.
@@ -674,6 +687,7 @@ fn skip_ignore(values: &[u8; 256], input: &[u8], mut inpos: usize) -> usize {
     }
     inpos
 }
+
 // Returns next input and output position.
 // Fails with Symbol if an input character does not translate to a symbol. The
 // error is the lowest index of such character.
@@ -710,12 +724,14 @@ fn decode_wrap_block<B: Static<usize>, M: Static<bool>, P: Static<bool>>(
         })?;
     Ok((inpos, written))
 }
+
 // Fails with Symbol if an input character does not translate to a symbol. The
 // error is the lowest index of such character.
 // Fails with Padding if some padding length is invalid. The error is the index
 // of the first padding character of the invalid padding.
 // Fails with Trailing if there are non-zero trailing bits.
 // Fails with Length if input length (without ignored characters) is invalid.
+#[allow(clippy::too_many_arguments)]
 fn decode_wrap_mut<B: Static<usize>, M: Static<bool>, P: Static<bool>, I: Static<bool>>(
     bit: B, msb: M, ctb: bool, values: &[u8; 256], pad: P, has_ignore: I, input: &[u8],
     output: &mut [u8],
@@ -770,40 +786,42 @@ fn decode_wrap_mut<B: Static<usize>, M: Static<bool>, P: Static<bool>, I: Static
 
 /// Order in which bits are read from a byte
 ///
-/// The base-conversion encoding is always little-endian. This means that the
-/// least significant *byte* is always first. However, we can still choose
-/// whether, within a byte, this is the most significant or the least
-/// significant *bit* that is first. If the terminology is confusing, testing on
-/// an asymmetrical example should be enough to choose the correct value.
+/// The base-conversion encoding is always little-endian. This means that the least significant
+/// **byte** is always first. However, we can still choose whether, within a byte, this is the most
+/// significant or the least significant **bit** that is first. If the terminology is confusing,
+/// testing on an asymmetrical example should be enough to choose the correct value.
 ///
 /// # Examples
 ///
-/// In the following example, we can see that a base with the
-/// `MostSignificantFirst` bit-order has the most significant bit first in the
-/// encoded output. In particular, the output is in the same order as the bits
-/// in the byte. The opposite happens with the `LeastSignificantFirst`
-/// bit-order. The least significant bit is first and the output is in the
-/// reverse order.
+/// In the following example, we can see that a base with the `MostSignificantFirst` bit-order has
+/// the most significant bit first in the encoded output. In particular, the output is in the same
+/// order as the bits in the byte. The opposite happens with the `LeastSignificantFirst` bit-order.
+/// The least significant bit is first and the output is in the reverse order.
 ///
 /// ```rust
 /// use data_encoding::{BitOrder, Specification};
 /// let mut spec = Specification::new();
 /// spec.symbols.push_str("01");
-/// // spec.bit_order = BitOrder::MostSignificantFirst;  // default
+/// spec.bit_order = BitOrder::MostSignificantFirst;  // default
 /// let msb = spec.encoding().unwrap();
 /// spec.bit_order = BitOrder::LeastSignificantFirst;
 /// let lsb = spec.encoding().unwrap();
 /// assert_eq!(msb.encode(&[0b01010011]), "01010011");
 /// assert_eq!(lsb.encode(&[0b01010011]), "11001010");
 /// ```
+///
+/// # Features
+///
+/// Requires the `alloc` feature.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg(feature = "alloc")]
 pub enum BitOrder {
     /// Most significant bit first
     ///
-    /// This is the most common and most intuitive bit-order. In particular,
-    /// this is the bit-order used by [RFC4648] and thus the usual hexadecimal,
-    /// base64, base32, base64url, and base32hex encodings. This is the default
-    /// bit-order when [specifying](struct.Specification.html) a base.
+    /// This is the most common and most intuitive bit-order. In particular, this is the bit-order
+    /// used by [RFC4648] and thus the usual hexadecimal, base64, base32, base64url, and base32hex
+    /// encodings. This is the default bit-order when [specifying](struct.Specification.html) a
+    /// base.
     ///
     /// [RFC4648]: https://tools.ietf.org/html/rfc4648
     MostSignificantFirst,
@@ -823,15 +841,20 @@ pub enum BitOrder {
     /// [base32]: constant.BASE32_DNSCURVE.html
     LeastSignificantFirst,
 }
+#[cfg(feature = "alloc")]
 use crate::BitOrder::*;
 
 #[doc(hidden)]
-pub type InternalEncoding = std::borrow::Cow<'static, [u8]>;
+#[cfg(feature = "alloc")]
+pub type InternalEncoding = Cow<'static, [u8]>;
+
+#[doc(hidden)]
+#[cfg(not(feature = "alloc"))]
+pub type InternalEncoding = &'static [u8];
 
 /// Base-conversion encoding
 ///
-/// See [Specification](struct.Specification.html) for technical details or how
-/// to define a new one.
+/// See [Specification](struct.Specification.html) for technical details or how to define a new one.
 // Required fields:
 //   0 - 256 (256) symbols
 // 256 - 512 (256) values
@@ -856,14 +879,20 @@ pub struct Encoding(pub InternalEncoding);
 
 /// How to translate characters when decoding
 ///
-/// The order matters. The first character of the `from` field is translated to
-/// the first character of the `to` field. The second to the second. Etc.
+/// The order matters. The first character of the `from` field is translated to the first character
+/// of the `to` field. The second to the second. Etc.
 ///
 /// See [Specification](struct.Specification.html) for more information.
+///
+/// # Features
+///
+/// Requires the `alloc` feature.
 #[derive(Debug, Clone)]
+#[cfg(feature = "alloc")]
 pub struct Translate {
     /// Characters to translate from
     pub from: String,
+
     /// Characters to translate to
     pub to: String,
 }
@@ -871,7 +900,12 @@ pub struct Translate {
 /// How to wrap the output when encoding
 ///
 /// See [Specification](struct.Specification.html) for more information.
+///
+/// # Features
+///
+/// Requires the `alloc` feature.
 #[derive(Debug, Clone)]
+#[cfg(feature = "alloc")]
 pub struct Wrap {
     /// Wrapping width
     ///
@@ -892,43 +926,38 @@ pub struct Wrap {
 
 /// Base-conversion specification
 ///
-/// It is possible to define custom encodings given a specification. To do so,
-/// it is important to understand the theory first.
+/// It is possible to define custom encodings given a specification. To do so, it is important to
+/// understand the theory first.
 ///
 /// # Theory
 ///
-/// Each subsection has an equivalent subsection in the [Practice](#practice)
-/// section.
+/// Each subsection has an equivalent subsection in the [Practice](#practice) section.
 ///
 /// ## Basics
 ///
-/// The main idea of a [base-conversion] encoding is to see `[u8]` as numbers
-/// written in little-endian base256 and convert them in another little-endian
-/// base. For performance reasons, this crate restricts this other base to be of
-/// size 2 (binary), 4 (base4), 8 (octal), 16 (hexadecimal), 32 (base32), or 64
-/// (base64). The converted number is written as `[u8]` although it doesn't use
-/// all the 256 possible values of `u8`. This crate encodes to ASCII, so only
-/// values smaller than 128 are allowed.
+/// The main idea of a [base-conversion] encoding is to see `[u8]` as numbers written in
+/// little-endian base256 and convert them in another little-endian base. For performance reasons,
+/// this crate restricts this other base to be of size 2 (binary), 4 (base4), 8 (octal), 16
+/// (hexadecimal), 32 (base32), or 64 (base64). The converted number is written as `[u8]` although
+/// it doesn't use all the 256 possible values of `u8`. This crate encodes to ASCII, so only values
+/// smaller than 128 are allowed.
 ///
 /// More precisely, we need the following elements:
 ///
-/// - The bit-width N: 1 for binary, 2 for base4, 3 for octal, 4 for
-/// hexadecimal, 5 for base32, and 6 for base64
+/// - The bit-width N: 1 for binary, 2 for base4, 3 for octal, 4 for hexadecimal, 5 for base32, and
+///   6 for base64
 /// - The [bit-order](enum.BitOrder.html): most or least significant bit first
-/// - The symbols function S from [0, 2<sup>N</sup>) (called values and written
-/// `uN`) to symbols (represented as `u8` although only ASCII symbols are
-/// allowed, i.e. smaller than 128)
-/// - The values partial function V from ASCII to [0, 2<sup>N</sup>), i.e. from
-/// `u8` to `uN`
-/// - Whether trailing bits are checked: trailing bits are leading zeros in
-/// theory, but since numbers are little-endian they come last
+/// - The symbols function S from [0, 2<sup>N</sup>) (called values and written `uN`) to symbols
+///   (represented as `u8` although only ASCII symbols are allowed, i.e. smaller than 128)
+/// - The values partial function V from ASCII to [0, 2<sup>N</sup>), i.e. from `u8` to `uN`
+/// - Whether trailing bits are checked: trailing bits are leading zeros in theory, but since
+///   numbers are little-endian they come last
 ///
-/// For the encoding to be correct (i.e. encoding then decoding gives back the
-/// initial input), V(S(i)) must be defined and equal to i for all i in [0,
-/// 2<sup>N</sup>). For the encoding to be [canonical][canonical] (i.e.
-/// different inputs decode to different outputs, or equivalently, decoding then
-/// encoding gives back the initial input), trailing bits must be checked and if
-/// V(i) is defined then S(V(i)) is equal to i for all i.
+/// For the encoding to be correct (i.e. encoding then decoding gives back the initial input),
+/// V(S(i)) must be defined and equal to i for all i in [0, 2<sup>N</sup>). For the encoding to be
+/// [canonical][canonical] (i.e. different inputs decode to different outputs, or equivalently,
+/// decoding then encoding gives back the initial input), trailing bits must be checked and if V(i)
+/// is defined then S(V(i)) is equal to i for all i.
 ///
 /// Encoding and decoding are given by the following pipeline:
 ///
@@ -950,46 +979,43 @@ pub struct Wrap {
 ///
 /// - the bit-width is 3 (octal), 5 (base32), or 6 (base64)
 /// - the length of the data to encode is not known in advance
+/// - the data must be sent without buffering
 ///
-/// Bases for which the bit-width N does not divide 8 may not concatenate
-/// encoded data. This comes from the fact that it is not possible to make the
-/// difference between trailing bits and encoding bits. Padding solves this
-/// issue by adding a new character (which is not a symbol) to discriminate
-/// between trailing bits and encoding bits. The idea is to work by blocks of
-/// lcm(8, N) bits, where lcm(8, N) is the least common multiple of 8 and N.
-/// When such block is not complete, it is padded.
+/// Bases for which the bit-width N does not divide 8 may not concatenate encoded data. This comes
+/// from the fact that it is not possible to make the difference between trailing bits and encoding
+/// bits. Padding solves this issue by adding a new character to discriminate between trailing bits
+/// and encoding bits. The idea is to work by blocks of lcm(8, N) bits, where lcm(8, N) is the least
+/// common multiple of 8 and N. When such block is not complete, it is padded.
 ///
 /// To preserve correctness, the padding character must not be a symbol.
 ///
 /// ### Ignore characters when decoding
 ///
-/// Ignoring characters when decoding is useful if after encoding some
-/// characters are added for convenience or any other reason (like wrapping). In
-/// that case we want to first ignore thoses characters before decoding.
+/// Ignoring characters when decoding is useful if after encoding some characters are added for
+/// convenience or any other reason (like wrapping). In that case we want to first ignore thoses
+/// characters before decoding.
 ///
-/// To preserve correctness, ignored characters must not contain symbols or the
-/// padding character.
+/// To preserve correctness, ignored characters must not contain symbols or the padding character.
 ///
 /// ### Wrap output when encoding
 ///
-/// Wrapping output when encoding is useful if the output is meant to be printed
-/// in a document where width is limited (typically 80-columns documents). In
-/// that case, the wrapping width and the wrapping separator have to be defined.
+/// Wrapping output when encoding is useful if the output is meant to be printed in a document where
+/// width is limited (typically 80-columns documents). In that case, the wrapping width and the
+/// wrapping separator have to be defined.
 ///
-/// To preserve correctness, the wrapping separator characters must be ignored
-/// (see previous subsection). As such, wrapping separator characters must also
-/// not contain symbols or the padding character.
+/// To preserve correctness, the wrapping separator characters must be ignored (see previous
+/// subsection). As such, wrapping separator characters must also not contain symbols or the padding
+/// character.
 ///
 /// ### Translate characters when decoding
 ///
-/// Translating characters when decoding is useful when encoded data may be
-/// copied by a humain instead of a machine. Humans tend to confuse some
-/// characters for others. In that case we want to translate those characters
-/// before decoding.
+/// Translating characters when decoding is useful when encoded data may be copied by a humain
+/// instead of a machine. Humans tend to confuse some characters for others. In that case we want to
+/// translate those characters before decoding.
 ///
-/// To preserve correctness, the characters we translate from must not contain
-/// symbols or the padding character, and the characters we translate to must
-/// only contain symbols or the padding character.
+/// To preserve correctness, the characters we translate _from_ must not contain symbols or the
+/// padding character, and the characters we translate _to_ must only contain symbols or the padding
+/// character.
 ///
 /// # Practice
 ///
@@ -1010,12 +1036,11 @@ pub struct Wrap {
 /// assert_eq!(hexadecimal.encode(b"Bit"), "426974");
 /// ```
 ///
-/// The `binary` base has 2 symbols `0` and `1` with value 0 and 1 respectively.
-/// The `octal` base has 8 symbols `0` to `7` with value 0 to 7. The
-/// `hexadecimal` base has 16 symbols `0` to `9` and `a` to `f` with value 0 to
-/// 15. The following diagram gives the idea of how encoding works in the
-/// previous example (note that we can actually write such diagram only because
-/// the bit-order is most significant first):
+/// The `binary` base has 2 symbols `0` and `1` with value 0 and 1 respectively. The `octal` base
+/// has 8 symbols `0` to `7` with value 0 to 7. The `hexadecimal` base has 16 symbols `0` to `9` and
+/// `a` to `f` with value 0 to 15. The following diagram gives the idea of how encoding works in the
+/// previous example (note that we can actually write such diagram only because the bit-order is
+/// most significant first):
 ///
 /// ```text
 /// [      octal] |  2  :  0  :  4  :  6  :  4  :  5  :  6  :  4  |
@@ -1024,13 +1049,12 @@ pub struct Wrap {
 ///                ^-- LSB                                       ^-- MSB
 /// ```
 ///
-/// Note that in theory, these little-endian numbers are read from right to left
-/// (the most significant bit is at the right). Since leading zeros are
-/// meaningless (in our usual decimal notation 0123 is the same as 123), it
-/// explains why trailing bits must be zero. Trailing bits may occur when the
-/// bit-width of a base does not divide 8. Only binary, base4, and hexadecimal
-/// don't have trailing bits issues. So let's consider octal and base64, which
-/// have trailing bits in similar circumstances:
+/// Note that in theory, these little-endian numbers are read from right to left (the most
+/// significant bit is at the right). Since leading zeros are meaningless (in our usual decimal
+/// notation 0123 is the same as 123), it explains why trailing bits must be zero. Trailing bits may
+/// occur when the bit-width of a base does not divide 8. Only binary, base4, and hexadecimal don't
+/// have trailing bits issues. So let's consider octal and base64, which have trailing bits in
+/// similar circumstances:
 ///
 /// ```rust
 /// use data_encoding::{Specification, BASE64_NOPAD};
@@ -1043,8 +1067,7 @@ pub struct Wrap {
 /// assert_eq!(octal.encode(b"B"), "204");
 /// ```
 ///
-/// We have the following diagram, where the base64 values are written between
-/// parentheses:
+/// We have the following diagram, where the base64 values are written between parentheses:
 ///
 /// ```text
 /// [base64] |   Q(16)   :   g(32)   : [has 4 zero trailing bits]
@@ -1058,8 +1081,8 @@ pub struct Wrap {
 ///
 /// ### Padding
 ///
-/// For octal and base64, lcm(8, 3) == lcm(8, 6) == 24 bits or 3 bytes. For
-/// base32, lcm(8, 5) is 40 bits or 5 bytes. Let's consider octal and base64:
+/// For octal and base64, lcm(8, 3) == lcm(8, 6) == 24 bits or 3 bytes. For base32, lcm(8, 5) is 40
+/// bits or 5 bytes. Let's consider octal and base64:
 ///
 /// ```rust
 /// use data_encoding::{Specification, BASE64};
@@ -1097,8 +1120,8 @@ pub struct Wrap {
 ///
 /// ### Ignore characters when decoding
 ///
-/// The typical use-case is to ignore newlines (`\r` and `\n`). But to keep the
-/// example small, we will ignore spaces.
+/// The typical use-case is to ignore newlines (`\r` and `\n`). But to keep the example small, we
+/// will ignore spaces.
 ///
 /// ```rust
 /// let mut spec = data_encoding::HEXLOWER.specification();
@@ -1109,9 +1132,8 @@ pub struct Wrap {
 ///
 /// ### Wrap output when encoding
 ///
-/// The typical use-case is to wrap after 64 or 76 characters with a newline
-/// (`\r\n` or `\n`). But to keep the example small, we will wrap after 8
-/// characters with a space.
+/// The typical use-case is to wrap after 64 or 76 characters with a newline (`\r\n` or `\n`). But
+/// to keep the example small, we will wrap after 8 characters with a space.
 ///
 /// ```rust
 /// let mut spec = data_encoding::BASE64.specification();
@@ -1125,9 +1147,8 @@ pub struct Wrap {
 ///
 /// ### Translate characters when decoding
 ///
-/// The typical use-case is to translate lowercase to uppercase or reciprocally,
-/// but it is also used for letters that look alike, like `O0` or `Il1`. Let's
-/// illustrate both examples.
+/// The typical use-case is to translate lowercase to uppercase or reciprocally, but it is also used
+/// for letters that look alike, like `O0` or `Il1`. Let's illustrate both examples.
 ///
 /// ```rust
 /// let mut spec = data_encoding::HEXLOWER.specification();
@@ -1137,70 +1158,63 @@ pub struct Wrap {
 /// assert_eq!(base.decode(b"BOIl"), base.decode(b"b011"));
 /// ```
 ///
-/// [base-conversion]:
-///     https://en.wikipedia.org/wiki/Positional_notation#Base_conversion
+/// # Features
+///
+/// Requires the `alloc` feature.
+///
+/// [base-conversion]: https://en.wikipedia.org/wiki/Positional_notation#Base_conversion
 /// [canonical]: https://tools.ietf.org/html/rfc4648#section-3.5
 #[derive(Debug, Clone)]
+#[cfg(feature = "alloc")]
 pub struct Specification {
     /// Symbols
     ///
-    /// The number of symbols must be 2, 4, 8, 16, 32, or 64. Symbols must be
-    /// ASCII characters (smaller than 128) and they must be unique.
+    /// The number of symbols must be 2, 4, 8, 16, 32, or 64. Symbols must be ASCII characters
+    /// (smaller than 128) and they must be unique.
     pub symbols: String,
 
     /// Bit-order
     ///
-    /// The default is to use most significant bit first since it is the most
-    /// common.
+    /// The default is to use most significant bit first since it is the most common.
     pub bit_order: BitOrder,
 
     /// Check trailing bits
     ///
-    /// The default is to check trailing bits. This field is ignored when
-    /// unnecessary (i.e. for base2, base4, and base16).
+    /// The default is to check trailing bits. This field is ignored when unnecessary (i.e. for
+    /// base2, base4, and base16).
     pub check_trailing_bits: bool,
 
     /// Padding
     ///
-    /// The default is to not use padding. The padding character must be ASCII
-    /// and must not be a symbol.
+    /// The default is to not use padding. The padding character must be ASCII and must not be a
+    /// symbol.
     pub padding: Option<char>,
 
     /// Characters to ignore when decoding
     ///
-    /// The default is to not ignore characters when decoding. The characters to
-    /// ignore must be ASCII and must not be symbols or the padding character.
+    /// The default is to not ignore characters when decoding. The characters to ignore must be
+    /// ASCII and must not be symbols or the padding character.
     pub ignore: String,
 
     /// How to wrap the output when encoding
     ///
-    /// The default is to not wrap the output when encoding. The wrapping
-    /// characters must be ASCII and must not be symbols or the padding
-    /// character.
+    /// The default is to not wrap the output when encoding. The wrapping characters must be ASCII
+    /// and must not be symbols or the padding character.
     pub wrap: Wrap,
 
     /// How to translate characters when decoding
     ///
-    /// The default is to not translate characters when decoding. The characters
-    /// to translate from must be ASCII and must not have already been assigned
-    /// a semantics. The characters to translate to must be ASCII and must have
-    /// been assigned a semantics (symbol, padding character, or ignored
-    /// character).
+    /// The default is to not translate characters when decoding. The characters to translate from
+    /// must be ASCII and must not have already been assigned a semantics. The characters to
+    /// translate to must be ASCII and must have been assigned a semantics (symbol, padding
+    /// character, or ignored character).
     pub translate: Translate,
 }
 
-impl Specification {
-    /// Returns a default specification
-    pub fn new() -> Specification {
-        Specification {
-            symbols: String::new(),
-            bit_order: MostSignificantFirst,
-            check_trailing_bits: true,
-            padding: None,
-            ignore: String::new(),
-            wrap: Wrap { width: 0, separator: String::new() },
-            translate: Translate { from: String::new(), to: String::new() },
-        }
+#[cfg(feature = "alloc")]
+impl Default for Specification {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1208,9 +1222,11 @@ impl Encoding {
     fn sym(&self) -> &[u8; 256] {
         unsafe { as_array(&self.0[0 .. 256]) }
     }
+
     fn val(&self) -> &[u8; 256] {
         unsafe { as_array(&self.0[256 .. 512]) }
     }
+
     fn pad(&self) -> Option<u8> {
         if self.0[512] < 128 {
             Some(self.0[512])
@@ -1218,21 +1234,26 @@ impl Encoding {
             None
         }
     }
+
     fn ctb(&self) -> bool {
         self.0[513] & 0x10 != 0
     }
+
     fn msb(&self) -> bool {
         self.0[513] & 0x8 != 0
     }
+
     fn bit(&self) -> usize {
         (self.0[513] & 0x7) as usize
     }
+
     fn wrap(&self) -> Option<(usize, &[u8])> {
         if self.0.len() <= 515 {
             return None;
         }
         Some((self.0[514] as usize, &self.0[515 ..]))
     }
+
     fn has_ignore(&self) -> bool {
         self.0.len() >= 515
     }
@@ -1255,8 +1276,8 @@ impl Encoding {
     ///
     /// # Panics
     ///
-    /// Panics if the `output` length does not match the result of
-    /// [`encode_len`] for the `input` length.
+    /// Panics if the `output` length does not match the result of [`encode_len`] for the `input`
+    /// length.
     ///
     /// # Examples
     ///
@@ -1270,6 +1291,7 @@ impl Encoding {
     /// ```
     ///
     /// [`encode_len`]: struct.Encoding.html#method.encode_len
+    #[allow(clippy::cognitive_complexity)]
     pub fn encode_mut(&self, input: &[u8], output: &mut [u8]) {
         assert_eq!(output.len(), self.encode_len(input.len()));
         dispatch! {
@@ -1281,6 +1303,30 @@ impl Encoding {
         }
     }
 
+    /// Appends the encoding of `input` to `output`
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use data_encoding::BASE64;
+    /// # let mut buffer = vec![0; 100];
+    /// let input = b"Hello world";
+    /// let mut output = "Result: ".to_string();
+    /// BASE64.encode_append(input, &mut output);
+    /// assert_eq!(output, "Result: SGVsbG8gd29ybGQ=");
+    /// ```
+    ///
+    /// # Features
+    ///
+    /// Requires the `alloc` feature.
+    #[cfg(feature = "alloc")]
+    pub fn encode_append(&self, input: &[u8], output: &mut String) {
+        let output = unsafe { output.as_mut_vec() };
+        let output_len = output.len();
+        output.resize(output_len + self.encode_len(input.len()), 0u8);
+        self.encode_mut(input, &mut output[output_len ..]);
+    }
+
     /// Returns encoded `input`
     ///
     /// # Examples
@@ -1289,6 +1335,11 @@ impl Encoding {
     /// use data_encoding::BASE64;
     /// assert_eq!(BASE64.encode(b"Hello world"), "SGVsbG8gd29ybGQ=");
     /// ```
+    ///
+    /// # Features
+    ///
+    /// Requires the `alloc` feature.
+    #[cfg(feature = "alloc")]
     pub fn encode(&self, input: &[u8]) -> String {
         let mut output = vec![0u8; self.encode_len(input.len())];
         self.encode_mut(input, &mut output);
@@ -1301,8 +1352,8 @@ impl Encoding {
     ///
     /// # Errors
     ///
-    /// Returns an error if `len` is invalid. The error kind is [`Length`] and
-    /// the [position] is the greatest valid input length.
+    /// Returns an error if `len` is invalid. The error kind is [`Length`] and the [position] is the
+    /// greatest valid input length.
     ///
     /// [`decode_mut`]: struct.Encoding.html#method.decode_mut
     /// [`Length`]: enum.DecodeKind.html#variant.Length
@@ -1322,26 +1373,24 @@ impl Encoding {
 
     /// Decodes `input` in `output`
     ///
-    /// Returns the length of the decoded output. This length may be smaller
-    /// than the output length if the input contained padding or ignored
-    /// characters. The output bytes after the returned length are not
-    /// initialized and should not be read.
+    /// Returns the length of the decoded output. This length may be smaller than the output length
+    /// if the input contained padding or ignored characters. The output bytes after the returned
+    /// length are not initialized and should not be read.
     ///
     /// # Panics
     ///
-    /// Panics if the `output` length does not match the result of
-    /// [`decode_len`] for the `input` length. Also panics if `decode_len` fails
-    /// for the `input` length.
+    /// Panics if the `output` length does not match the result of [`decode_len`] for the `input`
+    /// length. Also panics if `decode_len` fails for the `input` length.
     ///
     /// # Errors
     ///
-    /// Returns an error if `input` is invalid. See [`decode`] for more details.
-    /// The are two differences though:
+    /// Returns an error if `input` is invalid. See [`decode`] for more details. The are two
+    /// differences though:
     ///
-    /// - [`Length`] may be returned only if the encoding allows ignored
-    /// characters, because otherwise this is already checked by [`decode_len`].
-    /// - The [`read`] first bytes of the input have been successfully decoded
-    /// to the [`written`] first bytes of the output.
+    /// - [`Length`] may be returned only if the encoding allows ignored characters, because
+    ///   otherwise this is already checked by [`decode_len`].
+    /// - The [`read`] first bytes of the input have been successfully decoded to the [`written`]
+    ///   first bytes of the output.
     ///
     /// # Examples
     ///
@@ -1359,6 +1408,7 @@ impl Encoding {
     /// [`Length`]: enum.DecodeKind.html#variant.Length
     /// [`read`]: struct.DecodePartial.html#structfield.read
     /// [`written`]: struct.DecodePartial.html#structfield.written
+    #[allow(clippy::cognitive_complexity)]
     pub fn decode_mut(&self, input: &[u8], output: &mut [u8]) -> Result<usize, DecodePartial> {
         assert_eq!(Ok(output.len()), self.decode_len(input.len()));
         dispatch! {
@@ -1377,16 +1427,16 @@ impl Encoding {
     ///
     /// Returns an error if `input` is invalid. The error kind can be:
     ///
-    /// - [`Length`] if the input length is invalid. The [position] is the
-    /// greatest valid input length.
-    /// - [`Symbol`] if the input contains an invalid character. The [position]
-    /// is the first invalid character.
-    /// - [`Trailing`] if the input has non-zero trailing bits. This is only
-    /// possible if the encoding checks trailing bits. The [position] is the
-    /// first character containing non-zero trailing bits.
-    /// - [`Padding`] if the input has an invalid padding length. This is only
-    /// possible if the encoding uses padding. The [position] is the first
-    /// padding character of the first padding of invalid length.
+    /// - [`Length`] if the input length is invalid. The [position] is the greatest valid input
+    ///   length.
+    /// - [`Symbol`] if the input contains an invalid character. The [position] is the first invalid
+    ///   character.
+    /// - [`Trailing`] if the input has non-zero trailing bits. This is only possible if the
+    ///   encoding checks trailing bits. The [position] is the first character containing non-zero
+    ///   trailing bits.
+    /// - [`Padding`] if the input has an invalid padding length. This is only possible if the
+    ///   encoding uses padding. The [position] is the first padding character of the first padding
+    ///   of invalid length.
     ///
     /// # Examples
     ///
@@ -1395,11 +1445,16 @@ impl Encoding {
     /// assert_eq!(BASE64.decode(b"SGVsbA==byB3b3JsZA==").unwrap(), b"Hello world");
     /// ```
     ///
+    /// # Features
+    ///
+    /// Requires the `alloc` feature.
+    ///
     /// [`Length`]: enum.DecodeKind.html#variant.Length
     /// [`Symbol`]: enum.DecodeKind.html#variant.Symbol
     /// [`Trailing`]: enum.DecodeKind.html#variant.Trailing
     /// [`Padding`]: enum.DecodeKind.html#variant.Padding
     /// [position]: struct.DecodeError.html#structfield.position
+    #[cfg(feature = "alloc")]
     pub fn decode(&self, input: &[u8]) -> Result<Vec<u8>, DecodeError> {
         let mut output = vec![0u8; self.decode_len(input.len())?];
         let len = self.decode_mut(input, &mut output).map_err(|partial| partial.error)?;
@@ -1442,11 +1497,16 @@ impl Encoding {
     }
 
     /// Returns the encoding specification
+    ///
+    /// # Features
+    ///
+    /// Requires the `alloc` feature.
+    #[cfg(feature = "alloc")]
     pub fn specification(&self) -> Specification {
         let mut specification = Specification::new();
         specification
             .symbols
-            .push_str(std::str::from_utf8(&self.sym()[0 .. 1 << self.bit()]).unwrap());
+            .push_str(core::str::from_utf8(&self.sym()[0 .. 1 << self.bit()]).unwrap());
         specification.bit_order =
             if self.msb() { MostSignificantFirst } else { LeastSignificantFirst };
         specification.check_trailing_bits = self.ctb();
@@ -1461,7 +1521,7 @@ impl Encoding {
         }
         if let Some((col, end)) = self.wrap() {
             specification.wrap.width = col;
-            specification.wrap.separator = std::str::from_utf8(end).unwrap().to_owned();
+            specification.wrap.separator = core::str::from_utf8(end).unwrap().to_owned();
         }
         for i in 0 .. 128u8 {
             let canonical = if self.val()[i as usize] < 1 << self.bit() {
@@ -1481,8 +1541,12 @@ impl Encoding {
     }
 
     #[doc(hidden)]
-    pub fn internal_new(implementation: &'static [u8]) -> Encoding {
-        Encoding(std::borrow::Cow::Borrowed(implementation))
+    pub const fn internal_new(implementation: &'static [u8]) -> Encoding {
+        #[cfg(feature = "alloc")]
+        let encoding = Encoding(Cow::Borrowed(implementation));
+        #[cfg(not(feature = "alloc"))]
+        let encoding = Encoding(implementation);
+        encoding
     }
 
     #[doc(hidden)]
@@ -1492,6 +1556,7 @@ impl Encoding {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[cfg(feature = "alloc")]
 enum SpecificationErrorImpl {
     BadSize,
     NotAscii,
@@ -1502,14 +1567,21 @@ enum SpecificationErrorImpl {
     FromTo,
     Undefined(u8),
 }
+#[cfg(feature = "alloc")]
 use crate::SpecificationErrorImpl::*;
 
 /// Specification error
+///
+/// # Features
+///
+/// Requires the `alloc` feature.
 #[derive(Debug, Copy, Clone)]
+#[cfg(feature = "alloc")]
 pub struct SpecificationError(SpecificationErrorImpl);
 
-impl std::fmt::Display for SpecificationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+#[cfg(feature = "alloc")]
+impl core::fmt::Display for SpecificationError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self.0 {
             BadSize => write!(f, "invalid number of symbols"),
             NotAscii => write!(f, "non-ascii character"),
@@ -1523,6 +1595,7 @@ impl std::fmt::Display for SpecificationError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for SpecificationError {
     fn description(&self) -> &str {
         match self.0 {
@@ -1538,7 +1611,21 @@ impl std::error::Error for SpecificationError {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Specification {
+    /// Returns a default specification
+    pub fn new() -> Specification {
+        Specification {
+            symbols: String::new(),
+            bit_order: MostSignificantFirst,
+            check_trailing_bits: true,
+            padding: None,
+            ignore: String::new(),
+            wrap: Wrap { width: 0, separator: String::new() },
+            translate: Translate { from: String::new(), to: String::new() },
+        }
+    }
+
     /// Returns the specified encoding
     ///
     /// # Errors
@@ -1562,10 +1649,11 @@ impl Specification {
                 return Ok(());
             }
             check!(SpecificationError(Duplicate(i)), v[i as usize] == INVALID);
-            Ok(v[i as usize] = x)
+            v[i as usize] = x;
+            Ok(())
         };
-        for v in 0 .. symbols.len() {
-            set(&mut values, symbols[v], v as u8)?;
+        for (v, symbols) in symbols.iter().enumerate() {
+            set(&mut values, *symbols, v as u8)?;
         }
         let msb = self.bit_order == MostSignificantFirst;
         let ctb = self.check_trailing_bits || 8 % bit == 0;
@@ -1625,7 +1713,7 @@ impl Specification {
         } else if values.contains(&IGNORE) {
             encoding.push(0);
         }
-        Ok(Encoding(std::borrow::Cow::Owned(encoding)))
+        Ok(Encoding(Cow::Owned(encoding)))
     }
 }
 
@@ -1648,8 +1736,8 @@ impl Specification {
 /// assert_eq!(HEXLOWER.decode(b"deadbeef").unwrap(), deadbeef);
 /// assert_eq!(HEXLOWER.encode(&deadbeef), "deadbeef");
 /// ```
-pub const HEXLOWER: Encoding = HEXLOWER_IMPL;
-const HEXLOWER_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const HEXLOWER: Encoding = Encoding::internal_new(HEXLOWER_IMPL);
+const HEXLOWER_IMPL: &[u8] = &[
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102, 48, 49, 50, 51, 52, 53, 54,
     55, 56, 57, 97, 98, 99, 100, 101, 102, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100,
     101, 102, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102, 48, 49, 50, 51,
@@ -1675,7 +1763,7 @@ const HEXLOWER_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 28,
-]));
+];
 
 /// Lowercase hexadecimal encoding with case-insensitive decoding
 ///
@@ -1705,8 +1793,8 @@ const HEXLOWER_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// use data_encoding::{Encoding, HEXLOWER_PERMISSIVE};
 /// const HEX: Encoding = HEXLOWER_PERMISSIVE;
 /// ```
-pub const HEXLOWER_PERMISSIVE: Encoding = HEXLOWER_PERMISSIVE_IMPL;
-const HEXLOWER_PERMISSIVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const HEXLOWER_PERMISSIVE: Encoding = Encoding::internal_new(HEXLOWER_PERMISSIVE_IMPL);
+const HEXLOWER_PERMISSIVE_IMPL: &[u8] = &[
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102, 48, 49, 50, 51, 52, 53, 54,
     55, 56, 57, 97, 98, 99, 100, 101, 102, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100,
     101, 102, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102, 48, 49, 50, 51,
@@ -1732,7 +1820,7 @@ const HEXLOWER_PERMISSIVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 28,
-]));
+];
 
 /// Uppercase hexadecimal encoding
 ///
@@ -1757,8 +1845,8 @@ const HEXLOWER_PERMISSIVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&
 /// ```
 ///
 /// [RFC4648]: https://tools.ietf.org/html/rfc4648#section-8
-pub const HEXUPPER: Encoding = HEXUPPER_IMPL;
-const HEXUPPER_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const HEXUPPER: Encoding = Encoding::internal_new(HEXUPPER_IMPL);
+const HEXUPPER_IMPL: &[u8] = &[
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70, 48, 49, 50, 51, 52, 53, 54, 55,
     56, 57, 65, 66, 67, 68, 69, 70, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70,
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70, 48, 49, 50, 51, 52, 53, 54, 55,
@@ -1783,7 +1871,7 @@ const HEXUPPER_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 28,
-]));
+];
 
 /// Uppercase hexadecimal encoding with case-insensitive decoding
 ///
@@ -1806,8 +1894,8 @@ const HEXUPPER_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// assert_eq!(HEXUPPER_PERMISSIVE.decode(b"DeadBeef").unwrap(), deadbeef);
 /// assert_eq!(HEXUPPER_PERMISSIVE.encode(&deadbeef), "DEADBEEF");
 /// ```
-pub const HEXUPPER_PERMISSIVE: Encoding = HEXUPPER_PERMISSIVE_IMPL;
-const HEXUPPER_PERMISSIVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const HEXUPPER_PERMISSIVE: Encoding = Encoding::internal_new(HEXUPPER_PERMISSIVE_IMPL);
+const HEXUPPER_PERMISSIVE_IMPL: &[u8] = &[
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70, 48, 49, 50, 51, 52, 53, 54, 55,
     56, 57, 65, 66, 67, 68, 69, 70, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70,
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70, 48, 49, 50, 51, 52, 53, 54, 55,
@@ -1832,7 +1920,7 @@ const HEXUPPER_PERMISSIVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 28,
-]));
+];
 
 /// Padded base32 encoding
 ///
@@ -1849,8 +1937,8 @@ const HEXUPPER_PERMISSIVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&
 /// It is conform to [RFC4648].
 ///
 /// [RFC4648]: https://tools.ietf.org/html/rfc4648#section-6
-pub const BASE32: Encoding = BASE32_IMPL;
-const BASE32_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE32: Encoding = Encoding::internal_new(BASE32_IMPL);
+const BASE32_IMPL: &[u8] = &[
     65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
     89, 90, 50, 51, 52, 53, 54, 55, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
     81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 50, 51, 52, 53, 54, 55, 65, 66, 67, 68, 69, 70, 71, 72,
@@ -1875,7 +1963,7 @@ const BASE32_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 61, 29,
-]));
+];
 
 /// Unpadded base32 encoding
 ///
@@ -1887,8 +1975,8 @@ const BASE32_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// spec.symbols.push_str("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567");
 /// assert_eq!(BASE32_NOPAD, spec.encoding().unwrap());
 /// ```
-pub const BASE32_NOPAD: Encoding = BASE32_NOPAD_IMPL;
-const BASE32_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE32_NOPAD: Encoding = Encoding::internal_new(BASE32_NOPAD_IMPL);
+const BASE32_NOPAD_IMPL: &[u8] = &[
     65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
     89, 90, 50, 51, 52, 53, 54, 55, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
     81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 50, 51, 52, 53, 54, 55, 65, 66, 67, 68, 69, 70, 71, 72,
@@ -1913,7 +2001,7 @@ const BASE32_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 29,
-]));
+];
 
 /// Padded base32hex encoding
 ///
@@ -1930,8 +2018,8 @@ const BASE32_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// It is conform to [RFC4648].
 ///
 /// [RFC4648]: https://tools.ietf.org/html/rfc4648#section-7
-pub const BASE32HEX: Encoding = BASE32HEX_IMPL;
-const BASE32HEX_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE32HEX: Encoding = Encoding::internal_new(BASE32HEX_IMPL);
+const BASE32HEX_IMPL: &[u8] = &[
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78,
     79, 80, 81, 82, 83, 84, 85, 86, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70,
     71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 48, 49, 50, 51, 52, 53, 54, 55,
@@ -1956,7 +2044,7 @@ const BASE32HEX_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 61, 29,
-]));
+];
 
 /// Unpadded base32hex encoding
 ///
@@ -1968,8 +2056,8 @@ const BASE32HEX_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// spec.symbols.push_str("0123456789ABCDEFGHIJKLMNOPQRSTUV");
 /// assert_eq!(BASE32HEX_NOPAD, spec.encoding().unwrap());
 /// ```
-pub const BASE32HEX_NOPAD: Encoding = BASE32HEX_NOPAD_IMPL;
-const BASE32HEX_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE32HEX_NOPAD: Encoding = Encoding::internal_new(BASE32HEX_NOPAD_IMPL);
+const BASE32HEX_NOPAD_IMPL: &[u8] = &[
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78,
     79, 80, 81, 82, 83, 84, 85, 86, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70,
     71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 48, 49, 50, 51, 52, 53, 54, 55,
@@ -1994,7 +2082,7 @@ const BASE32HEX_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 29,
-]));
+];
 
 /// DNSSEC base32 encoding
 ///
@@ -2016,8 +2104,8 @@ const BASE32HEX_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// - It does not use padding.
 ///
 /// [RFC5155]: https://tools.ietf.org/html/rfc5155
-pub const BASE32_DNSSEC: Encoding = BASE32_DNSSEC_IMPL;
-const BASE32_DNSSEC_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE32_DNSSEC: Encoding = Encoding::internal_new(BASE32_DNSSEC_IMPL);
+const BASE32_DNSSEC_IMPL: &[u8] = &[
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107,
     108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
     97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115,
@@ -2044,7 +2132,7 @@ const BASE32_DNSSEC_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 29,
-]));
+];
 
 /// DNSCurve base32 encoding
 ///
@@ -2063,8 +2151,8 @@ const BASE32_DNSSEC_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// It is conform to [DNSCurve].
 ///
 /// [DNSCurve]: https://dnscurve.org/in-implement.html
-pub const BASE32_DNSCURVE: Encoding = BASE32_DNSCURVE_IMPL;
-const BASE32_DNSCURVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE32_DNSCURVE: Encoding = Encoding::internal_new(BASE32_DNSCURVE_IMPL);
+const BASE32_DNSCURVE_IMPL: &[u8] = &[
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 98, 99, 100, 102, 103, 104, 106, 107, 108, 109, 110,
     112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
     98, 99, 100, 102, 103, 104, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 117, 118, 119,
@@ -2091,7 +2179,7 @@ const BASE32_DNSCURVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 21,
-]));
+];
 
 /// Padded base64 encoding
 ///
@@ -2108,8 +2196,8 @@ const BASE32_DNSCURVE_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// It is conform to [RFC4648].
 ///
 /// [RFC4648]: https://tools.ietf.org/html/rfc4648#section-4
-pub const BASE64: Encoding = BASE64_IMPL;
-const BASE64_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE64: Encoding = Encoding::internal_new(BASE64_IMPL);
+const BASE64_IMPL: &[u8] = &[
     65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
     89, 90, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
     115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 43, 47, 65, 66,
@@ -2135,7 +2223,7 @@ const BASE64_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 61, 30,
-]));
+];
 
 /// Unpadded base64 encoding
 ///
@@ -2147,8 +2235,8 @@ const BASE64_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// spec.symbols.push_str("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 /// assert_eq!(BASE64_NOPAD, spec.encoding().unwrap());
 /// ```
-pub const BASE64_NOPAD: Encoding = BASE64_NOPAD_IMPL;
-const BASE64_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE64_NOPAD: Encoding = Encoding::internal_new(BASE64_NOPAD_IMPL);
+const BASE64_NOPAD_IMPL: &[u8] = &[
     65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
     89, 90, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
     115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 43, 47, 65, 66,
@@ -2174,7 +2262,7 @@ const BASE64_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 30,
-]));
+];
 
 /// MIME base64 encoding
 ///
@@ -2194,8 +2282,8 @@ const BASE64_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// and does not ignore all characters.
 ///
 /// [RFC2045]: https://tools.ietf.org/html/rfc2045
-pub const BASE64_MIME: Encoding = BASE64_MIME_IMPL;
-const BASE64_MIME_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE64_MIME: Encoding = Encoding::internal_new(BASE64_MIME_IMPL);
+const BASE64_MIME_IMPL: &[u8] = &[
     65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
     89, 90, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
     115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 43, 47, 65, 66,
@@ -2221,7 +2309,7 @@ const BASE64_MIME_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 61, 30, 76, 13, 10,
-]));
+];
 
 /// Padded base64url encoding
 ///
@@ -2238,8 +2326,8 @@ const BASE64_MIME_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// It is conform to [RFC4648].
 ///
 /// [RFC4648]: https://tools.ietf.org/html/rfc4648#section-5
-pub const BASE64URL: Encoding = BASE64URL_IMPL;
-const BASE64URL_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE64URL: Encoding = Encoding::internal_new(BASE64URL_IMPL);
+const BASE64URL_IMPL: &[u8] = &[
     65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
     89, 90, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
     115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 45, 95, 65, 66,
@@ -2265,7 +2353,7 @@ const BASE64URL_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 61, 30,
-]));
+];
 
 /// Unpadded base64url encoding
 ///
@@ -2277,8 +2365,8 @@ const BASE64URL_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
 /// spec.symbols.push_str("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_");
 /// assert_eq!(BASE64URL_NOPAD, spec.encoding().unwrap());
 /// ```
-pub const BASE64URL_NOPAD: Encoding = BASE64URL_NOPAD_IMPL;
-const BASE64URL_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
+pub const BASE64URL_NOPAD: Encoding = Encoding::internal_new(BASE64URL_NOPAD_IMPL);
+const BASE64URL_NOPAD_IMPL: &[u8] = &[
     65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
     89, 90, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
     115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 45, 95, 65, 66,
@@ -2304,4 +2392,4 @@ const BASE64URL_NOPAD_IMPL: Encoding = Encoding(std::borrow::Cow::Borrowed(&[
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 30,
-]));
+];

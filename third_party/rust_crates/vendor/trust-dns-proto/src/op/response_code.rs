@@ -136,9 +136,17 @@ impl ResponseCode {
         (u16::from(self) & 0x000F) as u8
     }
 
-    /// returns the high 12 bits for the edns portion of the response code
-    pub fn high(self) -> u16 {
-        (u16::from(self) & 0x0FF0) >> 4
+    /// returns the high 8 bits for the EDNS portion of the response code
+    pub fn high(self) -> u8 {
+        ((u16::from(self) & 0x0FF0) >> 4) as u8
+    }
+
+    /// DNS can not store the entire space of ResponseCodes in 4 bit space of the Header, this function
+    ///   allows for a initial value of the first 4 bits to be set.
+    ///
+    /// After the EDNS is read, the entire ResponseCode (12 bits) can be reconstructed for the full ResponseCode.
+    pub fn from_low(low: u8) -> Self {
+        ((u16::from(low)) & 0x000F).into()
     }
 
     /// Combines the EDNS high and low from the Header to produce the Extended ResponseCode
@@ -174,8 +182,14 @@ impl ResponseCode {
     }
 }
 
+impl Default for ResponseCode {
+    fn default() -> Self {
+        Self::NoError
+    }
+}
+
 impl Display for ResponseCode {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str(self.to_str())
     }
 }

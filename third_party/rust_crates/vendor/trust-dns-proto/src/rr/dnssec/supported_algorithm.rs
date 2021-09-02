@@ -20,6 +20,9 @@ use std::convert::From;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use log::warn;
 
 use crate::error::*;
@@ -27,6 +30,7 @@ use crate::rr::dnssec::Algorithm;
 use crate::serialize::binary::{BinEncodable, BinEncoder};
 
 /// Used to specify the set of SupportedAlgorithms between a client and server
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct SupportedAlgorithms {
     // right now the number of Algorithms supported are fewer than 16..
@@ -104,7 +108,7 @@ impl SupportedAlgorithms {
     }
 
     /// Return an Iterator over the supported set.
-    pub fn iter(&self) -> SupportedAlgorithmsIter {
+    pub fn iter(&self) -> SupportedAlgorithmsIter<'_> {
         SupportedAlgorithmsIter::new(self)
     }
 
@@ -127,7 +131,7 @@ impl Default for SupportedAlgorithms {
 }
 
 impl Display for SupportedAlgorithms {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         for a in self.iter() {
             a.fmt(f)?;
             f.write_str(", ")?;
@@ -205,7 +209,7 @@ impl<'a> Iterator for SupportedAlgorithmsIter<'a> {
 }
 
 impl BinEncodable for SupportedAlgorithms {
-    fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         for a in self.iter() {
             encoder.emit_u8(a.into())?;
         }

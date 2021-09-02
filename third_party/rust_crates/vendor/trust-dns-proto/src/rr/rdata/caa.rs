@@ -20,7 +20,11 @@
 //! record and rules for processing CAA records by certificate issuers.
 //! ```
 
+use std::fmt;
 use std::str;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::*;
 use crate::rr::domain::Name;
@@ -126,6 +130,7 @@ use url::Url;
 /// domain will change between the time a certificate was issued and
 /// validation by a relying party.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct CAA {
     #[doc(hidden)]
@@ -213,6 +218,7 @@ impl CAA {
 }
 
 /// Specifies in what contexts this key may be trusted for use
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Property {
     /// The issue property
@@ -232,14 +238,15 @@ pub enum Property {
     ///    Certification Practices or Certificate Policy, or that a
     ///    Certificate Evaluator may use to report observation of a possible
     ///    policy violation. The Incident Object Description Exchange Format
-    ///    (IODEF) format is used [RFC5070].
+    ///    (IODEF) format is used [RFC5070](https://tools.ietf.org/html/rfc5070).
     Iodef,
     /// Unknown format to Trust-DNS
     Unknown(String),
 }
 
 impl Property {
-    fn as_str(&self) -> &str {
+    /// Convert to string form
+    pub fn as_str(&self) -> &str {
         match *self {
             Property::Issue => "issue",
             Property::IssueWild => "issuewild",
@@ -250,38 +257,22 @@ impl Property {
 
     /// true if the property is `issue`
     pub fn is_issue(&self) -> bool {
-        if let Property::Issue = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, Property::Issue)
     }
 
     /// true if the property is `issueworld`
     pub fn is_issuewild(&self) -> bool {
-        if let Property::IssueWild = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, Property::IssueWild)
     }
 
     /// true if the property is `iodef`
     pub fn is_iodef(&self) -> bool {
-        if let Property::Iodef = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, Property::Iodef)
     }
 
     /// true if the property is not known to Trust-DNS
     pub fn is_unknown(&self) -> bool {
-        if let Property::Unknown(_) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, Property::Unknown(_))
     }
 }
 
@@ -308,6 +299,7 @@ impl From<String> for Property {
 /// `Issue` and `IssueWild` => `Issuer`,
 /// `Iodef` => `Url`,
 /// `Unknown` => `Unknown`,
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Value {
     /// Issuer authorized to issue certs for this zone, and any associated parameters
@@ -321,35 +313,23 @@ pub enum Value {
 impl Value {
     /// true if this is an `Issuer`
     pub fn is_issuer(&self) -> bool {
-        if let Value::Issuer(..) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, Value::Issuer(..))
     }
 
     /// true if this is a `Url`
     pub fn is_url(&self) -> bool {
-        if let Value::Url(..) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, Value::Url(..))
     }
 
     /// true if this is an `Unknown`
     pub fn is_unknown(&self) -> bool {
-        if let Value::Unknown(..) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, Value::Unknown(..))
     }
 }
 
 fn read_value(
     tag: &Property,
-    decoder: &mut BinDecoder,
+    decoder: &mut BinDecoder<'_>,
     value_len: Restrict<u16>,
 ) -> ProtoResult<Value> {
     let value_len = value_len.map(|u| u as usize).unverified(/*used purely as length safely*/);
@@ -370,7 +350,7 @@ fn read_value(
     }
 }
 
-fn emit_value(encoder: &mut BinEncoder, value: &Value) -> ProtoResult<()> {
+fn emit_value(encoder: &mut BinEncoder<'_>, value: &Value) -> ProtoResult<()> {
     match *value {
         Value::Issuer(ref name, ref key_values) => {
             // output the name
@@ -649,6 +629,7 @@ pub fn read_iodef(url: &[u8]) -> ProtoResult<Url> {
 ///
 /// See [RFC 6844, DNS Certification Authority Authorization, January 2013](https://tools.ietf.org/html/rfc6844#section-5.2)
 /// for more explanation.
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct KeyValue {
     key: String,
@@ -753,7 +734,7 @@ impl KeyValue {
 ///      The length of the value field is specified implicitly as the
 ///      remaining length of the enclosing Resource Record data field.
 /// ```
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<CAA> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<CAA> {
     // the spec declares that other flags should be ignored for future compatibility...
     let issuer_critical: bool =
         decoder.read_u8()?.unverified(/*used as bitfield*/) & 0b1000_0000 != 0;
@@ -776,7 +757,7 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 // TODO: change this to return &str
-fn read_tag(decoder: &mut BinDecoder, len: Restrict<u8>) -> ProtoResult<String> {
+fn read_tag(decoder: &mut BinDecoder<'_>, len: Restrict<u8>) -> ProtoResult<String> {
     let len = len
         .map(|len| len as usize)
         .verify_unwrap(|len| *len > 0 && *len <= 15)
@@ -787,10 +768,7 @@ fn read_tag(decoder: &mut BinDecoder, len: Restrict<u8>) -> ProtoResult<String> 
         let ch = decoder
             .pop()?
             .map(char::from)
-            .verify_unwrap(|ch| match ch {
-                'a'..='z' | 'A'..='Z' | '0'..='9' => true,
-                _ => false,
-            })
+            .verify_unwrap(|ch| matches!(ch, 'a'..='z' | 'A'..='Z' | '0'..='9'))
             .map_err(|_| ProtoError::from("CAA tag character(s) out of bounds"))?;
 
         tag.push(ch);
@@ -825,7 +803,7 @@ fn emit_tag(buf: &mut [u8], tag: &Property) -> ProtoResult<u8> {
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, caa: &CAA) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, caa: &CAA) -> ProtoResult<()> {
     let mut flags = 0_u8;
 
     if caa.issuer_critical {
@@ -843,6 +821,67 @@ pub fn emit(encoder: &mut BinEncoder, caa: &CAA) -> ProtoResult<()> {
     emit_value(encoder, &caa.value)?;
 
     Ok(())
+}
+
+impl fmt::Display for Property {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        let s = match self {
+            Property::Issue => "issue",
+            Property::IssueWild => "issuewild",
+            Property::Iodef => "iodef",
+            Property::Unknown(s) => s,
+        };
+
+        f.write_str(s)
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        f.write_str("\"")?;
+
+        match self {
+            Value::Issuer(_, values) => {
+                if let Some(value) = values.first() {
+                    write!(f, "{}", value)?;
+                }
+
+                for value in &values[1..] {
+                    write!(f, "; {}", value)?;
+                }
+            }
+            Value::Url(url) => write!(f, "{}", url)?,
+            Value::Unknown(v) => write!(f, "{:?}", v)?,
+        }
+
+        f.write_str("\"")
+    }
+}
+
+impl fmt::Display for KeyValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        f.write_str(&self.key)?;
+        if !self.value.is_empty() {
+            write!(f, "={}", self.value)?;
+        }
+
+        Ok(())
+    }
+}
+
+// FIXME: this needs to be verified to be correct, add tests...
+impl fmt::Display for CAA {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        let critical = if self.issuer_critical { "1" } else { "0" };
+
+        write!(
+            f,
+            "{critical} {tag} {value}",
+            critical = critical,
+            tag = self.tag,
+            value = self.value
+        )
+    }
 }
 
 #[cfg(test)]
@@ -975,13 +1014,13 @@ mod tests {
 
     fn test_encode_decode(rdata: CAA) {
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         emit(&mut encoder, &rdata).expect("failed to emit caa");
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let read_rdata =
             read(&mut decoder, Restrict::new(bytes.len() as u16)).expect("failed to read back");
         assert_eq!(rdata, read_rdata);
@@ -1034,10 +1073,10 @@ mod tests {
 
     fn test_encode(rdata: CAA, encoded: &[u8]) {
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         emit(&mut encoder, &rdata).expect("failed to emit caa");
         let bytes = encoder.into_bytes();
-        assert_eq!(&bytes as &[u8], encoded);
+        assert_eq!(bytes as &[u8], encoded);
     }
 
     #[test]

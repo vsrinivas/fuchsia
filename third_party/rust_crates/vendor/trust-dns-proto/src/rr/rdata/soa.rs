@@ -16,6 +16,11 @@
 
 //! start of authority record defining ownership and defaults for the zone
 
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use crate::error::*;
 use crate::rr::domain::Name;
 use crate::serialize::binary::*;
@@ -60,10 +65,11 @@ use crate::serialize::binary::*;
 /// and the MINIMUM field in the appropriate SOA.  Thus MINIMUM is a lower
 /// bound on the TTL field for all RRs in a zone.  Note that this use of
 /// MINIMUM should occur when the RRs are copied into the response and not
-/// when the zone is loaded from a master file or via a zone transfer.  The
+/// when the zone is loaded from a Zone File or via a zone transfer.  The
 /// reason for this provison is to allow future dynamic update facilities to
 /// change the SOA RR with known semantics.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct SOA {
     mname: Name,
@@ -80,12 +86,12 @@ impl SOA {
     ///
     /// # Arguments
     ///
-    /// * `mname` - the name of the master, primary, authority for this zone.
+    /// * `mname` - the name of the primary or authority for this zone.
     /// * `rname` - the name of the responsible party for this zone, e.g. an email address.
     /// * `serial` - the serial number of the zone, used for caching purposes.
     /// * `refresh` - the amount of time to wait before a zone is resynched.
     /// * `retry` - the minimum period to wait if there is a failure during refresh.
-    /// * `expire` - the time until this master is no longer authoritative for the zone.
+    /// * `expire` - the time until this primary is no longer authoritative for the zone.
     /// * `minimum` - no zone records should have time-to-live values less than this minimum.
     ///
     /// # Return value
@@ -124,7 +130,7 @@ impl SOA {
     /// # Return value
     ///
     /// The `domain-name` of the name server that was the original or primary source of data for
-    /// this zone, i.e. the master name server.
+    /// this zone, i.e. the Primary Name Server.
     pub fn mname(&self) -> &Name {
         &self.mname
     }
@@ -210,7 +216,7 @@ impl SOA {
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder) -> ProtoResult<SOA> {
+pub fn read(decoder: &mut BinDecoder<'_>) -> ProtoResult<SOA> {
     Ok(SOA {
         mname: Name::read(decoder)?,
         rname: Name::read(decoder)?,
@@ -240,7 +246,7 @@ pub fn read(decoder: &mut BinDecoder) -> ProtoResult<SOA> {
 ///        US-ASCII letters in the DNS names contained within the RDATA are replaced
 ///        by the corresponding lowercase US-ASCII letters;
 /// ```
-pub fn emit(encoder: &mut BinEncoder, soa: &SOA) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, soa: &SOA) -> ProtoResult<()> {
     let is_canonical_names = encoder.is_canonical_names();
 
     soa.mname.emit_with_lowercase(encoder, is_canonical_names)?;
@@ -251,6 +257,75 @@ pub fn emit(encoder: &mut BinEncoder, soa: &SOA) -> ProtoResult<()> {
     encoder.emit_i32(soa.expire)?;
     encoder.emit_u32(soa.minimum)?;
     Ok(())
+}
+
+/// [RFC 1033](https://tools.ietf.org/html/rfc1033), DOMAIN OPERATIONS GUIDE, November 1987
+///
+/// ```text
+/// SOA  (Start Of Authority)
+///
+/// <name>  [<ttl>]  [<class>]  SOA  <origin>  <person>  (
+///    <serial>
+///    <refresh>
+///    <retry>
+///    <expire>
+///    <minimum> )
+///
+/// The Start Of Authority record designates the start of a zone.  The
+/// zone ends at the next SOA record.
+///
+/// <name> is the name of the zone.
+///
+/// <origin> is the name of the host on which the master zone file
+/// resides.
+///
+/// <person> is a mailbox for the person responsible for the zone.  It is
+/// formatted like a mailing address but the at-sign that normally
+/// separates the user from the host name is replaced with a dot.
+///
+/// <serial> is the version number of the zone file.  It should be
+/// incremented anytime a change is made to data in the zone.
+///
+/// <refresh> is how long, in seconds, a secondary name server is to
+/// check with the primary name server to see if an update is needed.  A
+/// good value here would be one hour (3600).
+///
+/// <retry> is how long, in seconds, a secondary name server is to retry
+/// after a failure to check for a refresh.  A good value here would be
+/// 10 minutes (600).
+///
+/// <expire> is the upper limit, in seconds, that a secondary name server
+/// is to use the data before it expires for lack of getting a refresh.
+/// You want this to be rather large, and a nice value is 3600000, about
+/// 42 days.
+///
+/// <minimum> is the minimum number of seconds to be used for TTL values
+/// in RRs.  A minimum of at least a day is a good value here (86400).
+///
+/// There should only be one SOA record per zone.  A sample SOA record
+/// would look something like:
+///
+/// @   IN   SOA   SRI-NIC.ARPA.   HOSTMASTER.SRI-NIC.ARPA. (
+///     45         ;serial
+///     3600       ;refresh
+///     600        ;retry
+///     3600000    ;expire
+///     86400 )    ;minimum
+/// ```
+impl fmt::Display for SOA {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{mname} {rname} {serial} {refresh} {retry} {expire} {min}",
+            mname = self.mname,
+            rname = self.rname,
+            serial = self.serial,
+            refresh = self.refresh,
+            retry = self.retry,
+            expire = self.expire,
+            min = self.minimum
+        )
+    }
 }
 
 #[cfg(test)]
@@ -274,13 +349,13 @@ mod tests {
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let read_rdata = read(&mut decoder).expect("Decoding error");
         assert_eq!(rdata, read_rdata);
     }

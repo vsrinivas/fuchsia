@@ -16,6 +16,11 @@
 
 //! public key record data for signing zone records
 
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use crate::error::*;
 use crate::rr::dnssec::{Algorithm, Digest, DigestType};
 use crate::rr::record_data::RData;
@@ -70,6 +75,7 @@ use crate::serialize::binary::{
 ///    backward compatibility with early versions of the KEY record.
 ///
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct DNSKEY {
     zone_key: bool,
@@ -189,6 +195,22 @@ impl DNSKEY {
         &self.public_key
     }
 
+    /// Output the encoded form of the flags
+    pub fn flags(&self) -> u16 {
+        let mut flags: u16 = 0;
+        if self.zone_key() {
+            flags |= 0b0000_0001_0000_0000
+        }
+        if self.secure_entry_point() {
+            flags |= 0b0000_0000_0000_0001
+        }
+        if self.revoke() {
+            flags |= 0b0000_0000_1000_0000
+        }
+
+        flags
+    }
+
     /// Creates a message digest for this DNSKEY record.
     ///
     /// ```text
@@ -217,10 +239,11 @@ impl DNSKEY {
     /// * `name` - the label of of the DNSKEY record.
     /// * `digest_type` - the `DigestType` with which to create the message digest.
     #[cfg(any(feature = "openssl", feature = "ring"))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "openssl", feature = "ring"))))]
     pub fn to_digest(&self, name: &Name, digest_type: DigestType) -> ProtoResult<Digest> {
         let mut buf: Vec<u8> = Vec::new();
         {
-            let mut encoder: BinEncoder = BinEncoder::new(&mut buf);
+            let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut buf);
             encoder.set_canonical_names(true);
             if let Err(e) = name
                 .emit(&mut encoder)
@@ -236,13 +259,14 @@ impl DNSKEY {
 
     /// This will always return an error unless the Ring or OpenSSL features are enabled
     #[cfg(not(any(feature = "openssl", feature = "ring")))]
+    #[cfg_attr(docsrs, doc(cfg(not(any(feature = "openssl", feature = "ring")))))]
     pub fn to_digest(&self, _: &Name, _: DigestType) -> ProtoResult<Digest> {
         Err("Ring or OpenSSL must be enabled for this feature".into())
     }
 
     /// The key tag is calculated as a hash to more quickly lookup a DNSKEY.
     ///
-    /// [RFC 1035](https://tools.ietf.org/html/rfc1035), DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION, November 1987
+    /// [RFC 2535](https://tools.ietf.org/html/rfc2535), Domain Name System Security Extensions, March 1999
     ///
     /// ```text
     /// RFC 2535                DNS Security Extensions               March 1999
@@ -323,7 +347,7 @@ impl From<DNSKEY> for RData {
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<DNSKEY> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<DNSKEY> {
     let flags: u16 = decoder.read_u16()?.unverified(/*used as a bitfield, this is safe*/);
 
     //    Bits 0-6 and 8-14 are reserved: these bits MUST have value 0 upon
@@ -371,23 +395,66 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, rdata: &DNSKEY) -> ProtoResult<()> {
-    let mut flags: u16 = 0;
-    if rdata.zone_key() {
-        flags |= 0b0000_0001_0000_0000
-    }
-    if rdata.secure_entry_point() {
-        flags |= 0b0000_0000_0000_0001
-    }
-    if rdata.revoke() {
-        flags |= 0b0000_0000_1000_0000
-    }
-    encoder.emit_u16(flags)?;
+pub fn emit(encoder: &mut BinEncoder<'_>, rdata: &DNSKEY) -> ProtoResult<()> {
+    encoder.emit_u16(rdata.flags())?;
     encoder.emit(3)?; // always 3 for now
     rdata.algorithm().emit(encoder)?;
     encoder.emit_vec(rdata.public_key())?;
 
     Ok(())
+}
+
+/// [RFC 4034, DNSSEC Resource Records, March 2005](https://tools.ietf.org/html/rfc4034#section-2.2)
+///
+/// ```text
+/// 2.2.  The DNSKEY RR Presentation Format
+///
+///    The presentation format of the RDATA portion is as follows:
+///
+///    The Flag field MUST be represented as an unsigned decimal integer.
+///    Given the currently defined flags, the possible values are: 0, 256,
+///    and 257.
+///
+///    The Protocol Field MUST be represented as an unsigned decimal integer
+///    with a value of 3.
+///
+///    The Algorithm field MUST be represented either as an unsigned decimal
+///    integer or as an algorithm mnemonic as specified in Appendix A.1.
+///
+///    The Public Key field MUST be represented as a Base64 encoding of the
+///    Public Key.  Whitespace is allowed within the Base64 text.  For a
+///    definition of Base64 encoding, see [RFC3548].
+///
+/// 2.3.  DNSKEY RR Example
+///
+///    The following DNSKEY RR stores a DNS zone key for example.com.
+///
+///    example.com. 86400 IN DNSKEY 256 3 5 ( AQPSKmynfzW4kyBv015MUG2DeIQ3
+///                                           Cbl+BBZH4b/0PY1kxkmvHjcZc8no
+///                                           kfzj31GajIQKY+5CptLr3buXA10h
+///                                           WqTkF7H6RfoRqXQeogmMHfpftf6z
+///                                           Mv1LyBUgia7za6ZEzOJBOztyvhjL
+///                                           742iU/TpPSEDhm2SNKLijfUppn1U
+///                                           aNvv4w==  )
+///
+///    The first four text fields specify the owner name, TTL, Class, and RR
+///    type (DNSKEY).  Value 256 indicates that the Zone Key bit (bit 7) in
+///    the Flags field has value 1.  Value 3 is the fixed Protocol value.
+///    Value 5 indicates the public key algorithm.  Appendix A.1 identifies
+///    algorithm type 5 as RSA/SHA1 and indicates that the format of the
+///    RSA/SHA1 public key field is defined in [RFC3110].  The remaining
+///    text is a Base64 encoding of the public key.
+/// ```
+impl fmt::Display for DNSKEY {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{flags} 3 {alg} {key}",
+            flags = self.flags(),
+            alg = u8::from(self.algorithm),
+            key = data_encoding::BASE64.encode(&self.public_key)
+        )
+    }
 }
 
 #[cfg(test)]
@@ -398,7 +465,7 @@ mod tests {
 
     #[test]
     #[cfg(any(feature = "openssl", feature = "ring"))]
-    pub fn test() {
+    fn test() {
         let rdata = DNSKEY::new(
             true,
             true,
@@ -408,13 +475,13 @@ mod tests {
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let read_rdata = read(&mut decoder, Restrict::new(bytes.len() as u16));
         let read_rdata = read_rdata.expect("error decoding");
 
@@ -441,7 +508,7 @@ mod tests {
         ];
 
         for &(ref input_data, exp_result) in test_vectors.iter() {
-            let result = DNSKEY::calculate_key_tag_internal(&input_data);
+            let result = DNSKEY::calculate_key_tag_internal(input_data);
             assert_eq!(result, exp_result);
         }
     }

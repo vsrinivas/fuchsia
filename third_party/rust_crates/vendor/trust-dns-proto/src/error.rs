@@ -15,7 +15,10 @@ use std::{fmt, io, sync};
 use self::not_openssl::SslErrorStack;
 #[cfg(not(feature = "ring"))]
 use self::not_ring::Unspecified;
+#[cfg(feature = "backtrace")]
+#[cfg_attr(docsrs, doc(cfg(feature = "backtrace")))]
 pub use backtrace::Backtrace as ExtBacktrace;
+#[cfg(feature = "backtrace")]
 use lazy_static::lazy_static;
 #[cfg(feature = "openssl")]
 use openssl::error::ErrorStack as SslErrorStack;
@@ -24,22 +27,24 @@ use ring::error::Unspecified;
 use thiserror::Error;
 
 use crate::rr::{Name, RecordType};
+use crate::serialize::binary::DecodeError;
 
+#[cfg(feature = "backtrace")]
+#[cfg_attr(docsrs, doc(cfg(feature = "backtrace")))]
 lazy_static! {
     /// Boolean for checking if backtrace is enabled at runtime
     pub static ref ENABLE_BACKTRACE: bool = {
         use std::env;
         let bt = env::var("RUST_BACKTRACE");
-        match bt.as_ref().map(|s| s as &str) {
-            Ok("full") | Ok("1") => true,
-            _ => false,
-        }
+        matches!(bt.as_ref().map(|s| s as &str), Ok("full") | Ok("1"))
     };
 }
 
 /// Generate a backtrace
 ///
 /// If RUST_BACKTRACE is 1 or full then this will return Some(Backtrace), otherwise, NONE.
+#[cfg(feature = "backtrace")]
+#[cfg_attr(docsrs, doc(cfg(feature = "backtrace")))]
 #[macro_export]
 macro_rules! trace {
     () => {{
@@ -58,10 +63,19 @@ pub type ProtoResult<T> = ::std::result::Result<T, ProtoError>;
 
 /// The error kind for errors that get returned in the crate
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum ProtoErrorKind {
+    /// The underlying resource is too busy
+    ///
+    /// This is a signal that an internal resource is too busy. The intended action should be tried
+    /// again, ideally after waiting for a little while for the situation to improve. Alternatively,
+    /// the action could be tried on another resource (for example, in a name server pool).
+    #[error("resource too busy")]
+    Busy,
+
     /// An error caused by a canceled future
     #[error("future was canceled: {0:?}")]
-    Canceled(futures::channel::oneshot::Canceled),
+    Canceled(futures_channel::oneshot::Canceled),
 
     /// Character data length exceeded the limit
     #[error("char data length exceeds {max}: {len}")]
@@ -92,6 +106,10 @@ pub enum ProtoErrorKind {
     /// EDNS resource record label is not the root label, although required
     #[error("edns resource record label must be the root label (.): {0}")]
     EdnsNameNotRoot(crate::rr::Name),
+
+    /// An HMAC failed to verify
+    #[error("hmac validation failure")]
+    HmacInvalid(),
 
     /// The length of rdata read was not as expected
     #[error("incorrect rdata length read: {read} expected: {len}")]
@@ -207,12 +225,21 @@ pub enum ProtoErrorKind {
     /// A utf8 parsing error
     #[error("error parsing utf8 string")]
     Utf8(#[from] std::str::Utf8Error),
+
+    /// A utf8 parsing error
+    #[error("error parsing utf8 string")]
+    FromUtf8(#[from] std::string::FromUtf8Error),
+
+    /// An int parsing error
+    #[error("error parsing int")]
+    ParseInt(#[from] std::num::ParseIntError),
 }
 
 /// The error type for errors that get returned in the crate
 #[derive(Error, Clone, Debug)]
 pub struct ProtoError {
-    kind: ProtoErrorKind,
+    kind: Box<ProtoErrorKind>,
+    #[cfg(feature = "backtrace")]
     backtrack: Option<ExtBacktrace>,
 }
 
@@ -221,15 +248,26 @@ impl ProtoError {
     pub fn kind(&self) -> &ProtoErrorKind {
         &self.kind
     }
+
+    /// If this is a ProtoErrorKind::Busy
+    pub fn is_busy(&self) -> bool {
+        matches!(*self.kind, ProtoErrorKind::Busy)
+    }
 }
 
 impl fmt::Display for ProtoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(ref backtrace) = self.backtrack {
-            fmt::Display::fmt(&self.kind, f)?;
-            fmt::Debug::fmt(backtrace, f)
-        } else {
-            fmt::Display::fmt(&self.kind, f)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "backtrace")] {
+                if let Some(ref backtrace) = self.backtrack {
+                    fmt::Display::fmt(&self.kind, f)?;
+                    fmt::Debug::fmt(backtrace, f)
+                } else {
+                    fmt::Display::fmt(&self.kind, f)
+                }
+            } else {
+                fmt::Display::fmt(&self.kind, f)
+            }
         }
     }
 }
@@ -237,9 +275,28 @@ impl fmt::Display for ProtoError {
 impl From<ProtoErrorKind> for ProtoError {
     fn from(kind: ProtoErrorKind) -> ProtoError {
         ProtoError {
-            kind,
+            kind: Box::new(kind),
+            #[cfg(feature = "backtrace")]
             backtrack: trace!(),
         }
+    }
+}
+
+impl From<DecodeError> for ProtoError {
+    fn from(err: DecodeError) -> ProtoError {
+        match err {
+            DecodeError::PointerNotPriorToLabel { idx, ptr } => {
+                ProtoErrorKind::PointerNotPriorToLabel { idx, ptr }
+            }
+            DecodeError::LabelBytesTooLong(len) => ProtoErrorKind::LabelBytesTooLong(len),
+            DecodeError::UnrecognizedLabelCode(code) => ProtoErrorKind::UnrecognizedLabelCode(code),
+            DecodeError::DomainNameTooLong(len) => ProtoErrorKind::DomainNameTooLong(len),
+            DecodeError::LabelOverlapsWithOther { label, other } => {
+                ProtoErrorKind::LabelOverlapsWithOther { label, other }
+            }
+            _ => ProtoErrorKind::Msg(err.to_string()),
+        }
+        .into()
     }
 }
 
@@ -294,17 +351,30 @@ impl From<std::str::Utf8Error> for ProtoError {
     }
 }
 
+impl From<std::string::FromUtf8Error> for ProtoError {
+    fn from(e: std::string::FromUtf8Error) -> ProtoError {
+        ProtoErrorKind::from(e).into()
+    }
+}
+
+impl From<std::num::ParseIntError> for ProtoError {
+    fn from(e: std::num::ParseIntError) -> ProtoError {
+        ProtoErrorKind::from(e).into()
+    }
+}
+
 /// Stubs for running without OpenSSL
 #[cfg(not(feature = "openssl"))]
+#[cfg_attr(docsrs, doc(cfg(not(feature = "openssl"))))]
 pub mod not_openssl {
     use std;
 
     /// SslErrorStac stub
-    #[derive(Debug)]
+    #[derive(Clone, Copy, Debug)]
     pub struct SslErrorStack;
 
     impl std::fmt::Display for SslErrorStack {
-        fn fmt(&self, _: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
             Ok(())
         }
     }
@@ -318,15 +388,16 @@ pub mod not_openssl {
 
 /// Types used without ring
 #[cfg(not(feature = "ring"))]
+#[cfg_attr(docsrs, doc(cfg(not(feature = "ring"))))]
 pub mod not_ring {
     use std;
 
     /// The Unspecified error replacement
-    #[derive(Debug)]
+    #[derive(Clone, Copy, Debug)]
     pub struct Unspecified;
 
     impl std::fmt::Display for Unspecified {
-        fn fmt(&self, _: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
             Ok(())
         }
     }
@@ -354,6 +425,7 @@ impl From<ProtoError> for String {
 }
 
 #[cfg(feature = "wasm-bindgen")]
+#[cfg_attr(docsrs, doc(cfg(feature = "wasm-bindgen")))]
 impl From<ProtoError> for wasm_bindgen_crate::JsValue {
     fn from(e: ProtoError) -> Self {
         js_sys::Error::new(&e.to_string()).into()
@@ -364,12 +436,14 @@ impl Clone for ProtoErrorKind {
     fn clone(&self) -> Self {
         use self::ProtoErrorKind::*;
         match *self {
+            Busy => Busy,
             Canceled(ref c) => Canceled(*c),
             CharacterDataTooLong { max, len } => CharacterDataTooLong { max, len },
             LabelOverlapsWithOther { label, other } => LabelOverlapsWithOther { label, other },
             DnsKeyProtocolNot3(protocol) => DnsKeyProtocolNot3(protocol),
             DomainNameTooLong(len) => DomainNameTooLong(len),
             EdnsNameNotRoot(ref found) => EdnsNameNotRoot(found.clone()),
+            HmacInvalid() => HmacInvalid(),
             IncorrectRDataLengthRead { read, len } => IncorrectRDataLengthRead { read, len },
             LabelBytesTooLong(len) => LabelBytesTooLong(len),
             PointerNotPriorToLabel { idx, ptr } => PointerNotPriorToLabel { idx, ptr },
@@ -394,7 +468,11 @@ impl Clone for ProtoErrorKind {
             UnrecognizedNsec3Flags(flags) => UnrecognizedNsec3Flags(flags),
 
             // foreign
-            Io(ref e) => Io(io::Error::from(e.kind())),
+            Io(ref e) => Io(if let Some(raw) = e.raw_os_error() {
+                io::Error::from_raw_os_error(raw)
+            } else {
+                io::Error::from(e.kind())
+            }),
             Poisoned => Poisoned,
             Ring(ref _e) => Ring(Unspecified),
             SSL(ref e) => Msg(format!("there was an SSL error: {}", e)),
@@ -402,6 +480,8 @@ impl Clone for ProtoErrorKind {
             Timer => Timer,
             UrlParsing(ref e) => UrlParsing(*e),
             Utf8(ref e) => Utf8(*e),
+            FromUtf8(ref e) => FromUtf8(e.clone()),
+            ParseInt(ref e) => ParseInt(e.clone()),
         }
     }
 }

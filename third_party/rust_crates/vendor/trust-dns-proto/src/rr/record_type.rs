@@ -1,18 +1,9 @@
-/*
- * Copyright (C) 2015-2019 Benjamin Fry <benjaminfry@me.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2015-2021 Benjamin Fry <benjaminfry@me.com>
+//
+// Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
+// http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+// http://opensource.org/licenses/MIT>, at your option. This file may not be
+// copied, modified, or distributed except according to those terms.
 
 //! record type definitions
 
@@ -22,11 +13,11 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use crate::error::*;
 use crate::serialize::binary::*;
-
-#[cfg(feature = "dnssec")]
-use crate::rr::dnssec::rdata::DNSSECRecordType;
 
 // TODO: adopt proper restrictions on usage: https://tools.ietf.org/html/rfc6895 section 3.1
 //  add the data TYPEs, QTYPEs, and Meta-TYPEs
@@ -35,70 +26,90 @@ use crate::rr::dnssec::rdata::DNSSECRecordType;
 /// The type of the resource record.
 ///
 /// This specifies the type of data in the RData field of the Resource Record
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 #[allow(dead_code)]
+#[non_exhaustive]
 pub enum RecordType {
-    /// RFC 1035[1] IPv4 Address record
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) IPv4 Address record
     A,
-    /// RFC 3596[2] IPv6 address record
+    /// [RFC 3596](https://tools.ietf.org/html/rfc3596) IPv6 address record
     AAAA,
-    /// ANAME draft-ietf-dnsop-aname
+    /// [ANAME draft-ietf-dnsop-aname](https://tools.ietf.org/html/draft-ietf-dnsop-aname-04)
     ANAME,
     //  AFSDB,      //	18	RFC 1183	AFS database record
-    /// RFC 1035[1] All cached records, aka ANY
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) All cached records, aka ANY
     ANY,
     //  APL,        //	42	RFC 3123	Address Prefix List
-    /// RFC 1035[1] Authoritative Zone Transfer
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) Authoritative Zone Transfer
     AXFR,
-    /// RFC 6844 Certification Authority Authorization
+    /// [RFC 6844](https://tools.ietf.org/html/rfc6844) Certification Authority Authorization
     CAA,
-    //  CERT,       //	37	RFC 4398	Certificate record
-    /// RFC 1035[1] Canonical name record
+    //  CDS,        //	59	RFC 7344	Child DS
+    //  CDNSKEY,    //	60	RFC 7344	Child DNSKEY
+    //  CERT,       // 37 RFC 4398 Certificate record
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) Canonical name record
     CNAME,
-    //  DHCID,      //	49	RFC 4701	DHCP identifier
-    //  DNAME,      //	39	RFC 2672	Delegation Name
-    //  HIP,        //	55	RFC 5205	Host Identity Protocol
-    //  IPSECKEY,   //	45	RFC 4025	IPsec Key
-    /// RFC 1996 Incremental Zone Transfer
+    //  DHCID,      // 49 RFC 4701 DHCP identifier
+    //  DLV,        //	32769	RFC 4431	DNSSEC Lookaside Validation record
+    //  DNAME,      // 39 RFC 2672 Delegation Name
+    /// [RFC 4034](https://tools.ietf.org/html/rfc4034) DNS Key record: RSASHA256 and RSASHA512, RFC5702
+    DNSKEY,
+    /// [RFC 4034](https://tools.ietf.org/html/rfc4034) Delegation signer: RSASHA256 and RSASHA512, RFC5702
+    DS,
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) host information
+    HINFO,
+    //  HIP,        // 55 RFC 5205 Host Identity Protocol
+    /// [RFC draft-ietf-dnsop-svcb-https-03](https://tools.ietf.org/html/draft-ietf-dnsop-svcb-httpssvc-03) DNS SVCB and HTTPS RRs
+    HTTPS,
+    //  IPSECKEY,   // 45 RFC 4025 IPsec Key
+    /// [RFC 1996](https://tools.ietf.org/html/rfc1996) Incremental Zone Transfer
     IXFR,
-    //  KX,         //	36	RFC 2230	Key eXchanger record
-    //  LOC,        //	29	RFC 1876	Location record
-    /// RFC 1035[1] Mail exchange record
+    //  KX,         // 36 RFC 2230 Key eXchanger record
+    /// [RFC 2535](https://tools.ietf.org/html/rfc2535) and [RFC 2930](https://tools.ietf.org/html/rfc2930) Key record
+    KEY,
+    //  LOC,        // 29 RFC 1876 Location record
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) Mail exchange record
     MX,
-    /// RFC 3403 Naming Authority Pointer
+    /// [RFC 3403](https://tools.ietf.org/html/rfc3403) Naming Authority Pointer
     NAPTR,
-    /// RFC 1035[1] Name server record
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) Name server record
     NS,
-    /// RFC 1035[1] Null server record, for testing
+    /// [RFC 4034](https://tools.ietf.org/html/rfc4034) Next-Secure record
+    NSEC,
+    /// [RFC 5155](https://tools.ietf.org/html/rfc5155) NSEC record version 3
+    NSEC3,
+    /// [RFC 5155](https://tools.ietf.org/html/rfc5155) NSEC3 parameters
+    NSEC3PARAM,
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) Null server record, for testing
     NULL,
-    /// RFC 7929	OpenPGP public key
+    /// [RFC 7929](https://tools.ietf.org/html/rfc7929) OpenPGP public key
     OPENPGPKEY,
-    /// RFC 6891	Option
+    /// [RFC 6891](https://tools.ietf.org/html/rfc6891) Option
     OPT,
-    /// RFC 1035[1] Pointer record
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) Pointer record
     PTR,
-    //  RP,         //	17	RFC 1183	Responsible person
-    /// RFC 1035[1] and RFC 2308[9]	Start of [a zone of] authority record
+    //  RP,         // 17 RFC 1183 Responsible person
+    /// [RFC 4034](https://tools.ietf.org/html/rfc4034) DNSSEC signature: RSASHA256 and RSASHA512, RFC5702
+    RRSIG,
+    /// [RFC 2535](https://tools.ietf.org/html/rfc2535) (and [RFC 2931](https://tools.ietf.org/html/rfc2931)) Signature, to support [RFC 2137](https://tools.ietf.org/html/rfc2137) Update.
+    SIG,
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) and [RFC 2308](https://tools.ietf.org/html/rfc2308) Start of [a zone of] authority record
     SOA,
-    /// RFC 2782 Service locator
+    /// [RFC 2782](https://tools.ietf.org/html/rfc2782) Service locator
     SRV,
-    /// RFC 4255 SSH Public Key Fingerprint
+    /// [RFC 4255](https://tools.ietf.org/html/rfc4255) SSH Public Key Fingerprint
     SSHFP,
-    //  TA,         //	32768	N/A	DNSSEC Trust Authorities
-    //  TKEY,       //	249	RFC 2930	Secret key record
-    /// RFC 6698 TLSA certificate association
+    /// [RFC draft-ietf-dnsop-svcb-https-03](https://tools.ietf.org/html/draft-ietf-dnsop-svcb-httpssvc-03) DNS SVCB and HTTPS RRs
+    SVCB,
+    //  TA,         // 32768 N/A DNSSEC Trust Authorities
+    //  TKEY,       // 249 RFC 2930 Secret key record
+    /// [RFC 6698](https://tools.ietf.org/html/rfc6698) TLSA certificate association
     TLSA,
-    //  TSIG,       //	250	RFC 2845	Transaction Signature
-    /// RFC 1035[1] Text record
+    /// [RFC 8945](https://tools.ietf.org/html/rfc8945) Transaction Signature
+    TSIG,
+    /// [RFC 1035](https://tools.ietf.org/html/rfc1035) Text record
     TXT,
-
-    /// A DNSSEC- or SIG(0)- specific record type.
-    ///
-    /// These types are in `DNSSECRecordType` to make them easy to disable when
-    /// crypto functionality isn't needed.
-    #[cfg(feature = "dnssec")]
-    DNSSEC(DNSSECRecordType),
-
     /// Unknown Record type, or unsupported
     Unknown(u16),
 
@@ -119,6 +130,18 @@ impl RecordType {
         self == RecordType::CNAME
     }
 
+    /// Returns true if this is an NS
+    #[inline]
+    pub fn is_ns(self) -> bool {
+        self == RecordType::NS
+    }
+
+    /// Returns true if this is an SOA
+    #[inline]
+    pub fn is_soa(self) -> bool {
+        self == RecordType::SOA
+    }
+
     /// Returns true if this is an SRV
     #[inline]
     pub fn is_srv(self) -> bool {
@@ -128,10 +151,24 @@ impl RecordType {
     /// Returns true if this is an A or an AAAA record
     #[inline]
     pub fn is_ip_addr(self) -> bool {
-        match self {
-            RecordType::A | RecordType::AAAA => true,
-            _ => false,
-        }
+        matches!(self, RecordType::A | RecordType::AAAA)
+    }
+
+    /// Returns true if this is a DNSSEC RecordType
+    #[inline]
+    pub fn is_dnssec(self) -> bool {
+        matches!(
+            self,
+            RecordType::DNSKEY
+                | RecordType::DS
+                | RecordType::KEY
+                | RecordType::NSEC
+                | RecordType::NSEC3
+                | RecordType::NSEC3PARAM
+                | RecordType::RRSIG
+                | RecordType::SIG
+                | RecordType::TSIG
+        )
     }
 }
 
@@ -149,29 +186,38 @@ impl FromStr for RecordType {
     /// ```
     fn from_str(str: &str) -> ProtoResult<Self> {
         // TODO missing stuff?
+        debug_assert!(str.chars().all(|x| char::is_digit(x, 36)));
         match str {
             "A" => Ok(RecordType::A),
             "AAAA" => Ok(RecordType::AAAA),
             "ANAME" => Ok(RecordType::ANAME),
+            "AXFR" => Ok(RecordType::AXFR),
             "CAA" => Ok(RecordType::CAA),
             "CNAME" => Ok(RecordType::CNAME),
-            "NULL" => Ok(RecordType::NULL),
+            "DNSKEY" => Ok(RecordType::DNSKEY),
+            "DS" => Ok(RecordType::DS),
+            "HINFO" => Ok(RecordType::HINFO),
+            "HTTPS" => Ok(RecordType::HTTPS),
+            "KEY" => Ok(RecordType::KEY),
             "MX" => Ok(RecordType::MX),
             "NAPTR" => Ok(RecordType::NAPTR),
+            "NSEC" => Ok(RecordType::NSEC),
+            "NSEC3" => Ok(RecordType::NSEC3),
+            "NSEC3PARAM" => Ok(RecordType::NSEC3PARAM),
             "NS" => Ok(RecordType::NS),
+            "NULL" => Ok(RecordType::NULL),
             "OPENPGPKEY" => Ok(RecordType::OPENPGPKEY),
             "PTR" => Ok(RecordType::PTR),
+            "RRSIG" => Ok(RecordType::RRSIG),
+            "SIG" => Ok(RecordType::SIG),
             "SOA" => Ok(RecordType::SOA),
             "SRV" => Ok(RecordType::SRV),
             "SSHFP" => Ok(RecordType::SSHFP),
+            "SVCB" => Ok(RecordType::SVCB),
             "TLSA" => Ok(RecordType::TLSA),
             "TXT" => Ok(RecordType::TXT),
+            "TSIG" => Ok(RecordType::TSIG),
             "ANY" | "*" => Ok(RecordType::ANY),
-            "AXFR" => Ok(RecordType::AXFR),
-            #[cfg(feature = "dnssec")]
-            "DNSKEY" | "DS" | "KEY" | "NSEC" | "NSEC3" | "NSEC3PARAM" | "RRSIG" | "SIG" => {
-                Ok(RecordType::DNSSEC(str.parse()?))
-            }
             _ => Err(ProtoErrorKind::UnknownRecordTypeStr(str.to_string()).into()),
         }
     }
@@ -193,31 +239,35 @@ impl From<u16> for RecordType {
             // TODO: wrong value here, see https://github.com/bluejekyll/trust-dns/issues/723
             65305 => RecordType::ANAME,
             255 => RecordType::ANY,
+            251 => RecordType::IXFR,
             252 => RecordType::AXFR,
             257 => RecordType::CAA,
             5 => RecordType::CNAME,
-            0 => RecordType::ZERO,
+            48 => RecordType::DNSKEY,
+            43 => RecordType::DS,
+            13 => RecordType::HINFO,
+            65 => RecordType::HTTPS,
+            25 => RecordType::KEY,
             15 => RecordType::MX,
             35 => RecordType::NAPTR,
             2 => RecordType::NS,
+            47 => RecordType::NSEC,
+            50 => RecordType::NSEC3,
+            51 => RecordType::NSEC3PARAM,
             10 => RecordType::NULL,
             61 => RecordType::OPENPGPKEY,
             41 => RecordType::OPT,
             12 => RecordType::PTR,
+            46 => RecordType::RRSIG,
+            24 => RecordType::SIG,
             6 => RecordType::SOA,
             33 => RecordType::SRV,
             44 => RecordType::SSHFP,
+            64 => RecordType::SVCB,
             52 => RecordType::TLSA,
+            250 => RecordType::TSIG,
             16 => RecordType::TXT,
-            #[cfg(feature = "dnssec")]
-            48/*DNSKEY*/ |
-            43/*DS*/ |
-            25/*KEY*/ |
-            47/*NSEC*/|
-            50/*NSEC3*/|
-            51/*NSEC3PARAM*/|
-            46/*RRSIG*/|
-            24/*SIG*/ => RecordType::DNSSEC(DNSSECRecordType::from(value)),
+            0 => RecordType::ZERO,
             // all unknown record types
             _ => RecordType::Unknown(value),
         }
@@ -225,19 +275,19 @@ impl From<u16> for RecordType {
 }
 
 impl BinEncodable for RecordType {
-    fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         encoder.emit_u16((*self).into())
     }
 }
 
 impl<'r> BinDecodable<'r> for RecordType {
-    fn read(decoder: &mut BinDecoder) -> ProtoResult<Self> {
-        decoder
+    fn read(decoder: &mut BinDecoder<'_>) -> ProtoResult<Self> {
+        Ok(decoder
             .read_u16()
             .map(
                 Restrict::unverified, /*RecordType is safe with any u16*/
             )
-            .map(Self::from)
+            .map(Self::from)?)
     }
 }
 
@@ -265,22 +315,32 @@ impl From<RecordType> for &'static str {
             RecordType::AXFR => "AXFR",
             RecordType::CAA => "CAA",
             RecordType::CNAME => "CNAME",
-            RecordType::ZERO => "",
+            RecordType::DNSKEY => "DNSKEY",
+            RecordType::DS => "DS",
+            RecordType::HINFO => "HINFO",
+            RecordType::HTTPS => "HTTPS",
+            RecordType::KEY => "KEY",
             RecordType::IXFR => "IXFR",
             RecordType::MX => "MX",
             RecordType::NAPTR => "NAPTR",
             RecordType::NS => "NS",
+            RecordType::NSEC => "NSEC",
+            RecordType::NSEC3 => "NSEC3",
+            RecordType::NSEC3PARAM => "NSEC3PARAM",
             RecordType::NULL => "NULL",
             RecordType::OPENPGPKEY => "OPENPGPKEY",
             RecordType::OPT => "OPT",
             RecordType::PTR => "PTR",
+            RecordType::RRSIG => "RRSIG",
+            RecordType::SIG => "SIG",
             RecordType::SOA => "SOA",
             RecordType::SRV => "SRV",
             RecordType::SSHFP => "SSHFP",
+            RecordType::SVCB => "SVCB",
             RecordType::TLSA => "TLSA",
+            RecordType::TSIG => "TSIG",
             RecordType::TXT => "TXT",
-            #[cfg(feature = "dnssec")]
-            RecordType::DNSSEC(rt) => rt.into(),
+            RecordType::ZERO => "ZERO",
             RecordType::Unknown(_) => "Unknown",
         }
     }
@@ -306,22 +366,32 @@ impl From<RecordType> for u16 {
             RecordType::AXFR => 252,
             RecordType::CAA => 257,
             RecordType::CNAME => 5,
-            RecordType::ZERO => 0,
+            RecordType::DNSKEY => 48,
+            RecordType::DS => 43,
+            RecordType::HINFO => 13,
+            RecordType::HTTPS => 65,
+            RecordType::KEY => 25,
             RecordType::IXFR => 251,
             RecordType::MX => 15,
             RecordType::NAPTR => 35,
             RecordType::NS => 2,
+            RecordType::NSEC => 47,
+            RecordType::NSEC3 => 50,
+            RecordType::NSEC3PARAM => 51,
             RecordType::NULL => 10,
             RecordType::OPENPGPKEY => 61,
             RecordType::OPT => 41,
             RecordType::PTR => 12,
+            RecordType::RRSIG => 46,
+            RecordType::SIG => 24,
             RecordType::SOA => 6,
             RecordType::SRV => 33,
             RecordType::SSHFP => 44,
+            RecordType::SVCB => 64,
             RecordType::TLSA => 52,
+            RecordType::TSIG => 250,
             RecordType::TXT => 16,
-            #[cfg(feature = "dnssec")]
-            RecordType::DNSSEC(rt) => rt.into(),
+            RecordType::ZERO => 0,
             RecordType::Unknown(code) => code,
         }
     }
@@ -342,7 +412,7 @@ impl Ord for RecordType {
 }
 
 impl Display for RecordType {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str(Into::<&str>::into(*self))
     }
 }
@@ -362,6 +432,7 @@ mod tests {
             RecordType::SOA,
             RecordType::NULL,
             RecordType::PTR,
+            RecordType::HINFO,
             RecordType::MX,
             RecordType::TXT,
             RecordType::AAAA,
@@ -383,6 +454,7 @@ mod tests {
             RecordType::CNAME,
             RecordType::TXT,
             RecordType::AAAA,
+            RecordType::HINFO,
         ];
 
         unordered.sort();
@@ -404,6 +476,7 @@ mod tests {
             "ANAME",
             "CAA",
             "CNAME",
+            "HINFO",
             "NULL",
             "MX",
             "NAPTR",
@@ -429,6 +502,7 @@ mod tests {
             "NSEC3PARAM",
             "RRSIG",
             "SIG",
+            "TSIG",
         ];
         #[cfg(not(feature = "dnssec"))]
         let dnssec_record_names = &[];
@@ -436,7 +510,7 @@ mod tests {
         let mut rtypes = std::collections::HashSet::new();
         for name in record_names.iter().chain(dnssec_record_names) {
             let rtype: RecordType = name.parse().unwrap();
-            assert_eq!(rtype.to_string().as_str(), *name);
+            assert_eq!(rtype.to_string().to_ascii_uppercase().as_str(), *name);
             assert!(rtypes.insert(rtype));
         }
     }

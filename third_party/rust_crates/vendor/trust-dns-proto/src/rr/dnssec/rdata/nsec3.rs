@@ -15,15 +15,18 @@
  */
 
 //! hashed negative cache proof for non-existence
-
 use std::collections::BTreeMap;
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::*;
 use crate::rr::dnssec::Nsec3HashAlgorithm;
 use crate::rr::RecordType;
 use crate::serialize::binary::*;
 
-/// [RFC 5155, NSEC3, March 2008](https://tools.ietf.org/html/rfc5155#section-3)
+/// [RFC 5155](https://tools.ietf.org/html/rfc5155#section-3), NSEC3, March 2008
 ///
 /// ```text
 /// 3.  The NSEC3 Resource Record
@@ -108,6 +111,7 @@ use crate::serialize::binary::*;
 ///  does not include the name of the containing zone.  The length of this
 ///  field is determined by the preceding Hash Length field.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct NSEC3 {
     hash_algorithm: Nsec3HashAlgorithm,
@@ -138,7 +142,7 @@ impl NSEC3 {
         }
     }
 
-    /// [RFC 5155, NSEC3, March 2008](https://tools.ietf.org/html/rfc5155#section-3.1.1)
+    /// [RFC 5155](https://tools.ietf.org/html/rfc5155#section-3.1.1), NSEC3, March 2008
     ///
     /// ```text
     /// 3.1.1.  Hash Algorithm
@@ -153,7 +157,7 @@ impl NSEC3 {
         self.hash_algorithm
     }
 
-    /// [RFC 5155, NSEC3, March 2008](https://tools.ietf.org/html/rfc5155#section-3.1.2)
+    /// [RFC 5155](https://tools.ietf.org/html/rfc5155#section-3.1.2), NSEC3, March 2008
     ///
     /// ```text
     /// 3.1.2.  Flags
@@ -178,7 +182,7 @@ impl NSEC3 {
         self.opt_out
     }
 
-    /// [RFC 5155, NSEC3, March 2008](https://tools.ietf.org/html/rfc5155#section-3.1.3)
+    /// [RFC 5155](https://tools.ietf.org/html/rfc5155#section-3.1.3), NSEC3, March 2008
     ///
     /// ```text
     /// 3.1.3.  Iterations
@@ -194,7 +198,7 @@ impl NSEC3 {
         self.iterations
     }
 
-    /// [RFC 5155, NSEC3, March 2008](https://tools.ietf.org/html/rfc5155#section-3.1.5)
+    /// [RFC 5155](https://tools.ietf.org/html/rfc5155#section-3.1.5), NSEC3, March 2008
     ///
     /// ```text
     /// 3.1.5.  Salt
@@ -207,7 +211,7 @@ impl NSEC3 {
         &self.salt
     }
 
-    /// [RFC 5155, NSEC3, March 2008](https://tools.ietf.org/html/rfc5155#section-3.1.7)
+    /// [RFC 5155](https://tools.ietf.org/html/rfc5155#section-3.1.7), NSEC3, March 2008
     ///
     /// ```text
     /// 3.1.7.  Next Hashed Owner Name
@@ -226,7 +230,7 @@ impl NSEC3 {
         &self.next_hashed_owner_name
     }
 
-    /// [RFC 5155, NSEC3, March 2008](https://tools.ietf.org/html/rfc5155#section-3.1.8)
+    /// [RFC 5155](https://tools.ietf.org/html/rfc5155#section-3.1.8), NSEC3, March 2008
     ///
     /// ```text
     /// 3.1.8.  Type Bit Maps
@@ -237,10 +241,19 @@ impl NSEC3 {
     pub fn type_bit_maps(&self) -> &[RecordType] {
         &self.type_bit_maps
     }
+
+    /// Flags for encoding
+    pub fn flags(&self) -> u8 {
+        let mut flags: u8 = 0;
+        if self.opt_out {
+            flags |= 0b0000_0001
+        };
+        flags
+    }
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<NSEC3> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<NSEC3> {
     let start_idx = decoder.index();
 
     let hash_algorithm =
@@ -309,7 +322,7 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 ///
 /// The Array of covered types
 pub(crate) fn decode_type_bit_maps(
-    decoder: &mut BinDecoder,
+    decoder: &mut BinDecoder<'_>,
     bit_map_len: Restrict<usize>,
 ) -> ProtoResult<Vec<RecordType>> {
     // 3.2.1.  Type Bit Maps Encoding
@@ -428,13 +441,9 @@ enum BitMapReadState {
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, rdata: &NSEC3) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, rdata: &NSEC3) -> ProtoResult<()> {
     encoder.emit(rdata.hash_algorithm().into())?;
-    let mut flags: u8 = 0;
-    if rdata.opt_out() {
-        flags |= 0b0000_0001
-    };
-    encoder.emit(flags)?;
+    encoder.emit(rdata.flags())?;
     encoder.emit_u16(rdata.iterations())?;
     encoder.emit(rdata.salt().len() as u8)?;
     encoder.emit_vec(rdata.salt())?;
@@ -452,7 +461,7 @@ pub fn emit(encoder: &mut BinEncoder, rdata: &NSEC3) -> ProtoResult<()> {
 /// * `encoder` - the encoder to write to
 /// * `type_bit_maps` - types to encode into the bitmap
 pub(crate) fn encode_bit_maps(
-    encoder: &mut BinEncoder,
+    encoder: &mut BinEncoder<'_>,
     type_bit_maps: &[RecordType],
 ) -> ProtoResult<()> {
     let mut hash: BTreeMap<u8, Vec<u8>> = BTreeMap::new();
@@ -491,6 +500,65 @@ pub(crate) fn encode_bit_maps(
     Ok(())
 }
 
+/// [RFC 5155](https://tools.ietf.org/html/rfc5155#section-3.3), NSEC3, March 2008
+///
+/// ```text
+/// 3.3.  Presentation Format
+///
+///    The presentation format of the RDATA portion is as follows:
+///
+///    o  The Hash Algorithm field is represented as an unsigned decimal
+///       integer.  The value has a maximum of 255.
+///
+///    o  The Flags field is represented as an unsigned decimal integer.
+///       The value has a maximum of 255.
+///
+///    o  The Iterations field is represented as an unsigned decimal
+///       integer.  The value is between 0 and 65535, inclusive.
+///
+///    o  The Salt Length field is not represented.
+///
+///    o  The Salt field is represented as a sequence of case-insensitive
+///       hexadecimal digits.  Whitespace is not allowed within the
+///       sequence.  The Salt field is represented as "-" (without the
+///       quotes) when the Salt Length field has a value of 0.
+///
+///    o  The Hash Length field is not represented.
+///
+///    o  The Next Hashed Owner Name field is represented as an unpadded
+///       sequence of case-insensitive base32 digits, without whitespace.
+///
+///    o  The Type Bit Maps field is represented as a sequence of RR type
+///       mnemonics.  When the mnemonic is not known, the TYPE
+///       representation as described in Section 5 of [RFC3597] MUST be
+///       used.
+/// ```
+impl fmt::Display for NSEC3 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        let salt = if self.salt.is_empty() {
+            "-".to_string()
+        } else {
+            data_encoding::HEXUPPER_PERMISSIVE.encode(&self.salt)
+        };
+
+        write!(
+            f,
+            "{alg} {flags} {iterations} {salt} {owner}",
+            alg = u8::from(self.hash_algorithm),
+            flags = self.flags(),
+            iterations = self.iterations,
+            salt = salt,
+            owner = data_encoding::BASE32_NOPAD.encode(&self.next_hashed_owner_name)
+        )?;
+
+        for ty in &self.type_bit_maps {
+            write!(f, " {}", ty)?;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::dbg_macro, clippy::print_stdout)]
@@ -498,8 +566,8 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test() {
-        use crate::rr::dnssec::rdata::DNSSECRecordType;
+    fn test() {
+        use crate::rr::dnssec::rdata::RecordType;
 
         let rdata = NSEC3::new(
             Nsec3HashAlgorithm::SHA1,
@@ -510,27 +578,27 @@ mod tests {
             vec![
                 RecordType::A,
                 RecordType::AAAA,
-                RecordType::DNSSEC(DNSSECRecordType::DS),
-                RecordType::DNSSEC(DNSSECRecordType::RRSIG),
+                RecordType::DS,
+                RecordType::RRSIG,
             ],
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let restrict = Restrict::new(bytes.len() as u16);
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata, read_rdata);
     }
 
     #[test]
-    pub fn test_dups() {
-        use crate::rr::dnssec::rdata::DNSSECRecordType;
+    fn test_dups() {
+        use crate::rr::dnssec::rdata::RecordType;
 
         let rdata_with_dups = NSEC3::new(
             Nsec3HashAlgorithm::SHA1,
@@ -541,9 +609,9 @@ mod tests {
             vec![
                 RecordType::A,
                 RecordType::AAAA,
-                RecordType::DNSSEC(DNSSECRecordType::DS),
+                RecordType::DS,
                 RecordType::AAAA,
-                RecordType::DNSSEC(DNSSECRecordType::RRSIG),
+                RecordType::RRSIG,
             ],
         );
 
@@ -556,19 +624,19 @@ mod tests {
             vec![
                 RecordType::A,
                 RecordType::AAAA,
-                RecordType::DNSSEC(DNSSECRecordType::DS),
-                RecordType::DNSSEC(DNSSECRecordType::RRSIG),
+                RecordType::DS,
+                RecordType::RRSIG,
             ],
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata_with_dups).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let restrict = Restrict::new(bytes.len() as u16);
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata_wo, read_rdata);

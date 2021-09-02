@@ -17,7 +17,7 @@ use std::borrow::Borrow;
 use std::cmp::{Ordering, PartialEq};
 use std::fmt::{self, Debug, Display, Formatter, Write};
 use std::hash::{Hash, Hasher};
-use std::sync::Arc as Rc;
+use tinyvec::TinyVec;
 
 use idna;
 use log::debug;
@@ -29,7 +29,7 @@ const IDNA_PREFIX: &[u8] = b"xn--";
 
 /// Labels are always stored as ASCII, unicode characters must be encoded with punycode
 #[derive(Clone, Eq)]
-pub struct Label(Rc<[u8]>);
+pub struct Label(TinyVec<[u8; 24]>);
 
 impl Label {
     /// These must only be ASCII, with unicode encoded to PunyCode, or other such transformation.
@@ -40,7 +40,7 @@ impl Label {
         if bytes.len() > 63 {
             return Err(format!("Label exceeds maximum length 63: {}", bytes.len()).into());
         };
-        Ok(Label(Rc::from(bytes)))
+        Ok(Label(TinyVec::from(bytes)))
     }
 
     /// Translates this string into IDNA safe name, encoding to punycode as necessary.
@@ -86,7 +86,7 @@ impl Label {
 
     /// Returns a new Label of the Wildcard, i.e. "*"
     pub fn wildcard() -> Self {
-        Label(Rc::from(WILDCARD.to_vec()))
+        Label(TinyVec::from(WILDCARD))
     }
 
     /// Converts this label to lowercase
@@ -100,7 +100,7 @@ impl Label {
         {
             let mut lower_label: Vec<u8> = self.0.to_vec();
             lower_label[idx..].make_ascii_lowercase();
-            Label(Rc::from(lower_label))
+            Label(TinyVec::from(lower_label.as_slice()))
         } else {
             self.clone()
         }
@@ -201,7 +201,7 @@ impl Label {
 
 impl AsRef<[u8]> for Label {
     fn as_ref(&self) -> &[u8] {
-        &self.0
+        self.as_bytes()
     }
 }
 
@@ -228,7 +228,7 @@ impl Display for Label {
     ///
     /// if the string is punycode, i.e. starts with `xn--`, otherwise it translates to a safe ascii string
     ///   escaping characters as necessary.
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         if self.as_bytes().starts_with(IDNA_PREFIX) {
             // this should never be outside the ascii codes...
             let label = String::from_utf8_lossy(self.borrow());
@@ -254,7 +254,7 @@ impl Display for Label {
 }
 
 impl Debug for Label {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         let label = String::from_utf8_lossy(self.borrow());
         f.write_str(&label)
     }
@@ -316,41 +316,41 @@ impl LabelCmp for CaseInsensitive {
 /// Conversion into a Label
 pub trait IntoLabel: Sized {
     /// Convert this into Label
-    fn into_label(self: Self) -> ProtoResult<Label>;
+    fn into_label(self) -> ProtoResult<Label>;
 }
 
 impl<'a> IntoLabel for &'a Label {
-    fn into_label(self: Self) -> ProtoResult<Label> {
+    fn into_label(self) -> ProtoResult<Label> {
         Ok(self.clone())
     }
 }
 
 impl IntoLabel for Label {
-    fn into_label(self: Self) -> ProtoResult<Label> {
+    fn into_label(self) -> ProtoResult<Label> {
         Ok(self)
     }
 }
 
 impl<'a> IntoLabel for &'a str {
-    fn into_label(self: Self) -> ProtoResult<Label> {
+    fn into_label(self) -> ProtoResult<Label> {
         Label::from_utf8(self)
     }
 }
 
 impl IntoLabel for String {
-    fn into_label(self: Self) -> ProtoResult<Label> {
+    fn into_label(self) -> ProtoResult<Label> {
         Label::from_utf8(&self)
     }
 }
 
 impl<'a> IntoLabel for &'a [u8] {
-    fn into_label(self: Self) -> ProtoResult<Label> {
+    fn into_label(self) -> ProtoResult<Label> {
         Label::from_raw_bytes(self)
     }
 }
 
 impl IntoLabel for Vec<u8> {
-    fn into_label(self: Self) -> ProtoResult<Label> {
+    fn into_label(self) -> ProtoResult<Label> {
         Label::from_raw_bytes(&self)
     }
 }

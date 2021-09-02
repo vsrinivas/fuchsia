@@ -16,6 +16,11 @@
 
 //! pointer record from parent zone to child zone for dnskey proof
 
+use std::fmt::{self, Display, Formatter};
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use crate::error::*;
 use crate::rr::dnssec::{Algorithm, DigestType};
 use crate::serialize::binary::*;
@@ -66,6 +71,7 @@ use crate::rr::Name;
 ///    hexadecimal digits.  Whitespace is allowed within the hexadecimal
 ///    text.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct DS {
     key_tag: u16,
@@ -172,6 +178,7 @@ impl DS {
     ///
     /// true if and only if the DNSKEY is covered by the DS record.
     #[cfg(any(feature = "openssl", feature = "ring"))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "openssl", feature = "ring"))))]
     pub fn covers(&self, name: &Name, key: &DNSKEY) -> ProtoResult<bool> {
         key.to_digest(name, self.digest_type())
             .map(|hash| hash.as_ref() == self.digest())
@@ -179,13 +186,14 @@ impl DS {
 
     /// This will always return an error unless the Ring or OpenSSL features are enabled
     #[cfg(not(any(feature = "openssl", feature = "ring")))]
+    #[cfg_attr(docsrs, doc(cfg(not(any(feature = "openssl", feature = "ring")))))]
     pub fn covers(&self, _: &Name, _: &DNSKEY) -> ProtoResult<bool> {
         Err("Ring or OpenSSL must be enabled for this feature".into())
     }
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<DS> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<DS> {
     let start_idx = decoder.index();
 
     let key_tag: u16 = decoder.read_u16()?.unverified(/*key_tag is valid as any u16*/);
@@ -206,13 +214,69 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, rdata: &DS) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, rdata: &DS) -> ProtoResult<()> {
     encoder.emit_u16(rdata.key_tag())?;
     rdata.algorithm().emit(encoder)?; // always 3 for now
     encoder.emit(rdata.digest_type().into())?;
     encoder.emit_vec(rdata.digest())?;
 
     Ok(())
+}
+
+/// [RFC 4034, DNSSEC Resource Records, March 2005](https://tools.ietf.org/html/rfc4034#section-5.3)
+///
+/// ```text
+/// 5.3.  The DS RR Presentation Format
+///
+///    The presentation format of the RDATA portion is as follows:
+///
+///    The Key Tag field MUST be represented as an unsigned decimal integer.
+///
+///    The Algorithm field MUST be represented either as an unsigned decimal
+///    integer or as an algorithm mnemonic specified in Appendix A.1.
+///
+///    The Digest Type field MUST be represented as an unsigned decimal
+///    integer.
+///
+///    The Digest MUST be represented as a sequence of case-insensitive
+///    hexadecimal digits.  Whitespace is allowed within the hexadecimal
+///    text.
+///
+/// 5.4.  DS RR Example
+///
+///    The following example shows a DNSKEY RR and its corresponding DS RR.
+///
+///    dskey.example.com. 86400 IN DNSKEY 256 3 5 ( AQOeiiR0GOMYkDshWoSKz9Xz
+///                                              fwJr1AYtsmx3TGkJaNXVbfi/
+///                                              2pHm822aJ5iI9BMzNXxeYCmZ
+///                                              DRD99WYwYqUSdjMmmAphXdvx
+///                                              egXd/M5+X7OrzKBaMbCVdFLU
+///                                              Uh6DhweJBjEVv5f2wwjM9Xzc
+///                                              nOf+EPbtG9DMBmADjFDc2w/r
+///                                              ljwvFw==
+///                                              ) ;  key id = 60485
+///
+///    dskey.example.com. 86400 IN DS 60485 5 1 ( 2BB183AF5F22588179A53B0A
+///                                               98631FAD1A292118 )
+///
+///    The first four text fields specify the name, TTL, Class, and RR type
+///    (DS).  Value 60485 is the key tag for the corresponding
+///    "dskey.example.com." DNSKEY RR, and value 5 denotes the algorithm
+///    used by this "dskey.example.com." DNSKEY RR.  The value 1 is the
+///    algorithm used to construct the digest, and the rest of the RDATA
+///    text is the digest in hexadecimal.
+/// ```
+impl Display for DS {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{tag} {alg} {ty} {digest}",
+            tag = self.key_tag,
+            alg = u8::from(self.algorithm),
+            ty = u8::from(self.digest_type),
+            digest = data_encoding::HEXUPPER_PERMISSIVE.encode(&self.digest)
+        )
+    }
 }
 
 #[cfg(test)]
@@ -222,7 +286,7 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test() {
+    fn test() {
         let rdata = DS::new(
             0xF00F,
             Algorithm::RSASHA256,
@@ -231,13 +295,13 @@ mod tests {
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let restrict = Restrict::new(bytes.len() as u16);
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata, read_rdata);
@@ -245,7 +309,7 @@ mod tests {
 
     #[test]
     #[cfg(any(feature = "openssl", feature = "ring"))]
-    pub fn test_covers() {
+    pub(crate) fn test_covers() {
         use crate::rr::dnssec::rdata::DNSKEY;
 
         let name = Name::parse("www.example.com.", None).unwrap();

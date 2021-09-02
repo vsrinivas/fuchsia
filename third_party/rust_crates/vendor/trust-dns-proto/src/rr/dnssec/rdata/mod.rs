@@ -16,25 +16,31 @@
 
 //! All record data structures and related serialization methods
 
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 // TODO: these should each be it's own struct, it would make parsing and decoding a little cleaner
 //  and also a little more ergonomic when accessing.
 // each of these module's has the parser for that rdata embedded, to keep the file sizes down...
 pub mod dnskey;
 pub mod ds;
+#[allow(deprecated)]
 pub mod key;
 pub mod nsec;
 pub mod nsec3;
 pub mod nsec3param;
 pub mod sig;
-
-use std::str::FromStr;
+pub mod tsig;
 
 use enum_as_inner::EnumAsInner;
-use log::debug;
+use log::trace;
 
 use crate::error::*;
 use crate::rr::rdata::null;
 use crate::rr::rdata::NULL;
+use crate::rr::{RData, RecordType};
 use crate::serialize::binary::*;
 
 pub use self::dnskey::DNSKEY;
@@ -44,105 +50,16 @@ pub use self::nsec::NSEC;
 pub use self::nsec3::NSEC3;
 pub use self::nsec3param::NSEC3PARAM;
 pub use self::sig::SIG;
+pub use self::tsig::TSIG;
 
 /// The type of the resource record, for DNSSEC-specific records.
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-pub enum DNSSECRecordType {
-    //  CDS,        //	59	RFC 7344	Child DS
-    //  CDNSKEY,    //	60	RFC 7344	Child DNSKEY
-    //  DLV,        //	32769	RFC 4431	DNSSEC Lookaside Validation record
-    /// RFC 4034	DNS Key record: RSASHA256 and RSASHA512, RFC5702
-    DNSKEY,
-    /// RFC 4034	Delegation signer: RSASHA256 and RSASHA512, RFC5702
-    DS,
-    /// RFC 2535[3] and RFC 2930[4]	Key record
-    KEY,
-    /// RFC 4034	Next-Secure record
-    NSEC,
-    /// RFC 5155	NSEC record version 3
-    NSEC3,
-    /// RFC 5155	NSEC3 parameters
-    NSEC3PARAM,
-    /// RFC 4034	DNSSEC signature: RSASHA256 and RSASHA512, RFC5702
-    RRSIG,
-    /// RFC 2535 (2931)	Signature, to support 2137 Update.
-    ///
-    /// This isn't really a DNSSEC record type, but it is here because, at least
-    /// for now, we enable/disable SIG(0) in exactly the same circumstances that
-    /// we enable/disable DNSSEC. This may change in the future.
-    SIG,
-    /// Unknown or not yet supported DNSSec record type
-    Unknown(u16),
-}
-
-impl FromStr for DNSSECRecordType {
-    type Err = ProtoError;
-
-    fn from_str(str: &str) -> ProtoResult<Self> {
-        match str {
-            "DNSKEY" => Ok(DNSSECRecordType::DNSKEY),
-            "DS" => Ok(DNSSECRecordType::DS),
-            "KEY" => Ok(DNSSECRecordType::KEY),
-            "NSEC" => Ok(DNSSECRecordType::NSEC),
-            "NSEC3" => Ok(DNSSECRecordType::NSEC3),
-            "NSEC3PARAM" => Ok(DNSSECRecordType::NSEC3PARAM),
-            "RRSIG" => Ok(DNSSECRecordType::RRSIG),
-            "SIG" => Ok(DNSSECRecordType::SIG),
-            _ => Err(ProtoErrorKind::UnknownRecordTypeStr(str.to_string()).into()),
-        }
-    }
-}
-
-impl From<u16> for DNSSECRecordType {
-    fn from(value: u16) -> Self {
-        match value {
-            48 => DNSSECRecordType::DNSKEY,
-            43 => DNSSECRecordType::DS,
-            25 => DNSSECRecordType::KEY,
-            47 => DNSSECRecordType::NSEC,
-            50 => DNSSECRecordType::NSEC3,
-            51 => DNSSECRecordType::NSEC3PARAM,
-            46 => DNSSECRecordType::RRSIG,
-            24 => DNSSECRecordType::SIG,
-            _ => DNSSECRecordType::Unknown(value),
-        }
-    }
-}
-
-impl From<DNSSECRecordType> for &'static str {
-    fn from(rt: DNSSECRecordType) -> &'static str {
-        match rt {
-            DNSSECRecordType::DNSKEY => "DNSKEY",
-            DNSSECRecordType::DS => "DS",
-            DNSSECRecordType::KEY => "KEY",
-            DNSSECRecordType::NSEC => "NSEC",
-            DNSSECRecordType::NSEC3 => "NSEC3",
-            DNSSECRecordType::NSEC3PARAM => "NSEC3PARAM",
-            DNSSECRecordType::RRSIG => "RRSIG",
-            DNSSECRecordType::SIG => "SIG",
-            DNSSECRecordType::Unknown(..) => "DnsSecUnknown",
-        }
-    }
-}
-
-impl From<DNSSECRecordType> for u16 {
-    fn from(rt: DNSSECRecordType) -> Self {
-        match rt {
-            DNSSECRecordType::KEY => 25,
-            DNSSECRecordType::DNSKEY => 48,
-            DNSSECRecordType::DS => 43,
-            DNSSECRecordType::NSEC => 47,
-            DNSSECRecordType::NSEC3 => 50,
-            DNSSECRecordType::NSEC3PARAM => 51,
-            DNSSECRecordType::RRSIG => 46,
-            DNSSECRecordType::SIG => 24,
-            DNSSECRecordType::Unknown(value) => value,
-        }
-    }
-}
+#[deprecated(note = "All RecordType definitions have been moved into RecordType")]
+pub type DNSSECRecordType = RecordType;
 
 /// Record data enum variants for DNSSEC-specific records.
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, EnumAsInner, PartialEq, Clone, Eq)]
+#[non_exhaustive]
 pub enum DNSSECRData {
     /// ```text
     /// RFC 4034                DNSSEC Resource Records               March 2005
@@ -469,6 +386,120 @@ pub enum DNSSECRData {
     /// ```
     SIG(SIG),
 
+    /// [RFC 8945, Secret Key Transaction Authentication for DNS](https://tools.ietf.org/html/rfc8945#section-4.2)
+    ///
+    /// ```text
+    /// 4.2.  TSIG Record Format
+    ///
+    ///   The fields of the TSIG RR are described below.  All multi-octet
+    ///   integers in the record are sent in network byte order (see
+    ///   Section 2.3.2 of [RFC1035]).
+    ///
+    ///   NAME:  The name of the key used, in domain name syntax.  The name
+    ///      should reflect the names of the hosts and uniquely identify the
+    ///      key among a set of keys these two hosts may share at any given
+    ///      time.  For example, if hosts A.site.example and B.example.net
+    ///      share a key, possibilities for the key name include
+    ///      <id>.A.site.example, <id>.B.example.net, and
+    ///      <id>.A.site.example.B.example.net.  It should be possible for more
+    ///      than one key to be in simultaneous use among a set of interacting
+    ///      hosts.  This allows for periodic key rotation as per best
+    ///      operational practices, as well as algorithm agility as indicated
+    ///      by [RFC7696].
+    ///
+    ///      The name may be used as a local index to the key involved, but it
+    ///      is recommended that it be globally unique.  Where a key is just
+    ///      shared between two hosts, its name actually need only be
+    ///      meaningful to them, but it is recommended that the key name be
+    ///      mnemonic and incorporate the names of participating agents or
+    ///      resources as suggested above.
+    ///
+    ///   TYPE:  This MUST be TSIG (250: Transaction SIGnature).
+    ///
+    ///   CLASS:  This MUST be ANY.
+    ///
+    ///   TTL:  This MUST be 0.
+    ///
+    ///   RDLENGTH:  (variable)
+    ///
+    ///   RDATA:  The RDATA for a TSIG RR consists of a number of fields,
+    ///      described below:
+    ///
+    ///                            1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
+    ///        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    ///       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///       /                         Algorithm Name                        /
+    ///       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///       |                                                               |
+    ///       |          Time Signed          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///       |                               |            Fudge              |
+    ///       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///       |          MAC Size             |                               /
+    ///       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+             MAC               /
+    ///       /                                                               /
+    ///       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///       |          Original ID          |            Error              |
+    ///       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///       |          Other Len            |                               /
+    ///       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+           Other Data          /
+    ///       /                                                               /
+    ///       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///
+    ///   The contents of the RDATA fields are:
+    ///
+    ///   Algorithm Name:
+    ///      an octet sequence identifying the TSIG algorithm in the domain
+    ///      name syntax.  (Allowed names are listed in Table 3.)  The name is
+    ///      stored in the DNS name wire format as described in [RFC1034].  As
+    ///      per [RFC3597], this name MUST NOT be compressed.
+    ///
+    ///   Time Signed:
+    ///      an unsigned 48-bit integer containing the time the message was
+    ///      signed as seconds since 00:00 on 1970-01-01 UTC, ignoring leap
+    ///      seconds.
+    ///
+    ///   Fudge:
+    ///      an unsigned 16-bit integer specifying the allowed time difference
+    ///      in seconds permitted in the Time Signed field.
+    ///
+    ///   MAC Size:
+    ///      an unsigned 16-bit integer giving the length of the MAC field in
+    ///      octets.  Truncation is indicated by a MAC Size less than the size
+    ///      of the keyed hash produced by the algorithm specified by the
+    ///      Algorithm Name.
+    ///
+    ///   MAC:
+    ///      a sequence of octets whose contents are defined by the TSIG
+    ///      algorithm used, possibly truncated as specified by the MAC Size.
+    ///      The length of this field is given by the MAC Size.  Calculation of
+    ///      the MAC is detailed in Section 4.3.
+    ///
+    ///   Original ID:
+    ///      an unsigned 16-bit integer holding the message ID of the original
+    ///      request message.  For a TSIG RR on a request, it is set equal to
+    ///      the DNS message ID.  In a TSIG attached to a response -- or in
+    ///      cases such as the forwarding of a dynamic update request -- the
+    ///      field contains the ID of the original DNS request.
+    ///
+    ///   Error:
+    ///      in responses, an unsigned 16-bit integer containing the extended
+    ///      RCODE covering TSIG processing.  In requests, this MUST be zero.
+    ///
+    ///   Other Len:
+    ///      an unsigned 16-bit integer specifying the length of the Other Data
+    ///      field in octets.
+    ///
+    ///   Other Data:
+    ///      additional data relevant to the TSIG record.  In responses, this
+    ///      will be empty (i.e., Other Len will be zero) unless the content of
+    ///      the Error field is BADTIME, in which case it will be a 48-bit
+    ///      unsigned integer containing the server's current time as the
+    ///      number of seconds since 00:00 on 1970-01-01 UTC, ignoring leap
+    ///      seconds (see Section 5.2.3).  This document assigns no meaning to
+    ///      its contents in requests.
+    /// ```
+    TSIG(TSIG),
+
     /// Unknown or unsupported DNSSec record data
     Unknown {
         /// RecordType code
@@ -480,51 +511,54 @@ pub enum DNSSECRData {
 
 impl DNSSECRData {
     pub(crate) fn read(
-        decoder: &mut BinDecoder,
-        record_type: DNSSECRecordType,
+        decoder: &mut BinDecoder<'_>,
+        record_type: RecordType,
         rdata_length: Restrict<u16>,
     ) -> ProtoResult<Self> {
         match record_type {
-            DNSSECRecordType::DNSKEY => {
-                debug!("reading DNSKEY");
+            RecordType::DNSKEY => {
+                trace!("reading DNSKEY");
                 dnskey::read(decoder, rdata_length).map(DNSSECRData::DNSKEY)
             }
-            DNSSECRecordType::DS => {
-                debug!("reading DS");
+            RecordType::DS => {
+                trace!("reading DS");
                 ds::read(decoder, rdata_length).map(DNSSECRData::DS)
             }
-            DNSSECRecordType::KEY => {
-                debug!("reading KEY");
+            RecordType::KEY => {
+                trace!("reading KEY");
                 key::read(decoder, rdata_length).map(DNSSECRData::KEY)
             }
-            DNSSECRecordType::NSEC => {
-                debug!("reading NSEC");
+            RecordType::NSEC => {
+                trace!("reading NSEC");
                 nsec::read(decoder, rdata_length).map(DNSSECRData::NSEC)
             }
-            DNSSECRecordType::NSEC3 => {
-                debug!("reading NSEC3");
+            RecordType::NSEC3 => {
+                trace!("reading NSEC3");
                 nsec3::read(decoder, rdata_length).map(DNSSECRData::NSEC3)
             }
-            DNSSECRecordType::NSEC3PARAM => {
-                debug!("reading NSEC3PARAM");
+            RecordType::NSEC3PARAM => {
+                trace!("reading NSEC3PARAM");
                 nsec3param::read(decoder).map(DNSSECRData::NSEC3PARAM)
             }
-            DNSSECRecordType::RRSIG => {
-                debug!("reading RRSIG");
+            RecordType::RRSIG => {
+                trace!("reading RRSIG");
                 sig::read(decoder, rdata_length).map(DNSSECRData::SIG)
             }
-            DNSSECRecordType::SIG => {
-                debug!("reading SIG");
+            RecordType::SIG => {
+                trace!("reading SIG");
                 sig::read(decoder, rdata_length).map(DNSSECRData::SIG)
             }
-            DNSSECRecordType::Unknown(code) => {
-                debug!("reading unknown dnssec: {}", code);
-                null::read(decoder, rdata_length).map(|rdata| DNSSECRData::Unknown { code, rdata })
+            RecordType::TSIG => {
+                trace!("reading TSIG");
+                tsig::read(decoder, rdata_length).map(DNSSECRData::TSIG)
+            }
+            r => {
+                panic!("not a dnssec RecordType: {}", r);
             }
         }
     }
 
-    pub(crate) fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    pub(crate) fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         match *self {
             DNSSECRData::DS(ref ds) => {
                 encoder.with_canonical_names(|encoder| ds::emit(encoder, ds))
@@ -547,22 +581,50 @@ impl DNSSECRData {
             DNSSECRData::SIG(ref sig) => {
                 encoder.with_canonical_names(|encoder| sig::emit(encoder, sig))
             }
+            DNSSECRData::TSIG(ref tsig) => tsig::emit(encoder, tsig),
             DNSSECRData::Unknown { ref rdata, .. } => {
                 encoder.with_canonical_names(|encoder| null::emit(encoder, rdata))
             }
         }
     }
 
-    pub(crate) fn to_record_type(&self) -> DNSSECRecordType {
+    pub(crate) fn to_record_type(&self) -> RecordType {
         match *self {
-            DNSSECRData::DS(..) => DNSSECRecordType::DS,
-            DNSSECRData::KEY(..) => DNSSECRecordType::KEY,
-            DNSSECRData::DNSKEY(..) => DNSSECRecordType::DNSKEY,
-            DNSSECRData::NSEC(..) => DNSSECRecordType::NSEC,
-            DNSSECRData::NSEC3(..) => DNSSECRecordType::NSEC3,
-            DNSSECRData::NSEC3PARAM(..) => DNSSECRecordType::NSEC3PARAM,
-            DNSSECRData::SIG(..) => DNSSECRecordType::SIG,
-            DNSSECRData::Unknown { code, .. } => DNSSECRecordType::Unknown(code),
+            DNSSECRData::DS(..) => RecordType::DS,
+            DNSSECRData::KEY(..) => RecordType::KEY,
+            DNSSECRData::DNSKEY(..) => RecordType::DNSKEY,
+            DNSSECRData::NSEC(..) => RecordType::NSEC,
+            DNSSECRData::NSEC3(..) => RecordType::NSEC3,
+            DNSSECRData::NSEC3PARAM(..) => RecordType::NSEC3PARAM,
+            DNSSECRData::SIG(..) => RecordType::SIG,
+            DNSSECRData::TSIG(..) => RecordType::TSIG,
+            DNSSECRData::Unknown { code, .. } => RecordType::Unknown(code),
         }
+    }
+}
+
+impl fmt::Display for DNSSECRData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        fn w<D: fmt::Display>(f: &mut fmt::Formatter<'_>, d: D) -> Result<(), fmt::Error> {
+            write!(f, "{rdata}", rdata = d)
+        }
+
+        match self {
+            DNSSECRData::DS(ds) => w(f, ds),
+            DNSSECRData::KEY(key) => w(f, key),
+            DNSSECRData::DNSKEY(key) => w(f, key),
+            DNSSECRData::NSEC(nsec) => w(f, nsec),
+            DNSSECRData::NSEC3(nsec3) => w(f, nsec3),
+            DNSSECRData::NSEC3PARAM(nsec3param) => w(f, nsec3param),
+            DNSSECRData::SIG(sig) => w(f, sig),
+            DNSSECRData::TSIG(ref tsig) => w(f, tsig),
+            DNSSECRData::Unknown { rdata, .. } => w(f, rdata),
+        }
+    }
+}
+
+impl From<DNSSECRData> for RData {
+    fn from(rdata: DNSSECRData) -> RData {
+        RData::DNSSEC(rdata)
     }
 }

@@ -15,8 +15,11 @@
  */
 
 //! text records for storing arbitrary data
-
+use std::fmt;
 use std::slice::Iter;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::*;
 use crate::serialize::binary::*;
@@ -34,6 +37,7 @@ use crate::serialize::binary::*;
 /// TXT RRs are used to hold descriptive text.  The semantics of the text
 /// depends on the domain where it is found.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct TXT {
     txt_data: Box<[Box<[u8]>]>,
@@ -53,7 +57,27 @@ impl TXT {
         TXT {
             txt_data: txt_data
                 .into_iter()
-                .map(|s| s.as_bytes().to_vec().into_boxed_slice())
+                .map(|s| s.into_bytes().into_boxed_slice())
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
+        }
+    }
+
+    /// Creates a new TXT record data from bytes.
+    /// Allows creating binary record data.
+    ///
+    /// # Arguments
+    ///
+    /// * `txt_data` - the set of bytes which make up the txt_data.
+    ///
+    /// # Return value
+    ///
+    /// The new TXT record data.
+    pub fn from_bytes(txt_data: Vec<&[u8]>) -> TXT {
+        TXT {
+            txt_data: txt_data
+                .into_iter()
+                .map(|s| s.to_vec().into_boxed_slice())
                 .collect::<Vec<_>>()
                 .into_boxed_slice(),
         }
@@ -67,13 +91,13 @@ impl TXT {
     }
 
     /// Returns an iterator over the arrays in the txt data
-    pub fn iter(&self) -> Iter<Box<[u8]>> {
+    pub fn iter(&self) -> Iter<'_, Box<[u8]>> {
         self.txt_data.iter()
     }
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<TXT> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<TXT> {
     let data_len = decoder.len();
     let mut strings = Vec::with_capacity(1);
 
@@ -91,12 +115,22 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, txt: &TXT) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, txt: &TXT) -> ProtoResult<()> {
     for s in txt.txt_data() {
         encoder.emit_character_data(s)?;
     }
 
     Ok(())
+}
+
+impl fmt::Display for TXT {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        for txt in self.txt_data.iter() {
+            f.write_str(&String::from_utf8_lossy(txt))?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -110,13 +144,31 @@ mod tests {
         let rdata = TXT::new(vec!["Test me some".to_string(), "more please".to_string()]);
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
+        let restrict = Restrict::new(bytes.len() as u16);
+        let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
+        assert_eq!(rdata, read_rdata);
+    }
+
+    #[test]
+    fn publish_binary_txt_record() {
+        let bin_data = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let rdata = TXT::from_bytes(vec![b"Test me some", &bin_data]);
+
+        let mut bytes = Vec::new();
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
+        assert!(emit(&mut encoder, &rdata).is_ok());
+        let bytes = encoder.into_bytes();
+
+        println!("bytes: {:?}", bytes);
+
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let restrict = Restrict::new(bytes.len() as u16);
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata, read_rdata);

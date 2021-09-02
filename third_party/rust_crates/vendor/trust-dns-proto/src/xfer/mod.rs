@@ -9,9 +9,11 @@ use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use futures::channel::mpsc::{TrySendError, UnboundedSender};
-use futures::channel::oneshot::{self, Receiver, Sender};
-use futures::{ready, Future, Stream};
+use futures_channel::mpsc;
+use futures_channel::oneshot;
+use futures_util::future::Future;
+use futures_util::ready;
+use futures_util::stream::{Fuse, Peekable, Stream, StreamExt};
 use log::{debug, warn};
 
 use crate::error::*;
@@ -23,6 +25,7 @@ pub mod dns_multiplexer;
 pub mod dns_request;
 pub mod dns_response;
 #[cfg(feature = "dnssec")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
 pub mod dnssec_dns_handle;
 pub mod retry_dns_handle;
 mod serial_message;
@@ -30,13 +33,12 @@ mod serial_message;
 pub use self::dns_exchange::{
     DnsExchange, DnsExchangeBackground, DnsExchangeConnect, DnsExchangeSend,
 };
-pub use self::dns_handle::{DnsHandle, DnsStreamHandle, StreamHandle};
-pub use self::dns_multiplexer::{
-    DnsMultiplexer, DnsMultiplexerConnect, DnsMultiplexerSerialResponse,
-};
+pub use self::dns_handle::{DnsHandle, DnsStreamHandle};
+pub use self::dns_multiplexer::{DnsMultiplexer, DnsMultiplexerConnect};
 pub use self::dns_request::{DnsRequest, DnsRequestOptions};
-pub use self::dns_response::DnsResponse;
+pub use self::dns_response::{DnsResponse, DnsResponseStream};
 #[cfg(feature = "dnssec")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
 pub use self::dnssec_dns_handle::DnssecDnsHandle;
 pub use self::retry_dns_handle::RetryDnsHandle;
 pub use self::serial_message::SerialMessage;
@@ -52,33 +54,25 @@ fn ignore_send<M, E: Debug>(result: Result<M, E>) {
 pub trait DnsClientStream:
     Stream<Item = Result<SerialMessage, ProtoError>> + Display + Send
 {
+    /// Time implementation for this impl
+    type Time: Time;
+
     /// The remote name server address
     fn name_server_addr(&self) -> SocketAddr;
 }
 
-// TODO: change to Sink
-/// A sender to which serialized DNS Messages can be sent
-#[derive(Clone)]
-pub struct BufStreamHandle {
-    sender: UnboundedSender<SerialMessage>,
-}
+/// Receiver handle for peekable fused SerialMessage channel
+pub type StreamReceiver = Peekable<Fuse<mpsc::Receiver<SerialMessage>>>;
 
-impl BufStreamHandle {
-    /// Constructs a new BufStreamHandle with the associated ProtoError
-    pub fn new(sender: UnboundedSender<SerialMessage>) -> Self {
-        BufStreamHandle { sender }
-    }
-
-    /// see [`futures::sync::mpsc::UnboundedSender`]
-    pub fn unbounded_send(&self, msg: SerialMessage) -> Result<(), TrySendError<SerialMessage>> {
-        self.sender.unbounded_send(msg)
-    }
-}
+const CHANNEL_BUFFER_SIZE: usize = 32;
 
 /// A buffering stream bound to a `SocketAddr`
+///
+/// This stream handle ensures that all messages sent via this handle have the remote_addr set as the destination for the packet
+#[derive(Clone)]
 pub struct BufDnsStreamHandle {
-    name_server: SocketAddr,
-    sender: BufStreamHandle,
+    remote_addr: SocketAddr,
+    sender: mpsc::Sender<SerialMessage>,
 }
 
 impl BufDnsStreamHandle {
@@ -86,62 +80,38 @@ impl BufDnsStreamHandle {
     ///
     /// # Arguments
     ///
-    /// * `name_server` - the address of the DNS server
+    /// * `remote_addr` - the address of the remote DNS system (client or server)
     /// * `sender` - the handle being used to send data to the server
-    pub fn new(name_server: SocketAddr, sender: BufStreamHandle) -> Self {
-        BufDnsStreamHandle {
-            name_server,
+    pub fn new(remote_addr: SocketAddr) -> (Self, StreamReceiver) {
+        let (sender, receiver) = mpsc::channel(CHANNEL_BUFFER_SIZE);
+        let receiver = receiver.fuse().peekable();
+
+        let this = BufDnsStreamHandle {
+            remote_addr,
             sender,
+        };
+
+        (this, receiver)
+    }
+
+    /// Associates a different remote address for any responses.
+    ///
+    /// This is mainly useful in server use cases where the incoming address is only known after receiving a packet.
+    pub fn with_remote_addr(&self, remote_addr: SocketAddr) -> Self {
+        Self {
+            remote_addr,
+            sender: self.sender.clone(),
         }
     }
 }
 
 impl DnsStreamHandle for BufDnsStreamHandle {
     fn send(&mut self, buffer: SerialMessage) -> Result<(), ProtoError> {
-        let name_server: SocketAddr = self.name_server;
+        let remote_addr: SocketAddr = self.remote_addr;
         let sender: &mut _ = &mut self.sender;
         sender
-            .sender
-            .unbounded_send(SerialMessage::new(buffer.unwrap().0, name_server))
+            .try_send(SerialMessage::new(buffer.into_parts().0, remote_addr))
             .map_err(|e| ProtoError::from(format!("mpsc::SendError {}", e)))
-    }
-}
-
-// TODO: expose the Sink trait for this?
-/// A sender to which serialized DNS Messages can be sent
-pub struct DnsRequestStreamHandle<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
-    sender: UnboundedSender<OneshotDnsRequest<F>>,
-}
-
-impl<F> DnsRequestStreamHandle<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
-    /// Constructs a new BufStreamHandle with the associated ProtoError
-    pub fn new(sender: UnboundedSender<OneshotDnsRequest<F>>) -> Self {
-        DnsRequestStreamHandle { sender }
-    }
-
-    /// see [`futures::sync::mpsc::UnboundedSender`]
-    pub fn unbounded_send(
-        &self,
-        msg: OneshotDnsRequest<F>,
-    ) -> Result<(), TrySendError<OneshotDnsRequest<F>>> {
-        self.sender.unbounded_send(msg)
-    }
-}
-
-impl<F> Clone for DnsRequestStreamHandle<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
-    fn clone(&self) -> Self {
-        DnsRequestStreamHandle {
-            sender: self.sender.clone(),
-        }
     }
 }
 
@@ -151,25 +121,12 @@ where
 ///   NotReady, if it is not ready to send a message, and `Err` or `None` in the case that the stream is
 ///   done, and should be shutdown.
 pub trait DnsRequestSender: Stream<Item = Result<(), ProtoError>> + Send + Unpin + 'static {
-    /// A future that resolves to a response serial message
-    type DnsResponseFuture: Future<Output = Result<DnsResponse, ProtoError>>
-        + 'static
-        + Send
-        + Unpin;
-
-    /// Send a message, and return a future of the response
+    /// Send a message, and return a stream of response
     ///
     /// # Return
     ///
-    /// A future which will resolve to a SerialMessage response
-    fn send_message<TE: Time>(
-        &mut self,
-        message: DnsRequest,
-        cx: &mut Context,
-    ) -> Self::DnsResponseFuture;
-
-    /// Constructs an error response
-    fn error_response<TE: Time>(error: ProtoError) -> Self::DnsResponseFuture;
+    /// A stream which will resolve to SerialMessage responses
+    fn send_message(&mut self, message: DnsRequest) -> DnsResponseStream;
 
     /// Allows the upstream user to inform the underling stream that it should shutdown.
     ///
@@ -181,32 +138,9 @@ pub trait DnsRequestSender: Stream<Item = Result<(), ProtoError>> + Send + Unpin
 }
 
 /// Used for associating a name_server to a DnsRequestStreamHandle
-pub struct BufDnsRequestStreamHandle<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
-    sender: DnsRequestStreamHandle<F>,
-}
-
-impl<F> BufDnsRequestStreamHandle<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
-    /// Construct a new BufDnsRequestStreamHandle
-    pub fn new(sender: DnsRequestStreamHandle<F>) -> Self {
-        BufDnsRequestStreamHandle { sender }
-    }
-}
-
-impl<F> Clone for BufDnsRequestStreamHandle<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
-    fn clone(&self) -> Self {
-        BufDnsRequestStreamHandle {
-            sender: self.sender.clone(),
-        }
-    }
+#[derive(Clone)]
+pub struct BufDnsRequestStreamHandle {
+    sender: mpsc::Sender<OneshotDnsRequest>,
 }
 
 macro_rules! try_oneshot {
@@ -215,9 +149,7 @@ macro_rules! try_oneshot {
 
         match $expr {
             Result::Ok(val) => val,
-            Result::Err(err) => {
-                return OneshotDnsResponseReceiver::Err(Some(ProtoError::from(err)))
-            }
+            Result::Err(err) => return DnsResponseReceiver::Err(Some(ProtoError::from(err))),
         }
     }};
     ($expr:expr,) => {
@@ -225,41 +157,35 @@ macro_rules! try_oneshot {
     };
 }
 
-impl<F> DnsHandle for BufDnsRequestStreamHandle<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send + Unpin + 'static,
-{
-    type Response = OneshotDnsResponseReceiver<F>;
+impl DnsHandle for BufDnsRequestStreamHandle {
+    type Response = DnsResponseReceiver;
+    type Error = ProtoError;
 
     fn send<R: Into<DnsRequest>>(&mut self, request: R) -> Self::Response {
         let request: DnsRequest = request.into();
         debug!("enqueueing message: {:?}", request.queries());
 
         let (request, oneshot) = OneshotDnsRequest::oneshot(request);
-        try_oneshot!(self.sender.unbounded_send(request).map_err(|_| {
+        try_oneshot!(self.sender.try_send(request).map_err(|_| {
             debug!("unable to enqueue message");
-            ProtoError::from("could not send request")
+            ProtoError::from(ProtoErrorKind::Busy)
         }));
 
-        OneshotDnsResponseReceiver::Receiver(oneshot)
+        DnsResponseReceiver::Receiver(oneshot)
     }
 }
 
 // TODO: this future should return the origin message in the response on errors
 /// A OneshotDnsRequest creates a channel for a response to message
-pub struct OneshotDnsRequest<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
+pub struct OneshotDnsRequest {
     dns_request: DnsRequest,
-    sender_for_response: Sender<F>,
+    sender_for_response: oneshot::Sender<DnsResponseStream>,
 }
 
-impl<F> OneshotDnsRequest<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
-    fn oneshot(dns_request: DnsRequest) -> (OneshotDnsRequest<F>, oneshot::Receiver<F>) {
+impl OneshotDnsRequest {
+    fn oneshot(
+        dns_request: DnsRequest,
+    ) -> (OneshotDnsRequest, oneshot::Receiver<DnsResponseStream>) {
         let (sender_for_response, receiver) = oneshot::channel();
 
         (
@@ -271,7 +197,7 @@ where
         )
     }
 
-    fn unwrap(self) -> (DnsRequest, OneshotDnsResponse<F>) {
+    fn into_parts(self) -> (DnsRequest, OneshotDnsResponse) {
         (
             self.dns_request,
             OneshotDnsResponse(self.sender_for_response),
@@ -279,58 +205,86 @@ where
     }
 }
 
-struct OneshotDnsResponse<F>(oneshot::Sender<F>)
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send;
+struct OneshotDnsResponse(oneshot::Sender<DnsResponseStream>);
 
-impl<F> OneshotDnsResponse<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send,
-{
-    fn send_response(self, serial_response: F) -> Result<(), F> {
+impl OneshotDnsResponse {
+    fn send_response(self, serial_response: DnsResponseStream) -> Result<(), DnsResponseStream> {
         self.0.send(serial_response)
     }
 }
 
-/// A Future that wraps a oneshot::Receiver and resolves to the final value
-pub enum OneshotDnsResponseReceiver<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send + Unpin,
-{
+/// A Stream that wraps a oneshot::Receiver<Stream> and resolves to items in the inner Stream
+pub enum DnsResponseReceiver {
     /// The receiver
-    Receiver(Receiver<F>),
-    /// The future once received
-    Received(F),
+    Receiver(oneshot::Receiver<DnsResponseStream>),
+    /// The stream once received
+    Received(DnsResponseStream),
     /// Error during the send operation
     Err(Option<ProtoError>),
 }
 
-impl<F> Future for OneshotDnsResponseReceiver<F>
-where
-    F: Future<Output = Result<DnsResponse, ProtoError>> + Send + Unpin,
-{
-    type Output = <F as Future>::Output;
+impl Stream for DnsResponseReceiver {
+    type Item = Result<DnsResponse, ProtoError>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
             *self = match *self.as_mut() {
-                OneshotDnsResponseReceiver::Receiver(ref mut receiver) => {
+                DnsResponseReceiver::Receiver(ref mut receiver) => {
                     let receiver = Pin::new(receiver);
                     let future = ready!(receiver
                         .poll(cx)
                         .map_err(|_| ProtoError::from("receiver was canceled")))?;
-                    OneshotDnsResponseReceiver::Received(future)
+                    DnsResponseReceiver::Received(future)
                 }
-                OneshotDnsResponseReceiver::Received(ref mut future) => {
-                    let future = Pin::new(future);
-                    return future.poll(cx);
+                DnsResponseReceiver::Received(ref mut stream) => {
+                    return stream.poll_next_unpin(cx);
                 }
-                OneshotDnsResponseReceiver::Err(ref mut err) => {
-                    return Poll::Ready(Err(err
-                        .take()
-                        .expect("futures should not be polled after complete")))
-                }
+                DnsResponseReceiver::Err(ref mut err) => return Poll::Ready(err.take().map(Err)),
             };
         }
+    }
+}
+
+/// Helper trait to convert a Stream of dns response into a Future
+pub trait FirstAnswer<T, E: From<ProtoError>>: Stream<Item = Result<T, E>> + Unpin + Sized {
+    /// Convert a Stream of dns response into a Future yielding the first answer,
+    /// discarding others if any.
+    fn first_answer(self) -> FirstAnswerFuture<Self> {
+        FirstAnswerFuture { stream: Some(self) }
+    }
+}
+
+impl<E, S, T> FirstAnswer<T, E> for S
+where
+    S: Stream<Item = Result<T, E>> + Unpin + Sized,
+    E: From<ProtoError>,
+{
+}
+
+/// See [FirstAnswer::first_answer]
+#[derive(Debug)]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
+pub struct FirstAnswerFuture<S> {
+    stream: Option<S>,
+}
+
+impl<E, S: Stream<Item = Result<T, E>> + Unpin, T> Future for FirstAnswerFuture<S>
+where
+    S: Stream<Item = Result<T, E>> + Unpin + Sized,
+    E: From<ProtoError>,
+{
+    type Output = S::Item;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let s = self
+            .stream
+            .as_mut()
+            .expect("polling FirstAnswerFuture twice");
+        let item = match ready!(s.poll_next_unpin(cx)) {
+            Some(r) => r,
+            None => Err(ProtoError::from(ProtoErrorKind::Timeout).into()),
+        };
+        self.stream.take();
+        Poll::Ready(item)
     }
 }

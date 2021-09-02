@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::FuchsiaTime,
     async_trait::async_trait,
     fuchsia_async::net::TcpStream,
     futures::io::{AsyncRead, AsyncWrite},
@@ -16,13 +17,15 @@ use {
 /// creating a `TcpStream` to a particular destination.
 pub struct DnsTcpStream(TcpStream);
 
+impl trust_dns_proto::tcp::DnsTcpStream for DnsTcpStream {
+    type Time = FuchsiaTime;
+}
+
 #[async_trait]
 impl Connect for DnsTcpStream {
-    type Transport = DnsTcpStream;
-
-    async fn connect(addr: SocketAddr) -> io::Result<Self::Transport> {
+    async fn connect(addr: SocketAddr) -> io::Result<Self> {
         let connector = TcpStream::connect(addr)?;
-        connector.await.map(|tcp| DnsTcpStream(tcp))
+        connector.await.map(Self)
     }
 }
 

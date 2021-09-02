@@ -6,6 +6,12 @@
 // copied, modified, or distributed except according to those terms.
 
 //! TLSA records for storing TLS certificate validation information
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
+use super::sshfp;
 
 use crate::error::*;
 use crate::serialize::binary::*;
@@ -29,6 +35,7 @@ use crate::serialize::binary::*;
 ///    /                                                               /
 ///    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct TLSA {
     cert_usage: CertUsage,
@@ -63,6 +70,7 @@ pub struct TLSA {
 ///    that accept other formats for certificates, those certificates will
 ///    need their own certificate usage values.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CertUsage {
     /// ```text
@@ -173,12 +181,13 @@ impl From<CertUsage> for u8 {
 ///    unrelated to the use of "selector" in DomainKeys Identified Mail
 ///    (DKIM) [RFC6376].)
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Selector {
-    /// Full certificate: the Certificate binary structure as defined in [RFC5280]
+    /// Full certificate: the Certificate binary structure as defined in [RFC5280](https://tools.ietf.org/html/rfc5280)
     Full,
 
-    /// SubjectPublicKeyInfo: DER-encoded binary structure as defined in [RFC5280]
+    /// SubjectPublicKeyInfo: DER-encoded binary structure as defined in [RFC5280](https://tools.ietf.org/html/rfc5280)
     Spki,
 
     /// Unassigned at the time of this writing
@@ -231,15 +240,16 @@ impl From<Selector> for u8 {
 ///    certificate (if possible) will assist clients that support a small
 ///    number of hash algorithms.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Matching {
     /// Exact match on selected content
     Raw,
 
-    /// SHA-256 hash of selected content [RFC6234]
+    /// SHA-256 hash of selected content [RFC6234](https://tools.ietf.org/html/rfc6234)
     Sha256,
 
-    /// SHA-512 hash of selected content [RFC6234]
+    /// SHA-512 hash of selected content [RFC6234](https://tools.ietf.org/html/rfc6234)
     Sha512,
 
     /// Unassigned at the time of this writing
@@ -340,7 +350,7 @@ impl TLSA {
 ///    /                                                               /
 ///    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 /// ```
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<TLSA> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<TLSA> {
     let cert_usage = decoder.read_u8()?.unverified(/*CertUsage is verified*/).into();
     let selector = decoder.read_u8()?.unverified(/*Selector is verified*/).into();
     let matching = decoder.read_u8()?.unverified(/*Matching is verified*/).into();
@@ -362,12 +372,73 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, tlsa: &TLSA) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, tlsa: &TLSA) -> ProtoResult<()> {
     encoder.emit_u8(tlsa.cert_usage.into())?;
     encoder.emit_u8(tlsa.selector.into())?;
     encoder.emit_u8(tlsa.matching.into())?;
     encoder.emit_vec(&tlsa.cert_data)?;
     Ok(())
+}
+
+/// [RFC 6698, DNS-Based Authentication for TLS](https://tools.ietf.org/html/rfc6698#section-2.2)
+///
+/// ```text
+/// 2.2.  TLSA RR Presentation Format
+///
+///   The presentation format of the RDATA portion (as defined in
+///   [RFC1035]) is as follows:
+///
+///   o  The certificate usage field MUST be represented as an 8-bit
+///      unsigned integer.
+///
+///   o  The selector field MUST be represented as an 8-bit unsigned
+///      integer.
+///
+///   o  The matching type field MUST be represented as an 8-bit unsigned
+///      integer.
+///
+///   o  The certificate association data field MUST be represented as a
+///      string of hexadecimal characters.  Whitespace is allowed within
+///      the string of hexadecimal characters, as described in [RFC1035].
+///
+/// 2.3.  TLSA RR Examples
+///
+///    In the following examples, the domain name is formed using the rules
+///    in Section 3.
+///
+///    An example of a hashed (SHA-256) association of a PKIX CA
+///    certificate:
+///
+///    _443._tcp.www.example.com. IN TLSA (
+///       0 0 1 d2abde240d7cd3ee6b4b28c54df034b9
+///             7983a1d16e8a410e4561cb106618e971 )
+///
+///    An example of a hashed (SHA-512) subject public key association of a
+///    PKIX end entity certificate:
+///
+///    _443._tcp.www.example.com. IN TLSA (
+///       1 1 2 92003ba34942dc74152e2f2c408d29ec
+///             a5a520e7f2e06bb944f4dca346baf63c
+///             1b177615d466f6c4b71c216a50292bd5
+///             8c9ebdd2f74e38fe51ffd48c43326cbc )
+///
+///    An example of a full certificate association of a PKIX end entity
+///    certificate:
+///
+///    _443._tcp.www.example.com. IN TLSA (
+///       3 0 0 30820307308201efa003020102020... )
+/// ```
+impl fmt::Display for TLSA {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{usage} {selector} {matching} {cert}",
+            usage = u8::from(self.cert_usage),
+            selector = u8::from(self.selector),
+            matching = u8::from(self.matching),
+            cert = sshfp::HEX.encode(&self.cert_data),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -429,13 +500,13 @@ mod tests {
 
     fn test_encode_decode(rdata: TLSA) {
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         emit(&mut encoder, &rdata).expect("failed to emit tlsa");
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let read_rdata =
             read(&mut decoder, Restrict::new(bytes.len() as u16)).expect("failed to read back");
         assert_eq!(rdata, read_rdata);

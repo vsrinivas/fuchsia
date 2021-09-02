@@ -15,14 +15,17 @@
  */
 
 //! negative cache proof for non-existence
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
 
 use super::nsec3;
 use crate::error::*;
-use crate::rr::dnssec::rdata::DNSSECRecordType;
 use crate::rr::{Name, RecordType};
 use crate::serialize::binary::*;
 
-/// [RFC 4034, DNSSEC Resource Records, March 2005](https://tools.ietf.org/html/rfc4034#section-4)
+/// [RFC 4034](https://tools.ietf.org/html/rfc4034#section-4), DNSSEC Resource Records, March 2005
 ///
 /// ```text
 /// 4.1.  NSEC RDATA Wire Format
@@ -46,6 +49,7 @@ use crate::serialize::binary::*;
 ///    expansion.  [RFC4035] describes the impact of wildcards on
 ///    authenticated denial of existence.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct NSEC {
     next_domain_name: Name,
@@ -83,12 +87,12 @@ impl NSEC {
     ///
     /// An NSEC RData for use in a Resource Record
     pub fn new_cover_self(next_domain_name: Name, mut type_bit_maps: Vec<RecordType>) -> NSEC {
-        type_bit_maps.push(RecordType::DNSSEC(DNSSECRecordType::NSEC));
+        type_bit_maps.push(RecordType::NSEC);
 
         Self::new(next_domain_name, type_bit_maps)
     }
 
-    /// [RFC 4034, DNSSEC Resource Records, March 2005](https://tools.ietf.org/html/rfc4034#section-4.1.1)
+    /// [RFC 4034](https://tools.ietf.org/html/rfc4034#section-4.1.1), DNSSEC Resource Records, March 2005
     ///
     /// ```text
     /// 4.1.1.  The Next Domain Name Field
@@ -130,7 +134,7 @@ impl NSEC {
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<NSEC> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<NSEC> {
     let start_idx = decoder.index();
 
     let next_domain_name = Name::read(decoder)?;
@@ -154,11 +158,56 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 ///   to lowercase.  DNS names in the RDATA section of RRSIG resource
 ///   records are converted to lowercase.
 /// ```
-pub fn emit(encoder: &mut BinEncoder, rdata: &NSEC) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, rdata: &NSEC) -> ProtoResult<()> {
     encoder.with_canonical_names(|encoder| {
         rdata.next_domain_name().emit(encoder)?;
         nsec3::encode_bit_maps(encoder, rdata.type_bit_maps())
     })
+}
+
+/// [RFC 4034](https://tools.ietf.org/html/rfc4034#section-4.2), DNSSEC Resource Records, March 2005
+///
+/// ```text
+/// 4.2.  The NSEC RR Presentation Format
+///
+///    The presentation format of the RDATA portion is as follows:
+///
+///    The Next Domain Name field is represented as a domain name.
+///
+///    The Type Bit Maps field is represented as a sequence of RR type
+///    mnemonics.  When the mnemonic is not known, the TYPE representation
+///    described in [RFC3597], Section 5, MUST be used.
+///
+/// 4.3.  NSEC RR Example
+///
+///    The following NSEC RR identifies the RRsets associated with
+///    alfa.example.com. and identifies the next authoritative name after
+///    alfa.example.com.
+///
+///    alfa.example.com. 86400 IN NSEC host.example.com. (
+///                                    A MX RRSIG NSEC TYPE1234 )
+///
+///    The first four text fields specify the name, TTL, Class, and RR type
+///    (NSEC).  The entry host.example.com. is the next authoritative name
+///    after alfa.example.com. in canonical order.  The A, MX, RRSIG, NSEC,
+///    and TYPE1234 mnemonics indicate that there are A, MX, RRSIG, NSEC,
+///    and TYPE1234 RRsets associated with the name alfa.example.com.
+///
+///    Assuming that the validator can authenticate this NSEC record, it
+///    could be used to prove that beta.example.com does not exist, or to
+///    prove that there is no AAAA record associated with alfa.example.com.
+///    Authenticated denial of existence is discussed in [RFC4035].
+/// ```
+impl fmt::Display for NSEC {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "{}", self.next_domain_name)?;
+
+        for ty in &self.type_bit_maps {
+            write!(f, " {}", ty)?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -168,8 +217,7 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test() {
-        use crate::rr::dnssec::rdata::DNSSECRecordType;
+    fn test() {
         use crate::rr::RecordType;
         use std::str::FromStr;
 
@@ -178,19 +226,19 @@ mod tests {
             vec![
                 RecordType::A,
                 RecordType::AAAA,
-                RecordType::DNSSEC(DNSSECRecordType::DS),
-                RecordType::DNSSEC(DNSSECRecordType::RRSIG),
+                RecordType::DS,
+                RecordType::RRSIG,
             ],
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let restrict = Restrict::new(bytes.len() as u16);
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata, read_rdata);

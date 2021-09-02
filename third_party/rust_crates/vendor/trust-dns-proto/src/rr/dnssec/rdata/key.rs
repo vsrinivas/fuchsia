@@ -15,6 +15,10 @@
  */
 
 //! public key record data for signing zone records
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::*;
 use crate::rr::dnssec::Algorithm;
@@ -158,7 +162,7 @@ use crate::serialize::binary::*;
 ///               6 and 7 above) always have authority to sign any RRs in
 ///               the zone regardless of the value of the signatory field.
 /// ```
-#[allow(deprecated)]
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct KEY {
     key_trust: KeyTrust,
@@ -170,6 +174,7 @@ pub struct KEY {
 }
 
 /// Specifies in what contexts this key may be trusted for use
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum KeyTrust {
     /// Use of the key is prohibited for authentication
@@ -241,8 +246,8 @@ fn test_key_trust() {
 }
 
 /// Declares what this key is for
-#[allow(deprecated)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 pub enum KeyUsage {
     /// key associated with a "user" or "account" at an end entity, usually a host
     Host,
@@ -262,7 +267,6 @@ impl Default for KeyUsage {
 }
 
 impl From<u16> for KeyUsage {
-    #[allow(deprecated)]
     fn from(flags: u16) -> Self {
         // we only care about the 6&7 two bits, zero out the rest
         match flags & 0b0000_0011_0000_0000 {
@@ -280,7 +284,6 @@ impl From<u16> for KeyUsage {
 }
 
 impl From<KeyUsage> for u16 {
-    #[allow(deprecated)]
     fn from(key_usage: KeyUsage) -> Self {
         match key_usage {
             // 00: indicates that this is a key associated with a "user" or
@@ -296,7 +299,7 @@ impl From<KeyUsage> for u16 {
 }
 
 #[test]
-#[allow(deprecated)]
+
 fn test_key_usage() {
     assert_eq!(KeyUsage::Host, KeyUsage::from(u16::from(KeyUsage::Host)));
     assert_eq!(KeyUsage::Zone, KeyUsage::from(u16::from(KeyUsage::Zone)));
@@ -403,8 +406,8 @@ fn test_key_usage() {
 ///    SHOULD be set to 0 in KEY records, and MUST be ignored.
 ///
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[deprecated = "Deprecated by RFC3007"]
-#[allow(deprecated)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct UpdateScope {
     /// this key is authorized to attach,
@@ -422,7 +425,6 @@ pub struct UpdateScope {
     pub general: bool,
 }
 
-#[allow(deprecated)]
 impl Default for UpdateScope {
     fn default() -> Self {
         UpdateScope {
@@ -434,7 +436,6 @@ impl Default for UpdateScope {
     }
 }
 
-#[allow(deprecated)]
 impl From<u16> for UpdateScope {
     fn from(flags: u16) -> Self {
         // we only care about the final four bits, zero out the rest
@@ -451,7 +452,6 @@ impl From<u16> for UpdateScope {
     }
 }
 
-#[allow(deprecated)]
 impl From<UpdateScope> for u16 {
     fn from(update_scope: UpdateScope) -> Self {
         let mut flags = 0_u16;
@@ -477,7 +477,6 @@ impl From<UpdateScope> for u16 {
 }
 
 #[test]
-#[allow(deprecated)]
 fn test_update_scope() {
     assert_eq!(
         UpdateScope::default(),
@@ -576,7 +575,7 @@ fn test_update_scope() {
 /// ```text
 /// All Protocol Octet values except DNSSEC (3) are eliminated
 /// ```
-#[allow(deprecated)]
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Protocol {
     /// Not in use
@@ -608,7 +607,6 @@ impl Default for Protocol {
 }
 
 impl From<u8> for Protocol {
-    #[allow(deprecated)]
     fn from(field: u8) -> Self {
         match field {
             0 => Protocol::Reserved,
@@ -623,7 +621,6 @@ impl From<u8> for Protocol {
 }
 
 impl From<Protocol> for u8 {
-    #[allow(deprecated)]
     fn from(protocol: Protocol) -> Self {
         match protocol {
             Protocol::Reserved => 0,
@@ -651,7 +648,6 @@ impl KEY {
     /// # Return
     ///
     /// A new KEY RData for use in a Resource Record
-    #[allow(deprecated)]
     pub fn new(
         key_trust: KeyTrust,
         key_usage: KeyUsage,
@@ -681,7 +677,6 @@ impl KEY {
     }
 
     /// Returns the signatory information of the KEY
-    #[allow(deprecated)]
     pub fn signatory(&self) -> UpdateScope {
         self.signatory
     }
@@ -720,6 +715,16 @@ impl KEY {
     /// ```
     pub fn public_key(&self) -> &[u8] {
         &self.public_key
+    }
+
+    /// Output the encoded form of the flags
+    pub fn flags(&self) -> u16 {
+        let mut flags: u16 = 0;
+        flags |= u16::from(self.key_trust);
+        flags |= u16::from(self.key_usage);
+        flags |= u16::from(self.signatory);
+
+        flags
     }
 
     // /// Creates a message digest for this KEY record.
@@ -772,8 +777,7 @@ impl From<KEY> for RData {
 }
 
 /// Read the RData from the given Decoder
-#[allow(deprecated)]
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<KEY> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<KEY> {
     //      0   1   2   3   4   5   6   7   8   9   0   1   2   3   4   5
     //    +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
     //    |  A/C  | Z | XT| Z | Z | NAMTYP| Z | Z | Z | Z |      SIG      |
@@ -819,18 +823,90 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, rdata: &KEY) -> ProtoResult<()> {
-    let mut flags: u16 = 0;
-    flags |= u16::from(rdata.key_trust);
-    flags |= u16::from(rdata.key_usage);
-    flags |= u16::from(rdata.signatory);
-
-    encoder.emit_u16(flags)?;
+pub fn emit(encoder: &mut BinEncoder<'_>, rdata: &KEY) -> ProtoResult<()> {
+    encoder.emit_u16(rdata.flags())?;
     encoder.emit(u8::from(rdata.protocol))?;
     rdata.algorithm().emit(encoder)?;
     encoder.emit_vec(rdata.public_key())?;
 
     Ok(())
+}
+
+/// Note that KEY is a deprecated type in DNS
+///
+/// [RFC 2535](https://tools.ietf.org/html/rfc2535#section-7.1), Domain Name System Security Extensions, March 1999
+///
+/// ```text
+/// 7.1 Presentation of KEY RRs
+///
+///    KEY RRs may appear as single logical lines in a zone data master file
+///    [RFC 1033].
+///
+///    The flag field is represented as an unsigned integer or a sequence of
+///    mnemonics as follows separated by instances of the verticle bar ("|")
+///    character:
+///
+///      BIT  Mnemonic  Explanation
+///     0-1           key type
+///         NOCONF    =1 confidentiality use prohibited
+///         NOAUTH    =2 authentication use prohibited
+///         NOKEY     =3 no key present
+///     2   FLAG2     - reserved
+///     3   EXTEND    flags extension
+///     4   FLAG4     - reserved
+///     5   FLAG5     - reserved
+///     6-7           name type
+///         USER      =0 (default, may be omitted)
+///         ZONE      =1
+///         HOST      =2 (host or other end entity)
+///         NTYP3     - reserved
+///     8   FLAG8     - reserved
+///     9   FLAG9     - reserved
+///    10   FLAG10    - reserved
+///    11   FLAG11    - reserved
+///    12-15          signatory field, values 0 to 15
+///             can be represented by SIG0, SIG1, ... SIG15
+///
+///    No flag mnemonic need be present if the bit or field it represents is
+///    zero.
+///
+///    The protocol octet can be represented as either an unsigned integer
+///    or symbolicly.  The following initial symbols are defined:
+///
+///         000    NONE
+///         001    TLS
+///         002    EMAIL
+///         003    DNSSEC
+///         004    IPSEC
+///         255    ALL
+///
+///    Note that if the type flags field has the NOKEY value, nothing
+///    appears after the algorithm octet.
+///
+///    The remaining public key portion is represented in base 64 (see
+///    Appendix A) and may be divided up into any number of white space
+///    separated substrings, down to single base 64 digits, which are
+///    concatenated to obtain the full signature.  These substrings can span
+///    lines using the standard parenthesis.
+///
+///    Note that the public key may have internal sub-fields but these do
+///    not appear in the master file representation.  For example, with
+///    algorithm 1 there is a public exponent size, then a public exponent,
+///    and then a modulus.  With algorithm 254, there will be an OID size,
+///    an OID, and algorithm dependent information. But in both cases only a
+///    single logical base 64 string will appear in the master file.
+/// ```
+impl fmt::Display for KEY {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{flags} {proto} {alg} {key}",
+            flags = self.flags(),
+            proto = u8::from(self.protocol),
+            alg = self.algorithm,
+            key = data_encoding::BASE64.encode(&self.public_key)
+        )
+    }
 }
 
 #[cfg(test)]
@@ -840,7 +916,7 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test() {
+    fn test() {
         let rdata = KEY::new(
             Default::default(),
             Default::default(),
@@ -851,13 +927,13 @@ mod tests {
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let restrict = Restrict::new(bytes.len() as u16);
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata, read_rdata);

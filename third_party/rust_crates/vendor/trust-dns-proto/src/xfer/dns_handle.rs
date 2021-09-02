@@ -6,8 +6,9 @@
 // copied, modified, or distributed except according to those terms.
 
 //! `DnsHandle` types perform conversions of the raw DNS messages before sending the messages on the specified streams.
-use futures::channel::mpsc::UnboundedSender;
-use futures::future::Future;
+use std::error::Error;
+
+use futures_util::stream::Stream;
 use log::debug;
 use rand;
 
@@ -16,19 +17,9 @@ use crate::op::{Message, MessageType, OpCode, Query};
 use crate::xfer::{DnsRequest, DnsRequestOptions, DnsResponse, SerialMessage};
 
 // TODO: this should be configurable
-const MAX_PAYLOAD_LEN: u16 = 1500 - 40 - 8; // 1500 (general MTU) - 40 (ipv6 header) - 8 (udp header)
-
-/// The StreamHandle is the general interface for communicating with the DnsMultiplexer
-pub struct StreamHandle {
-    sender: UnboundedSender<Vec<u8>>,
-}
-
-impl StreamHandle {
-    /// Constructs a new StreamHandle for wrapping the sender
-    pub fn new(sender: UnboundedSender<Vec<u8>>) -> Self {
-        StreamHandle { sender }
-    }
-}
+// > An EDNS buffer size of 1232 bytes will avoid fragmentation on nearly all current networks.
+// https://dnsflagday.net/2020/
+const MAX_PAYLOAD_LEN: u16 = 1232;
 
 /// Implementations of Sinks for sending DNS messages
 pub trait DnsStreamHandle: 'static + Send {
@@ -36,23 +27,23 @@ pub trait DnsStreamHandle: 'static + Send {
     fn send(&mut self, buffer: SerialMessage) -> Result<(), ProtoError>;
 }
 
-impl DnsStreamHandle for StreamHandle {
-    fn send(&mut self, buffer: SerialMessage) -> Result<(), ProtoError> {
-        UnboundedSender::unbounded_send(&self.sender, buffer.unwrap().0)
-            .map_err(|e| ProtoError::from(format!("mpsc::SendError {}", e)))
-    }
-}
-
 /// A trait for implementing high level functions of DNS.
 pub trait DnsHandle: 'static + Clone + Send + Sync + Unpin {
-    /// The associated response from the response future, this should resolve to the Response message
-    type Response: Future<Output = Result<DnsResponse, ProtoError>> + 'static + Send + Unpin;
+    /// The associated response from the response stream, this should resolve to the Response messages
+    type Response: Stream<Item = Result<DnsResponse, Self::Error>> + Send + Unpin + 'static;
+    /// Error of the response, generally this will be `ProtoError`
+    type Error: From<ProtoError> + Error + Clone + Send + Unpin + 'static;
 
     /// Only returns true if and only if this DNS handle is validating DNSSec.
     ///
     /// If the DnsHandle impl is wrapping other clients, then the correct option is to delegate the question to the wrapped client.
     fn is_verifying_dnssec(&self) -> bool {
         false
+    }
+
+    /// Allow for disabling EDNS
+    fn is_using_edns(&self) -> bool {
+        true
     }
 
     /// Send a message via the channel in the client
@@ -71,31 +62,32 @@ pub trait DnsHandle: 'static + Clone + Send + Sync + Unpin {
     /// # Arguments
     ///
     /// * `query` - the query to lookup
+    /// * `options` - options to use when constructing the message
     fn lookup(&mut self, query: Query, options: DnsRequestOptions) -> Self::Response {
         debug!("querying: {} {:?}", query.name(), query.query_type());
-
-        // build the message
-        let mut message: Message = Message::new();
-
-        // TODO: This is not the final ID, it's actually set in the poll method of DNS future
-        //  should we just remove this?
-        let id: u16 = rand::random();
-
-        message.add_query(query);
-        message
-            .set_id(id)
-            .set_message_type(MessageType::Query)
-            .set_op_code(OpCode::Query)
-            .set_recursion_desired(true);
-
-        // Extended dns
-        {
-            // TODO: this should really be configurable...
-            let edns = message.edns_mut();
-            edns.set_max_payload(MAX_PAYLOAD_LEN);
-            edns.set_version(0);
-        }
-
-        self.send(DnsRequest::new(message, options))
+        self.send(DnsRequest::new(build_message(query, options), options))
     }
+}
+
+fn build_message(query: Query, options: DnsRequestOptions) -> Message {
+    // build the message
+    let mut message: Message = Message::new();
+    // TODO: This is not the final ID, it's actually set in the poll method of DNS future
+    //  should we just remove this?
+    let id: u16 = rand::random();
+    message
+        .add_query(query)
+        .set_id(id)
+        .set_message_type(MessageType::Query)
+        .set_op_code(OpCode::Query)
+        .set_recursion_desired(true);
+
+    // Extended dns
+    if options.use_edns {
+        message
+            .edns_mut()
+            .set_max_payload(MAX_PAYLOAD_LEN)
+            .set_version(0);
+    }
+    message
 }

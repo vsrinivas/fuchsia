@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -13,30 +13,18 @@
 [package]
 edition = "2018"
 name = "data-encoding"
-version = "2.1.2"
+version = "2.3.2"
 authors = ["Julien Cretin <git@ia0.eu>"]
 include = ["Cargo.toml", "LICENSE", "README.md", "src/lib.rs"]
-description = "Efficient and customizable data-encoding functions"
+description = "Efficient and customizable data-encoding functions like base64, base32, and hex"
 documentation = "https://docs.rs/data-encoding"
 readme = "README.md"
-keywords = ["base-conversion", "encoding", "base64", "base32", "hex"]
-categories = ["encoding"]
+keywords = ["no_std", "base64", "base32", "hex"]
+categories = ["encoding", "no-std"]
 license = "MIT"
 repository = "https://github.com/ia0/data-encoding"
-[badges.appveyor]
-repository = "ia0/data-encoding"
 
-[badges.coveralls]
-repository = "ia0/data-encoding"
-
-[badges.is-it-maintained-issue-resolution]
-repository = "ia0/data-encoding"
-
-[badges.is-it-maintained-open-issues]
-repository = "ia0/data-encoding"
-
-[badges.maintenance]
-status = "passively-maintained"
-
-[badges.travis-ci]
-repository = "ia0/data-encoding"
+[features]
+alloc = []
+default = ["std"]
+std = ["alloc"]

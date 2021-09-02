@@ -88,28 +88,38 @@ impl Edns {
         &self.options
     }
 
+    /// Returns a mutable options portion of EDNS
+    pub fn options_mut(&mut self) -> &mut OPT {
+        &mut self.options
+    }
+
     /// Set the high order bits for the result code.
-    pub fn set_rcode_high(&mut self, rcode_high: u8) {
-        self.rcode_high = rcode_high
+    pub fn set_rcode_high(&mut self, rcode_high: u8) -> &mut Self {
+        self.rcode_high = rcode_high;
+        self
     }
 
     /// Set the EDNS version
-    pub fn set_version(&mut self, version: u8) {
-        self.version = version
+    pub fn set_version(&mut self, version: u8) -> &mut Self {
+        self.version = version;
+        self
     }
 
     /// Set to true if DNSSec is supported
-    pub fn set_dnssec_ok(&mut self, dnssec_ok: bool) {
-        self.dnssec_ok = dnssec_ok
+    pub fn set_dnssec_ok(&mut self, dnssec_ok: bool) -> &mut Self {
+        self.dnssec_ok = dnssec_ok;
+        self
     }
 
     /// Set the maximum payload which can be supported
     /// From RFC 6891: `Values lower than 512 MUST be treated as equal to 512`
-    pub fn set_max_payload(&mut self, max_payload: u16) {
+    pub fn set_max_payload(&mut self, max_payload: u16) -> &mut Self {
         self.max_payload = max_payload.max(512);
+        self
     }
 
     /// Set the specified EDNS option
+    #[deprecated(note = "Please use options_mut().insert() to modify")]
     pub fn set_option(&mut self, option: EdnsOption) {
         self.options.insert(option);
     }
@@ -178,7 +188,7 @@ impl<'a> From<&'a Edns> for Record {
 }
 
 impl BinEncodable for Edns {
-    fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         encoder.emit(0)?; // Name::root
         RecordType::OPT.emit(encoder)?; //self.rr_type.emit(encoder)?;
         DNSClass::for_opt(self.max_payload()).emit(encoder)?; // self.dns_class.emit(encoder)?;
@@ -215,7 +225,8 @@ fn test_encode_decode() {
     edns.set_max_payload(0x8008);
     edns.set_version(0x40);
     edns.set_rcode_high(0x01);
-    edns.set_option(EdnsOption::DAU(SupportedAlgorithms::all()));
+    edns.options_mut()
+        .insert(EdnsOption::DAU(SupportedAlgorithms::all()));
 
     let record: Record = (&edns).into();
     let edns_decode: Edns = (&record).into();
@@ -225,4 +236,10 @@ fn test_encode_decode() {
     assert_eq!(edns.version(), edns_decode.version());
     assert_eq!(edns.rcode_high(), edns_decode.rcode_high());
     assert_eq!(edns.options(), edns_decode.options());
+
+    // re-insert and remove using mut
+    edns.options_mut()
+        .insert(EdnsOption::DAU(SupportedAlgorithms::all()));
+    edns.options_mut().remove(EdnsCode::DAU);
+    assert!(edns.option(EdnsCode::DAU).is_none());
 }

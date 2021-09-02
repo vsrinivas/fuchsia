@@ -13,6 +13,7 @@ use log::info;
 use crate::rr::{DNSClass, Name, RData, Record, RecordType};
 
 #[cfg(feature = "dnssec")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
 use crate::rr::dnssec::SupportedAlgorithms;
 
 /// Set of resource records associated to a name and type
@@ -136,11 +137,12 @@ impl RecordSet {
     /// * `supported_algorithms` - the RRSIGs will be filtered by the set of supported_algorithms,
     ///                            and then only the maximal RRSIG algorithm will be returned.
     #[cfg(feature = "dnssec")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
     pub fn records(
         &self,
         and_rrsigs: bool,
         supported_algorithms: SupportedAlgorithms,
-    ) -> RrsetRecords {
+    ) -> RrsetRecords<'_> {
         if and_rrsigs {
             self.records_with_rrsigs(supported_algorithms)
         } else {
@@ -155,7 +157,11 @@ impl RecordSet {
     /// * `supported_algorithms` - the RRSIGs will be filtered by the set of supported_algorithms,
     ///                            and then only the maximal RRSIG algorithm will be returned.
     #[cfg(feature = "dnssec")]
-    pub fn records_with_rrsigs(&self, supported_algorithms: SupportedAlgorithms) -> RrsetRecords {
+    #[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
+    pub fn records_with_rrsigs(
+        &self,
+        supported_algorithms: SupportedAlgorithms,
+    ) -> RrsetRecords<'_> {
         if self.records.is_empty() {
             RrsetRecords::Empty
         } else {
@@ -168,7 +174,7 @@ impl RecordSet {
     }
 
     /// Returns a Vec of all records in the set, without any RRSIGs.
-    pub fn records_without_rrsigs(&self) -> RrsetRecords {
+    pub fn records_without_rrsigs(&self) -> RrsetRecords<'_> {
         if self.records.is_empty() {
             RrsetRecords::Empty
         } else {
@@ -178,7 +184,7 @@ impl RecordSet {
 
     /// Returns an iterator over the records in the set
     #[deprecated(note = "see `records_without_rrsigs`")]
-    pub fn iter(&self) -> Iter<Record> {
+    pub fn iter(&self) -> Iter<'_, Record> {
         self.records.iter()
     }
 
@@ -288,7 +294,7 @@ impl RecordSet {
             RecordType::SOA => {
                 assert!(self.records.len() <= 1);
 
-                if let Some(soa_record) = self.records.iter().next() {
+                if let Some(soa_record) = self.records.get(0) {
                     match soa_record.rdata() {
                         &RData::SOA(ref existing_soa) => {
                             if let RData::SOA(ref new_soa) = *record.rdata() {
@@ -428,6 +434,47 @@ impl RecordSet {
 
         removed
     }
+
+    /// Consumes `RecordSet` and returns its components
+    pub fn into_parts(self) -> RecordSetParts {
+        self.into()
+    }
+}
+
+/// Consumes `RecordSet` giving public access to fields of `RecordSet` so they can
+/// be destructured and taken by value
+#[derive(Clone, Debug, PartialEq)]
+pub struct RecordSetParts {
+    pub name: Name,
+    pub record_type: RecordType,
+    pub dns_class: DNSClass,
+    pub ttl: u32,
+    pub records: Vec<Record>,
+    pub rrsigs: Vec<Record>,
+    pub serial: u32, // serial number at which this record was modifie,
+}
+
+impl From<RecordSet> for RecordSetParts {
+    fn from(rset: RecordSet) -> Self {
+        let RecordSet {
+            name,
+            record_type,
+            dns_class,
+            ttl,
+            records,
+            rrsigs,
+            serial,
+        } = rset;
+        RecordSetParts {
+            name,
+            record_type,
+            dns_class,
+            ttl,
+            records,
+            rrsigs,
+            serial,
+        }
+    }
 }
 
 impl From<Record> for RecordSet {
@@ -469,10 +516,12 @@ impl IntoIterator for RecordSet {
 
 /// An iterator over all the records and their signatures
 #[cfg(feature = "dnssec")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
 #[derive(Debug)]
 pub struct RecordsAndRrsigsIter<'r>(Chain<Iter<'r, Record>, RrsigsByAlgorithms<'r>>);
 
 #[cfg(feature = "dnssec")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
 impl<'r> Iterator for RecordsAndRrsigsIter<'r> {
     type Item = &'r Record;
 
@@ -483,13 +532,15 @@ impl<'r> Iterator for RecordsAndRrsigsIter<'r> {
 
 /// An iterator that limits the record signatures by SupportedAlgorithms
 #[cfg(feature = "dnssec")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
 #[derive(Debug)]
-pub struct RrsigsByAlgorithms<'r> {
+pub(crate) struct RrsigsByAlgorithms<'r> {
     rrsigs: Iter<'r, Record>,
     supported_algorithms: SupportedAlgorithms,
 }
 
 #[cfg(feature = "dnssec")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
 impl<'r> Iterator for RrsigsByAlgorithms<'r> {
     type Item = &'r Record;
 
@@ -532,16 +583,14 @@ pub enum RrsetRecords<'r> {
     RecordsOnly(Iter<'r, Record>),
     /// The records along with their signatures in the record set
     #[cfg(feature = "dnssec")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
     RecordsAndRrsigs(RecordsAndRrsigsIter<'r>),
 }
 
 impl<'r> RrsetRecords<'r> {
     /// This is a best effort emptyness check
     pub fn is_empty(&self) -> bool {
-        match *self {
-            RrsetRecords::Empty => true,
-            _ => false,
-        }
+        matches!(*self, RrsetRecords::Empty)
     }
 }
 
@@ -808,10 +857,10 @@ mod test {
 
     #[test]
     #[cfg(feature = "dnssec")] // This tests RFC 6975, a DNSSEC-specific feature.
-    #[allow(clippy::block_in_if_condition_stmt)]
+    #[allow(clippy::blocks_in_if_conditions)]
     fn test_get_filter() {
+        use crate::rr::dnssec::rdata::DNSSECRData;
         use crate::rr::dnssec::rdata::SIG;
-        use crate::rr::dnssec::rdata::{DNSSECRData, DNSSECRecordType};
         use crate::rr::dnssec::{Algorithm, SupportedAlgorithms};
 
         let name = Name::root();
@@ -863,28 +912,28 @@ mod test {
         let rrsig_rsa = Record::new()
             .set_name(name.clone())
             .set_ttl(3600)
-            .set_rr_type(RecordType::DNSSEC(DNSSECRecordType::RRSIG))
+            .set_rr_type(RecordType::RRSIG)
             .set_dns_class(DNSClass::IN)
             .set_rdata(RData::DNSSEC(DNSSECRData::SIG(rsasha256)))
             .clone();
         let rrsig_ecp256 = Record::new()
             .set_name(name.clone())
             .set_ttl(3600)
-            .set_rr_type(RecordType::DNSSEC(DNSSECRecordType::RRSIG))
+            .set_rr_type(RecordType::RRSIG)
             .set_dns_class(DNSClass::IN)
             .set_rdata(RData::DNSSEC(DNSSECRData::SIG(ecp256)))
             .clone();
         let rrsig_ecp384 = Record::new()
             .set_name(name.clone())
             .set_ttl(3600)
-            .set_rr_type(RecordType::DNSSEC(DNSSECRecordType::RRSIG))
+            .set_rr_type(RecordType::RRSIG)
             .set_dns_class(DNSClass::IN)
             .set_rdata(RData::DNSSEC(DNSSECRData::SIG(ecp384)))
             .clone();
         let rrsig_ed25519 = Record::new()
             .set_name(name.clone())
             .set_ttl(3600)
-            .set_rr_type(RecordType::DNSSEC(DNSSECRecordType::RRSIG))
+            .set_rr_type(RecordType::RRSIG)
             .set_dns_class(DNSClass::IN)
             .set_rdata(RData::DNSSEC(DNSSECRData::SIG(ed25519)))
             .clone();

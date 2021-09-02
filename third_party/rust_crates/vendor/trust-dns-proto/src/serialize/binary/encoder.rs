@@ -25,13 +25,13 @@ mod private {
     use crate::error::{ProtoErrorKind, ProtoResult};
 
     /// A wrapper for a buffer that guarantees writes never exceed a defined set of bytes
-    pub struct MaximalBuf<'a> {
+    pub(crate) struct MaximalBuf<'a> {
         max_size: usize,
         buffer: &'a mut Vec<u8>,
     }
 
     impl<'a> MaximalBuf<'a> {
-        pub fn new(max_size: u16, buffer: &'a mut Vec<u8>) -> Self {
+        pub(crate) fn new(max_size: u16, buffer: &'a mut Vec<u8>) -> Self {
             MaximalBuf {
                 max_size: max_size as usize,
                 buffer,
@@ -39,16 +39,16 @@ mod private {
         }
 
         /// Sets the maximum size to enforce
-        pub fn set_max_size(&mut self, max: u16) {
+        pub(crate) fn set_max_size(&mut self, max: u16) {
             self.max_size = max as usize;
         }
 
         /// returns an error if the maximum buffer size would be exceeded with the addition number of elements
         ///
         /// and reserves the additional space in the buffer
-        pub fn enforced_write<F>(&mut self, additional: usize, writer: F) -> ProtoResult<()>
+        pub(crate) fn enforced_write<F>(&mut self, additional: usize, writer: F) -> ProtoResult<()>
         where
-            F: FnOnce(&mut Vec<u8>) -> (),
+            F: FnOnce(&mut Vec<u8>),
         {
             let expected_len = self.buffer.len() + additional;
 
@@ -64,22 +64,22 @@ mod private {
         }
 
         /// truncates are always safe
-        pub fn truncate(&mut self, len: usize) {
+        pub(crate) fn truncate(&mut self, len: usize) {
             self.buffer.truncate(len)
         }
 
         /// returns the length of the underlying buffer
-        pub fn len(&self) -> usize {
+        pub(crate) fn len(&self) -> usize {
             self.buffer.len()
         }
 
         /// Immutable reads are always safe
-        pub fn buffer(&'a self) -> &'a [u8] {
+        pub(crate) fn buffer(&'a self) -> &'a [u8] {
             self.buffer as &'a [u8]
         }
 
         /// Returns a reference to the internal buffer
-        pub fn into_bytes(self) -> &'a Vec<u8> {
+        pub(crate) fn into_bytes(self) -> &'a Vec<u8> {
             self.buffer
         }
     }
@@ -89,8 +89,8 @@ mod private {
 pub struct BinEncoder<'a> {
     offset: usize,
     buffer: private::MaximalBuf<'a>,
-    /// start and end of label pointers, smallvec here?
-    name_pointers: Vec<(usize, usize)>,
+    /// start of label pointers with their labels in fully decompressed form for easy comparison, smallvec here?
+    name_pointers: Vec<(usize, Vec<u8>)>,
     mode: EncodeMode,
     canonical_names: bool,
 }
@@ -185,7 +185,7 @@ impl<'a> BinEncoder<'a> {
         self.canonical_names
     }
 
-    /// Emit all names in canonical form, useful for https://tools.ietf.org/html/rfc3597
+    /// Emit all names in canonical form, useful for <https://tools.ietf.org/html/rfc3597>
     pub fn with_canonical_names<F: FnOnce(&mut Self) -> ProtoResult<()>>(
         &mut self,
         f: F,
@@ -209,8 +209,7 @@ impl<'a> BinEncoder<'a> {
     pub fn trim(&mut self) {
         let offset = self.offset;
         self.buffer.truncate(offset);
-        self.name_pointers
-            .retain(|&(start, end)| start < offset && end <= offset);
+        self.name_pointers.retain(|&(start, _)| start < offset);
     }
 
     // /// returns an error if the maximum buffer size would be exceeded with the addition number of elements
@@ -241,7 +240,8 @@ impl<'a> BinEncoder<'a> {
         assert!(end <= (u16::max_value() as usize));
         assert!(start <= end);
         if self.offset < 0x3FFF_usize {
-            self.name_pointers.push((start, end)); // the next char will be at the len() location
+            self.name_pointers
+                .push((start, self.slice_of(start, end).to_vec())); // the next char will be at the len() location
         }
     }
 
@@ -249,11 +249,10 @@ impl<'a> BinEncoder<'a> {
     pub fn get_label_pointer(&self, start: usize, end: usize) -> Option<u16> {
         let search = self.slice_of(start, end);
 
-        for &(match_start, match_end) in &self.name_pointers {
-            let matcher = self.slice_of(match_start as usize, match_end as usize);
-            if matcher == search {
-                assert!(match_start <= (u16::max_value() as usize));
-                return Some(match_start as u16);
+        for (match_start, matcher) in &self.name_pointers {
+            if matcher.as_slice() == search {
+                assert!(match_start <= &(u16::max_value() as usize));
+                return Some(*match_start as u16);
             }
         }
 
@@ -337,13 +336,12 @@ impl<'a> BinEncoder<'a> {
                     offset += 1;
                 }
             })?;
-
-            self.offset += data.len();
         } else {
             self.buffer
                 .enforced_write(data.len(), |buffer| buffer.extend_from_slice(data))?;
-            self.offset += data.len();
         }
+
+        self.offset += data.len();
 
         Ok(())
     }
@@ -476,7 +474,7 @@ pub struct Place<T: EncodedSize> {
 }
 
 impl<T: EncodedSize> Place<T> {
-    pub fn replace(self, encoder: &mut BinEncoder, data: T) -> ProtoResult<()> {
+    pub fn replace(self, encoder: &mut BinEncoder<'_>, data: T) -> ProtoResult<()> {
         encoder.emit_at(self, data)
     }
 
@@ -486,12 +484,12 @@ impl<T: EncodedSize> Place<T> {
 }
 
 /// A type representing a rollback point in a stream
-pub struct Rollback {
+pub(crate) struct Rollback {
     rollback_index: usize,
 }
 
 impl Rollback {
-    pub fn rollback(self, encoder: &mut BinEncoder) {
+    pub(crate) fn rollback(self, encoder: &mut BinEncoder<'_>) {
         encoder.set_offset(self.rollback_index)
     }
 }
@@ -508,9 +506,14 @@ pub enum EncodeMode {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
-    use crate::op::Message;
-    use crate::serialize::binary::BinDecoder;
+    use crate::{
+        op::{Message, Query},
+        rr::{rdata::SRV, RData, Record, RecordType},
+    };
+    use crate::{rr::Name, serialize::binary::BinDecoder};
 
     #[test]
     fn test_label_compression_regression() {
@@ -617,5 +620,46 @@ mod tests {
             ProtoErrorKind::MaxBufferSizeExceeded(_) => (),
             _ => panic!(),
         }
+    }
+
+    #[test]
+    fn test_target_compression() {
+        let mut msg = Message::new();
+        msg.add_query(Query::query(
+            Name::from_str("www.google.com.").unwrap(),
+            RecordType::A,
+        ))
+        .add_answer(Record::from_rdata(
+            Name::from_str("www.google.com.").unwrap(),
+            0,
+            RData::SRV(SRV::new(
+                0,
+                0,
+                0,
+                Name::from_str("www.compressme.com").unwrap(),
+            )),
+        ))
+        .add_additional(Record::from_rdata(
+            Name::from_str("www.google.com.").unwrap(),
+            0,
+            RData::SRV(SRV::new(
+                0,
+                0,
+                0,
+                Name::from_str("www.compressme.com").unwrap(),
+            )),
+        ))
+        // name here should use compressed label from target in previous records
+        .add_answer(Record::from_rdata(
+            Name::from_str("www.compressme.com").unwrap(),
+            0,
+            RData::CNAME(Name::from_str("www.foo.com").unwrap()),
+        ));
+
+        let bytes = msg.to_vec().unwrap();
+        // label is compressed pointing to target, would be 145 otherwise
+        assert_eq!(bytes.len(), 130);
+        // check re-serializing
+        assert!(Message::from_vec(&bytes).is_ok());
     }
 }

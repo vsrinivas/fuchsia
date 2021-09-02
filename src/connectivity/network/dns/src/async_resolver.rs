@@ -64,8 +64,7 @@ mod tests {
     #[test]
     fn test_ip_lookup_across_threads() {
         use trust_dns_resolver::testing::ip_lookup_across_threads_test;
-        let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        ip_lookup_across_threads_test::<FuchsiaExec, FuchsiaRuntime>(exec, Spawner)
+        ip_lookup_across_threads_test::<FuchsiaExec, FuchsiaRuntime>(Spawner)
     }
 
     #[test]

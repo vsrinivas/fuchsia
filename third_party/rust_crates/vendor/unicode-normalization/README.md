@@ -7,7 +7,7 @@ Unicode character composition and decomposition utilities
 as described in
 [Unicode Standard Annex #15](http://www.unicode.org/reports/tr15/).
 
-This crate requires Rust 1.21+.
+This crate requires Rust 1.36+.
 
 ```rust
 extern crate unicode_normalization;
@@ -31,5 +31,9 @@ to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-unicode-normalization = "0.1.8"
+unicode-normalization = "0.1.19"
 ```
+
+## `no_std` + `alloc` support
+
+This crate is completely `no_std` + `alloc` compatible. This can be enabled by disabling the `std` feature, i.e. specifying `default-features = false` for this crate on your `Cargo.toml`.

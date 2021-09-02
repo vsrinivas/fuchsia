@@ -6,9 +6,28 @@
 // copied, modified, or distributed except according to those terms.
 
 //! SSHFP records for SSH public key fingerprints
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
+use data_encoding::{Encoding, Specification};
+use lazy_static::lazy_static;
 
 use crate::error::*;
 use crate::serialize::binary::*;
+
+lazy_static! {
+    /// HEX formatting specific to TLSA and SSHFP encodings
+    pub static ref HEX: Encoding = {
+        let mut spec = Specification::new();
+        spec.symbols.push_str("0123456789abcdef");
+        spec.ignore.push_str(" \t\r\n");
+        spec.translate.from.push_str("ABCDEF");
+        spec.translate.to.push_str("abcdef");
+        spec.encoding().expect("error in sshfp HEX encoding")
+    };
+}
 
 /// [RFC 4255](https://tools.ietf.org/html/rfc4255#section-3.1)
 ///
@@ -36,6 +55,7 @@ use crate::serialize::binary::*;
 ///    The message-digest algorithm is presumed to produce an opaque octet
 ///    string output, which is placed as-is in the RDATA fingerprint field.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct SSHFP {
     algorithm: Algorithm,
@@ -92,11 +112,12 @@ impl SSHFP {
 ///           2        DSS
 ///
 ///    Reserving other types requires IETF consensus [4].
-/// ```text
+/// ```
 ///
 /// The algorithm values have been updated in
 /// [RFC 6594](https://tools.ietf.org/html/rfc6594) and
 /// [RFC 7479](https://tools.ietf.org/html/rfc7479).
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Algorithm {
     /// Reserved value
@@ -165,6 +186,7 @@ impl From<Algorithm> for u8 {
 ///
 /// The fingerprint type values have been updated in
 /// [RFC 6594](https://tools.ietf.org/html/rfc6594).
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum FingerprintType {
     /// Reserved value
@@ -203,7 +225,7 @@ impl From<FingerprintType> for u8 {
 }
 
 /// Read the RData from the given decoder.
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<SSHFP> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<SSHFP> {
     let algorithm = decoder.read_u8()?.unverified().into();
     let fingerprint_type = decoder.read_u8()?.unverified().into();
     let fingerprint_len = rdata_length
@@ -216,10 +238,35 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 /// Write the RData using the given encoder.
-pub fn emit(encoder: &mut BinEncoder, sshfp: &SSHFP) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, sshfp: &SSHFP) -> ProtoResult<()> {
     encoder.emit_u8(sshfp.algorithm().into())?;
     encoder.emit_u8(sshfp.fingerprint_type().into())?;
     encoder.emit_vec(sshfp.fingerprint())
+}
+
+/// [RFC 4255](https://tools.ietf.org/html/rfc4255#section-3.2)
+///
+/// ```text
+/// 3.2.  Presentation Format of the SSHFP RR
+///
+///    The RDATA of the presentation format of the SSHFP resource record
+///    consists of two numbers (algorithm and fingerprint type) followed by
+///    the fingerprint itself, presented in hex, e.g.:
+///
+///        host.example.  SSHFP 2 1 123456789abcdef67890123456789abcdef67890
+///
+///    The use of mnemonics instead of numbers is not allowed.
+/// ```
+impl fmt::Display for SSHFP {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{algorithm} {ty} {fingerprint}",
+            algorithm = u8::from(self.algorithm),
+            ty = u8::from(self.fingerprint_type),
+            fingerprint = HEX.encode(&self.fingerprint),
+        )
+    }
 }
 
 #[cfg(test)]

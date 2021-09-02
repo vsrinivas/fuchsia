@@ -10,9 +10,9 @@
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use futures::{Future, FutureExt};
+use futures_util::stream::{Stream, StreamExt};
 
-use crate::error::ProtoError;
+use crate::error::{ProtoError, ProtoErrorKind};
 use crate::xfer::{DnsRequest, DnsResponse};
 use crate::DnsHandle;
 
@@ -21,12 +21,20 @@ use crate::DnsHandle;
 /// *note* Current value of this is not clear, it may be removed
 #[derive(Clone)]
 #[must_use = "queries can only be sent through a ClientHandle"]
-pub struct RetryDnsHandle<H: DnsHandle + Unpin + Send> {
+pub struct RetryDnsHandle<H>
+where
+    H: DnsHandle + Unpin + Send,
+    H::Error: RetryableError,
+{
     handle: H,
     attempts: usize,
 }
 
-impl<H: DnsHandle + Unpin> RetryDnsHandle<H> {
+impl<H> RetryDnsHandle<H>
+where
+    H: DnsHandle + Unpin + Send,
+    H::Error: RetryableError,
+{
     /// Creates a new Client handler for reattempting requests on failures.
     ///
     /// # Arguments
@@ -41,55 +49,84 @@ impl<H: DnsHandle + Unpin> RetryDnsHandle<H> {
 impl<H> DnsHandle for RetryDnsHandle<H>
 where
     H: DnsHandle + Send + Unpin + 'static,
+    H::Error: RetryableError,
 {
-    type Response = Pin<Box<dyn Future<Output = Result<DnsResponse, ProtoError>> + Send + Unpin>>;
+    type Response = Pin<Box<dyn Stream<Item = Result<DnsResponse, Self::Error>> + Send + Unpin>>;
+    type Error = <H as DnsHandle>::Error;
 
     fn send<R: Into<DnsRequest>>(&mut self, request: R) -> Self::Response {
         let request = request.into();
 
         // need to clone here so that the retry can resend if necessary...
         //  obviously it would be nice to be lazy about this...
-        let future = self.handle.send(request.clone());
+        let stream = self.handle.send(request.clone());
 
-        Box::pin(RetrySendFuture {
+        Box::pin(RetrySendStream {
             request,
             handle: self.handle.clone(),
-            future,
+            stream,
             remaining_attempts: self.attempts,
         })
     }
 }
 
-/// A future for retrying (on failure, for the remaining number of times specified)
-struct RetrySendFuture<H: DnsHandle> {
+/// A stream for retrying (on failure, for the remaining number of times specified)
+struct RetrySendStream<H>
+where
+    H: DnsHandle,
+{
     request: DnsRequest,
     handle: H,
-    future: <H as DnsHandle>::Response,
+    stream: <H as DnsHandle>::Response,
     remaining_attempts: usize,
 }
 
-impl<H: DnsHandle + Unpin> Future for RetrySendFuture<H> {
-    type Output = Result<DnsResponse, ProtoError>;
+impl<H: DnsHandle + Unpin> Stream for RetrySendStream<H>
+where
+    <H as DnsHandle>::Error: RetryableError,
+{
+    type Item = Result<DnsResponse, <H as DnsHandle>::Error>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        // loop over the future, on errors, spawn a new future
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        // loop over the stream, on errors, spawn a new stream
         //  on ready and not ready return.
         loop {
-            match self.future.poll_unpin(cx) {
-                Poll::Ready(Err(e)) => {
-                    if self.remaining_attempts == 0 {
-                        return Poll::Ready(Err(e));
+            match self.stream.poll_next_unpin(cx) {
+                Poll::Ready(Some(Err(e))) => {
+                    if self.remaining_attempts == 0 || !e.should_retry() {
+                        return Poll::Ready(Some(Err(e)));
                     }
 
-                    self.remaining_attempts -= 1;
+                    if e.attempted() {
+                        self.remaining_attempts -= 1;
+                    }
+
                     // TODO: if the "sent" Message is part of the error result,
                     //  then we can just reuse it... and no clone necessary
                     let request = self.request.clone();
-                    self.future = self.handle.send(request);
+                    self.stream = self.handle.send(request);
                 }
                 poll => return poll,
             }
         }
+    }
+}
+
+/// What errors should be retried
+pub trait RetryableError {
+    /// Whether the query should be retried after this error
+    fn should_retry(&self) -> bool;
+    /// Whether this error should count as an attempt
+    fn attempted(&self) -> bool;
+}
+
+impl RetryableError for ProtoError {
+    fn should_retry(&self) -> bool {
+        true
+    }
+
+    fn attempted(&self) -> bool {
+        !matches!(self.kind(), ProtoErrorKind::Busy)
     }
 }
 
@@ -98,8 +135,10 @@ mod test {
     use super::*;
     use crate::error::*;
     use crate::op::*;
-    use futures::executor::block_on;
-    use futures::future::*;
+    use crate::xfer::FirstAnswer;
+    use futures_executor::block_on;
+    use futures_util::future::*;
+    use futures_util::stream::*;
     use std::sync::{
         atomic::{AtomicU16, Ordering},
         Arc,
@@ -114,7 +153,8 @@ mod test {
     }
 
     impl DnsHandle for TestClient {
-        type Response = Box<dyn Future<Output = Result<DnsResponse, ProtoError>> + Send + Unpin>;
+        type Response = Box<dyn Stream<Item = Result<DnsResponse, ProtoError>> + Send + Unpin>;
+        type Error = ProtoError;
 
         fn send<R: Into<DnsRequest>>(&mut self, _: R) -> Self::Response {
             let i = self.attempts.load(Ordering::SeqCst);
@@ -122,11 +162,11 @@ mod test {
             if (i > self.retries || self.retries - i == 0) && self.last_succeed {
                 let mut message = Message::new();
                 message.set_id(i);
-                return Box::new(ok(message.into()));
+                return Box::new(once(ok(message.into())));
             }
 
             self.attempts.fetch_add(1, Ordering::SeqCst);
-            Box::new(err(ProtoError::from("last retry set to fail")))
+            Box::new(once(err(ProtoError::from("last retry set to fail"))))
         }
     }
 
@@ -141,7 +181,7 @@ mod test {
             2,
         );
         let test1 = Message::new();
-        let result = block_on(handle.send(test1)).expect("should have succeeded");
+        let result = block_on(handle.send(test1).first_answer()).expect("should have succeeded");
         assert_eq!(result.id(), 1); // this is checking the number of iterations the TestClient ran
     }
 
@@ -156,6 +196,6 @@ mod test {
             2,
         );
         let test1 = Message::new();
-        assert!(block_on(client.send(test1)).is_err());
+        assert!(block_on(client.send(test1).first_answer()).is_err());
     }
 }

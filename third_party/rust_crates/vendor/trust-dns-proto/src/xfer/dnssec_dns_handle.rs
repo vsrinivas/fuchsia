@@ -9,30 +9,33 @@
 
 use std::clone::Clone;
 use std::collections::HashSet;
+use std::error::Error;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use futures::future;
-use futures::{Future, FutureExt, TryFutureExt};
-use log::debug;
+use futures_util::future;
+use futures_util::future::{Future, FutureExt, TryFutureExt};
+use futures_util::stream;
+use futures_util::stream::{Stream, TryStreamExt};
+use log::{debug, trace};
 
 use crate::error::*;
 use crate::op::{OpCode, Query};
-use crate::rr::dnssec::rdata::{DNSSECRData, DNSSECRecordType, DNSKEY, SIG};
+use crate::rr::dnssec::rdata::{DNSSECRData, DNSKEY, SIG};
 #[cfg(feature = "dnssec")]
 use crate::rr::dnssec::Verifier;
 use crate::rr::dnssec::{Algorithm, SupportedAlgorithms, TrustAnchor};
 use crate::rr::rdata::opt::EdnsOption;
 use crate::rr::{DNSClass, Name, RData, Record, RecordType};
 use crate::xfer::dns_handle::DnsHandle;
-use crate::xfer::{DnsRequest, DnsRequestOptions, DnsResponse};
+use crate::xfer::{DnsRequest, DnsRequestOptions, DnsResponse, FirstAnswer};
 
 #[derive(Debug)]
 struct Rrset {
-    pub name: Name,
-    pub record_type: RecordType,
-    pub record_class: DNSClass,
-    pub records: Vec<Record>,
+    pub(crate) name: Name,
+    pub(crate) record_type: RecordType,
+    pub(crate) record_class: DNSClass,
+    pub(crate) records: Vec<Record>,
 }
 
 /// Performs DNSSec validation of all DNS responses from the wrapped DnsHandle
@@ -63,7 +66,7 @@ where
     ///
     /// # Arguments
     /// * `handle` - handle to use for all connections to a remote server.
-    pub fn new(handle: H) -> DnssecDnsHandle<H> {
+    pub fn new(handle: H) -> Self {
         Self::with_trust_anchor(handle, TrustAnchor::default())
     }
 
@@ -74,7 +77,7 @@ where
     /// # Arguments
     /// * `handle` - handle to use for all connections to a remote server.
     /// * `trust_anchor` - custom DNSKEYs that will be trusted, can be used to pin trusted keys.
-    pub fn with_trust_anchor(handle: H, trust_anchor: TrustAnchor) -> DnssecDnsHandle<H> {
+    pub fn with_trust_anchor(handle: H, trust_anchor: TrustAnchor) -> Self {
         DnssecDnsHandle {
             handle,
             trust_anchor: Arc::new(trust_anchor),
@@ -98,8 +101,12 @@ where
     }
 }
 
-impl<H: DnsHandle + Sync + Unpin> DnsHandle for DnssecDnsHandle<H> {
-    type Response = Pin<Box<dyn Future<Output = Result<DnsResponse, ProtoError>> + Send>>;
+impl<H> DnsHandle for DnssecDnsHandle<H>
+where
+    H: DnsHandle + Sync + Unpin,
+{
+    type Response = Pin<Box<dyn Stream<Item = Result<DnsResponse, Self::Error>> + Send>>;
+    type Error = <H as DnsHandle>::Error;
 
     fn is_verifying_dnssec(&self) -> bool {
         // This handler is always verifying...
@@ -111,9 +118,9 @@ impl<H: DnsHandle + Sync + Unpin> DnsHandle for DnssecDnsHandle<H> {
 
         // backstop, this might need to be configurable at some point
         if self.request_depth > 20 {
-            return Box::pin(future::err(ProtoError::from(
-                "exceeded max validation depth",
-            )));
+            return Box::pin(stream::once(future::err(Self::Error::from(
+                ProtoError::from("exceeded max validation depth"),
+            ))));
         }
 
         // dnssec only matters on queries.
@@ -147,8 +154,8 @@ impl<H: DnsHandle + Sync + Unpin> DnsHandle for DnssecDnsHandle<H> {
                 let dau = EdnsOption::DAU(algorithms);
                 let dhu = EdnsOption::DHU(algorithms);
 
-                edns.set_option(dau);
-                edns.set_option(dhu);
+                edns.options_mut().insert(dau);
+                edns.options_mut().insert(dhu);
             }
 
             request.set_authentic_data(true);
@@ -164,8 +171,12 @@ impl<H: DnsHandle + Sync + Unpin> DnsHandle for DnssecDnsHandle<H> {
                     .and_then(move |message_response| {
                         // group the record sets by name and type
                         //  each rrset type needs to validated independently
-                        debug!("validating message_response: {}", message_response.id());
-                        verify_rrsets(handle, message_response, dns_class)
+                        debug!(
+                            "validating message_response: {}, with {} trust_anchors",
+                            message_response.id(),
+                            handle.trust_anchor.len(),
+                        );
+                        verify_rrsets(handle.clone(), message_response, dns_class)
                     })
                     .and_then(move |verified_message| {
                         // at this point all of the message is verified.
@@ -182,22 +193,22 @@ impl<H: DnsHandle + Sync + Unpin> DnsHandle for DnssecDnsHandle<H> {
                             {
                                 soa_name
                             } else {
-                                return future::err(ProtoError::from(
+                                return future::err(Self::Error::from(ProtoError::from(
                                     "could not validate negative response missing SOA",
-                                ));
+                                )));
                             };
 
                             let nsecs = verified_message
                                 .name_servers()
                                 .iter()
-                                .filter(|rr| is_dnssec(rr, DNSSECRecordType::NSEC))
+                                .filter(|rr| is_dnssec(rr, RecordType::NSEC))
                                 .collect::<Vec<_>>();
 
                             if !verify_nsec(&query, soa_name, nsecs.as_slice()) {
                                 // TODO change this to remove the NSECs, like we do for the others?
-                                return future::err(ProtoError::from(
+                                return future::err(Self::Error::from(ProtoError::from(
                                     "could not validate negative response with NSEC",
-                                ));
+                                )));
                             }
                         }
 
@@ -213,25 +224,29 @@ impl<H: DnsHandle + Sync + Unpin> DnsHandle for DnssecDnsHandle<H> {
 /// this pulls all records returned in a Message response and returns a future which will
 ///  validate all of them.
 #[allow(clippy::type_complexity)]
-async fn verify_rrsets<H: DnsHandle + Sync + Unpin>(
+async fn verify_rrsets<H, E>(
     handle: DnssecDnsHandle<H>,
     message_result: DnsResponse,
     dns_class: DNSClass,
-) -> Result<DnsResponse, ProtoError> {
+) -> Result<DnsResponse, E>
+where
+    H: DnsHandle<Error = E> + Sync + Unpin,
+    E: From<ProtoError> + Error + Clone + Send + Unpin + 'static,
+{
     let mut rrset_types: HashSet<(Name, RecordType)> = HashSet::new();
     for rrset in message_result
         .answers()
         .iter()
         .chain(message_result.name_servers())
         .filter(|rr| {
-            !is_dnssec(rr, DNSSECRecordType::RRSIG) &&
+            !is_dnssec(rr, RecordType::RRSIG) &&
                              // if we are at a depth greater than 1, we are only interested in proving evaluation chains
                              //   this means that only DNSKEY and DS are interesting at that point.
                              //   this protects against looping over things like NS records and DNSKEYs in responses.
                              // TODO: is there a cleaner way to prevent cycles in the evaluations?
                                           (handle.request_depth <= 1 ||
-                                           is_dnssec(rr, DNSSECRecordType::DNSKEY) ||
-                                           is_dnssec(rr, DNSSECRecordType::DS))
+                                           is_dnssec(rr, RecordType::DNSKEY) ||
+                                           is_dnssec(rr, RecordType::DS))
         })
         .map(|rr| (rr.name().clone(), rr.rr_type()))
     {
@@ -247,9 +262,9 @@ async fn verify_rrsets<H: DnsHandle + Sync + Unpin>(
         message_result.take_name_servers();
         message_result.take_additionals();
 
-        return Err(ProtoError::from(ProtoErrorKind::Message(
+        return Err(E::from(ProtoError::from(ProtoErrorKind::Message(
             "no results to verify",
-        )));
+        ))));
     }
 
     // collect all the rrsets to verify
@@ -271,7 +286,7 @@ async fn verify_rrsets<H: DnsHandle + Sync + Unpin>(
             .iter()
             .chain(message_result.name_servers())
             .chain(message_result.additionals())
-            .filter(|rr| is_dnssec(rr, DNSSECRecordType::RRSIG))
+            .filter(|rr| is_dnssec(rr, RecordType::RRSIG))
             .filter(|rr| {
                 if let RData::DNSSEC(DNSSECRData::SIG(ref rrsig)) = *rr.rdata() {
                     rrsig.type_covered() == record_type
@@ -305,20 +320,21 @@ async fn verify_rrsets<H: DnsHandle + Sync + Unpin>(
     verify_all_rrsets(message_result, rrsets_to_verify).await
 }
 
-fn is_dnssec(rr: &Record, dnssec_type: DNSSECRecordType) -> bool {
-    rr.rr_type() == RecordType::DNSSEC(dnssec_type)
+fn is_dnssec(rr: &Record, dnssec_type: RecordType) -> bool {
+    rr.rr_type().is_dnssec() && dnssec_type.is_dnssec() && rr.record_type() == dnssec_type
 }
 
-async fn verify_all_rrsets<F>(
+async fn verify_all_rrsets<F, E>(
     message_result: DnsResponse,
     rrsets: Vec<F>,
-) -> Result<DnsResponse, ProtoError>
+) -> Result<DnsResponse, E>
 where
-    F: Future<Output = Result<Rrset, ProtoError>> + Send + Unpin,
+    F: Future<Output = Result<Rrset, E>> + Send + Unpin,
+    E: From<ProtoError> + Error + Clone + Send + Unpin + 'static,
 {
     let mut verified_rrsets: HashSet<(Name, RecordType)> = HashSet::new();
     let mut rrsets = future::select_all(rrsets);
-    let mut last_validation_err: Option<ProtoError> = None;
+    let mut last_validation_err: Option<E> = None;
 
     // loop through all the rrset evaluations, filter all the rrsets in the Message
     //  down to just the ones that were able to be validated
@@ -336,7 +352,17 @@ where
             //       on a validation failure?
             // any error, is an error for all
             Err(e) => {
-                debug!("an rrset failed to verify: {:?}", e);
+                if log::log_enabled!(log::Level::Debug) {
+                    let mut query = message_result
+                        .queries()
+                        .iter()
+                        .map(|q| q.to_string())
+                        .fold(String::new(), |s, q| format!("{},{}", q, s));
+
+                    query.truncate(query.len() - 1);
+                    debug!("an rrset failed to verify ({}): {:?}", query, e);
+                }
+
                 last_validation_err = Some(e);
             }
         };
@@ -397,18 +423,19 @@ where
 ///  validated to prove it's correctness. There is a special case for DNSKEY, where if the RRSET
 ///  is unsigned, `rrsigs` is empty, then an immediate `verify_dnskey_rrset()` is triggered. In
 ///  this case, it's possible the DNSKEY is a trust_anchor and is not self-signed.
-async fn verify_rrset<H>(
+async fn verify_rrset<H, E>(
     handle: DnssecDnsHandle<H>,
     rrset: Rrset,
     rrsigs: Vec<Record>,
-) -> Result<Rrset, ProtoError>
+) -> Result<Rrset, E>
 where
-    H: DnsHandle + Sync + Unpin,
+    H: DnsHandle<Error = E> + Sync + Unpin,
+    E: From<ProtoError> + Error + Clone + Send + Unpin + 'static,
 {
     // Special case for unsigned DNSKEYs, it's valid for a DNSKEY to be bare in the zone if
     //  it's a trust_anchor, though some DNS servers choose to self-sign in this case,
     //  for self-signed KEYS they will drop through to the standard validation logic.
-    if let RecordType::DNSSEC(DNSSECRecordType::DNSKEY) = rrset.record_type {
+    if let RecordType::DNSKEY = rrset.record_type {
         if rrsigs.is_empty() {
             debug!("unsigned key: {}, {:?}", rrset.name, rrset.record_type);
             // TODO: validate that this DNSKEY is stronger than the one lower in the chain,
@@ -420,9 +447,9 @@ where
     // standard validation path
     let rrset = verify_default_rrset(&handle.clone_with_context(), rrset, rrsigs).await?;
 
-    // POST validation
+    // validation of DNSKEY records
     match rrset.record_type {
-        RecordType::DNSSEC(DNSSECRecordType::DNSKEY) => verify_dnskey_rrset(handle, rrset).await,
+        RecordType::DNSKEY => verify_dnskey_rrset(handle, rrset).await,
         _ => Ok(rrset),
     }
 }
@@ -432,16 +459,15 @@ where
 /// This first checks to see if the key is in the set of trust_anchors. If so then it's returned
 ///  as a success. Otherwise, a query is sent to get the DS record, and the DNSKEY is validated
 ///  against the DS record.
-async fn verify_dnskey_rrset<H>(
-    mut handle: DnssecDnsHandle<H>,
-    rrset: Rrset,
-) -> Result<Rrset, ProtoError>
+async fn verify_dnskey_rrset<H, E>(mut handle: DnssecDnsHandle<H>, rrset: Rrset) -> Result<Rrset, E>
 where
-    H: DnsHandle + Sync + Unpin,
+    H: DnsHandle<Error = E> + Sync + Unpin,
+    E: From<ProtoError> + Error + Clone + Send + Unpin + 'static,
 {
-    debug!(
+    trace!(
         "dnskey validation {}, record_type: {:?}",
-        rrset.name, rrset.record_type
+        rrset.name,
+        rrset.record_type
     );
 
     // check the DNSKEYS against the trust_anchor, if it's approved allow it.
@@ -450,7 +476,7 @@ where
             .records
             .iter()
             .enumerate()
-            .filter(|&(_, rr)| is_dnssec(rr, DNSSECRecordType::DNSKEY))
+            .filter(|&(_, rr)| is_dnssec(rr, RecordType::DNSKEY))
             .filter_map(|(i, rr)| {
                 if let RData::DNSSEC(DNSSECRData::DNSKEY(ref rdata)) = *rr.rdata() {
                     Some((i, rdata))
@@ -463,7 +489,11 @@ where
                     .trust_anchor
                     .contains_dnskey_bytes(rdata.public_key())
                 {
-                    debug!("in trust_anchor");
+                    debug!(
+                        "validated dnskey with trust_anchor: {}, {}",
+                        rrset.name, rdata
+                    );
+
                     Some(i)
                 } else {
                     None
@@ -474,67 +504,71 @@ where
         if !anchored_keys.is_empty() {
             let mut rrset = rrset;
             preserve(&mut rrset.records, anchored_keys);
-
-            debug!(
-                "validated dnskey with trust_anchor: {}, {}",
-                rrset.name,
-                rrset.records.len()
-            );
             return Ok(rrset);
         }
     }
 
     // need to get DS records for each DNSKEY
-    let valid_dnskey = handle
+    let ds_message = handle
         .lookup(
-            Query::query(rrset.name.clone(), RecordType::DNSSEC(DNSSECRecordType::DS)),
+            Query::query(rrset.name.clone(), RecordType::DS),
             DnsRequestOptions::default(),
         )
-        .and_then(move |ds_message| {
-            let valid_keys = rrset
-                .records
+        .first_answer()
+        .await?;
+    let valid_keys = rrset
+        .records
+        .iter()
+        .enumerate()
+        .filter(|&(_, rr)| is_dnssec(rr, RecordType::DNSKEY))
+        .filter_map(|(i, rr)| {
+            if let RData::DNSSEC(DNSSECRData::DNSKEY(ref rdata)) = *rr.rdata() {
+                Some((i, rdata))
+            } else {
+                None
+            }
+        })
+        .filter(|&(_, key_rdata)| {
+            ds_message
+                .answers()
                 .iter()
-                .enumerate()
-                .filter(|&(_, rr)| is_dnssec(rr, DNSSECRecordType::DNSKEY))
-                .filter_map(|(i, rr)| {
-                    if let RData::DNSSEC(DNSSECRData::DNSKEY(ref rdata)) = *rr.rdata() {
-                        Some((i, rdata))
+                .filter(|ds| is_dnssec(ds, RecordType::DS))
+                .filter_map(|ds| {
+                    if let RData::DNSSEC(DNSSECRData::DS(ref ds_rdata)) = *ds.rdata() {
+                        Some((ds.name(), ds_rdata))
                     } else {
                         None
                     }
                 })
-                .filter(|&(_, key_rdata)| {
-                    ds_message
-                        .answers()
-                        .iter()
-                        .filter(|ds| is_dnssec(ds, DNSSECRecordType::DS))
-                        .filter_map(|ds| {
-                            if let RData::DNSSEC(DNSSECRData::DS(ref ds_rdata)) = *ds.rdata() {
-                                Some(ds_rdata)
-                            } else {
-                                None
-                            }
-                        })
-                        // must be covered by at least one DS record
-                        .any(|ds_rdata| ds_rdata.covers(&rrset.name, key_rdata).unwrap_or(false))
+                // must be covered by at least one DS record
+                .any(|(ds_name, ds_rdata)| {
+                    if ds_rdata.covers(&rrset.name, key_rdata).unwrap_or(false) {
+                        if log::log_enabled!(log::Level::Debug) {
+                            debug!(
+                                "validated dnskey ({}, {}) with {} {}",
+                                rrset.name, key_rdata, ds_name, ds_rdata
+                            );
+                        }
+                        true
+                    } else {
+                        false
+                    }
                 })
-                .map(|(i, _)| i)
-                .collect::<Vec<usize>>();
+        })
+        .map(|(i, _)| i)
+        .collect::<Vec<usize>>();
 
-            if !valid_keys.is_empty() {
-                let mut rrset = rrset;
-                preserve(&mut rrset.records, valid_keys);
+    if !valid_keys.is_empty() {
+        let mut rrset = rrset;
+        preserve(&mut rrset.records, valid_keys);
 
-                debug!("validated dnskey: {}, {}", rrset.name, rrset.records.len());
-                future::ok(rrset)
-            } else {
-                future::err(ProtoError::from(ProtoErrorKind::Message(
-                    "Could not validate all DNSKEYs",
-                )))
-            }
-        });
-
-    valid_dnskey.await
+        trace!("validated dnskey: {}", rrset.name);
+        Ok(rrset)
+    } else {
+        Err(E::from(ProtoError::from(ProtoErrorKind::Message(
+            "Could not validate all DNSKEYs",
+        ))))
+    }
 }
 
 /// Preserves the specified indexes in vec, all others will be removed
@@ -601,30 +635,31 @@ fn test_preserve() {
 /// Invalid RRSIGs will be ignored. RRSIGs will only be validated against DNSKEYs which can
 ///  be validated through a chain back to the `trust_anchor`. As long as one RRSIG is valid,
 ///  then the RRSET will be valid.
-#[allow(clippy::block_in_if_condition_stmt)]
-async fn verify_default_rrset<H>(
+#[allow(clippy::blocks_in_if_conditions)]
+async fn verify_default_rrset<H, E>(
     handle: &DnssecDnsHandle<H>,
     rrset: Rrset,
     rrsigs: Vec<Record>,
-) -> Result<Rrset, ProtoError>
+) -> Result<Rrset, E>
 where
-    H: DnsHandle + Sync + Unpin,
+    H: DnsHandle<Error = E> + Sync + Unpin,
+    E: From<ProtoError> + Error + Clone + Send + Unpin + 'static,
 {
     // the record set is going to be shared across a bunch of futures, Arc for that.
     let rrset = Arc::new(rrset);
-    debug!(
+    trace!(
         "default validation {}, record_type: {:?}",
-        rrset.name, rrset.record_type
+        rrset.name,
+        rrset.record_type
     );
 
     // Special case for self-signed DNSKEYS, validate with itself...
     if rrsigs
         .iter()
-        .filter(|rrsig| is_dnssec(rrsig, DNSSECRecordType::RRSIG))
+        .filter(|rrsig| is_dnssec(rrsig, RecordType::RRSIG))
         .any(|rrsig| {
             if let RData::DNSSEC(DNSSECRData::SIG(ref sig)) = *rrsig.rdata() {
-                RecordType::DNSSEC(DNSSECRecordType::DNSKEY) == rrset.record_type
-                    && sig.signer_name() == &rrset.name
+                RecordType::DNSKEY == rrset.record_type && sig.signer_name() == &rrset.name
             } else {
                 panic!("expected a SIG here");
             }
@@ -638,9 +673,9 @@ where
             rrsigs
                 .into_iter()
                 // this filter is technically unnecessary, can probably remove it...
-                .filter(|rrsig| is_dnssec(rrsig, DNSSECRecordType::RRSIG))
+                .filter(|rrsig| is_dnssec(rrsig, RecordType::RRSIG))
                 .map(|rrsig| {
-                    if let RData::DNSSEC(DNSSECRData::SIG(sig)) = rrsig.unwrap_rdata() {
+                    if let RData::DNSSEC(DNSSECRData::SIG(sig)) = rrsig.into_data() {
                         // setting up the context explicitly.
                         sig
                     } else {
@@ -652,7 +687,8 @@ where
 
                     if rrset.records.iter().any(|r| {
                         if let RData::DNSSEC(DNSSECRData::DNSKEY(ref dnskey)) = *r.rdata() {
-                            verify_rrset_with_dnskey(dnskey, &sig, &rrset).is_ok()
+                            let dnskey_name = r.name();
+                            verify_rrset_with_dnskey(dnskey_name, dnskey, &sig, &rrset).is_ok()
                         } else {
                             panic!("expected a DNSKEY here: {:?}", r.rdata());
                         }
@@ -664,7 +700,9 @@ where
                 })
                 .next()
                 .ok_or_else(|| {
-                    ProtoError::from(ProtoErrorKind::Message("self-signed dnskey is invalid"))
+                    E::from(ProtoError::from(ProtoErrorKind::Message(
+                        "self-signed dnskey is invalid",
+                    )))
                 }),
         )
         .map_ok(move |_| Arc::try_unwrap(rrset).expect("unable to unwrap Arc"))
@@ -682,9 +720,9 @@ where
     //  TODO: strip RRSIGS to accepted algorithms and make algorithms configurable.
     let verifications = rrsigs.into_iter()
         // this filter is technically unnecessary, can probably remove it...
-        .filter(|rrsig| is_dnssec(rrsig, DNSSECRecordType::RRSIG))
+        .filter(|rrsig| is_dnssec(rrsig, RecordType::RRSIG))
         .map(|rrsig|
-            if let RData::DNSSEC(DNSSECRData::SIG(sig)) = rrsig.unwrap_rdata() {
+            if let RData::DNSSEC(DNSSECRData::SIG(sig)) = rrsig.into_data() {
                 // setting up the context explicitly.
                 sig
             } else {
@@ -697,34 +735,38 @@ where
 
             handle
                 .lookup(
-                    Query::query(sig.signer_name().clone(), RecordType::DNSSEC(DNSSECRecordType::DNSKEY)),
+                    Query::query(sig.signer_name().clone(), RecordType::DNSKEY),
                     DnsRequestOptions::default()
                 )
+                .first_answer()
                 .and_then(move |message|
                     // DNSKEYs are validated by the inner query
                     future::ready(message
                         .answers()
                         .iter()
-                        .filter(|r| is_dnssec(r, DNSSECRecordType::DNSKEY))
+                        .filter(|r| is_dnssec(r, RecordType::DNSKEY))
                         .find(|r|
                             if let RData::DNSSEC(DNSSECRData::DNSKEY(ref dnskey)) = *r.rdata() {
-                                verify_rrset_with_dnskey(dnskey, &sig, &rrset).is_ok()
+                                let dnskey_name = r.name();
+                                verify_rrset_with_dnskey(dnskey_name, dnskey, &sig, &rrset).is_ok()
                             } else {
                                 panic!("expected a DNSKEY here: {:?}", r.rdata());
                             }
                         )
                         .map(|_| ())
-                        .ok_or_else(|| ProtoError::from(ProtoErrorKind::Message("validation failed"))))
+                        .ok_or_else(|| E::from(ProtoError::from(ProtoErrorKind::Message("validation failed")))))
                 )
         })
         .collect::<Vec<_>>();
 
     // if there are no available verifications, then we are in a failed state.
     if verifications.is_empty() {
-        return Err(ProtoError::from(ProtoErrorKind::RrsigsNotPresent {
-            name: rrset.name.clone(),
-            record_type: rrset.record_type,
-        }));
+        return Err(E::from(ProtoError::from(
+            ProtoErrorKind::RrsigsNotPresent {
+                name: rrset.name.clone(),
+                record_type: rrset.record_type,
+            },
+        )));
     }
 
     // as long as any of the verifications is good, then the RRSET is valid.
@@ -740,7 +782,12 @@ where
 
 /// Verifies the given SIG of the RRSET with the DNSKEY.
 #[cfg(feature = "dnssec")]
-fn verify_rrset_with_dnskey(dnskey: &DNSKEY, sig: &SIG, rrset: &Rrset) -> ProtoResult<()> {
+fn verify_rrset_with_dnskey(
+    dnskey_name: &Name,
+    dnskey: &DNSKEY,
+    sig: &SIG,
+    rrset: &Rrset,
+) -> ProtoResult<()> {
     if dnskey.revoke() {
         debug!("revoked");
         return Err(ProtoErrorKind::Message("revoked").into());
@@ -754,7 +801,26 @@ fn verify_rrset_with_dnskey(dnskey: &DNSKEY, sig: &SIG, rrset: &Rrset) -> ProtoR
 
     dnskey
         .verify_rrsig(&rrset.name, rrset.record_class, sig, &rrset.records)
+        .map(|r| {
+            if log::log_enabled!(log::Level::Debug) {
+                debug!(
+                    "validated ({}, {:?}) with ({}, {})",
+                    rrset.name, rrset.record_type, dnskey_name, dnskey
+                )
+            }
+            r
+        })
         .map_err(Into::into)
+        .map_err(|e| {
+            if log::log_enabled!(log::Level::Debug) {
+                debug!(
+                    "failed validation of ({}, {:?}) with ({}, {})",
+                    rrset.name, rrset.record_type, dnskey_name, dnskey
+                )
+            }
+
+            e
+        })
 }
 
 /// Will always return an error. To enable record verification compile with the openssl feature.
@@ -815,7 +881,7 @@ fn verify_rrset_with_dnskey(_: &DNSKEY, _: &SIG, _: &Rrset) -> ProtoResult<()> {
 ///  corresponding RRSIG RR, a validator MUST ignore the settings of the
 ///  NSEC and RRSIG bits in an NSEC RR.
 /// ```
-#[allow(clippy::block_in_if_condition_stmt)]
+#[allow(clippy::blocks_in_if_conditions)]
 #[doc(hidden)]
 pub fn verify_nsec(query: &Query, soa_name: &Name, nsecs: &[&Record]) -> bool {
     // TODO: consider converting this to Result, and giving explicit reason for the failure

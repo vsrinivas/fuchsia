@@ -139,7 +139,13 @@ impl FailureStats {
                 let _: &String = error;
                 *message += 1
             }
-            ResolveErrorKind::NoRecordsFound { query: _, valid_until: _ } => *no_records_found += 1,
+            ResolveErrorKind::NoRecordsFound {
+                query: _,
+                soa: _,
+                negative_ttl: _,
+                response_code: _,
+                trusted: _,
+            } => *no_records_found += 1,
             ResolveErrorKind::Io(error) => {
                 let _: &std::io::Error = error;
                 *io += 1
@@ -149,6 +155,10 @@ impl FailureStats {
                 *proto += 1
             }
             ResolveErrorKind::Timeout => *timeout += 1,
+            // ResolveErrorKind is marked #[non_exhaustive] in trust-dns:
+            // https://github.com/bluejekyll/trust-dns/blob/v0.21.0-alpha.1/crates/resolver/src/error.rs#L29
+            // So we have to include a wildcard match.
+            kind => error!("unhandled variant {:?}", kind),
         }
     }
 }
@@ -202,7 +212,7 @@ impl QueryWindow {
     }
 }
 
-async fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, servers: ServerList) {
+fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, servers: ServerList) {
     let mut resolver_opts = ResolverOpts::default();
     resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
 
@@ -218,16 +228,18 @@ async fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, server
             socket_addr,
             protocol: Protocol::Udp,
             tls_dns_name: None,
+            trust_nx_responses: true,
         })
         .chain(std::iter::once(NameServerConfig {
             socket_addr,
             protocol: Protocol::Tcp,
             tls_dns_name: None,
+            trust_nx_responses: true,
         }))
     }));
 
     let new_resolver =
-        T::new(ResolverConfig::from_parts(None, Vec::new(), name_servers), resolver_opts).await;
+        T::new(ResolverConfig::from_parts(None, Vec::new(), name_servers), resolver_opts);
     let () = resolver.write(Rc::new(new_resolver));
 }
 
@@ -239,7 +251,7 @@ enum IncomingRequest {
 
 #[async_trait]
 trait ResolverLookup {
-    async fn new(config: ResolverConfig, options: ResolverOpts) -> Self;
+    fn new(config: ResolverConfig, options: ResolverOpts) -> Self;
 
     async fn lookup_ip<N: IntoName + TryParseIp + Send>(
         &self,
@@ -261,8 +273,8 @@ trait ResolverLookup {
 
 #[async_trait]
 impl ResolverLookup for Resolver {
-    async fn new(config: ResolverConfig, options: ResolverOpts) -> Self {
-        Resolver::new(config, options, Spawner).await.expect("failed to create resolver")
+    fn new(config: ResolverConfig, options: ResolverOpts) -> Self {
+        Resolver::new(config, options, Spawner).expect("failed to create resolver")
     }
 
     async fn lookup_ip<N: IntoName + TryParseIp + Send>(
@@ -303,20 +315,25 @@ fn handle_err(source: &str, err: ResolveError) -> fname::LookupError {
         // `ResolveErrorKind::Message`: An error with arbitrary message, it is mostly returned when
         // there is no name in the input vector to look up with "can not lookup for no names".
         // This is a best-effort mapping.
-        ResolveErrorKind::NoRecordsFound { query: _, valid_until: _ } => {
-            (fname::LookupError::NotFound, None)
-        }
+        ResolveErrorKind::NoRecordsFound {
+            query: _,
+            soa: _,
+            negative_ttl: _,
+            response_code: _,
+            trusted: _,
+        } => (fname::LookupError::NotFound, None),
         ResolveErrorKind::Proto(err) => match err.kind() {
             ProtoErrorKind::DomainNameTooLong(_) | ProtoErrorKind::EdnsNameNotRoot(_) => {
                 (fname::LookupError::InvalidArgs, None)
             }
-            ProtoErrorKind::Canceled(_) | ProtoErrorKind::Timeout => {
+            ProtoErrorKind::Busy | ProtoErrorKind::Canceled(_) | ProtoErrorKind::Timeout => {
                 (fname::LookupError::Transient, None)
             }
             ProtoErrorKind::Io(inner) => (fname::LookupError::Transient, Some(inner)),
             ProtoErrorKind::CharacterDataTooLong { max: _, len: _ }
             | ProtoErrorKind::LabelOverlapsWithOther { label: _, other: _ }
             | ProtoErrorKind::DnsKeyProtocolNot3(_)
+            | ProtoErrorKind::HmacInvalid()
             | ProtoErrorKind::IncorrectRDataLengthRead { read: _, len: _ }
             | ProtoErrorKind::LabelBytesTooLong(_)
             | ProtoErrorKind::PointerNotPriorToLabel { idx: _, ptr: _ }
@@ -338,11 +355,27 @@ fn handle_err(source: &str, err: ResolveError) -> fname::LookupError {
             | ProtoErrorKind::SSL(_)
             | ProtoErrorKind::Timer
             | ProtoErrorKind::UrlParsing(_)
-            | ProtoErrorKind::Utf8(_) => (fname::LookupError::InternalError, None),
+            | ProtoErrorKind::Utf8(_)
+            | ProtoErrorKind::FromUtf8(_)
+            | ProtoErrorKind::ParseInt(_) => (fname::LookupError::InternalError, None),
+            // ProtoErrorKind is marked #[non_exhaustive] in trust-dns:
+            // https://github.com/bluejekyll/trust-dns/blob/v0.21.0-alpha.1/crates/proto/src/error.rs#L66
+            // So we have to include a wildcard match.
+            kind => {
+                error!("unhandled variant {:?}", kind);
+                (fname::LookupError::InternalError, None)
+            }
         },
         ResolveErrorKind::Io(inner) => (fname::LookupError::Transient, Some(inner)),
         ResolveErrorKind::Timeout => (fname::LookupError::Transient, None),
         ResolveErrorKind::Msg(_) | ResolveErrorKind::Message(_) => {
+            (fname::LookupError::InternalError, None)
+        }
+        // ResolveErrorKind is marked #[non_exhaustive] in trust-dns:
+        // https://github.com/bluejekyll/trust-dns/blob/v0.21.0-alpha.1/crates/resolver/src/error.rs#L29
+        // So we have to include a wildcard match.
+        kind => {
+            error!("unhandled variant {:?}", kind);
             (fname::LookupError::InternalError, None)
         }
     };
@@ -843,7 +876,7 @@ async fn run_lookup_admin<T: ResolverLookup>(
                 LookupAdminRequest::SetDnsServers { servers, responder } => {
                     let mut response = match state.update_servers(servers) {
                         UpdateServersResult::Updated(servers) => {
-                            let () = update_resolver(resolver, servers).await;
+                            let () = update_resolver(resolver, servers);
                             Ok(())
                         }
                         UpdateServersResult::NoChange => Ok(()),
@@ -972,7 +1005,6 @@ async fn main() -> Result<(), Error> {
     resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
     let resolver = SharedResolver::new(
         Resolver::new(ResolverConfig::default(), resolver_opts, Spawner)
-            .await
             .expect("failed to create resolver"),
     );
 
@@ -1083,7 +1115,6 @@ mod tests {
 
         let resolver = SharedResolver::new(
             Resolver::new(ResolverConfig::default(), resolver_opts, Spawner)
-                .await
                 .expect("failed to create resolver"),
         );
         let stats = Arc::new(QueryStats::new());
@@ -1210,14 +1241,15 @@ mod tests {
                     )
                 })
                 .collect();
+            let records: Arc<[_]> = records.into();
 
-            Lookup::new_with_max_ttl(Query::default(), Arc::new(records))
+            Lookup::new_with_max_ttl(Query::default(), records)
         }
     }
 
     #[async_trait]
     impl ResolverLookup for MockResolver {
-        async fn new(config: ResolverConfig, _options: ResolverOpts) -> Self {
+        fn new(config: ResolverConfig, _options: ResolverOpts) -> Self {
             MockResolver { config }
         }
 
@@ -1254,7 +1286,7 @@ mod tests {
             } else if addr == IPV6_HOST {
                 Lookup::new_with_max_ttl(
                     Query::default(),
-                    Arc::new(vec![
+                    Arc::new([
                         Record::from_rdata(
                             Name::new(),
                             60, // The value is taken arbitrarily and does not matter
@@ -1270,7 +1302,7 @@ mod tests {
                     ]),
                 )
             } else {
-                Lookup::new_with_max_ttl(Query::default(), Arc::new(vec![]))
+                Lookup::new_with_max_ttl(Query::default(), Arc::new([]))
             };
             Ok(ReverseLookup::from(lookup))
         }
@@ -1485,8 +1517,18 @@ mod tests {
 
         let to_server_configs = |socket_addr: SocketAddr| -> [NameServerConfig; 2] {
             [
-                NameServerConfig { socket_addr, protocol: Protocol::Udp, tls_dns_name: None },
-                NameServerConfig { socket_addr, protocol: Protocol::Tcp, tls_dns_name: None },
+                NameServerConfig {
+                    socket_addr,
+                    protocol: Protocol::Udp,
+                    tls_dns_name: None,
+                    trust_nx_responses: true,
+                },
+                NameServerConfig {
+                    socket_addr,
+                    protocol: Protocol::Tcp,
+                    tls_dns_name: None,
+                    trust_nx_responses: true,
+                },
             ]
         };
 
@@ -1850,7 +1892,7 @@ mod tests {
 
     #[async_trait]
     impl ResolverLookup for BlockingResolver {
-        async fn new(_config: ResolverConfig, _options: ResolverOpts) -> Self {
+        fn new(_config: ResolverConfig, _options: ResolverOpts) -> Self {
             BlockingResolver {}
         }
 
@@ -1942,9 +1984,10 @@ mod tests {
         }
         .fuse();
         let recv_fut = {
-            let resolver = SharedResolver::new(
-                BlockingResolver::new(ResolverConfig::default(), ResolverOpts::default()).await,
-            );
+            let resolver = SharedResolver::new(BlockingResolver::new(
+                ResolverConfig::default(),
+                ResolverOpts::default(),
+            ));
             let stats = Arc::new(QueryStats::new());
             let (routes_proxy, _routes_stream) =
                 fidl::endpoints::create_proxy_and_stream::<fnet_routes::StateMarker>()
@@ -1972,7 +2015,13 @@ mod tests {
                 FailureStats { message: 2, ..Default::default() },
             ),
             (
-                ResolveErrorKind::NoRecordsFound { query: Query::default(), valid_until: None },
+                ResolveErrorKind::NoRecordsFound {
+                    query: Box::new(Query::default()),
+                    soa: None,
+                    negative_ttl: None,
+                    response_code: trust_dns_proto::op::ResponseCode::Refused,
+                    trusted: false,
+                },
                 FailureStats { message: 2, no_records_found: 1, ..Default::default() },
             ),
             (

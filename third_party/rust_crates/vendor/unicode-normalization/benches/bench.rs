@@ -1,7 +1,7 @@
 #![feature(test)]
-#![feature(iterator_step_by)]
-extern crate unicode_normalization;
+
 extern crate test;
+extern crate unicode_normalization;
 
 use std::fs;
 use test::Bencher;

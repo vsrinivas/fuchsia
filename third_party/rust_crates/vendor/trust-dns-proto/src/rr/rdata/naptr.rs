@@ -7,6 +7,11 @@
 
 //! Dynamic Delegation Discovery System
 
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use crate::error::*;
 use crate::rr::domain::Name;
 use crate::serialize::binary::*;
@@ -40,6 +45,7 @@ use crate::serialize::binary::*;
 ///   <character-string> and <domain-name> as used here are defined in RFC
 ///   1035 [7].
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct NAPTR {
     order: u16,
@@ -192,16 +198,13 @@ impl NAPTR {
 
 /// verifies that the flags are valid
 pub fn verify_flags(flags: &[u8]) -> bool {
-    flags.iter().all(|c| match c {
-        b'0'..=b'9' => true,
-        b'a'..=b'z' => true,
-        b'A'..=b'Z' => true,
-        _ => false,
-    })
+    flags
+        .iter()
+        .all(|c| matches!(c, b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z'))
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder) -> ProtoResult<NAPTR> {
+pub fn read(decoder: &mut BinDecoder<'_>) -> ProtoResult<NAPTR> {
     Ok(NAPTR::new(
         decoder.read_u16()?.unverified(/*any u16 is valid*/),
         decoder.read_u16()?.unverified(/*any u16 is valid*/),
@@ -219,7 +222,7 @@ pub fn read(decoder: &mut BinDecoder) -> ProtoResult<NAPTR> {
 }
 
 /// Declares the method for emitting this type
-pub fn emit(encoder: &mut BinEncoder, naptr: &NAPTR) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, naptr: &NAPTR) -> ProtoResult<()> {
     naptr.order.emit(encoder)?;
     naptr.preference.emit(encoder)?;
     encoder.emit_character_data(&naptr.flags)?;
@@ -230,13 +233,46 @@ pub fn emit(encoder: &mut BinEncoder, naptr: &NAPTR) -> ProtoResult<()> {
     Ok(())
 }
 
+/// [RFC 2915](https://tools.ietf.org/html/rfc2915), NAPTR DNS RR, September 2000
+///
+/// ```text
+/// Master File Format
+///
+///   The master file format follows the standard rules in RFC-1035 [1].
+///   Order and preference, being 16-bit unsigned integers, shall be an
+///   integer between 0 and 65535.  The Flags and Services and Regexp
+///   fields are all quoted <character-string>s.  Since the Regexp field
+///   can contain numerous backslashes and thus should be treated with
+///   care.  See Section 10 for how to correctly enter and escape the
+///   regular expression.
+///
+/// ;;      order pref flags service           regexp replacement
+/// IN NAPTR 100  50  "a"    "z3950+N2L+N2C"     ""   cidserver.example.com.
+/// IN NAPTR 100  50  "a"    "rcds+N2C"          ""   cidserver.example.com.
+/// IN NAPTR 100  50  "s"    "http+N2L+N2C+N2R"  ""   www.example.com.
+/// ```
+impl fmt::Display for NAPTR {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{order} {pref} \"{flags}\" \"{service}\" \"{regexp}\" {replace}",
+            order = self.order,
+            pref = self.preference,
+            flags = &String::from_utf8_lossy(&self.flags),
+            service = &String::from_utf8_lossy(&self.services),
+            regexp = &String::from_utf8_lossy(&self.regexp),
+            replace = self.replacement
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::dbg_macro, clippy::print_stdout)]
 
     use super::*;
     #[test]
-    pub fn test() {
+    fn test() {
         use std::str::FromStr;
 
         let rdata = NAPTR::new(
@@ -249,19 +285,19 @@ mod tests {
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let read_rdata = read(&mut decoder).expect("Decoding error");
         assert_eq!(rdata, read_rdata);
     }
 
     #[test]
-    pub fn test_bad_data() {
+    fn test_bad_data() {
         use std::str::FromStr;
 
         let rdata = NAPTR::new(
@@ -274,13 +310,13 @@ mod tests {
         );
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let read_rdata = read(&mut decoder);
         assert!(
             read_rdata.is_err(),

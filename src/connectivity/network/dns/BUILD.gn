@@ -21,6 +21,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
   ]

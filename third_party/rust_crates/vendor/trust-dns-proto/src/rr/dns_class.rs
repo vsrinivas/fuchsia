@@ -13,10 +13,14 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use crate::error::*;
 use crate::serialize::binary::*;
 
 /// The DNS Record class
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 #[allow(dead_code)]
 pub enum DNSClass {
@@ -48,6 +52,7 @@ impl FromStr for DNSClass {
     /// assert_eq!(DNSClass::IN, var);
     /// ```
     fn from_str(str: &str) -> ProtoResult<Self> {
+        debug_assert!(str.chars().all(|x| char::is_ascii_uppercase(&x)));
         match str {
             "IN" => Ok(DNSClass::IN),
             "CH" => Ok(DNSClass::CH),
@@ -88,13 +93,13 @@ impl DNSClass {
 }
 
 impl BinEncodable for DNSClass {
-    fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         encoder.emit_u16((*self).into())
     }
 }
 
 impl<'r> BinDecodable<'r> for DNSClass {
-    fn read(decoder: &mut BinDecoder) -> ProtoResult<Self> {
+    fn read(decoder: &mut BinDecoder<'_>) -> ProtoResult<Self> {
         Self::from_u16(
             decoder.read_u16()?.unverified(/*DNSClass is verified as safe in processing this*/),
         )
@@ -159,7 +164,7 @@ impl Ord for DNSClass {
 }
 
 impl Display for DNSClass {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str(Into::<&str>::into(*self))
     }
 }

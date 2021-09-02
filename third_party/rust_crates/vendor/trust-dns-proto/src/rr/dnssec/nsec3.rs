@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 #[cfg(any(feature = "openssl", feature = "ring"))]
 use super::{Digest, DigestType};
 use crate::error::*;
@@ -96,6 +99,7 @@ use crate::serialize::binary::{BinEncodable, BinEncoder};
 ///    Assignment of additional NSEC3 hash algorithms in this registry
 ///    requires IETF Standards Action [RFC2434].
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Nsec3HashAlgorithm {
     /// Hash for the Nsec3 records
@@ -103,7 +107,7 @@ pub enum Nsec3HashAlgorithm {
 }
 
 impl Nsec3HashAlgorithm {
-    /// http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml
+    /// <http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml>
     pub fn from_u8(value: u8) -> ProtoResult<Self> {
         match value {
             1 => Ok(Nsec3HashAlgorithm::SHA1),
@@ -144,13 +148,14 @@ impl Nsec3HashAlgorithm {
     ///        substitution);
     /// ```
     #[cfg(any(feature = "openssl", feature = "ring"))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "openssl", feature = "ring"))))]
     pub fn hash(self, salt: &[u8], name: &Name, iterations: u16) -> ProtoResult<Digest> {
         match self {
             // if there ever is more than just SHA1 support, this should be a genericized method
             Nsec3HashAlgorithm::SHA1 => {
                 let mut buf: Vec<u8> = Vec::new();
                 {
-                    let mut encoder: BinEncoder = BinEncoder::new(&mut buf);
+                    let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut buf);
                     encoder.set_canonical_names(true);
                     name.emit(&mut encoder).expect("could not encode Name");
                 }

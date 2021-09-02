@@ -22,6 +22,7 @@
 pub mod a;
 pub mod aaaa;
 pub mod caa;
+pub mod hinfo;
 pub mod mx;
 pub mod name;
 pub mod naptr;
@@ -31,10 +32,12 @@ pub mod opt;
 pub mod soa;
 pub mod srv;
 pub mod sshfp;
+pub mod svcb;
 pub mod tlsa;
 pub mod txt;
 
 pub use self::caa::CAA;
+pub use self::hinfo::HINFO;
 pub use self::mx::MX;
 pub use self::naptr::NAPTR;
 pub use self::null::NULL;
@@ -43,5 +46,6 @@ pub use self::opt::OPT;
 pub use self::soa::SOA;
 pub use self::srv::SRV;
 pub use self::sshfp::SSHFP;
+pub use self::svcb::SVCB;
 pub use self::tlsa::TLSA;
 pub use self::txt::TXT;

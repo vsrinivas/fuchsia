@@ -19,6 +19,9 @@ use openssl::hash;
 #[cfg(feature = "ring")]
 use ring::digest;
 
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use crate::error::*;
 use crate::rr::dnssec::Algorithm;
 
@@ -28,22 +31,24 @@ use super::Digest;
 /// This is the digest format for the
 ///
 ///```text
-/// 0	Reserved	-	[RFC3658]
-/// 1	SHA-1	MANDATORY	[RFC3658]
-/// 2	SHA-256	MANDATORY	[RFC4509]
-/// 3	GOST R 34.11-94	OPTIONAL	[RFC5933]
-/// 4	SHA-384	OPTIONAL	[RFC6605]
+/// 0 Reserved - [RFC3658]
+/// 1 SHA-1 MANDATORY [RFC3658]
+/// 2 SHA-256 MANDATORY [RFC4509]
+/// 3 GOST R 34.11-94 OPTIONAL [RFC5933]
+/// 4 SHA-384 OPTIONAL [RFC6605]
 /// 5 ED25519 [RFC draft-ietf-curdle-dnskey-eddsa-03]
-/// 5-255	Unassigned	-
+/// 5-255 Unassigned -
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+#[non_exhaustive]
 pub enum DigestType {
-    /// [RFC3658]
+    /// [RFC 3658](https://tools.ietf.org/html/rfc3658)
     SHA1,
-    /// [RFC4509]
-    SHA256, // [RFC4509]
+    /// [RFC 4509](https://tools.ietf.org/html/rfc4509)
+    SHA256,
     // GOSTR34_11_94, // [RFC5933]
-    /// [RFC6605]
+    /// [RFC 6605](https://tools.ietf.org/html/rfc6605)
     SHA384,
     /// Undefined
     SHA512,
@@ -53,7 +58,7 @@ pub enum DigestType {
 
 impl DigestType {
     /// TODO: add an Unknown DigestType and make this infallible
-    /// http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml
+    /// <http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml>
     pub fn from_u8(value: u8) -> ProtoResult<Self> {
         match value {
             1 => Ok(DigestType::SHA1),
@@ -67,6 +72,7 @@ impl DigestType {
 
     /// The OpenSSL counterpart for the digest
     #[cfg(feature = "openssl")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "openssl")))]
     pub fn to_openssl_digest(self) -> ProtoResult<hash::MessageDigest> {
         match self {
             DigestType::SHA1 => Ok(hash::MessageDigest::sha1()),
@@ -79,6 +85,7 @@ impl DigestType {
 
     /// The *ring* counterpart for the digest
     #[cfg(feature = "ring")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "ring")))]
     pub fn to_ring_digest_alg(self) -> ProtoResult<&'static digest::Algorithm> {
         match self {
             DigestType::SHA1 => Ok(&digest::SHA1_FOR_LEGACY_USE_ONLY),
@@ -91,12 +98,14 @@ impl DigestType {
 
     /// Hash the data
     #[cfg(all(not(feature = "ring"), feature = "openssl"))]
+    #[cfg_attr(docsrs, doc(cfg(all(not(feature = "ring"), feature = "openssl"))))]
     pub fn hash(self, data: &[u8]) -> ProtoResult<Digest> {
         hash::hash(self.to_openssl_digest()?, data).map_err(Into::into)
     }
 
     /// Hash the data
     #[cfg(feature = "ring")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "ring")))]
     pub fn hash(self, data: &[u8]) -> ProtoResult<Digest> {
         let alg = self.to_ring_digest_alg()?;
         Ok(digest::digest(alg, data))
@@ -104,12 +113,14 @@ impl DigestType {
 
     /// This will always error, enable openssl feature at compile time
     #[cfg(not(any(feature = "openssl", feature = "ring")))]
+    #[cfg_attr(docsrs, doc(cfg(not(any(feature = "openssl", feature = "ring")))))]
     pub fn hash(self, _: &[u8]) -> ProtoResult<Vec<u8>> {
         Err("The openssl and ring features are both disabled".into())
     }
 
     /// Digest all the data.
     #[cfg(all(not(feature = "ring"), feature = "openssl"))]
+    #[cfg_attr(docsrs, doc(cfg(all(not(feature = "ring"), feature = "openssl"))))]
     pub fn digest_all(self, data: &[&[u8]]) -> ProtoResult<Digest> {
         use std::io::Write;
 
@@ -126,6 +137,7 @@ impl DigestType {
 
     /// Digest all the data.
     #[cfg(feature = "ring")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "ring")))]
     pub fn digest_all(self, data: &[&[u8]]) -> ProtoResult<Digest> {
         let alg = self.to_ring_digest_alg()?;
         let mut ctx = digest::Context::new(alg);

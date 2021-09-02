@@ -17,6 +17,10 @@
 //! resource record implementation
 
 use std::cmp::Ordering;
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::*;
 use crate::rr::dns_class::DNSClass;
@@ -28,6 +32,17 @@ use crate::rr::RData;
 use crate::rr::RecordSet;
 use crate::rr::RecordType;
 use crate::serialize::binary::*;
+
+#[cfg(feature = "mdns")]
+/// From [RFC 6762](https://tools.ietf.org/html/rfc6762#section-10.2)
+/// ```text
+/// The cache-flush bit is the most significant bit of the second
+/// 16-bit word of a resource record in a Resource Record Section of a
+/// Multicast DNS message (the field conventionally referred to as the
+/// rrclass field), and the actual resource record class is the least
+/// significant fifteen bits of this field.
+/// ```
+const MDNS_ENABLE_CACHE_FLUSH: u16 = 1 << 15;
 
 /// Resource records are storage value in DNS, into which all key/value pair data is stored.
 ///
@@ -62,13 +77,16 @@ use crate::serialize::binary::*;
 ///     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 ///
 /// ```
-#[derive(Eq, Ord, Debug, Clone)]
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
+#[derive(Eq, Debug, Clone)]
 pub struct Record {
     name_labels: Name,
     rr_type: RecordType,
     dns_class: DNSClass,
     ttl: u32,
     rdata: RData,
+    #[cfg(feature = "mdns")]
+    mdns_cache_flush: bool,
 }
 
 impl Default for Record {
@@ -80,6 +98,8 @@ impl Default for Record {
             dns_class: DNSClass::IN,
             ttl: 0,
             rdata: RData::NULL(NULL::new()),
+            #[cfg(feature = "mdns")]
+            mdns_cache_flush: false,
         }
     }
 }
@@ -107,6 +127,8 @@ impl Record {
             dns_class: DNSClass::IN,
             ttl,
             rdata: RData::NULL(NULL::new()),
+            #[cfg(feature = "mdns")]
+            mdns_cache_flush: false,
         }
     }
 
@@ -124,6 +146,8 @@ impl Record {
             dns_class: DNSClass::IN,
             ttl,
             rdata,
+            #[cfg(feature = "mdns")]
+            mdns_cache_flush: false,
         }
     }
 
@@ -189,6 +213,15 @@ impl Record {
         self
     }
 
+    /// Changes mDNS cache-flush bit
+    /// See [RFC 6762](https://tools.ietf.org/html/rfc6762#section-10.2)
+    #[cfg(feature = "mdns")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "mdns")))]
+    pub fn set_mdns_cache_flush(&mut self, flag: bool) -> &mut Self {
+        self.mdns_cache_flush = flag;
+        self
+    }
+
     /// Returns the name of the record
     pub fn name(&self) -> &Name {
         &self.name_labels
@@ -220,14 +253,81 @@ impl Record {
         &self.rdata
     }
 
+    /// Returns if the mDNS cache-flush bit is set or not
+    /// See [RFC 6762](https://tools.ietf.org/html/rfc6762#section-10.2)
+    #[cfg(feature = "mdns")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "mdns")))]
+    pub fn mdns_cache_flush(&self) -> bool {
+        self.mdns_cache_flush
+    }
+
     /// Returns a mutable reference to the Record Data
     pub fn rdata_mut(&mut self) -> &mut RData {
         &mut self.rdata
     }
 
     /// Returns the RData consuming the Record
-    pub fn unwrap_rdata(self) -> RData {
+    pub fn into_data(self) -> RData {
         self.rdata
+    }
+
+    /// Consumes `Record` and returns its components
+    pub fn into_parts(self) -> RecordParts {
+        self.into()
+    }
+}
+
+/// Consumes `Record` giving public access to fields of `Record` so they can
+/// be destructured and taken by value
+pub struct RecordParts {
+    /// label names
+    pub name_labels: Name,
+    /// record type
+    pub rr_type: RecordType,
+    /// dns class
+    pub dns_class: DNSClass,
+    /// time to live
+    pub ttl: u32,
+    /// rdata
+    pub rdata: RData,
+    /// mDNS cache flush
+    #[cfg(feature = "mdns")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "mdns")))]
+    pub mdns_cache_flush: bool,
+}
+
+impl From<Record> for RecordParts {
+    fn from(record: Record) -> Self {
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "mdns")] {
+                let Record {
+                    name_labels,
+                    rr_type,
+                    dns_class,
+                    ttl,
+                    rdata,
+                    mdns_cache_flush,
+                } = record;
+            } else {
+                let Record {
+                    name_labels,
+                    rr_type,
+                    dns_class,
+                    ttl,
+                    rdata,
+                } = record;
+            }
+        }
+
+        RecordParts {
+            name_labels,
+            rr_type,
+            dns_class,
+            ttl,
+            rdata,
+            #[cfg(feature = "mdns")]
+            mdns_cache_flush,
+        }
     }
 }
 
@@ -239,10 +339,21 @@ impl IntoRecordSet for Record {
 }
 
 impl BinEncodable for Record {
-    fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         self.name_labels.emit(encoder)?;
         self.rr_type.emit(encoder)?;
+
+        #[cfg(not(feature = "mdns"))]
         self.dns_class.emit(encoder)?;
+
+        #[cfg(feature = "mdns")]
+        {
+            if self.mdns_cache_flush {
+                encoder.emit_u16(u16::from(self.dns_class()) | MDNS_ENABLE_CACHE_FLUSH)?;
+            } else {
+                self.dns_class.emit(encoder)?;
+            }
+        }
 
         encoder.emit_u32(self.ttl)?;
 
@@ -273,6 +384,9 @@ impl<'r> BinDecodable<'r> for Record {
         // TYPE            two octets containing one of the RR TYPE codes.
         let record_type: RecordType = RecordType::read(decoder)?;
 
+        #[cfg(feature = "mdns")]
+        let mut mdns_cache_flush = false;
+
         // CLASS           two octets containing one of the RR CLASS codes.
         let class: DNSClass = if record_type == RecordType::OPT {
             // verify that the OPT record is Root
@@ -285,7 +399,22 @@ impl<'r> BinDecodable<'r> for Record {
                 decoder.read_u16()?.unverified(/*restricted to a min of 512 in for_opt*/),
             )
         } else {
-            DNSClass::read(decoder)?
+            #[cfg(not(feature = "mdns"))]
+            {
+                DNSClass::read(decoder)?
+            }
+
+            #[cfg(feature = "mdns")]
+            {
+                let dns_class_value =
+                    decoder.read_u16()?.unverified(/*DNSClass::from_u16 will verify the value*/);
+                if dns_class_value & MDNS_ENABLE_CACHE_FLUSH > 0 {
+                    mdns_cache_flush = true;
+                    DNSClass::from_u16(dns_class_value & !MDNS_ENABLE_CACHE_FLUSH)?
+                } else {
+                    DNSClass::from_u16(dns_class_value)?
+                }
+            }
         };
 
         // TTL             a 32 bit signed integer that specifies the time interval
@@ -301,11 +430,15 @@ impl<'r> BinDecodable<'r> for Record {
 
         // RDLENGTH        an unsigned 16 bit integer that specifies the length in
         //                octets of the RDATA field.
-        let rd_length: u16 = decoder
+        let rd_length = decoder
             .read_u16()?
             .verify_unwrap(|u| (*u as usize) <= decoder.len())
-            .map_err(|_| {
-                ProtoError::from("rdata length too large for remaining bytes, need: {} remain: {}")
+            .map_err(|u| {
+                ProtoError::from(format!(
+                    "rdata length too large for remaining bytes, need: {} remain: {}",
+                    u,
+                    decoder.len()
+                ))
             })?;
 
         // this is to handle updates, RFC 2136, which uses 0 to indicate certain aspects of
@@ -327,7 +460,65 @@ impl<'r> BinDecodable<'r> for Record {
             dns_class: class,
             ttl,
             rdata,
+            #[cfg(feature = "mdns")]
+            mdns_cache_flush,
         })
+    }
+}
+
+/// [RFC 1033](https://tools.ietf.org/html/rfc1033), DOMAIN OPERATIONS GUIDE, November 1987
+///
+/// ```text
+///   RESOURCE RECORDS
+///
+///   Records in the zone data files are called resource records (RRs).
+///   They are specified in RFC-883 and RFC-973.  An RR has a standard
+///   format as shown:
+///
+///           <name>   [<ttl>]   [<class>]   <type>   <data>
+///
+///   The record is divided into fields which are separated by white space.
+///
+///      <name>
+///
+///         The name field defines what domain name applies to the given
+///         RR.  In some cases the name field can be left blank and it will
+///         default to the name field of the previous RR.
+///
+///      <ttl>
+///
+///         TTL stands for Time To Live.  It specifies how long a domain
+///         resolver should cache the RR before it throws it out and asks a
+///         domain server again.  See the section on TTL's.  If you leave
+///         the TTL field blank it will default to the minimum time
+///         specified in the SOA record (described later).
+///
+///      <class>
+///
+///         The class field specifies the protocol group.  If left blank it
+///         will default to the last class specified.
+///
+///      <type>
+///
+///         The type field specifies what type of data is in the RR.  See
+///         the section on types.
+///
+///      <data>
+///
+///         The data field is defined differently for each type and class
+///         of data.  Popular RR data formats are described later.
+/// ```
+impl fmt::Display for Record {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{name} {ttl} {class} {ty} {rdata}",
+            name = self.name_labels,
+            ttl = self.ttl,
+            class = self.dns_class,
+            ty = self.rr_type,
+            rdata = self.rdata
+        )
     }
 }
 
@@ -355,12 +546,56 @@ impl PartialEq for Record {
 /// returns the value of the compare if the items are greater or lesser, but continues on equal
 macro_rules! compare_or_equal {
     ($x:ident, $y:ident, $z:ident) => {
-        match $x.$z.partial_cmp(&$y.$z) {
-            o @ Some(Ordering::Less) | o @ Some(Ordering::Greater) => return o,
-            None => return None,
-            Some(Ordering::Equal) => (),
+        match $x.$z.cmp(&$y.$z) {
+            o @ Ordering::Less | o @ Ordering::Greater => return o,
+            Ordering::Equal => (),
         }
     };
+}
+
+impl Ord for Record {
+    /// Canonical ordering as defined by
+    ///  [RFC 4034](https://tools.ietf.org/html/rfc4034#section-6), DNSSEC Resource Records, March 2005
+    ///
+    /// ```text
+    /// 6.2.  Canonical RR Form
+    ///
+    ///    For the purposes of DNS security, the canonical form of an RR is the
+    ///    wire format of the RR where:
+    ///
+    ///    1.  every domain name in the RR is fully expanded (no DNS name
+    ///        compression) and fully qualified;
+    ///
+    ///    2.  all uppercase US-ASCII letters in the owner name of the RR are
+    ///        replaced by the corresponding lowercase US-ASCII letters;
+    ///
+    ///    3.  if the type of the RR is NS, MD, MF, CNAME, SOA, MB, MG, MR, PTR,
+    ///        HINFO, MINFO, MX, HINFO, RP, AFSDB, RT, SIG, PX, NXT, NAPTR, KX,
+    ///        SRV, DNAME, A6, RRSIG, or NSEC, all uppercase US-ASCII letters in
+    ///        the DNS names contained within the RDATA are replaced by the
+    ///        corresponding lowercase US-ASCII letters;
+    ///
+    ///    4.  if the owner name of the RR is a wildcard name, the owner name is
+    ///        in its original unexpanded form, including the "*" label (no
+    ///        wildcard substitution); and
+    ///
+    ///    5.  the RR's TTL is set to its original value as it appears in the
+    ///        originating authoritative zone or the Original TTL field of the
+    ///        covering RRSIG RR.
+    /// ```
+    fn cmp(&self, other: &Record) -> Ordering {
+        // TODO: given that the ordering of Resource Records is dependent on it's binary form and this
+        //  method will be used during insertion sort or similar, we should probably do this
+        //  conversion once somehow and store it separately. Or should the internal storage of all
+        //  resource records be maintained in binary?
+
+        compare_or_equal!(self, other, name_labels);
+        compare_or_equal!(self, other, rr_type);
+        compare_or_equal!(self, other, dns_class);
+        compare_or_equal!(self, other, ttl);
+        compare_or_equal!(self, other, rdata);
+        Ordering::Equal
+    }
 }
 
 impl PartialOrd<Record> for Record {
@@ -394,19 +629,7 @@ impl PartialOrd<Record> for Record {
     ///        covering RRSIG RR.
     /// ```
     fn partial_cmp(&self, other: &Record) -> Option<Ordering> {
-        // TODO: given that the ordering of Resource Records is dependent on it's binary form and this
-        //  method will be used during insertion sort or similar, we should probably do this
-        //  conversion once somehow and store it separately. Or should the internal storage of all
-        //  resource records be maintained in binary?
-
-        compare_or_equal!(self, other, name_labels);
-        compare_or_equal!(self, other, rr_type);
-        compare_or_equal!(self, other, dns_class);
-        compare_or_equal!(self, other, ttl);
-        compare_or_equal!(self, other, rdata);
-
-        // got here, means they are equal
-        Some(Ordering::Equal)
+        Some(self.cmp(other))
     }
 }
 
@@ -484,5 +707,31 @@ mod tests {
             println!("r, g: {:?}, {:?}", r, g);
             assert_eq!(r.cmp(g), Ordering::Less);
         }
+    }
+
+    #[cfg(feature = "mdns")]
+    #[test]
+    fn test_mdns_cache_flush_bit_handling() {
+        const RR_CLASS_OFFSET: usize = 1 /* empty name */ +
+            std::mem::size_of::<u16>() /* rr_type */;
+
+        let mut record = Record::new();
+        record.set_mdns_cache_flush(true);
+
+        let mut vec_bytes: Vec<u8> = Vec::with_capacity(512);
+        {
+            let mut encoder = BinEncoder::new(&mut vec_bytes);
+            record.emit(&mut encoder).unwrap();
+
+            let rr_class_slice = encoder.slice_of(RR_CLASS_OFFSET, RR_CLASS_OFFSET + 2);
+            assert_eq!(rr_class_slice, &[0x80, 0x01]);
+        }
+
+        let mut decoder = BinDecoder::new(&vec_bytes);
+
+        let got = Record::read(&mut decoder).unwrap();
+
+        assert_eq!(got.dns_class(), DNSClass::IN);
+        assert!(got.mdns_cache_flush());
     }
 }

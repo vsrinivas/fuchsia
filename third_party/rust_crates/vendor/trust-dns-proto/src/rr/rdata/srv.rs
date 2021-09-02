@@ -15,6 +15,10 @@
  */
 
 //! service records for identify port mapping for specific services on a host
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::*;
 use crate::rr::domain::Name;
@@ -80,6 +84,7 @@ use crate::serialize::binary::*;
 /// Class.
 ///
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct SRV {
     priority: u16,
@@ -193,7 +198,7 @@ impl SRV {
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder) -> ProtoResult<SRV> {
+pub fn read(decoder: &mut BinDecoder<'_>) -> ProtoResult<SRV> {
     // SRV { priority: u16, weight: u16, port: u16, target: Name, },
     Ok(SRV::new(
         decoder.read_u16()?.unverified(/*any u16 is valid*/),
@@ -221,7 +226,7 @@ pub fn read(decoder: &mut BinDecoder) -> ProtoResult<SRV> {
 ///        US-ASCII letters in the DNS names contained within the RDATA are replaced
 ///        by the corresponding lowercase US-ASCII letters;
 /// ```
-pub fn emit(encoder: &mut BinEncoder, srv: &SRV) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, srv: &SRV) -> ProtoResult<()> {
     let is_canonical_names = encoder.is_canonical_names();
 
     encoder.emit_u16(srv.priority())?;
@@ -230,6 +235,30 @@ pub fn emit(encoder: &mut BinEncoder, srv: &SRV) -> ProtoResult<()> {
     srv.target()
         .emit_with_lowercase(encoder, is_canonical_names)?;
     Ok(())
+}
+
+/// [RFC 2782, DNS SRV RR, February 2000](https://tools.ietf.org/html/rfc2782)
+///
+/// ```text
+/// The format of the SRV RR
+///
+///   Here is the format of the SRV RR, whose DNS type code is 33:
+///
+///   _Service._Proto.Name TTL Class SRV Priority Weight Port Target
+///
+///   (There is an example near the end of this document.)
+/// ```
+impl fmt::Display for SRV {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{priority} {weight} {port} {target}",
+            priority = self.priority,
+            weight = self.weight,
+            port = self.port,
+            target = self.target,
+        )
+    }
 }
 
 #[cfg(test)]
@@ -245,13 +274,13 @@ mod tests {
         let rdata = SRV::new(1, 2, 3, Name::from_str("_dns._tcp.example.com").unwrap());
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
 
         let read_rdata = read(&mut decoder).expect("Decoding error");
         assert_eq!(rdata, read_rdata);

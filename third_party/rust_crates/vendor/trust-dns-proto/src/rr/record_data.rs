@@ -1,32 +1,29 @@
-/*
- * Copyright (C) 2015-2019 Benjamin Fry <benjaminfry@me.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2015-2021 Benjamin Fry <benjaminfry@me.com>
+//
+// Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
+// http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+// http://opensource.org/licenses/MIT>, at your option. This file may not be
+// copied, modified, or distributed except according to those terms.
 
 //! record data enum variants
 
 use std::cmp::Ordering;
 #[cfg(test)]
 use std::convert::From;
+use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use enum_as_inner::EnumAsInner;
-use log::{debug, warn};
+use log::{trace, warn};
 
 use super::domain::Name;
 use super::rdata;
-use super::rdata::{CAA, MX, NAPTR, NULL, OPENPGPKEY, OPT, SOA, SRV, SSHFP, TLSA, TXT};
+use super::rdata::{
+    CAA, HINFO, MX, NAPTR, NULL, OPENPGPKEY, OPT, SOA, SRV, SSHFP, SVCB, TLSA, TXT,
+};
 use super::record_type::RecordType;
 use crate::error::*;
 use crate::serialize::binary::*;
@@ -53,7 +50,9 @@ use super::dnssec::rdata::DNSSECRData;
 /// is treated as binary information, and can be up to 256 characters in
 /// length (including the length octet).
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, EnumAsInner, PartialEq, Clone, Eq)]
+#[non_exhaustive]
 pub enum RData {
     /// ```text
     /// -- RFC 1035 -- Domain Implementation and Specification    November 1987
@@ -74,7 +73,7 @@ pub enum RData {
     /// records.
     ///
     /// A records cause no additional section processing.  The RDATA section of
-    /// an A line in a master file is an Internet address expressed as four
+    /// an A line in a Zone File is an Internet address expressed as four
     /// decimal numbers separated by dots without any embedded spaces (e.g.,
     /// "10.2.0.52" or "192.0.5.6").
     /// ```
@@ -167,6 +166,55 @@ pub enum RData {
     /// the description of name server logic in [RFC-1034] for details.
     /// ```
     CNAME(Name),
+
+    /// ```text
+    /// 3.3.2. HINFO RDATA format
+    ///
+    ///     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    ///     /                      CPU                      /
+    ///     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    ///     /                       OS                      /
+    ///     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    ///
+    /// where:
+    ///
+    /// CPU             A <character-string> which specifies the CPU type.
+    ///
+    /// OS              A <character-string> which specifies the operating
+    ///                 system type.
+    ///
+    /// Standard values for CPU and OS can be found in [RFC-1010].
+    ///
+    /// HINFO records are used to acquire general information about a host.  The
+    /// main use is for protocols such as FTP that can use special procedures
+    /// when talking between machines or operating systems of the same type.
+    /// ```
+    ///
+    /// `HINFO` is also used by [RFC 8482](https://tools.ietf.org/html/rfc8482)
+    HINFO(HINFO),
+
+    /// [RFC draft-ietf-dnsop-svcb-https-03, DNS SVCB and HTTPS RRs](https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-svcb-https-03#section-8)
+    ///
+    /// ```text
+    ///    8.  Using SVCB with HTTPS and HTTP
+    ///
+    ///    Use of any protocol with SVCB requires a protocol-specific mapping
+    ///    specification.  This section specifies the mapping for HTTPS and
+    ///    HTTP.
+    ///
+    ///    To enable special handling for the HTTPS and HTTP use-cases, the
+    ///    HTTPS RR type is defined as a SVCB-compatible RR type, specific to
+    ///    the https and http schemes.  Clients MUST NOT perform SVCB queries or
+    ///    accept SVCB responses for "https" or "http" schemes.
+    ///
+    ///    The HTTPS RR wire format and presentation format are identical to
+    ///    SVCB, and both share the SvcParamKey registry.  SVCB semantics apply
+    ///    equally to HTTPS RRs unless specified otherwise.  The presentation
+    ///    format of the record is:
+    ///
+    ///    Name TTL IN HTTPS SvcPriority TargetName SvcParams
+    /// ```
+    HTTPS(SVCB),
 
     /// ```text
     /// 3.3.9. MX RDATA format
@@ -316,7 +364,7 @@ pub enum RData {
     /// or less.
     ///
     /// NULL records cause no additional section processing.  NULL RRs are not
-    /// allowed in master files.  NULLs are used as placeholders in some
+    /// allowed in Zone Files.  NULLs are used as placeholders in some
     /// experimental extensions of the DNS.
     /// ```
     NULL(NULL),
@@ -470,7 +518,7 @@ pub enum RData {
     /// and the MINIMUM field in the appropriate SOA.  Thus MINIMUM is a lower
     /// bound on the TTL field for all RRs in a zone.  Note that this use of
     /// MINIMUM should occur when the RRs are copied into the response and not
-    /// when the zone is loaded from a master file or via a zone transfer.  The
+    /// when the zone is loaded from a Zone File or via a zone transfer.  The
     /// reason for this provision is to allow future dynamic update facilities to
     /// change the SOA RR with known semantics.
     /// ```
@@ -547,6 +595,31 @@ pub enum RData {
     /// [RFC 7479](https://tools.ietf.org/html/rfc7479).
     SSHFP(SSHFP),
 
+    /// [RFC draft-ietf-dnsop-svcb-https-03, DNS SVCB and HTTPS RRs](https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-svcb-https-03#section-2)
+    ///
+    /// ```text
+    ///    2.  The SVCB record type
+    ///
+    ///   The SVCB DNS resource record (RR) type (RR type 64) is used to locate
+    ///   alternative endpoints for a service.
+    ///
+    ///   The algorithm for resolving SVCB records and associated address
+    ///   records is specified in Section 3.
+    ///
+    ///   Other SVCB-compatible resource record types can also be defined as-
+    ///   needed.  In particular, the HTTPS RR (RR type 65) provides special
+    ///   handling for the case of "https" origins as described in Section 8.
+    ///
+    ///   SVCB RRs are extensible by a list of SvcParams, which are pairs
+    ///   consisting of a SvcParamKey and a SvcParamValue.  Each SvcParamKey
+    ///   has a presentation name and a registered number.  Values are in a
+    ///   format specific to the SvcParamKey.  Their definition should specify
+    ///   both their presentation format and wire encoding (e.g., domain names,
+    ///   binary data, or numeric values).  The initial SvcParamKeys and
+    ///   formats are defined in Section 6.
+    /// ```
+    SVCB(SVCB),
+
     /// [RFC 6698, DNS-Based Authentication for TLS](https://tools.ietf.org/html/rfc6698#section-2.1)
     ///
     /// ```text
@@ -583,6 +656,7 @@ pub enum RData {
     /// These types are in `DNSSECRData` to make them easy to disable when
     /// crypto functionality isn't needed.
     #[cfg(feature = "dnssec")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
     DNSSEC(DNSSECRData),
 
     /// Unknown RecordData is for record types not supported by Trust-DNS
@@ -601,7 +675,7 @@ impl RData {
     fn to_bytes(&self) -> Vec<u8> {
         let mut buf: Vec<u8> = Vec::new();
         {
-            let mut encoder: BinEncoder = BinEncoder::new(&mut buf);
+            let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut buf);
             self.emit(&mut encoder).unwrap_or_else(|_| {
                 warn!("could not encode RDATA: {:?}", self);
             });
@@ -611,7 +685,7 @@ impl RData {
 
     /// Read the RData from the given Decoder
     pub fn read(
-        decoder: &mut BinDecoder,
+        decoder: &mut BinDecoder<'_>,
         record_type: RecordType,
         rdata_length: Restrict<u16>,
     ) -> ProtoResult<Self> {
@@ -619,87 +693,102 @@ impl RData {
 
         let result = match record_type {
             RecordType::A => {
-                debug!("reading A");
+                trace!("reading A");
                 rdata::a::read(decoder).map(RData::A)
             }
             RecordType::AAAA => {
-                debug!("reading AAAA");
+                trace!("reading AAAA");
                 rdata::aaaa::read(decoder).map(RData::AAAA)
             }
             RecordType::ANAME => {
-                debug!("reading ANAME");
+                trace!("reading ANAME");
                 rdata::name::read(decoder).map(RData::ANAME)
             }
             rt @ RecordType::ANY | rt @ RecordType::AXFR | rt @ RecordType::IXFR => {
                 return Err(ProtoErrorKind::UnknownRecordTypeValue(rt.into()).into());
             }
             RecordType::CAA => {
-                debug!("reading CAA");
+                trace!("reading CAA");
                 rdata::caa::read(decoder, rdata_length).map(RData::CAA)
             }
             RecordType::CNAME => {
-                debug!("reading CNAME");
+                trace!("reading CNAME");
                 rdata::name::read(decoder).map(RData::CNAME)
             }
+            RecordType::HINFO => {
+                trace!("reading HINFO");
+                rdata::hinfo::read(decoder).map(RData::HINFO)
+            }
+            RecordType::HTTPS => {
+                trace!("reading HTTPS");
+                rdata::svcb::read(decoder, rdata_length).map(RData::HTTPS)
+            }
             RecordType::ZERO => {
-                debug!("reading EMPTY");
+                trace!("reading EMPTY");
                 return Ok(RData::ZERO);
             }
             RecordType::MX => {
-                debug!("reading MX");
+                trace!("reading MX");
                 rdata::mx::read(decoder).map(RData::MX)
             }
             RecordType::NAPTR => {
-                debug!("reading NAPTR");
+                trace!("reading NAPTR");
                 rdata::naptr::read(decoder).map(RData::NAPTR)
             }
             RecordType::NULL => {
-                debug!("reading NULL");
+                trace!("reading NULL");
                 rdata::null::read(decoder, rdata_length).map(RData::NULL)
             }
             RecordType::NS => {
-                debug!("reading NS");
+                trace!("reading NS");
                 rdata::name::read(decoder).map(RData::NS)
             }
             RecordType::OPENPGPKEY => {
-                debug!("reading OPENPGPKEY");
+                trace!("reading OPENPGPKEY");
                 rdata::openpgpkey::read(decoder, rdata_length).map(RData::OPENPGPKEY)
             }
             RecordType::OPT => {
-                debug!("reading OPT");
+                trace!("reading OPT");
                 rdata::opt::read(decoder, rdata_length).map(RData::OPT)
             }
             RecordType::PTR => {
-                debug!("reading PTR");
+                trace!("reading PTR");
                 rdata::name::read(decoder).map(RData::PTR)
             }
             RecordType::SOA => {
-                debug!("reading SOA");
+                trace!("reading SOA");
                 rdata::soa::read(decoder).map(RData::SOA)
             }
             RecordType::SRV => {
-                debug!("reading SRV");
+                trace!("reading SRV");
                 rdata::srv::read(decoder).map(RData::SRV)
             }
             RecordType::SSHFP => {
-                debug!("reading SSHFP");
+                trace!("reading SSHFP");
                 rdata::sshfp::read(decoder, rdata_length).map(RData::SSHFP)
             }
+            RecordType::SVCB => {
+                trace!("reading SVCB");
+                rdata::svcb::read(decoder, rdata_length).map(RData::SVCB)
+            }
             RecordType::TLSA => {
-                debug!("reading TLSA");
+                trace!("reading TLSA");
                 rdata::tlsa::read(decoder, rdata_length).map(RData::TLSA)
             }
             RecordType::TXT => {
-                debug!("reading TXT");
+                trace!("reading TXT");
                 rdata::txt::read(decoder, rdata_length).map(RData::TXT)
             }
             #[cfg(feature = "dnssec")]
-            RecordType::DNSSEC(record_type) => {
+            r if r.is_dnssec() => {
                 DNSSECRData::read(decoder, record_type, rdata_length).map(RData::DNSSEC)
             }
-            RecordType::Unknown(code) => {
-                debug!("reading Unknown");
-                rdata::null::read(decoder, rdata_length).map(|rdata| RData::Unknown { code, rdata })
+            record_type => {
+                trace!("reading Unknown record: {}", record_type);
+                rdata::null::read(decoder, rdata_length).map(|rdata| RData::Unknown {
+                    code: record_type.into(),
+                    rdata,
+                })
             }
         };
 
@@ -785,7 +874,7 @@ impl RData {
     ///   DNAME, and A6.
     ///   ...
     /// ```
-    pub fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    pub fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         match *self {
             RData::A(address) => rdata::a::emit(encoder, address),
             RData::AAAA(ref address) => rdata::aaaa::emit(encoder, address),
@@ -799,6 +888,8 @@ impl RData {
             RData::CNAME(ref name) | RData::NS(ref name) | RData::PTR(ref name) => {
                 rdata::name::emit(encoder, name)
             }
+            RData::HINFO(ref hinfo) => rdata::hinfo::emit(encoder, hinfo),
+            RData::HTTPS(ref svcb) => rdata::svcb::emit(encoder, svcb),
             RData::ZERO => Ok(()),
             // to_lowercase for rfc4034 and rfc6840
             RData::MX(ref mx) => rdata::mx::emit(encoder, mx),
@@ -819,6 +910,7 @@ impl RData {
             RData::SSHFP(ref sshfp) => {
                 encoder.with_canonical_names(|encoder| rdata::sshfp::emit(encoder, sshfp))
             }
+            RData::SVCB(ref svcb) => rdata::svcb::emit(encoder, svcb),
             RData::TLSA(ref tlsa) => {
                 encoder.with_canonical_names(|encoder| rdata::tlsa::emit(encoder, tlsa))
             }
@@ -837,6 +929,8 @@ impl RData {
             RData::ANAME(..) => RecordType::ANAME,
             RData::CAA(..) => RecordType::CAA,
             RData::CNAME(..) => RecordType::CNAME,
+            RData::HINFO(..) => RecordType::HINFO,
+            RData::HTTPS(..) => RecordType::HTTPS,
             RData::MX(..) => RecordType::MX,
             RData::NAPTR(..) => RecordType::NAPTR,
             RData::NS(..) => RecordType::NS,
@@ -847,10 +941,11 @@ impl RData {
             RData::SOA(..) => RecordType::SOA,
             RData::SRV(..) => RecordType::SRV,
             RData::SSHFP(..) => RecordType::SSHFP,
+            RData::SVCB(..) => RecordType::SVCB,
             RData::TLSA(..) => RecordType::TLSA,
             RData::TXT(..) => RecordType::TXT,
             #[cfg(feature = "dnssec")]
-            RData::DNSSEC(ref rdata) => RecordType::DNSSEC(DNSSECRData::to_record_type(rdata)),
+            RData::DNSSEC(ref rdata) => DNSSECRData::to_record_type(rdata),
             RData::Unknown { code, .. } => RecordType::Unknown(code),
             RData::ZERO => RecordType::ZERO,
         }
@@ -862,6 +957,44 @@ impl RData {
             RData::A(a) => Some(IpAddr::from(a)),
             RData::AAAA(aaaa) => Some(IpAddr::from(aaaa)),
             _ => None,
+        }
+    }
+}
+
+impl fmt::Display for RData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        fn w<D: fmt::Display>(f: &mut fmt::Formatter<'_>, d: D) -> Result<(), fmt::Error> {
+            write!(f, "{rdata}", rdata = d)
+        }
+
+        match *self {
+            RData::A(address) => w(f, address),
+            RData::AAAA(ref address) => w(f, address),
+            RData::ANAME(ref name) => w(f, name),
+            RData::CAA(ref caa) => w(f, caa),
+            // to_lowercase for rfc4034 and rfc6840
+            RData::CNAME(ref name) | RData::NS(ref name) | RData::PTR(ref name) => w(f, name),
+            RData::HINFO(ref hinfo) => w(f, hinfo),
+            RData::HTTPS(ref svcb) => w(f, svcb),
+            RData::ZERO => Ok(()),
+            // to_lowercase for rfc4034 and rfc6840
+            RData::MX(ref mx) => w(f, mx),
+            RData::NAPTR(ref naptr) => w(f, naptr),
+            RData::NULL(ref null) => w(f, null),
+            RData::OPENPGPKEY(ref openpgpkey) => w(f, openpgpkey),
+            // Opt has no display representation
+            RData::OPT(_) => Err(fmt::Error),
+            // to_lowercase for rfc4034 and rfc6840
+            RData::SOA(ref soa) => w(f, soa),
+            // to_lowercase for rfc4034 and rfc6840
+            RData::SRV(ref srv) => w(f, srv),
+            RData::SSHFP(ref sshfp) => w(f, sshfp),
+            RData::SVCB(ref svcb) => w(f, svcb),
+            RData::TLSA(ref tlsa) => w(f, tlsa),
+            RData::TXT(ref txt) => w(f, txt),
+            #[cfg(feature = "dnssec")]
+            RData::DNSSEC(ref rdata) => w(f, rdata),
+            RData::Unknown { ref rdata, .. } => w(f, rdata),
         }
     }
 }
@@ -946,9 +1079,9 @@ mod tests {
                     Name::from_str("www.example.com").unwrap(),
                     Name::from_str("xxx.example.com").unwrap(),
                     u32::max_value(),
-                    -1 as i32,
-                    -1 as i32,
-                    -1 as i32,
+                    -1,
+                    -1,
+                    -1,
                     u32::max_value(),
                 )),
                 vec![
@@ -989,6 +1122,10 @@ mod tests {
                     b'm', b'p', b'l', b'e', 3, b'c', b'o', b'm', 0,
                 ],
             ),
+            (
+                RData::HINFO(HINFO::new("cpu".to_string(), "os".to_string())),
+                vec![3, b'c', b'p', b'u', 2, b'o', b's'],
+            ),
         ]
     }
 
@@ -1012,9 +1149,9 @@ mod tests {
                 Name::from_str("www.example.com").unwrap(),
                 Name::from_str("xxx.example.com").unwrap(),
                 u32::max_value(),
-                -1 as i32,
-                -1 as i32,
-                -1 as i32,
+                -1,
+                -1,
+                -1,
                 u32::max_value(),
             )),
             RData::TXT(TXT::new(vec![
@@ -1033,9 +1170,9 @@ mod tests {
                 Name::from_str("www.example.com").unwrap(),
                 Name::from_str("xxx.example.com").unwrap(),
                 u32::max_value(),
-                -1 as i32,
-                -1 as i32,
-                -1 as i32,
+                -1,
+                -1,
+                -1,
                 u32::max_value(),
             )),
             RData::TXT(TXT::new(vec![
@@ -1084,6 +1221,8 @@ mod tests {
             RData::ANAME(..) => RecordType::ANAME,
             RData::CAA(..) => RecordType::CAA,
             RData::CNAME(..) => RecordType::CNAME,
+            RData::HINFO(..) => RecordType::HINFO,
+            RData::HTTPS(..) => RecordType::HTTPS,
             RData::MX(..) => RecordType::MX,
             RData::NAPTR(..) => RecordType::NAPTR,
             RData::NS(..) => RecordType::NS,
@@ -1094,10 +1233,11 @@ mod tests {
             RData::SOA(..) => RecordType::SOA,
             RData::SRV(..) => RecordType::SRV,
             RData::SSHFP(..) => RecordType::SSHFP,
+            RData::SVCB(..) => RecordType::SVCB,
             RData::TLSA(..) => RecordType::TLSA,
             RData::TXT(..) => RecordType::TXT,
             #[cfg(feature = "dnssec")]
-            RData::DNSSEC(ref rdata) => RecordType::DNSSEC(rdata.to_record_type()),
+            RData::DNSSEC(ref rdata) => rdata.to_record_type(),
             RData::Unknown { code, .. } => RecordType::Unknown(code),
             RData::ZERO => RecordType::ZERO,
         }

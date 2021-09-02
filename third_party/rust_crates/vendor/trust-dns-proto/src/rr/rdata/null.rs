@@ -15,6 +15,10 @@
  */
 
 //! null record type, generally not used except as an internal tool for representing null data
+use std::fmt;
+
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::*;
 use crate::serialize::binary::*;
@@ -33,9 +37,10 @@ use crate::serialize::binary::*;
 /// or less.
 ///
 /// NULL records cause no additional section processing.  NULL RRs are not
-/// allowed in master files.  NULLs are used as placeholders in some
+/// allowed in Zone Files.  NULLs are used as placeholders in some
 /// experimental extensions of the DNS.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct NULL {
     anything: Option<Vec<u8>>,
@@ -61,7 +66,7 @@ impl NULL {
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<NULL> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<NULL> {
     let rdata_length = rdata_length.map(|u| u as usize).unverified(/*any u16 is valid*/);
     if rdata_length > 0 {
         let anything = decoder.read_vec(rdata_length)?.unverified(/*any byte array is good*/);
@@ -72,7 +77,7 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, nil: &NULL) -> ProtoResult<()> {
+pub fn emit(encoder: &mut BinEncoder<'_>, nil: &NULL) -> ProtoResult<()> {
     if let Some(anything) = nil.anything() {
         for b in anything.iter() {
             encoder.emit(*b)?;
@@ -82,6 +87,16 @@ pub fn emit(encoder: &mut BinEncoder, nil: &NULL) -> ProtoResult<()> {
     Ok(())
 }
 
+impl fmt::Display for NULL {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        if let Some(thing) = &self.anything {
+            f.write_str(&data_encoding::BASE64.encode(thing))?;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::dbg_macro, clippy::print_stdout)]
@@ -89,17 +104,17 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test() {
+    fn test() {
         let rdata = NULL::with(vec![0, 1, 2, 3, 4, 5, 6, 7]);
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let restrict = Restrict::new(bytes.len() as u16);
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata, read_rdata);

@@ -18,6 +18,9 @@
 
 use std::collections::HashMap;
 
+#[cfg(feature = "serde-config")]
+use serde::{Deserialize, Serialize};
+
 use log::warn;
 
 use crate::error::*;
@@ -49,7 +52,7 @@ use crate::rr::dnssec::SupportedAlgorithms;
 ///    An OPT record does not carry any DNS data.  It is used only to
 ///    contain control information pertaining to the question-and-answer
 ///    sequence of a specific transaction.  OPT RRs MUST NOT be cached,
-///    forwarded, or stored in or loaded from master files.
+///    forwarded, or stored in or loaded from Zone Files.
 ///
 ///    The OPT RR MAY be placed anywhere within the additional data section.
 ///    When an OPT RR is included within any DNS message, it MUST be the
@@ -162,6 +165,7 @@ use crate::rr::dnssec::SupportedAlgorithms;
 ///       Set to zero by senders and ignored by receivers, unless modified
 ///       in a subsequent specification.
 /// ```
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct OPT {
     options: HashMap<EdnsCode, EdnsOption>,
@@ -181,6 +185,7 @@ impl OPT {
         OPT { options }
     }
 
+    #[deprecated(note = "Please use as_ref() or as_mut() for shared/mutable references")]
     /// The entire map of options
     pub fn options(&self) -> &HashMap<EdnsCode, EdnsOption> {
         &self.options
@@ -195,10 +200,27 @@ impl OPT {
     pub fn insert(&mut self, option: EdnsOption) {
         self.options.insert((&option).into(), option);
     }
+
+    /// Remove an option, the key is derived from the `EdnsOption`
+    pub fn remove(&mut self, option: EdnsCode) {
+        self.options.remove(&option);
+    }
+}
+
+impl AsMut<HashMap<EdnsCode, EdnsOption>> for OPT {
+    fn as_mut(&mut self) -> &mut HashMap<EdnsCode, EdnsOption> {
+        &mut self.options
+    }
+}
+
+impl AsRef<HashMap<EdnsCode, EdnsOption>> for OPT {
+    fn as_ref(&self) -> &HashMap<EdnsCode, EdnsOption> {
+        &self.options
+    }
 }
 
 /// Read the RData from the given Decoder
-pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResult<OPT> {
+pub fn read(decoder: &mut BinDecoder<'_>, rdata_length: Restrict<u16>) -> ProtoResult<OPT> {
     let mut state: OptReadState = OptReadState::ReadCode;
     let mut options: HashMap<EdnsCode, EdnsOption> = HashMap::new();
     let start_idx = decoder.index();
@@ -221,12 +243,21 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
                     .map(|u| u as usize)
                     .verify_unwrap(|u| *u <= rdata_length)
                     .map_err(|_| ProtoError::from("OPT value length exceeds rdata length"))?;
-                state = OptReadState::Data {
-                    code,
-                    length,
-                    // TODO: this can be replaced with decoder.read_vec(), right?
-                    //  the current version allows for malformed opt to be skipped...
-                    collected: Vec::<u8>::with_capacity(length),
+                // If we know that the length is 0, we can avoid the `OptReadState::Data` state
+                // and directly add the option to the map.
+                // The data state does not process 0-length correctly, since it always reads at
+                // least 1 byte, thus making the length check fail.
+                state = if length == 0 {
+                    options.insert(code, (code, &[] as &[u8]).into());
+                    OptReadState::ReadCode
+                } else {
+                    OptReadState::Data {
+                        code,
+                        length,
+                        // TODO: this cean be replaced with decoder.read_vec(), right?
+                        //  the current version allows for malformed opt to be skipped...
+                        collected: Vec::<u8>::with_capacity(length),
+                    }
                 };
             }
             OptReadState::Data {
@@ -262,8 +293,8 @@ pub fn read(decoder: &mut BinDecoder, rdata_length: Restrict<u16>) -> ProtoResul
 }
 
 /// Write the RData from the given Decoder
-pub fn emit(encoder: &mut BinEncoder, opt: &OPT) -> ProtoResult<()> {
-    for (edns_code, edns_option) in opt.options().iter() {
+pub fn emit(encoder: &mut BinEncoder<'_>, opt: &OPT) -> ProtoResult<()> {
+    for (edns_code, edns_option) in opt.as_ref().iter() {
         encoder.emit_u16(u16::from(*edns_code))?;
         encoder.emit_u16(edns_option.len())?;
         edns_option.emit(encoder)?
@@ -285,12 +316,14 @@ enum OptReadState {
 }
 
 /// The code of the EDNS data option
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Hash, Debug, Copy, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum EdnsCode {
     /// [RFC 6891, Reserved](https://tools.ietf.org/html/rfc6891)
     Zero,
 
-    /// [LLQ On-hold](http://files.dns-sd.org/draft-sekar-dns-llq.txt)
+    /// [RFC 8764l, Apple's Long-Lived Queries, Optional](https://tools.ietf.org/html/rfc8764)
     LLQ,
 
     /// [UL On-hold](http://files.dns-sd.org/draft-sekar-dns-ul.txt)
@@ -308,22 +341,22 @@ pub enum EdnsCode {
     /// [RFC 6975, NSEC3 Hash Understood](https://tools.ietf.org/html/rfc6975)
     N3U,
 
-    /// [edns-client-subnet, Optional](https://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02)
+    /// [RFC 7871, Client Subnet, Optional](https://tools.ietf.org/html/rfc7871)
     Subnet,
 
     /// [RFC 7314, EDNS EXPIRE, Optional](https://tools.ietf.org/html/rfc7314)
     Expire,
 
-    /// [draft-ietf-dnsop-cookies](https://tools.ietf.org/html/draft-ietf-dnsop-cookies-07)
+    /// [RFC 7873, DNS Cookies](https://tools.ietf.org/html/rfc7873)
     Cookie,
 
-    /// [draft-ietf-dnsop-edns-tcp-keepalive, Optional](https://tools.ietf.org/html/draft-ietf-dnsop-edns-tcp-keepalive-04)
+    /// [RFC 7828, edns-tcp-keepalive](https://tools.ietf.org/html/rfc7828)
     Keepalive,
 
-    /// [draft-mayrhofer-edns0-padding, Optional](https://tools.ietf.org/html/draft-mayrhofer-edns0-padding-01)
+    /// [RFC 7830, The EDNS(0) Padding](https://tools.ietf.org/html/rfc7830)
     Padding,
 
-    /// [draft-ietf-dnsop-edns-chain-query](https://tools.ietf.org/html/draft-ietf-dnsop-edns-chain-query-07)
+    /// [RFC 7901, CHAIN Query Requests in DNS, Optional](https://tools.ietf.org/html/rfc7901)
     Chain,
 
     /// Unknown, used to deal with unknown or unsupported codes
@@ -379,19 +412,24 @@ impl From<EdnsCode> for u16 {
 ///
 /// `note: Not all EdnsOptions are supported at this time.`
 ///
-/// http://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-13
+/// <http://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-13>
+#[cfg_attr(feature = "serde-config", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Hash)]
+#[non_exhaustive]
 pub enum EdnsOption {
     /// [RFC 6975, DNSSEC Algorithm Understood](https://tools.ietf.org/html/rfc6975)
     #[cfg(feature = "dnssec")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
     DAU(SupportedAlgorithms),
 
     /// [RFC 6975, DS Hash Understood](https://tools.ietf.org/html/rfc6975)
     #[cfg(feature = "dnssec")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
     DHU(SupportedAlgorithms),
 
     /// [RFC 6975, NSEC3 Hash Understood](https://tools.ietf.org/html/rfc6975)
     #[cfg(feature = "dnssec")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "dnssec")))]
     N3U(SupportedAlgorithms),
 
     /// Unknown, used to deal with unknown or unsupported codes
@@ -423,7 +461,7 @@ impl EdnsOption {
 }
 
 impl BinEncodable for EdnsOption {
-    fn emit(&self, encoder: &mut BinEncoder) -> ProtoResult<()> {
+    fn emit(&self, encoder: &mut BinEncoder<'_>) -> ProtoResult<()> {
         match *self {
             #[cfg(feature = "dnssec")]
             EdnsOption::DAU(ref algorithms)
@@ -436,6 +474,7 @@ impl BinEncodable for EdnsOption {
 
 /// only the supported extensions are listed right now.
 impl<'a> From<(EdnsCode, &'a [u8])> for EdnsOption {
+    #[allow(clippy::match_single_binding)]
     fn from(value: (EdnsCode, &'a [u8])) -> EdnsOption {
         match value.0 {
             #[cfg(feature = "dnssec")]
@@ -484,20 +523,47 @@ mod tests {
 
     #[test]
     #[cfg(feature = "dnssec")]
-    pub fn test() {
+    fn test() {
         let mut rdata = OPT::default();
         rdata.insert(EdnsOption::DAU(SupportedAlgorithms::all()));
 
         let mut bytes = Vec::new();
-        let mut encoder: BinEncoder = BinEncoder::new(&mut bytes);
+        let mut encoder: BinEncoder<'_> = BinEncoder::new(&mut bytes);
         assert!(emit(&mut encoder, &rdata).is_ok());
         let bytes = encoder.into_bytes();
 
         println!("bytes: {:?}", bytes);
 
-        let mut decoder: BinDecoder = BinDecoder::new(bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(bytes);
         let restrict = Restrict::new(bytes.len() as u16);
         let read_rdata = read(&mut decoder, restrict).expect("Decoding error");
         assert_eq!(rdata, read_rdata);
     }
+}
+
+#[test]
+pub fn test_read_empty_option_at_end_of_opt() {
+    let bytes: Vec<u8> = vec![
+        0x00, 0x0a, 0x00, 0x08, 0x0b, 0x64, 0xb4, 0xdc, 0xd7, 0xb0, 0xcc, 0x8f, 0x00, 0x08, 0x00,
+        0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00,
+    ];
+
+    let mut decoder: BinDecoder<'_> = BinDecoder::new(&*bytes);
+    let read_rdata = read(&mut decoder, Restrict::new(bytes.len() as u16));
+    assert!(
+        read_rdata.is_ok(),
+        "error decoding: {:?}",
+        read_rdata.unwrap_err()
+    );
+
+    let opt = read_rdata.unwrap();
+    let mut options = HashMap::default();
+    options.insert(EdnsCode::Subnet, EdnsOption::Unknown(8, vec![0, 1, 0, 0]));
+    options.insert(
+        EdnsCode::Cookie,
+        EdnsOption::Unknown(10, vec![0x0b, 0x64, 0xb4, 0xdc, 0xd7, 0xb0, 0xcc, 0x8f]),
+    );
+    options.insert(EdnsCode::Keepalive, EdnsOption::Unknown(11, vec![]));
+    let options = OPT::new(options);
+    assert_eq!(opt, options);
 }
