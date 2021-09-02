@@ -201,7 +201,7 @@ void PerformanceCounters::RemoveClient(Client* client) {
 bool PerformanceCounters::AddManager(PerformanceCountersManager* manager) {
   std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   if (manager_)
-    return false;
+    return DRETF(false, "Manager already exists, can't add new manager");
   manager_ = manager;
   return true;
 }

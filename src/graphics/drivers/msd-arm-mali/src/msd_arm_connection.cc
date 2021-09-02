@@ -1033,12 +1033,16 @@ magma_status_t MsdArmConnection::EnablePerformanceCounters(std::vector<uint64_t>
   }
   auto* perf_count = performance_counters();
   auto reply = owner_->RunTaskOnDeviceThread([perf_count_manager = perf_count_manager_, perf_count,
-                                              flags = std::move(flags),
+                                              flags = std::move(flags), client_id = client_id_,
                                               start_managing](MsdArmDevice* device) {
     perf_count_manager->enabled_performance_counters_ = std::move(flags);
     if (start_managing) {
-      if (!perf_count->AddManager(perf_count_manager.get()))
+      if (!perf_count->AddManager(perf_count_manager.get())) {
+        MAGMA_LOG(WARNING,
+                  "Client %" PRIu64 " Attempting to add performance counter manager failed.",
+                  client_id);
         return MAGMA_STATUS_INTERNAL_ERROR;
+      }
     }
     perf_count->Update();
     return MAGMA_STATUS_OK;
