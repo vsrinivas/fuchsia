@@ -17,16 +17,19 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
       tts_manager_(tts_manager),
       semantics_source_(semantics_source),
       locale_id_(std::move(locale_id)) {
-  FX_DCHECK(tts_manager);
-  FX_DCHECK(semantics_source_);
+  FX_CHECK(tts_manager);
+  FX_CHECK(semantics_source_);
   tts_manager_->OpenEngine(tts_engine_ptr_.NewRequest(),
                            [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
                              if (result.is_err()) {
                                FX_LOGS(ERROR) << "Unable to connect to TTS service";
                              }
                            });
-  auto result = intl::Lookup::New({locale_id_});
-  FX_DCHECK(result.is_ok()) << "Load of l10n resources failed.";
+
+  // Note that en-US is passed here so that we can fallback to use it in case the first locale is
+  // not available.
+  auto result = intl::Lookup::New({locale_id_, "en-US"});
+  FX_CHECK(result.is_ok()) << "Load of l10n resources failed.";
   auto message_formatter =
       std::make_unique<i18n::MessageFormatter>(icu::Locale("en-US"), result.take_value());
   auto screen_reader_message_generator =
@@ -40,12 +43,12 @@ ScreenReaderContext::ScreenReaderContext() : executor_(async_get_default_dispatc
 ScreenReaderContext::~ScreenReaderContext() {}
 
 A11yFocusManager* ScreenReaderContext::GetA11yFocusManager() {
-  FX_DCHECK(a11y_focus_manager_.get());
+  FX_CHECK(a11y_focus_manager_.get());
   return a11y_focus_manager_.get();
 }
 
 Speaker* ScreenReaderContext::speaker() {
-  FX_DCHECK(speaker_.get());
+  FX_CHECK(speaker_.get());
   return speaker_.get();
 }
 

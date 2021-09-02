@@ -104,5 +104,14 @@ TEST_F(ScreenReaderContextTest, IsTextFieldFocused) {
   EXPECT_FALSE(screen_reader_context_->IsTextFieldFocused());
 }
 
+TEST_F(ScreenReaderContextTest, FallbackToEnglishWhenLocaleIsUnknown) {
+  auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(
+      &mock_focus_requester_, &mock_focus_registry_, &mock_focus_highlight_manager_);
+
+  // If the context is built successfully, this means that it loaded the English strings, as they
+  // are the only ones present in the test package and the fallback worked.
+  screen_reader_context_ = std::make_unique<a11y::ScreenReaderContext>(
+      std::move(a11y_focus_manager), &tts_manager_, &mock_semantics_source_, "sr-RS");
+}
 }  // namespace
 }  // namespace accessibility_test
