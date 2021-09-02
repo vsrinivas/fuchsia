@@ -4,44 +4,23 @@
 
 # This exists to allow a soft, coordinated move of FIDL and related Dart
 # packages and tools from topaz to fuchsia.git.
-# Please also update dart_packages_list below.
 
 dart_package_label = {
-  fidl = "//sdk/dart/fidl"
-  fuchsia = "//sdk/dart/fuchsia"
-  fuchsia_inspect = "//sdk/dart/fuchsia_inspect"
-  fuchsia_inspect_flutter = "//sdk/dart/fuchsia_inspect_flutter"
+  fidl = "//sdk/dart/fidl/"
+  fuchsia = "//sdk/dart/fuchsia/"
+  fuchsia_inspect = "//sdk/dart/fuchsia_inspect/"
+  fuchsia_inspect_flutter = "//sdk/dart/fuchsia_inspect_flutter/"
   fuchsia_internationalization_flutter =
-      "//sdk/dart/fuchsia_internationalization_flutter"
-  fuchsia_logger = "//sdk/dart/fuchsia_logger"
-  fuchsia_modular = "//sdk/dart/fuchsia_modular"
-  fuchsia_modular_testing = "//sdk/dart/fuchsia_modular_testing"
-  fuchsia_scenic = "//sdk/dart/fuchsia_scenic"
-  fuchsia_scenic_flutter = "//sdk/dart/fuchsia_scenic_flutter"
-  fuchsia_services = "//sdk/dart/fuchsia_services"
-  fuchsia_vfs = "//sdk/dart/fuchsia_vfs"
-  fuchsia_webview_flutter = "//sdk/dart/fuchsia_webview_flutter"
-  zircon = "//sdk/dart/zircon"
+      "//sdk/dart/fuchsia_internationalization_flutter/"
+  fuchsia_logger = "//sdk/dart/fuchsia_logger/"
+  fuchsia_modular = "//sdk/dart/fuchsia_modular/"
+  fuchsia_modular_testing = "//sdk/dart/fuchsia_modular_testing/"
+  fuchsia_scenic = "//sdk/dart/fuchsia_scenic/"
+  fuchsia_scenic_flutter = "//sdk/dart/fuchsia_scenic_flutter/"
+  fuchsia_services = "//sdk/dart/fuchsia_services/"
+  fuchsia_vfs = "//sdk/dart/fuchsia_vfs/"
+  fuchsia_webview_flutter = "//sdk/dart/fuchsia_webview_flutter/"
+  zircon = "//sdk/dart/zircon/"
 }
-
-# This is a list representation of dart_package_label.
-# New entries in the scope should be added to this list.
-
-dart_packages_list = [
-  dart_package_label.fidl,
-  dart_package_label.fuchsia,
-  dart_package_label.fuchsia_inspect,
-  dart_package_label.fuchsia_inspect_flutter,
-  dart_package_label.fuchsia_internationalization_flutter,
-  dart_package_label.fuchsia_logger,
-  dart_package_label.fuchsia_modular,
-  dart_package_label.fuchsia_modular_testing,
-  dart_package_label.fuchsia_scenic,
-  dart_package_label.fuchsia_scenic_flutter,
-  dart_package_label.fuchsia_services,
-  dart_package_label.fuchsia_vfs,
-  dart_package_label.fuchsia_webview_flutter,
-  dart_package_label.zircon,
-]
 
 fidlgen_dart_topaz_output_name = "fidlgen_dart_topaz"

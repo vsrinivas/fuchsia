@@ -11,12 +11,12 @@ this behavior is not desired, do not pass more than one package argument.
 """
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
 import sys
 import yaml
-import generate_dart_toc
 
 _PUBSPEC_CONTENT = """name: Fuchsia
 homepage: https://fuchsia.dev/reference/dart
@@ -45,7 +45,7 @@ def is_dart_package_dir(package_dir):
     with open(pubspec_file) as f:
         pubspec = yaml.load(f, Loader=yaml.Loader)
         if not pubspec or pubspec['name'] != os.path.basename(package_dir):
-            print('%s has an invalid pubspec.yaml. Ignoring.' % (package_dir))
+            print('%s has an invalid pubspec.yaml' % (package_dir))
             return False
 
     return True
@@ -119,44 +119,14 @@ def fabricate_package(gen_dir, pubspec_content, imports_content):
         f.write(imports_content)
 
 
-def walk_rmtree(directory):
-    """Manually remove all subdirectories and files of a directory
-    via os.walk instead of using
-    shutil.rmtree, to avoid registering spurious reads on stale
-    subdirectories. See https://fxbug.dev/74084.
-
-    Args:
-        directory: path to directory which should have tree removed. 
-    """
-    for root, dirs, files in os.walk(directory, topdown=False):
-        for file in files:
-            os.unlink(os.path.join(root, file))
-        for dir in dirs:
-            full_path = os.path.join(root, dir)
-            if os.path.islink(full_path):
-                os.unlink(full_path)
-            else:
-                os.rmdir(full_path)
-    os.rmdir(directory)
-
-
-def generate_docs(
-        package_dir,
-        out_dir,
-        dart_prebuilt_dir,
-        run_toc=False,
-        delete_artifact_files=False,
-        zipped_result=False):
+def generate_docs(package_dir, out_dir, dart_prebuilt_dir):
     """Generate dart reference docs.
 
     Args:
         package_dir: The directory of the package to document.
         out_dir: The output directory for documentation.
         dart_prebuilt_dir: The directory with dart executables (dartdoc, pub).
-        run_toc: If true, will generate a toc.yaml file to represent dartdocs.
-        delete_artifact_files: If true, will delete unused artifacts in output.
-        zipped_result: If true, will zip dartdocs and delete orig. generated docs.
-        
+
     Returns:
         0 if documentation was generated successfully, non-zero otherwise.
     """
@@ -170,24 +140,20 @@ def generate_docs(
         print(process.stderr)
         return 1
 
-    # Clear the docdir first.
-    docs_dir = os.path.join(out_dir, "docs")
-    pkg_to_docs_path = os.path.join(package_dir, docs_dir)
-    if os.path.exists(pkg_to_docs_path):
-        walk_rmtree(pkg_to_docs_path)
+    # Clear the outdir first.
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
 
     # Run dartdoc.
     excluded_packages = ['Dart', 'logging']
     process = subprocess.run(
         [
             os.path.join(dart_prebuilt_dir, 'dartdoc'),
-            '--no-validate-links',
             '--auto-include-dependencies',
-            '--no-enhanced-reference-lookup',
             '--exclude-packages',
             ','.join(excluded_packages),
             '--output',
-            docs_dir,
+            out_dir,
             '--format',
             'md',
         ],
@@ -198,27 +164,6 @@ def generate_docs(
         print(process.stderr)
         return 1
 
-    # Run toc.yaml generation
-    if run_toc:
-        generate_dart_toc.no_args_main(
-            index_file=os.path.join(pkg_to_docs_path, 'index.json'),
-            outfile=os.path.join(pkg_to_docs_path, '_toc.yaml'))
-
-    # Delete useless artifact files
-    if delete_artifact_files:
-        for file in ['__404error.md', 'categories.json', 'index.json']:
-            os.remove(os.path.join(pkg_to_docs_path, file))
-
-    # Zip generated docs and delete original docs to make build hermetic.
-    if zipped_result:
-        pkg_to_out = os.path.join(package_dir, out_dir)
-        shutil.make_archive(
-            os.path.join(pkg_to_out, 'dartdoc_out'),
-            'zip',
-            root_dir=pkg_to_out,
-            base_dir='docs')
-        walk_rmtree(pkg_to_docs_path)
-
     return 0
 
 
@@ -227,32 +172,13 @@ def main():
         description=__doc__,  # Prepend help doc with this file's docstring.
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
-        '-d',
-        '--delete-artifact-files',
-        action='store_true',
-        help=
-        'If set will delete __404error.md, categories.json, index.json in the out directory'
-    )
-    parser.add_argument(
-        '-z',
-        '--zipped-result',
-        action='store_true',
-        help=(
-            'If set will zip output documentation and delete md files.'
-            'This is to make the doc generation process hermetic'))
-    parser.add_argument(
-        '-r',
-        '--run-toc',
-        action='store_true',
-        help='If set will run generate_toc script on the generated dartdocs.')
-    parser.add_argument(
         '-g',
         '--gen-dir',
         type=str,
         required=False,
         help='Location where intermediate files can be generated (should be '
-        'different from the output directory). This is required if more '
-        'than one package argument is given.')
+             'different from the output directory). This is required if more '
+             'than one package argument is given.')
     parser.add_argument(
         '-o',
         '--out-dir',
@@ -260,15 +186,12 @@ def main():
         required=True,
         help='Output location where generated docs should go')
     parser.add_argument(
-        '--dep-file', type=argparse.FileType('w'), required=True)
-    parser.add_argument(
         '-p',
         '--prebuilts-dir',
         type=str,
         required=False,
         default='',
         help="Location of dart prebuilts, usually a Dart SDK's bin directory")
-
     parser.add_argument(
         'packages', type=str, nargs='+', help='Paths of packages to document')
 
@@ -287,31 +210,19 @@ def main():
 
         packages_dict = {}
         imports_dict = {}
-        input_dart_files = []
         for pkg in args.packages:
-            if is_dart_package_dir(pkg):
-                package_basename = os.path.basename(pkg)
-                packages_dict[package_basename] = os.path.abspath(pkg)
-                imports_dict[package_basename] = collect_top_level_files(pkg)
-                for root, dirs, files in os.walk(os.path.join(pkg),
-                                                 topdown=False):
-                    for name in files:
-                        if os.path.basename(name).endswith(
-                                '.dart') or name == 'pubspec.yaml':
-                            input_dart_files.append(os.path.join(root, name))
-            else:
-                input_dart_files.append(os.path.join(pkg, 'pubspec.yaml'))
+            if not is_dart_package_dir(pkg):
+                return 1
+
+            package_basename = os.path.basename(pkg)
+            packages_dict[package_basename] = os.path.abspath(pkg)
+            imports_dict[package_basename] = collect_top_level_files(pkg)
+
         pubspec_content = compose_pubspec_content(packages_dict)
         imports_content = compose_imports_content(imports_dict)
         fabricate_package(package_dir, pubspec_content, imports_content)
-    args.dep_file.write(
-        '{}: {}\n'.format(
-            os.path.join(package_dir, args.out_dir, 'dartdoc_out.zip'),
-            ' '.join(input_dart_files)))
 
-    return generate_docs(
-        package_dir, args.out_dir, args.prebuilts_dir, args.run_toc,
-        args.delete_artifact_files, args.zipped_result)
+    return generate_docs(package_dir, args.out_dir, args.prebuilts_dir)
 
 
 if __name__ == '__main__':

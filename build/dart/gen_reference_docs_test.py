@@ -103,23 +103,6 @@ dependencies:
         result = gen_reference_docs.compose_pubspec_content(packages)
         self.assertEqual(result, expected)
 
-    def test_walk_rmtree(self):
-        with mock.patch.object(gen_reference_docs.os, 'walk') as mock_walk:
-            with mock.patch.object(gen_reference_docs.os.path,'islink') as mock_islink:
-                with mock.patch.object(gen_reference_docs.os,'unlink') as mock_unlink:
-                    with mock.patch.object(gen_reference_docs.os, 'rmdir') as mock_rmdir:
-                        mock_walk.return_value = [
-                        ('/foo', ('bar',), ('baz',)),
-                        ('/foo/bar', (), ('spam', 'eggs'))]
-                        mock_islink.return_value = True
-                        gen_reference_docs.walk_rmtree('fake_dir')
-                        mock_unlink.assert_any_call('/foo/baz')
-                        mock_unlink.assert_any_call('/foo/bar/spam')
-                        mock_unlink.assert_any_call('/foo/bar/eggs')
-                        mock_unlink.assert_any_call('/foo/bar')
-                        mock_rmdir.assert_any_call('fake_dir')
-
-
     def test_compose_imports_content(self):
         imports = {
             'foo': ['foo.dart', 'another_foo.dart'],
@@ -147,35 +130,36 @@ import 'package:foo/foo.dart';
 
     @mock.patch.object(subprocess, 'run')
     def test_generate_docs(self, mock_run):
-        mock_run.return_value = subprocess.CompletedProcess(
-            args='', returncode=0)
+        mock_run.return_value = subprocess.CompletedProcess(args='',
+                                                            returncode=0)
 
         package_dir = os.path.join(self.temp_dir, 'test_package')
         out_dir = os.path.join(self.temp_dir, 'out')
         prebuilts = os.path.join(self.temp_dir, 'prebuilts')
-        result = gen_reference_docs.generate_docs(
-            package_dir=package_dir,
-            out_dir=out_dir,
-            dart_prebuilt_dir=prebuilts)
+        result = gen_reference_docs.generate_docs(package_dir=package_dir,
+                                                  out_dir=out_dir,
+                                                  dart_prebuilt_dir=prebuilts)
         self.assertEqual(result, 0)
-        mock_run.assert_has_calls(
-            [
-                mock.call(
-                    [os.path.join(prebuilts, 'pub'), 'get'],
-                    cwd=package_dir,
-                    capture_output=True,
-                    universal_newlines=True),
-                mock.call(
-                    [
-                        os.path.join(prebuilts, 'dartdoc'),
-                        '--no-validate-links', '--auto-include-dependencies',
-                        '--no-enhanced-reference-lookup', '--exclude-packages',
-                        'Dart,logging', '--output',
-                        os.path.join(out_dir, 'docs'), '--format', 'md'
-                    ],
-                    cwd=package_dir,
-                    capture_output=True,
-                    universal_newlines=True),
+        mock_run.assert_has_calls([
+            mock.call.run(
+                [os.path.join(prebuilts, 'pub'), 'get'],
+                cwd=package_dir,
+                capture_output=True,
+                universal_newlines=True),
+            mock.call.run(
+                [
+                    os.path.join(prebuilts, 'dartdoc'),
+                    '--auto-include-dependencies',
+                    '--exclude-packages',
+                    'Dart,logging',
+                    '--output',
+                    out_dir,
+                    '--format',
+                    'md'
+                ],
+                cwd=package_dir,
+                capture_output=True,
+                universal_newlines=True),
             ])
 
 

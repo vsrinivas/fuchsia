@@ -22,7 +22,6 @@ group("tools") {
     "//tools/dart-strict-deps:strict_deps($host_toolchain)",
     "//tools/debroot($host_toolchain)",
     "//tools/doc_checker($host_toolchain)",
-    "//tools/docsgen",
     "//tools/femu-control:host($host_toolchain)",
     "//tools/fidl",
     "//tools/fidlcat:fidlcat_host",
