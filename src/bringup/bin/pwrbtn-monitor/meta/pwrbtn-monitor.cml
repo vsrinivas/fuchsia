@@ -4,6 +4,9 @@
         runner: "elf",
         binary: "bin/pwrbtn-monitor",
     },
+    capabilities: [
+        { protocol: "fuchsia.power.button.Monitor" },
+    ],
     use: [
         {
             directory: "input",
@@ -15,6 +18,12 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.hardware.power.statecontrol.Admin",
             ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.power.button.Monitor",
+            from: "self",
         },
     ],
 }

@@ -1,0 +1,32 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.power.button;
+
+/// Action to perform when power button is pressed.
+type Action = flexible enum {
+    /// Do nothing.
+    IGNORE = 0;
+    /// Shutdown the system.
+    SHUTDOWN = 1;
+};
+
+/// Protocol to manage the power button monitor.
+/// This protocol allows applications to configure the action performed when the
+/// power button is pressed.
+/// It is intended for board-specific components that need to use the power
+/// button for their own purposes (e.g. as a physical presence check).
+@discoverable
+protocol Monitor {
+    /// Get the current action for the power button.
+    /// Always returns immediately, never fails.
+    GetAction() -> (struct {
+        action Action;
+    });
+
+    /// Set the action that will be performed when the power button is pressed.
+    /// Always returns immediately, never fails.
+    SetAction(struct {
+        action Action;
+    }) -> ();
+};

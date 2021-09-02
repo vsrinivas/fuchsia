@@ -5,14 +5,14 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.input/cpp/wire.h>
-#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
-#include <lib/ddk/device.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
+#include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,16 +26,14 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/string.h>
-#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 
+#include "src/bringup/bin/pwrbtn-monitor/monitor.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 #define INPUT_PATH "/input"
-
-namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
 namespace {
 
@@ -148,34 +146,6 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
   return ZX_ERR_STOP;
 }
 
-zx_status_t send_poweroff() {
-  zx::channel channel_local, channel_remote;
-  zx_status_t status = zx::channel::create(0, &channel_local, &channel_remote);
-  if (status != ZX_OK) {
-    printf("pwrbtn-monitor: failed to create channel: %d\n", status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  auto service =
-      fbl::StringPrintf("/svc/%s", fidl::DiscoverableProtocolName<statecontrol_fidl::Admin>);
-  status = fdio_service_connect(service.c_str(), channel_remote.release());
-  if (status != ZX_OK) {
-    printf("pwrbtn-monitor: failed to connect to service %s: %d\n", service.c_str(), status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  auto admin_client = fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(channel_local));
-  auto resp = admin_client.Poweroff();
-
-  if (!resp.ok()) {
-    printf("pwrbtn-monitor: Call to %s failed: %s\n", service.c_str(),
-           resp.FormatDescription().c_str());
-    return resp.status();
-  }
-
-  return ZX_OK;
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -204,8 +174,6 @@ int main(int argc, char** argv) {
   auto& client = *info.client;
 
   // Get the report event.
-  //
-  // // Get the report event.
   zx::event report_event;
   {
     auto result = client.GetReportsEvent();
@@ -220,36 +188,68 @@ int main(int argc, char** argv) {
     report_event = std::move(result->event);
   }
 
-  // Watch the power button device for reports
-  while (true) {
-    report_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
-
-    auto result = client.ReadReport();
-    if (result.status() != ZX_OK) {
-      printf("pwrbtn-monitor: failed to read report: %d\n", result.status());
-      return 1;
-    }
-    if (result->status != ZX_OK) {
-      printf("pwrbtn-monitor: failed to read report: %d\n", result->status);
-      return 1;
-    }
-
-    const fidl::VectorView<uint8_t>& report = result->data;
-
-    // Ignore reports from different report IDs
-    if (info.has_report_id_byte && report[0] != info.report_id) {
-      printf("pwrbtn-monitor: input-watcher: wrong id\n");
-      continue;
-    }
-
-    // Check if the power button is pressed, and request a poweroff if so.
-    const size_t byte_index = info.has_report_id_byte + info.bit_offset / 8;
-    if (report[byte_index] & (1u << (info.bit_offset % 8))) {
-      auto status = send_poweroff();
-      if (status != ZX_OK) {
-        printf("pwrbtn-monitor: input-watcher: failed send poweroff to device manager.\n");
-        continue;
-      }
-    }
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  svc::Outgoing outgoing(loop.dispatcher());
+  status = outgoing.ServeFromStartupInfo();
+  if (status != ZX_OK) {
+    printf("pwrbtn-monitor: failed to ServeFromStartupInfo: %s\n", zx_status_get_string(status));
+    return 1;
   }
+
+  pwrbtn::PowerButtonMonitor monitor;
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+  status = outgoing.svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_power_button::Monitor>,
+      fbl::MakeRefCounted<fs::Service>(
+          [&monitor, dispatcher](fidl::ServerEnd<fuchsia_power_button::Monitor> request) mutable {
+            fidl::BindServer(dispatcher, std::move(request), &monitor);
+            return ZX_OK;
+          }));
+  if (status != ZX_OK) {
+    printf("pwrbtn-monitor: failed to AddEntry: %s\n", zx_status_get_string(status));
+    return 1;
+  }
+
+  async::Wait pwrbtn_waiter(
+      report_event.get(), ZX_USER_SIGNAL_0, 0,
+      [&](async_dispatcher_t*, async::Wait*, zx_status_t status, const zx_packet_signal_t*) {
+        if (status == ZX_ERR_CANCELED) {
+          return;
+        }
+        auto result = client.ReadReport();
+        if (result.status() != ZX_OK) {
+          printf("pwrbtn-monitor: failed to read report: %d\n", result.status());
+          loop.Quit();
+          return;
+        }
+        if (result->status != ZX_OK) {
+          printf("pwrbtn-monitor: failed to read report: %d\n", result->status);
+          loop.Quit();
+          return;
+        }
+
+        // Re-queue the task.
+        pwrbtn_waiter.Begin(loop.dispatcher());
+        const fidl::VectorView<uint8_t>& report = result->data;
+
+        // Ignore reports from different report IDs
+        if (info.has_report_id_byte && report[0] != info.report_id) {
+          printf("pwrbtn-monitor: input-watcher: wrong id\n");
+          return;
+        }
+
+        // Check if the power button is pressed, and request a poweroff if so.
+        const size_t byte_index = info.has_report_id_byte + info.bit_offset / 8;
+        if (report[byte_index] & (1u << (info.bit_offset % 8))) {
+          auto status = monitor.DoAction();
+          if (status != ZX_OK) {
+            printf("pwrbtn-monitor: input-watcher: failed to handle press.\n");
+            return;
+          }
+        }
+      });
+
+  pwrbtn_waiter.Begin(loop.dispatcher());
+  loop.Run();
+  return 1;
 }
