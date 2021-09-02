@@ -19,8 +19,6 @@
 namespace {
 
 DECLARE_TEST_FUNCTION(vcpu_resume)
-DECLARE_TEST_FUNCTION(vcpu_read_write_state)
-DECLARE_TEST_FUNCTION(vcpu_interrupt)
 DECLARE_TEST_FUNCTION(guest_set_trap)
 DECLARE_TEST_FUNCTION(exiting_guest)
 
