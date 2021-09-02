@@ -148,7 +148,8 @@ do
       # Copy this opt, but also append its value to extern_paths.
       extern)
         extern_path=$(expr "X$opt" : '[^=]*=\(.*\)')
-        extern_paths+=("$(realpath --relative-to="$project_root" "$extern_path")")
+        # Sometimes, --extern names only a single crate without =path.
+        test -z "$extern_path" || extern_paths+=("$(realpath --relative-to="$project_root" "$extern_path")")
         dep_only_command+=( "$dep_only_token" )
         rustc_command+=( "$opt" )
         ;;
