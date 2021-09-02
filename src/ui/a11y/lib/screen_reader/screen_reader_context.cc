@@ -60,7 +60,8 @@ bool ScreenReaderContext::IsTextFieldFocused() const {
     return false;
   }
 
-  if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::TEXT_FIELD) {
+  if (node->has_role() && (node->role() == fuchsia::accessibility::semantics::Role::TEXT_FIELD ||
+                           node->role() == fuchsia::accessibility::semantics::Role::SEARCH_BOX)) {
     return true;
   }
 
