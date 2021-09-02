@@ -540,7 +540,7 @@ void HermeticFidelityTest::Run(
 
   // TODO(fxbug.dev/80003): Skipping checks until underflows are fixed.
   if (DeviceHasUnderflows(device)) {
-    FX_LOGS(WARNING) << "Skipping threshold checks due to underflows";
+    GTEST_SKIP() << "Skipping threshold checks due to underflows";
   } else {
     VerifyResults(tc);
   }
