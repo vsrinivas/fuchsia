@@ -389,17 +389,18 @@ class AppStateImpl with Disposable implements AppState {
   @override
   void updateChannelAlert() {
     runInAction(() {
-      int index = alerts.length;
+      final key = Key('channelalert_${DateTime.now().millisecondsSinceEpoch}');
       alerts.add(AlertInfo(
+        key: key,
         title: Strings.channelUpdateAlertTitle,
         content: Strings.channelUpdateAlertBody,
         buttons: {
           Strings.close: () {
-            alerts.removeAt(index);
+            alerts.removeWhere((alert) => alert.key == key);
           },
           Strings.continueLabel: () {
             settingsState.checkForUpdates();
-            alerts.removeAt(index);
+            alerts.removeWhere((alert) => alert.key == key);
           },
         },
       ));
@@ -556,15 +557,16 @@ class AppStateImpl with Disposable implements AppState {
       if (_isPrelistedApp(url)) {
         errors[url] = [description, '$error\n$referenceLink'];
       } else {
-        int index = alerts.length;
+        final key = Key('presenterr_${DateTime.now().millisecondsSinceEpoch}');
         alerts.add(AlertInfo(
+          key: key,
           title: description,
           content: '${Strings.errorWhilePresenting},\n$url\n\n'
               '${Strings.errorType}: $error\n\n'
               '${Strings.moreErrorInformation}\n$referenceLink',
           buttons: {
             Strings.close: () {
-              alerts.removeAt(index);
+              alerts.removeWhere((alert) => alert.key == key);
             }
           },
         ));
@@ -637,12 +639,13 @@ class AppStateImpl with Disposable implements AppState {
         return;
       }
       final description = Strings.applicationFailedToStart(view.title);
+      final key = Key('startfail_${DateTime.now().millisecondsSinceEpoch}');
       alerts.add(AlertInfo(
         title: description,
         content: 'Url: ${view.url}',
         buttons: {
           Strings.close: () {
-            alerts.removeAt(0);
+            alerts.removeWhere((alert) => alert.key == key);
             view.close();
           }
         },

@@ -83,11 +83,12 @@ abstract class AppState {
 }
 
 class AlertInfo {
+  Key? key;
   String? title;
   String? content;
   Map<String, VoidCallback> buttons;
 
-  AlertInfo({required this.buttons, this.title, this.content})
+  AlertInfo({required this.buttons, this.title, this.content, this.key})
       : assert(title != null || content != null),
         assert(buttons.isNotEmpty);
 }
