@@ -88,9 +88,14 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_package_with_single_component("session_manager") {
+fuchsia_component("session_manager_comp") {
+  component_name = "session_manager"
   manifest = "meta/session_manager.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_package("session_manager") {
+  deps = [ ":session_manager_comp" ]
 }
 
 fuchsia_unittest_package("session_manager_tests") {

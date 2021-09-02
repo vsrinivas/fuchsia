@@ -10,12 +10,12 @@
     children: [
         {
             name: "element_manager",
-            url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+            url: "#meta/element_manager.cm",
             startup: "eager",
         },
         {
             name: "reference-graphical-presenter",
-            url: "fuchsia-pkg://fuchsia.com/fuchsia-element-reference#meta/reference-graphical-presenter.cm",
+            url: "#meta/reference-graphical-presenter.cm",
             startup: "eager",
         },
     ],

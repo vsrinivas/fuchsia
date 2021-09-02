@@ -38,5 +38,10 @@
         "archive_name": "fidl_hlcpp_unit_test_package",
         "component_name": "fidl_hlcpp_unit_tests.cm",
         "package": "fidl_hlcpp_unit_test_package"
+    },
+    {
+        "archive_name": "fuchsia-element-tests",
+        "component_name": "fuchsia-element-test.cm",
+        "package": "fuchsia-element-tests"
     }
 ]

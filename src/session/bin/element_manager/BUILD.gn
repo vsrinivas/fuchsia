@@ -35,9 +35,14 @@ rustc_binary("element_manager_bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_package_with_single_component("element_manager") {
+fuchsia_component("element_manager_comp") {
+  component_name = "element_manager"
   manifest = "meta/element_manager.cml"
   deps = [ ":element_manager_bin" ]
+}
+
+fuchsia_package("element_manager") {
+  deps = [ ":element_manager_comp" ]
 }
 
 fuchsia_unittest_package("element_manager_tests") {

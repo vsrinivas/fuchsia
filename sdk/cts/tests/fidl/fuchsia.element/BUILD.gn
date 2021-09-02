@@ -21,8 +21,13 @@ cts_executable("element-manager-test-bin") {
   ]
 }
 
+cts_fuchsia_component("fuchsia-element-test") {
+  manifest = "meta/fuchsia-element-test.cml"
+  testonly = true
+}
+
 cts_fuchsia_component("element-manager-test") {
-  manifest = "meta/element-manager-test.cmx"
+  manifest = "meta/element-manager-test.cml"
   testonly = true
 
   deps = [ ":element-manager-test-bin" ]
@@ -30,14 +35,15 @@ cts_fuchsia_component("element-manager-test") {
 
 cts_fuchsia_test_package("fuchsia-element-tests") {
   package_name = "fuchsia-element-tests"
-
-  # TODO(fxbug.dev/70941): Remove workaround for teardown race causing unrelated ERROR
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-  test_components = [ ":element-manager-test" ]
+  test_components = [ ":fuchsia-element-test" ]
+  deps = [
+    ":element-manager-test",
+    ":reference-element",
+    ":reference-graphical-presenter",
+    ":reference-session",
+    ":reference-session-config",
+    "//src/session/bin/element_manager:element_manager_comp",
+  ]
 }
 
 fuchsia_package_archive("fuchsia-element-tests_archive") {
@@ -110,16 +116,6 @@ cts_fuchsia_component("reference-session") {
   deps = [ ":reference-session-bin" ]
 }
 
-cts_fuchsia_package("fuchsia-element-reference") {
-  package_name = "fuchsia-element-reference"
-  testonly = true
-  deps = [
-    ":reference-element",
-    ":reference-graphical-presenter",
-    ":reference-session",
-  ]
-}
-
 cts_session_config("reference-session-config") {
   config = "reference_session_config.json"
 }
@@ -131,17 +127,7 @@ cts_copy_to_sdk("build") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fuchsia-element-tests",
-
-    # Required base packages for tests to run in CQ.
-    ":fuchsia-element-reference",
-    ":reference-session-config",
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/session/bin/component_manager:component_manager_sfw",
-    "//src/session/bin/element_manager",
-    "//src/session/bin/session_manager",
-  ]
+  deps = [ ":fuchsia-element-tests" ]
 }
 
 sdk_molecule("test_sdks") {
@@ -150,6 +136,7 @@ sdk_molecule("test_sdks") {
     ":build_sdk",
     ":element-manager-test-bin_sdk",
     ":element-manager-test_sdk",
+    ":fuchsia-element-test_sdk",
     ":reference-element-bin_sdk",
     ":reference-element_sdk",
     ":reference-graphical-presenter-bin_sdk",

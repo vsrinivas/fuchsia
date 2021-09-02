@@ -17,6 +17,10 @@ import("//src/session/build/session_config.gni")
 template("cts_session_config") {
   assert(defined(invoker.config), "config must be defined.")
 
+  write_file_target = target_name + "_cts_file"
+  write_cts_file(write_file_target) {
+  }
+
   session_config(target_name) {
     forward_variables_from(invoker, "*")
   }

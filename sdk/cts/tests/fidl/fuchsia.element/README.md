@@ -27,7 +27,7 @@ between:
 
 ## Component Topology
 
-Session CTS tests are CFv1 components that launch a Session Framework and the
+Session CTS tests are CFv2 components that launch a Session Framework and the
 session under test in an isolated environment.
 
 The test launches [`session_manager`][glossary-session-manager], which in turn
@@ -90,6 +90,10 @@ $ fx test fuchsia-element-tests -o
 
 ### Configuring session under test
 
+TODO(fxbug.dev/83905): The tests will currently always run the reference-session.
+The instructions below are valid once this test can run the `session_manager`'s
+configured session.
+
 The tests require that the build contains a `session_manager` configuration,
 typically by including a `session_config` target in the base image.
 The CTS tests will use the session specified in this configuration as
@@ -112,20 +116,6 @@ used just for that test.
 Some products, like workstation, already include a `session_config` in their
 build, so you should not include it in `fx set`.
 
-## Future work: CFv2 test components
-
-**See [issue 67205](https://fxbug.dev/67205).**
-
-Currently, CTS tests must be CFv1 components because they require zxtest instead
-of gtest (see [RFC][doc-cts-rfc]), but there is no CFv2 [test
-runner][source-test-runners] that works with zxtest. One potential solution is
-to implement the `--gtest_output:json` flag in zxtest and reuse the [gtest
-runner][source-gtest-runner].
-
-Once tests can be launched as v2 components, they can start `session_manager`
-directly as a child, and `component_manager_sfw` can be removed from the
-topology.
-
 [doc-cts-rfc]: /docs/contribute/governance/rfcs/0015_cts.md
 [doc-event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [doc-sfw-intro]: /docs/concepts/session/introduction.md
@@ -135,6 +125,4 @@ topology.
 [source-element-management]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/lib/element_management
 [source-element-manager-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.element/element_manager.fidl
 [source-element-manager]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/bin/element_manager
-[source-gtest-runner]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/test_runners/gtest
 [source-session-config]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/build/session_config.gni
-[source-test-runners]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/test_runners

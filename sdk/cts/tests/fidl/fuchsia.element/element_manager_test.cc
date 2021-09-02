@@ -11,8 +11,7 @@
 
 namespace {
 
-constexpr auto kReferenceElementV2Url =
-    "fuchsia-pkg://fuchsia.com/fuchsia-element-reference#meta/reference-element.cm";
+constexpr auto kReferenceElementV2Url = "#meta/reference-element.cm";
 
 class ElementManagerTest : public zxtest::Test {};
 

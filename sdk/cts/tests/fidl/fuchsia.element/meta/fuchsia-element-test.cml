@@ -1,0 +1,34 @@
+{
+    children: [
+        // TODO(fxbug.dev/83905): Add session_manager back and have it launch the session.
+        {
+            name: "element-manager-test",
+            url: "#meta/element-manager-test.cm",
+        },
+        {
+            name: "reference-session",
+            url: "#meta/reference-session.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.element.Manager",
+            from: "#reference-session",
+            to: [ "#element-manager-test" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#element-manager-test",
+                "#reference-session",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#element-manager-test",
+        },
+    ],
+}

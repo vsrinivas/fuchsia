@@ -1,7 +1,15 @@
 {
-    // TODO(fxbug.dev/67205): Running this test as a v2 component requires a zxtest-compatible v2 test runner.
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         binary: "bin/element-manager-test",
     },
+    use: [
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+        },
+    ],
 }
