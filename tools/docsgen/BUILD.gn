@@ -1,0 +1,62 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/fidl_move.gni")
+import("//build/python/python.gni")
+import("//build/python/python_binary.gni")
+import("//build/python/python_host_test.gni")
+
+group("docsgen") {
+  deps = [ ":dart_sdk_docs($host_toolchain)" ]
+}
+
+_dartdoc_transforms_script_target = "dartdoc_transforms"
+python_binary(_dartdoc_transforms_script_target) {
+  main_source = "//build/dart/gen_reference_docs.py"
+  output_name = "gen_reference_docs.pyz"
+  sources = [ "//build/dart/generate_dart_toc.py" ]
+  deps = [ "//third_party/pyyaml:yaml" ]
+}
+
+# Runs one time python dartdoc generation script.
+# See dartdoc_transforms.py for more information
+action("dart_sdk_docs") {
+  script_output = get_target_outputs(":${_dartdoc_transforms_script_target}")
+  script = script_output[0]
+
+  inputs = [
+    "//sdk/dart",
+    "//prebuilt/third_party/dart/linux-x64/bin/pub",
+    "//prebuilt/third_party/dart/linux-x64/bin/dartdoc",
+  ]
+
+  outputs = [
+    "$target_out_dir/dartdoc_out.zip",
+    "$target_gen_dir/.packages",
+    "$target_gen_dir/lib/lib.dart",
+    "$target_gen_dir/pubspec.lock",
+    "$target_gen_dir/pubspec.yaml",
+  ]
+  depfile = "$target_out_dir/$target_name.d"
+
+  args = [
+    "--delete-artifact-files",
+    "--run-toc",
+    "--zipped-result",
+    "--gen-dir",
+    rebase_path(target_gen_dir, root_build_dir),
+    "--out-dir",
+    rebase_path(target_out_dir, target_gen_dir),
+    "--prebuilts-dir",
+    rebase_path("//prebuilt/third_party/dart/linux-x64/bin", target_gen_dir),
+    "--dep-file",
+    rebase_path(depfile, root_build_dir),
+  ]
+
+  foreach(pkg, dart_packages_list) {
+    args += [ rebase_path(pkg, root_build_dir) ]
+  }
+
+  deps = [ ":${_dartdoc_transforms_script_target}" ] + dart_packages_list
+}
