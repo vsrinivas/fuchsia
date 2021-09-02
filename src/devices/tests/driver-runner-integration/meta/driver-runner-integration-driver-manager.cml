@@ -7,8 +7,6 @@
         runner: "elf",
         binary: "bin/driver_manager",
         args: [
-            "--path-prefix",
-            "/pkg/",
             "--driver-runner-root-driver-url",
             "fuchsia-pkg://fuchsia.com/driver-runner-integration-test#meta/packaged_driver.cm",
         ],
@@ -34,6 +32,11 @@
         },
     ],
     use: [
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot",
+        },
         {
             directory: "system-delayed",
             rights: [ "r*" ],

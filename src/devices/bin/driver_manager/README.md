@@ -37,10 +37,6 @@ fuchsia.boot.WriteOnlyLog.
 
 Do not exit Driver Manager after suspending the system.
 
-### --path-prefix=\<string\>
-
-The path prefix for binaries, drivers, libraries, etc. This defaults to `/boot/`
-
 ### --sys-device-driver=\<bool\>
 
 Use this driver as the sys_device driver.  If nullptr, the default will be used.

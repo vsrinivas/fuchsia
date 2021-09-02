@@ -164,7 +164,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     kLoadDriver,
     kLogToDebuglog,
     kNoExitAfterSuspend,
-    kPathPrefix,
     kSysDeviceDriver,
     kDriverRunnerRootDriverUrl,
     kUseDriverIndex,
@@ -174,7 +173,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       {"load-driver", required_argument, nullptr, kLoadDriver},
       {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
       {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend},
-      {"path-prefix", required_argument, nullptr, kPathPrefix},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
       {"driver-runner-root-driver-url", required_argument, nullptr, kDriverRunnerRootDriverUrl},
       {"use-driver-index", no_argument, nullptr, kUseDriverIndex},
@@ -210,9 +208,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
         break;
       case kNoExitAfterSuspend:
         args.no_exit_after_suspend = true;
-        break;
-      case kPathPrefix:
-        args.path_prefix = optarg;
         break;
       case kSysDeviceDriver:
         check_not_duplicated(args.sys_device_driver);

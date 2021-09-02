@@ -72,6 +72,11 @@
             to: [ "#driver_manager" ],
         },
         {
+            directory: "boot",
+            from: "#driver-manager-support",
+            to: [ "#driver_manager" ],
+        },
+        {
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
