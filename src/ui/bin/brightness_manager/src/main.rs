@@ -35,7 +35,6 @@ async fn run_brightness_server(
     mut stream: ControlRequestStream,
     control: Arc<Mutex<dyn ControlTrait>>,
 ) -> Result<(), Error> {
-    fx_log_info!("New brightness server");
     let (initial_current, initial_auto) = get_initial_value(control.clone()).await?;
 
     let watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>> =
