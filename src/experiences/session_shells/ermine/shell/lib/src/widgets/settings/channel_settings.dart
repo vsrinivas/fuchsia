@@ -11,9 +11,11 @@ import 'package:internationalization/strings.dart';
 /// Defines a widget to list all channels in [SettingDetails] widget.
 class ChannelSettings extends StatelessWidget {
   final SettingsState state;
+  final VoidCallback updateAlert;
   final ValueChanged<String> onChange;
 
-  const ChannelSettings({required this.state, required this.onChange});
+  const ChannelSettings(
+      {required this.state, required this.onChange, required this.updateAlert});
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +59,7 @@ class ChannelSettings extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
                 child: ElevatedButton(
-                  onPressed: state.checkForUpdates,
+                  onPressed: state.targetChannel == '' ? null : updateAlert,
                   child: Text(Strings.update.toUpperCase()),
                 ),
               ),

@@ -852,6 +852,21 @@ class Strings {
         name: 'update',
         desc: 'The label for "Update" text field.',
       );
+  static String get continueLabel => Intl.message(
+        'Continue',
+        name: 'continue',
+        desc: 'The label for "Continue" text field.',
+      );
+  static String get channelUpdateAlertTitle => Intl.message(
+        'System will reboot',
+        name: 'system will reboot',
+        desc: 'The alert dialog title before attempting channel update.',
+      );
+  static String get channelUpdateAlertBody => Intl.message(
+        'This action will download the latest OTA updates and reboot the system. You will lose unsaved data. Do you want to continue?',
+        name: 'this action will download the latest OTA updates',
+        desc: 'The alert dialog body before attempting channel update.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

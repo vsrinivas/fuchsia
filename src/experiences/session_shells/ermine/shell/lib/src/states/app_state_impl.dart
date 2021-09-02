@@ -386,6 +386,26 @@ class AppStateImpl with Disposable implements AppState {
   void oobeFinished() =>
       runInAction(() => preferencesService.launchOobe.value = false);
 
+  @override
+  void updateChannelAlert() {
+    runInAction(() {
+      int index = alerts.length;
+      alerts.add(AlertInfo(
+        title: Strings.channelUpdateAlertTitle,
+        content: Strings.channelUpdateAlertBody,
+        buttons: {
+          Strings.close: () {
+            alerts.removeAt(index);
+          },
+          Strings.continueLabel: () {
+            settingsState.checkForUpdates();
+            alerts.removeAt(index);
+          },
+        },
+      ));
+    });
+  }
+
   late final showScreenSaver = () {
     _onIdle(idle: true);
   }.asAction();

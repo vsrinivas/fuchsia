@@ -64,6 +64,7 @@ abstract class AppState {
   void launchFeedback();
   void launchLicense();
   void oobeFinished();
+  void updateChannelAlert();
 
   factory AppState.fromEnv() {
     return AppStateImpl(
