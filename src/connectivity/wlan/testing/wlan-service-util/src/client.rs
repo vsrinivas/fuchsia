@@ -12,6 +12,7 @@ use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;
+use ieee80211::Ssid;
 
 type WlanService = DeviceServiceProxy;
 
@@ -44,17 +45,16 @@ pub async fn get_first_sme(wlan_svc: &WlanService) -> Result<fidl_sme::ClientSme
 
 pub async fn connect(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
-    target_ssid: Vec<u8>,
+    target_ssid: Ssid,
     target_pwd: Vec<u8>,
     target_bss_desc: fidl_internal::BssDescription,
 ) -> Result<bool, Error> {
     let (connection_proxy, connection_remote) = endpoints::create_proxy()?;
-    let target_ssid_clone = target_ssid.clone();
 
     // create ConnectRequest holding network info
     let credential = credential_from_bytes(target_pwd)?;
     let mut req = fidl_sme::ConnectRequest {
-        ssid: target_ssid,
+        ssid: target_ssid.clone().into(),
         bss_description: target_bss_desc,
         credential,
         radio_cfg: fidl_sme::RadioConfig {
@@ -82,11 +82,11 @@ pub async fn connect(
         iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
     Ok(match client_status_response {
         fidl_sme::ClientStatusResponse::Connected(serving_ap_info) => {
-            if serving_ap_info.ssid != target_ssid_clone.as_slice() {
+            if serving_ap_info.ssid != target_ssid {
                 fx_log_err!(
                     "Connected to wrong network: {:?}. Expected: {:?}.",
                     serving_ap_info.ssid.as_slice(),
-                    target_ssid_clone.as_slice()
+                    target_ssid
                 );
                 false
             } else {
@@ -796,12 +796,12 @@ mod tests {
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
-        let target_ssid = ssid.as_bytes();
+        let target_ssid = Ssid::from(ssid);
         let target_password = password.as_bytes();
         let target_bss_desc = generate_random_bss_description();
 
         let fut =
-            connect(&client_sme, target_ssid.to_vec(), target_password.to_vec(), target_bss_desc);
+            connect(&client_sme, target_ssid.clone(), target_password.to_vec(), target_bss_desc);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -809,7 +809,7 @@ mod tests {
         send_connect_request_response(
             &mut exec,
             &mut next_client_sme_req,
-            target_ssid,
+            &target_ssid,
             credential_from_bytes(target_password.to_vec()).expect("password should be valid"),
             result_code,
         );
@@ -846,13 +846,13 @@ mod tests {
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
-        let target_ssid = "TestAp".as_bytes();
+        let target_ssid = Ssid::from("TestAp");
         let target_password = "password".as_bytes();
         let target_bss_desc = generate_random_bss_description();
 
         let fut = connect(
             &client_sme,
-            target_ssid.to_vec(),
+            target_ssid.clone(),
             target_password.to_vec(),
             target_bss_desc.clone(),
         );
@@ -863,7 +863,7 @@ mod tests {
         verify_connect_request_info(
             &mut exec,
             &mut next_client_sme_req,
-            target_ssid,
+            &target_ssid,
             credential_from_bytes(target_password.to_vec()).expect("password should be valid"),
             target_bss_desc,
         );
@@ -875,13 +875,13 @@ mod tests {
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
-        let target_ssid = "TestAp".as_bytes();
+        let target_ssid = Ssid::from("TestAp");
         let target_password = "".as_bytes();
         let target_bss_desc = generate_random_bss_description();
 
         let fut = connect(
             &client_sme,
-            target_ssid.to_vec(),
+            target_ssid.clone(),
             target_password.to_vec(),
             target_bss_desc.clone(),
         );
@@ -892,7 +892,7 @@ mod tests {
         verify_connect_request_info(
             &mut exec,
             &mut next_client_sme_req,
-            target_ssid,
+            &target_ssid,
             credential_from_bytes(vec![]).expect("password should be valid"),
             target_bss_desc,
         );
@@ -901,13 +901,13 @@ mod tests {
     fn verify_connect_request_info(
         exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
-        expected_ssid: &[u8],
+        expected_ssid: &Ssid,
         expected_credential: fidl_sme::Credential,
         expected_bss_desc: fidl_internal::BssDescription,
     ) {
         match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, .. }) => {
-                assert_eq!(expected_ssid, &req.ssid[..]);
+                assert_eq!(expected_ssid, &req.ssid);
                 assert_eq_credentials(&req.credential, &expected_credential);
                 assert_eq!(req.bss_description, expected_bss_desc);
             }
@@ -918,7 +918,7 @@ mod tests {
     fn send_connect_request_response(
         exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
-        expected_ssid: &[u8],
+        expected_ssid: &Ssid,
         expected_credential: fidl_sme::Credential,
         connect_result: ConnectResultCode,
     ) {
@@ -1107,7 +1107,7 @@ mod tests {
             Protection::Wpa2Personal,
             true,
         );
-        let entry1_copy = clone_scan_result(&entry1);
+        let entry1_copy = entry1.clone();
         let entry2 = create_scan_result(
             [1, 2, 3, 4, 5, 6],
             Ssid::from("hello"),
@@ -1121,7 +1121,7 @@ mod tests {
             Protection::Wpa2Personal,
             false,
         );
-        let entry2_copy = clone_scan_result(&entry2);
+        let entry2_copy = entry2.clone();
         scan_results_for_response.push(entry1);
         scan_results_for_response.push(entry2);
         let mut expected_response = Vec::new();
@@ -1137,14 +1137,6 @@ mod tests {
     fn scan_error_correctly_handled() {
         // need to expect an error
         assert!(test_scan_error().is_err())
-    }
-
-    fn clone_scan_result(scan_result: &fidl_sme::ScanResult) -> fidl_sme::ScanResult {
-        fidl_sme::ScanResult {
-            ssid: scan_result.ssid.clone(),
-            bss_description: scan_result.bss_description.clone(),
-            ..*scan_result
-        }
     }
 
     fn test_scan(mut scan_results: Vec<fidl_sme::ScanResult>) -> Vec<fidl_sme::ScanResult> {

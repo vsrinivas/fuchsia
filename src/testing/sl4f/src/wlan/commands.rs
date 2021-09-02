@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fuchsia_syslog::macros::*;
+use ieee80211::Ssid;
 use serde::{Deserialize, Serialize};
 use serde_json::{to_value, Value};
 use std::collections::HashMap;
@@ -93,7 +94,7 @@ impl Facade for WlanFacade {
                     .iter()
                     .map(|(ssid, bss_desc)| {
                         (
-                            String::from_utf8(ssid.clone()).unwrap(),
+                            String::from_utf8(ssid.to_vec()).unwrap(),
                             bss_desc
                                 .iter()
                                 .map(|bss_desc| BssDescriptionWrapper(&**bss_desc))
@@ -108,7 +109,7 @@ impl Facade for WlanFacade {
                 let target_ssid = match args.get("target_ssid") {
                     Some(ssid) => {
                         let ssid = match ssid.as_str() {
-                            Some(ssid) => ssid.as_bytes().to_vec(),
+                            Some(ssid) => Ssid::from(ssid),
                             None => {
                                 return Err(format_err!("Please provide a target ssid"));
                             }
