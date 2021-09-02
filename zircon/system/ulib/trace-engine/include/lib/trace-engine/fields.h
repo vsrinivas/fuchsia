@@ -39,7 +39,7 @@ struct Field {
 
   static constexpr uint64_t kMask = (uint64_t(1) << (end - begin + 1)) - 1;
 
-  static constexpr uint64_t Make(uint64_t value) { return value << begin; }
+  static constexpr uint64_t Make(uint64_t value) { return (value & kMask) << begin; }
 
   template <typename U>
   static constexpr U Get(uint64_t word) {
@@ -48,7 +48,7 @@ struct Field {
   }
 
   static constexpr void Set(uint64_t& word, uint64_t value) {
-    word = (word & ~(kMask << begin)) | (value << begin);
+    word = (word & ~(kMask << begin)) | Make(value);
   }
 };
 

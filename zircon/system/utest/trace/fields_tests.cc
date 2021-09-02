@@ -8,24 +8,46 @@
 
 namespace {
 
-TEST(Types, field_get_set_test) {
-  uint64_t value(0);
+TEST(Types, Set) {
+  uint64_t value = 0;
 
-  trace::Field<0, 0>::Set(value, uint8_t(1));
-  trace::Field<1, 1>::Set(value, uint8_t(1));
-  trace::Field<2, 2>::Set(value, uint8_t(1));
-  trace::Field<3, 3>::Set(value, uint8_t(1));
-  trace::Field<4, 4>::Set(value, uint8_t(1));
-  trace::Field<5, 5>::Set(value, uint8_t(1));
-  trace::Field<6, 6>::Set(value, uint8_t(1));
-  trace::Field<7, 7>::Set(value, uint8_t(1));
+  // Test setting fields.
+  trace::Field<0, 0>::Set(value, 1);
+  trace::Field<1, 1>::Set(value, 1);
+  trace::Field<2, 2>::Set(value, 1);
+  trace::Field<3, 3>::Set(value, 1);
+  trace::Field<4, 4>::Set(value, 1);
+  trace::Field<5, 5>::Set(value, 1);
+  trace::Field<6, 6>::Set(value, 1);
+  trace::Field<7, 7>::Set(value, 1);
+  EXPECT_EQ(0xff, value);
 
-  EXPECT_EQ(uint8_t(-1), value);
-  value = 0;
-  trace::Field<0, 2>::Set(value, uint8_t(7));
-  EXPECT_EQ(uint8_t(7), value);
-  trace::Field<0, 2>::Set(value, uint8_t(0));
-  EXPECT_EQ(uint8_t(0), value);
+  // Test updating fields.
+  trace::Field<4, 7>::Set(value, 0xa);
+  EXPECT_EQ(0xaf, value);
+
+  // Test field overflow.
+  trace::Field<4, 7>::Set(value, 0xffff);
+  EXPECT_EQ(0xff, value);
+}
+
+TEST(Types, Get) {
+  uint64_t value = 0xff00aa55;
+
+  EXPECT_EQ(0xff, (trace::Field<24, 31>::Get<uint8_t>(value)));
+  EXPECT_EQ(0x00, (trace::Field<16, 23>::Get<uint8_t>(value)));
+  EXPECT_EQ(0xaa, (trace::Field<8, 15>::Get<uint8_t>(value)));
+  EXPECT_EQ(0x55, (trace::Field<0, 7>::Get<uint8_t>(value)));
+}
+
+TEST(Types, Make) {
+  EXPECT_EQ(0xff000000, (trace::Field<24, 31>::Make(0xff)));
+  EXPECT_EQ(0x00cc0000, (trace::Field<16, 23>::Make(0xcc)));
+  EXPECT_EQ(0x0000aa00, (trace::Field<8, 15>::Make(0xaa)));
+  EXPECT_EQ(0x00000055, (trace::Field<0, 7>::Make(0x55)));
+
+  // Test field overflow.
+  EXPECT_EQ(0x00000055, (trace::Field<0, 7>::Make(0xaa55)));
 }
 
 }  // namespace
