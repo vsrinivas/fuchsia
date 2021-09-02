@@ -58,8 +58,11 @@ pub async fn get_repository(repo_name: &str) -> Result<Option<RepositorySpec>> {
 
 /// Read all the repositories from the config. This will log, but otherwise ignore invalid entries.
 pub async fn get_repositories() -> HashMap<String, RepositorySpec> {
-    let value = match ffx_config::get::<Value, _>(CONFIG_KEY_REPOSITORIES).await {
-        Ok(value) => value,
+    let value = match ffx_config::get::<Option<Value>, _>(CONFIG_KEY_REPOSITORIES).await {
+        Ok(Some(value)) => value,
+        Ok(None) => {
+            return HashMap::new();
+        }
         Err(err) => {
             log::warn!("failed to load repositories: {:#?}", err);
             return HashMap::new();
@@ -122,8 +125,11 @@ pub async fn get_registration(
 }
 
 pub async fn get_registrations() -> HashMap<String, HashMap<String, RepositoryTarget>> {
-    let value = match ffx_config::get::<Value, _>(CONFIG_KEY_REGISTRATIONS).await {
-        Ok(value) => value,
+    let value = match ffx_config::get::<Option<Value>, _>(CONFIG_KEY_REGISTRATIONS).await {
+        Ok(Some(value)) => value,
+        Ok(None) => {
+            return HashMap::new();
+        }
         Err(err) => {
             log::warn!("failed to load registrations: {:#?}", err);
             return HashMap::new();
@@ -157,7 +163,10 @@ pub async fn get_registrations() -> HashMap<String, HashMap<String, RepositoryTa
 
 pub async fn get_repository_registrations(repo_name: &str) -> HashMap<String, RepositoryTarget> {
     let targets = match ffx_config::get(&repository_registrations_query(repo_name)).await {
-        Ok(targets) => targets,
+        Ok(Some(targets)) => targets,
+        Ok(None) => {
+            return HashMap::new();
+        }
         Err(err) => {
             log::warn!("failed to load repository registrations: {:?} {:#?}", repo_name, err);
             serde_json::Map::new().into()
