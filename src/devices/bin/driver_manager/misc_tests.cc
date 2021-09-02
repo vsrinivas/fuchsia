@@ -27,7 +27,7 @@
 #include "driver_test_reporter.h"
 #include "fdio.h"
 
-constexpr char kDriverPath[] = "/pkg/driver/test/mock-device.so";
+constexpr char kDriverPath[] = "/pkg/driver/mock-device.so";
 constexpr char kLogMessage[] = "log message text";
 constexpr char kLogTestCaseName[] = "log test case";
 constexpr fuchsia_driver_test::wire::TestCaseResult kLogTestCaseResult = {

@@ -16,7 +16,6 @@ driver_bind_rules("mock-device-bind") {
 
 driver_module("mock-device-driver") {
   output_name = "mock-device"
-  test = true
   testonly = true
   sources = [
     "device.cc",

@@ -31,7 +31,6 @@ using usb_virtual_bus::ValidateResult;
 USBVirtualBusBase::USBVirtualBusBase() {
   args_.disable_block_watcher = true;
   args_.driver_search_paths.push_back("/boot/driver");
-  args_.driver_search_paths.push_back("/boot/driver/test");
 
   board_test::DeviceEntry dev = {};
   dev.did = 0;

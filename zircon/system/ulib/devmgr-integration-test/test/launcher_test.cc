@@ -23,7 +23,6 @@ TEST(LauncherTest, DriverSearchPath) {
   devmgr_launcher::Args args;
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
-  args.driver_search_paths.push_back("/boot/driver/test");
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));

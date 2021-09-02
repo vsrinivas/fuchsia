@@ -195,7 +195,7 @@ async fn load_package_firmware_test() -> Result<(), Error> {
         },
     };
     let driver_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
-        "/pkg/driver/test",
+        "/pkg/driver",
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
     )?);
     let meta_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
@@ -220,9 +220,7 @@ async fn load_package_firmware_test() -> Result<(), Error> {
             },
             "my-package" => vfs::pseudo_directory! {
                 "0" => vfs::pseudo_directory! {
-                    "driver" => vfs::pseudo_directory! {
-                        "test" => driver_dir,
-                    },
+                    "driver" => driver_dir,
                     "meta" => meta_dir,
                     "bind" => bind_dir,
                         "lib" => vfs::pseudo_directory! {
@@ -281,7 +279,7 @@ async fn load_package_firmware_test() -> Result<(), Error> {
 async fn load_system_firmware_test() -> Result<(), Error> {
     let firmware_file = vfs::file::vmo::asynchronous::read_only_static(b"this is some firmware\n");
     let driver_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
-        "/pkg/driver/test",
+        "/pkg/driver",
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
     )?);
     let system: Directory = vfs::pseudo_directory! {

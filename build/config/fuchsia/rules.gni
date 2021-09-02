@@ -12,11 +12,6 @@ import("//build/zircon/c_utils.gni")
 #
 # Parameters
 #
-#   test (optional)
-#     [boolean] Whether this driver is a test driver. Defaults to false.
-#     Note: this only makes sense for drivers migrated from the Zircon build.
-#           Safe to ignore in other cases.
-#
 # Flags: cflags, cflags_c, cflags_cc,  asmflags, defines, include_dirs,
 #        ldflags, lib_dirs, libs,
 # Deps: data_deps, deps, public_deps
@@ -94,10 +89,6 @@ template("driver_module") {
     }
     _output_file = "$output_dir/$_output_file_name"
     _rebased_output_file = rebase_path(_output_file, root_build_dir)
-    _dest_dir = "driver"
-    if (defined(invoker.test) && invoker.test) {
-      _dest_dir += "/test"
-    }
 
     has_syslog_backend = false
 
@@ -126,7 +117,7 @@ template("driver_module") {
       distribution_entries = [
         {
           source = _rebased_output_file
-          destination = "$_dest_dir/$_output_file_name"
+          destination = "driver/$_output_file_name"
           label = get_label_info(":$_target_name", "label_with_toolchain")
           elf_runtime_dir = "lib/${toolchain_variant.libprefix}"
         },

@@ -935,7 +935,6 @@ int main(int argc, char** argv) {
   auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
-  args.driver_search_paths.push_back("/boot/driver/test");
   args.load_drivers.push_back("/boot/driver/ethertap.so");
 
   devmgr_integration_test::IsolatedDevmgr devmgr;

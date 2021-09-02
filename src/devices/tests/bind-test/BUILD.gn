@@ -51,7 +51,6 @@ driver_bind_rules("bind") {
 
 driver_module("bind-test-driver-driver") {
   output_name = "bind-test-driver"
-  test = true
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",

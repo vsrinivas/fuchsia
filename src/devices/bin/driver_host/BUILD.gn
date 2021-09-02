@@ -219,7 +219,6 @@ driver_bind_rules("unit-test-fail-bind") {
 
 driver_module("unit-test-fail-driver") {
   output_name = "unit-test-fail"
-  test = true
   sources = [ "unit-test-fail.cc" ]
   deps = [
     ":unit-test-fail-bind",
@@ -242,7 +241,6 @@ driver_bind_rules("unit-test-pass-bind") {
 
 driver_module("unit-test-pass-driver") {
   output_name = "unit-test-pass"
-  test = true
   sources = [ "unit-test-pass.cc" ]
   deps = [
     ":unit-test-pass-bind",

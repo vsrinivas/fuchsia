@@ -29,7 +29,6 @@ renamed_binary("renamed_sys_binary") {
 
 driver_module("sysdev-driver") {
   output_name = "sysdev"
-  test = true
   sources = [ "sysdev.cc" ]
   deps = [
     ":sysdev-bind",

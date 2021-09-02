@@ -21,7 +21,7 @@ namespace testing {
 
 class DevmgrTest : public ::gtest::RealLoopFixture {
  protected:
-  static constexpr const char* kSysdevDriver = "/boot/driver/test/sysdev.so";
+  static constexpr const char* kSysdevDriver = "/boot/driver/sysdev.so";
   static constexpr const char* kPlatformDriver = "/boot/driver/platform-bus.so";
   const board_test::DeviceEntry kRtcDeviceEntry = []() {
     board_test::DeviceEntry entry = {};
@@ -61,7 +61,6 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
 
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.driver_search_paths.push_back("/boot/driver");
-    args.driver_search_paths.push_back("/boot/driver/test");
     args.disable_block_watcher = true;
     args.boot_args = {{"driver-manager.driver-host-crash-policy", crash_policy}};
     device_list_ptr->push_back(kRtcDeviceEntry);

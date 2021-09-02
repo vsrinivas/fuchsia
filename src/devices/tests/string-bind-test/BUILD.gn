@@ -52,7 +52,6 @@ driver_bind_rules("parent-driver-bind") {
 
 driver_module("parent-driver-driver") {
   output_name = "string-bind-parent"
-  test = true
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -81,7 +80,6 @@ driver_bind_rules("child-driver-bind") {
 
 driver_module("child-driver-driver") {
   output_name = "string-bind-child"
-  test = true
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",

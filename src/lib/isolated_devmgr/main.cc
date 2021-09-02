@@ -43,7 +43,7 @@ Options:
    --search_driver=[search_path]: loads all drivers in provided search path. May be informed
                                   multiple times.
    --sys_device=[sys_device_driver]: path to sys device driver, defaults to
-                                     /boot/driver/test/sysdev.so
+                                     /boot/driver/sysdev.so
    --wait_for=[device]: wait for isolated manager to have |device| exposed before serving any
                         requests. May be informed multiple times.
    --add_namespace=[ns]: make the namespace 'ns' from this component available to the devmgr
@@ -144,8 +144,8 @@ int main(int argc, const char** argv) {
 
   // Fallback if sys_device is not specified.
   if (args.sys_device_driver == nullptr) {
-    args.sys_device_driver = "/boot/driver/test/sysdev.so";
-    args.load_drivers.push_back("/boot/driver/test/sysdev.so");
+    args.sys_device_driver = "/boot/driver/sysdev.so";
+    args.load_drivers.push_back("/boot/driver/sysdev.so");
   }
 
   // Pass-through any additional namespaces that we want to provide to the devmgr. These are

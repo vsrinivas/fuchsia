@@ -19,8 +19,8 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
-#define DRIVER_TEST_DIR "/boot/driver/test"
-#define MOCK_DEVICE_LIB "/boot/driver/test/mock-device.so"
+#define DRIVER_TEST_DIR "/boot/driver"
+#define MOCK_DEVICE_LIB "/boot/driver/mock-device.so"
 
 namespace libdriver_integration_test {
 

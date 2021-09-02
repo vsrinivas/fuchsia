@@ -16,7 +16,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 const std::string kDevPrefix = "/dev/";
-const std::string kDriverTestDir = "/boot/driver/test";
+const std::string kDriverTestDir = "/boot/driver";
 const std::string kDriverLibname = "bind-test-driver.so";
 const std::string kChildDeviceName = "child";
 
@@ -29,7 +29,6 @@ class BindCompilerTest : public testing::Test {
 
     args.sys_device_driver = "/boot/driver/test-parent-sys.so";
     args.driver_search_paths.push_back("/boot/driver");
-    args.driver_search_paths.push_back("/boot/driver/test");
 
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
     ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);

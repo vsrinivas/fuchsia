@@ -29,7 +29,6 @@ driver_bind_rules("ddk-firmware-test-bind") {
 }
 
 driver_module("ddk-firmware-test") {
-  test = true
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",

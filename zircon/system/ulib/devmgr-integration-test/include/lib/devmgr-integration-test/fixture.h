@@ -32,7 +32,7 @@ class IsolatedDevmgr {
   IsolatedDevmgr& operator=(IsolatedDevmgr&& other);
 
   // Path to the test sysdev driver
-  static inline constexpr char kSysdevDriver[] = "/boot/driver/test/sysdev.so";
+  static inline constexpr char kSysdevDriver[] = "/boot/driver/sysdev.so";
 
   // Get an args structure pre-populated with the test sysdev driver, the
   // test control driver, and the test driver directory.
