@@ -5,12 +5,6 @@
     "generatorVersion": "2.9.0-edge.06cb010247fb9163db673ba2fd0b338ad6caafb8",
     "packages": [
         {
-            "languageVersion": "2.12",
-            "name": "fxutils",
-            "packageUri": "lib/",
-            "rootUri": "../../fxutils"
-        },
-        {
             "name": "codesize",
             "packageUri": "lib/",
             "rootUri": "../"

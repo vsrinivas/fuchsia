@@ -11,11 +11,10 @@ import 'dart:mirrors';
 
 import 'package:file/file.dart';
 import 'package:file/local.dart';
-import 'package:fxutils/fxutils.dart' as fxutils;
 import 'package:process/process.dart';
 
 /// Abstract interface for doing I/O (console output, process creation, etc.).
-/// See `Standard` for the production implemention used to run `fx codesize`.
+/// See `Standard` for the production implemention used to run `codesize`.
 /// When running unit tests, we would provide mock implementations which
 /// record I/O activities instead.
 abstract class Io {
@@ -32,10 +31,6 @@ abstract class Io {
   void print(Object object);
 
   ProcessManager get processManager;
-
-  fxutils.FxEnv get fxEnv;
-
-  fxutils.Fx get fx;
 
   /// Sets the exit code of the program.
   set exitCode(int code);
@@ -67,29 +62,6 @@ class Standard implements Io {
 
   @override
   ProcessManager get processManager => LocalProcessManager();
-
-  fxutils.FxEnv? _fxEnv;
-
-  @override
-  fxutils.FxEnv get fxEnv {
-    if (_fxEnv != null) {
-      return _fxEnv!;
-    }
-
-    final envReader = fxutils.EnvReader(cwd: cwd, environment: environment);
-    return _fxEnv = fxutils.FxEnv(envReader: envReader);
-  }
-
-  fxutils.Fx? _fx;
-
-  @override
-  fxutils.Fx get fx {
-    if (_fx != null) {
-      return _fx!;
-    }
-
-    return _fx = fxutils.Fx(fxEnv: fxEnv);
-  }
 
   @override
   set exitCode(int code) => dart_io.exitCode = code;

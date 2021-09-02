@@ -12,4 +12,12 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/dart_utils.sh || exit $?
 fx-config-read
 
-run-dart-tool codesize "$@"
+if [[ ${FUCHSIA_ARCH} != "arm64" ]]; then
+  echo "\`fx codesize\` is only supported in arm64 builds. The current" \
+       "architecture is ${FUCHSIA_ARCH}. Please switch to the correct" \
+       "product using \`fx set\`."
+  exit 1
+fi
+
+STATUS=$(fx-command-run status)
+run-dart-tool codesize --status "$STATUS" "$@"

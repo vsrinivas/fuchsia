@@ -21,19 +21,17 @@ class KnownFailure implements Exception {
   }
 }
 
-Future<String> saveCrashDiagnostics(
-    Io io, dynamic errorOrException, StackTrace stackTrace) async {
+Future<String> saveCrashDiagnostics(Io io, dynamic errorOrException,
+    StackTrace stackTrace, String status) async {
   final file = io.createTempFile('crash_report.txt');
   final sink = file.openWrite();
-
-  final rawStatusOutput = await io.fx.getSubCommandOutput('status');
 
   try {
     sink
       ..writeln(errorOrException)
       ..writeln('')
-      ..writeln('======== fx status ========')
-      ..writeln(rawStatusOutput)
+      ..writeln('======== status ========')
+      ..writeln(status)
       ..writeln('')
       ..writeln('======== stack trace ========')
       ..writeln(stackTrace);
@@ -44,7 +42,8 @@ Future<String> saveCrashDiagnostics(
   return file.path;
 }
 
-Future<void> withExceptionHandler(Future<void> Function() body) async {
+Future<void> withExceptionHandler(
+    Future<void> Function() body, String status) async {
   try {
     await body();
   } on KnownFailure catch (e) {
@@ -57,11 +56,12 @@ Future<void> withExceptionHandler(Future<void> Function() body) async {
   } catch (e, stackTrace) {
     // Generic top-level exception handler
     final io = Io.get();
-    String diagnosticsPath = await saveCrashDiagnostics(io, e, stackTrace);
+    String diagnosticsPath =
+        await saveCrashDiagnostics(io, e, stackTrace, status);
 
     io.err.writeln('''
 ════════════════════════════════════════════════════════════
-Oops, `fx codesize` has crashed.
+Oops, `codesize` has crashed.
 
 Brief error description:
 $e

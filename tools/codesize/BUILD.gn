@@ -51,7 +51,6 @@ dart_tool("codesize") {
 
   # Note: keep in sync with `codesize.packages`.
   deps = [
-    "//scripts/fxutils",
     "//third_party/dart-pkg/pub/_discoveryapis_commons",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/async",
@@ -114,7 +113,6 @@ dart_test("codesize_tests") {
 
   deps = [
     ":codesize_dart_library",
-    "//scripts/fxutils",
     "//third_party/dart-pkg/pub/file",
     "//third_party/dart-pkg/pub/process",
     "//third_party/dart-pkg/pub/test",

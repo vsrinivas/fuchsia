@@ -20,25 +20,20 @@ import 'package:googleapis/discovery/v1.dart' as discovery;
 import 'package:path/path.dart' as path;
 import 'package:pool/pool.dart';
 
-/// The common location for storing Fuchsia debug symbols. See fxbug.dev/41031.
-const _fxSymbolCache = '.fuchsia/debug/symbol-cache';
-
 /// Entry point of our application from the command line.
 Future<void> main(List<String> args) =>
     runWithIo<io.Standard, void>(() => mainImpl(args));
 
 Future<void> mainImpl(List<String> args) async {
+  final parsedArgs = cli.parseArgs(args);
+  if (parsedArgs == null) return;
   await crash_handling.withExceptionHandler(() async {
-    final parsedArgs = cli.parseArgs(args);
-    if (parsedArgs == null) return;
-
     // The high-level flow of the program:
     // - Generate bloaty reports if they aren't already cached.
     // - Run requested queries on those reports.
     // - Present the results in the specified format.
-    await preflightChecks();
-
-    final cs = CodeSize(parsedArgs.buildDir);
+    final cs = CodeSize(
+        parsedArgs.checkoutDir, parsedArgs.buildDir, parsedArgs.symbolCacheDir);
 
     AnalysisRequest allBloatyReportFiles = await ensureReportFiles(cs,
         cachingBehavior: parsedArgs.cachingBehavior,
@@ -55,18 +50,7 @@ Future<void> mainImpl(List<String> args) async {
 
     await presentResults(
         parsedArgs.format, parsedArgs.output, populatedQueries);
-  });
-}
-
-/// Checks preconditions for running codesize:
-/// - The CPU architecture should be arm64.
-Future<void> preflightChecks() async {
-  final fxEnv = Io.get().fxEnv;
-  if (fxEnv.fuchsiaArch != 'arm64') {
-    throw crash_handling.KnownFailure('`fx codesize` is only supported '
-        'in arm64 builds. The current architecture is ${fxEnv.fuchsiaArch}.\n'
-        'Please switch to the correct product using `fx set`.');
-  }
+  }, parsedArgs.status);
 }
 
 class ParseManifestResult {
@@ -80,9 +64,14 @@ class ParseManifestResult {
 }
 
 class CodeSize {
-  CodeSize(String buildDir) : build = Build(buildDir);
+  CodeSize(String checkoutDir, String buildDir, String symbolCacheDir)
+      : checkout = Directory(checkoutDir),
+        build = Build(buildDir),
+        symbolCache = Directory(symbolCacheDir);
 
+  final Directory checkout;
   final Build build;
+  final Directory symbolCache;
 
   /// List of packages in the build.
   final List<Package> packages = <Package>[];
@@ -322,15 +311,13 @@ class CodeSize {
 
   Future<void> addBuildIdFromSymbolSources() async {
     final fuchsiaBuildDir = build.openDirectory('.build-id');
-    final sourceTree = Directory(Platform.environment['FUCHSIA_DIR']).absolute;
-    final home = Directory(Platform.environment['HOME']);
     final maybeCipdBuildIdDirs = ([
               'prebuilt/.build-id',
               'prebuilt/third_party/clang/linux-x64/lib/debug/.build-id',
               'prebuilt/third_party/clang/mac-x64/lib/debug/.build-id',
-            ].map((e) => sourceTree / Directory(e)).toList() +
+            ].map((e) => checkout / Directory(e)).toList() +
             [
-              home / Directory(_fxSymbolCache),
+              symbolCache,
             ])
         .where((e) => e.existsSync());
     await _addBuildId(
@@ -765,13 +752,11 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
 
 Future<bool> downloadUnmatchedDebugBinaries(
     Iterable<String> buildIds, CodeSize cs) async {
-  final homeDir = Directory(Platform.environment['HOME']);
   final repos = await Future.wait([
     'gs://fuchsia-artifacts/debug',
     'gs://fuchsia-artifacts-internal/debug',
     'gs://fuchsia-artifacts-release/debug',
-  ].map(
-      (e) => CloudRepo.create(e, Cache(homeDir / Directory(_fxSymbolCache)))));
+  ].map((e) => CloudRepo.create(e, Cache(cs.symbolCache))));
   var downloadedAny = false;
   cs.jobInitCallback?.call(buildIds.length);
 

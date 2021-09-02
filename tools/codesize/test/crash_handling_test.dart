@@ -8,11 +8,10 @@ import 'package:codesize/crash_handling.dart';
 import 'package:codesize/io.dart';
 import 'package:file/file.dart';
 import 'package:file/memory.dart';
-import 'package:fxutils/fxutils.dart' as fxutils;
 import 'package:process/process.dart';
 import 'package:test/test.dart';
 
-const _mockProcessOutput = '❌ MOCK ❌';
+const _mockStatus = '❌ MOCK ❌';
 
 class MockIo implements Io {
   static Map<Object, Object> inject() => {#io: MockIo()};
@@ -36,15 +35,6 @@ class MockIo implements Io {
 
   @override
   ProcessManager get processManager => throw UnimplementedError();
-
-  final fxutils.FxEnv _fxEnv = fxutils.FxEnv.env(_environment);
-
-  @override
-  fxutils.FxEnv get fxEnv => _fxEnv;
-
-  @override
-  fxutils.Fx get fx => fxutils.Fx.mock(
-      fxutils.MockProcess.raw(stdout: _mockProcessOutput), _fxEnv);
 
   @override
   set exitCode(int code) => mockExitCode = code;
@@ -73,7 +63,7 @@ void main() {
         'Catch known exception',
         () => runWithIo<MockIo, void>(() async {
               await withExceptionHandler(
-                  () => throw KnownFailure('example failure'));
+                  () => throw KnownFailure('example failure'), _mockStatus);
               MockIo io = Io.get();
 
               // The exit code of a known exception.
@@ -85,14 +75,14 @@ void main() {
               expect(io.out.toString(), equals(''));
               expect(io.err.toString(), contains('example failure'));
               expect(io.err.toString(),
-                  isNot(contains('Oops, `fx codesize` has crashed.')));
+                  isNot(contains('Oops, `codesize` has crashed.')));
             }));
 
     test(
         'Catch unexpected error',
         () => runWithIo<MockIo, void>(() async {
               await withExceptionHandler(
-                  () => throw Exception('unexpected error'));
+                  () => throw Exception('unexpected error'), _mockStatus);
               MockIo io = Io.get();
 
               /// The exit code of an unexpected error.
@@ -104,8 +94,8 @@ void main() {
               final tmpDirs = io._fs.systemTempDirectory.listSync();
               expect(tmpDirs.length, equals(1));
 
-              expect(io.err.toString(),
-                  contains('Oops, `fx codesize` has crashed.'));
+              expect(
+                  io.err.toString(), contains('Oops, `codesize` has crashed.'));
 
               expect(
                   io.err.toString(),
@@ -114,13 +104,12 @@ Brief error description:
 Exception: unexpected error
 '''
                       .trim()));
-
               final crashLogPattern = RegExp(
                   '''
 Exception: unexpected error
 
-======== fx status ========
-$_mockProcessOutput
+======== status ========
+$_mockStatus
 
 ======== stack trace ========
 #0.*crash_handling_test\\.dart.*
@@ -128,7 +117,6 @@ $_mockProcessOutput
               '''
                       .trim(),
                   multiLine: true);
-
               expect(
                   io._fs
                       .directory(tmpDirs.first)

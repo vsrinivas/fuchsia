@@ -1,7 +1,7 @@
-fx codesize
+codesize
 =================================================
 
-`fx codesize` is a binary size analytics tool for ELF executables and libraries,
+`codesize` is a binary size analytics tool for ELF executables and libraries,
 sifting through symbols and debug information to produce statistics about their
 size and categorizations, helping to make informed decisions on which pieces of
 code should have their size kept in check, and which code should be the focus
@@ -9,13 +9,11 @@ for binary size optimization.
 
 ## Usage Tips
 
-Before running `fx codesize`, one should perform a full build (fx build),
-which would update the system images that codesize uses. Every time another
-full build happens, codesize would detect this by default, and re-analyze
-all the binaries.
+Before running `codesize`, one should perform a full build which would update
+the system images that codesize uses. Every time another full build happens,
+codesize would detect this by default, and re-analyze all the binaries.
 
-`fx codesize --help` has more detailed help information and details on each
-query.
+`codesize --help` has more detailed help information and details on each query.
 
 ## Development Tips
 

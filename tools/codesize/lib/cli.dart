@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:path/path.dart' as path;
 
 import 'common_util.dart';
 import 'crash_handling.dart';
@@ -24,10 +25,10 @@ ParsedArgs parseArgs(List<String> args) {
     ..addFlag('help', abbr: 'h', help: 'Give this help.', negatable: false)
     // The `--[no-]cache` parameter is a tri-state:
     //
-    // fx codesize --cache => Always use cached bloaty reports
-    // fx codesize --no-cache => Never use cached bloaty reports
-    // fx codesize => If the system image is newer than the report index,
-    //                re-run bloaty. Otherwise use cache. This is the default.
+    // codesize --cache => Always use cached bloaty reports
+    // codesize --no-cache => Never use cached bloaty reports
+    // codesize => If the system image is newer than the report index,
+    //             re-run bloaty. Otherwise use cache. This is the default.
     ..addFlag(cache,
         help:
             'Use the cached version of the list of bloaty reports if available',
@@ -37,11 +38,23 @@ ParsedArgs parseArgs(List<String> args) {
         help: 'Do not use the cache of the list of bloaty reports',
         defaultsTo: false,
         negatable: false)
+    ..addOption(checkoutDir,
+        help: 'The Fuchsia checkout root.\n'
+            'If absent, defaults to FUCHSIA_DIR env var.',
+        defaultsTo: Platform.environment['FUCHSIA_DIR'])
     ..addOption(buildDir,
         help: 'The build output directory (e.g. out/default).\n'
             'If absent, defaults to the current output directory '
             '(FUCHSIA_BUILD_DIR)',
         defaultsTo: Platform.environment['FUCHSIA_BUILD_DIR'])
+    ..addOption(symbolCacheDir,
+        help: 'The symbol cache directory.\n'
+            'If absent, defaults to ~/.fuchsia/debug/symbol-cache.',
+        defaultsTo: path.join(
+            Platform.environment['HOME'], '.fuchsia', 'debug', 'symbol-cache'))
+    ..addOption(status,
+        help: 'The status message to attach to a crash report.',
+        defaultsTo: 'No status available')
     ..addOption(concurrency,
         help: 'The number of worker threads.\n'
             'If absent, defaults to a reasonable number based on the CPU cores',
@@ -105,7 +118,7 @@ and string-like argument values are un-quoted. For instance, to specify the
 `sortBySize` argument to `BinaryNames`, one could write on the command line:
 
       # Use single-quotes to escape any special characters on the shell.
-      fx codesize 'BinaryNames(sortBySize: true)'
+      codesize 'BinaryNames(sortBySize: true)'
 
 ''');
 
@@ -116,29 +129,29 @@ and string-like argument values are un-quoted. For instance, to specify the
         // ignore: prefer_interpolation_to_compose_strings
         ('# By default, codesize runs the ${defaultQueryConstructors.join(" and ")} signal\n'
                 r'''
-fx codesize
+codesize
 
 # Can run on a subset of binaries, filtered by a regex
 # For instance, "(?!\[prebuilt\])" will skip all the prebuilts, which might be helpful
 # if changing SDK libraries that won't lead to their update
-fx codesize --file-regex '^(?!\[prebuilt\])'
+codesize --file-regex '^(?!\[prebuilt\])'
 
 # Another example, only looking at the ELF binaries in Zircon Boot Images
-fx codesize --file-regex '^\[zbi: '
+codesize --file-regex '^\[zbi: '
 
 # Another example, only running on appmgr...
-fx codesize --file-regex appmgr CodeCategory
+codesize --file-regex appmgr CodeCategory
 
 # Listing all symbols with annotation in a binary, grouped by compile units, also hiding unknown symbols
-fx codesize --file-regex appmgr 'Symbols(hideUnknown: true)'
+codesize --file-regex appmgr 'Symbols(hideUnknown: true)'
 
 # Look through all C++ symbols alongside their containing programs, sorted by aggregate size
-fx codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: true, hideUnknown: false)' | less
+codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: true, hideUnknown: false)' | less
 ''')
             .split('\n')
             .map((s) => '      $s')
             .join('\n');
-    print('Usage: fx codesize [OPTION]... [QUERY]...\n\n'
+    print('Usage: codesize [OPTION]... [QUERY]...\n\n'
         'Looks at all the ELF binaries in the fvm/zbi images in the out dir,\n'
         'computes various bary size queries specified in [QUERY]...\n'
         'If [QUERY] is absent, defaults to CodeCategory and SourceLang\n\n'
@@ -180,7 +193,10 @@ fx codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: tr
     cachingBehavior = CachingBehavior.useIfUpToDate;
 
   return ParsedArgs(
+      checkoutDir: argResults[checkoutDir],
       buildDir: argResults[buildDir],
+      symbolCacheDir: argResults[symbolCacheDir],
+      status: argResults[status],
       fileRegex: RegExp(argResults[fileRegex]),
       output: output,
       cachingBehavior: cachingBehavior,
@@ -279,7 +295,10 @@ QueryThunk parseQueryConstructor(
 
 const cache = 'cache';
 const noCache = 'no-cache';
+const checkoutDir = 'checkout-dir';
 const buildDir = 'build-dir';
+const symbolCacheDir = 'symbol-cache-dir';
+const status = 'status';
 const fileRegex = 'file-regex';
 const onlyLang = 'only-lang';
 const outputFile = 'output';
@@ -290,7 +309,10 @@ const heatmapFrameSize = 'heatmap-frame-size';
 
 class ParsedArgs {
   final CachingBehavior cachingBehavior;
+  final String checkoutDir;
   final String buildDir;
+  final String symbolCacheDir;
+  final String status;
   final RegExp fileRegex;
   final SourceLang onlyLang;
   final IOSink output;
@@ -302,7 +324,10 @@ class ParsedArgs {
 
   ParsedArgs(
       {this.cachingBehavior,
+      this.checkoutDir,
       this.buildDir,
+      this.symbolCacheDir,
+      this.status,
       this.fileRegex,
       this.onlyLang,
       this.output,

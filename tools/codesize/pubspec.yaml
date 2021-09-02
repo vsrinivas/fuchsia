@@ -71,8 +71,6 @@ dependencies:
     path: ../../third_party/dart-pkg/pub/process
   protobuf:
     path: ../../third_party/dart-pkg/pub/protobuf
-  fxutils:
-    path: ../fxutils/lib
 
 dependency_overrides:
   async:
@@ -137,5 +135,3 @@ dependency_overrides:
     path: ../../third_party/dart-pkg/pub/process
   protobuf:
     path: ../../third_party/dart-pkg/pub/protobuf
-  fxutils:
-    path: ../fxutils/lib
