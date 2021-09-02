@@ -297,3 +297,8 @@
   available_in_git: '442b29735720936f85cc5372113e101b00cfba4e'
   areas: ['Connectivity', 'Uart']
   path: '/src/connectivity/ppp/drivers/serial-ppp'
+- short_description: 'FocalTech FT8201 touch driver'
+  tracking_bug: '83830'
+  gerrit_change_id: '575784'
+  available_in_git: 'ae74b26b33034aab0d550cceea9726144e16dd08'
+  path: '/src/ui/input/drivers/ft8201'

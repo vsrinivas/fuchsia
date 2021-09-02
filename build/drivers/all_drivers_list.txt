@@ -282,7 +282,6 @@
 //src/ui/input/drivers/cypress:cypress-driver
 //src/ui/input/drivers/focaltech:focaltech-driver
 //src/ui/input/drivers/focaltech:focaltech-sherlock-driver
-//src/ui/input/drivers/ft8201:ft8201-module-driver
 //src/ui/input/drivers/goldfish_sensor:sensor_driver_module
 //src/ui/input/drivers/goodix:goodix-module-driver
 //src/ui/input/drivers/gt6853:gt6853-module-driver

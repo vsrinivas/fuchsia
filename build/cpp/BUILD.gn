@@ -223,8 +223,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/ui/bin/hardware_display_controller_provider/fake/tests:unittests",
     "//src/ui/examples/tile_view:bin",
     "//src/ui/input/bin/hid:hid",
-    "//src/ui/input/drivers/ft8201:ft8201-module-driver",
-    "//src/ui/input/drivers/ft8201:ft8201-test-bin",
     "//src/ui/input/drivers/gt6853:gt6853-module-driver",
     "//src/ui/input/drivers/gt6853:gt6853-test",
     "//src/ui/input/drivers/hid:hid-driver",

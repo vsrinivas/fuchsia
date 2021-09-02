@@ -947,7 +947,6 @@ config("Wno-conversion") {
     "//src/ui/examples/lab/scenic_dev_app:*",
     "//src/ui/examples/shadertoy/service:*",
     "//src/ui/examples/standalone_app:*",
-    "//src/ui/input/drivers/ft8201:*",
     "//src/ui/input/drivers/goodix:*",
     "//src/ui/input/drivers/gt6853:*",
     "//src/ui/input/drivers/hid-buttons:*",

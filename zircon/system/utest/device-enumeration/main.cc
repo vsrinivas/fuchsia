@@ -496,7 +496,6 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "sys/platform/05:04:13/luis-audio-pdm-in",
       "luis-i2s-audio-out",
       "sherlock-buttons/hid-buttons",
-      "ft8201-touch",
 
       // Thermal devices
       "sys/platform/05:04:28/thermal",
