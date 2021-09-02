@@ -42,7 +42,7 @@ Fuchsia uses a distributed implementation for its tracing system, which lets
 the trace provider write tracing data directly into a Zircon Virtual Memory
 Object (VMO), which is a shared memory segment. The tracing data is stored
 in memory as it is generated and isn't copied to any other location. For more
-information on VMOs,
+information on VMOs, see
 [Virtual Memory Object](/docs/reference/kernel_objects/vm_object.md).
 
 When you specify trace statements in your code, categories give you
