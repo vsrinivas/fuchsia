@@ -146,6 +146,7 @@ mod test {
                 test_mem_size as usize,
                 flags,
                 MappingOptions::empty(),
+                None,
             )
             .unwrap();
 

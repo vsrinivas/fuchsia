@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use bitflags::bitflags;
-use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use lazy_static::lazy_static;
 use parking_lot::{Mutex, RwLock};
-use process_builder::elf_load;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -54,6 +53,9 @@ struct Mapping {
     /// The flags for this mapping.
     options: MappingOptions,
 
+    /// The name of the file used for the mapping. None if the mapping is anonymous.
+    filename: Option<NamespaceNode>,
+
     /// A name associated with the mapping. Set by prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, ...).
     name: CString,
 }
@@ -75,6 +77,7 @@ impl Mapping {
                     | zx::VmarFlags::PERM_WRITE
                     | zx::VmarFlags::PERM_EXECUTE),
             options,
+            filename: None,
             name: CString::default(),
         }
     }
@@ -89,6 +92,7 @@ impl Mapping {
                     | zx::VmarFlags::PERM_WRITE
                     | zx::VmarFlags::PERM_EXECUTE),
             options: self.options,
+            filename: self.filename.clone(),
             name: self.name.clone(),
         }
     }
@@ -150,6 +154,7 @@ impl MemoryManagerState {
         length: usize,
         flags: zx::VmarFlags,
         options: MappingOptions,
+        filename: Option<NamespaceNode>,
     ) -> Result<UserAddress, zx::Status> {
         let addr = UserAddress::from_ptr(self.user_vmar.map(
             vmar_offset,
@@ -158,7 +163,8 @@ impl MemoryManagerState {
             length,
             flags,
         )?);
-        let mapping = Mapping::new(addr, vmo, vmo_offset, flags, options);
+        let mut mapping = Mapping::new(addr, vmo, vmo_offset, flags, options);
+        mapping.filename = filename;
         let end = (addr + length).round_up(*PAGE_SIZE);
         self.mappings.insert(addr..end, mapping);
         Ok(addr)
@@ -283,6 +289,7 @@ impl MemoryManager {
                             | zx::VmarFlags::PERM_WRITE
                             | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
                         MappingOptions::empty(),
+                        None,
                     )
                     .map_err(Self::get_errno_for_map_err)?;
                 let brk = ProgramBreak { base: addr, current: addr };
@@ -392,6 +399,7 @@ impl MemoryManager {
                     length,
                     mapping.permissions | zx::VmarFlags::SPECIFIC,
                     mapping.options,
+                    mapping.filename.clone(),
                 )
                 .map_err(Self::get_errno_for_map_err)?;
         }
@@ -435,11 +443,12 @@ impl MemoryManager {
         length: usize,
         flags: zx::VmarFlags,
         options: MappingOptions,
+        filename: Option<NamespaceNode>,
     ) -> Result<UserAddress, Errno> {
         let vmar_offset = if addr.is_null() { 0 } else { addr - self.base_addr };
         let mut state = self.state.write();
         state
-            .map(vmar_offset, vmo, vmo_offset, length, flags, options)
+            .map(vmar_offset, vmo, vmo_offset, length, flags, options, filename)
             .map_err(Self::get_errno_for_map_err)
     }
 
@@ -638,23 +647,6 @@ impl MemoryManager {
     }
 }
 
-impl elf_load::Mapper for MemoryManager {
-    fn map(
-        &self,
-        vmar_offset: usize,
-        vmo: &zx::Vmo,
-        vmo_offset: u64,
-        length: usize,
-        flags: zx::VmarFlags,
-    ) -> Result<usize, zx::Status> {
-        let vmo = Arc::new(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?);
-        let mut state = self.state.write();
-        state
-            .map(vmar_offset, vmo, vmo_offset, length, flags, MappingOptions::empty())
-            .map(|addr| addr.ptr())
-    }
-}
-
 pub struct ProcMapsFile {
     task: Arc<Task>,
     seq: Mutex<SeqFileState<UserAddress>>,
@@ -684,9 +676,9 @@ impl FileOps for ProcMapsFile {
         let iter = |cursor: UserAddress, sink: &mut SeqFileBuf| {
             let iter = iter.get_or_insert_with(|| state.mappings.iter_starting_at(&cursor));
             if let Some((range, map)) = iter.next() {
-                write!(
+                let line_length = write!(
                     sink,
-                    "{:x}-{:x} {}{}{}{} {:08}\n",
+                    "{:08x}-{:08x} {}{}{}{} {:08x} 00:00 {} ",
                     range.start.ptr(),
                     range.end.ptr(),
                     if map.permissions.contains(zx::VmarFlags::PERM_READ) { 'r' } else { '-' },
@@ -694,8 +686,21 @@ impl FileOps for ProcMapsFile {
                     if map.permissions.contains(zx::VmarFlags::PERM_EXECUTE) { 'x' } else { '-' },
                     if map.options.contains(MappingOptions::SHARED) { 's' } else { 'p' },
                     map.vmo_offset,
-                );
-                return Ok(Some(range.end + 1usize));
+                    if let Some(filename) = &map.filename {
+                        filename.entry.node.inode_num
+                    } else {
+                        0
+                    }
+                )?;
+                if let Some(filename) = &map.filename {
+                    // The filename goes at >= the 74th column (73rd when zero indexed)
+                    for _ in line_length..73 {
+                        sink.write(b" ");
+                    }
+                    sink.write(&filename.path());
+                }
+                sink.write(b"\n");
+                return Ok(Some(range.end));
             }
             Ok(None)
         };

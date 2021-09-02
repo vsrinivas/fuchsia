@@ -343,10 +343,8 @@ impl Task {
         argv: &Vec<CString>,
         environ: &Vec<CString>,
     ) -> Result<ThreadStartInfo, Errno> {
-        let executable_file = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
-        *self.executable_node.write() = Some(executable_file.name.clone());
-        let executable = executable_file
-            .get_vmo(self, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+        let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
+        *self.executable_node.write() = Some(executable.name.clone());
 
         // TODO: Implement #!interpreter [optional-arg]
 

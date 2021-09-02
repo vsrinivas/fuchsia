@@ -113,12 +113,14 @@ impl<C: Default> SeqFileState<C> {
 #[derive(Default)]
 pub struct SeqFileBuf(Vec<u8>);
 impl SeqFileBuf {
-    #[cfg(test)]
     pub fn write(&mut self, data: &[u8]) {
         self.0.extend_from_slice(data);
     }
-    pub fn write_fmt(&mut self, args: std::fmt::Arguments<'_>) {
-        std::io::Write::write_fmt(&mut self.0, args).unwrap();
+    pub fn write_fmt(&mut self, args: std::fmt::Arguments<'_>) -> Result<usize, Errno> {
+        let start_size = self.0.len();
+        std::io::Write::write_fmt(&mut self.0, args).map_err(|_| EINVAL)?;
+        let end_size = self.0.len();
+        Ok(end_size - start_size)
     }
 }
 

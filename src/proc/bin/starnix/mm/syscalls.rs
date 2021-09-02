@@ -91,6 +91,7 @@ pub fn sys_mmap(
         };
     }
 
+    let mut filename = None;
     let vmo = if flags & MAP_ANONYMOUS != 0 {
         let mut vmo = zx::Vmo::create(length as u64).map_err(|s| match s {
             zx::Status::NO_MEMORY => errno!(ENOMEM),
@@ -106,6 +107,7 @@ pub fn sys_mmap(
     } else {
         // TODO(tbodt): maximize protection flags so that mprotect works
         let file = ctx.task.files.get(fd)?;
+        filename = Some(file.name.clone());
         let zx_prot = mmap_prot_to_vm_opt(prot);
         if flags & MAP_PRIVATE != 0 {
             // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
@@ -129,8 +131,17 @@ pub fn sys_mmap(
         options |= MappingOptions::SHARED;
     }
 
-    let try_map =
-        |addr, flags| ctx.task.mm.map(addr, Arc::clone(&vmo), vmo_offset, length, flags, options);
+    let try_map = |addr, flags| {
+        ctx.task.mm.map(
+            addr,
+            Arc::clone(&vmo),
+            vmo_offset,
+            length,
+            flags,
+            options,
+            filename.clone(),
+        )
+    };
     let addr = match try_map(addr, zx_flags) {
         Err(errno)
             if errno == EINVAL

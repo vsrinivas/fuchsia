@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef};
+use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef, HandleBased};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
 
 use crate::errno;
 use crate::from_status_like_fdio;
+use crate::fs::FileHandle;
 use crate::logging::*;
 use crate::mm::*;
 use crate::task::*;
@@ -90,6 +91,7 @@ struct LoadedElf {
     headers: elf_parse::Elf64Headers,
     base: usize,
     bias: usize,
+    vmo: zx::Vmo,
 }
 
 // TODO: Improve the error reporting produced by this function by mapping ElfParseError to Errno more precisely.
@@ -104,15 +106,49 @@ fn elf_load_error_to_errno(err: elf_load::ElfLoadError) -> Errno {
     errno!(EINVAL)
 }
 
-fn load_elf(vmo: &zx::Vmo, mm: &MemoryManager) -> Result<LoadedElf, Errno> {
+struct Mapper<'a> {
+    file: &'a FileHandle,
+    mm: &'a MemoryManager,
+}
+impl elf_load::Mapper for Mapper<'_> {
+    fn map(
+        &self,
+        vmar_offset: usize,
+        vmo: &zx::Vmo,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<usize, zx::Status> {
+        let vmo = Arc::new(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?);
+        self.mm
+            .map(
+                self.mm.base_addr + vmar_offset,
+                vmo,
+                vmo_offset,
+                length,
+                flags,
+                MappingOptions::empty(),
+                Some(self.file.name.clone()),
+            )
+            .map_err(|e| {
+                // TODO: Find a way to propagate this errno to the caller.
+                log::error!("elf map error: {:?}", e);
+                zx::Status::INVALID_ARGS
+            })
+            .map(|addr| addr.ptr())
+    }
+}
+
+fn load_elf(task: &Task, elf: &FileHandle, mm: &MemoryManager) -> Result<LoadedElf, Errno> {
+    let vmo = elf.get_vmo(task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
     let headers = elf_parse::Elf64Headers::from_vmo(&vmo).map_err(elf_parse_error_to_errno)?;
     let elf_info = elf_load::loaded_elf_info(&headers);
     let base = mm.get_random_base(elf_info.high - elf_info.low).ptr();
     let bias = base.wrapping_sub(elf_info.low);
-    let mapper = mm as &dyn elf_load::Mapper;
-    elf_load::map_elf_segments(&vmo, &headers, mapper, mm.base_addr.ptr(), bias)
+    let mapper = Mapper { file: &elf, mm };
+    elf_load::map_elf_segments(&vmo, &headers, &mapper, mm.base_addr.ptr(), bias)
         .map_err(elf_load_error_to_errno)?;
-    Ok(LoadedElf { headers, base, bias })
+    Ok(LoadedElf { headers, base, bias, vmo })
 }
 
 pub struct ThreadStartInfo {
@@ -131,18 +167,19 @@ impl ThreadStartInfo {
 
 pub fn load_executable(
     task: &Task,
-    executable: zx::Vmo,
+    executable: FileHandle,
     argv: &Vec<CString>,
     environ: &Vec<CString>,
 ) -> Result<ThreadStartInfo, Errno> {
-    let main_elf = load_elf(&executable, &task.mm)?;
+    let main_elf = load_elf(task, &executable, &task.mm)?;
     let interp_elf = if let Some(interp_hdr) = main_elf
         .headers
         .program_header_with_type(elf_parse::SegmentType::Interp)
         .map_err(|_| errno!(EINVAL))?
     {
         let mut interp = vec![0; interp_hdr.filesz as usize];
-        executable
+        main_elf
+            .vmo
             .read(&mut interp, interp_hdr.offset as u64)
             .map_err(|status| from_status_like_fdio!(status))?;
         let interp = CStr::from_bytes_with_nul(&interp)
@@ -150,9 +187,7 @@ pub fn load_executable(
             .to_str()
             .map_err(|_| errno!(EINVAL))?;
         let interp_file = task.open_file(interp.as_bytes(), OpenFlags::RDONLY)?;
-        let interp_vmo =
-            interp_file.get_vmo(task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
-        Some(load_elf(&interp_vmo, &task.mm)?)
+        Some(load_elf(task, &interp_file, &task.mm)?)
     } else {
         None
     };
@@ -176,6 +211,7 @@ pub fn load_executable(
         stack_size,
         zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE,
         MappingOptions::empty(),
+        None,
     )?;
     let stack = stack_base + (stack_size - 8);
 
