@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_INTERRUPT_TRACKER_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_INTERRUPT_TRACKER_H_
 
+#include <lib/fit/defer.h>
 #include <lib/ktrace.h>
 
 #include <bitmap/raw-bitmap.h>
@@ -150,16 +151,26 @@ class InterruptTracker {
       invalidator->Invalidate();
     }
     ktrace_vcpu(TAG_VCPU_BLOCK, VCPU_INTERRUPT);
+    auto defer = fit::defer([] { ktrace_vcpu(TAG_VCPU_UNBLOCK, VCPU_INTERRUPT); });
     do {
       zx_status_t status = event_.Wait(Deadline::no_slack(deadline));
-      if (status == ZX_ERR_TIMED_OUT) {
-        break;
-      } else if (status != ZX_OK) {
-        ktrace_vcpu(TAG_VCPU_UNBLOCK, VCPU_INTERRUPT);
-        return ZX_ERR_CANCELED;
+      switch (status) {
+        case ZX_OK:
+          continue;
+        case ZX_ERR_TIMED_OUT:
+          // If the event timed out, return ZX_OK to resume the VCPU.
+        case ZX_ERR_INTERNAL_INTR_RETRY:
+          // If the thread was suspended, return ZX_OK to resume the VCPU once
+          // the thread is resumed.
+          return ZX_OK;
+        case ZX_ERR_INTERNAL_INTR_KILLED:
+          // If the thread was killed, return ZX_ERR_CANCELED.
+          return ZX_ERR_CANCELED;
+        default:
+          // Otherwise, return the status requested by Event::Signal().
+          return status;
       }
     } while (!Pending());
-    ktrace_vcpu(TAG_VCPU_UNBLOCK, VCPU_INTERRUPT);
     return ZX_OK;
   }
 
