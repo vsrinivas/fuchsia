@@ -79,9 +79,7 @@ if [[ -z "${output_dir}" ]]; then
   fi
 fi
 
-fx-warn "Consider running \`ffx target snapshot\` instead. fx snapshot is being deprecated in \
-September 2021, and waits for 16s before grabbing a snapshot."
-sleep 16
+fx-info "Consider running \`ffx target snapshot\` instead. fx snapshot will eventually be deprecated."
 
 # At this point, we know that we have a valid output directory.
 
