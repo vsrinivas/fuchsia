@@ -362,6 +362,26 @@ impl BssDescription {
             .map_err(|e| e.into())
     }
 
+    /// Search for vendor-specific Info Element for WMM Parameter. If found, return the body.
+    pub fn find_wmm_param(&self) -> Option<&[u8]> {
+        ie::Reader::new(&self.ies[..])
+            .filter_map(|(id, ie)| match id {
+                ie::Id::VENDOR_SPECIFIC => match ie::parse_vendor_ie(ie) {
+                    Ok(ie::VendorIe::WmmParam(body)) => Some(&body[..]),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .next()
+    }
+
+    /// Search for WMM Parameter Element and parse it. If no WMM Parameter Element is found,
+    /// return an error.
+    pub fn wmm_param(&self) -> Result<LayoutVerified<&[u8], ie::WmmParam>, anyhow::Error> {
+        ie::parse_wmm_param(self.find_wmm_param().ok_or(format_err!("no wmm parameter found"))?)
+            .map_err(|e| e.into())
+    }
+
     /// Search for the WiFi Simple Configuration Info Element. If found, return the body.
     pub fn find_wsc_ie(&self) -> Option<&[u8]> {
         ie::Reader::new(&self.ies[..])
@@ -614,12 +634,13 @@ mod tests {
         super::*,
         crate::{
             assert_variant, fake_bss_description,
-            ie::IeType,
+            ie::{fake_ies::fake_wmm_param, IeType},
             test_utils::{
                 fake_frames::{
-                    fake_unknown_rsne, fake_wpa1_ie_body, fake_wpa2_mfpc_rsne, fake_wpa2_mfpr_rsne,
-                    fake_wpa2_rsne, fake_wpa2_wpa3_mfpr_rsne, fake_wpa2_wpa3_no_mfp_rsne,
-                    invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
+                    fake_unknown_rsne, fake_wmm_param_body, fake_wpa1_ie_body, fake_wpa2_mfpc_rsne,
+                    fake_wpa2_mfpr_rsne, fake_wpa2_rsne, fake_wpa2_wpa3_mfpr_rsne,
+                    fake_wpa2_wpa3_no_mfp_rsne, invalid_wpa3_enterprise_192_bit_rsne,
+                    invalid_wpa3_rsne,
                 },
                 fake_stas::IesOverrides,
             },
@@ -777,6 +798,13 @@ mod tests {
             .expect("failed to serialize WPA1 IE");
         assert_eq!(fake_wpa1_ie_body(false), buf);
         fake_bss_description!(Wpa2).wpa_ie().expect_err("found unexpected WPA1 IE");
+    }
+
+    #[test]
+    fn test_wmm_param() {
+        let bss = fake_bss_description!(Wpa2, qos: true, wmm_param: Some(fake_wmm_param()));
+        let wmm_param = bss.wmm_param().expect("failed to find wmm param");
+        assert_eq!(fake_wmm_param_body(), wmm_param.as_bytes());
     }
 
     #[test]

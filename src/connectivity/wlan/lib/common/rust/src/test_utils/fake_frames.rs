@@ -418,3 +418,23 @@ pub fn fake_unknown_rsne() -> Vec<u8> {
         1, 0, 0x00, 0x0F, 0xAC, 7, // 1 AKM: TDLS
     ])
 }
+
+pub fn fake_wmm_param_header() -> Vec<u8> {
+    vec![
+        0xdd, 0x18, // Vendor IE header
+        0x00, 0x50, 0xf2, // MSFT OUI
+        0x02, 0x01, // WMM Type and WMM Parameter Subtype
+        0x01, // Version 1
+    ]
+}
+
+pub fn fake_wmm_param_body() -> Vec<u8> {
+    vec![
+        0x80, // U-APSD enabled
+        0x00, // reserved
+        0x03, 0xa4, 0x00, 0x00, // AC_BE parameters
+        0x27, 0xa4, 0x00, 0x00, // AC_BK parameters
+        0x42, 0x43, 0x5e, 0x00, // AC_VI parameters
+        0x62, 0x32, 0x2f, 0x00, // AC_VO parameters
+    ]
+}
