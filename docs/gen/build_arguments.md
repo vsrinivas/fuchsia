@@ -2103,13 +2103,13 @@ built and mounted inside the container at /mnt/chromeos.
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:24
+From //src/virtualization/bin/linux_runner/BUILD.gn:23
 
 ### linux_runner_gateway
 
 **Current value (from the default):** `"10.0.0.1"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:19
+From //src/virtualization/bin/linux_runner/BUILD.gn:18
 
 ### linux_runner_ip
 Default values for the guest network configuration.
@@ -2121,27 +2121,27 @@ See //src/virtualization/bin/vmm/device/virtio_net.cc for more details.
 
 **Current value (from the default):** `"10.0.0.2"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:18
+From //src/virtualization/bin/linux_runner/BUILD.gn:17
 
 ### linux_runner_netmask
 
 **Current value (from the default):** `"255.255.255.0"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:20
+From //src/virtualization/bin/linux_runner/BUILD.gn:19
 
 ### linux_runner_stateful_image_path
 Point this to the location of a prebuilt stateful image
 
 **Current value (from the default):** `""`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:35
+From //src/virtualization/bin/linux_runner/BUILD.gn:34
 
 ### linux_runner_user_extras
 Point this to the location of external files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:32
+From //src/virtualization/bin/linux_runner/BUILD.gn:31
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -2150,7 +2150,7 @@ the linux kernel as crashes and panics can sometimes corrupt the images.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:29
+From //src/virtualization/bin/linux_runner/BUILD.gn:28
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
