@@ -1,0 +1,18 @@
+{
+    include: [ "//src/cobalt/bin/app/meta/cobalt.cml" ],
+    program: {
+        // With the following values for the scheduling parameters we are
+        // essentially configuring the ShippingManager to be in manual mode. It will
+        // never send Observations because of the schedule and send them immediately
+        // in response to RequestSendSoon().
+        args: [
+            // This must be less than 2^31. There appears to be a bug in
+            // std::condition_variable::wait_for() in which setting the wait time to
+            // std::chrono::seconds::max() effectively sets the wait time to zero.
+            "--schedule_interval_seconds=999999999",
+            "--min_interval_seconds=0",
+            "--event_aggregator_backfill_days=2",
+            "--start_event_aggregator_worker=false",
+        ],
+    },
+}

@@ -1,0 +1,3 @@
+{
+    include: [ "//src/cobalt/bin/meta/base/cobalt_testapp_networked.shard.cml" ],
+}

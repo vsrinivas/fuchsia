@@ -43,13 +43,7 @@
         },
         {
             instance_id: "e534c6322665ea3b4e7bf7bdce64d17bea86100be0eba25ed220a5e9b355c4ef",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/cobalt",
         },
         {
             instance_id: "20b2c7aba6793929c252d4e933b8a1537f7bfe8e208ad228c50a896a18b2c4b5",

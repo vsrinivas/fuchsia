@@ -1,0 +1,6 @@
+{
+    include: [ "//src/cobalt/bin/meta/base/cobalt_testapp.shard.cml" ],
+    program: {
+        args: [ "--no_network_for_testing" ],
+    },
+}

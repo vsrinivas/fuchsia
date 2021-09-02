@@ -7,12 +7,12 @@
     },
     "sandbox": {
         "features": [
-            "build-info",
             "config-data",
             "isolated-persistent-storage",
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.buildinfo.Provider",
             "fuchsia.net.http.Loader",
             "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",

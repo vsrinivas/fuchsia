@@ -1,0 +1,69 @@
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/cobalt_testapp",
+    },
+    children: [
+        {
+            name: "activity",
+            url: "fuchsia-pkg://fuchsia.com/activity#meta/activity.cm",
+        },
+        {
+            name: "sysinfo",
+            url: "fuchsia-boot:///#meta/sysinfo.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+            rights: [ "r*" ],
+            subdir: "cobalt",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#activity",
+                "#sysinfo",
+            ],
+        },
+        {
+            protocol: "fuchsia.boot.WriteOnlyLog",
+            from: "parent",
+            to: "#sysinfo",
+        },
+        {
+            protocol: "fuchsia.ui.activity.Provider",
+            from: "#activity",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            protocol: "fuchsia.sysinfo.SysInfo",
+            from: "#sysinfo",
+            to: "#fuchsia_component_test_collection",
+        },
+    ],
+}

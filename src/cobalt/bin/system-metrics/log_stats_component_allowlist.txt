@@ -3,7 +3,7 @@
 2 fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm
 3 fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx
 4 fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx
-5 fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx
+5 fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cm
 6 fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx
 7 fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx
 8 fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx

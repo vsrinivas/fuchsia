@@ -26,6 +26,7 @@
             from: "#build-info",
             to: [
                 "#appmgr",
+                "#cobalt",
                 "#remote-control",
             ],
         },

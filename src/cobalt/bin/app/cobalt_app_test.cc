@@ -11,6 +11,7 @@
 
 #include <gmock/gmock.h>
 
+#include "fuchsia/process/lifecycle/cpp/fidl.h"
 #include "sdk/lib/sys/cpp/testing/service_directory_provider.h"
 #include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/diagnostics_impl.h"
@@ -165,11 +166,12 @@ class CobaltAppTest : public gtest::TestLoopFixture {
         context_provider_(),
         clock_(new FakeFuchsiaSystemClock(dispatcher())),
         fake_service_(new testing::FakeCobaltService()),
-        cobalt_app_(context_provider_.TakeContext(), dispatcher(),
-                    inspector_.GetRoot().CreateChild("cobalt_app"), inspect::Node(),
-                    inspect::ValueList(),
-                    std::unique_ptr<testing::FakeCobaltService>(fake_service_),
-                    std::unique_ptr<FakeFuchsiaSystemClock>(clock_), true, false) {}
+        cobalt_app_(
+            context_provider_.TakeContext(), dispatcher(), lifecycle_.NewRequest(dispatcher()),
+            []() { /* Stub shutdown callback */ }, inspector_.GetRoot().CreateChild("cobalt_app"),
+            inspect::Node(), inspect::ValueList(),
+            std::unique_ptr<testing::FakeCobaltService>(fake_service_),
+            std::unique_ptr<FakeFuchsiaSystemClock>(clock_), true, false) {}
 
  protected:
   void SetUp() override {
@@ -210,6 +212,7 @@ class CobaltAppTest : public gtest::TestLoopFixture {
 
   fuchsia::cobalt::Controller* GetCobaltController() { return cobalt_app_.controller_impl_.get(); }
 
+  fuchsia::process::lifecycle::LifecyclePtr lifecycle_;
   sys::testing::ComponentContextProvider context_provider_;
   FakeFuchsiaSystemClock* clock_;
   testing::FakeCobaltService* fake_service_;
@@ -486,22 +489,16 @@ TEST_F(CobaltAppTest, ShutDown) {
   EXPECT_TRUE(metric_logger.is_bound());
   EXPECT_TRUE(logger.is_bound());
 
-  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
-  context_provider_.ConnectToPublicService(process_lifecycle.NewRequest(),
-                                           "fuchsia.process.lifecycle.Lifecycle");
-  process_lifecycle->Stop();
+  lifecycle_->Stop();
   RunLoopUntilIdle();
   EXPECT_EQ(fake_service_->is_shut_down(), true);
   EXPECT_FALSE(metric_logger.is_bound());
   EXPECT_FALSE(logger.is_bound());
-  EXPECT_FALSE(process_lifecycle.is_bound());
+  EXPECT_FALSE(lifecycle_.is_bound());
 }
 
 TEST_F(CobaltAppTest, NoNewLoggersAfterShutDown) {
-  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
-  context_provider_.ConnectToPublicService(process_lifecycle.NewRequest(),
-                                           "fuchsia.process.lifecycle.Lifecycle");
-  process_lifecycle->Stop();
+  lifecycle_->Stop();
   RunLoopUntilIdle();
 
   fuchsia::metrics::MetricEventLoggerPtr metric_logger = nullptr;
