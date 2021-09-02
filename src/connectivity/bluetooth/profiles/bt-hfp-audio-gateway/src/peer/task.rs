@@ -610,6 +610,7 @@ fn stream_item_map_or_log<T, E: fmt::Debug>(
 mod tests {
     use {
         super::*,
+        async_test_helpers::run_while,
         async_utils::PollExt,
         at_commands::{self as at, SerDe},
         bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
@@ -647,7 +648,6 @@ mod tests {
                 SlcState,
             },
         },
-        test::run_while,
     };
 
     fn arb_signal() -> impl Strategy<Value = Option<SignalStrength>> {

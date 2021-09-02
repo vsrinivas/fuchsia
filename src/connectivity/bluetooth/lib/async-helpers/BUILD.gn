@@ -28,6 +28,19 @@ rustc_library("async-helpers") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
+rustc_library("async-test-helpers") {
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
+
+  source_root = "src/test/lib.rs"
+  sources = [ "src/test/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
 fuchsia_unittest_package("async-helpers-tests") {
   deps = [ ":async-helpers_test" ]
 }

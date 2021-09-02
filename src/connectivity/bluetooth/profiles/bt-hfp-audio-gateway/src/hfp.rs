@@ -205,8 +205,8 @@ mod tests {
         crate::{
             peer::{fake::PeerFake, ConnectionBehavior, PeerRequest},
             profile::test_server::{setup_profile_and_test_server, LocalProfileTestServer},
-            test::run_while,
         },
+        async_test_helpers::run_while,
         async_utils::PollExt,
         fidl_fuchsia_bluetooth as bt,
         fidl_fuchsia_bluetooth_hfp::{
