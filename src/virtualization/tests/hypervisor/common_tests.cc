@@ -166,7 +166,7 @@ TEST(Guest, VcpuDeleteFromOtherThread) {
   TestCase test;
 
   // Create and run a VCPU on a different thread.
-  std::thread t([&]() {
+  std::thread t([&test, &child_ready, &child_should_exit]() {
     // Start the guest.
     ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, exiting_guest_start, exiting_guest_end));
     ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_MEM, TRAP_ADDR, PAGE_SIZE, zx::port(), kTrapKey),
