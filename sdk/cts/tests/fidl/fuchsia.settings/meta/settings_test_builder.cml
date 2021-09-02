@@ -1,0 +1,24 @@
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/settings_test_bin",
+    },
+    use: [
+        { protocol: "fuchsia.settings.FactoryReset" },
+    ],
+    offer: [
+        {
+            storage: "data",
+            from: "parent",
+
+            // TODO(fxbug.dev/81446): Remove this clause once this lands.
+            // Name of collection used by Realm::Builder.
+            to: "#fuchsia_component_test_collection",
+        },
+    ],
+}

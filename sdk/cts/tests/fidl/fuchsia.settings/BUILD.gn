@@ -1,0 +1,42 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//sdk/cts/build/cts.gni")
+
+cts_executable("settings_test_bin") {
+  testonly = true
+
+  sources = [ "factory_reset_test_builder.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  non_cts_deps = [
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/sys/cpp/testing:realm_builder",
+  ]
+}
+
+fuchsia_component("settings_test_realm") {
+  manifest = "meta/settings_test_builder.cml"
+  testonly = true
+
+  deps = [
+    ":settings_test_bin",
+    "//sdk/fidl/fuchsia.component",
+  ]
+}
+
+fuchsia_test_package("fuchsia_settings_test") {
+  test_components = [ ":settings_test_realm" ]
+  deps = [
+    "//garnet/bin/setui:setui_service",
+    "//src/sys/stash:pkg",
+  ]
+}
