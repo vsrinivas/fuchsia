@@ -7,6 +7,7 @@ use std::usize;
 
 use crate::errno;
 use crate::error;
+use crate::fs::eventfd::*;
 use crate::fs::fuchsia::*;
 use crate::fs::memfd::*;
 use crate::fs::pipe::*;
@@ -764,6 +765,30 @@ pub fn sys_mount(
     let fs = create_filesystem(ctx.kernel(), source, fs_type, b"")?;
     ctx.task.lookup_path_from_root(target)?.mount(fs)?;
     Ok(SUCCESS)
+}
+
+pub fn sys_eventfd(ctx: &SyscallContext<'_>, value: u32) -> Result<SyscallResult, Errno> {
+    sys_eventfd2(ctx, value, 0)
+}
+
+pub fn sys_eventfd2(
+    ctx: &SyscallContext<'_>,
+    value: u32,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    if flags & !(O_CLOEXEC | O_NONBLOCK) != 0 {
+        // TODO: Implement EFD_SEMAPHORE.
+        not_implemented!("eventfd2: flags 0x{:x}", flags);
+        return error!(EINVAL);
+    }
+    let mut open_flags = OpenFlags::empty();
+    if flags & O_NONBLOCK != 0 {
+        open_flags |= OpenFlags::NONBLOCK;
+    }
+    let file = new_eventfd(ctx.kernel(), value, open_flags);
+    let fd_flags = get_fd_flags(flags);
+    let fd = ctx.task.files.add_with_flags(file, fd_flags)?;
+    Ok(fd.into())
 }
 
 pub fn sys_timerfd_create(

@@ -62,6 +62,8 @@ pub fn dispatch_syscall(
         epoll_create1[1],
         epoll_pwait[5],
         epoll_wait[4],
+        eventfd[1],
+        eventfd2[2],
         execve[3],
         exit[1],
         exit_group[1],
