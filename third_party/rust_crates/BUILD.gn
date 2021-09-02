@@ -4252,10 +4252,10 @@ rust_library("http-body-v0_3_1") {
   ]
 }
 
-rust_library("httparse-v1_3_3") {
+rust_library("httparse-v1_5_1") {
   crate_name = "httparse"
   crate_root = "//third_party/rust_crates/vendor/httparse/src/lib.rs"
-  output_name = "httparse-52a50b12991f65bb"
+  output_name = "httparse-68c956610281c40c"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4268,8 +4268,8 @@ rust_library("httparse-v1_3_3") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=52a50b12991f65bb",
-    "-Cextra-filename=-52a50b12991f65bb",
+    "-Cmetadata=68c956610281c40c",
+    "-Cextra-filename=-68c956610281c40c",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=httparse_simd",
@@ -4314,7 +4314,7 @@ rust_library("hyper-v0_13_6") {
   deps += [ ":h2-v0_2_5" ]
   deps += [ ":http-v0_2_4" ]
   deps += [ ":http-body-v0_3_1" ]
-  deps += [ ":httparse-v1_3_3" ]
+  deps += [ ":httparse-v1_5_1" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":pin-project-v0_4_26" ]
@@ -5317,7 +5317,7 @@ rust_library("multipart-v0_15_4") {
 
   deps = []
   deps += [ ":buf_redux-v0_8_1" ]
-  deps += [ ":httparse-v1_3_3" ]
+  deps += [ ":httparse-v1_5_1" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":mime-v0_2_6" ]
   deps += [ ":mime_guess-v1_8_6" ]
