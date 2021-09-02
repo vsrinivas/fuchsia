@@ -4,14 +4,12 @@
 
 use std::sync::Arc;
 
-use crate::errno;
-use crate::error;
-use crate::fd_impl_directory;
 use crate::fs::*;
-use crate::fs_node_impl_symlink;
+use crate::mm::ProcMapsFile;
 use crate::mode;
 use crate::task::Task;
 use crate::types::*;
+use crate::{errno, error, fd_impl_directory, fs_node_impl_symlink};
 
 use maplit::hashmap;
 use std::collections::HashMap;
@@ -28,6 +26,7 @@ impl PidDirectory {
             b"exe".to_vec() => ExeSymlink::new(fs, task.clone()),
             b"fd".to_vec() => FdDirectory::new(fs, task.clone()),
             b"fdinfo".to_vec() => FdInfoDirectory::new(fs, task.clone()),
+            b"maps".to_vec() => ProcMapsFile::new(fs, task.clone()),
         });
 
         PidDirectory { nodes }

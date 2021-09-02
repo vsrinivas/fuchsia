@@ -263,6 +263,13 @@ where
         self.map.iter().map(|(k, value)| (&k.range, value))
     }
 
+    /// Iterate over the ranges in the map, starting at the first range starting after or at the given point.
+    pub fn iter_starting_at(&self, point: &K) -> impl Iterator<Item = (&Range<K>, &V)> {
+        self.map
+            .range((Bound::Included(RangeStart::from_point(point)), Bound::Unbounded))
+            .map(|(k, value)| (&k.range, value))
+    }
+
     /// Associate the keys in the given range with the given value.
     ///
     /// Callers must ensure that the keys in the given range are not already
@@ -316,15 +323,19 @@ mod test {
 
         let mut iter = map.iter();
 
-        let (range, value) = iter.next().expect("missing first");
-        assert_eq!(10..34, *range);
-        assert_eq!(-14, *value);
-
-        let (range, value) = iter.next().expect("missing first");
-        assert_eq!(74..92, *range);
-        assert_eq!(-12, *value);
+        assert_eq!(iter.next().expect("missing elem"), (&(10..34), &-14));
+        assert_eq!(iter.next().expect("missing elem"), (&(74..92), &-12));
 
         assert!(iter.next().is_none());
+
+        let mut iter = map.iter_starting_at(&10);
+        assert_eq!(iter.next().expect("missing elem"), (&(10..34), &-14));
+        let mut iter = map.iter_starting_at(&11);
+        assert_eq!(iter.next().expect("missing elem"), (&(74..92), &-12));
+        let mut iter = map.iter_starting_at(&74);
+        assert_eq!(iter.next().expect("missing elem"), (&(74..92), &-12));
+        let mut iter = map.iter_starting_at(&75);
+        assert_eq!(iter.next(), None);
     }
 
     #[test]

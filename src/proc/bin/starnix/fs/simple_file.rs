@@ -53,16 +53,7 @@ impl FileOps for ByteVecFile {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let buf_len = UserBuffer::get_total_length(data);
-        if offset >= self.0.len() {
-            return Ok(0);
-        }
-        let mut out_len = self.0.len() - offset;
-        if out_len > buf_len {
-            out_len = buf_len;
-        }
-        task.mm.write_all(data, &self.0[offset..offset + out_len])?;
-        Ok(out_len)
+        task.mm.write_all(data, &self.0[offset..])
     }
 
     fn write_at(

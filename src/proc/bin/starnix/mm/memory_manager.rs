@@ -15,12 +15,13 @@ use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::collections::*;
-use crate::errno;
-use crate::error;
+use crate::fs::*;
 use crate::logging::*;
 use crate::mm::FutexTable;
+use crate::task::Task;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
+use crate::{errno, error, fd_impl_seekable, mode};
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
@@ -128,6 +129,9 @@ struct MemoryManagerState {
     /// entire VMAR during exec.
     user_vmar: zx::Vmar,
 
+    /// Cached VmarInfo for user_vmar.
+    user_vmar_info: zx::VmarInfo,
+
     /// State for the brk and sbrk syscalls.
     brk: Option<ProgramBreak>,
 
@@ -173,7 +177,7 @@ impl MemoryManagerState {
         Ok(())
     }
 
-    pub fn protect(
+    fn protect(
         &mut self,
         addr: UserAddress,
         length: usize,
@@ -194,6 +198,10 @@ impl MemoryManagerState {
         let end = (addr + length).round_up(*PAGE_SIZE);
         self.mappings.insert(addr..end, mapping);
         Ok(())
+    }
+
+    fn max_address(&self) -> UserAddress {
+        UserAddress::from_ptr(self.user_vmar_info.base + self.user_vmar_info.len)
     }
 }
 
@@ -239,6 +247,7 @@ impl MemoryManager {
     pub fn new(process: zx::Process, root_vmar: zx::Vmar) -> Result<Self, zx::Status> {
         let info = root_vmar.info()?;
         let user_vmar = create_user_vmar(&root_vmar, &info)?;
+        let user_vmar_info = user_vmar.info()?;
         Ok(MemoryManager {
             process,
             root_vmar,
@@ -246,6 +255,7 @@ impl MemoryManager {
             futex: FutexTable::default(),
             state: RwLock::new(MemoryManagerState {
                 user_vmar,
+                user_vmar_info,
                 brk: None,
                 mappings: RangeMap::new(),
             }),
@@ -398,6 +408,7 @@ impl MemoryManager {
         // SAFETY: This operation is safe because the VMAR is for another process.
         unsafe { state.user_vmar.destroy()? }
         state.user_vmar = create_user_vmar(&self.root_vmar, &info)?;
+        state.user_vmar_info = state.user_vmar.info()?;
         state.brk = None;
         state.mappings = RangeMap::new();
 
@@ -490,6 +501,12 @@ impl MemoryManager {
     }
 
     pub fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
+        if addr > self.state.read().max_address() {
+            return error!(EFAULT);
+        }
+        if bytes.len() == 0 {
+            return Ok(());
+        }
         let actual = self.process.read_memory(addr.ptr(), bytes).map_err(|_| errno!(EFAULT))?;
         if actual != bytes.len() {
             return error!(EFAULT);
@@ -548,10 +565,7 @@ impl MemoryManager {
         Ok(())
     }
 
-    pub fn read_all(&self, data: &[UserBuffer], bytes: &mut [u8]) -> Result<(), Errno> {
-        if bytes.len() == 0 {
-            return Ok(());
-        }
+    pub fn read_all(&self, data: &[UserBuffer], bytes: &mut [u8]) -> Result<usize, Errno> {
         let mut offset = 0;
         for buffer in data {
             if buffer.address.is_null() && buffer.length == 0 {
@@ -561,13 +575,19 @@ impl MemoryManager {
             self.read_memory(buffer.address, &mut bytes[offset..end])?;
             offset = end;
             if offset == bytes.len() {
-                return Ok(());
+                break;
             }
         }
-        error!(EFAULT)
+        Ok(offset)
     }
 
     pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
+        if addr > self.state.read().max_address() {
+            return error!(EFAULT);
+        }
+        if bytes.len() == 0 {
+            return Ok(());
+        }
         let actual = self.process.write_memory(addr.ptr(), bytes).map_err(|_| errno!(EFAULT))?;
         if actual != bytes.len() {
             return error!(EFAULT);
@@ -601,10 +621,7 @@ impl MemoryManager {
         Ok(())
     }
 
-    pub fn write_all(&self, data: &[UserBuffer], bytes: &[u8]) -> Result<(), Errno> {
-        if bytes.len() == 0 {
-            return Ok(());
-        }
+    pub fn write_all(&self, data: &[UserBuffer], bytes: &[u8]) -> Result<usize, Errno> {
         let mut offset = 0;
         for buffer in data {
             if buffer.address.is_null() && buffer.length == 0 {
@@ -614,10 +631,10 @@ impl MemoryManager {
             self.write_memory(buffer.address, &bytes[offset..end])?;
             offset = end;
             if offset == bytes.len() {
-                return Ok(());
+                break;
             }
         }
-        error!(EFAULT)
+        Ok(offset)
     }
 }
 
@@ -635,6 +652,64 @@ impl elf_load::Mapper for MemoryManager {
         state
             .map(vmar_offset, vmo, vmo_offset, length, flags, MappingOptions::empty())
             .map(|addr| addr.ptr())
+    }
+}
+
+pub struct ProcMapsFile {
+    task: Arc<Task>,
+    seq: Mutex<SeqFileState<UserAddress>>,
+}
+impl ProcMapsFile {
+    pub fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        fs.create_node_with_ops(
+            SimpleFileNode::new(move || {
+                Ok(ProcMapsFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+            }),
+            mode!(IFREG, 0o444),
+        )
+    }
+}
+impl FileOps for ProcMapsFile {
+    fd_impl_seekable!();
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        task: &Task,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let state = self.task.mm.state.read();
+        let mut seq = self.seq.lock();
+        let mut iter = None;
+        let iter = |cursor: UserAddress, sink: &mut SeqFileBuf| {
+            let iter = iter.get_or_insert_with(|| state.mappings.iter_starting_at(&cursor));
+            if let Some((range, map)) = iter.next() {
+                write!(
+                    sink,
+                    "{:x}-{:x} {}{}{}{} {:08}\n",
+                    range.start.ptr(),
+                    range.end.ptr(),
+                    if map.permissions.contains(zx::VmarFlags::PERM_READ) { 'r' } else { '-' },
+                    if map.permissions.contains(zx::VmarFlags::PERM_WRITE) { 'w' } else { '-' },
+                    if map.permissions.contains(zx::VmarFlags::PERM_EXECUTE) { 'x' } else { '-' },
+                    if map.options.contains(MappingOptions::SHARED) { 's' } else { 'p' },
+                    map.vmo_offset,
+                );
+                return Ok(Some(range.end + 1usize));
+            }
+            Ok(None)
+        };
+        seq.read_at(task, iter, offset, data)
+    }
+
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Err(ENOSYS)
     }
 }
 
@@ -809,7 +884,7 @@ mod tests {
         assert_eq!(&data[64..66], &buffer[25..27]);
 
         buffer = vec![0u8; 42];
-        assert_eq!(error!(EFAULT), mm.read_all(&iovec, &mut buffer));
+        assert_eq!(Ok(37), mm.read_all(&iovec, &mut buffer));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -871,7 +946,7 @@ mod tests {
             UserBuffer { address: addr + 64usize, length: 12 },
         ];
 
-        mm.write_all(&iovec, &data[..37]).expect("failed to read all");
+        mm.write_all(&iovec, &data[..37]).expect("failed to write all");
 
         let mut written = vec![0u8; 1024];
         mm.read_memory(addr, &mut written).expect("failed to read back memory");
@@ -881,11 +956,11 @@ mod tests {
 
         written = vec![0u8; 1024];
         mm.write_memory(addr, &mut written).expect("clear memory");
-        mm.write_all(&iovec, &data[..27]).expect("failed to read all");
+        mm.write_all(&iovec, &data[..27]).expect("failed to write all");
         mm.read_memory(addr, &mut written).expect("failed to read back memory");
         assert_eq!(&written[..25], &data[..25]);
         assert_eq!(&written[64..66], &data[25..27]);
 
-        assert_eq!(error!(EFAULT), mm.write_all(&iovec, &&data[..42]));
+        assert_eq!(Ok(37), mm.write_all(&iovec, &data[..42]));
     }
 }

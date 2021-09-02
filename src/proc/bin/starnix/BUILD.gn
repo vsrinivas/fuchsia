@@ -100,6 +100,7 @@ if (target_cpu == "x64") {
       "fs/proc/mod.rs",
       "fs/proc/pid_directory.rs",
       "fs/proc/proc_directory.rs",
+      "fs/seq_file.rs",
       "fs/simple_file.rs",
       "fs/socket/mod.rs",
       "fs/socket/socket.rs",

@@ -115,7 +115,7 @@ impl ops::Sub<UserAddress> for UserAddress {
 
 impl fmt::Display for UserAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "0x{:x}", self.0)
+        write!(f, "{:#x}", self.0)
     }
 }
 
