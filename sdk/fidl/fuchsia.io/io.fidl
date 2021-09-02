@@ -12,71 +12,83 @@ using zx;
 /// Refer to [`Node.Describe`] and [`Node.OnOpen`] for usage.
 type NodeInfo = strict resource union {
     /// No protocol information was supplied by the connection.
-    1: service Service;
-    /// The connection composes [`File`].
-    2: file FileObject;
-    /// The connection composes [`Directory`].
-    3: directory DirectoryObject;
-    4: pipe Pipe;
-    /// The connection composes [`File`]. Its implementation is backed by a VMO.
-    5: vmofile Vmofile;
-    6: device Device;
-    7: tty Tty;
-    8: reserved;
-    /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
-    9: datagram_socket DatagramSocket;
-    /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
-   10: stream_socket StreamSocket;
-    /// The connection composes [`fuchsia.posix.socket.raw/Socket`].
-   11: raw_socket RawSocket;
-};
+    1: service
+    @generated_name("Service") struct {};
 
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type Service = struct {};
+    /// The connection composes [`File`].
+    2: file
+    @generated_name("FileObject") resource struct {
+        /// An optional event which transmits information about an object's readability
+        /// or writability. This event relays information about the underlying object, not
+        /// the capability granted to client: this event may be signalled "readable" on a
+        /// connection that does not have the capability to read.
+        ///
+        /// The "`FILE_SIGNAL_`" values may be observed on this event.
+        event zx.handle:<EVENT, optional>;
+
+        /// A placeholder for future stream support.
+        ///
+        /// Currently, servers are required not to send a handle in this field.
+        stream zx.handle:<STREAM, optional>;
+    };
+
+    /// The connection composes [`Directory`].
+    3: directory
+    @generated_name("DirectoryObject") struct {};
+    4: pipe
+    @generated_name("Pipe") resource struct {
+        socket zx.handle:SOCKET;
+    };
+
+    /// The connection composes [`File`]. Its implementation is backed by a VMO.
+    5: vmofile
+    @generated_name("Vmofile") resource struct {
+        /// The VMO which backs this file.
+        vmo zx.handle:VMO;
+        /// The index into `vmo` which represents the first byte of the file.
+        offset uint64;
+        /// The number of bytes, starting at `offset`, which may be used to represent this file.
+        length uint64;
+    };
+    6: device
+    @generated_name("Device") resource struct {
+        /// An optional event which transmits information about a device's state.
+        ///
+        /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
+        event zx.handle:<EVENTPAIR, optional>;
+    };
+    7: tty
+    @generated_name("Tty") resource struct {
+        event zx.handle:<EVENTPAIR, optional>;
+    };
+
+    8: reserved;
+
+    /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
+    9: datagram_socket
+    @generated_name("DatagramSocket") resource struct {
+        /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
+        event zx.handle:EVENTPAIR;
+    };
+
+    /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
+   10: stream_socket
+    @generated_name("StreamSocket") resource struct {
+        socket zx.handle:SOCKET;
+    };
+
+    /// The connection composes [`fuchsia.posix.socket.raw/Socket`].
+   11: raw_socket
+    @generated_name("RawSocket") resource struct {
+        /// See [`fuchsia.posix.socket.raw.Socket`] for details.
+        event zx.handle:EVENTPAIR;
+    };
+};
 
 /// Indicates the file is ready for reading.
 const FILE_SIGNAL_READABLE uint32 = 0x01000000; // ZX_USER_SIGNAL_0
 /// Indicates the file is ready for writing.
 const FILE_SIGNAL_WRITABLE uint32 = 0x02000000; // ZX_USER_SIGNAL_1
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type FileObject = resource struct {
-    /// An optional event which transmits information about an object's readability
-    /// or writability. This event relays information about the underlying object, not
-    /// the capability granted to client: this event may be signalled "readable" on a
-    /// connection that does not have the capability to read.
-    ///
-    /// The "`FILE_SIGNAL_`" values may be observed on this event.
-    event zx.handle:<EVENT, optional>;
-
-    /// A placeholder for future stream support.
-    ///
-    /// Currently, servers are required not to send a handle in this field.
-    stream zx.handle:<STREAM, optional>;
-};
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type DirectoryObject = struct {};
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type Pipe = resource struct {
-    socket zx.handle:SOCKET;
-};
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type Vmofile = resource struct {
-    /// The VMO which backs this file.
-    vmo zx.handle:VMO;
-    /// The index into `vmo` which represents the first byte of the file.
-    offset uint64;
-    /// The number of bytes, starting at `offset`, which may be used to represent this file.
-    length uint64;
-};
 
 /// Indicates the device is ready for reading.
 const DEVICE_SIGNAL_READABLE uint32 = 0x01000000; // ZX_USER_SIGNAL_0
@@ -88,41 +100,6 @@ const DEVICE_SIGNAL_WRITABLE uint32 = 0x04000000; // ZX_USER_SIGNAL_2
 const DEVICE_SIGNAL_ERROR uint32 = 0x08000000; // ZX_USER_SIGNAL_3
 /// Indicates the device has hung up on the current connection.
 const DEVICE_SIGNAL_HANGUP uint32 = 0x10000000; // ZX_USER_SIGNAL_4
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type Device = resource struct {
-    /// An optional event which transmits information about a device's state.
-    ///
-    /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
-    event zx.handle:<EVENTPAIR, optional>;
-};
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type Tty = resource struct {
-    event zx.handle:<EVENTPAIR, optional>;
-};
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type DatagramSocket = resource struct {
-    /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
-    event zx.handle:EVENTPAIR;
-};
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type StreamSocket = resource struct {
-    socket zx.handle:SOCKET;
-};
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-type RawSocket = resource struct {
-    /// See [`fuchsia.posix.socket.raw.Socket`] for details.
-    event zx.handle:EVENTPAIR;
-};
 
 /// Can read from target object.
 const OPEN_RIGHT_READABLE uint32 = 0x00000001;
