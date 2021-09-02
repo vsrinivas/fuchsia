@@ -15,7 +15,7 @@ use std::sync::Arc;
 /// `sys_socket`.
 pub struct SocketFs {}
 impl FileSystemOps for SocketFs {
-    fn stat(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
         let mut stat = statfs::default();
         stat.f_type = SOCKFS_MAGIC as i64;
         stat.f_bsize = *PAGE_SIZE;

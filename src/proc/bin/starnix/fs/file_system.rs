@@ -199,8 +199,8 @@ impl FileSystem {
     /// the filesystem.
     ///
     /// Returns `ENOSYS` if the `FileSystemOps` don't implement `stat`.
-    pub fn stat(&self) -> Result<statfs, Errno> {
-        self.ops.stat(self)
+    pub fn statfs(&self) -> Result<statfs, Errno> {
+        self.ops.statfs(self)
     }
 
     pub fn did_create_dir_entry(&self, entry: &DirEntryHandle) {
@@ -248,7 +248,7 @@ pub trait FileSystemOps: Send + Sync {
     /// Return the `statfs` containing information about this filesystem.
     ///
     /// If a filesystem cannot generate a `statfs`, the default behavior is to return `Err(ENOSYS)`.
-    fn stat(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
         // TODO: This should return ENOSYS, but that currently breaks a bunch of tests (since not
         // enough `FileSystemOps` implement `stat`).
         Ok(statfs::default())
