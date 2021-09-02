@@ -67,6 +67,10 @@ class Evictor {
   // Called from the scanner to enable eviction if required. Creates an eviction thread to process
   // asynchronous eviction requests (both one-shot and continuous).
   void EnableEviction();
+  // Called from the scanner to disable all eviction if needed, will shut down any in existing
+  // eviction thread. It is a responsibility of the scanner to not have multiple concurrent calls
+  // to this and EnableEviction.
+  void DisableEviction();
 
   // Set |one_shot_eviction_target_| to the specified |target|. The previous values are overridden.
   void SetOneShotEvictionTarget(EvictionTarget target);

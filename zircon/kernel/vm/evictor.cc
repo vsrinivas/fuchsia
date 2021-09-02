@@ -28,15 +28,7 @@ Evictor::Evictor(PmmNode* node) : pmm_node_(node), page_queues_(node->GetPageQue
 
 Evictor::Evictor(PmmNode* node, PageQueues* queues) : pmm_node_(node), page_queues_(queues) {}
 
-Evictor::~Evictor() {
-  if (eviction_thread_) {
-    eviction_thread_exiting_ = true;
-    eviction_signal_.Signal();
-    int res = 0;
-    eviction_thread_->Join(&res, ZX_TIME_INFINITE);
-    DEBUG_ASSERT(res == 0);
-  }
-}
+Evictor::~Evictor() { DisableEviction(); }
 
 bool Evictor::IsEvictionEnabled() const {
   Guard<SpinLock, IrqSave> guard{&lock_};
@@ -46,6 +38,8 @@ bool Evictor::IsEvictionEnabled() const {
 void Evictor::EnableEviction() {
   {
     Guard<SpinLock, IrqSave> guard{&lock_};
+    // It's an error to call this whilst the eviction thread is still exiting.
+    ASSERT(!eviction_thread_exiting_);
     eviction_enabled_ = true;
 
     if (eviction_thread_) {
@@ -61,6 +55,36 @@ void Evictor::EnableEviction() {
   eviction_thread_ = Thread::Create("eviction-thread", eviction_thread, this, LOW_PRIORITY);
   DEBUG_ASSERT(eviction_thread_);
   eviction_thread_->Resume();
+}
+
+void Evictor::DisableEviction() {
+  Thread* eviction_thread = nullptr;
+  {
+    // Grab the lock and update any state. We cannot actually wait for the eviction thread to
+    // complete whilst the lock is held, however.
+    Guard<SpinLock, IrqSave> guard{&lock_};
+    if (!eviction_thread_) {
+      return;
+    }
+    // It's an error to call this in parallel with another DisableEviction call.
+    ASSERT(!eviction_thread_exiting_);
+    eviction_thread = eviction_thread_;
+    eviction_thread_exiting_ = true;
+    eviction_signal_.Signal();
+  }
+  // Now with the lock dropped wait for the thread to complete. Use a locally cached copy of the
+  // pointer so that even if the scanner performs a concurrent EnableEviction call we should not
+  // crash or have races, although the eviction thread may fail to join.
+  int res = 0;
+  eviction_thread->Join(&res, ZX_TIME_INFINITE);
+  DEBUG_ASSERT(res == 0);
+  {
+    Guard<SpinLock, IrqSave> guard{&lock_};
+    // Now update the state to indicate that eviction is disabled.
+    eviction_thread_ = nullptr;
+    eviction_enabled_ = false;
+    eviction_thread_exiting_ = false;
+  }
 }
 
 void Evictor::SetDiscardableEvictionsPercent(uint32_t discardable_percent) {

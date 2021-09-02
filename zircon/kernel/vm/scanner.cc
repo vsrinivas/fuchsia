@@ -102,10 +102,16 @@ int scanner_request_thread(void *) {
     // that holds the mutex until complete.
     if (op & kScannerOpEnable) {
       op &= ~kScannerOpEnable;
+      // Re-enable eviction if it was originally enabled.
+      if (gBootOptions->page_scanner_enable_eviction) {
+        pmm_evictor()->EnableEviction();
+      }
       disabled = false;
     }
     if (op & kScannerOpDisable) {
       op &= ~kScannerOpDisable;
+      // Make sure no eviction is happening either.
+      pmm_evictor()->DisableEviction();
       disabled = true;
       scanner_disabled_event.Signal();
     }
