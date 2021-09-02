@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/buildinfo/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
@@ -20,7 +19,6 @@
 #include <lib/zx/clock.h>
 #include <stdlib.h>
 #include <zircon/boot/image.h>
-#include <zircon/processargs.h>
 #include <zircon/types.h>
 #include <zircon/utc.h>
 
@@ -31,7 +29,6 @@
 #include <thread>
 #include <utility>
 
-#include "lib/fidl/cpp/interface_request.h"
 #include "src/cobalt/bin/app/cobalt_app.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/command_line.h"
@@ -113,6 +110,21 @@ std::string ReadBoardName(const std::shared_ptr<sys::ServiceDirectory>& services
   }
 
   return board_name.value();
+}
+
+std::string ReadBuildInfo(std::string value) {
+  std::ifstream file("/config/build-info/" + value);
+  if (file.is_open()) {
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    auto val = buffer.str();
+    if (val == "") {
+      return "<" + value + " not specified>";
+    }
+    return val;
+  } else {
+    return "<" + value + " read failed>";
+  }
 }
 
 // Replaces the UTC clock installed in the process' namespace with a fake one
@@ -263,34 +275,6 @@ int main(int argc, const char** argv) {
     FX_LOGS(INFO) << "Unable to lower current thread provider. ProfileProvider is down.";
   }
 
-  std::string product = "<product read failed>";
-  std::string version = "<version read failed>";
-  {
-    fuchsia::buildinfo::ProviderSyncPtr buildinfo_provider;
-    context->svc()->Connect<fuchsia::buildinfo::Provider>(buildinfo_provider.NewRequest());
-    fuchsia::buildinfo::BuildInfo build_info;
-    status = buildinfo_provider->GetBuildInfo(&build_info);
-    if (status == ZX_OK) {
-      if (build_info.product_config().empty()) {
-        product = "<product not specified>";
-      } else {
-        product = build_info.product_config();
-      }
-
-      if (build_info.version().empty()) {
-        version = "<version not specified>";
-      } else {
-        version = build_info.version();
-      }
-    }
-  }
-
-  // Fetch the provided fuchsia::process::lifecycle::Lifecycle service handle.
-  zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
-  FX_CHECK(lifecycle_request.is_valid()) << "Received invalid lifecycle handle";
-  fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle(
-      std::move(lifecycle_request));
-
   auto boardname = ReadBoardName(context->svc());
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");
   cobalt::UploadScheduleConfig upload_schedule = {
@@ -300,12 +284,11 @@ int main(int argc, const char** argv) {
       .jitter = upload_jitter,
   };
   cobalt::CobaltApp app = cobalt::CobaltApp::CreateCobaltApp(
-      std::move(context), loop.dispatcher(), std::move(lifecycle_handle),
-      [loop = &loop]() { loop->Quit(); }, inspector.root().CreateChild("cobalt_app"),
+      std::move(context), loop.dispatcher(), inspector.root().CreateChild("cobalt_app"),
       upload_schedule, event_aggregator_backfill_days, start_event_aggregator_worker,
-      use_memory_observation_store, max_bytes_per_observation_store, product, boardname, version);
+      use_memory_observation_store, max_bytes_per_observation_store, ReadBuildInfo("product"),
+      boardname, ReadBuildInfo("version"));
   inspector.Health().Ok();
   loop.Run();
-  FX_LOGS(INFO) << "Cobalt will now shut down.";
   return 0;
 }

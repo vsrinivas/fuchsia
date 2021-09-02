@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
-import("//src/sys/core/build/core_shard.gni")
 
 group("tests") {
   testonly = true
@@ -19,13 +18,13 @@ group("tests") {
   ]
 }
 
-fuchsia_test_component("cobalt_app_unittests") {
-  manifest = "meta/cobalt_app_unittests.cml"
+fuchsia_unittest_component("cobalt_app_unittests") {
+  manifest = "meta/cobalt_app_unittests.cmx"
   deps = [ "app:cobalt_app_unittests" ]
 }
 
-fuchsia_test_component("cobalt_system_metrics_unittests") {
-  manifest = "meta/cobalt_system_metrics_unittests.cml"
+fuchsia_unittest_component("cobalt_system_metrics_unittests") {
+  manifest = "meta/cobalt_system_metrics_unittests.cmx"
   deps = [ "system-metrics:cobalt_system_metrics_unittests" ]
 }
 
@@ -33,47 +32,10 @@ fuchsia_unittest_component("cobalt_utils_unittests") {
   deps = [ "utils:cobalt_utils_unittests" ]
 }
 
-fuchsia_test_component("cobalt_testapp_no_network") {
-  manifest = "meta/cobalt_testapp_no_network.cml"
+fuchsia_component("cobalt_testapp_no_network") {
+  testonly = true
+  manifest = "meta/cobalt_testapp_no_network.cmx"
   deps = [ "testapp:cobalt_testapp" ]
-}
-
-template("testapp_cobalt_components") {
-  test_name = target_name
-  if (defined(invoker.name)) {
-    test_name = invoker.name
-  } else {
-    not_needed(invoker, "*")
-  }
-
-  fuchsia_test_component("variant_${test_name}_with_event_aggregator") {
-    component_name = "cobalt_with_event_aggregator_worker"
-    manifest =
-        "meta/cobalt_variants/${test_name}_with_event_aggregator_worker.cml"
-    deps = [ "app" ]
-  }
-
-  fuchsia_test_component("variant_${test_name}_no_event_aggregator") {
-    component_name = "cobalt_no_event_aggregator_worker"
-    manifest =
-        "meta/cobalt_variants/${test_name}_no_event_aggregator_worker.cml"
-    deps = [ "app" ]
-  }
-
-  group(target_name) {
-    testonly = true
-    deps = [
-      ":variant_${test_name}_no_event_aggregator",
-      ":variant_${test_name}_with_event_aggregator",
-    ]
-  }
-}
-
-testapp_cobalt_components("variants_networked_components") {
-  name = "networked"
-}
-testapp_cobalt_components("variants_no_network_components") {
-  name = "no_network"
 }
 
 resource("testapp_metrics_registry") {
@@ -114,9 +76,8 @@ fuchsia_test_package("cobalt_tests") {
     ":default_granular_error_stats_specs",
     ":log_stats_component_allowlist",
     ":testapp_metrics_registry",
-    ":variants_no_network_components",
     "app:analyzer_devel_public",
-    "app:cobalt_devel_environment",
+    "app:component",
     "app:global_metrics_registry",
     "app:shuffler_devel_public",
     "app:testapp_metrics_registry",
@@ -128,50 +89,29 @@ fuchsia_test_package("cobalt_tests") {
   }
 }
 
-fuchsia_test_component("cobalt-testapp") {
-  manifest = "meta/cobalt_testapp.cml"
+fuchsia_component("cobalt-testapp") {
+  testonly = true
+  manifest = "meta/cobalt_testapp.cmx"
   deps = [ "testapp:cobalt_testapp" ]
 }
 
 # Tests that should not be run on any bot.
-# These should be run locally to verify that the cobalt_testapp works with
-# networking.
 fuchsia_test_package("cobalt-manual-tests") {
   test_components = [ ":cobalt-testapp" ]
-  deps = [
-    ":variants_networked_components",
-    "app:analyzer_devel_public",
-    "app:analyzer_prod_public",
-    "app:cobalt_environment",
-    "app:shuffler_devel_public",
-    "app:shuffler_prod_public",
-  ]
   test_specs = {
     environments = []
-    log_settings = {
-      max_severity = "ERROR"
-    }
   }
 }
 
-fuchsia_test_component("cobalt_testapp_for_prober_do_not_run_manually") {
-  manifest = "meta/cobalt_testapp_for_prober_do_not_run_manually.cml"
+fuchsia_component("cobalt_testapp_for_prober_do_not_run_manually") {
+  testonly = true
+  manifest = "meta/cobalt_testapp_for_prober_do_not_run_manually.cmx"
   deps = [ "testapp:cobalt_testapp" ]
 }
 
-# Tests that should be run on a schedule for probing cobalt.
-# These should only be run in CQ to avoid polluting the data collected. To
-# verify that this still works, use cobalt-manual-tests instead.
 fuchsia_test_package("cobalt_tests_do_not_run_manually") {
   test_components = [ ":cobalt_testapp_for_prober_do_not_run_manually" ]
-  deps = [
-    ":variants_networked_components",
-    "app:analyzer_devel_public",
-    "app:analyzer_prod_public",
-    "app:cobalt_environment",
-    "app:shuffler_devel_public",
-    "app:shuffler_prod_public",
-  ]
+  deps = [ "app:component" ]
   test_specs = {
     # We don't want to run this version of cobalt_testapp in the Fuchsia
     # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network

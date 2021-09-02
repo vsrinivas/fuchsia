@@ -60,7 +60,6 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
-    "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.metrics",
     "//sdk/fidl/fuchsia.process.lifecycle",
@@ -132,16 +131,9 @@ config_data("userdebug_config") {
   outputs = [ "config.json" ]
 }
 
-# TODO(fxbug.dev/83213): Delete once nothing references this file
 fuchsia_component("component") {
   component_name = "cobalt"
   manifest = "meta/cobalt.cmx"
-  deps = [ ":app" ]
-}
-
-fuchsia_component("component-v2") {
-  component_name = "cobalt"
-  manifest = "meta/cobalt.cml"
   deps = [ ":app" ]
 }
 
@@ -156,12 +148,6 @@ resource("cobalt_environment") {
   } else {
     assert(false, "Unknown cobalt_environment: $cobalt_environment")
   }
-  outputs = [ "data/cobalt_environment" ]
-}
-
-resource("cobalt_devel_environment") {
-  testonly = true
-  sources = [ "configs/devel_environment" ]
   outputs = [ "data/cobalt_environment" ]
 }
 
@@ -198,12 +184,9 @@ fuchsia_package("cobalt") {
     ":analyzer_devel_public",
     ":analyzer_prod_public",
     ":cobalt_environment",
-    ":component-v2",
+    ":component",
     ":shuffler_devel_public",
     ":shuffler_prod_public",
-
-    # TODO(fxbug.dev/83213): Delete once nothing references this file
-    ":component",
   ]
 }
 

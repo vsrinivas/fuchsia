@@ -16,15 +16,12 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/sys/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <sstream>
 #include <string>
-#include <thread>
 
-#include "fuchsia/sys2/cpp/fidl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/sys/cpp/component_context.h"
@@ -38,33 +35,42 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 
-namespace cobalt::testapp {
+namespace cobalt {
+namespace testapp {
 
 using ::cobalt::StatusToString;
 
-constexpr char kCobaltWithEventAggregatorWorker[] = "#meta/cobalt_with_event_aggregator_worker.cm";
-constexpr char kCobaltNoEventAggregatorWorker[] = "#meta/cobalt_no_event_aggregator_worker.cm";
+// This must be less than 2^31. There appears to be a bug in
+// std::condition_variable::wait_for() in which setting the wait time to
+// std::chrono::seconds::max() effectively sets the wait time to zero.
+constexpr uint32_t kInfiniteTime = 999999999;
 
 #define TRY_TEST(test) \
   if (!(test)) {       \
     return false;      \
   }
 
-#define CONNECT_AND_TRY_TEST_TWICE(test, variant)       \
-  {                                                     \
-    sys::testing::ScopedChild child = Connect(variant); \
+#define CONNECT_AND_TRY_TEST(test, backfill_days)     \
+  Connect(kInfiniteTime, 0, backfill_days, false, 0); \
+  if (!(test)) {                                      \
+    return false;                                     \
+  }
+
+#define CONNECT_AND_TRY_TEST_TWICE(test, backfill_days) \
+  Connect(kInfiniteTime, 0, backfill_days, false, 0);   \
+  if (!(test)) {                                        \
+    Connect(kInfiniteTime, 0, backfill_days, false, 0); \
     if (!(test)) {                                      \
-      DropChild(std::move(child));                      \
-      child = Connect(variant);                         \
-      if (!(test)) {                                    \
-        return false;                                   \
-      }                                                 \
+      return false;                                     \
     }                                                   \
-    DropChild(std::move(child));                        \
   }
 
 bool CobaltTestApp::RunTests() {
-  sys::testing::ScopedChild child = Connect(kCobaltWithEventAggregatorWorker);
+  // With the following values for the scheduling parameters we are
+  // essentially configuring the ShippingManager to be in manual mode. It will
+  // never send Observations because of the schedule and send them immediately
+  // in response to RequestSendSoon().
+  Connect(kInfiniteTime, 0, kEventAggregatorBackfillDays, true, 0);
 
   // TODO(zmbush): Create tests for all logger methods.
   TRY_TEST(TestLogEvent(&logger_));
@@ -75,13 +81,15 @@ bool CobaltTestApp::RunTests() {
   TRY_TEST(TestLogIntHistogram(&logger_));
   TRY_TEST(TestLogCustomEvent(&logger_));
   TRY_TEST(TestLogCobaltEvent(&logger_));
-  DropChild(std::move(child));
 
-  return DoLocalAggregationTests(kEventAggregatorBackfillDays, kCobaltNoEventAggregatorWorker);
+  if (!DoLocalAggregationTests(kEventAggregatorBackfillDays)) {
+    return false;
+  }
+
+  return true;
 }
 
-bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days,
-                                            const std::string &variant) {
+bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
   uint32_t project_id =
       (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
   // TODO(fxbug.dev/52750): We try each of these tests twice in case the failure
@@ -89,43 +97,97 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days,
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
                                   project_id),
-      variant);
+      backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogEventCountWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
                                        project_id),
-      variant);
+      backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
                                         project_id),
-      variant);
+      backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogInteger(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
-      variant);
+      backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogOccurrence(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
-      variant);
+      backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(TestLogIntegerHistogram(&logger_, clock_.get(), &cobalt_controller_,
                                                      backfill_days, project_id),
-                             variant);
+                             backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogString(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
-      variant);
+      backfill_days);
 
   return true;
 }
 
-sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
-  fuchsia::sys2::RealmSyncPtr realm_proxy;
-  FX_CHECK(ZX_OK == context_->svc()->Connect(realm_proxy.NewRequest()))
-      << "Failed to connect to fuchsia.sys2.Realm";
+void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_interval_seconds,
+                            size_t event_aggregator_backfill_days,
+                            bool start_event_aggregator_worker, uint32_t initial_interval_seconds) {
+  controller_.Unbind();
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory;
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx";
+  launch_info.directory_request = directory.NewRequest().TakeChannel();
+  launch_info.arguments.emplace();
+  {
+    std::ostringstream stream;
+    stream << "--schedule_interval_seconds=" << schedule_interval_seconds;
+    launch_info.arguments->push_back(stream.str());
+  }
 
-  auto child = sys::testing::ScopedChild::New(
-      std::move(realm_proxy), "fuchsia_component_test_collection",
-      "cobalt_under_test_" + std::to_string(scoped_child_destructors_.size()), variant);
+  if (initial_interval_seconds > 0) {
+    std::ostringstream stream;
+    stream << "--initial_interval_seconds=" << initial_interval_seconds;
+    launch_info.arguments->push_back(stream.str());
+  }
 
-  fuchsia::cobalt::LoggerFactorySyncPtr logger_factory =
-      child.ConnectSync<fuchsia::cobalt::LoggerFactory>();
+  {
+    std::ostringstream stream;
+    stream << "--min_interval_seconds=" << min_interval_seconds;
+    launch_info.arguments->push_back(stream.str());
+  }
+
+  {
+    std::ostringstream stream;
+    stream << "--event_aggregator_backfill_days=" << event_aggregator_backfill_days;
+    launch_info.arguments->push_back(stream.str());
+  }
+
+  {
+    std::ostringstream stream;
+    stream << "--start_event_aggregator_worker="
+           << (start_event_aggregator_worker ? "true" : "false");
+    launch_info.arguments->push_back(stream.str());
+  }
+
+  {
+    std::ostringstream stream;
+    stream << "--verbose=" << syslog::GetVlogVerbosity();
+    launch_info.arguments->push_back(stream.str());
+  }
+
+  if (!use_network_) {
+    std::ostringstream stream;
+    stream << "--test_only_use_fake_clock";
+    launch_info.arguments->push_back(stream.str());
+  }
+
+  fuchsia::sys::LauncherPtr launcher;
+  context_->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+  controller_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Connection error from CobaltTestApp to Cobalt FIDL Service.";
+  });
+
+  sys::ServiceDirectory services(std::move(directory));
+
+  fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
+  services.Connect(logger_factory.NewRequest());
+
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+
   uint32_t project_id =
       (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
   FX_LOGS(INFO) << "Test app is logging for the " << project_id << " project";
@@ -137,20 +199,19 @@ sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
   FX_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
 
-  fuchsia::metrics::MetricEventLoggerFactorySyncPtr metric_event_logger_factory =
-      child.ConnectSync<fuchsia::metrics::MetricEventLoggerFactory>();
+  fuchsia::metrics::MetricEventLoggerFactorySyncPtr metric_event_logger_factory;
+  services.Connect(metric_event_logger_factory.NewRequest());
 
   fuchsia::metrics::Status metrics_status = fuchsia::metrics::Status::INTERNAL_ERROR;
   fuchsia::metrics::ProjectSpec project;
   project.set_customer_id(1);
   project.set_project_id(project_id);
-  zx_status_t fx_status = metric_event_logger_factory->CreateMetricEventLogger(
+  metric_event_logger_factory->CreateMetricEventLogger(
       std::move(project), logger_.metric_event_logger_.NewRequest(), &metrics_status);
-  FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
   FX_CHECK(metrics_status == fuchsia::metrics::Status::OK)
       << "CreateMetricEventLogger() => " << StatusToString(metrics_status);
 
-  child.Connect(system_data_updater_.NewRequest());
+  services.Connect(system_data_updater_.NewRequest());
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   fuchsia::cobalt::SoftwareDistributionInfo info;
   info.set_current_channel("devhost");
@@ -158,14 +219,14 @@ sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
   system_data_updater_->SetSoftwareDistributionInfo(std::move(info), &status);
   FX_CHECK(status == fuchsia::cobalt::Status::OK) << "Unable to set software distribution info";
 
-  cobalt_controller_ = child.ConnectSync<fuchsia::cobalt::Controller>();
+  services.Connect(cobalt_controller_.NewRequest());
 
   // Block until the Cobalt service has been fully initialized. This includes
   // being notified by the timekeeper service that the system clock is accurate.
   FX_LOGS(INFO) << "Blocking until the Cobalt service is fully initialized.";
   cobalt_controller_->ListenForInitialized();
   FX_LOGS(INFO) << "Continuing because the Cobalt service is fully initialzied.";
-  return child;
 }
 
-}  // namespace cobalt::testapp
+}  // namespace testapp
+}  // namespace cobalt

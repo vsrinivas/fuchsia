@@ -104,6 +104,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
 const std::unordered_set<std::string> kNetworkUsingTestsThatShouldBeE2E = {
     "aml-widevine-cdm-integration-tests.cmx",
     "widevine-cdm-integration-tests.cmx",
+    "cobalt_testapp_for_prober_do_not_run_manually.cmx",
     "playready-cdm-integration-tests.cmx",
 };
 

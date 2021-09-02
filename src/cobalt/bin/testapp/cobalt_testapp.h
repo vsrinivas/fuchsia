@@ -6,8 +6,6 @@
 #define SRC_COBALT_BIN_TESTAPP_COBALT_TESTAPP_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/svc/cpp/services.h>
@@ -17,16 +15,15 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <thread>
 
-#include "lib/sys/cpp/testing/scoped_child.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/cobalt/src/public/lib/clock_interfaces.h"
 
-namespace cobalt::testapp {
+namespace cobalt {
+namespace testapp {
 
 constexpr size_t kEventAggregatorBackfillDays = 2;
 
@@ -40,7 +37,6 @@ class CobaltTestApp {
         logger_(use_network, &cobalt_controller_),
         use_network_(use_network),
         test_for_prober_(test_for_prober) {
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     clock_ = std::make_unique<SystemClock>();
     if (test_for_prober) {
       FX_LOGS(INFO) << "Running the Cobalt test app in prober mode";
@@ -51,14 +47,16 @@ class CobaltTestApp {
   bool RunTests();
 
  private:
-  // Starts and connects to the cobalt fidl service using the provided variant file.
-  sys::testing::ScopedChild Connect(const std::string &variant);
+  // Starts and connects to the cobalt fidl service using the provided
+  // parameters, passing the values of the parameters as command-line flags.
+  void Connect(uint32_t schedule_interval_seconds, uint32_t min_interval_seconds,
+               size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+               uint32_t initial_interval_seconds);
 
   void SetChannel(const std::string &current_channel);
   bool DoDebugMetricTest();
-  bool DoLocalAggregationTests(size_t backfill_days, const std::string &variant);
+  bool DoLocalAggregationTests(const size_t backfill_days);
 
-  std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
@@ -68,26 +66,10 @@ class CobaltTestApp {
   bool test_for_prober_;
   std::unique_ptr<util::SystemClockInterface> clock_;
 
-  // ==================================================================================
-  // TODO(fxbug.dev/83362): Hack to deal with slow destructor.
-  std::vector<std::thread> scoped_child_destructors_;
-  void DropChild(sys::testing::ScopedChild child) {
-    scoped_child_destructors_.emplace_back(std::thread([child = std::move(child)] {}));
-  }
-
- public:
-  ~CobaltTestApp() {
-    for (std::thread &t : scoped_child_destructors_) {
-      t.join();
-    }
-  }
-  // End: Hack to deal with slow destructor.
-  // ==================================================================================
-
- private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
 
-}  // namespace cobalt::testapp
+}  // namespace testapp
+}  // namespace cobalt
 
 #endif  // SRC_COBALT_BIN_TESTAPP_COBALT_TESTAPP_H_

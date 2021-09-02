@@ -8,7 +8,6 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <stdlib.h>
@@ -19,7 +18,6 @@
 #include <string>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/interface_request.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
@@ -45,10 +43,6 @@ namespace cobalt {
 class CobaltApp {
  public:
   // |dispatcher| The async_t to be used for all asynchronous operations.
-  //
-  // |lifecycle_handle| A zx::channel to this process's Lifecycle endpoint. May be invalid.
-  //
-  // |shutdown| Callback to shut down the async::Loop. Called by ProcessLifecycleImpl.
   //
   // |upload_schedule_cfg| Defines when the shipping_manager should upload
   //                       observations.
@@ -83,12 +77,10 @@ class CobaltApp {
   //           Example: 20190220_01_RC00
   static CobaltApp CreateCobaltApp(
       std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-      fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
-      fit::callback<void()> shutdown, inspect::Node inspect_node,
-      UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
-      bool start_event_aggregator_worker, bool use_memory_observation_store,
-      size_t max_bytes_per_observation_store, const std::string& product_name,
-      const std::string& board_name, const std::string& version);
+      inspect::Node inspect_node, UploadScheduleConfig upload_schedule_cfg,
+      size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+      const std::string& product_name, const std::string& board_name, const std::string& version);
 
  private:
   friend class CobaltAppTest;
@@ -105,9 +97,8 @@ class CobaltApp {
       std::unique_ptr<ActivityListenerImpl> listener, std::unique_ptr<DiagnosticsImpl> diagnostics);
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-            fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
-            fit::callback<void()> shutdown, inspect::Node inspect_node,
-            inspect::Node inspect_config_node, inspect::ValueList inspect_values,
+            inspect::Node inspect_node, inspect::Node inspect_config_node,
+            inspect::ValueList inspect_values,
             std::unique_ptr<CobaltServiceInterface> cobalt_service,
             std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
             bool start_event_aggregator_worker, bool watch_for_user_consent);
@@ -140,6 +131,7 @@ class CobaltApp {
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater> system_data_updater_bindings_;
 
   std::unique_ptr<cobalt::ProcessLifecycle> process_lifecycle_impl_;
+  fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> process_lifecycle_bindings_;
 
   std::unique_ptr<UserConsentWatcher> user_consent_watcher_;
 

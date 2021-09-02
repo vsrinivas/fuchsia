@@ -27,7 +27,6 @@ metrics_registry("prober_metrics_registry") {
 }
 
 executable("cobalt_testapp") {
-  testonly = true
   output_name = "cobalt_testapp"
   sources = [
     "cobalt_testapp.cc",
@@ -46,7 +45,6 @@ executable("cobalt_testapp") {
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.metrics",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:realm_builder",
     "//sdk/lib/syslog/cpp",
     "//src/cobalt/bin/utils:base64",
     "//src/cobalt/bin/utils:status_utils",

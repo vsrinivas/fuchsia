@@ -8,8 +8,6 @@
 
 #include <memory>
 
-#include "fuchsia/process/lifecycle/cpp/fidl.h"
-#include "lib/fidl/cpp/interface_request.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/diagnostics_impl.h"
@@ -122,12 +120,10 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
 
 CobaltApp CobaltApp::CreateCobaltApp(
     std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-    fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
-    fit::callback<void()> shutdown, inspect::Node inspect_node,
-    UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
-    bool start_event_aggregator_worker, bool use_memory_observation_store,
-    size_t max_bytes_per_observation_store, const std::string& product_name,
-    const std::string& board_name, const std::string& version) {
+    inspect::Node inspect_node, UploadScheduleConfig upload_schedule_cfg,
+    size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+    bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+    const std::string& product_name, const std::string& board_name, const std::string& version) {
   inspect::ValueList inspect_values;
   inspect::Node inspect_config_node = inspect_node.CreateChild("configuration_data");
   inspect_config_node.CreateString("product_name", product_name, &inspect_values);
@@ -157,19 +153,18 @@ CobaltApp CobaltApp::CreateCobaltApp(
 
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
 
-  return CobaltApp(std::move(context), dispatcher, std::move(lifecycle_handle), std::move(shutdown),
-                   std::move(inspect_node), std::move(inspect_config_node),
-                   std::move(inspect_values), std::move(cobalt_service), std::move(validated_clock),
+  return CobaltApp(std::move(context), dispatcher, std::move(inspect_node),
+                   std::move(inspect_config_node), std::move(inspect_values),
+                   std::move(cobalt_service), std::move(validated_clock),
                    start_event_aggregator_worker, configuration_data.GetWatchForUserConsent());
 }
 
-CobaltApp::CobaltApp(
-    std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-    fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
-    fit::callback<void()> shutdown, inspect::Node inspect_node, inspect::Node inspect_config_node,
-    inspect::ValueList inspect_values, std::unique_ptr<CobaltServiceInterface> cobalt_service,
-    std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
-    bool start_event_aggregator_worker, bool watch_for_user_consent)
+CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
+                     inspect::Node inspect_node, inspect::Node inspect_config_node,
+                     inspect::ValueList inspect_values,
+                     std::unique_ptr<CobaltServiceInterface> cobalt_service,
+                     std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
+                     bool start_event_aggregator_worker, bool watch_for_user_consent)
     : context_(std::move(context)),
       inspect_node_(std::move(inspect_node)),
       inspect_config_node_(std::move(inspect_config_node)),
@@ -195,12 +190,13 @@ CobaltApp::CobaltApp(
   context_->outgoing()->AddPublicService(
       metric_event_logger_factory_bindings_.GetHandler(metric_event_logger_factory_impl_.get()));
 
-  if (lifecycle_handle.is_valid()) {
-    // Bind the ProcessLifecycle service to the provided handle.
-    process_lifecycle_impl_ = std::make_unique<ProcessLifecycle>(
-        cobalt_service_.get(), logger_factory_impl_.get(), metric_event_logger_factory_impl_.get(),
-        std::move(shutdown), std::move(lifecycle_handle), dispatcher);
-  }
+  // Create process.lifecycle protocol implementation and start serving it.
+  process_lifecycle_impl_ = std::make_unique<ProcessLifecycle>(
+      cobalt_service_.get(), logger_factory_impl_.get(), metric_event_logger_factory_impl_.get(),
+      &process_lifecycle_bindings_);
+  context_->outgoing()->AddPublicService(
+      process_lifecycle_bindings_.GetHandler(process_lifecycle_impl_.get()),
+      "fuchsia.process.lifecycle.Lifecycle");
 
   // Create SystemDataUpdater protocol implementation and start serving it.
   system_data_updater_impl_.reset(
