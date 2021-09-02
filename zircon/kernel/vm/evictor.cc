@@ -307,17 +307,17 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
 
   DEBUG_ASSERT(page_queues_);
   while (count < target_pages) {
-    // TODO(rashaeqbal): The sequence of actions in PeekPagerBacked() and EvictPage() implicitly
-    // guarantee forward progress in this loop, so that we're not stuck trying to evict the same
-    // page (i.e. PeekPagerBacked keeps returning the same page). It would be nice to have some
-    // explicit checks here (or in PageQueues) to guarantee forward progress. Or we might want to
-    // use cursors to iterate the queues instead of peeking the tail each time.
+    // TODO(rashaeqbal): The sequence of actions in PeekPagerBacked() and RemovePageForEviction()
+    // implicitly guarantee forward progress in this loop, so that we're not stuck trying to evict
+    // the same page (i.e. PeekPagerBacked keeps returning the same page). It would be nice to have
+    // some explicit checks here (or in PageQueues) to guarantee forward progress. Or we might want
+    // to use cursors to iterate the queues instead of peeking the tail each time.
     if (ktl::optional<PageQueues::VmoBacklink> backlink =
             page_queues_->PeekPagerBacked(lowest_evict_queue)) {
       if (!backlink->cow) {
         continue;
       }
-      if (backlink->cow->EvictPage(backlink->page, backlink->offset, hint_action)) {
+      if (backlink->cow->RemovePageForEviction(backlink->page, backlink->offset, hint_action)) {
         list_add_tail(&freed_list, &backlink->page->queue_node);
         count++;
       }

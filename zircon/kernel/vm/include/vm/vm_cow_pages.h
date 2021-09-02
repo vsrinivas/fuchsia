@@ -200,7 +200,7 @@ class VmCowPages final
   // |hint_action| indicates whether the |always_need| eviction hint should be respected or ignored.
   // If this page is not evicted as a result of the hint, the caller can assume that the page has
   // been moved out from the evictable page queue(s) into the active queue(s).
-  bool EvictPage(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action);
+  bool RemovePageForEviction(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action);
 
   // Attempts to dedup the given page at the specified offset with the zero page. The only
   // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that

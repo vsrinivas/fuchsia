@@ -3108,7 +3108,8 @@ void VmCowPages::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeCha
   RangeChangeUpdateListLocked(&list, op);
 }
 
-bool VmCowPages::EvictPage(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action) {
+bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
+                                       EvictionHintAction hint_action) {
   // Without a page source to bring the page back in we cannot even think about eviction.
   if (!page_source_) {
     return false;
