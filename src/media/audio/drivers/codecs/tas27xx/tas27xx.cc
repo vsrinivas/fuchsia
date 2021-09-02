@@ -105,7 +105,7 @@ void Tas27xx::ReportState(State& state, const char* description) {
 
 int Tas27xx::Thread() {
   while (true) {
-    zx::time hardware_state_check_timeout = zx::deadline_after(zx::sec(3));
+    zx::time hardware_state_check_timeout = zx::deadline_after(zx::sec(20));
     zx_port_packet_t packet;
     zx_status_t status = port_.wait(hardware_state_check_timeout, &packet);
     if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
