@@ -156,12 +156,6 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     return status;
   }
 
-  status = aml_audio_->InitHW(metadata_, std::numeric_limits<uint64_t>::max(), frame_rate_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to init tdm hardware %d", status);
-    return status;
-  }
-
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     auto info = codecs_[i].GetInfo();
     if (info.is_error()) {
@@ -192,6 +186,23 @@ zx_status_t AmlG12TdmStream::InitPDev() {
       zxlogf(ERROR, "could not set DAI format %s", format_info.status_string());
       return format_info.status_value();
     }
+  }
+
+  // Put codecs in stopped state before starting the AMLogic engine.
+  // Codecs are started after format is set via ChangeFormat() or the stream is explicitly started.
+  status = StopAllCodecs();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // TODO(fxbug.dev/83200): Define a codec turn-off time API to replace this sleep amount.
+  constexpr uint32_t msecs_turn_off_delay = 10;
+  zx::nanosleep(zx::deadline_after(zx::msec(msecs_turn_off_delay)));
+
+  status = aml_audio_->InitHW(metadata_, std::numeric_limits<uint64_t>::max(), frame_rate_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to init tdm hardware %d", status);
+    return status;
   }
 
   zxlogf(INFO, "audio: %s initialized", metadata_.is_input ? "input" : "output");
@@ -428,6 +439,11 @@ void AmlG12TdmStream::ShutdownHook() {
     // safe the codec so it won't throw clock errors when tdm bus shuts down
     codecs_[i].Stop();
   }
+
+  // TODO(fxbug.dev/83200): Define a codec turn-off time API to replace this sleep amount.
+  constexpr uint32_t msecs_turn_off_delay = 10;
+  zx::nanosleep(zx::deadline_after(zx::msec(msecs_turn_off_delay)));
+
   if (enable_gpio_.is_valid()) {
     enable_gpio_.Write(0);
   }
