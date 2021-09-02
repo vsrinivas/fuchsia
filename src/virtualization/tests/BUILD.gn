@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/testing/environments.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
-import("//third_party/Vulkan-Loader/arg.gni")
 
 # Packages required to run the guest integration tests.
 guest_packages = [
@@ -483,16 +482,8 @@ romfs_image("extras") {
     "${linux_exe_path}/virtmagma_unit_tests_linux",
     "${linux_exe_path}/virtmagma_vulkan_unit_tests",
     "${linux_exe_path}/virtmagma_abi_conformance_tests",
+    "${linux_lib_path}/libvulkan.so.1",  # Vulkan Loader
   ]
-  if (output_libvulkan_so_1) {
-    inputs += [
-      "${linux_lib_path}/libvulkan.so.1",  # Vulkan Loader
-    ]
-  } else {
-    inputs += [
-      "${linux_lib_path}/libvulkan.so",  # Vulkan Loader
-    ]
-  }
 
   if (current_cpu == "x64") {
     deps += [ "//third_party/mesa/src/intel/vulkan:vulkan_intel(${linux_lib_toolchain})" ]

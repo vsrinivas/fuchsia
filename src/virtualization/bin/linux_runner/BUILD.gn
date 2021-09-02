@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//src/graphics/lib/gbm/gbm.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
-import("//third_party/Vulkan-Loader/arg.gni")
 
 declare_args() {
   # Default values for the guest network configuration.
@@ -125,16 +124,10 @@ romfs_image("extras") {
     "//src/lib/vulkan:vulkan_headers_and_loader(${linux_lib_toolchain})",
   ]
 
-  inputs = [ "${icd_manifest}" ]
-  if (output_libvulkan_so_1) {
-    inputs += [
-      "${linux_lib_path}/libvulkan.so.1",  # Vulkan Loader
-    ]
-  } else {
-    inputs += [
-      "${linux_lib_path}/libvulkan.so",  # Vulkan Loader
-    ]
-  }
+  inputs = [
+    "${icd_manifest}",
+    "${linux_lib_path}/libvulkan.so.1",  # Vulkan Loader
+  ]
 
   if (linux_runner_extras_tests) {
     testonly = true
