@@ -8,8 +8,6 @@
 #include "src/connectivity/weave/adaptation/ble_manager_impl.h"
 // clang-format on
 
-#include <fuchsia/bluetooth/gatt/cpp/fidl_test_base.h>
-#include <fuchsia/bluetooth/le/cpp/fidl_test_base.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
@@ -17,6 +15,8 @@
 #include <gtest/gtest.h>
 
 #include "connectivity_manager_delegate_impl.h"
+#include "fake_ble_peripheral.h"
+#include "fake_gatt_server.h"
 #include "test_configuration_manager.h"
 #include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
@@ -26,104 +26,11 @@ namespace {
 using nl::Weave::DeviceLayer::ConnectivityManager;
 using nl::Weave::DeviceLayer::Internal::BLEManager;
 using nl::Weave::DeviceLayer::Internal::BLEManagerImpl;
+using weave::adaptation::testing::FakeBLEPeripheral;
+using weave::adaptation::testing::FakeGATTService;
 using weave::adaptation::testing::TestConfigurationManager;
 using weave::adaptation::testing::TestThreadStackManager;
 }  // namespace
-
-class FakeGATTLocalService : public fuchsia::bluetooth::gatt::testing::LocalService_TestBase {
- public:
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void RemoveService() override {
-    binding_.Unbind();
-    gatt_subscribe_confirmed_ = false;
-  }
-
-  void NotifyValue(uint64_t characteristic_id, std::string peer_id, std::vector<uint8_t> value,
-                   bool confirm) override {
-    gatt_subscribe_confirmed_ = true;
-  }
-
-  fidl::Binding<fuchsia::bluetooth::gatt::LocalService> binding_{this};
-  bool gatt_subscribe_confirmed_{false};
-};
-
-class FakeGATTService : public fuchsia::bluetooth::gatt::testing::Server_TestBase {
- public:
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void PublishService(
-      fuchsia::bluetooth::gatt::ServiceInfo info,
-      fidl::InterfaceHandle<fuchsia::bluetooth::gatt::LocalServiceDelegate> delegate,
-      fidl::InterfaceRequest<fuchsia::bluetooth::gatt::LocalService> service,
-      PublishServiceCallback callback) override {
-    ::fuchsia::bluetooth::Status resp;
-    local_service_.binding_.Bind(std::move(service), gatt_server_dispatcher_);
-    local_service_delegate_ = delegate.BindSync();
-
-    callback(std::move(resp));
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::bluetooth::gatt::Server> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    gatt_server_dispatcher_ = dispatcher;
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> request) {
-      FX_LOGS(INFO) << "Binding to fake fuchsia::bluetooth::gatt::Server ";
-      binding_.Bind(std::move(request), dispatcher);
-    };
-  }
-
-  fuchsia::bluetooth::gatt::ErrorCode WriteRequest() {
-    // BTP connect request
-    std::vector<uint8_t> value{0x6E, 0x6C, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5};
-    fuchsia::bluetooth::gatt::ErrorCode out_status;
-    local_service_delegate_->OnWriteValue(0, 0, value, &out_status);
-    return out_status;
-  }
-
-  void OnCharacteristicConfiguration() {
-    local_service_delegate_->OnCharacteristicConfiguration(1, "123456", false, true);
-  }
-
-  bool WeaveConnectionConfirmed() const { return local_service_.gatt_subscribe_confirmed_; }
-
- private:
-  fidl::Binding<fuchsia::bluetooth::gatt::Server> binding_{this};
-  async_dispatcher_t* gatt_server_dispatcher_;
-  FakeGATTLocalService local_service_;
-  fidl::InterfaceHandle<class fuchsia::bluetooth::gatt::LocalServiceDelegate> delegate_;
-  fuchsia::bluetooth::gatt::LocalServiceDelegateSyncPtr local_service_delegate_;
-};
-
-class FakeBLEPeripheral : public fuchsia::bluetooth::le::testing::Peripheral_TestBase {
- public:
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void StartAdvertising(fuchsia::bluetooth::le::AdvertisingParameters parameters,
-                        fidl::InterfaceRequest<fuchsia::bluetooth::le::AdvertisingHandle> handle,
-                        StartAdvertisingCallback callback) override {
-    fuchsia::bluetooth::le::Peripheral_StartAdvertising_Response resp;
-    fuchsia::bluetooth::le::Peripheral_StartAdvertising_Result result;
-    result.set_response(resp);
-    adv_handle_ = std::move(handle);
-    FX_LOGS(INFO) << "Sending fake StartAdvertising response";
-    callback(std::move(result));
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::bluetooth::le::Peripheral> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    le_peripheral_dispatcher_ = dispatcher;
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::bluetooth::le::Peripheral> request) {
-      FX_LOGS(INFO) << "Binding to fake fuchsia::bluetooth::le::Peripheral ";
-      binding_.Bind(std::move(request), dispatcher);
-    };
-  }
-
- private:
-  fidl::Binding<fuchsia::bluetooth::le::Peripheral> binding_{this};
-  async_dispatcher_t* le_peripheral_dispatcher_;
-  fidl::InterfaceRequest<fuchsia::bluetooth::le::AdvertisingHandle> adv_handle_;
-};
 
 class BLEManagerTest : public WeaveTestFixture<> {
  public:
