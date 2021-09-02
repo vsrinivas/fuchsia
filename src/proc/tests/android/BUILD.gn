@@ -95,6 +95,7 @@ gvisor_tests = [
   "clock_getres_test",
   "clock_gettime_test",
   "dev_test",
+  "dup_test",
   "epoll_test",
   "eventfd_test",
   "exit_test",

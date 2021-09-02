@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "/data/tests/dup_test",
+        args: [ "--gunit_filter=-*.DupClearsCloExec:*.Rlimit:*.Dup3:*.Dup3WithOpath" ],
+    },
+}
