@@ -15,7 +15,7 @@ use carnelian::{
         scene::{Scene, SceneBuilder},
     },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
-    Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{point2, size2, vec2};
 use fidl_fuchsia_input_report::ConsumerControlButton;
@@ -320,14 +320,18 @@ impl RecoveryViewAssistant {
             while let Some(event) = receiver.next().await {
                 println!("recovery: received request");
                 match event {
-                    SetupEvent::Root => local_app_context
-                        .queue_message(view_key, make_message(RecoveryMessages::EventReceived)),
+                    SetupEvent::Root => local_app_context.queue_message(
+                        MessageTarget::View(view_key),
+                        make_message(RecoveryMessages::EventReceived),
+                    ),
                     SetupEvent::DevhostOta { cfg } => {
-                        local_app_context
-                            .queue_message(view_key, make_message(RecoveryMessages::StartingOta));
+                        local_app_context.queue_message(
+                            MessageTarget::View(view_key),
+                            make_message(RecoveryMessages::StartingOta),
+                        );
                         let result = ota::run_devhost_ota(cfg).await;
                         local_app_context.queue_message(
-                            view_key,
+                            MessageTarget::View(view_key),
                             make_message(RecoveryMessages::OtaFinished { result }),
                         );
                     }
@@ -352,7 +356,7 @@ impl RecoveryViewAssistant {
             true
         });
         app_context.queue_message(
-            view_key,
+            MessageTarget::View(view_key),
             make_message(RecoveryMessages::PolicyResult(check_id, fdr_enabled)),
         );
     }
@@ -362,7 +366,10 @@ impl RecoveryViewAssistant {
         let proxy = match factory_reset_service {
             Ok(marker) => marker.clone(),
             Err(error) => {
-                app_context.queue_message(view_key, make_message(RecoveryMessages::ResetFailed));
+                app_context.queue_message(
+                    MessageTarget::View(view_key),
+                    make_message(RecoveryMessages::ResetFailed),
+                );
                 panic!("Could not connect to factory_reset_service: {}", error);
             }
         };
@@ -373,7 +380,10 @@ impl RecoveryViewAssistant {
         match res {
             Ok(_) => {}
             Err(error) => {
-                app_context.queue_message(view_key, make_message(RecoveryMessages::ResetFailed));
+                app_context.queue_message(
+                    MessageTarget::View(view_key),
+                    make_message(RecoveryMessages::ResetFailed),
+                );
                 eprintln!("recovery: Error occurred : {}", error);
             }
         };
@@ -438,7 +448,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                         .reset_state_machine
                         .handle_event(ResetEvent::AwaitPolicyResult(*check_id, *fdr_enabled));
                     self.app_context.queue_message(
-                        self.view_key,
+                        MessageTarget::View(self.view_key),
                         make_message(RecoveryMessages::ResetMessage(state)),
                     );
                 }
@@ -459,7 +469,7 @@ impl ViewAssistant for RecoveryViewAssistant {
 
                             let mut counter = FACTORY_RESET_TIMER_IN_SECONDS;
                             local_app_context.queue_message(
-                                view_key,
+                                MessageTarget::View(view_key),
                                 make_message(RecoveryMessages::CountdownTick(counter)),
                             );
 
@@ -470,7 +480,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                                 while let Some(()) = interval_timer.next().await {
                                     counter -= 1;
                                     local_app_context.queue_message(
-                                        view_key,
+                                        MessageTarget::View(view_key),
                                         make_message(RecoveryMessages::CountdownTick(counter)),
                                     );
                                     if counter == 0 {
@@ -489,7 +499,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                                 .handle_event(ResetEvent::CountdownCancelled);
                             assert_eq!(state, fdr::FactoryResetState::Waiting);
                             self.app_context.queue_message(
-                                self.view_key,
+                                MessageTarget::View(self.view_key),
                                 make_message(RecoveryMessages::ResetMessage(state)),
                             );
                         }
@@ -513,7 +523,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                             self.reset_state_machine.handle_event(ResetEvent::CountdownFinished);
                         assert_eq!(state, FactoryResetState::ExecuteReset);
                         self.app_context.queue_message(
-                            self.view_key,
+                            MessageTarget::View(self.view_key),
                             make_message(RecoveryMessages::ResetMessage(state)),
                         );
                     } else {

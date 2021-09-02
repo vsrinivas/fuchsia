@@ -8,23 +8,56 @@ use {
     crate::log::{Log, LogClient},
     crate::session_manager::{SessionManager, SessionManagerClient},
     crate::terminal::Terminal,
-    crate::view::{EventProxy, ViewMessages, VirtualConsoleViewAssistant},
+    crate::view::{ViewMessages, VirtualConsoleViewAssistant},
     anyhow::Error,
-    carnelian::{app::Config, make_message, AppAssistant, AppContext, ViewAssistantPtr, ViewKey},
+    carnelian::{
+        app::Config, make_message, AppAssistant, AppContext, MessageTarget, ViewAssistantPtr,
+        ViewKey,
+    },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_hardware_display::VirtconMode,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    std::fs::File,
+    std::{collections::BTreeMap, fs::File},
+    term_model::event::{Event, EventListener},
 };
 
 const DEBUGLOG_ID: u32 = 0;
 const FIRST_SESSION_ID: u32 = 1;
 
+pub struct EventProxy {
+    app_context: AppContext,
+    id: u32,
+}
+
+impl EventProxy {
+    pub fn new(app_context: &AppContext, id: u32) -> Self {
+        Self { app_context: app_context.clone(), id }
+    }
+}
+
+impl EventListener for EventProxy {
+    fn send_event(&self, event: Event) {
+        match event {
+            Event::MouseCursorDirty => {
+                self.app_context.queue_message(
+                    MessageTarget::Application,
+                    make_message(AppMessages::RequestTerminalUpdateMessage(self.id)),
+                );
+            }
+            _ => (),
+        }
+    }
+}
+
+enum AppMessages {
+    AddTerminalMessage(u32, Terminal<EventProxy>, bool),
+    RequestTerminalUpdateMessage(u32),
+}
+
 #[derive(Clone)]
 struct VirtualConsoleClient {
     app_context: AppContext,
-    view_key: ViewKey,
     color_scheme: ColorScheme,
     scrollback_rows: u32,
 }
@@ -37,21 +70,21 @@ impl VirtualConsoleClient {
         make_active: bool,
         pty_fd: Option<File>,
     ) -> Result<Terminal<EventProxy>, Error> {
-        let event_proxy = EventProxy::new(&self.app_context, self.view_key, id);
+        let event_proxy = EventProxy::new(&self.app_context, id);
         let terminal =
             Terminal::new(event_proxy, title, self.color_scheme, self.scrollback_rows, pty_fd);
         let terminal_clone = terminal.try_clone()?;
         self.app_context.queue_message(
-            self.view_key,
-            make_message(ViewMessages::AddTerminalMessage(id, terminal_clone, make_active)),
+            MessageTarget::Application,
+            make_message(AppMessages::AddTerminalMessage(id, terminal_clone, make_active)),
         );
         Ok(terminal)
     }
 
     fn request_update(&self, id: u32) {
         self.app_context.queue_message(
-            self.view_key,
-            make_message(ViewMessages::RequestTerminalUpdateMessage(id)),
+            MessageTarget::Application,
+            make_message(AppMessages::RequestTerminalUpdateMessage(id)),
         );
     }
 }
@@ -92,7 +125,7 @@ pub struct VirtualConsoleAppAssistant {
     args: VirtualConsoleArgs,
     read_only_debuglog: Option<zx::DebugLog>,
     session_manager: SessionManager,
-    pending_sessions: Vec<fasync::Channel>,
+    terminals: BTreeMap<u32, (Terminal<EventProxy>, bool)>,
 }
 
 impl VirtualConsoleAppAssistant {
@@ -103,7 +136,7 @@ impl VirtualConsoleAppAssistant {
     ) -> Result<VirtualConsoleAppAssistant, Error> {
         let app_context = app_context.clone();
         let session_manager = SessionManager::new(args.keep_log_visible, FIRST_SESSION_ID);
-        let pending_sessions = vec![];
+        let terminals = BTreeMap::new();
 
         Ok(VirtualConsoleAppAssistant {
             app_context,
@@ -111,34 +144,16 @@ impl VirtualConsoleAppAssistant {
             args,
             read_only_debuglog,
             session_manager,
-            pending_sessions,
+            terminals,
         })
     }
 
     fn start_log(&self, read_only_debuglog: zx::DebugLog) -> Result<(), Error> {
         let app_context = self.app_context.clone();
-        let view_key = self.view_key;
-        if self.view_key == 0 {
-            panic!("Trying to start debuglog without a view.");
-        }
         let color_scheme = self.args.color_scheme;
         let scrollback_rows = self.args.scrollback_rows;
-        let client = VirtualConsoleClient { app_context, view_key, color_scheme, scrollback_rows };
+        let client = VirtualConsoleClient { app_context, color_scheme, scrollback_rows };
         Log::start(read_only_debuglog, &client, DEBUGLOG_ID)
-    }
-
-    fn service_pending_sessions(&mut self) {
-        let app_context = self.app_context.clone();
-        let view_key = self.view_key;
-        if self.view_key == 0 {
-            panic!("Trying to service session manager connection without a view.");
-        }
-        let color_scheme = self.args.color_scheme;
-        let scrollback_rows = self.args.scrollback_rows;
-        let client = VirtualConsoleClient { app_context, view_key, color_scheme, scrollback_rows };
-        for channel in self.pending_sessions.drain(..) {
-            self.session_manager.bind(&client, channel);
-        }
     }
 
     #[cfg(test)]
@@ -150,6 +165,9 @@ impl VirtualConsoleAppAssistant {
 
 impl AppAssistant for VirtualConsoleAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
+        if let Some(read_only_debuglog) = self.read_only_debuglog.take() {
+            self.start_log(read_only_debuglog).expect("failed to start debuglog");
+        }
         Ok(())
     }
 
@@ -163,15 +181,27 @@ impl AppAssistant for VirtualConsoleAppAssistant {
             self.args.dpi.iter().cloned().collect(),
             self.args.boot_animation,
         )?;
-        self.view_key = view_key;
 
-        // Start debuglog now that we have a view that it can be associated with.
-        if let Some(read_only_debuglog) = self.read_only_debuglog.take() {
-            self.start_log(read_only_debuglog).expect("failed to start debuglog");
+        // Early out if terminals are already associated with a view.
+        // TODO(reveman): Improve this when we have multi-display support.
+        if self.view_key != 0 {
+            return Ok(view_assistant);
         }
 
-        // Service any pending sessions.
-        self.service_pending_sessions();
+        // Primary display has connected when this is called.
+        self.session_manager.set_has_primary_connected(true);
+
+        // Add all terminals to this view.
+        for (id, (terminal, make_active)) in &self.terminals {
+            let terminal_clone = terminal.try_clone().expect("failed to clone terminal");
+            self.app_context.queue_message(
+                MessageTarget::View(view_key),
+                make_message(ViewMessages::AddTerminalMessage(*id, terminal_clone, *make_active)),
+            );
+        }
+
+        // Terminal messages will be routed to this view from this point forward.
+        self.view_key = view_key;
 
         Ok(view_assistant)
     }
@@ -185,11 +215,11 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         _service_name: &str,
         channel: fasync::Channel,
     ) -> Result<(), Error> {
-        self.pending_sessions.push(channel);
-        // Service this session immediately if we already have a view.
-        if self.view_key != 0 {
-            self.service_pending_sessions();
-        }
+        let app_context = self.app_context.clone();
+        let color_scheme = self.args.color_scheme;
+        let scrollback_rows = self.args.scrollback_rows;
+        let client = VirtualConsoleClient { app_context, color_scheme, scrollback_rows };
+        self.session_manager.bind(&client, channel);
         Ok(())
     }
 
@@ -199,6 +229,38 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         config.display_rotation = self.args.display_rotation;
         config.keymap_name = Some(self.args.keymap.clone());
         config.buffer_count = Some(self.args.buffer_count);
+    }
+
+    fn handle_message(&mut self, message: carnelian::Message) {
+        if let Some(message) = message.downcast_ref::<AppMessages>() {
+            match message {
+                AppMessages::AddTerminalMessage(id, terminal, make_active) => {
+                    let terminal_clone = terminal.try_clone().expect("failed to clone terminal");
+                    self.terminals.insert(*id, (terminal_clone, *make_active));
+                    if self.view_key == 0 {
+                        return;
+                    }
+                    let terminal_clone = terminal.try_clone().expect("failed to clone terminal");
+                    self.app_context.queue_message(
+                        MessageTarget::View(self.view_key),
+                        make_message(ViewMessages::AddTerminalMessage(
+                            *id,
+                            terminal_clone,
+                            *make_active,
+                        )),
+                    );
+                }
+                AppMessages::RequestTerminalUpdateMessage(id) => {
+                    if self.view_key == 0 {
+                        return;
+                    }
+                    self.app_context.queue_message(
+                        MessageTarget::View(self.view_key),
+                        make_message(ViewMessages::RequestTerminalUpdateMessage(*id)),
+                    );
+                }
+            }
+        }
     }
 }
 

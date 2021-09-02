@@ -34,13 +34,19 @@ pub struct SessionManager {
     keep_log_visible: bool,
     first_session_id: u32,
     next_session_id: Rc<RefCell<u32>>,
+    has_primary_connected: Rc<RefCell<bool>>,
 }
 
 impl SessionManager {
     pub fn new(keep_log_visible: bool, first_session_id: u32) -> Self {
         let next_session_id = Rc::new(RefCell::new(first_session_id));
+        let has_primary_connected = Rc::new(RefCell::new(false));
 
-        Self { keep_log_visible, first_session_id, next_session_id }
+        Self { keep_log_visible, first_session_id, next_session_id, has_primary_connected }
+    }
+
+    pub fn set_has_primary_connected(&mut self, has_primary_connected: bool) {
+        *self.has_primary_connected.borrow_mut() = has_primary_connected;
     }
 
     pub fn bind<T: SessionManagerClient>(&mut self, client: &T, channel: fasync::Channel)
@@ -50,6 +56,7 @@ impl SessionManager {
         let keep_log_visible = self.keep_log_visible;
         let first_session_id = self.first_session_id;
         let next_session_id = Rc::clone(&self.next_session_id);
+        let has_primary_connected = Rc::clone(&self.has_primary_connected);
         let client = client.clone();
 
         fasync::Task::local(
@@ -80,7 +87,7 @@ impl SessionManager {
                         }
                         SessionManagerRequest::HasPrimaryConnected { responder } => {
                             responder
-                                .send(Self::has_primary_connected())
+                                .send(*has_primary_connected.borrow())
                                 .context("error sending response")?;
                         }
                     }
@@ -141,11 +148,6 @@ impl SessionManager {
         .detach();
 
         Ok(())
-    }
-
-    fn has_primary_connected() -> bool {
-        // TODO(fxb/73628): Return correct state when exposed by Carnelian.
-        false
     }
 }
 

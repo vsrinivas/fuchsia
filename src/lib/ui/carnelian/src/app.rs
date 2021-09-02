@@ -161,6 +161,11 @@ pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
 
 pub(crate) const FIRST_VIEW_KEY: ViewKey = 100;
 
+pub enum MessageTarget {
+    View(ViewKey),
+    Application,
+}
+
 /// Context struct passed to the application assistant creator
 // function.
 #[derive(Clone)]
@@ -170,7 +175,7 @@ pub struct AppContext {
 
 impl AppContext {
     /// Send a message to a view controller.
-    pub fn queue_message(&self, target: ViewKey, message: Message) {
+    pub fn queue_message(&self, target: MessageTarget, message: Message) {
         self.sender
             .unbounded_send(MessageInternal::TargetedMessage(target, message))
             .expect("AppContext::queue_message - unbounded_send");
@@ -235,6 +240,11 @@ pub trait AppAssistant {
 
     /// Filter Carnelian configuration at runtime, if needed.
     fn filter_config(&mut self, _config: &mut Config) {}
+
+    /// This method is called when `App::queue_message` is called with `Application`
+    /// as target.
+    #[allow(unused_variables)]
+    fn handle_message(&mut self, message: Message) {}
 }
 
 /// Reference to an application assistant.
@@ -269,7 +279,7 @@ pub(crate) enum MessageInternal {
     RenderAllViews,
     ImageFreed(ViewKey, u64, u32),
     HandleVSyncParametersChanged(Time, Duration, u64),
-    TargetedMessage(ViewKey, Message),
+    TargetedMessage(MessageTarget, Message),
     RegisterDevice(DeviceId, hid_input_report::DeviceDescriptor),
     InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
     KeyboardAutoRepeat(DeviceId, ViewKey),
@@ -385,10 +395,15 @@ impl App {
                 self.handle_vsync_parameters_changed(phase, interval);
                 self.handle_vsync_cookie(cookie);
             }
-            MessageInternal::TargetedMessage(view_id, message) => {
-                let view = self.get_view(view_id);
-                view.send_message(message);
-            }
+            MessageInternal::TargetedMessage(target, message) => match target {
+                MessageTarget::View(view_id) => {
+                    let view = self.get_view(view_id);
+                    view.send_message(message);
+                }
+                MessageTarget::Application => {
+                    self.assistant.handle_message(message);
+                }
+            },
             MessageInternal::RegisterDevice(device_id, device_descriptor) => {
                 self.strategy.handle_register_input_device(&device_id, &device_descriptor);
             }

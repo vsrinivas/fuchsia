@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::app::EventProxy,
     crate::args::{MAX_FONT_SIZE, MIN_FONT_SIZE},
     crate::colors::{ColorScheme, DARK_COLOR_SCHEME, LIGHT_COLOR_SCHEME, SPECIAL_COLOR_SCHEME},
     crate::terminal::Terminal,
@@ -10,7 +11,7 @@ use {
     anyhow::{anyhow, Error},
     carnelian::{
         drawing::{load_font, FontFace},
-        input, make_message,
+        input,
         render::{rive::load_rive, Context as RenderContext},
         scene::{
             facets::{FacetId, RiveFacet},
@@ -34,7 +35,6 @@ use {
     },
     term_model::{
         ansi::TermInfo,
-        event::{Event, EventListener},
         grid::Scroll,
         term::{color::Rgb, SizeInfo},
     },
@@ -71,32 +71,6 @@ fn get_scale_factor(dpi: &BTreeSet<u32>, actual_dpi: f32) -> f32 {
         scale_factor += 1.0;
     }
     scale_factor
-}
-
-pub struct EventProxy {
-    app_context: AppContext,
-    view_key: ViewKey,
-    id: u32,
-}
-
-impl EventProxy {
-    pub fn new(app_context: &AppContext, view_key: ViewKey, id: u32) -> Self {
-        Self { app_context: app_context.clone(), view_key, id }
-    }
-}
-
-impl EventListener for EventProxy {
-    fn send_event(&self, event: Event) {
-        match event {
-            Event::MouseCursorDirty => {
-                self.app_context.queue_message(
-                    self.view_key,
-                    make_message(ViewMessages::RequestTerminalUpdateMessage(self.id)),
-                );
-            }
-            _ => (),
-        }
-    }
 }
 
 pub enum ViewMessages {
