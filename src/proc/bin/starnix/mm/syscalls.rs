@@ -6,15 +6,13 @@ use fuchsia_zircon::{self as zx, AsHandleRef};
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use crate::errno;
-use crate::error;
 use crate::fs::*;
 use crate::logging::*;
 use crate::mm::*;
-use crate::not_implemented;
 use crate::syscalls::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
+use crate::{errno, error, not_implemented, strace};
 
 fn mmap_prot_to_vm_opt(prot: u32) -> zx::VmarFlags {
     let mut flags = zx::VmarFlags::empty();
@@ -192,6 +190,41 @@ pub fn sys_msync(
 
 pub fn sys_brk(ctx: &SyscallContext<'_>, addr: UserAddress) -> Result<SyscallResult, Errno> {
     Ok(ctx.task.mm.set_brk(addr)?.into())
+}
+
+pub fn sys_process_vm_readv(
+    ctx: &SyscallContext<'_>,
+    pid: pid_t,
+    local_iov_addr: UserAddress,
+    local_iov_count: i32,
+    remote_iov_addr: UserAddress,
+    remote_iov_count: i32,
+    _flags: usize,
+) -> Result<SyscallResult, Errno> {
+    let task = ctx.task.get_task(pid).ok_or(errno!(ESRCH))?;
+    if !Arc::ptr_eq(&task, ctx.task) {
+        return error!(EPERM);
+    }
+    let local_iov = task.mm.read_iovec(local_iov_addr, local_iov_count)?;
+    let remote_iov = task.mm.read_iovec(remote_iov_addr, remote_iov_count)?;
+    strace!(
+        ctx.task,
+        "process_vm_readv(pid={}, local_iov={:?}, remote_iov={:?})",
+        pid,
+        local_iov,
+        remote_iov
+    );
+    // TODO(tbodt): According to the man page, this syscall was added to Linux specifically to
+    // avoid doing two copies like other IPC mechanisms require. We should avoid this too at some
+    // point.
+    let len = std::cmp::min(
+        UserBuffer::get_total_length(&local_iov),
+        UserBuffer::get_total_length(&remote_iov),
+    );
+    let mut buf = vec![0u8; len];
+    let len = task.mm.read_all(&remote_iov, &mut buf)?;
+    let len = task.mm.write_all(&local_iov, &buf[..len])?;
+    Ok(len.into())
 }
 
 #[cfg(test)]
