@@ -76,7 +76,7 @@ trace manager gathers the data and sends it over a socket to the trace client.
 The trace client cannot directly affect the operation of the trace provider.
 In the Fuchsia tracing system, trace providers write data to a VMO, then the
 trace manager reads data from the VMO, and finally the trace client reads
-tracing data from a socket,
+tracing data from a socket.
 
 Fuchsia uses a single trace client that consists of these utilities:
 
