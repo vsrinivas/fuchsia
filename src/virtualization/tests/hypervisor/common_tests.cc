@@ -19,8 +19,8 @@
 namespace {
 
 DECLARE_TEST_FUNCTION(vcpu_resume)
+DECLARE_TEST_FUNCTION(vcpu_always_exit)
 DECLARE_TEST_FUNCTION(guest_set_trap)
-DECLARE_TEST_FUNCTION(exiting_guest)
 
 TEST(Guest, VcpuResume) {
   TestCase test;
@@ -168,7 +168,7 @@ TEST(Guest, VcpuDeleteFromOtherThread) {
   // Create and run a VCPU on a different thread.
   std::thread t([&test, &child_ready, &child_should_exit]() {
     // Start the guest.
-    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, exiting_guest_start, exiting_guest_end));
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_always_exit_start, vcpu_always_exit_end));
     ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_MEM, TRAP_ADDR, PAGE_SIZE, zx::port(), kTrapKey),
               ZX_OK);
 

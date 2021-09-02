@@ -425,7 +425,7 @@ FUNCTION vcpu_enable_disable_mmu
 END_FUNCTION
 
 // A guest that just exits each time it is resumed.
-FUNCTION exiting_guest
+FUNCTION vcpu_always_exit
     1:
     mov x0, TRAP_ADDR
     str xzr, [x0]

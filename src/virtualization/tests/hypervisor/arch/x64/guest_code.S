@@ -487,7 +487,7 @@ FUNCTION guest_set_trap_with_io
 END_FUNCTION
 
 // A guest that just exits each time it is resumed.
-FUNCTION exiting_guest
+FUNCTION vcpu_always_exit
     1:
     movq $0, (TRAP_ADDR)
     jmp  1b
