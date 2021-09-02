@@ -72,7 +72,7 @@ fuchsia_package_archive("fuchsia-diagnostics-tests_archive") {
 
 cts_artifacts("prebuilts") {
   testonly = true
-  package_archives = [ ":fuchsia-diagnostics-tests_archive" ]
+  targets = [ ":fuchsia-diagnostics-tests_archive" ]
 }
 
 cts_copy_to_sdk("build") {
@@ -93,5 +93,6 @@ sdk_molecule("test_sdks") {
     ":diagnostics-test_sdk",
     ":inspect-publisher-bin_sdk",
     ":inspect-publisher_sdk",
+    ":prebuilts",
   ]
 }

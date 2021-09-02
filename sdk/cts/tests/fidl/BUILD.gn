@@ -3,15 +3,6 @@
 # found in the LICENSE file.
 import("//sdk/cts/build/cts.gni")
 
-group("prebuilts") {
-  testonly = true
-  deps = [
-    "fuchsia.diagnostics:prebuilts",
-    "fuchsia.element:prebuilts",
-    "fuchsia.hwinfo:prebuilts",
-  ]
-}
-
 group("tests") {
   deps = [
     "fuchsia.diagnostics:tests",

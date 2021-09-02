@@ -17,11 +17,11 @@ template("cts_sdk") {
   sdk_target_name = "${target_name}_sdk"
   export_target_name = "${sdk_target_name}_export"
   generate_target_name = "${target_name}_generate"
-  build_api_target_name = "${target_name}_artifacts_v2"
+  build_api_target_name = "${target_name}_artifacts"
   main_target_name = "${target_name}"
 
   sdk_export_dir = "${root_out_dir}/sdk/exported/${sdk_target_name}"
-  final_export_dir = "${root_out_dir}/cts_v2"
+  final_export_dir = "${root_out_dir}/cts"
 
   # Create the CTS SDK
   sdk(sdk_target_name) {

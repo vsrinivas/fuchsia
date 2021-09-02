@@ -39,7 +39,7 @@ fuchsia_package_archive("memfs-test-package_archive") {
 
 cts_artifacts("prebuilts") {
   testonly = true
-  package_archives = [ ":memfs-test-package_archive" ]
+  targets = [ ":memfs-test-package_archive" ]
 }
 
 cts_copy_to_sdk("build") {
@@ -58,5 +58,6 @@ sdk_molecule("test_sdks") {
     ":build_sdk",
     ":memfs-component_sdk",
     ":memfs-cts-test_sdk",
+    ":prebuilts",
   ]
 }

@@ -28,6 +28,7 @@ sdk_molecule("test_sdks") {
   deps = [
     ":build_sdk",
     "hello_world:test_sdks",
+    "rust:test_sdks",
   ]
   testonly = true
 }

@@ -2,81 +2,86 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Collects build outputs and data files for inclusion in the CTS archive.
+import("//build/sdk/sdk_molecule.gni")
+
+import("//sdk/cts/build/cts_copy_to_sdk.gni")
+
+# Collects build outputs for inclusion in the CTS SDK.
 #
-# This is a helper template that declares metadata for the cts_artifacts
-# build api module. See //sdk/cts:cts_artifacts. Package archives and data
-# files are copied to the root of $root_gen_dir/cts. For example:
+# This is a helper template that copies fuchsia test package archives
+# and stores them in the proper place in the resulting CTS SDK.
 #
-#   package_archives = [//my/pkg.far] generates $root_gen_dir/cts/pkg.far
-#   data = [my/data/file.txt] generates $root_gen_dir/cts/file.txt
+# To support execution in Fuchsia infrastructure, all prebuilt .far files
+# must live in the same location. This template saves the resulting artifacts
+# in the root directory of the resulting SDK.
 #
 # Parameters
 #
-#  package_archives (optional)
-#    A list of targets declared earlier in the same file which generate Fuchsia
-#    package archives.
+#  targets (optional)
+#    A list of targets declared earlier in the same file which generate
+#    output files that should be included in the CTS SDK, (for example, Fuchsia
+#    package archives). If data is not provided, targets is required.
 #    Type: list(label)
 #
 #  data (optional)
 #    A list of metadata files to include. Filepaths are relative to the
 #    target directory. This should not be used for source files: the directory
-#    structure is not preserved in the output.
+#    structure is not preserved in the output. If targets is not
+#    provided, data is required.
 #    Type: list(string)
+#
+#  dest (optional)
+#    The location to store the data or targets' output files in the resulting
+#    CTS archive. If not provided, all targets' output files will default to
+#    <cts root>
+#    Type: string
 #
 #  testonly
 template("cts_artifacts") {
-  group(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-    metadata = {
-      # TODO(jcecil): Remove "_old" entry after fxr/559550 lands.
-      cts_artifacts = []
-      cts_artifacts_old = []
-    }
+  assert(defined(invoker.targets) || defined(invoker.data),
+         "At least one parameter of 'targets' or 'data' must be provided.")
 
-    _cts_artifacts_dir = "$root_out_dir/cts"
+  group_deps = []
+  dest = ""
 
-    deps = []
-    if (defined(invoker.deps)) {
-      deps = invoker.deps
-    }
+  if (defined(invoker.targets)) {
+    foreach(t, invoker.targets) {
+      foreach(o, get_target_outputs(t)) {
+        copy_target_name = "${target_name}_" + get_path_info(o, "name")
 
-    # Copies all package archives into _cts_artifacts_dir.
-    if (defined(invoker.package_archives)) {
-      copy_archives_target_name = "copy_${target_name}_archives"
-      copy(copy_archives_target_name) {
-        sources = []
-        foreach(a, invoker.package_archives) {
-          sources += get_target_outputs(a)
+        cts_copy_to_sdk(copy_target_name) {
+          forward_variables_from(invoker,
+                                 [
+                                   "testonly",
+                                   "dest",
+                                 ])
+          sources = [ o ]
+          non_sdk_deps = [ t ]
         }
-        outputs = [ "$_cts_artifacts_dir/{{source_file_part}}" ]
-        deps = invoker.package_archives
-      }
 
-      foreach(o, get_target_outputs(":$copy_archives_target_name")) {
-        # TODO(jcecil): Remove "_old" entry after fxr/559550 lands.
-        metadata.cts_artifacts += [ rebase_path(o, root_build_dir) ]
-        metadata.cts_artifacts_old += [ rebase_path(o, root_build_dir) ]
+        group_deps += [ ":${copy_target_name}_sdk" ]
       }
-
-      deps += [ ":$copy_archives_target_name" ]
     }
+  }
 
-    # Copies all data files into _cts_artifacts_dir.
-    if (defined(invoker.data)) {
-      copy_data_target_name = "copy_${target_name}_data"
-      copy(copy_data_target_name) {
-        sources = invoker.data
-        outputs = [ "$_cts_artifacts_dir/{{source_file_part}}" ]
+  if (defined(invoker.data)) {
+    foreach(d, invoker.data) {
+      copy_data_name = "${target_name}_" + get_path_info(d, "name")
+
+      cts_copy_to_sdk(copy_data_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "dest",
+                               ])
+        sources = [ d ]
       }
-
-      foreach(o, get_target_outputs(":$copy_data_target_name")) {
-        # TODO(jcecil): Remove "_old" entry after fxr/559550 lands.
-        metadata.cts_artifacts += [ rebase_path(o, root_build_dir) ]
-        metadata.cts_artifacts_old += [ rebase_path(o, root_build_dir) ]
-      }
-
-      deps += [ ":$copy_data_target_name" ]
+      group_deps += [ ":${copy_data_name}_sdk" ]
     }
+  }
+
+  sdk_molecule(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = group_deps
   }
 }

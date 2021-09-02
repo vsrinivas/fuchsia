@@ -32,7 +32,7 @@ fuchsia_package_archive("cts-hello-world-rust-tests_archive") {
 
 cts_artifacts("prebuilts") {
   testonly = true
-  package_archives = [ ":cts-hello-world-rust-tests_archive" ]
+  targets = [ ":cts-hello-world-rust-tests_archive" ]
 }
 
 # No additional test dependencies should go into this group. All test
@@ -42,4 +42,9 @@ cts_artifacts("prebuilts") {
 group("tests") {
   testonly = true
   deps = [ ":cts-hello-world-rust-tests" ]
+}
+
+sdk_molecule("test_sdks") {
+  testonly = true
+  deps = [ ":prebuilts" ]
 }

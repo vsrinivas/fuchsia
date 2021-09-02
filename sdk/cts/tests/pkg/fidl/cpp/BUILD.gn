@@ -169,7 +169,7 @@ fuchsia_package_archive("fidl_hlcpp_conformance_test_archive") {
 
 cts_artifacts("prebuilts") {
   testonly = true
-  package_archives = [
+  targets = [
     ":fidl_hlcpp_unit_test_archive",
     ":fidl_hlcpp_conformance_test_archive",
   ]
@@ -262,6 +262,7 @@ sdk_molecule("test_sdks") {
     ":fidl_hlcpp_unit_tests_sdk",
     ":handle_util_sdk",
     ":host_test_sources_sdk",
+    ":prebuilts",
     ":test_sources_sdk",
     ":test_util_sdk",
   ]

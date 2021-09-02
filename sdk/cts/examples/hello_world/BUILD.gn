@@ -42,7 +42,7 @@ fuchsia_package_archive("my-cts-test-package_archive") {
 
 cts_artifacts("prebuilts") {
   testonly = true
-  package_archives = [ ":my-cts-test-package_archive" ]
+  targets = [ ":my-cts-test-package_archive" ]
 }
 
 group("tests") {
@@ -62,5 +62,6 @@ sdk_molecule("test_sdks") {
     ":my-cts-component_sdk",
     ":my-cts-source-set_sdk",
     ":my-cts-test_sdk",
+    ":prebuilts",
   ]
 }

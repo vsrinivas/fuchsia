@@ -3,18 +3,6 @@
 # found in the LICENSE file.
 import("//sdk/cts/build/cts.gni")
 
-group("prebuilts") {
-  testonly = true
-  deps = [
-    "fidl:prebuilts",
-    "pkg:prebuilts",
-    "//sdk/cts/examples:prebuilts",
-
-    # TODO(kjharland): Include fidl cpp tests.
-    # TODO(kjharland): Include tools tests.
-  ]
-}
-
 group("tests_no_e2e") {
   testonly = true
   assert_no_deps = e2e_test_libs

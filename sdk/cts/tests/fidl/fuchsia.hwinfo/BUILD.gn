@@ -46,7 +46,7 @@ fuchsia_package_archive("fuchsia-hwinfo-tests_archive") {
 
 cts_artifacts("prebuilts") {
   testonly = true
-  package_archives = [ ":fuchsia-hwinfo-tests_archive" ]
+  targets = [ ":fuchsia-hwinfo-tests_archive" ]
 }
 
 cts_copy_to_sdk("build") {
@@ -65,5 +65,6 @@ sdk_molecule("test_sdks") {
     ":build_sdk",
     ":hwinfo-test-bin_sdk",
     ":hwinfo-test_sdk",
+    ":prebuilts",
   ]
 }

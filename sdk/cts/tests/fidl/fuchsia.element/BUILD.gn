@@ -53,7 +53,7 @@ fuchsia_package_archive("fuchsia-element-tests_archive") {
 
 cts_artifacts("prebuilts") {
   testonly = true
-  package_archives = [ ":fuchsia-element-tests_archive" ]
+  targets = [ ":fuchsia-element-tests_archive" ]
 }
 
 cts_executable("reference-element-bin") {
@@ -136,7 +136,7 @@ sdk_molecule("test_sdks") {
     ":build_sdk",
     ":element-manager-test-bin_sdk",
     ":element-manager-test_sdk",
-    ":fuchsia-element-test_sdk",
+    ":prebuilts",
     ":reference-element-bin_sdk",
     ":reference-element_sdk",
     ":reference-graphical-presenter-bin_sdk",

@@ -5,25 +5,21 @@
 import("//build/config/build_api_module.gni")
 import("//sdk/cts/build/cts.gni")
 
-build_api_module("cts_artifacts") {
-  # The list of filepaths to include in the CTS archive.
-  #
-  # Paths should be given without a '//' prefix.
-  #
-  # Type: list(string)
+# TODO(fxb/82775): Remove this target once infra points to //sdk:cts.
+group("cts_artifacts") {
   testonly = true
-  data_keys = [ "cts_artifacts_old" ]
-  deps = [
-    ":cts_data_files",
-    "//sdk/cts/tests:prebuilts",
-  ]
+
+  # build_api_module invocation moved to //sdk/cts/build/cts_sdk.gni
+  # and is hooked into the build from the //sdk:cts target.
+
+  deps = [ "//sdk:cts" ]
 }
 
 action("update_test_manifest") {
   # When trying to build CTS at ToT and a previous version of CTS, the build fails because both CTS
   # versions generate packages with identical names. This target appends the CTS version to the
   # previous CTS version's package names in the test manifest. The previous version's package names
-  # are updated in the in the build via //sdk/cts/build/script/transform_build_gn.py.
+  # are updated in the build via //sdk/cts/build/script/transform_build_gn.py.
   script = "//sdk/cts/build/scripts/update_test_manifest.py"
   inputs = [ "data/test_manifest.json" ]
   outputs = [ "$target_gen_dir/test_manifest.json" ]
@@ -43,15 +39,9 @@ action("update_test_manifest") {
   }
 }
 
-cts_artifacts("cts_data_files") {
-  data = [
-           # TODO(fxb/80700): Combine the ABI and API targets, and add these LICENSE files in //sdk:cts.
-           "../../LICENSE",
-           "../../AUTHORS",
-           "../../PATENTS",
-         ] + get_target_outputs(":update_test_manifest")
-
-  deps = [ ":update_test_manifest" ]
+cts_artifacts("test_manifest") {
+  testonly = true
+  targets = [ ":update_test_manifest" ]
 }
 
 group("cts_no_e2e") {
@@ -74,7 +64,6 @@ group("cts_no_e2e") {
 group("cts") {
   testonly = true
   deps = [
-    ":cts_artifacts",
     ":cts_no_e2e",
     "tests",
   ]
@@ -98,6 +87,7 @@ sdk_molecule("cts_tests") {
   deps = [
     ":build_sdk",
     ":cts_deps",
+    ":test_manifest",
     "tests:test_sdks",
     "//sdk/testing/fidl:test_sdks",
   ]
