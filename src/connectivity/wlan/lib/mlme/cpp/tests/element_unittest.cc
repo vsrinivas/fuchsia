@@ -120,9 +120,15 @@ TEST(HtCapabilities, DdkConversion) {
   ieee80211_ht_capabilities_t ddk{
       .ht_capability_info = 0x016e,
       .ampdu_params = 0x17,
-      .supported_mcs_set.fields.rx_mcs_head = 0x00000001000000ff,
-      .supported_mcs_set.fields.rx_mcs_tail = 0x01000000,
-      .supported_mcs_set.fields.tx_mcs = 0x00000000,
+      .supported_mcs_set =
+          {
+              .fields =
+                  {
+                      .rx_mcs_head = 0x00000001000000ff,
+                      .rx_mcs_tail = 0x01000000,
+                      .tx_mcs = 0x00000000,
+                  },
+          },
       .ht_ext_capabilities = 0x1234,
       .tx_beamforming_capabilities = 0x12345678,
       .asel_capabilities = 0xff,

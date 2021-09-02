@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
+
 #include <utility>
 
 #include <pretty/hexdump.h>
@@ -333,7 +334,7 @@ static void unittest_run_test(const char* name, bool (*test)(),
                               struct test_info** current_test_info, bool* all_success) {
   unittest_printf_critical("    %-51s [RUNNING]", name);
   nsecs_t start_time = now();
-  test_info test_info = {.all_ok = true, nullptr};
+  test_info test_info = {.all_ok = true};
   *current_test_info = &test_info;
   if (!test()) {
     test_info.all_ok = false;

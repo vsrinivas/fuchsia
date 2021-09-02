@@ -9,6 +9,10 @@
 #include <hypervisor/ktrace.h>
 #include <kernel/thread.h>
 
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+#endif
 static const char* const vcpu_meta[] = {
     [VCPU_INTERRUPT] = "wait:interrupt",
     [VCPU_PORT] = "wait:port",
@@ -45,6 +49,9 @@ static const char* const vcpu_exit[] = {
     [VCPU_UNKNOWN] = "exit:unknown",
     [VCPU_FAILURE] = "exit:failure",
 };
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 static_assert((sizeof(vcpu_exit) / sizeof(vcpu_exit[0])) == VCPU_EXIT_COUNT,
               "vcpu_exit array must match enum VcpuExit");
 

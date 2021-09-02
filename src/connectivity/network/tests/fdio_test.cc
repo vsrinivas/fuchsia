@@ -31,7 +31,10 @@ TEST(NetStreamTest, ReleasePortNoClose) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(first.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -144,7 +147,10 @@ class SocketTest : public testing::Test {
     ASSERT_TRUE(fd_ = fbl::unique_fd(socket(AF_INET, Impl::type(), 0))) << strerror(errno);
     addr_ = {
         .sin_family = AF_INET,
-        .sin_addr.s_addr = htonl(INADDR_ANY),
+        .sin_addr =
+            {
+                .s_addr = htonl(INADDR_ANY),
+            },
     };
     ASSERT_EQ(bind(fd_.get(), reinterpret_cast<const struct sockaddr*>(&addr_), sizeof(addr_)), 0)
         << strerror(errno);
@@ -232,7 +238,10 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   ASSERT_EQ(bind(serverfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -278,7 +287,10 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   ASSERT_EQ(bind(serverfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -358,7 +370,10 @@ TEST(SocketTest, PassFD) {
 
   struct sockaddr_in addr_in = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   auto addr = reinterpret_cast<struct sockaddr*>(&addr_in);
   socklen_t addr_len = sizeof(addr_in);

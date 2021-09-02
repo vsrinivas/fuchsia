@@ -86,8 +86,11 @@ fuchsia::camera2::hal::Config VideoConferencingConfig(bool extended_fov) {
 static InternalConfigNode OutputMLFR(bool extended_fov) {
   return {
       .type = kOutputStream,
-      .output_frame_rate.frames_per_sec_numerator = kMlFRFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kMlFRFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -106,8 +109,11 @@ static InternalConfigNode OutputMLFR(bool extended_fov) {
 static InternalConfigNode OutputVideoConferencing(bool extended_fov) {
   return {
       .type = kOutputStream,
-      .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kVideoFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -135,8 +141,11 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo2Constraints() {
 static InternalConfigNode GdcVideo2(bool extended_fov) {
   return {
       .type = kGdc,
-      .output_frame_rate.frames_per_sec_numerator = kMlFRFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kMlFRFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -153,9 +162,12 @@ static InternalConfigNode GdcVideo2(bool extended_fov) {
                   OutputMLFR(extended_fov),
               },
           },
-      .gdc_info.config_type =
+      .gdc_info =
           {
-              GdcConfig::VIDEO_CONFERENCE_ML,
+              .config_type =
+                  {
+                      GdcConfig::VIDEO_CONFERENCE_ML,
+                  },
           },
       .input_constraints = GdcVideo2Constraints(),
       .output_constraints = MLVideoFRConfig(extended_fov).constraints,
@@ -176,8 +188,11 @@ fuchsia::sysmem::BufferCollectionConstraints Ge2dConstraints() {
 static InternalConfigNode Ge2d(bool extended_fov) {
   return {
       .type = kGe2d,
-      .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kVideoFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -194,17 +209,20 @@ static InternalConfigNode Ge2d(bool extended_fov) {
                   OutputVideoConferencing(extended_fov),
               },
           },
-      .ge2d_info.config_type = Ge2DConfig::GE2D_RESIZE,
-      .ge2d_info.resize =
+      .ge2d_info =
           {
-              .crop =
+              .config_type = Ge2DConfig::GE2D_RESIZE,
+              .resize =
                   {
-                      .x = 0,
-                      .y = 0,
-                      .width = kGdcFRWidth,
-                      .height = kGdcFRHeight,
+                      .crop =
+                          {
+                              .x = 0,
+                              .y = 0,
+                              .width = kGdcFRWidth,
+                              .height = kGdcFRHeight,
+                          },
+                      .output_rotation = GE2D_ROTATION_ROTATION_0,
                   },
-              .output_rotation = GE2D_ROTATION_ROTATION_0,
           },
       .input_constraints = Ge2dConstraints(),
       .output_constraints = VideoConfig(extended_fov).constraints,
@@ -245,8 +263,11 @@ static InternalConfigNode GdcVideo1(bool extended_fov) {
 
   return {
       .type = kGdc,
-      .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kVideoFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -274,9 +295,12 @@ static InternalConfigNode GdcVideo1(bool extended_fov) {
                   Ge2d(extended_fov),
               },
           },
-      .gdc_info.config_type =
+      .gdc_info =
           {
-              gdc_config,
+              .config_type =
+                  {
+                      gdc_config,
+                  },
           },
       .input_constraints = GdcVideo1InputConstraints(),
       .output_constraints = GdcVideo1OutputConstraints(),
@@ -303,8 +327,11 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> IspImageFormats() {
 InternalConfigNode VideoConfigFullRes(bool extended_fov) {
   return {
       .type = kInputStream,
-      .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kVideoFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
       .supported_streams =
           {

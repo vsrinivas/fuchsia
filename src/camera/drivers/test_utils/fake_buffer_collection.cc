@@ -43,14 +43,20 @@ zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format
           {
               .type = pixel_format_type,
               .has_format_modifier = false,
-              .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_NONE,
+              .format_modifier =
+                  {
+                      .value = fuchsia_sysmem_FORMAT_MODIFIER_NONE,
+                  },
           },
       .coded_width = width,
       .coded_height = height,
       .display_width = width,
       .display_height = height,
       .layers = 1,
-      .color_space.type = fuchsia_sysmem_ColorSpaceType_SRGB,
+      .color_space =
+          {
+              .type = fuchsia_sysmem_ColorSpaceType_SRGB,
+          },
       .has_pixel_aspect_ratio = false,
       .pixel_aspect_ratio_width = 1,
       .pixel_aspect_ratio_height = 1,

@@ -56,7 +56,10 @@ void ExpectEqual(const fuchsia::ui::pointer::ViewParameters& received_view_param
 InternalMouseEvent IMEventTemplate() {
   return {
       .device_id = kDeviceId,
-      .viewport.receiver_from_viewport_transform = std::array<float, 9>(),
+      .viewport =
+          {
+              .receiver_from_viewport_transform = std::array<float, 9>(),
+          },
   };
 }
 

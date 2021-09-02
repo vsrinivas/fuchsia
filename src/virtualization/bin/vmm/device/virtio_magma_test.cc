@@ -342,8 +342,13 @@ class VirtioMagmaTest : public TestWithDevice {
   }
 
   void CreateImage(uint64_t connection, magma_buffer_t* image_out) {
-    virtio_magma_virt_create_image_ctrl_t request = {.hdr.type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE,
-                                                     .connection = connection};
+    virtio_magma_virt_create_image_ctrl_t request = {
+        .hdr =
+            {
+                .type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE,
+            },
+        .connection = connection,
+    };
     magma_image_create_info_t create_image = {
         .drm_format = DRM_FORMAT_ARGB8888,
         .drm_format_modifiers = {DRM_FORMAT_MOD_INVALID},

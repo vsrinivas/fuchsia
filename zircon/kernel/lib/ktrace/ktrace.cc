@@ -55,9 +55,16 @@ struct ktrace_state {
 #define INTERNAL_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
 #define BLOCKING_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
 
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+#endif
 constexpr const char* kSyscallNames[] = {
 #include <lib/syscalls/kernel.inc>
 };
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #undef VDSO_SYSCALL
 #undef KERNEL_SYSCALL

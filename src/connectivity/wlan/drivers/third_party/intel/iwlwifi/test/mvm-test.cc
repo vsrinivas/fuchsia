@@ -116,7 +116,10 @@ TEST_F(MvmTest, rxMpdu) {
       .channel = cpu_to_le16(kExpChan),
       .non_cfg_phy =
           {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
               [IWL_RX_INFO_ENERGY_ANT_ABC_IDX] = 0x000a28,  // RSSI C:n/a B:-10, A:-40
+#pragma GCC diagnostic pop
           },
       .rate_n_flags = cpu_to_le32(0x7),  // IWL_RATE_18M_PLCP
   };

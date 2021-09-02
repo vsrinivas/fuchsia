@@ -16,18 +16,20 @@ Environment::Environment()
     : signal_loss_model_(std::unique_ptr<SignalLossModel>(new LogSignalLossModel())) {
   // Construct the dispatcher ops for task post/cancel using the notification system.
   static const async_ops_t ops = {
-      .v1.now =
-          [](async_dispatcher_t* dispatcher) {
-            return static_cast<Dispatcher*>(dispatcher)->parent->GetTime().get();
-          },
-      .v1.post_task =
-          [](async_dispatcher_t* dispatcher, async_task_t* task) {
-            return static_cast<Dispatcher*>(dispatcher)->parent->PostTask(task);
-          },
-      .v1.cancel_task =
-          [](async_dispatcher_t* dispatcher, async_task_t* task) {
-            return static_cast<Dispatcher*>(dispatcher)->parent->CancelTask(task);
-          },
+      .v1 = {
+          .now =
+              [](async_dispatcher_t* dispatcher) {
+                return static_cast<Dispatcher*>(dispatcher)->parent->GetTime().get();
+              },
+          .post_task =
+              [](async_dispatcher_t* dispatcher, async_task_t* task) {
+                return static_cast<Dispatcher*>(dispatcher)->parent->PostTask(task);
+              },
+          .cancel_task =
+              [](async_dispatcher_t* dispatcher, async_task_t* task) {
+                return static_cast<Dispatcher*>(dispatcher)->parent->CancelTask(task);
+              },
+      },
   };
   dispatcher_.parent = this;
   dispatcher_.ops = &ops;

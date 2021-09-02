@@ -28,30 +28,37 @@ namespace {
 
 void WriteHeaders(const fbl::Span<const Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
   const Elf64_Ehdr ehdr = {
-      .e_ident =
-          {
-              [EI_MAG0] = ELFMAG0,
-              [EI_MAG1] = ELFMAG1,
-              [EI_MAG2] = ELFMAG2,
-              [EI_MAG3] = ELFMAG3,
-              [EI_CLASS] = ELFCLASS64,
-              [EI_DATA] = ELFDATA2LSB,
-              [EI_VERSION] = EV_CURRENT,
-              [EI_OSABI] = ELFOSABI_NONE,
-          },
-      .e_type = ET_DYN,
-      .e_machine = elf_search::kNativeElfMachine,
-      .e_version = EV_CURRENT,
-      .e_entry = 0,
-      .e_phoff = sizeof(Elf64_Ehdr),
-      .e_shoff = 0,
-      .e_flags = 0,
-      .e_ehsize = sizeof(Elf64_Ehdr),
-      .e_phentsize = sizeof(Elf64_Phdr),
-      .e_phnum = static_cast<Elf64_Half>(phdrs.size()),
-      .e_shentsize = 0,
-      .e_shnum = 0,
-      .e_shstrndx = 0,
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+#endif
+    .e_ident =
+        {
+            [EI_MAG0] = ELFMAG0,
+            [EI_MAG1] = ELFMAG1,
+            [EI_MAG2] = ELFMAG2,
+            [EI_MAG3] = ELFMAG3,
+            [EI_CLASS] = ELFCLASS64,
+            [EI_DATA] = ELFDATA2LSB,
+            [EI_VERSION] = EV_CURRENT,
+            [EI_OSABI] = ELFOSABI_NONE,
+        },
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+    .e_type = ET_DYN,
+    .e_machine = elf_search::kNativeElfMachine,
+    .e_version = EV_CURRENT,
+    .e_entry = 0,
+    .e_phoff = sizeof(Elf64_Ehdr),
+    .e_shoff = 0,
+    .e_flags = 0,
+    .e_ehsize = sizeof(Elf64_Ehdr),
+    .e_phentsize = sizeof(Elf64_Phdr),
+    .e_phnum = static_cast<Elf64_Half>(phdrs.size()),
+    .e_shentsize = 0,
+    .e_shnum = 0,
+    .e_shstrndx = 0,
   };
   EXPECT_OK(vmo.write(&ehdr, 0, sizeof(ehdr)));
   EXPECT_OK(vmo.write(phdrs.begin(), sizeof(ehdr), sizeof(Elf64_Phdr) * phdrs.size()));

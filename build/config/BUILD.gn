@@ -530,11 +530,6 @@ config("default_warnings") {
     "-Wimplicit-fallthrough",
     "-Wno-unused-parameter",
     "-Wno-sign-conversion",
-
-    # TODO(fxbug.dev/35965): Temporarily disable C99 designator warnings introduced in
-    # https://reviews.llvm.org/D59754. After the new Clang toolchain lands
-    # and we do some cleanup, this will be re-enabled.
-    "-Wno-c99-designator",
   ]
 }
 

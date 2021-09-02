@@ -80,12 +80,19 @@ enum clock_source {
   CLOCK_COUNT
 };
 
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+#endif
 const char* clock_name[] = {
     [CLOCK_UNSELECTED] = "UNSELECTED",
     [CLOCK_TSC] = "TSC",
     [CLOCK_PIT] = "PIT",
     [CLOCK_HPET] = "HPET",
 };
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 static_assert(ktl::size(clock_name) == CLOCK_COUNT, "");
 
 // PIT time accounting info

@@ -47,12 +47,13 @@ TEST_F(EntryViewTest, SetHeaderFromOperation) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 1234,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 1234,
+                  .length = 1,
+              },
       },
   };
 
@@ -68,21 +69,23 @@ TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 1234,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 1234,
+                  .length = 1,
+              },
       },
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 5678,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 5678,
+                  .length = 1,
+              },
       },
   };
 
@@ -98,12 +101,13 @@ TEST_F(EntryViewTest, SameJournalEntryGeneratesSameChecksum) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 0,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 0,
+                  .length = 1,
+              },
       },
   };
 
@@ -118,12 +122,13 @@ TEST_F(EntryViewTest, DifferentTargetBlockGeneratesDifferentChecksum) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 0,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 0,
+                  .length = 1,
+              },
       },
   };
 
@@ -141,12 +146,13 @@ TEST_F(EntryViewTest, DifferentSequenceNumberGeneratesDifferentChecksum) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 0,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 0,
+                  .length = 1,
+              },
       },
   };
 
@@ -162,12 +168,13 @@ TEST_F(EntryViewTest, ChecksumDoesNotIncludeCommit) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 0,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 0,
+                  .length = 1,
+              },
       },
   };
 
@@ -193,12 +200,13 @@ class EscapedEntryFixture : public EntryViewFixture {
     std::vector<storage::BufferedOperation> operations = {
         {
             .vmoid = 0,
-            {
-                .type = storage::OperationType::kWrite,
-                .vmo_offset = 0,
-                .dev_offset = kTarget,
-                .length = 1,
-            },
+            .op =
+                {
+                    .type = storage::OperationType::kWrite,
+                    .vmo_offset = 0,
+                    .dev_offset = kTarget,
+                    .length = 1,
+                },
         },
     };
     return operations;

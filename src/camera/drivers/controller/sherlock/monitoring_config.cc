@@ -124,8 +124,11 @@ fuchsia::camera2::hal::Config MonitoringConfig() {
 static InternalConfigNode OutputStreamMLFR() {
   return {
       .type = kOutputStream,
-      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlFRFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kOutputStreamMlFRFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -143,8 +146,11 @@ static InternalConfigNode OutputStreamMLFR() {
 static InternalConfigNode OutputStreamMLDS() {
   return {
       .type = kOutputStream,
-      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -172,8 +178,11 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc1Constraints() {
 static InternalConfigNode Gdc1() {
   return {
       .type = kGdc,
-      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -189,9 +198,12 @@ static InternalConfigNode Gdc1() {
                   OutputStreamMLDS(),
               },
           },
-      .gdc_info.config_type =
+      .gdc_info =
           {
-              GdcConfig::MONITORING_ML,
+              .config_type =
+                  {
+                      GdcConfig::MONITORING_ML,
+                  },
           },
       .input_constraints = Gdc1Constraints(),
       .output_constraints = OutputStreamMLDSConfig().constraints,
@@ -214,8 +226,11 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
 InternalConfigNode MonitorConfigFullRes() {
   return {
       .type = kInputStream,
-      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
       .supported_streams =
           {
@@ -254,8 +269,11 @@ InternalConfigNode MonitorConfigFullRes() {
 static InternalConfigNode OutputStreamMonitoring() {
   return {
       .type = kOutputStream,
-      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -296,8 +314,11 @@ fuchsia::sysmem::BufferCollectionConstraints Ge2dMonitoringConstraints() {
 static InternalConfigNode Ge2dMonitoring() {
   return {
       .type = kGe2d,
-      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -312,32 +333,34 @@ static InternalConfigNode Ge2dMonitoring() {
                   OutputStreamMonitoring(),
               },
           },
-      .ge2d_info.config_type = Ge2DConfig::GE2D_WATERMARK,
-      .ge2d_info.watermark =
+      .ge2d_info =
           {
-              {
-                  .filename = "watermark-720p.rgba",
-                  .image_format = StreamConstraints::MakeImageFormat(
-                      kWatermark720pWidth, kWatermark720pHeight, kWatermarkPixelFormat),
-                  .loc_x = kOutputStreamMonitoringWidth - kWatermark720pWidth,
-                  .loc_y = 0,
-              },
-              {
-                  .filename = "watermark-480p.rgba",
-                  .image_format = StreamConstraints::MakeImageFormat(
-                      kWatermark480pWidth, kWatermark480pHeight, kWatermarkPixelFormat),
-                  .loc_x = kOutputStreamMonitoringWidth1 - kWatermark480pWidth,
-                  .loc_y = 0,
-              },
-              {
-                  .filename = "watermark-360p.rgba",
-                  .image_format = StreamConstraints::MakeImageFormat(
-                      kWatermark360pWidth, kWatermark360pHeight, kWatermarkPixelFormat),
-                  .loc_x = kOutputStreamMonitoringWidth2 - kWatermark360pWidth,
-                  .loc_y = 0,
-              },
+              .config_type = Ge2DConfig::GE2D_WATERMARK,
+              .watermark =
+                  {
+                      {
+                          .filename = "watermark-720p.rgba",
+                          .image_format = StreamConstraints::MakeImageFormat(
+                              kWatermark720pWidth, kWatermark720pHeight, kWatermarkPixelFormat),
+                          .loc_x = kOutputStreamMonitoringWidth - kWatermark720pWidth,
+                          .loc_y = 0,
+                      },
+                      {
+                          .filename = "watermark-480p.rgba",
+                          .image_format = StreamConstraints::MakeImageFormat(
+                              kWatermark480pWidth, kWatermark480pHeight, kWatermarkPixelFormat),
+                          .loc_x = kOutputStreamMonitoringWidth1 - kWatermark480pWidth,
+                          .loc_y = 0,
+                      },
+                      {
+                          .filename = "watermark-360p.rgba",
+                          .image_format = StreamConstraints::MakeImageFormat(
+                              kWatermark360pWidth, kWatermark360pHeight, kWatermarkPixelFormat),
+                          .loc_x = kOutputStreamMonitoringWidth2 - kWatermark360pWidth,
+                          .loc_y = 0,
+                      },
+                  },
           },
-
       .input_constraints = Ge2dMonitoringConstraints(),
       .output_constraints = Ge2dMonitoringConstraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
@@ -363,8 +386,11 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc2OutputConstraints() {
 static InternalConfigNode Gdc2() {
   return {
       .type = kGdc,
-      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -379,11 +405,14 @@ static InternalConfigNode Gdc2() {
                   Ge2dMonitoring(),
               },
           },
-      .gdc_info.config_type =
+      .gdc_info =
           {
-              GdcConfig::MONITORING_720p,
-              GdcConfig::MONITORING_480p,
-              GdcConfig::MONITORING_360p,
+              .config_type =
+                  {
+                      GdcConfig::MONITORING_720p,
+                      GdcConfig::MONITORING_480p,
+                      GdcConfig::MONITORING_360p,
+                  },
           },
       .input_constraints = Gdc2Constraints(),
       .output_constraints = Gdc2OutputConstraints(),
@@ -405,8 +434,11 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigDownScaledResConstrain
 InternalConfigNode MonitorConfigDownScaledRes() {
   return {
       .type = kInputStream,
-      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
       .supported_streams =
           {

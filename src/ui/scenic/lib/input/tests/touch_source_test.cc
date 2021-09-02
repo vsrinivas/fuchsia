@@ -68,7 +68,10 @@ InternalPointerEvent IPEventTemplate(Phase phase) {
       .device_id = kDeviceId,
       .pointer_id = kPointerId,
       .phase = phase,
-      .viewport.receiver_from_viewport_transform = std::array<float, 9>(),
+      .viewport =
+          {
+              .receiver_from_viewport_transform = std::array<float, 9>(),
+          },
   };
 }
 

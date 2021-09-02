@@ -495,7 +495,10 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   const socklen_t addrlen = sizeof(addr);
 

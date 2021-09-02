@@ -319,10 +319,13 @@ int main(int argc, char** argv) {
             {
                 .type = type,
                 .code = 0,
-                .un.echo =
+                .un =
                     {
-                        .id = 0,
-                        .sequence = htons(sequence++),
+                        .echo =
+                            {
+                                .id = 0,
+                                .sequence = htons(sequence++),
+                            },
                     },
             },
     };

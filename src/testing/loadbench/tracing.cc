@@ -9,6 +9,14 @@
 
 #include <fstream>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+static TagDefinition kTags[] = {
+#define KTRACE_DEF(num, type, name, group) [num] = {num, KTRACE_GRP_##group, kTag##type, #name},
+#include <lib/zircon-internal/ktrace-def.h>
+};
+#pragma GCC diagnostic pop
+
 std::optional<KTraceRecord> KTraceRecord::ParseRecord(uint8_t* data_buf, size_t buf_len) {
   if (buf_len < KTRACE_HDRSIZE)
     return std::nullopt;

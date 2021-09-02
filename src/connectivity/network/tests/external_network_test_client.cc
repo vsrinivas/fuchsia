@@ -182,9 +182,7 @@ TEST(ExternalNetworkTest, IoctlGetInterfaceAddresses) {
   // in bytes for receiving all available addresses in ifc_len. This allows the
   // caller to determine the necessary buffer size beforehand.
   // See: https://man7.org/linux/man-pages/man7/netdevice.7.html
-  struct ifconf ifc {
-    .ifc_req = nullptr,
-  };
+  struct ifconf ifc = {};
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFCONF, &ifc), 0) << strerror(errno);
 
   struct ifaddr {

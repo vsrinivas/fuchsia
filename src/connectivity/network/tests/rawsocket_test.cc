@@ -82,7 +82,10 @@ TEST(RawSocketTest, SendToDifferentProtocolV4) {
 
   const struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = network_endian_loopback_addr,
+      .sin_addr =
+          {
+              .s_addr = network_endian_loopback_addr,
+          },
   };
 
   char addrbuf[INET_ADDRSTRLEN];
@@ -278,7 +281,10 @@ TEST(RawSocketTest, SendtoRecvfrom) {
 
   const struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = network_endian_loopback_addr,
+      .sin_addr =
+          {
+              .s_addr = network_endian_loopback_addr,
+          },
   };
 
   {

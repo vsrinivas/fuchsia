@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef LIB_SYSLOG_CPP_LOGGING_BACKEND_FUCHSIA_PRIVATE_H_
+#define LIB_SYSLOG_CPP_LOGGING_BACKEND_FUCHSIA_PRIVATE_H_
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -114,3 +117,5 @@ WordOffset<T> WritePaddedInternal(T* buffer, const void* msg, const ByteOffset& 
   memcpy(buffer, msg, length.unsafe_get());
   return WordOffset<T>::FromByteOffset(ByteOffset::Unbounded(length.unsafe_get() + padding));
 }
+
+#endif  // LIB_SYSLOG_CPP_LOGGING_BACKEND_FUCHSIA_PRIVATE_H_

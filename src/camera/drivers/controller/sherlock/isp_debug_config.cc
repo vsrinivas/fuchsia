@@ -69,8 +69,11 @@ fuchsia::camera2::hal::Config DebugConfig() {
 static InternalConfigNode OutputFRStream() {
   return {
       .type = kOutputStream,
-      .output_frame_rate.frames_per_sec_numerator = kFRStreamFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kFRStreamFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -88,8 +91,11 @@ InternalConfigNode DebugConfigFullRes() {
       .type = kInputStream,
       // For node type |kInputStream| we will be ignoring the
       // frame rate divisor.
-      .output_frame_rate.frames_per_sec_numerator = kFRStreamFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kFRStreamFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
       .supported_streams =
           {
@@ -112,8 +118,11 @@ InternalConfigNode DebugConfigFullRes() {
 static InternalConfigNode OutputDSStream() {
   return {
       .type = kOutputStream,
-      .output_frame_rate.frames_per_sec_numerator = kDSStreamFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kDSStreamFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .supported_streams =
           {
               {
@@ -131,8 +140,11 @@ InternalConfigNode DebugConfigDownScaledRes() {
       .type = kInputStream,
       // For node type |kInputStream| we will be ignoring the
       // frame rate divisor.
-      .output_frame_rate.frames_per_sec_numerator = kFRStreamFrameRate,
-      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kFRStreamFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
       .input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
       .supported_streams =
           {

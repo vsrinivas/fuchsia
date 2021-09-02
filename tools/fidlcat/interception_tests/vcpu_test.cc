@@ -55,13 +55,21 @@ std::unique_ptr<SystemCallTest> ZxVcpuResume(int64_t result, std::string_view re
 }
 
 #define VCPU_RESUME_DISPLAY_TEST_CONTENT(result, expected)                                    \
-  zx_port_packet_t packet = {.key = kKey,                                                     \
-                             .type = ZX_PKT_TYPE_GUEST_VCPU,                                  \
-                             .status = ZX_OK,                                                 \
-                             .guest_vcpu = {.startup.id = 1234,                               \
-                                            .startup.entry = 0x123456,                        \
-                                            .type = ZX_PKT_GUEST_VCPU_STARTUP,                \
-                                            .reserved = 0}};                                  \
+  zx_port_packet_t packet = {                                                                 \
+      .key = kKey,                                                                            \
+      .type = ZX_PKT_TYPE_GUEST_VCPU,                                                         \
+      .status = ZX_OK,                                                                        \
+      .guest_vcpu =                                                                           \
+          {                                                                                   \
+              .startup =                                                                      \
+                  {                                                                           \
+                      .id = 1234,                                                             \
+                      .entry = 0x123456,                                                      \
+                  },                                                                          \
+              .type = ZX_PKT_GUEST_VCPU_STARTUP,                                              \
+              .reserved = 0,                                                                  \
+          },                                                                                  \
+  };                                                                                          \
   PerformDisplayTest("$plt(zx_vcpu_resume)", ZxVcpuResume(result, #result, kHandle, &packet), \
                      expected);
 

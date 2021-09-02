@@ -82,8 +82,10 @@ static void stuff_loader_bootstrap(const zx::debuglog& log, const zx::process& p
                                    const zx::vmar& root_vmar, const zx::thread& thread,
                                    const zx::channel& to_child, zx::vmar segments_vmar, zx::vmo vmo,
                                    zx::channel* loader_svc) {
+#if defined(__clang__)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wc99-designator"
+#endif
   struct loader_bootstrap_message msg = {
       .header =
           {
@@ -105,7 +107,6 @@ static void stuff_loader_bootstrap(const zx::debuglog& log, const zx::process& p
           },
       .env = LOADER_BOOTSTRAP_ENVIRON,
   };
-#pragma GCC diagnostic pop
   zx_handle_t handles[] = {
       [BOOTSTRAP_EXEC_VMO] = vmo.release(),
       [BOOTSTRAP_LOGGER] = ZX_HANDLE_INVALID,
@@ -115,6 +116,9 @@ static void stuff_loader_bootstrap(const zx::debuglog& log, const zx::process& p
       [BOOTSTRAP_THREAD] = ZX_HANDLE_INVALID,
       [BOOTSTRAP_LOADER_SVC] = ZX_HANDLE_INVALID,
   };
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
   check(log, zx_handle_duplicate(log.get(), ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_LOGGER]),
         "zx_handle_duplicate failed");
   check(log, zx_handle_duplicate(proc.get(), ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_PROC]),

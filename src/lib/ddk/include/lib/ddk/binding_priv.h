@@ -190,12 +190,18 @@ typedef struct zx_device_str_prop_val {
 } zx_device_str_prop_val_t;
 
 // Supporting macros to construct zx_device_str_prop_val_t.
-#define str_prop_int_val(val) \
-  (zx_device_str_prop_val{.value_type = ZX_DEVICE_PROPERTY_VALUE_INT, .value.int_val = val})
-#define str_prop_str_val(val) \
-  (zx_device_str_prop_val{.value_type = ZX_DEVICE_PROPERTY_VALUE_STRING, .value.str_val = val})
-#define str_prop_bool_val(val) \
-  (zx_device_str_prop_val{.value_type = ZX_DEVICE_PROPERTY_VALUE_BOOL, .value.bool_val = val})
+#define str_prop_int_val(val)                                                \
+  zx_device_str_prop_val {                                                   \
+    .value_type = ZX_DEVICE_PROPERTY_VALUE_INT, .value = {.int_val = (val) } \
+  }
+#define str_prop_str_val(val)                                                   \
+  zx_device_str_prop_val {                                                      \
+    .value_type = ZX_DEVICE_PROPERTY_VALUE_STRING, .value = {.str_val = (val) } \
+  }
+#define str_prop_bool_val(val)                                                 \
+  zx_device_str_prop_val {                                                     \
+    .value_type = ZX_DEVICE_PROPERTY_VALUE_BOOL, .value = {.bool_val = (val) } \
+  }
 
 typedef struct zx_device_str_prop {
   const char* key;

@@ -48,13 +48,19 @@ TEST(ImageFormat, LinearComparison_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat linear = {
       .type = sysmem_v1::wire::PixelFormatType::kBgra32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::wire::kFormatModifierLinear,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierLinear,
+          },
   };
 
   sysmem_v1::wire::PixelFormat x_tiled = {
       .type = sysmem_v1::wire::PixelFormatType::kBgra32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::wire::kFormatModifierIntelI915XTiled,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierIntelI915XTiled,
+          },
   };
 
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(plain, plain));
@@ -76,13 +82,19 @@ TEST(ImageFormat, LinearComparison_V1_C) {
   fuchsia_sysmem_PixelFormat linear = {
       .type = fuchsia_sysmem_PixelFormatType_BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+      .format_modifier =
+          {
+              .value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+          },
   };
 
   fuchsia_sysmem_PixelFormat x_tiled = {
       .type = fuchsia_sysmem_PixelFormatType_BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED,
+      .format_modifier =
+          {
+              .value = fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED,
+          },
   };
 
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(plain, plain));
@@ -119,7 +131,10 @@ TEST(ImageFormat, LinearRowBytes_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat linear = {
       .type = sysmem_v1::wire::PixelFormatType::kBgra32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::wire::kFormatModifierLinear,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierLinear,
+          },
   };
   sysmem_v1::wire::ImageFormatConstraints constraints = {
       .pixel_format = linear,
@@ -141,7 +156,10 @@ TEST(ImageFormat, LinearRowBytes_V1_C) {
   fuchsia_sysmem_PixelFormat linear = {
       .type = fuchsia_sysmem_PixelFormatType_BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+      .format_modifier =
+          {
+              .value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+          },
   };
   fuchsia_sysmem_ImageFormatConstraints constraints = {
       .pixel_format = linear,
@@ -258,7 +276,10 @@ TEST(ImageFormat, ZxPixelFormat_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat other_format = {
       .type = sysmem_v1::wire::PixelFormatType::kBgra32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::wire::kFormatModifierIntelI915XTiled,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierIntelI915XTiled,
+          },
   };
 
   zx_pixel_format_t back_format;
@@ -305,7 +326,10 @@ TEST(ImageFormat, ZxPixelFormat_V1_C) {
   fuchsia_sysmem_PixelFormat other_format = {
       .type = fuchsia_sysmem_PixelFormatType_BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED,
+      .format_modifier =
+          {
+              .value = fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED,
+          },
   };
 
   zx_pixel_format_t back_format;
@@ -370,7 +394,10 @@ TEST(ImageFormat, PlaneByteOffset_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat linear = {
       .type = sysmem_v1::wire::PixelFormatType::kBgra32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::wire::kFormatModifierLinear,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierLinear,
+          },
   };
   sysmem_v1::wire::ImageFormatConstraints constraints = {
       .pixel_format = linear,
@@ -422,7 +449,10 @@ TEST(ImageFormat, PlaneByteOffset_V1_C) {
   fuchsia_sysmem_PixelFormat linear = {
       .type = fuchsia_sysmem_PixelFormatType_BGRA32,
       .has_format_modifier = true,
-      .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+      .format_modifier =
+          {
+              .value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+          },
   };
   fuchsia_sysmem_ImageFormatConstraints constraints = {
       .pixel_format = linear,
@@ -517,7 +547,10 @@ TEST(ImageFormat, TransactionEliminationFormats_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat format = {
       .type = sysmem_v1::wire::PixelFormatType::kBgra32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::wire::kFormatModifierLinear,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierLinear,
+          },
   };
   EXPECT_TRUE(image_format::FormatCompatibleWithProtectedMemory(format));
   EXPECT_TRUE(ImageFormatCompatibleWithProtectedMemory(format));
@@ -601,7 +634,10 @@ TEST(ImageFormat, BasicSizes_V1_LLCPP) {
   constexpr uint32_t kStride = 256;
 
   sysmem_v1::wire::ImageFormat2 image_format_bgra32 = {
-      .pixel_format.type = sysmem_v1::wire::PixelFormatType::kBgra32,
+      .pixel_format =
+          {
+              .type = sysmem_v1::wire::PixelFormatType::kBgra32,
+          },
       .coded_width = kWidth,
       .coded_height = kHeight,
       .bytes_per_row = kStride,
@@ -612,7 +648,10 @@ TEST(ImageFormat, BasicSizes_V1_LLCPP) {
   EXPECT_EQ(4, ImageFormatSampleAlignment(image_format_bgra32.pixel_format));
 
   sysmem_v1::wire::ImageFormat2 image_format_nv12 = {
-      .pixel_format.type = sysmem_v1::wire::PixelFormatType::kNv12,
+      .pixel_format =
+          {
+              .type = sysmem_v1::wire::PixelFormatType::kNv12,
+          },
       .coded_width = kWidth,
       .coded_height = kHeight,
       .bytes_per_row = kStride,
@@ -629,7 +668,10 @@ TEST(ImageFormat, BasicSizes_V1_C) {
   constexpr uint32_t kStride = 256;
 
   fuchsia_sysmem_ImageFormat_2 image_format_bgra32 = {
-      .pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32,
+      .pixel_format =
+          {
+              .type = fuchsia_sysmem_PixelFormatType_BGRA32,
+          },
       .coded_width = kWidth,
       .coded_height = kHeight,
       .bytes_per_row = kStride,
@@ -640,7 +682,10 @@ TEST(ImageFormat, BasicSizes_V1_C) {
   EXPECT_EQ(4, ImageFormatSampleAlignment(&image_format_bgra32.pixel_format));
 
   fuchsia_sysmem_ImageFormat_2 image_format_nv12{
-      .pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12,
+      .pixel_format =
+          {
+              .type = fuchsia_sysmem_PixelFormatType_NV12,
+          },
       .coded_width = kWidth,
       .coded_height = kHeight,
       .bytes_per_row = kStride,
@@ -655,7 +700,10 @@ TEST(ImageFormat, AfbcFlagFormats_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat format = {
       .type = sysmem_v1::wire::PixelFormatType::kBgra32,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::wire::kFormatModifierArmAfbc16X16SplitBlockSparseYuvTe,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierArmAfbc16X16SplitBlockSparseYuvTe,
+          },
   };
 
   EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
@@ -676,8 +724,10 @@ TEST(ImageFormat, AfbcFlagFormats_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat tiled_format = {
       .type = sysmem_v1::wire::PixelFormatType::kBgra32,
       .has_format_modifier = true,
-      .format_modifier.value =
-          sysmem_v1::wire::kFormatModifierArmAfbc16X16SplitBlockSparseYuvTiledHeader,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierArmAfbc16X16SplitBlockSparseYuvTiledHeader,
+          },
   };
 
   constraints.pixel_format = tiled_format;
@@ -695,7 +745,10 @@ TEST(ImageFormat, R8G8Formats_V1_LLCPP) {
   sysmem_v1::wire::PixelFormat format = {
       .type = sysmem_v1::wire::PixelFormatType::kR8G8,
       .has_format_modifier = true,
-      .format_modifier.value = sysmem_v1::wire::kFormatModifierLinear,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierLinear,
+          },
   };
 
   sysmem_v1::wire::ImageFormatConstraints constraints = {
@@ -727,7 +780,10 @@ TEST(ImageFormat, A2R10G10B10_Formats_V1_LLCPP) {
     sysmem_v1::wire::PixelFormat format = {
         .type = pixel_format_type,
         .has_format_modifier = true,
-        .format_modifier.value = sysmem_v1::wire::kFormatModifierLinear,
+        .format_modifier =
+            {
+                .value = sysmem_v1::wire::kFormatModifierLinear,
+            },
     };
 
     sysmem_v1::wire::ImageFormatConstraints constraints = {
@@ -806,7 +862,10 @@ TEST(ImageFormat, IntelCcsFormats_V1_LLCPP) {
     sysmem_v1::wire::PixelFormat format = {
         .type = sysmem_v1::wire::PixelFormatType::kBgra32,
         .has_format_modifier = true,
-        .format_modifier.value = format_modifier,
+        .format_modifier =
+            {
+                .value = format_modifier,
+            },
     };
 
     sysmem_v1::wire::ImageFormatConstraints constraints = {

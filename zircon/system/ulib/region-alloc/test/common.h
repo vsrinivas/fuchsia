@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_REGION_ALLOC_TEST_COMMON_H_
+#define ZIRCON_SYSTEM_ULIB_REGION_ALLOC_TEST_COMMON_H_
+
+#include <stddef.h>
 
 #include <region-alloc/region-alloc.h>
-#include <stddef.h>
 #include <zxtest/zxtest.h>
 
 // Constants and common tables used by both the C and C++ API tests.
@@ -85,14 +87,16 @@ typedef struct {
 } alloc_by_size_alloc_test_t;
 
 static const alloc_by_size_alloc_test_t ALLOC_BY_SIZE_TESTS[] = {
+    // clang-format off
     // Invalid parameter failures
-    {.size = 0x00000000, .align = 0x00000001, .res = ZX_ERR_INVALID_ARGS, 0},  // bad size
-    {.size = 0x00000001, .align = 0x00000000, .res = ZX_ERR_INVALID_ARGS, 0},  // bad align
-    {.size = 0x00000001, .align = 0x00001001, .res = ZX_ERR_INVALID_ARGS, 0},  // bad align
+    {.size = 0x00000000, .align = 0x00000001, .res = ZX_ERR_INVALID_ARGS, .region = 0},  // bad size
+    {.size = 0x00000001, .align = 0x00000000, .res = ZX_ERR_INVALID_ARGS, .region = 0},  // bad align
+    {.size = 0x00000001, .align = 0x00001001, .res = ZX_ERR_INVALID_ARGS, .region = 0},  // bad align
 
     // Initially unsatisfiable
-    {.size = 0x10000000, .align = 0x00000001, .res = ZX_ERR_NOT_FOUND, 0},  // too large
-    {.size = 0x00005000, .align = 0x10000000, .res = ZX_ERR_NOT_FOUND, 0},  // Cannot align
+    {.size = 0x10000000, .align = 0x00000001, .res = ZX_ERR_NOT_FOUND, .region = 0},  // too large
+    {.size = 0x00005000, .align = 0x10000000, .res = ZX_ERR_NOT_FOUND, .region = 0},  // Cannot align
+    // clang-format on
 
     // Should succeed, all pulled from first chunk
     {.size = (1 << 0), .align = (1 << 1), .res = ZX_OK, .region = 0},
@@ -137,12 +141,12 @@ static const alloc_by_size_alloc_test_t ALLOC_BY_SIZE_TESTS[] = {
     // region.  Ask for two 4k regions with arbitrary alignment.  The first
     // request should succeed while the second request should fail.
     {.size = (4 << 10), .align = 1, .res = ZX_OK, .region = 1},
-    {.size = (4 << 10), .align = 1, .res = ZX_ERR_NOT_FOUND, 0},
+    {.size = (4 << 10), .align = 1, .res = ZX_ERR_NOT_FOUND, .region = 0},
 
     // Finally, soak up the last of the space with a 0xFFF byte allocation.
     // Afterwards, we should be unable to allocate even a single byte
     {.size = 0xFFF, .align = 1, .res = ZX_OK, .region = 1},
-    {.size = 1, .align = 1, .res = ZX_ERR_NOT_FOUND, 0},
+    {.size = 1, .align = 1, .res = ZX_ERR_NOT_FOUND, .region = 0},
 };
 
 #define ALLOC_SPECIFIC_REGION_BASE (0x1000)
@@ -443,3 +447,5 @@ void check_region_match(const ralloc_region_t* test, const ralloc_region_t* expe
   ASSERT_EQ(test->base, expected->base);
   ASSERT_EQ(test->size, expected->size);
 }
+
+#endif  // ZIRCON_SYSTEM_ULIB_REGION_ALLOC_TEST_COMMON_H_

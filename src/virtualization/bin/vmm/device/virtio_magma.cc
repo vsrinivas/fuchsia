@@ -181,7 +181,10 @@ zx_status_t VirtioMagma::HandleCommandDescriptors(VirtioDescriptor* request_desc
       auto request = reinterpret_cast<virtio_magma_get_buffer_handle2_ctrl_t*>(request_desc->addr);
 
       virtio_magma_get_buffer_handle2_resp_t response = {
-          .hdr.type = VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2,
+          .hdr =
+              {
+                  .type = VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2,
+              },
       };
 
       zx::vmo vmo;
@@ -216,7 +219,10 @@ zx_status_t VirtioMagma::HandleCommandDescriptors(VirtioDescriptor* request_desc
           reinterpret_cast<virtio_magma_query_returns_buffer2_ctrl_t*>(request_desc->addr);
 
       virtio_magma_get_buffer_handle2_resp_t response = {
-          .hdr.type = VIRTIO_MAGMA_RESP_QUERY_RETURNS_BUFFER2,
+          .hdr =
+              {
+                  .type = VIRTIO_MAGMA_RESP_QUERY_RETURNS_BUFFER2,
+              },
       };
 
       const auto device = request->device;

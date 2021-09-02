@@ -51,10 +51,13 @@ class FakeGdc {
     frame_available_info info = {
         .frame_status = FRAME_STATUS_OK,
         .buffer_id = input_buffer_index,
-        .metadata.input_buffer_index = input_buffer_index,
-        .metadata.image_format_index = image_format_index_,
-        .metadata.timestamp = capture_timestamp + kFrameDelayClocks,
-        .metadata.capture_timestamp = capture_timestamp,
+        .metadata =
+            {
+                .timestamp = capture_timestamp + kFrameDelayClocks,
+                .image_format_index = image_format_index_,
+                .input_buffer_index = input_buffer_index,
+                .capture_timestamp = capture_timestamp,
+            },
     };
     frame_callback_->frame_ready(frame_callback_->ctx, &info);
     return ZX_OK;
@@ -72,8 +75,11 @@ class FakeGdc {
     frame_available_info info = {
         .frame_status = FRAME_STATUS_OK,
         .buffer_id = 0,
-        .metadata.input_buffer_index = 0,
-        .metadata.image_format_index = image_format_index_,
+        .metadata =
+            {
+                .image_format_index = image_format_index_,
+                .input_buffer_index = 0,
+            },
     };
     res_change_callback_->frame_resolution_changed(res_change_callback_->ctx, &info);
     return ZX_OK;

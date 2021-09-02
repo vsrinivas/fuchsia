@@ -55,6 +55,8 @@ const CustomDiskFormat* CustomDiskFormat::Get(disk_format_t format) {
 }  // namespace fs_management
 
 __EXPORT const char* disk_format_string(disk_format_t fs_type) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
   static const char* disk_format_string_[DISK_FORMAT_COUNT_] = {
       [DISK_FORMAT_UNKNOWN] = "unknown",
       [DISK_FORMAT_GPT] = "gpt",
@@ -70,6 +72,7 @@ __EXPORT const char* disk_format_string(disk_format_t fs_type) {
       [DISK_FORMAT_FXFS] = "fxfs",
       [DISK_FORMAT_F2FS] = "f2fs",
   };
+#pragma GCC diagnostic pop
 
   if (fs_type < DISK_FORMAT_COUNT_) {
     return disk_format_string_[fs_type];

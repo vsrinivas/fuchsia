@@ -38,7 +38,10 @@ JSValue Reload(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSValueConst
   return JS_UNDEFINED;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const JSCFunctionListEntry funcs_[] = {JS_CFUNC_DEF("reload", 0, Reload)};
+#pragma GCC diagnostic pop
 
 namespace {
 

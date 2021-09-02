@@ -365,11 +365,17 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
 
   {
     fuchsia_sysmem::wire::BufferCollectionConstraints constraints{
-        .usage.cpu =
-            fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften,
+        .usage =
+            {
+                .cpu = fuchsia_sysmem::wire::kCpuUsageReadOften |
+                       fuchsia_sysmem::wire::kCpuUsageWriteOften,
+            },
         .min_buffer_count = 1,
         .has_buffer_memory_constraints = true,
-        .buffer_memory_constraints.cpu_domain_supported = true,
+        .buffer_memory_constraints =
+            {
+                .cpu_domain_supported = true,
+            },
         .image_format_constraints_count = to_uint32(modifiers.size()),
     };
 

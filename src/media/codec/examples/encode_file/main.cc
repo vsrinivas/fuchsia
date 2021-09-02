@@ -200,7 +200,10 @@ int main(int argc, char* argv[]) {
 
   // TODO(afoxley) add support for non-equal display and coded dimensions
   fuchsia::sysmem::ImageFormat_2 image_format = {
-      .pixel_format.type = input_format,
+      .pixel_format =
+          {
+              .type = input_format,
+          },
       .coded_width = input_width,
       .coded_height = input_height,
       .bytes_per_row = input_width,

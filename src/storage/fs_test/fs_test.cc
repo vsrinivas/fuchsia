@@ -160,13 +160,17 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   std::optional<ramdevice_client::RamNand> ram_nand;
   fuchsia_hardware_nand_RamNandInfo config = {
       .vmo = vmo.release(),
-      .nand_info.page_size = kPageSize,
-      .nand_info.pages_per_block = kPagesPerBlock,
-      .nand_info.num_blocks = block_count,
-      .nand_info.ecc_bits = 8,
-      .nand_info.oob_size = kOobSize,
-      .nand_info.nand_class = fuchsia_hardware_nand_Class_FTL,
-      .fail_after = options.fail_after};
+      .nand_info =
+          {
+              .page_size = kPageSize,
+              .pages_per_block = kPagesPerBlock,
+              .num_blocks = block_count,
+              .ecc_bits = 8,
+              .oob_size = kOobSize,
+              .nand_class = fuchsia_hardware_nand_Class_FTL,
+          },
+      .fail_after = options.fail_after,
+  };
   status = zx::make_status(ramdevice_client::RamNand::Create(&config, &ram_nand));
   if (status.is_error()) {
     std::cout << "RamNand::Create failed: " << status.status_string() << std::endl;

@@ -103,9 +103,14 @@ std::vector<fuchsia::sysmem::PixelFormatType> GetSupportedFormats() {
 }
 
 fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(const fuchsia::sysmem::PixelFormat &format) {
-  return {.type = *reinterpret_cast<const fuchsia_sysmem_PixelFormatType *>(&format.type),
-          .has_format_modifier = format.has_format_modifier,
-          .format_modifier.value = format.format_modifier.value};
+  return {
+      .type = *reinterpret_cast<const fuchsia_sysmem_PixelFormatType *>(&format.type),
+      .has_format_modifier = format.has_format_modifier,
+      .format_modifier =
+          {
+              .value = format.format_modifier.value,
+          },
+  };
 }
 
 fuchsia_sysmem_ColorSpace ConvertColorSpaceToC(const fuchsia::sysmem::ColorSpace &cs) {

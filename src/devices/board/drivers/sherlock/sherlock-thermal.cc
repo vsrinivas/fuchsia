@@ -124,61 +124,66 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
 
 // NOTE: This is a very trivial policy, no data backing it up
 // As we do more testing this policy can evolve.
-fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll =
-    {
-        .active_cooling = false,
-        .passive_cooling = true,
-        .gpu_throttling = true,
-        .num_trip_points = 4,
-        .big_little = true,
-        .critical_temp_celsius = 101.0f,
-        .trip_point_info =
-            {
-                TripPoint(82.5f, 9, 10, 4), TripPoint(85.0f, 8, 9, 4), TripPoint(87.5f, 6, 6, 4),
-                TripPoint(90.0f, 4, 4, 4),
-                TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
-            },
-        .opps =
-            {
-                [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-                    {
-                        .opp =
-                            {
-                                [0] = {.freq_hz = 100'000'000, .volt_uv = 751'000},
-                                [1] = {.freq_hz = 250'000'000, .volt_uv = 751'000},
-                                [2] = {.freq_hz = 500'000'000, .volt_uv = 751'000},
-                                [3] = {.freq_hz = 667'000'000, .volt_uv = 751'000},
-                                [4] = {.freq_hz = 1'000'000'000, .volt_uv = 771'000},
-                                [5] = {.freq_hz = 1'200'000'000, .volt_uv = 771'000},
-                                [6] = {.freq_hz = 1'398'000'000, .volt_uv = 791'000},
-                                [7] = {.freq_hz = 1'512'000'000, .volt_uv = 821'000},
-                                [8] = {.freq_hz = 1'608'000'000, .volt_uv = 861'000},
-                                [9] = {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
-                                [10] = {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
-                            },
-                        .latency = 0,
-                        .count = 10,
-                    },
-                [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
-                    {
-                        .opp =
-                            {
-                                [0] = {.freq_hz = 100'000'000, .volt_uv = 731'000},
-                                [1] = {.freq_hz = 250'000'000, .volt_uv = 731'000},
-                                [2] = {.freq_hz = 500'000'000, .volt_uv = 731'000},
-                                [3] = {.freq_hz = 667'000'000, .volt_uv = 731'000},
-                                [4] = {.freq_hz = 1'000'000'000, .volt_uv = 731'000},
-                                [5] = {.freq_hz = 1'200'000'000, .volt_uv = 731'000},
-                                [6] = {.freq_hz = 1'398'000'000, .volt_uv = 761'000},
-                                [7] = {.freq_hz = 1'512'000'000, .volt_uv = 791'000},
-                                [8] = {.freq_hz = 1'608'000'000, .volt_uv = 831'000},
-                                [9] = {.freq_hz = 1'704'000'000, .volt_uv = 861'000},
-                                [10] = {.freq_hz = 1'896'000'000, .volt_uv = 1'011'000},
-                            },
-                        .latency = 0,
-                        .count = 11,
-                    },
-            },
+fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
+    .active_cooling = false,
+    .passive_cooling = true,
+    .gpu_throttling = true,
+    .num_trip_points = 4,
+    .big_little = true,
+    .critical_temp_celsius = 101.0f,
+    .trip_point_info =
+        {
+            TripPoint(82.5f, 9, 10, 4), TripPoint(85.0f, 8, 9, 4), TripPoint(87.5f, 6, 6, 4),
+            TripPoint(90.0f, 4, 4, 4),
+            TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
+        },
+    .opps =
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+#pragma GCC diagnostic pop
+                {
+                    .opp =
+                        {
+                            {.freq_hz = 100'000'000, .volt_uv = 751'000},
+                            {.freq_hz = 250'000'000, .volt_uv = 751'000},
+                            {.freq_hz = 500'000'000, .volt_uv = 751'000},
+                            {.freq_hz = 667'000'000, .volt_uv = 751'000},
+                            {.freq_hz = 1'000'000'000, .volt_uv = 771'000},
+                            {.freq_hz = 1'200'000'000, .volt_uv = 771'000},
+                            {.freq_hz = 1'398'000'000, .volt_uv = 791'000},
+                            {.freq_hz = 1'512'000'000, .volt_uv = 821'000},
+                            {.freq_hz = 1'608'000'000, .volt_uv = 861'000},
+                            {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
+                            {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
+                        },
+                    .latency = 0,
+                    .count = 10,
+                },
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+            [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
+#pragma GCC diagnostic pop
+                {
+                    .opp =
+                        {
+                            {.freq_hz = 100'000'000, .volt_uv = 731'000},
+                            {.freq_hz = 250'000'000, .volt_uv = 731'000},
+                            {.freq_hz = 500'000'000, .volt_uv = 731'000},
+                            {.freq_hz = 667'000'000, .volt_uv = 731'000},
+                            {.freq_hz = 1'000'000'000, .volt_uv = 731'000},
+                            {.freq_hz = 1'200'000'000, .volt_uv = 731'000},
+                            {.freq_hz = 1'398'000'000, .volt_uv = 761'000},
+                            {.freq_hz = 1'512'000'000, .volt_uv = 791'000},
+                            {.freq_hz = 1'608'000'000, .volt_uv = 831'000},
+                            {.freq_hz = 1'704'000'000, .volt_uv = 861'000},
+                            {.freq_hz = 1'896'000'000, .volt_uv = 1'011'000},
+                        },
+                    .latency = 0,
+                    .count = 11,
+                },
+        },
 };
 
 fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_ddr = {
@@ -205,8 +210,11 @@ aml_thermal_info_t aml_thermal_info = {
         },
     .initial_cluster_frequencies =
         {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
             [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
             [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
+#pragma GCC diagnostic pop
         },
     .voltage_pwm_period_ns = 1250,
     .opps = {},

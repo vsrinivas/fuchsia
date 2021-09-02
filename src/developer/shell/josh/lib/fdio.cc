@@ -55,7 +55,7 @@ JSValue ServiceConnect(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSVa
 // Makes the root handles (representing elements of the namespace) available to JS callers.
 
 JSClassDef flat_ns_class_ = {
-    "FlatNs",
+    .class_name = "FlatNs",
     .finalizer = nullptr,
 };
 
@@ -124,6 +124,8 @@ JSValue NsGetElements(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
   return dirents;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const JSCFunctionListEntry flat_ns_proto_funcs_[] = {
     JS_CFUNC_DEF("getCount", 0, NsGetCount),
     JS_CFUNC_DEF("getElements", 0, NsGetElements),
@@ -134,6 +136,7 @@ const JSCFunctionListEntry funcs_[] = {
     JS_CFUNC_DEF("serviceConnect", 1, ServiceConnect),
     JS_CFUNC_DEF("nsExportRoot", 0, NsExportRoot),
 };
+#pragma GCC diagnostic pop
 
 int FdioRunOnInit(JSContext *ctx, JSModuleDef *m) {
   JS_NewClassID(&flat_ns_class_id_);

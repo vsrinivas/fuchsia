@@ -57,21 +57,22 @@ TEST_F(SetKeysTest, SetGroupKey) {
   const uint8_t ucast_key[WLAN_MAX_KEY_LEN] = "My Key";
   wlanif_set_keys_req key_req = {
       .num_keys = 2,
-      .keylist[0] =
+      .keylist =
           {
-              .key_list = group_key,
-              .key_count = strlen(reinterpret_cast<const char*>(group_key)),
-              .key_id = 0,
-              .address = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-              .cipher_suite_type = WPA_CIPHER_CCMP_128,
-          },
-      .keylist[1] =
-          {
-              .key_list = ucast_key,
-              .key_count = strlen(reinterpret_cast<const char*>(ucast_key)),
-              .key_id = 1,
-              .address = {0xde, 0xad, 0xbe, 0xef, 0xab, 0xcd},
-              .cipher_suite_type = WPA_CIPHER_CCMP_128,
+              {
+                  .key_list = group_key,
+                  .key_count = strlen(reinterpret_cast<const char*>(group_key)),
+                  .key_id = 0,
+                  .address = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+                  .cipher_suite_type = WPA_CIPHER_CCMP_128,
+              },
+              {
+                  .key_list = ucast_key,
+                  .key_count = strlen(reinterpret_cast<const char*>(ucast_key)),
+                  .key_id = 1,
+                  .address = {0xde, 0xad, 0xbe, 0xef, 0xab, 0xcd},
+                  .cipher_suite_type = WPA_CIPHER_CCMP_128,
+              },
           },
   };
   client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &key_req);

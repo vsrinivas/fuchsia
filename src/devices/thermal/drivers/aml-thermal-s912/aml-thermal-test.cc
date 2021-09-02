@@ -112,11 +112,11 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
   constexpr scpi_opp_t kExpectedBigClusterOpp = {
       .opp =
           {
-              [0] = {.freq_hz = 500'000'000, .volt_uv = 900'000},
-              [1] = {.freq_hz = 750'000'000, .volt_uv = 900'000},
-              [2] = {.freq_hz = 1'000'000'000, .volt_uv = 1'000'000},
-              [3] = {.freq_hz = 1'100'000'000, .volt_uv = 1'000'000},
-              [4] = {.freq_hz = 1'200'000'000, .volt_uv = 1'100'000},
+              {.freq_hz = 500'000'000, .volt_uv = 900'000},
+              {.freq_hz = 750'000'000, .volt_uv = 900'000},
+              {.freq_hz = 1'000'000'000, .volt_uv = 1'000'000},
+              {.freq_hz = 1'100'000'000, .volt_uv = 1'000'000},
+              {.freq_hz = 1'200'000'000, .volt_uv = 1'100'000},
           },
       .latency = 100,
       .count = 5};
@@ -124,9 +124,9 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
   constexpr scpi_opp_t kExpectedLittleClusterOpp = {
       .opp =
           {
-              [0] = {.freq_hz = 500'000'000, .volt_uv = 800'000},
-              [1] = {.freq_hz = 650'000'000, .volt_uv = 900'000},
-              [2] = {.freq_hz = 900'000'000, .volt_uv = 1'000'000},
+              {.freq_hz = 500'000'000, .volt_uv = 800'000},
+              {.freq_hz = 650'000'000, .volt_uv = 900'000},
+              {.freq_hz = 900'000'000, .volt_uv = 1'000'000},
           },
       .latency = 200,
       .count = 3};

@@ -14,6 +14,8 @@ namespace perfmon {
 
 namespace {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const EventDetails g_fixed_event_details[] = {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
   [id] = {MakeEventId(kGroupFixed, id), #event_name, readable_name, description},
@@ -48,6 +50,15 @@ const EventDetails g_skl_misc_event_details[] = {
 
 const size_t g_num_skl_misc_event_details = std::size(g_skl_misc_event_details);
 
+const EventDetails g_glm_event_details[] = {
+#define DEF_GLM_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
+  [id] = {MakeEventId(kGroupModel, id), #event_name, readable_name, description},
+#include <lib/zircon-internal/device/cpu-trace/goldmont-pm-events.inc>
+};
+
+const size_t g_num_glm_event_details = std::size(g_glm_event_details);
+#pragma GCC diagnostic pop
+
 // Register all events for Intel Skylake.
 void RegisterIntelSkylakeEvents(internal::EventRegistry* registry) {
   // TODO(dje): Clear table first (start over).
@@ -57,13 +68,6 @@ void RegisterIntelSkylakeEvents(internal::EventRegistry* registry) {
   registry->RegisterEvents("skylake", "misc", g_skl_misc_event_details,
                            g_num_skl_misc_event_details);
 }
-
-const EventDetails g_glm_event_details[] = {
-#define DEF_GLM_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
-  [id] = {MakeEventId(kGroupModel, id), #event_name, readable_name, description},
-#include <lib/zircon-internal/device/cpu-trace/goldmont-pm-events.inc>
-};
-const size_t g_num_glm_event_details = std::size(g_glm_event_details);
 
 void RegisterIntelGoldmontEvents(internal::EventRegistry* registry) {
   registry->RegisterEvents("goldmont", "fixed", g_fixed_event_details, g_num_fixed_event_details);

@@ -20,30 +20,36 @@ enum {
   S905D2_FCLK_DIV7 = 7,    // 285.7 MHz
 };
 
-static aml_gpu_block_t s905d2_gpu_blocks = {.reset0_level_offset = S905D2_RESET0_LEVEL,
-                                            .reset0_mask_offset = S905D2_RESET0_MASK,
-                                            .reset2_level_offset = S905D2_RESET2_LEVEL,
-                                            .reset2_mask_offset = S905D2_RESET2_MASK,
-                                            .hhi_clock_cntl_offset = 0x6C,
-                                            .initial_clock_index = 5,
-                                            .gpu_clk_freq =
-                                                {
-                                                    S905D2_FCLK_DIV7,
-                                                    S905D2_FCLK_DIV5,
-                                                    S905D2_FCLK_DIV4,
-                                                    S905D2_FCLK_DIV3,
-                                                    S905D2_FCLK_DIV2P5,
-                                                    S905D2_GP0,
-                                                },
-                                            .input_freq_map = {
-                                                [S905D2_XTAL] = 24'000'000,
-                                                [S905D2_GP0] = 846'000'000,
-                                                [S905D2_HIFI] = 0,
-                                                [S905D2_FCLK_DIV2P5] = 800'000'000,
-                                                [S905D2_FCLK_DIV3] = 666'666'666,
-                                                [S905D2_FCLK_DIV4] = 500'000'000,
-                                                [S905D2_FCLK_DIV5] = 400'000'000,
-                                                [S905D2_FCLK_DIV7] = 285'714'285,
-                                            }};
+static aml_gpu_block_t s905d2_gpu_blocks = {
+    .reset0_level_offset = S905D2_RESET0_LEVEL,
+    .reset0_mask_offset = S905D2_RESET0_MASK,
+    .reset2_level_offset = S905D2_RESET2_LEVEL,
+    .reset2_mask_offset = S905D2_RESET2_MASK,
+    .hhi_clock_cntl_offset = 0x6C,
+    .initial_clock_index = 5,
+    .gpu_clk_freq =
+        {
+            S905D2_FCLK_DIV7,
+            S905D2_FCLK_DIV5,
+            S905D2_FCLK_DIV4,
+            S905D2_FCLK_DIV3,
+            S905D2_FCLK_DIV2P5,
+            S905D2_GP0,
+        },
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+    .input_freq_map =
+        {
+            [S905D2_XTAL] = 24'000'000,
+            [S905D2_GP0] = 846'000'000,
+            [S905D2_HIFI] = 0,
+            [S905D2_FCLK_DIV2P5] = 800'000'000,
+            [S905D2_FCLK_DIV3] = 666'666'666,
+            [S905D2_FCLK_DIV4] = 500'000'000,
+            [S905D2_FCLK_DIV5] = 400'000'000,
+            [S905D2_FCLK_DIV7] = 285'714'285,
+        },
+#pragma GCC diagnostic pop
+};
 
 #endif  // SRC_GRAPHICS_DRIVERS_AML_GPU_S905D2_GPU_H_

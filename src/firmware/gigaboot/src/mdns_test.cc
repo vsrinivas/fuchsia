@@ -132,7 +132,13 @@ TEST(MdnsTest, TestWriteRecord) {
       .type = MDNS_TYPE_PTR,
       .record_class = 0,
       .time_to_live = 0,
-      .data.ptr.name = &seg,
+      .data =
+          {
+              .ptr =
+                  {
+                      .name = &seg,
+                  },
+          },
   };
 
   ASSERT_TRUE(mdns_write_record(&b, &r));

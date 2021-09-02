@@ -45,7 +45,10 @@ TEST(LocalhostTest, SendToZeroPort) {
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
       .sin_port = htons(0),
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   fbl::unique_fd fd;
@@ -69,7 +72,10 @@ TEST(LocalhostTest, DatagramSocketIgnoresMsgWaitAll) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -193,7 +199,10 @@ TEST(LocalhostTest, IpAddMembershipAny) {
   ASSERT_TRUE(s = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
 
   ip_mreqn param = {
-      .imr_address.s_addr = htonl(INADDR_ANY),
+      .imr_address =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
       .imr_ifindex = 1,
   };
   int n = inet_pton(AF_INET, "224.0.2.1", &param.imr_multiaddr.s_addr);
@@ -1022,7 +1031,10 @@ TEST_P(SocketOptsTest, SetUDPMulticastIfImrAddress) {
 
   SockOption t = GetMcastIfOption();
   ip_mreqn param_in = {
-      .imr_address.s_addr = htonl(INADDR_LOOPBACK),
+      .imr_address =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &param_in, sizeof(param_in)), 0)
       << strerror(errno);
@@ -1289,7 +1301,10 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   if (multicast) {
     int n = inet_pton(addr.sin_family, "224.0.2.1", &addr.sin_addr);
@@ -1310,7 +1325,10 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
     ASSERT_TRUE(s = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
     ip_mreqn param = {
         .imr_multiaddr = addr.sin_addr,
-        .imr_address.s_addr = htonl(INADDR_ANY),
+        .imr_address =
+            {
+                .s_addr = htonl(INADDR_ANY),
+            },
         .imr_ifindex = 1,
     };
     ASSERT_EQ(setsockopt(s.get(), SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0)
@@ -1466,7 +1484,10 @@ TEST(LocalhostTest, ConnectAFMismatchINET6) {
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
       .sin_port = htons(1337),
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   EXPECT_EQ(connect(s.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -1481,7 +1502,10 @@ TEST(NetStreamTest, UnconnectPoll) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   ASSERT_EQ(bind(bound.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -1523,7 +1547,10 @@ TEST(NetStreamTest, ConnectTwice) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -1557,7 +1584,10 @@ TEST(NetStreamTest, ConnectTwice) {
 TEST(NetStreamTest, ConnectCloseRace) {
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   // Use the ephemeral port allocated by the stack as destination address for connect.
@@ -1644,7 +1674,10 @@ TEST_P(HangupTest, DuringConnect) {
 
   struct sockaddr_in addr_in = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   auto addr = reinterpret_cast<struct sockaddr*>(&addr_in);
   socklen_t addr_len = sizeof(addr_in);
@@ -1859,7 +1892,10 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
 #endif
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -1989,7 +2025,10 @@ class NetStreamSocketsTest : public ::testing::Test {
 
     struct sockaddr_in addr = {
         .sin_family = AF_INET,
-        .sin_addr.s_addr = htonl(INADDR_ANY),
+        .sin_addr =
+            {
+                .s_addr = htonl(INADDR_ANY),
+            },
     };
     ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
               0)
@@ -2244,7 +2283,10 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -2303,7 +2345,10 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -2349,7 +2394,10 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -2398,7 +2446,10 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -2455,7 +2506,10 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -2742,9 +2796,8 @@ class IOMethod {
 // send{,to,msg} support the MSG_NOSIGNAL flag to suppress this behaviour, but
 // write and writev do not.
 auto disableSIGPIPE(bool isWrite) {
-  struct sigaction act = {
-      .sa_handler = SIG_IGN,
-  };
+  struct sigaction act = {};
+  act.sa_handler = SIG_IGN;
   struct sigaction oldact;
   if (isWrite) {
     EXPECT_EQ(sigaction(SIGPIPE, &act, &oldact), 0) << strerror(errno);
@@ -3005,7 +3058,10 @@ TEST_P(IOMethodTest, ListenerSocketIO) {
 
   struct sockaddr_in serveraddr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<sockaddr*>(&serveraddr), sizeof(serveraddr)), 0)
@@ -3033,7 +3089,10 @@ TEST_P(IOMethodTest, NullptrFaultDGRAM) {
   const struct sockaddr_in addr = {
       .sin_family = AF_INET,
       .sin_port = 1235,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -3051,7 +3110,10 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -3107,7 +3169,10 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
     struct sockaddr_in addr = {
         .sin_family = AF_INET,
         .sin_port = htons(1337),
-        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+        .sin_addr =
+            {
+                .s_addr = htonl(INADDR_LOOPBACK),
+            },
     };
     ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
@@ -3178,7 +3243,10 @@ void TestDatagramSocketClearPoller(bool nonblocking, F consumeError) {
     struct sockaddr_in addr = {
         .sin_family = AF_INET,
         .sin_port = htons(1337),
-        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+        .sin_addr =
+            {
+                .s_addr = htonl(INADDR_LOOPBACK),
+            },
     };
 
     ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -3298,7 +3366,10 @@ TEST_P(ConnectingIOTest, BlockedIO) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -3468,7 +3539,10 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -3591,7 +3665,10 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -3695,7 +3772,10 @@ TEST(NetStreamTest, GetSocketAcceptConn) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_ANY),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_ANY),
+          },
   };
   ASSERT_EQ(bind(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -4092,7 +4172,10 @@ TEST_P(DatagramSendTest, SendToIPv4MappedIPv6FromIPv4) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -4146,7 +4229,10 @@ TEST_P(DatagramSendTest, DatagramSend) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   EXPECT_EQ(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -4268,7 +4354,10 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -4306,7 +4395,10 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -4381,7 +4473,10 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
 
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -4539,7 +4634,10 @@ TEST(NetStreamTest, MultipleListeningSockets) {
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   socklen_t addrlen = sizeof(addr);
 
@@ -4584,7 +4682,10 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   int socketType = GetParam();
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
   };
   socklen_t addrlen = sizeof(addr);
   fbl::unique_fd sendfd;
@@ -4704,9 +4805,8 @@ TEST_P(SocketKindTest, IoctlInterfaceLookupRoundTrip) {
 
   // This test assumes index 1 is bound to a valid interface. In Fuchsia's test environment (the
   // component executing this test), 1 is always bound to "lo".
-  struct ifreq ifr_iton = {
-      .ifr_ifindex = 1,
-  };
+  struct ifreq ifr_iton = {};
+  ifr_iton.ifr_ifindex = 1;
   // Set ifr_name to random chars to test ioctl correctly sets null terminator.
   memset(ifr_iton.ifr_name, 0xde, IFNAMSIZ);
   ASSERT_EQ(strnlen(ifr_iton.ifr_name, IFNAMSIZ), (size_t)IFNAMSIZ);
@@ -4749,16 +4849,13 @@ TEST_P(SocketKindTest, IoctlInterfaceNotFound) {
   ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
 
   // Invalid ifindex "-1" should match no interfaces.
-  struct ifreq ifr_iton = {
-      .ifr_ifindex = -1,
-  };
+  struct ifreq ifr_iton = {};
+  ifr_iton.ifr_ifindex = -1;
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), -1);
   EXPECT_EQ(errno, ENODEV) << strerror(errno);
 
   // Empty name should match no interface.
-  struct ifreq ifr = {
-      .ifr_name = 0,
-  };
+  struct ifreq ifr = {};
   struct ioctl_request {
     std::string name;
     int request;
@@ -4783,9 +4880,8 @@ TEST(SocketKindTest, IoctlLookupForNonSocketFd) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(open("/", O_RDONLY | O_DIRECTORY))) << strerror(errno);
 
-  struct ifreq ifr_iton = {
-      .ifr_ifindex = 1,
-  };
+  struct ifreq ifr_iton = {};
+  ifr_iton.ifr_ifindex = 1;
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), -1);
   EXPECT_EQ(errno, ENOTTY) << strerror(errno);
 
@@ -4815,9 +4911,11 @@ TEST(IoctlTest, IoctlGetInterfaceFlags) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  struct ifreq ifr_ntof = {
-      .ifr_name = "lo",
-  };
+  struct ifreq ifr_ntof = {};
+  {
+    constexpr char name[] = "lo";
+    memcpy(ifr_ntof.ifr_name, name, sizeof(name));
+  }
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFFLAGS, &ifr_ntof), 0) << strerror(errno);
   struct expected_flag {
     std::string name;
@@ -4878,10 +4976,9 @@ TEST(IoctlTest, IoctlGetInterfaceAddressesPartialRecord) {
   const char FILLER = 0xa;
   struct ifreq ifr;
   memset(&ifr, FILLER, sizeof(ifr));
-  struct ifconf ifc = {
-      .ifc_len = sizeof(ifr) - 1,
-      .ifc_req = &ifr,
-  };
+  struct ifconf ifc = {};
+  ifc.ifc_len = sizeof(ifr) - 1;
+  ifc.ifc_req = &ifr;
 
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFCONF, &ifc), 0) << strerror(errno);
   ASSERT_EQ(ifc.ifc_len, 0);

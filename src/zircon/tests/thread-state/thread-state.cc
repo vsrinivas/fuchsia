@@ -45,7 +45,14 @@ constexpr uint32_t MAX_NUM_MSG_HANDLES = 2;
 constexpr uint32_t NUM_WAIT_MANY_HANDLES = MAX_NUM_MSG_HANDLES;
 
 const zx_port_packet_t port_test_packet = {
-    .key = 42u, .type = ZX_PKT_TYPE_USER, .status = -42, {.user = {.u64 = {1, 2, 3, 4}}}};
+    .key = 42u,
+    .type = ZX_PKT_TYPE_USER,
+    .status = -42,
+    .user =
+        {
+            .u64 = {1, 2, 3, 4},
+        },
+};
 
 const zx_time_t interrupt_signaled_timestamp = 12345;
 

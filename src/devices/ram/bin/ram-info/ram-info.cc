@@ -16,6 +16,8 @@ namespace {
 
 // TODO(fxbug.dev/48254): Get default channel information through the FIDL API.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 constexpr ram_info::RamDeviceInfo kDevices[] = {
     {
         // Astro
@@ -54,6 +56,7 @@ constexpr ram_info::RamDeviceInfo kDevices[] = {
             },
     },
 };
+#pragma GCC diagnostic pop
 
 double CounterToBandwidthMBs(uint64_t cycles, uint64_t frequency, uint64_t cycles_measured,
                              uint64_t bytes_per_cycle) {

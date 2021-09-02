@@ -23,11 +23,6 @@ typedef struct {
   const char* name;
 } TagDefinition;
 
-static TagDefinition kTags[] = {
-#define KTRACE_DEF(num, type, name, group) [num] = {num, KTRACE_GRP_##group, kTag##type, #name},
-#include <lib/zircon-internal/ktrace-def.h>
-};
-
 class KTraceRecord {
  public:
   static std::optional<KTraceRecord> ParseRecord(uint8_t* data_buf, size_t buf_len);

@@ -338,7 +338,10 @@ TEST_F(ConnectivityManagerTest, OnPlatformEvent) {
   WeaveDeviceEvent provisioning_event{.Type = DeviceEventType::kServiceProvisioningChange};
   WeaveDeviceEvent account_pairing_event{
       .Type = DeviceEventType::kAccountPairingChange,
-      .AccountPairingChange.IsPairedToAccount = true,
+      .AccountPairingChange =
+          {
+              .IsPairedToAccount = true,
+          },
   };
 
   // The tunnel should be down by default.

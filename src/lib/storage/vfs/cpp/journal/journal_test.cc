@@ -679,7 +679,7 @@ TEST_F(JournalTest, WriteDataObserveTransaction) {
       {.vmo = zx::unowned_vmo(buffer.vmo().get()),
        .op =
            {
-               storage::OperationType::kWrite,
+               .type = storage::OperationType::kWrite,
                .vmo_offset = 0,
                .dev_offset = 20,
                .length = 1,
@@ -688,7 +688,7 @@ TEST_F(JournalTest, WriteDataObserveTransaction) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 30,
                   .length = 1,
@@ -743,7 +743,7 @@ TEST_F(JournalTest, WriteNoDataSucceeds) {
       .vmo = zx::unowned_vmo(buffer.vmo().get()),
       .op =
           {
-              storage::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -794,7 +794,7 @@ TEST_F(JournalTest, WriteMetadataObserveTransactions) {
       .vmo = zx::unowned_vmo(metadata.vmo().get()),
       .op =
           {
-              storage::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -851,7 +851,7 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -861,7 +861,7 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 1234,
                   .length = 1,
@@ -917,7 +917,7 @@ TEST_F(JournalTest, TrimDataObserveTransaction) {
       .vmo = zx::unowned_vmo(metadata.vmo().get()),
       .op =
           {
-              storage::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -926,7 +926,7 @@ TEST_F(JournalTest, TrimDataObserveTransaction) {
   const storage::BufferedOperation trim = {
       .op =
           {
-              storage::OperationType::kTrim,
+              .type = storage::OperationType::kTrim,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 5,
@@ -997,7 +997,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 5,
@@ -1007,7 +1007,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 1234,
                   .length = 1,
@@ -1077,7 +1077,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 8,
@@ -1087,7 +1087,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 1234,
                   .length = 1,
@@ -1167,7 +1167,7 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 6,
@@ -1177,7 +1177,7 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 1234,
                   .length = 1,
@@ -1264,7 +1264,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 6,
@@ -1274,7 +1274,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 1234,
                   .length = 1,
@@ -1357,7 +1357,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 7,
@@ -1367,7 +1367,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 1234,
                   .length = 1,
@@ -1453,7 +1453,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 1234,
                   .length = 1,
@@ -1463,7 +1463,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 4567,
                   .length = 1,
@@ -1554,7 +1554,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 7,
@@ -1564,7 +1564,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 1234,
                   .length = 1,
@@ -1574,7 +1574,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 4567,
                   .length = 1,
@@ -1704,7 +1704,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 4,
@@ -1714,7 +1714,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 1234,
                   .length = 4,
@@ -1803,7 +1803,7 @@ TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 10,
                   .length = 3,
@@ -1813,7 +1813,7 @@ TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 10,
                   .length = 3,
@@ -1823,7 +1823,7 @@ TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 3,
@@ -1905,7 +1905,7 @@ TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 10,
                   .length = 3,
@@ -1915,7 +1915,7 @@ TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 3,
@@ -1925,7 +1925,7 @@ TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 30,
                   .length = 3,
@@ -2001,7 +2001,7 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 8,
@@ -2011,7 +2011,7 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 1234,
                   .length = 1,
@@ -2087,7 +2087,7 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 2,
@@ -2097,7 +2097,7 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 1,
                   .dev_offset = 200,
                   .length = 3,
@@ -2150,7 +2150,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -2160,7 +2160,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 1,
                   .dev_offset = 200,
                   .length = 1,
@@ -2170,7 +2170,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 2000,
                   .length = 1,
@@ -2180,7 +2180,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 3000,
                   .length = 1,
@@ -2260,7 +2260,7 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 9,
@@ -2270,7 +2270,7 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 2,
@@ -2341,7 +2341,7 @@ TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -2351,7 +2351,7 @@ TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 30,
                   .length = 1,
@@ -2419,7 +2419,7 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
       .vmo = zx::unowned_vmo(buffer.vmo().get()),
       .op =
           {
-              storage::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -2479,7 +2479,7 @@ TEST_F(JournalTest, DataOperationTooLargeToFitInWritebackFails) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = kBufferLength,
@@ -2510,7 +2510,7 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = kBufferLength,
@@ -2535,7 +2535,7 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -2545,7 +2545,7 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 200,
                   .length = 1,
@@ -2597,7 +2597,7 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -2648,7 +2648,7 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -2658,7 +2658,7 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 1234,
                   .length = 1,
@@ -2707,7 +2707,7 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -2717,7 +2717,7 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 1234,
                   .length = 1,
@@ -2769,7 +2769,7 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -2779,7 +2779,7 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
           .vmo = zx::unowned_vmo(metadata.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 200,
                   .length = 1,
@@ -2872,7 +2872,7 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
       .vmo = zx::unowned_vmo(metadata.vmo().get()),
       .op =
           {
-              storage::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -3003,7 +3003,7 @@ TEST_F(JournalTest, MetricsUpdates) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 0,
                   .dev_offset = 20,
                   .length = 1,
@@ -3013,7 +3013,7 @@ TEST_F(JournalTest, MetricsUpdates) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 1,
                   .dev_offset = 200,
                   .length = 1,
@@ -3023,7 +3023,7 @@ TEST_F(JournalTest, MetricsUpdates) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 2000,
                   .length = 1,
@@ -3033,7 +3033,7 @@ TEST_F(JournalTest, MetricsUpdates) {
           .vmo = zx::unowned_vmo(buffer.vmo().get()),
           .op =
               {
-                  storage::OperationType::kWrite,
+                  .type = storage::OperationType::kWrite,
                   .vmo_offset = 2,
                   .dev_offset = 3000,
                   .length = 1,
@@ -3143,7 +3143,7 @@ TEST_F(JournalTestWithLargeBuffer, ExactlyMaxBlockDescriptorsSucceeds) {
                                 .vmo = zx::unowned_vmo(buffer.vmo().get()),
                                 .op =
                                     {
-                                        storage::OperationType::kWrite,
+                                        .type = storage::OperationType::kWrite,
                                         .vmo_offset = 0,
                                         .dev_offset = 20,
                                         .length = 1,
@@ -3162,7 +3162,7 @@ TEST_F(JournalTestWithLargeBuffer, MoreThanMaxBlockDescriptorsFails) {
                                     .vmo = zx::unowned_vmo(buffer.vmo().get()),
                                     .op =
                                         {
-                                            storage::OperationType::kWrite,
+                                            .type = storage::OperationType::kWrite,
                                             .vmo_offset = 0,
                                             .dev_offset = 20,
                                             .length = 1,
@@ -3264,7 +3264,7 @@ TEST(JournalCallbackTest, CommitCallbackTriggeredAtCorrectTime) {
                                                .vmo = zx::unowned_vmo(test_buffer.vmo().get()),
                                                .op =
                                                    {
-                                                       storage::OperationType::kWrite,
+                                                       .type = storage::OperationType::kWrite,
                                                        .vmo_offset = 0,
                                                        .dev_offset = 20,
                                                        .length = 1,
@@ -3274,7 +3274,7 @@ TEST(JournalCallbackTest, CommitCallbackTriggeredAtCorrectTime) {
                                                .vmo = zx::unowned_vmo(test_buffer.vmo().get()),
                                                .op =
                                                    {
-                                                       storage::OperationType::kWrite,
+                                                       .type = storage::OperationType::kWrite,
                                                        .vmo_offset = 1,
                                                        .dev_offset = 21,
                                                        .length = 1,
@@ -3375,7 +3375,7 @@ TEST(JournalCallbackTest, CompleteCallbackTriggeredAtCorrectTime) {
                                                .vmo = zx::unowned_vmo(test_buffer.vmo().get()),
                                                .op =
                                                    {
-                                                       storage::OperationType::kWrite,
+                                                       .type = storage::OperationType::kWrite,
                                                        .vmo_offset = 0,
                                                        .dev_offset = 20,
                                                        .length = 1,
@@ -3385,7 +3385,7 @@ TEST(JournalCallbackTest, CompleteCallbackTriggeredAtCorrectTime) {
                                                .vmo = zx::unowned_vmo(test_buffer.vmo().get()),
                                                .op =
                                                    {
-                                                       storage::OperationType::kWrite,
+                                                       .type = storage::OperationType::kWrite,
                                                        .vmo_offset = 1,
                                                        .dev_offset = 21,
                                                        .length = 1,

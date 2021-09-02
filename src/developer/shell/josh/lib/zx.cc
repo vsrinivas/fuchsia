@@ -37,7 +37,7 @@ JSValue ZxStatusToError(JSContext *ctx, zx_status_t status) {
 JSClassID handle_class_id_;
 
 JSClassDef handle_class_ = {
-    "Handle",
+    .class_name = "Handle",
     .finalizer = nullptr,
 };
 
@@ -496,29 +496,56 @@ JSValue Kill(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSValueConst *
 #define FLAG(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE)
 #define FLAG_64(x) JS_PROP_INT64_DEF(#x, x, JS_PROP_CONFIGURABLE)
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const JSCFunctionListEntry funcs_[] = {
     /* Fuchsia handle operations */
-    JS_CFUNC_DEF("channelCreate", 0, ChannelCreate), JS_CFUNC_DEF("channelRead", 0, ChannelRead),
-    JS_CFUNC_DEF("channelWrite", 0, ChannelWrite), JS_CFUNC_DEF("handleClose", 0, HandleClose),
-    JS_CFUNC_DEF("objectWaitAsync", 0, ObjectWaitAsync), JS_CFUNC_DEF("duplicate", 0, Duplicate),
-    JS_CFUNC_DEF("getChild", 0, GetChild), JS_CFUNC_DEF("handleFromInt", 0, HandleFromInt),
+    JS_CFUNC_DEF("channelCreate", 0, ChannelCreate),
+    JS_CFUNC_DEF("channelRead", 0, ChannelRead),
+    JS_CFUNC_DEF("channelWrite", 0, ChannelWrite),
+    JS_CFUNC_DEF("handleClose", 0, HandleClose),
+    JS_CFUNC_DEF("objectWaitAsync", 0, ObjectWaitAsync),
+    JS_CFUNC_DEF("duplicate", 0, Duplicate),
+    JS_CFUNC_DEF("getChild", 0, GetChild),
+    JS_CFUNC_DEF("handleFromInt", 0, HandleFromInt),
     JS_CFUNC_DEF("getObjectInfo", 2, ObjectGetInfo),
     JS_CFUNC_DEF("getObjectProperty", 2, ObjectGetProperty),
-    JS_CFUNC_DEF("jobDefault", 2, JobDefault), JS_CFUNC_DEF("processSelf", 2, ProcessSelf),
+    JS_CFUNC_DEF("jobDefault", 2, JobDefault),
+    JS_CFUNC_DEF("processSelf", 2, ProcessSelf),
     JS_CFUNC_DEF("kill", 1, Kill),
     /* Handle signal constants */
-    FLAG(ZX_CHANNEL_READABLE), FLAG(ZX_CHANNEL_WRITABLE), FLAG(ZX_CHANNEL_PEER_CLOSED),
+    FLAG(ZX_CHANNEL_READABLE),
+    FLAG(ZX_CHANNEL_WRITABLE),
+    FLAG(ZX_CHANNEL_PEER_CLOSED),
     /* zx_object_get_info flags */
-    FLAG(ZX_INFO_NONE), FLAG(ZX_INFO_HANDLE_VALID), FLAG(ZX_INFO_HANDLE_BASIC),
-    FLAG(ZX_INFO_PROCESS_V1), FLAG(ZX_INFO_PROCESS_V2), FLAG(ZX_INFO_PROCESS_THREADS),
-    FLAG(ZX_INFO_VMAR), FLAG(ZX_INFO_JOB_CHILDREN), FLAG(ZX_INFO_JOB_PROCESSES),
-    FLAG(ZX_INFO_THREAD), FLAG(ZX_INFO_THREAD_EXCEPTION_REPORT), FLAG(ZX_INFO_TASK_STATS),
-    FLAG(ZX_INFO_PROCESS_MAPS), FLAG(ZX_INFO_PROCESS_VMOS), FLAG(ZX_INFO_THREAD_STATS),
-    FLAG(ZX_INFO_CPU_STATS), FLAG(ZX_INFO_KMEM_STATS), FLAG(ZX_INFO_RESOURCE),
-    FLAG(ZX_INFO_HANDLE_COUNT), FLAG(ZX_INFO_BTI), FLAG(ZX_INFO_PROCESS_HANDLE_STATS),
-    FLAG(ZX_INFO_SOCKET), FLAG(ZX_INFO_VMO),
+    FLAG(ZX_INFO_NONE),
+    FLAG(ZX_INFO_HANDLE_VALID),
+    FLAG(ZX_INFO_HANDLE_BASIC),
+    FLAG(ZX_INFO_PROCESS_V1),
+    FLAG(ZX_INFO_PROCESS_V2),
+    FLAG(ZX_INFO_PROCESS_THREADS),
+    FLAG(ZX_INFO_VMAR),
+    FLAG(ZX_INFO_JOB_CHILDREN),
+    FLAG(ZX_INFO_JOB_PROCESSES),
+    FLAG(ZX_INFO_THREAD),
+    FLAG(ZX_INFO_THREAD_EXCEPTION_REPORT),
+    FLAG(ZX_INFO_TASK_STATS),
+    FLAG(ZX_INFO_PROCESS_MAPS),
+    FLAG(ZX_INFO_PROCESS_VMOS),
+    FLAG(ZX_INFO_THREAD_STATS),
+    FLAG(ZX_INFO_CPU_STATS),
+    FLAG(ZX_INFO_KMEM_STATS),
+    FLAG(ZX_INFO_RESOURCE),
+    FLAG(ZX_INFO_HANDLE_COUNT),
+    FLAG(ZX_INFO_BTI),
+    FLAG(ZX_INFO_PROCESS_HANDLE_STATS),
+    FLAG(ZX_INFO_SOCKET),
+    FLAG(ZX_INFO_VMO),
     /* zx_object_get_property flags */
-    FLAG(ZX_PROP_NAME), FLAG_64(ZX_RIGHT_SAME_RIGHTS)};
+    FLAG(ZX_PROP_NAME),
+    FLAG_64(ZX_RIGHT_SAME_RIGHTS),
+};
+#pragma GCC diagnostic pop
 
 namespace {
 

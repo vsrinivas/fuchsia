@@ -172,7 +172,7 @@ param const params[] = {
   {
     .name             = "composition_clip", // bug:25525
     .surface          = { 256, 256 },
-    .clip.composition = { 0, 0, 128, 128 },
+    .clip = { .composition = { 0, 0, 128, 128 }, },
     .checksums        = {
       { 0xBFFF3840, {} }
     },
@@ -184,7 +184,7 @@ param const params[] = {
   {
     .name        = "render_clip", // bug:25525
     .surface     = { 256, 256 },
-    .clip.render = { 0, 0, 128, 128 },
+    .clip = { .render = { 0, 0, 128, 128 }, },
     .checksums   = {
       { 0xBFFF3840, {} }
     },

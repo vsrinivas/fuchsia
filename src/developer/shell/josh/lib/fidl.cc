@@ -38,7 +38,7 @@ std::string DocumentToString(rapidjson::Document* document) {
 JSClassID fidl_class_id_;
 
 JSClassDef fidl_class_ = {
-    "FidlInternal",
+    .class_name = "FidlInternal",
     .finalizer = nullptr,
 };
 
@@ -260,6 +260,8 @@ JSValue Close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* /*a
   return JS_UNDEFINED;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const JSCFunctionListEntry fidl_proto_funcs_[] = {
     JS_CFUNC_DEF("loadLibrary", 1, LoadLibrary),
     JS_CFUNC_DEF("loadLibraryFromString", 1, LoadLibraryFromString),
@@ -270,6 +272,7 @@ const JSCFunctionListEntry fidl_proto_funcs_[] = {
 
 JSCFunctionListEntry module_funcs_[] = {JS_CFUNC_DEF("newLibrary", 1, NewLibrary),
                                         JS_PROP_STRING_DEF("irPath", "", JS_PROP_CONFIGURABLE)};
+#pragma GCC diagnostic pop
 
 int FidlRunOnInit(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&fidl_class_id_);

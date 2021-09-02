@@ -45,11 +45,14 @@ enum DiskType {
   Mtd = 1,
   BlockDevice = 2,
 };
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const char* kDiskTypeStr[] = {
     [DiskType::File] = "file",
     [DiskType::Mtd] = "mtd",
     [DiskType::BlockDevice] = "block_device",
 };
+#pragma GCC diagnostic pop
 
 int usage(void) {
   fprintf(stderr, "usage: fvm [ output_path ] [ command ] [ <flags>* ] [ <input_paths>* ]\n");

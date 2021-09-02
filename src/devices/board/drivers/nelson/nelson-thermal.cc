@@ -97,124 +97,110 @@ static const fuchsia_hardware_thermal_ThermalDeviceInfo nelson_config = {
     .opps = {},
 };
 
-static const aml_thermal_info_t
-    aml_thermal_info =
+static const aml_thermal_info_t aml_thermal_info = {
+    .voltage_table =
         {
-            .voltage_table =
+            {.microvolt = 1'050'000, .duty_cycle = 0},  {.microvolt = 1'040'000, .duty_cycle = 3},
+            {.microvolt = 1'030'000, .duty_cycle = 6},  {.microvolt = 1'020'000, .duty_cycle = 8},
+            {.microvolt = 1'010'000, .duty_cycle = 11}, {.microvolt = 1'000'000, .duty_cycle = 14},
+            {.microvolt = 990'000, .duty_cycle = 17},   {.microvolt = 980'000, .duty_cycle = 20},
+            {.microvolt = 970'000, .duty_cycle = 23},   {.microvolt = 960'000, .duty_cycle = 26},
+            {.microvolt = 950'000, .duty_cycle = 29},   {.microvolt = 940'000, .duty_cycle = 31},
+            {.microvolt = 930'000, .duty_cycle = 34},   {.microvolt = 920'000, .duty_cycle = 37},
+            {.microvolt = 910'000, .duty_cycle = 40},   {.microvolt = 900'000, .duty_cycle = 43},
+            {.microvolt = 890'000, .duty_cycle = 45},   {.microvolt = 880'000, .duty_cycle = 48},
+            {.microvolt = 870'000, .duty_cycle = 51},   {.microvolt = 860'000, .duty_cycle = 54},
+            {.microvolt = 850'000, .duty_cycle = 56},   {.microvolt = 840'000, .duty_cycle = 59},
+            {.microvolt = 830'000, .duty_cycle = 62},   {.microvolt = 820'000, .duty_cycle = 65},
+            {.microvolt = 810'000, .duty_cycle = 68},   {.microvolt = 800'000, .duty_cycle = 70},
+            {.microvolt = 790'000, .duty_cycle = 73},   {.microvolt = 780'000, .duty_cycle = 76},
+            {.microvolt = 770'000, .duty_cycle = 79},   {.microvolt = 760'000, .duty_cycle = 81},
+            {.microvolt = 750'000, .duty_cycle = 84},   {.microvolt = 740'000, .duty_cycle = 87},
+            {.microvolt = 730'000, .duty_cycle = 89},   {.microvolt = 720'000, .duty_cycle = 92},
+            {.microvolt = 710'000, .duty_cycle = 95},   {.microvolt = 700'000, .duty_cycle = 98},
+            {.microvolt = 690'000, .duty_cycle = 100},
+        },
+    .initial_cluster_frequencies =
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
+#pragma GCC diagnostic pop
+        },
+    .voltage_pwm_period_ns = 1500,
+    .opps =
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+#pragma GCC diagnostic pop
                 {
-                    [0] = {.microvolt = 1'050'000, .duty_cycle = 0},
-                    [1] = {.microvolt = 1'040'000, .duty_cycle = 3},
-                    [2] = {.microvolt = 1'030'000, .duty_cycle = 6},
-                    [3] = {.microvolt = 1'020'000, .duty_cycle = 8},
-                    [4] = {.microvolt = 1'010'000, .duty_cycle = 11},
-                    [5] = {.microvolt = 1'000'000, .duty_cycle = 14},
-                    [6] = {.microvolt = 990'000, .duty_cycle = 17},
-                    [7] = {.microvolt = 980'000, .duty_cycle = 20},
-                    [8] = {.microvolt = 970'000, .duty_cycle = 23},
-                    [9] = {.microvolt = 960'000, .duty_cycle = 26},
-                    [10] = {.microvolt = 950'000, .duty_cycle = 29},
-                    [11] = {.microvolt = 940'000, .duty_cycle = 31},
-                    [12] = {.microvolt = 930'000, .duty_cycle = 34},
-                    [13] = {.microvolt = 920'000, .duty_cycle = 37},
-                    [14] = {.microvolt = 910'000, .duty_cycle = 40},
-                    [15] = {.microvolt = 900'000, .duty_cycle = 43},
-                    [16] = {.microvolt = 890'000, .duty_cycle = 45},
-                    [17] = {.microvolt = 880'000, .duty_cycle = 48},
-                    [18] = {.microvolt = 870'000, .duty_cycle = 51},
-                    [19] = {.microvolt = 860'000, .duty_cycle = 54},
-                    [20] = {.microvolt = 850'000, .duty_cycle = 56},
-                    [21] = {.microvolt = 840'000, .duty_cycle = 59},
-                    [22] = {.microvolt = 830'000, .duty_cycle = 62},
-                    [23] = {.microvolt = 820'000, .duty_cycle = 65},
-                    [24] = {.microvolt = 810'000, .duty_cycle = 68},
-                    [25] = {.microvolt = 800'000, .duty_cycle = 70},
-                    [26] = {.microvolt = 790'000, .duty_cycle = 73},
-                    [27] = {.microvolt = 780'000, .duty_cycle = 76},
-                    [28] = {.microvolt = 770'000, .duty_cycle = 79},
-                    [29] = {.microvolt = 760'000, .duty_cycle = 81},
-                    [30] = {.microvolt = 750'000, .duty_cycle = 84},
-                    [31] = {.microvolt = 740'000, .duty_cycle = 87},
-                    [32] = {.microvolt = 730'000, .duty_cycle = 89},
-                    [33] = {.microvolt = 720'000, .duty_cycle = 92},
-                    [34] = {.microvolt = 710'000, .duty_cycle = 95},
-                    [35] = {.microvolt = 700'000, .duty_cycle = 98},
-                    [36] = {.microvolt = 690'000, .duty_cycle = 100},
+                    {
+                        .opp =
+                            {
+                                {.freq_hz = 100'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 250'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 500'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 667'000'000, .volt_uv = 780'000},
+                                {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
+                                {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
+                                {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
+                                {.freq_hz = 1'512'000'000, .volt_uv = 830'000},
+                                {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
+                                {.freq_hz = 1'704'000'000, .volt_uv = 900'000},
+                                {.freq_hz = 1'800'000'000, .volt_uv = 940'000},
+                                {.freq_hz = 1'908'000'000, .volt_uv = 970'000},
+                            },
+                        .latency = 0,
+                        .count = 12,
+                    },
+                    {
+                        .opp =
+                            {
+                                {.freq_hz = 100'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 250'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 500'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 667'000'000, .volt_uv = 780'000},
+                                {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
+                                {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
+                                {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
+                                {.freq_hz = 1'500'000'000, .volt_uv = 830'000},
+                                {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
+                                {.freq_hz = 1'704'000'000, .volt_uv = 900'000},
+                                {.freq_hz = 1'800'000'000, .volt_uv = 910'000},
+                                {.freq_hz = 1'908'000'000, .volt_uv = 910'000},
+                            },
+                        .latency = 0,
+                        .count = 12,
+                    },
+                    {
+                        .opp =
+                            {
+                                {.freq_hz = 100'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 250'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 500'000'000, .volt_uv = 760'000},
+                                {.freq_hz = 667'000'000, .volt_uv = 780'000},
+                                {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
+                                {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
+                                {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
+                                {.freq_hz = 1'500'000'000, .volt_uv = 830'000},
+                                {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
+                                {.freq_hz = 1'704'000'000, .volt_uv = 860'000},
+                                {.freq_hz = 1'800'000'000, .volt_uv = 860'000},
+                                {.freq_hz = 1'908'000'000, .volt_uv = 860'000},
+                            },
+                        .latency = 0,
+                        .count = 12,
+                    },
                 },
-            .initial_cluster_frequencies =
-                {
-                    [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
-                },
-            .voltage_pwm_period_ns = 1500,
-            .opps =
-                {
-                    [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-                        {
-                            [0] =
-                                {
-                                    .opp =
-                                        {
-                                            [0] = {.freq_hz = 100'000'000, .volt_uv = 760'000},
-                                            [1] = {.freq_hz = 250'000'000, .volt_uv = 760'000},
-                                            [2] = {.freq_hz = 500'000'000, .volt_uv = 760'000},
-                                            [3] = {.freq_hz = 667'000'000, .volt_uv = 780'000},
-                                            [4] = {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
-                                            [5] = {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
-                                            [6] = {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
-                                            [7] = {.freq_hz = 1'512'000'000, .volt_uv = 830'000},
-                                            [8] = {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
-                                            [9] = {.freq_hz = 1'704'000'000, .volt_uv = 900'000},
-                                            [10] = {.freq_hz = 1'800'000'000, .volt_uv = 940'000},
-                                            [11] = {.freq_hz = 1'908'000'000, .volt_uv = 970'000},
-                                        },
-                                    .latency = 0,
-                                    .count = 12,
-                                },
-                            [1] =
-                                {
-                                    .opp =
-                                        {
-                                            [0] = {.freq_hz = 100'000'000, .volt_uv = 760'000},
-                                            [1] = {.freq_hz = 250'000'000, .volt_uv = 760'000},
-                                            [2] = {.freq_hz = 500'000'000, .volt_uv = 760'000},
-                                            [3] = {.freq_hz = 667'000'000, .volt_uv = 780'000},
-                                            [4] = {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
-                                            [5] = {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
-                                            [6] = {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
-                                            [7] = {.freq_hz = 1'500'000'000, .volt_uv = 830'000},
-                                            [8] = {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
-                                            [9] = {.freq_hz = 1'704'000'000, .volt_uv = 900'000},
-                                            [10] = {.freq_hz = 1'800'000'000, .volt_uv = 910'000},
-                                            [11] = {.freq_hz = 1'908'000'000, .volt_uv = 910'000},
-                                        },
-                                    .latency = 0,
-                                    .count = 12,
-                                },
-                            [2] =
-                                {
-                                    .opp =
-                                        {
-                                            [0] = {.freq_hz = 100'000'000, .volt_uv = 760'000},
-                                            [1] = {.freq_hz = 250'000'000, .volt_uv = 760'000},
-                                            [2] = {.freq_hz = 500'000'000, .volt_uv = 760'000},
-                                            [3] = {.freq_hz = 667'000'000, .volt_uv = 780'000},
-                                            [4] = {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
-                                            [5] = {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
-                                            [6] = {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
-                                            [7] = {.freq_hz = 1'500'000'000, .volt_uv = 830'000},
-                                            [8] = {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
-                                            [9] = {.freq_hz = 1'704'000'000, .volt_uv = 860'000},
-                                            [10] = {.freq_hz = 1'800'000'000, .volt_uv = 860'000},
-                                            [11] = {.freq_hz = 1'908'000'000, .volt_uv = 860'000},
-                                        },
-                                    .latency = 0,
-                                    .count = 12,
-                                },
-                        },
-                },
-            .cluster_id_map =
-                {
-                    [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 0,
-                },
+        },
+    .cluster_id_map =
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 0,
+#pragma GCC diagnostic pop
+        },
 };
 
 static const pbus_metadata_t thermal_metadata[] = {

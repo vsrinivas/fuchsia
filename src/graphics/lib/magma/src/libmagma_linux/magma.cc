@@ -153,7 +153,10 @@ magma_status_t magma_virt_create_image(magma_connection_t connection,
   };
 
   virtio_magma_virt_create_image_ctrl request{
-      .hdr.type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE,
+      .hdr =
+          {
+              .type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE,
+          },
       .connection = reinterpret_cast<uintptr_t>(connection_wrapped->Object()),
       .create_info = reinterpret_cast<uintptr_t>(&wrapper),
   };
@@ -193,7 +196,10 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
   };
 
   virtio_magma_virt_get_image_info_ctrl request{
-      .hdr.type = VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO,
+      .hdr =
+          {
+              .type = VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO,
+          },
       .connection = reinterpret_cast<uintptr_t>(connection_wrapped->Object()),
       .image = image_wrapped->Object(),
       .image_info_out = reinterpret_cast<uintptr_t>(&wrapper),

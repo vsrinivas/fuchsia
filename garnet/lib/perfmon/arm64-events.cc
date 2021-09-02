@@ -14,6 +14,8 @@ namespace perfmon {
 
 namespace {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const EventDetails g_fixed_event_details[] = {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
   [id] = {MakeEventId(kGroupFixed, id), #event_name, readable_name, description},
@@ -30,6 +32,7 @@ const EventDetails g_arch_event_details[] = {
 };
 
 const size_t g_num_arch_event_details = std::size(g_arch_event_details);
+#pragma GCC diagnostic pop
 
 // Register all events for armv8.
 void RegisterArmv8Events(internal::EventRegistry* registry) {

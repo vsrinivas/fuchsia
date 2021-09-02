@@ -35,11 +35,14 @@ namespace simple_pt {
 
 const char* InsnClassName(enum pt_insn_class iclass) {
   // Note: The output expects this to be 7 chars or less.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
   static const char* const class_name[] = {
       [ptic_error] = "error",    [ptic_other] = "other",        [ptic_call] = "call",
       [ptic_return] = "return",  [ptic_jump] = "jump",          [ptic_cond_jump] = "cjump",
       [ptic_far_call] = "fcall", [ptic_far_return] = "freturn", [ptic_far_jump] = "fjump",
   };
+#pragma GCC diagnostic pop
   if (iclass >= std::size(class_name))
     return ";;;";
   return class_name[iclass] ? class_name[iclass] : "???";

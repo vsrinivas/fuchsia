@@ -99,6 +99,8 @@ void InputReport::SendInitialConsumerControlReport(InputReportsReader* reader) {
 }
 
 std::string InputReport::GetDeviceTypesString() const {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
   const char* kDeviceTypeNames[] = {
       [static_cast<uint32_t>(hid_input_report::DeviceType::kMouse)] = "mouse",
       [static_cast<uint32_t>(hid_input_report::DeviceType::kSensor)] = "sensor",
@@ -106,6 +108,7 @@ std::string InputReport::GetDeviceTypesString() const {
       [static_cast<uint32_t>(hid_input_report::DeviceType::kKeyboard)] = "keyboard",
       [static_cast<uint32_t>(hid_input_report::DeviceType::kConsumerControl)] = "consumer-control",
   };
+#pragma GCC diagnostic pop
 
   std::string device_types;
   for (size_t i = 0; i < devices_.size(); i++) {

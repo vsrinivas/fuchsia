@@ -17,7 +17,7 @@ namespace {
 JSClassID js_repl_class_id;
 
 JSClassDef js_repl_class = {
-    "Repl",
+    .class_name = "Repl",
     .finalizer = nullptr,
 };
 
@@ -117,11 +117,14 @@ JSValue GetLine(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *a
   return JS_NewString(ctx, repl->GetLine());
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const JSCFunctionListEntry js_li_funcs[] = {
     JS_CFUNC_DEF("createRepl", 0, NewRepl),    JS_CFUNC_DEF("onInput", 3, OnInput),
     JS_CFUNC_DEF("closeRepl", 1, CloseRepl),   JS_CFUNC_DEF("getAndEvalCmd", 1, GetAndEvalCmd),
     JS_CFUNC_DEF("showPrompt", 1, ShowPrompt), JS_CFUNC_DEF("showOutput", 2, ShowOutput),
     JS_CFUNC_DEF("getLine", 1, GetLine)};
+#pragma GCC diagnostic pop
 
 int LiRunOnInit(JSContext *ctx, JSModuleDef *m) {
   /* Repl Input class */

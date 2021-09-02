@@ -16,7 +16,10 @@ fuchsia_sysmem_ImageFormat_2 ConvertHlcppImageFormat2toCType(
               .type = *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
                   &hlcpp_image_format2.pixel_format.type),
               .has_format_modifier = hlcpp_image_format2.pixel_format.has_format_modifier,
-              .format_modifier.value = hlcpp_image_format2.pixel_format.format_modifier.value,
+              .format_modifier =
+                  {
+                      .value = hlcpp_image_format2.pixel_format.format_modifier.value,
+                  },
           },
       .coded_width = hlcpp_image_format2.coded_width,
       .coded_height = hlcpp_image_format2.coded_height,

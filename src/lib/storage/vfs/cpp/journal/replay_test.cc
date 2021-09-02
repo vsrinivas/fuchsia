@@ -777,12 +777,13 @@ TEST_F(ReplayJournalTest, OneEntry) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 1234,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 1234,
+                  .length = 1,
+              },
       },
   };
   uint64_t entry_size = operations[0].op.length + kEntryMetadataBlocks;
@@ -839,12 +840,13 @@ TEST_F(ReplayJournalTest, BadSuperblockIsRestored) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 1234,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 1234,
+                  .length = 1,
+              },
       },
   };
   uint64_t entry_size = operations[0].op.length + kEntryMetadataBlocks;
@@ -890,12 +892,13 @@ TEST_F(ReplayJournalTest, CannotWriteParsedEntriesFails) {
   std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
-          {
-              .type = storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 1234,
-              .length = 1,
-          },
+          .op =
+              {
+                  .type = storage::OperationType::kWrite,
+                  .vmo_offset = 0,
+                  .dev_offset = 1234,
+                  .length = 1,
+              },
       },
   };
   uint64_t entry_size = operations[0].op.length + kEntryMetadataBlocks;

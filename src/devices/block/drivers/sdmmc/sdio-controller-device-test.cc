@@ -883,30 +883,26 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
   ddk.Ok();
 
   constexpr zx_device_prop_t kExpectedProps[4][3] = {
-      [0] =
-          {
-              {BIND_SDIO_VID, 0, 0x317b},
-              {BIND_SDIO_PID, 0, 0xa88f},
-              {BIND_SDIO_FUNCTION, 0, 1},
-          },
-      [1] =
-          {
-              {BIND_SDIO_VID, 0, 0x6dbd},
-              {BIND_SDIO_PID, 0, 0x240d},
-              {BIND_SDIO_FUNCTION, 0, 2},
-          },
-      [2] =
-          {
-              {BIND_SDIO_VID, 0, 0xb8ca},
-              {BIND_SDIO_PID, 0, 0x9852},
-              {BIND_SDIO_FUNCTION, 0, 3},
-          },
-      [3] =
-          {
-              {BIND_SDIO_VID, 0, 0xf5ee},
-              {BIND_SDIO_PID, 0, 0x30de},
-              {BIND_SDIO_FUNCTION, 0, 4},
-          },
+      {
+          {BIND_SDIO_VID, 0, 0x317b},
+          {BIND_SDIO_PID, 0, 0xa88f},
+          {BIND_SDIO_FUNCTION, 0, 1},
+      },
+      {
+          {BIND_SDIO_VID, 0, 0x6dbd},
+          {BIND_SDIO_PID, 0, 0x240d},
+          {BIND_SDIO_FUNCTION, 0, 2},
+      },
+      {
+          {BIND_SDIO_VID, 0, 0xb8ca},
+          {BIND_SDIO_PID, 0, 0x9852},
+          {BIND_SDIO_FUNCTION, 0, 3},
+      },
+      {
+          {BIND_SDIO_VID, 0, 0xf5ee},
+          {BIND_SDIO_PID, 0, 0x30de},
+          {BIND_SDIO_FUNCTION, 0, 4},
+      },
   };
 
   EXPECT_EQ(ddk.total_children(), std::size(kExpectedProps));

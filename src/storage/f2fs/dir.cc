@@ -9,6 +9,8 @@
 
 namespace f2fs {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
 const unsigned char kFiletypeTable[static_cast<uint8_t>(FileType::kFtMax)] = {
     [static_cast<uint8_t>(FileType::kFtUnknown)] = DT_UNKNOWN,
     [static_cast<uint8_t>(FileType::kFtRegFile)] = DT_REG,
@@ -31,6 +33,7 @@ const unsigned char kTypeByMode[S_IFMT >> kStatShift] = {
     [S_IFSOCK >> kStatShift] = static_cast<uint8_t>(FileType::kFtSock),
     [S_IFLNK >> kStatShift] = static_cast<uint8_t>(FileType::kFtSymlink),
 };
+#pragma GCC diagnostic pop
 
 Dir::Dir(F2fs *fs) : VnodeF2fs(fs) {}
 

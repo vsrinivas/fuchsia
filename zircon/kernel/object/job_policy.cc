@@ -348,10 +348,17 @@ bool JobPolicy::operator!=(const JobPolicy& rhs) const { return !operator==(rhs)
   };                                                                            \
   static_assert(ktl::size(COUNTER_ARRAY(action)) == ZX_POL_MAX);
 
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+#endif
 // Counts policy violations resulting in ZX_POL_ACTION_DENY or ZX_POL_ACTION_DENY_EXCEPTION.
 DEFINE_COUNTER_ARRAY(deny)
 // Counts policy violations resulting in ZX_POL_ACTION_KILL.
 DEFINE_COUNTER_ARRAY(kill)
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 static_assert(ZX_POL_ACTION_MAX == 5, "add another instantiation of DEFINE_COUNTER_ARRAY");
 
 void JobPolicy::IncrementCounter(uint32_t action, uint32_t condition) {

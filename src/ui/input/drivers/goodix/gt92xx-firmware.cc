@@ -30,23 +30,23 @@ constexpr size_t kMaxI2cAccessSize = 256;
 // Copy command not relevant for DSP ISP
 constexpr goodix::Gt92xxDevice::SectionInfo kDspIspSection = {0xc000, 2, 0};
 constexpr goodix::Gt92xxDevice::SectionInfo kGwakeSections[] = {
-    [0] = {0x9000, 3, 0xa},
-    [1] = {0x9000, 3, 0xb},
-    [2] = {0x9000, 3, 0xc},
-    [3] = {0x9000, 3, 0xd},
+    {0x9000, 3, 0xa},
+    {0x9000, 3, 0xb},
+    {0x9000, 3, 0xc},
+    {0x9000, 3, 0xd},
 };
 constexpr goodix::Gt92xxDevice::SectionInfo kSs51Sections[] = {
-    [0] = {0xc000, 0, 0x1},
-    [1] = {0xe000, 0, 0x2},
-    [2] = {0xc000, 1, 0x3},
-    [3] = {0xe000, 1, 0x4},
+    {0xc000, 0, 0x1},
+    {0xe000, 0, 0x2},
+    {0xc000, 1, 0x3},
+    {0xe000, 1, 0x4},
 };
 constexpr goodix::Gt92xxDevice::SectionInfo kDspSection = {0x9000, 3, 0x5};
 constexpr goodix::Gt92xxDevice::SectionInfo kBootSection = {0x9000, 3, 0x6};
 constexpr goodix::Gt92xxDevice::SectionInfo kBootIspSection = {0x9000, 3, 0x7};
 constexpr goodix::Gt92xxDevice::SectionInfo kLinkSections[] = {
-    [0] = {0x9000, 3, 0x8},
-    [1] = {0x9000, 3, 0x9},
+    {0x9000, 3, 0x8},
+    {0x9000, 3, 0x9},
 };
 
 constexpr uint8_t kEnableDspCodeDownloadCommand = 0x99;
@@ -56,6 +56,8 @@ constexpr uint8_t kEnableDspCodeDownloadCommand = 0x99;
 namespace goodix {
 
 void Gt92xxDevice::LogFirmwareStatus() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
   constexpr const char* kFirmwareStatusStrings[] = {
       [kNoFirmware] = "Skipped, no firmware supplied",
       [kInternalError] = "Failed, internal error",
@@ -65,6 +67,7 @@ void Gt92xxDevice::LogFirmwareStatus() {
       [kFirmwareUpdateError] = "Failed, chip error",
       [kFirmwareUpdated] = "Succeeded",
   };
+#pragma GCC diagnostic pop
   static_assert(countof(kFirmwareStatusStrings) == kFirmwareStatusCount);
 
   node_ = inspector_.GetRoot().CreateChild("Chip info");
