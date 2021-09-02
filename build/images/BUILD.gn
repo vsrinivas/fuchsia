@@ -451,6 +451,7 @@ foreach(firmware, firmware_prebuilts) {
 # Stores bootstrap partition information to assemble the flashing manifest.
 bootstrap_parts = []
 archive_bootstrap_parts = []
+flash_script_deps = [ ":fastboot" ]
 
 foreach(file, bootstrap_files) {
   file_name = get_path_info(file.path, "file")
@@ -474,6 +475,7 @@ foreach(file, bootstrap_files) {
   }
 
   default_image_deps += [ ":${file_name}" ]
+  flash_script_deps += [ ":${file_name}" ]
 
   if (defined(file.partition)) {
     part = {
@@ -579,7 +581,6 @@ flash_script_args = [
 if (custom_signing_script != "") {
   flash_script_args += [ "--signed=true" ]
 }
-flash_script_deps = [ ":fastboot" ]
 
 bootloader_parts = []
 
@@ -661,7 +662,10 @@ generated_file("fastboot_manifest") {
   testonly = true
   outputs = [ fastboot_manifest_file ]
   output_conversion = "json"
-  deps = [ ":flash_script" ]
+  deps = [
+    ":board_tools",
+    ":flash_script",
+  ]
 
   contents = [
     {
