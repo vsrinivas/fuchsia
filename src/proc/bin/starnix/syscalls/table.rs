@@ -5,6 +5,7 @@
 use paste::paste;
 use zerocopy::{AsBytes, FromBytes};
 
+use crate::fs::socket::syscalls::*;
 use crate::fs::syscalls::*;
 use crate::fs::FdNumber;
 use crate::mm::syscalls::*;
@@ -46,6 +47,7 @@ pub fn dispatch_syscall(
         ctx; syscall_number; args;
         access[2],
         arch_prctl[2],
+        bind[3],
         brk[1],
         capget[2],
         chdir[1],
@@ -128,6 +130,7 @@ pub fn dispatch_syscall(
         setgroups[2],
         setitimer[3],
         sigaltstack[2],
+        socket[3],
         statfs[2],
         symlinkat[3],
         tgkill[3],

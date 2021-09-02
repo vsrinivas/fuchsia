@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
+use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::{Arc, Weak};
 
 use crate::device::*;
 use crate::error;
 use crate::fs::pipe::Pipe;
+use crate::fs::socket::*;
 use crate::fs::*;
 use crate::task::Task;
 use crate::types::*;
@@ -33,6 +35,16 @@ pub struct FsNode {
     ///
     /// Used if, and only if, the node has a mode of FileMode::IFIFO.
     fifo: Option<Arc<Mutex<Pipe>>>,
+
+    /// The socket located at this node, if any.
+    ///
+    /// Used if, and only if, the node has a mode of FileMode::IFSOCK.
+    ///
+    /// The `OnceCell` is initialized when a new socket node is created:
+    ///   - in `Socket::new` (e.g., from `sys_socket`)
+    ///   - in `sys_bind`, before the node is given a name (i.e., before it could be accessed by
+    ///     others)
+    socket: OnceCell<SocketHandle>,
 
     /// Mutable informationa about this node.
     ///
@@ -212,6 +224,7 @@ impl FsNode {
             fs,
             inode_num,
             fifo: if mode.is_fifo() { Some(Pipe::new()) } else { None },
+            socket: OnceCell::new(),
             info: RwLock::new(info),
             append_lock: RwLock::new(()),
         }
@@ -247,6 +260,8 @@ impl FsNode {
             FileMode::IFCHR => open_character_device(rdev),
             FileMode::IFBLK => open_block_device(rdev),
             FileMode::IFIFO => Ok(Pipe::open(self.fifo.as_ref().unwrap(), flags)),
+            // UNIX domain sockets can't be opened.
+            FileMode::IFSOCK => error!(ENXIO),
             _ => self.ops().open(&self, flags),
         }
     }
@@ -285,6 +300,26 @@ impl FsNode {
         self.ops().truncate(self, length)
     }
 
+    /// Associates the provided socket with this file node.
+    ///
+    /// `set_socket` must be called before it is possible to look up `self`, since user space should
+    ///  not be able to look up this node and find the socket missing.
+    ///
+    /// Note that it is a fatal error to call this method if a socket has already been bound for
+    /// this node.
+    ///
+    /// # Parameters
+    /// - `socket`: The socket to store in this file node.
+    pub fn set_socket(&self, socket: SocketHandle) -> Result<(), Errno> {
+        assert!(self.socket.set(socket).is_ok());
+        Ok(())
+    }
+
+    /// Returns the socket associated with this node, if such a socket exists.
+    pub fn socket(&self) -> Option<&SocketHandle> {
+        self.socket.get()
+    }
+
     /// Set the permissions on this FsNode to the given values.
     ///
     /// Does not change the IFMT of the node.
@@ -296,6 +331,11 @@ impl FsNode {
     /// Whether this node is a directory.
     pub fn is_dir(&self) -> bool {
         self.info().mode.is_dir()
+    }
+
+    /// Whether this node is a socket.
+    pub fn is_sock(&self) -> bool {
+        self.info().mode.is_sock()
     }
 
     /// Update the access and modify time for this node to now.

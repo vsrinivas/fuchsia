@@ -9,6 +9,7 @@ use std::sync::{Arc, Weak};
 
 use crate::errno;
 use crate::error;
+use crate::fs::socket::*;
 use crate::fs::*;
 use crate::types::*;
 
@@ -176,6 +177,22 @@ impl DirEntry {
             } else {
                 self.node.mknod(name, mode)
             }
+        })
+    }
+
+    pub fn create_socket(
+        self: &DirEntryHandle,
+        name: &FsStr,
+        mode: FileMode,
+        socket_handle: SocketHandle,
+    ) -> Result<DirEntryHandle, Errno> {
+        self.create_entry(name, mode, DeviceType::NONE, || {
+            // Make the node in the parent...
+            let node = self.node.mknod(name, mode)?;
+            // ... and make sure to initialize the socket before the callback returns, so the socket
+            // is guaranteed to be initialized by the time it is named.
+            node.set_socket(socket_handle)?;
+            Ok(node)
         })
     }
 

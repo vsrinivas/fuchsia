@@ -26,6 +26,8 @@ pub struct Kernel {
     pub anon_fs: OnceCell<FileSystemHandle>,
     // Owned by pipe.rs
     pub pipe_fs: OnceCell<FileSystemHandle>,
+    /// Owned by socket.rs
+    pub socket_fs: OnceCell<FileSystemHandle>,
     // Owned by devfs.rs
     pub dev_tmp_fs: OnceCell<FileSystemHandle>,
     // Owned by procfs.rs
@@ -46,6 +48,7 @@ impl Kernel {
             pipe_fs: OnceCell::new(),
             dev_tmp_fs: OnceCell::new(),
             proc_fs: OnceCell::new(),
+            socket_fs: OnceCell::new(),
             sys_fs: OnceCell::new(),
             selinux_fs: OnceCell::new(),
         }

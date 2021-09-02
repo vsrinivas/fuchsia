@@ -1694,6 +1694,7 @@ pub const SS_ONSTACK: u32 = 1;
 pub const SS_DISABLE: u32 = 2;
 pub const SS_AUTODISARM: u32 = 2147483648;
 pub const SS_FLAG_BITS: u32 = 2147483648;
+pub const _K_SS_MAXSIZE: u32 = 128;
 pub const S_IFMT: u32 = 61440;
 pub const S_IFSOCK: u32 = 49152;
 pub const S_IFLNK: u32 = 40960;
@@ -2306,6 +2307,39 @@ impl Default for sigaltstack {
     }
 }
 pub type stack_t = sigaltstack;
+pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sockaddr_storage {
+    pub __bindgen_anon_1: sockaddr_storage__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union sockaddr_storage__bindgen_ty_1 {
+    pub __bindgen_anon_1: sockaddr_storage__bindgen_ty_1__bindgen_ty_1,
+    pub __align: *mut crate::x86_64_types::c_void,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
+    pub ss_family: __kernel_sa_family_t,
+    pub __data: [crate::x86_64_types::c_char; 126usize],
+}
+impl Default for sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+impl Default for sockaddr_storage__bindgen_ty_1 {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+impl Default for sockaddr_storage {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct statx_timestamp {

@@ -198,7 +198,7 @@ fn open_file_at(
     task.open_file_at(dir_fd, path, OpenFlags::from_bits_truncate(flags), mode)
 }
 
-fn lookup_parent_at<T, F>(
+pub fn lookup_parent_at<T, F>(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,

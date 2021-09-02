@@ -49,6 +49,7 @@ pub mod memfd;
 pub mod path;
 pub mod pipe;
 pub mod proc;
+pub mod socket;
 pub mod syscalls;
 pub mod sysfs;
 pub mod tmpfs;

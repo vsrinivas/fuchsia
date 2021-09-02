@@ -65,6 +65,7 @@ impl FsNodeOps for TmpfsDirectory {
             FileMode::IFIFO => Box::new(SpecialNode),
             FileMode::IFBLK => Box::new(SpecialNode),
             FileMode::IFCHR => Box::new(SpecialNode),
+            FileMode::IFSOCK => Box::new(SpecialNode),
             _ => return error!(EACCES),
         };
         Ok(node.fs().create_node(ops, mode))

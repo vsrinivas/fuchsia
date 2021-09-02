@@ -55,18 +55,18 @@ pub struct stat_t {
 #[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes, PartialEq)]
 #[repr(C)]
 pub struct statfs {
-    f_type: i64,
-    f_bsize: i64,
-    f_blocks: i64,
-    f_bfree: i64,
-    f_bavail: i64,
-    f_files: i64,
-    f_ffree: i64,
-    f_fsid: i64,
-    f_namelen: i64,
-    f_frsize: i64,
-    f_flags: i64,
-    f_spare: [i64; 4],
+    pub f_type: i64,
+    pub f_bsize: u64,
+    pub f_blocks: i64,
+    pub f_bfree: i64,
+    pub f_bavail: i64,
+    pub f_files: i64,
+    pub f_ffree: i64,
+    pub f_fsid: i64,
+    pub f_namelen: i64,
+    pub f_frsize: i64,
+    pub f_flags: i64,
+    pub f_spare: [i64; 4],
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, AsBytes, FromBytes)]

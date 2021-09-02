@@ -32,6 +32,7 @@
 #include <linux/resource.h>
 #include <linux/sched.h>
 #include <linux/signal.h>
+#include <linux/socket.h>
 #include <linux/stat.h>
 #include <linux/time.h>
 #include <linux/timerfd.h>
