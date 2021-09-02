@@ -19,7 +19,7 @@ but specific tracing categories can be individually selected.
 ## Parts of the Fuchsia tracing system
 
 In the Fuchsia tracing system, the following
-[component][glossary.component] work in a distributed manner:
+[components][glossary.component] work in a distributed manner:
 
 - [Trace providers](#trace-providers)
 
