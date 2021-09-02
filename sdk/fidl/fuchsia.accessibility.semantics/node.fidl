@@ -92,6 +92,10 @@ type Role = strict enum {
 
     // A special type of input text field that represents a search box.
     SEARCH_BOX = 22;
+
+    // Role used to represent a text field with an associated combo box (e.g. a
+    // dropdown menu).
+    TEXT_FIELD_WITH_COMBO_BOX = 23;
 };
 
 /// The possible origins of a label.

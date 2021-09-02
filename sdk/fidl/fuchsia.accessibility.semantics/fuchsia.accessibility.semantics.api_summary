@@ -78,6 +78,7 @@ enum/member fuchsia.accessibility.semantics/Role.STATIC_TEXT 13
 enum/member fuchsia.accessibility.semantics/Role.TABLE 15
 enum/member fuchsia.accessibility.semantics/Role.TABLE_ROW 17
 enum/member fuchsia.accessibility.semantics/Role.TEXT_FIELD 5
+enum/member fuchsia.accessibility.semantics/Role.TEXT_FIELD_WITH_COMBO_BOX 23
 enum/member fuchsia.accessibility.semantics/Role.TOGGLE_SWITCH 14
 enum/member fuchsia.accessibility.semantics/Role.UNKNOWN 1
 strict enum fuchsia.accessibility.semantics/Role uint32
