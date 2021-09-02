@@ -3945,10 +3945,6 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
       auto literal_constant = static_cast<LiteralConstant*>(constant);
       return ResolveLiteralConstant(literal_constant, type);
     }
-    case Constant::Kind::kSynthesized: {
-      assert(false && "Compiler bug: synthesized constant does not have a resolved value!");
-      break;
-    }
     case Constant::Kind::kBinaryOperator: {
       auto binary_operator_constant = static_cast<BinaryOperatorConstant*>(constant);
       if (!ResolveConstant(binary_operator_constant->left_operand.get(), type)) {
@@ -4453,8 +4449,7 @@ bool Library::AddConstantDependencies(const Constant* constant, std::set<const D
       out_edges->insert(decl);
       break;
     }
-    case Constant::Kind::kLiteral:
-    case Constant::Kind::kSynthesized: {
+    case Constant::Kind::kLiteral: {
       // Literal and synthesized constants have no dependencies on other declarations.
       break;
     }

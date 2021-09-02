@@ -322,12 +322,11 @@ struct StringConstantValue final : ConstantValue {
 // Constant represents the _use_ of a constant. (For the _declaration_, see
 // Const. For the _value_, see ConstantValue.) A Constant can either be a
 // reference to another constant (IdentifierConstant), a literal value
-// (LiteralConstant), or synthesized by the compiler (SynthesizedConstant).
-// Every Constant resolves to a concrete ConstantValue.
+// (LiteralConstant). Every Constant resolves to a concrete ConstantValue.
 struct Constant {
   virtual ~Constant() {}
 
-  enum struct Kind { kIdentifier, kLiteral, kSynthesized, kBinaryOperator };
+  enum struct Kind { kIdentifier, kLiteral, kBinaryOperator };
 
   explicit Constant(Kind kind, SourceSpan span) : kind(kind), span(span), value_(nullptr) {}
 
@@ -369,13 +368,6 @@ struct LiteralConstant final : Constant {
       : Constant(Kind::kLiteral, literal->span()), literal(std::move(literal)) {}
 
   std::unique_ptr<raw::Literal> literal;
-};
-
-struct SynthesizedConstant final : Constant {
-  explicit SynthesizedConstant(std::unique_ptr<ConstantValue> value)
-      : Constant(Kind::kSynthesized, SourceSpan()) {
-    ResolveTo(std::move(value));
-  }
 };
 
 struct BinaryOperatorConstant final : Constant {

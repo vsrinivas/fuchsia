@@ -240,8 +240,6 @@ std::string NameFlatConstantKind(flat::Constant::Kind kind) {
       return "identifier";
     case flat::Constant::Kind::kLiteral:
       return "literal";
-    case flat::Constant::Kind::kSynthesized:
-      return "synthesized";
     case flat::Constant::Kind::kBinaryOperator:
       return "binary_operator";
   }
@@ -323,9 +321,6 @@ std::string NameFlatConstant(const flat::Constant* constant) {
     case flat::Constant::Kind::kIdentifier: {
       auto identifier_constant = static_cast<const flat::IdentifierConstant*>(constant);
       return NameFlatName(identifier_constant->name);
-    }
-    case flat::Constant::Kind::kSynthesized: {
-      return std::string("synthesized constant");
     }
     case flat::Constant::Kind::kBinaryOperator: {
       return std::string("binary operator");

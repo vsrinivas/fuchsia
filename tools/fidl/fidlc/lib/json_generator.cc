@@ -123,13 +123,6 @@ void JSONGenerator::Generate(const flat::LiteralConstant& value) {
 
 void JSONGenerator::Generate(const flat::Constant& value) {
   GenerateObject([&]() {
-    // TODO(pascallouis): We should explore exposing these in the JSON IR, such that the
-    // implicit bounds are made explicit by fidlc, rather than sprinkled throughout all
-    // backends.
-    //
-    // For now, do not emit synthesized constants
-    if (value.kind == flat::Constant::Kind::kSynthesized)
-      return;
     GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
     GenerateObjectMember("value", value.Value());
     GenerateObjectMember("expression", value.span);
@@ -148,8 +141,6 @@ void JSONGenerator::Generate(const flat::Constant& value) {
         // Avoid emitting a structure for binary operators in favor of "expression".
         break;
       }
-      case flat::Constant::Kind::kSynthesized:
-        break;
     }
   });
 }
