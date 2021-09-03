@@ -556,7 +556,10 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
 
   final manifest = await cs.parseManifest(cs.build.blobManifestFile());
   final blobsByHash = manifest.blobsByHash;
-  await cs.addBlobSizes(cs.build.openFile('blobs.json'), blobsByHash);
+  await cs.addBlobSizes(
+      cs.build.openDirectory('obj/build/images/fuchsia/fuchsia/gen') /
+          File('blobs.json'),
+      blobsByHash);
   await cs.computePackagesInParallel(manifest, Platform.numberOfProcessors);
   cs.computeStats(blobsByHash);
 
