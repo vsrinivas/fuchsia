@@ -441,6 +441,23 @@ TEST_F(VirtioWlTest, HandleDmabuf) {
   EXPECT_EQ(response->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
   EXPECT_GT(response->pfn, 0u);
   EXPECT_GT(response->size, 0u);
+
+  virtio_wl_ctrl_vfd_dmabuf_sync_t sync_request = {};
+  sync_request.hdr.type = VIRTIO_WL_CMD_VFD_DMABUF_SYNC;
+  sync_request.vfd_id = 1u;
+  virtio_wl_ctrl_hdr_t* sync_response;
+  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                .AppendReadableDescriptor(&sync_request, sizeof(sync_request))
+                .AppendWritableDescriptor(&sync_response, sizeof(*sync_response))
+                .Build(&descriptor_id),
+            ZX_OK);
+
+  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+  used_elem = NextUsed(&out_queue_);
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->len, sizeof(*sync_response));
+  EXPECT_EQ(sync_response->type, VIRTIO_WL_RESP_OK);
 }
 
 TEST_F(VirtioWlTest, HandleSend) {

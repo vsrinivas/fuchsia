@@ -374,6 +374,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
         .has_buffer_memory_constraints = true,
         .buffer_memory_constraints =
             {
+                .ram_domain_supported = true,
                 .cpu_domain_supported = true,
             },
         .image_format_constraints_count = to_uint32(modifiers.size()),

@@ -84,6 +84,9 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
 
     // Creates a duplicate VirtioImage.
     virtual std::unique_ptr<VirtioWl::VirtioImage> ExportImage() { return nullptr; }
+
+    // Perform a cache clean operation on object if coherency domain requires it.
+    virtual void CacheClean() {}
   };
 
   explicit VirtioWl(sys::ComponentContext* context);

@@ -51,14 +51,16 @@ uint32_t MinBytesPerRow(uint32_t drm_format, uint32_t width) {
 class Memory : public VirtioWl::Vfd {
  public:
   Memory(zx::unowned_handle handle, zx::vmo vmo, zx::eventpair token, uintptr_t addr, uint64_t size,
-         zx::vmar* vmar, VirtioWl::VirtioImageInfo image_info)
+         zx::vmar* vmar, VirtioWl::VirtioImageInfo image_info,
+         fuchsia::sysmem::CoherencyDomain coherency_domain)
       : handle_(std::move(handle)),
         vmo_(std::move(vmo)),
         token_(std::move(token)),
         addr_(addr),
         size_(size),
         vmar_(vmar),
-        image_info_(std::move(image_info)) {}
+        image_info_(std::move(image_info)),
+        coherency_domain_(coherency_domain) {}
   ~Memory() override { vmar_->unmap(addr_, size_); }
 
   // Map |vmo| into |vmar|. Returns ZX_OK on success.
@@ -93,13 +95,14 @@ class Memory : public VirtioWl::Vfd {
     // Use token as handle if valid.
     zx::unowned_handle handle(token.is_valid() ? token.get() : vmo.get());
     return std::make_unique<Memory>(std::move(handle), std::move(vmo), std::move(token), addr, size,
-                                    vmar, std::move(image_info));
+                                    vmar, std::move(image_info),
+                                    fuchsia::sysmem::CoherencyDomain::CPU);
   }
 
   // Create a memory instance with Scenic import token.
   static std::unique_ptr<Memory> CreateWithImportToken(
       zx::vmo vmo, fuchsia::ui::composition::BufferCollectionImportToken import_token,
-      zx::vmar* vmar, uint32_t map_flags) {
+      zx::vmar* vmar, uint32_t map_flags, fuchsia::sysmem::CoherencyDomain coherency_domain) {
     TRACE_DURATION("machina", "Memory::CreateWithImportToken");
 
     uint64_t size;
@@ -112,8 +115,8 @@ class Memory : public VirtioWl::Vfd {
     zx::eventpair token(import_token.value.release());
     zx::unowned_handle handle(token.get());
     VirtioWl::VirtioImageInfo image_info;
-    return std::make_unique<Memory>(std::move(handle), zx::vmo(), std::move(token), addr, size,
-                                    vmar, std::move(image_info));
+    return std::make_unique<Memory>(std::move(handle), std::move(vmo), std::move(token), addr, size,
+                                    vmar, std::move(image_info), coherency_domain);
   }
 
   // |VirtioWl::Vfd|
@@ -141,6 +144,15 @@ class Memory : public VirtioWl::Vfd {
     return image;
   }
 
+  void CacheClean() override {
+    if (coherency_domain_ == fuchsia::sysmem::CoherencyDomain::RAM) {
+      zx_status_t status = vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, size_, nullptr, 0);
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "ZX_VMO_OP_CACHE_CLEAN failed: " << status;
+      }
+    }
+  }
+
   uintptr_t addr() const { return addr_; }
   uint64_t size() const { return size_; }
 
@@ -152,6 +164,7 @@ class Memory : public VirtioWl::Vfd {
   const uint64_t size_;
   zx::vmar* const vmar_;
   const VirtioWl::VirtioImageInfo image_info_;
+  const fuchsia::sysmem::CoherencyDomain coherency_domain_;
 };
 
 // Vfd type that holds a wayland dispatcher connection.
@@ -797,6 +810,8 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   constraints.min_buffer_count = 1;
   constraints.usage.cpu = fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
   constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
   constraints.image_format_constraints_count = 1;
   fuchsia::sysmem::ImageFormatConstraints& image_constraints =
       constraints.image_format_constraints[0];
@@ -822,8 +837,8 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   zx_status_t allocation_status;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
   status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "WaitForBuffersAllocated failed: " << status;
+  if (status != ZX_OK || allocation_status != ZX_OK) {
+    FX_LOGS(ERROR) << "WaitForBuffersAllocated failed: " << status << ", " << allocation_status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
@@ -831,7 +846,6 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   // Close must be called before closing the channel.
   buffer_collection->Close();
 
-  FX_CHECK(allocation_status == ZX_OK);
   FX_CHECK(buffer_collection_info.buffer_count > 0);
   FX_CHECK(buffer_collection_info.settings.has_image_format_constraints);
 
@@ -848,7 +862,8 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
 
   std::unique_ptr<Memory> vfd = Memory::CreateWithImportToken(
       std::move(buffer_collection_info.buffers[0].vmo), std::move(import_token), &vmar_,
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+      buffer_collection_info.settings.buffer_settings.coherency_domain);
   if (!vfd) {
     FX_LOGS(ERROR) << "Failed to create memory instance";
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
@@ -889,7 +904,7 @@ void VirtioWl::HandleDmabufSync(const virtio_wl_ctrl_vfd_dmabuf_sync_t* request,
     return;
   }
 
-  // TODO(reveman): Add synchronization code when using GPU buffers.
+  it->second->CacheClean();
   response->type = VIRTIO_WL_RESP_OK;
 }
 
