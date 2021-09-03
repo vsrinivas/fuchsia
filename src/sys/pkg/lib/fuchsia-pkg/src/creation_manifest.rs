@@ -446,8 +446,7 @@ mod tests {
                 "this-path=this-host-path\n\
                  that/path=that/host/path\n\
                  another/path=another/host=path\n
-                   with/white/space = host/white/space \n\
-
+                   with/white/space = host/white/space \n\n\
                  meta/some-path=some-host-path\n\
                  meta/other/path=other/host/path\n\
                  meta/another/path=another/host=path\n\
