@@ -575,7 +575,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeReturnValue) {
   auto result = helper.EncodeReturnValue(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
   ASSERT_FALSE(result.value().is_err());
-  auto object = result.value().response().result;
+  auto &object = result.value().response().result;
   // Expect a value of this size to be encoded in-line.
   fuchsia_hardware_acpi::wire::Object expected;
   expected.set_integer_val(alloc, 47);

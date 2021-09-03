@@ -456,7 +456,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
           if (describe) {
             fidl::WireResponse<fio::Node::OnOpen>::OwnedEncodedMessage response(
                 node_info.status_value(),
-                node_info.is_ok() ? node_info.value() : fio::wire::NodeInfo());
+                node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo());
             response.Write(ipc.channel());
           }
         };
@@ -479,7 +479,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       fio::wire::DirectoryObject directory;
       node_info.set_directory(
           fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
-      describe(zx::ok(node_info));
+      describe(zx::ok(std::move(node_info)));
       DcIostate::Bind(std::move(ios), std::move(ipc));
     } else if (dn->service_node) {
       fidl::WireCall(dn->service_node).Clone(flags, std::move(ipc));

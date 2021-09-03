@@ -51,7 +51,7 @@ class AcpiClientTest : public zxtest::Test {
         facpi::EncodedObject reply;
         auto object = fidl::ObjectView<facpi::Object>::FromExternal(&response_.value());
         reply.set_object(object);
-        sync.ReplySuccess(reply);
+        sync.ReplySuccess(std::move(reply));
       }
     });
   }

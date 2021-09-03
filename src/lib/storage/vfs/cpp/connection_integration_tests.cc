@@ -67,10 +67,10 @@ zx::status<fio::wire::NodeInfo> GetOnOpenResponse(zx::unowned_channel channel) {
 
       void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) override {
         ASSERT_NE(event, nullptr);
-        response_ = *event;
+        response_ = std::move(*event);
       }
 
-      fidl::WireResponse<fio::Node::OnOpen> GetResponse() { return response_; }
+      fidl::WireResponse<fio::Node::OnOpen> GetResponse() { return std::move(response_); }
 
       zx_status_t Unknown() override { return ZX_ERR_UNAVAILABLE; }
 
@@ -88,7 +88,7 @@ zx::status<fio::wire::NodeInfo> GetOnOpenResponse(zx::unowned_channel channel) {
       return;
     }
     ASSERT_FALSE(response.info.has_invalid_tag());
-    node_info = zx::ok(response.info);
+    node_info = zx::ok(std::move(response.info));
   };
   get_on_open_response(std::move(channel), node_info);
   return node_info;

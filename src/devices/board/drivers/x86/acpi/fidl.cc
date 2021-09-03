@@ -119,7 +119,7 @@ EvaluateObjectFidlHelper::Evaluate(fidl::AnyArena& alloc) {
     return fidl_val.take_error();
   }
 
-  return acpi::ok(fidl_val.value());
+  return acpi::ok(std::move(fidl_val.value()));
 }
 
 acpi::status<std::string> EvaluateObjectFidlHelper::ValidateAndLookupPath(const char* request_path,
@@ -176,10 +176,10 @@ EvaluateObjectFidlHelper::EncodeReturnValue(fidl::AnyArena& alloc, ACPI_OBJECT* 
   encoded.set_object(alloc, result.value());
 
   fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResponse response;
-  response.result = encoded;
+  response.result = std::move(encoded);
   fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult ret;
-  ret.set_response(alloc, response);
-  return acpi::ok(ret);
+  ret.set_response(alloc, std::move(response));
+  return acpi::ok(std::move(ret));
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::EncodeObject(

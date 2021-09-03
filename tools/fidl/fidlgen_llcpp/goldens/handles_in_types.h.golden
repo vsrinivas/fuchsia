@@ -62,8 +62,8 @@ class UnionWithHandle {
                      Invalid),
         envelope_{} {}
 
-  UnionWithHandle(const UnionWithHandle&) = default;
-  UnionWithHandle& operator=(const UnionWithHandle&) = default;
+  UnionWithHandle(const UnionWithHandle&) = delete;
+  UnionWithHandle& operator=(const UnionWithHandle&) = delete;
   UnionWithHandle(UnionWithHandle&&) = default;
   UnionWithHandle& operator=(UnionWithHandle&&) = default;
 

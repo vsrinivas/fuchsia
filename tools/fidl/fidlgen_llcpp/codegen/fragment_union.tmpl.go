@@ -27,8 +27,13 @@ class {{ .Name }} {
 
   {{ .Name }}() : ordinal_({{ .WireInvalidOrdinal }}), envelope_{} {}
 
+  {{ if .IsResourceType -}}
+  {{ .Name }}(const {{ .Name }}&) = delete;
+  {{ .Name }}& operator=(const {{ .Name }}&) = delete;
+  {{- else -}}
   {{ .Name }}(const {{ .Name }}&) = default;
   {{ .Name }}& operator=(const {{ .Name }}&) = default;
+  {{- end }}
   {{ .Name }}({{ .Name }}&&) = default;
   {{ .Name }}& operator=({{ .Name }}&&) = default;
 

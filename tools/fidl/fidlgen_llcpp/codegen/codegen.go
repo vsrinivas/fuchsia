@@ -99,7 +99,9 @@ func param(n string, t cpp.Type) string {
 }
 
 func forwardParam(n string, t cpp.Type) string {
-	if t.Kind == cpp.TypeKinds.Array || t.Kind == cpp.TypeKinds.Struct {
+	if t.Kind == cpp.TypeKinds.Union && t.IsResource {
+		return fmt.Sprintf("std::move(%s)", n)
+	} else if t.Kind == cpp.TypeKinds.Array || t.Kind == cpp.TypeKinds.Struct {
 		if t.IsResource && !t.Nullable {
 			return fmt.Sprintf("std::move(%s)", n)
 		}

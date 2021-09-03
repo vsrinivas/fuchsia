@@ -96,7 +96,7 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
       if (status != ZX_OK) {
         return status;
       }
-      auto node_info = result.value().info;
+      auto node_info = std::move(result.value().info);
       return zxio_create_with_nodeinfo(std::move(node), node_info, storage);
     }
     case ZX_OBJ_TYPE_LOG: {

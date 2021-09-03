@@ -31,7 +31,7 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
                        [](auto& pair) { return pair.first; });
         facpi::EncodedObject result;
         result.set_object(arena_, ToPackage(keys));
-        completer.ReplySuccess(result);
+        completer.ReplySuccess(std::move(result));
         return;
       }
       auto pair = values_.find(std::string(request->path.data(), request->path.size()));
@@ -42,7 +42,7 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
 
       facpi::EncodedObject result;
       result.set_object(arena_, pair->second);
-      completer.ReplySuccess(result);
+      completer.ReplySuccess(std::move(result));
     });
   }
 

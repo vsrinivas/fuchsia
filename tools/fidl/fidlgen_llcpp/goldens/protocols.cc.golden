@@ -5101,7 +5101,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>
-      _response{::fidl::internal::AllowUnownedInputRef{}, result};
+      _response{::fidl::internal::AllowUnownedInputRef{}, std::move(result)};
   return ::fidl::internal::WireCompleterBase<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>::
       SendReply(&_response.GetOutgoingMessage());
@@ -5134,7 +5134,8 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
           ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult
               result) {
   ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::HandleInResult>::
-      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, result);
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
+                                      std::move(result));
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireCompleterBase<

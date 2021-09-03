@@ -42,7 +42,7 @@ class WindowSizeTtyServer : public fuchsia_hardware_pty::testing::Device_TestBas
     fuchsia_io::wire::Tty tty = {.event = std::move(event)};
     fidl::Arena fidl_allocator;
     auto node_info = fuchsia_io::wire::NodeInfo::WithTty(fidl_allocator, std::move(tty));
-    completer.Reply(node_info);
+    completer.Reply(std::move(node_info));
   }
 
   void SetWindowSize(SetWindowSizeRequestView request,

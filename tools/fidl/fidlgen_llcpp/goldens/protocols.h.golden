@@ -205,9 +205,9 @@ class WithErrorSyntaxHandleInResultResult {
         envelope_{} {}
 
   WithErrorSyntaxHandleInResultResult(
-      const WithErrorSyntaxHandleInResultResult&) = default;
+      const WithErrorSyntaxHandleInResultResult&) = delete;
   WithErrorSyntaxHandleInResultResult& operator=(
-      const WithErrorSyntaxHandleInResultResult&) = default;
+      const WithErrorSyntaxHandleInResultResult&) = delete;
   WithErrorSyntaxHandleInResultResult(WithErrorSyntaxHandleInResultResult&&) =
       default;
   WithErrorSyntaxHandleInResultResult& operator=(
@@ -12214,7 +12214,7 @@ struct ::fidl::WireResponse<
   ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult result;
   explicit WireResponse(
       ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult result)
-      : result(result) {
+      : result(std::move(result)) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
@@ -12237,8 +12237,8 @@ struct ::fidl::WireResponse<
         uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
         ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult result)
         : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, result) {
-    }
+                                _backing_buffer, _backing_buffer_size,
+                                std::move(result)) {}
     UnownedEncodedMessage(
         uint32_t _iovec_capacity, uint8_t* _backing_buffer,
         uint32_t _backing_buffer_size,
@@ -12253,7 +12253,7 @@ struct ::fidl::WireResponse<
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireResponse _response{result};
+      FIDL_ALIGNDECL WireResponse _response{std::move(result)};
       message_.Encode<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>(&_response);
     }
@@ -12311,13 +12311,15 @@ struct ::fidl::WireResponse<
     explicit OwnedEncodedMessage(
         ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult result)
         : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), result) {}
+                   static_cast<uint32_t>(backing_buffer_.size()),
+                   std::move(result)) {}
     // Internal constructor.
     explicit OwnedEncodedMessage(
         ::fidl::internal::AllowUnownedInputRef allow_unowned,
         ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult result)
         : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), result) {}
+                   static_cast<uint32_t>(backing_buffer_.size()),
+                   std::move(result)) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<
             ::fidl_test_protocols::WithErrorSyntax::HandleInResult>* response)
