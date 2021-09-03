@@ -42,7 +42,8 @@ impl VerifyRoutes {
     /// errors that are not allowlisted cause the verification to fail listing
     /// all non-allowlisted errors.
     fn verify(&self) -> Result<()> {
-        VerifyRoutes::generate_depfile(&self.stamp_path, &self.depfile_path)?;
+        VerifyRoutes::generate_depfile(&self.stamp_path, &self.depfile_path)
+            .context("failed to generate depfile")?;
         let mut config = Config::run_command_with_plugins(
             CommandBuilder::new("verify.capability_routes")
                 .param("capability_types", "directory protocol")
@@ -55,13 +56,13 @@ impl VerifyRoutes {
         config.runtime.model.repository_path = current_dir.join(AMBER_PATH);
         config.runtime.logging.silent_mode = true;
 
-        let results = &launcher::launch_from_config(config).context("scrutiny launch")?;
+        let results = &launcher::launch_from_config(config).context("failed to launch scrutiny")?;
         let route_analysis: Vec<ResultsForCapabilityType> =
             serde_json5::from_str(results).context("deserialize verify routes results")?;
         let allowlist: Vec<ResultsForCapabilityType> = serde_json5::from_str(
-            &fs::read_to_string(&self.allowlist_path).context("read allowlist")?,
+            &fs::read_to_string(&self.allowlist_path).context("failed to read allowlist")?,
         )
-        .context("deserialize allowlist")?;
+        .context("failed to deserialize allowlist")?;
         let filtered_analysis = VerifyRoutes::filter_analysis(route_analysis, allowlist);
         for entry in filtered_analysis.iter() {
             if !entry.results.errors.is_empty() {
@@ -83,7 +84,7 @@ Verification Errors:
             }
         }
 
-        fs::write(&self.stamp_path, "Verified\n").context("write stamp file")?;
+        fs::write(&self.stamp_path, "Verified\n").context("failed to write stamp file")?;
         Ok(())
     }
 
@@ -147,12 +148,12 @@ Verification Errors:
         stamp.push_str(": ");
         stamp.push_str(AMBER_TARGETS_PATH);
         stamp.push_str(" ");
-        let blob_paths = fs::read_dir(AMBER_BLOB_PATH)?;
+        let blob_paths = fs::read_dir(AMBER_BLOB_PATH).context("failed to read amber blob path")?;
         for blob_path in blob_paths {
             stamp.push_str(&blob_path.unwrap().path().into_os_string().into_string().unwrap());
             stamp.push_str(" ");
         }
-        fs::write(depfile_path, stamp)?;
+        fs::write(depfile_path, stamp).context("failed to write to depfile")?;
         Ok(())
     }
 }

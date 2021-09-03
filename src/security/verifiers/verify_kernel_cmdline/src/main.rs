@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     clap::{App, Arg},
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
@@ -41,11 +41,15 @@ impl VerifyKernelCmdline {
                 .build(),
             vec!["ToolkitPlugin"],
         );
-        let kernel_cmdline: String = serde_json::from_str(&launcher::launch_from_config(config)?)?;
+        let kernel_cmdline: String = serde_json::from_str(
+            &launcher::launch_from_config(config).context("failed to launch scrutiny")?,
+        )
+        .context("failed to deserialize scrutiny output")?;
         let mut sorted_cmdline =
             kernel_cmdline.split(' ').map(ToString::to_string).collect::<Vec<String>>();
         sorted_cmdline.sort();
-        let golden_file = GoldenFile::open(self.golden_path.clone())?;
+        let golden_file =
+            GoldenFile::open(self.golden_path.clone()).context("failed to open golden file")?;
         match golden_file.compare(sorted_cmdline) {
             CompareResult::Matches => Ok(()),
             CompareResult::Mismatch { errors } => {

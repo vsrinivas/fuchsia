@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     clap::{App, Arg},
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
@@ -41,9 +41,12 @@ impl VerifyBootfs {
                 .build(),
             vec!["ToolkitPlugin"],
         );
-        let bootfs_files: Vec<String> =
-            serde_json::from_str(&launcher::launch_from_config(config)?)?;
-        let golden_file = GoldenFile::open(self.golden_path.clone())?;
+        let bootfs_files: Vec<String> = serde_json::from_str(
+            &launcher::launch_from_config(config).context("failed to launch scrutiny")?,
+        )
+        .context("failed to deserialize scrutiny output")?;
+        let golden_file =
+            GoldenFile::open(self.golden_path.clone()).context("failed to open the golden file")?;
         match golden_file.compare(bootfs_files) {
             CompareResult::Matches => Ok(()),
             CompareResult::Mismatch { errors } => {
