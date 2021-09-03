@@ -8,39 +8,15 @@
 
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/word-view.h>
-#include <lib/lazy_init/lazy_init.h>
-#include <lib/uart/all.h>
 
-namespace {
-
-lazy_init::LazyInit<uart::all::KernelDriver<uart::BasicIoProvider, uart::Unsynchronized>,
-                    lazy_init::CheckType::None, lazy_init::Destructor::Disabled>
-    gSerial;
-
-void UpdateStdout() {
-  gSerial.Get().Visit([](auto&& driver) {
-    driver.Init();
-    FILE::stdout_ = FILE{&driver};
-  });
-}
-
-}  // namespace
-
-FILE FILE::stdout_;
-
-void StdoutInit() {
-  // Start with the null driver and then update it when new settings come in.
-  gSerial.Initialize();
-  UpdateStdout();
-}
+#include <phys/stdio.h>
 
 // Pure Multiboot loaders like QEMU provide no means of information about the
 // serial port, just the command line.  So parse it just for kernel.serial.
 void StdoutFromCmdline(ktl::string_view cmdline) {
   BootOptions boot_opts;
   boot_opts.SetMany(cmdline);
-  gSerial.Get() = boot_opts.serial;
-  UpdateStdout();
+  ConfigureStdout(boot_opts.serial);
 
   // We only use boot-options parsing for kernel.serial and ignore the rest.
   // But it destructively scrubs the RedactedHex input so we have to undo that.

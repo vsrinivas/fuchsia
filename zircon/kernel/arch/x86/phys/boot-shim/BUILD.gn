@@ -184,8 +184,7 @@ if (toolchain_environment == "kernel.phys32") {
     public = [ "stdout.h" ]
     deps = [
       "//zircon/kernel/lib/boot-options",
-      "//zircon/system/ulib/lazy_init",
-      "//zircon/system/ulib/uart",
+      "//zircon/kernel/phys:stdio",
     ]
   }
 

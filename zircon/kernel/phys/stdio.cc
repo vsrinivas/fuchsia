@@ -10,6 +10,23 @@
 
 #include <phys/stdio.h>
 
+FILE FILE::stdout_;
+
+UartDriver& GetUartDriver() {
+  static UartDriver uart;
+  return uart;
+}
+
+void ConfigureStdout(const uart::all::Driver& uart) {
+  GetUartDriver() = uart;
+  GetUartDriver().Visit([](auto&& driver) {
+    driver.Init();
+
+    // Update stdout global to write to the configured driver.
+    FILE::stdout_ = FILE{&driver};
+  });
+}
+
 void debugf(const char* fmt, ...) {
   if (gBootOptions && !gBootOptions->phys_verbose) {
     return;

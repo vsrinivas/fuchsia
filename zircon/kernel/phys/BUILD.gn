@@ -137,6 +137,7 @@ if (toolchain_environment == "kernel.phys" ||
     ]
     deps = [
       ":main",
+      ":stdio",
       ":zbi-memory",
       "//zircon/kernel/arch/$zircon_cpu/phys",
       "//zircon/kernel/lib/arch",
@@ -194,7 +195,12 @@ if (toolchain_environment == "kernel.phys" ||
 
     sources = [ "stdio.cc" ]
 
-    deps = [ "//zircon/kernel/lib/boot-options" ]
+    public_deps = [ "//zircon/system/ulib/uart" ]
+
+    deps = [
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/system/ulib/uart",
+    ]
   }
 
   # This is linked into the special-case phys_executable() tests that

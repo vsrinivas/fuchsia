@@ -14,6 +14,7 @@
 #include <phys/allocation.h>
 #include <phys/main.h>
 #include <phys/page-table.h>
+#include <phys/stdio.h>
 #include <phys/symbolize.h>
 
 #include "acpi.h"
@@ -21,7 +22,7 @@
 #include "trampoline-boot.h"
 
 void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
-  StdoutInit();
+  ConfigureStdout();
 
   ApplyRelocations();
 

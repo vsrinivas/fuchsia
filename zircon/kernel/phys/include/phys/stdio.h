@@ -7,7 +7,15 @@
 #ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_STDIO_H_
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_STDIO_H_
 
+#include <lib/uart/all.h>
 #include <zircon/compiler.h>
+
+using UartDriver = uart::all::KernelDriver<uart::BasicIoProvider, uart::Unsynchronized>;
+
+UartDriver& GetUartDriver();
+
+// Wires up the associated UART to stdout. Defaults to uart::null::Driver.
+void ConfigureStdout(const uart::all::Driver& uart = {});
 
 // A printf that respects the `kernel.phys.verbose` boot option: if the option
 // is false, nothing will be printed.

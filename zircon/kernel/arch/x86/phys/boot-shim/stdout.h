@@ -9,10 +9,6 @@
 
 #include <ktl/string_view.h>
 
-// This must be called before using stdout (e.g. printf).
-// It can be used before static PIE self-relocation.
-void StdoutInit();
-
 // Parse kernel.serial=... from the command line to update stdout.
 void StdoutFromCmdline(ktl::string_view cmdline);
 

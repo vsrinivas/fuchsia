@@ -14,42 +14,21 @@
 #include <ktl/byte.h>
 #include <ktl/span.h>
 #include <phys/main.h>
-
-FILE FILE::stdout_;
-
-namespace {
-
-using UartKernelDriver = uart::all::KernelDriver<uart::BasicIoProvider, uart::Unsynchronized>;
-
-// Configure the global "stdout" variable to use the given UART configuration.
-//
-// This allows functions such as printf() to output via the UART.
-void ConfigureStdout(const uart::all::Driver& uart) {
-  static UartKernelDriver global_uart;
-  global_uart = uart;
-  global_uart.Visit([](auto&& driver) {
-    driver.Init();
-
-    // Update stdout global to write to the configured driver.
-    FILE::stdout_ = FILE{&driver};
-  });
-}
-
-}  // namespace
+#include <phys/stdio.h>
 
 void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // Apply any relocations required to ourself.
   ApplyRelocations();
 
   // Initially set up stdout to write to the null uart driver.
-  ConfigureStdout(uart::null::Driver());
+  ConfigureStdout();
 
   // Scan through the ZBI looking for items that configure the serial console.
   // Note that as each item is encountered, it resets uart to the appropriate
   // variant and sets its configuration values.  So a later item will override
   // the selection and configuration of an earlier item.  But this all happens
   // before anything touches hardware.
-  UartKernelDriver uart;
+  UartDriver& uart = GetUartDriver();
   zbitl::View<zbitl::ByteView> zbi_view{
       zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi))};
   for (auto [header, payload] : zbi_view) {
