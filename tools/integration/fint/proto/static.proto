@@ -145,4 +145,7 @@ message Static {
 
   // Whether to skip ninja -t cleandead.
   bool no_cleandead = 34;
+
+  // Whether to include the the default ninja target.
+  bool include_default_ninja_target = 35;
 }

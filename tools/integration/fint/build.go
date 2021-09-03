@@ -247,6 +247,10 @@ func constructNinjaTargets(
 	var targets []string
 	var artifacts fintpb.BuildArtifacts
 
+	if staticSpec.IncludeDefaultNinjaTarget {
+		targets = append(targets, ":default")
+	}
+
 	if staticSpec.IncludeImages {
 		targets = append(targets, extraTargetsForImages...)
 

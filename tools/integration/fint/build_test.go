@@ -104,6 +104,13 @@ func TestConstructNinjaTargets(t *testing.T) {
 			},
 		},
 		{
+			name: "default ninja target included",
+			staticSpec: &fintpb.Static{
+				IncludeDefaultNinjaTarget: true,
+			},
+			expectedTargets: []string{":default"},
+		},
+		{
 			name: "host tests included",
 			staticSpec: &fintpb.Static{
 				IncludeHostTests: true,
