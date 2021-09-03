@@ -2,11 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("safemath") {
-  sdk = "source"
-  sdk_headers = [
+library_headers("safemath") {
+  headers = [
     "safemath/checked_math.h",
     "safemath/checked_math_impl.h",
     "safemath/clamped_math.h",
@@ -22,6 +21,6 @@ zx_library("safemath") {
     "safemath/safe_math_shared_impl.h",
   ]
 
-  sources = []
-  kernel = false
+  assert(!is_kernel,
+         "This header library cannot be used with a kernel-specific toolchain!")
 }
