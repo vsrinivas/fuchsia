@@ -53,18 +53,23 @@ resource("test-data") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_unittest_package("fuchsia-audio-codec-tests") {
-  manifest = "meta/fuchsia_audio_codec_lib_test.cmx"
-  deps = [
-    ":fuchsia-audio-codec_test",
-    ":test-data",
-  ]
+fuchsia_test_component("fuchsia-audio-codec-test-component") {
+  manifest = "meta/fuchsia-audio-codec-lib-test.cml"
+  deps = [ ":fuchsia-audio-codec_test" ]
+}
+
+fuchsia_test_package("fuchsia-audio-codec-tests") {
+  test_components = [ ":fuchsia-audio-codec-test-component" ]
+  deps = [ ":test-data" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":fuchsia-audio-codec-tests",
+
+    # Codec Factory package with the CFv2 component providing the `fuchsia.mediacodec.CodecFactory`
+    # capability.
     "//src/media/codec:codec_factory",
   ]
 }
