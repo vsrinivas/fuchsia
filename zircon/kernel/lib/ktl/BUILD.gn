@@ -8,7 +8,6 @@ import("//build/zircon/migrated_targets.gni")
 
 zx_library("ktl") {
   kernel = true
-  static = false
 
   sources = [
     "dummy-new.cc",

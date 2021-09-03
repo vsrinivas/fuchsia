@@ -17,7 +17,7 @@ zx_library("cmdline") {
     "//zircon/system/ulib",
   ]
   kernel = true
-  static = true
+
   sources = [ "cmdline.cc" ]
   deps = [
     "//sdk/lib/fit",

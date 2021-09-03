@@ -131,7 +131,6 @@ if (zircon_toolchain == false) {
 } else {
   zx_library("c") {
     shared = true
-    static = false
 
     sdk = "shared"
     sdk_headers = []

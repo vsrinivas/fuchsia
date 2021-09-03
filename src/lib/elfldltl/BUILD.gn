@@ -11,7 +11,6 @@ is_elf = current_os != "mac" && current_os != "win"
 
 zx_library("elfldltl") {
   kernel = true
-  static = true
 
   sdk = "source"
   sdk_headers = [

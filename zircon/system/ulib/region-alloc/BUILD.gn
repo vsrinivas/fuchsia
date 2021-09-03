@@ -9,7 +9,7 @@ zx_library("region-alloc") {
   sdk_headers = [ "region-alloc/region-alloc.h" ]
 
   kernel = true
-  static = true
+
   sources = [ "region-alloc.cc" ]
   if (!is_kernel) {
     deps = [ "//zircon/system/ulib/fbl" ]

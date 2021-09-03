@@ -14,7 +14,6 @@ zx_library("affine") {
   ]
 
   kernel = true
-  static = true
 
   sources = [
     "ratio.cc",

@@ -14,7 +14,7 @@ zx_library("efi") {
   ]
   kernel = true
   sources = []
-  static = true
+
   sdk = "source"
   sdk_headers = [
     "efi/boot-services.h",

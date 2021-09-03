@@ -14,7 +14,7 @@ import("$bssl_dir/zircon.gni")
 # C++ headers.
 zx_library("boringssl") {
   kernel = true
-  static = true
+
   sdk = "static"
   sdk_headers = [
     "openssl/aead.h",

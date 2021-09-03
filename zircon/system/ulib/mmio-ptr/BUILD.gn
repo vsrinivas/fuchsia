@@ -8,7 +8,6 @@ zx_library("mmio-ptr") {
   kernel = true
   sources = []
 
-  static = true
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/mmio-ptr/mmio-ptr.h" ]
@@ -20,7 +19,6 @@ zx_library("mmio-ptr-fake") {
   deps = [ ":mmio-ptr" ]
   testonly = true
 
-  static = true
   sdk = "source"
   sdk_headers = [ "lib/mmio-ptr/fake.h" ]
 }

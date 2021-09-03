@@ -8,7 +8,6 @@ zx_library("hwreg-i2c") {
   sdk = "source"
   sdk_headers = [ "hwreg/i2c.h" ]
   sources = []
-  static = true
 
   public_deps = [
     # <hwreg/i2c.h> has #include <lib/device-protocol/i2c.h>.

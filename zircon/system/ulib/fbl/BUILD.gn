@@ -55,7 +55,6 @@ zx_library("fbl") {
   ]
 
   kernel = true
-  static = true
 
   sources = [ "alloc_checker.cc" ]
   if (!is_kernel) {

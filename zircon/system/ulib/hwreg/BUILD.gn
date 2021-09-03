@@ -17,7 +17,7 @@ zx_library("hwreg") {
   ]
 
   kernel = true
-  static = true
+
   sources = [ "printers.cc" ]
   if (is_kernel) {
     # TODO(mcgrathr): remove old multiboot environment
@@ -47,7 +47,7 @@ zx_library("hwreg-mock") {
   ]
 
   kernel = true
-  static = true
+
   sources = []
   deps = [ "//zircon/system/ulib/mock-function" ]
   public_deps = [

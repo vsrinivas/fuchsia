@@ -20,7 +20,6 @@ zx_library("buffer") {
     "array_buffer.cc",
     "block_buffer.cc",
   ]
-  static = true
 
   if (is_fuchsia) {
     sources += [

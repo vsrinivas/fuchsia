@@ -10,7 +10,6 @@ group("tests") {
 }
 
 zx_library("stdcompat") {
-  static = true
   kernel = true
 
   sdk = "source"

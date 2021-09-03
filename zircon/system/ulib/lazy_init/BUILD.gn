@@ -14,7 +14,7 @@ zx_library("lazy_init") {
 
   sources = []
   kernel = true
-  static = true
+
   if (is_fuchsia && !is_kernel) {
     deps = [ "//zircon/system/ulib/zx" ]
   }

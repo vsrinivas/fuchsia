@@ -24,7 +24,6 @@ sdk_source_set("zx") {
 
 zx_library("zxc") {
   kernel = true
-  static = true
 
   sdk = "source"
 

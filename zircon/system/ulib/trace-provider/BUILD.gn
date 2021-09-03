@@ -120,7 +120,6 @@ trace_provider_library("trace-provider-so") {
   sdk_publishable = true
   sdk = "shared"
   shared = true
-  static = false
   defines = [ "SHARED_LIBRARY" ]
   sdk_headers = trace_provider_fdio_connect_headers
   public_deps = [ "//zircon/system/ulib/trace-engine" ]

@@ -9,7 +9,7 @@ import("//build/unification/zx_library.gni")
 
 zx_library("libc") {
   kernel = true
-  static = false
+
   sources = [
     "abort.cc",
     "atomic.cc",

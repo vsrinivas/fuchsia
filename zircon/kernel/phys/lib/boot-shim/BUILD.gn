@@ -10,7 +10,6 @@ import("//build/zircon/migrated_targets.gni")
 
 zx_library("boot-shim") {
   kernel = true
-  static = true
 
   sdk = "source"
   sdk_headers = [
@@ -55,7 +54,6 @@ zx_library("boot-shim") {
 if (!is_kernel) {
   zx_library("boot-shim-test") {
     testonly = true
-    static = true
 
     sdk = "source"
     sdk_headers = [ "lib/boot-shim/test-helper.h" ]

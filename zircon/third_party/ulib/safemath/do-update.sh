@@ -74,9 +74,7 @@ zx_library("safemath") {
     "safemath/safe_math_shared_impl.h",
   ]
   sources = []
-  host = true
   kernel = false
-  static = true
 }
 END
 ) >BUILD.gn

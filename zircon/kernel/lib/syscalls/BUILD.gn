@@ -12,7 +12,7 @@ zx_library("syscalls") {
 
   # This can be used for headers only by the vDSO and test code.
   kernel = true
-  static = true
+
   sources = []
 
   # Depend on the files generated from the syscall IDL.

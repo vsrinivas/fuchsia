@@ -13,7 +13,7 @@ zx_library("io-scheduler") {
     "io-scheduler/stream.h",
     "io-scheduler/worker.h",
   ]
-  static = true
+
   configs += [ "//build/config:all_source" ]
   sources = [
     "scheduler.cc",

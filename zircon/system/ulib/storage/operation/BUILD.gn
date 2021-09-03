@@ -10,7 +10,6 @@ zx_library("operation") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",
   ]
-  static = true
 
   sdk = "source"
   sdk_headers = [

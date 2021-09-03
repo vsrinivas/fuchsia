@@ -24,5 +24,4 @@ zx_library("safemath") {
 
   sources = []
   kernel = false
-  static = true
 }

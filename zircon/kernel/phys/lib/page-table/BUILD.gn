@@ -11,7 +11,6 @@ zx_library("page-table") {
   sdk = "source"
 
   kernel = true
-  static = true
 
   sources = [
     "arch/arm64/builder.cc",

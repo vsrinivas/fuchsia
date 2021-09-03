@@ -55,7 +55,6 @@ if (is_fuchsia) {
       "disk_inspector/vmo_buffer_factory.h",
       "disk_inspector/loader.h",
     ]
-    static = true
     sources = [
       "command.cc",
       "disk_inspector.cc",

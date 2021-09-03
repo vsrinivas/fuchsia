@@ -20,7 +20,6 @@ zx_library("static-pie") {
   sdk_headers = [ "lib/static-pie/static-pie.h" ]
 
   kernel = true
-  static = true
 
   sources = [
     "relocation.cc",

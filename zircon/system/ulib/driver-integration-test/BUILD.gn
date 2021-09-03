@@ -34,7 +34,6 @@ zx_library("driver-integration-test-static") {
   sdk = "static"
   sdk_headers = [ "lib/driver-integration-test/fixture.h" ]
 
-  static = true
   sources = [ "launcher.cc" ]
   deps = [
     "//sdk/lib/fdio",

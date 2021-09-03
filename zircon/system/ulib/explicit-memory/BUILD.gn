@@ -9,7 +9,7 @@ zx_library("explicit-memory") {
   sdk_headers = [ "explicit-memory/bytes.h" ]
 
   kernel = true
-  static = true
+
   sources = [ "bytes.c" ]
   if (!is_kernel) {
     deps = [ "//zircon/system/ulib/fbl" ]

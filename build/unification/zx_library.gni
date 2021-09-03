@@ -91,11 +91,6 @@ import("//build/toolchain/toolchain_environment.gni")
 # to support zx_library() calls that are shared by BUILD.zircon.gn and BUILD.gn
 # file. Support for these may be removed after build unification completes.
 #
-#   static
-#     Optional: True if this library can be statically linked in user code.
-#     Type: bool
-#     Default: !$kernel
-#
 #   shared
 #     Optional: True if this library can be made a shared library for user code.
 #     Type: bool
@@ -108,7 +103,6 @@ template("zx_library") {
     "sdk_headers",
     "sdk_publishable",
     "shared",
-    "static",
   ]
 
   not_needed(invoker, [ "sdk_name" ])
@@ -179,7 +173,6 @@ template("zx_library") {
     not_needed(invoker,
                [
                  "kernel",
-                 "static",
                  "shared",
                ])
 

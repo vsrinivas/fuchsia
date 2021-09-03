@@ -21,7 +21,7 @@ zx_library("counters") {
     "//zircon/system/ulib/kcounter/*",
   ]
   kernel = true
-  static = true
+
   sources = []
   if (is_kernel) {
     sources += [ "counters.cc" ]

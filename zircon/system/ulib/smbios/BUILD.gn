@@ -9,7 +9,7 @@ zx_library("smbios") {
   sdk_headers = [ "lib/smbios/smbios.h" ]
 
   kernel = true
-  static = true
+
   sources = [ "smbios.cc" ]
   deps = [ "//zircon/system/ulib/fbl" ]
 }

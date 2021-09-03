@@ -13,7 +13,7 @@ zx_library("pretty") {
   ]
 
   kernel = true
-  static = true
+
   sources = [
     "hexdump.cc",
     "sizes.cc",

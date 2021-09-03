@@ -10,8 +10,6 @@ declare_args() {
 }
 
 zx_library("fit-promise") {
-  static = true
-
   sdk = "source"
   sdk_publishable = true
 
