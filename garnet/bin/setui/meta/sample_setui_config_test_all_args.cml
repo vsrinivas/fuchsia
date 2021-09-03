@@ -19,6 +19,8 @@
             "/pkg/data/service_flags.json",
             "--input-device-config",
             "/pkg/data/input_device_configuration.json",
+            "--interface-config",
+            "/pkg/data/interface_configuration.json",
             "--light-sensor-config",
             "/pkg/data/light_sensor_configuration.json",
             "--light-hardware-config",

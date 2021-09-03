@@ -11,7 +11,9 @@ use settings::base::get_default_setting_types;
 use settings::config::base::{get_default_agent_types, AgentType};
 use settings::config::default_settings::DefaultSetting;
 use settings::handler::device_storage::StashDeviceStorageFactory;
+use settings::ingress::fidl::into_interface_specs;
 use settings::AgentConfiguration;
+use settings::EnabledInterfacesConfiguration;
 use settings::EnabledPoliciesConfiguration;
 use settings::EnabledServicesConfiguration;
 use settings::EnvironmentBuilder;
@@ -38,13 +40,24 @@ fn main() -> Result<(), Error> {
 
     // TODO(fxbug.dev/80754): Report the results of the config loads in this file.
 
-    let enabled_service_configuration = DefaultSetting::new(
-        Some(default_enabled_service_configuration),
-        "/config/data/service_configuration.json",
-    )
-    .load_default_value()
-    .expect("invalid default enabled service configuration")
-    .expect("no default enabled service configuration");
+    let enabled_interface_configuration =
+        DefaultSetting::new(None, "/config/data/interface_configuration.json")
+            .load_default_value()
+            .expect("invalid default enabled service configuration")
+            .unwrap_or_else(|| {
+                // If the interface configuration file doesn't exist, fallback to the old
+                // SettingType-based configuration file.
+                let enabled_service_configuration = DefaultSetting::new(
+                    Some(default_enabled_service_configuration),
+                    "/config/data/service_configuration.json",
+                )
+                .load_default_value()
+                .expect("invalid default enabled service configuration")
+                .expect("no default enabled service configuration");
+                EnabledInterfacesConfiguration {
+                    interfaces: into_interface_specs(enabled_service_configuration.services),
+                }
+            });
 
     let enabled_policy_configuration = DefaultSetting::new(
         Some(default_enabled_policy_configuration),
@@ -76,7 +89,7 @@ fn main() -> Result<(), Error> {
 
     let configuration = ServiceConfiguration::from(
         agent_types,
-        enabled_service_configuration,
+        enabled_interface_configuration,
         enabled_policy_configuration,
         flags,
     );

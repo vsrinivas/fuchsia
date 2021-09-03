@@ -14,6 +14,9 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_component::server::{ServiceFsDir, ServiceObj};
 use fuchsia_zircon;
+use serde::Deserialize;
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
 
 impl From<Error> for fuchsia_zircon::Status {
     fn from(error: Error) -> fuchsia_zircon::Status {
@@ -27,22 +30,24 @@ impl From<Error> for fuchsia_zircon::Status {
 // TODO(fxbug.dev/76287): Remove this conversion. It is only in place while configurations still
 // reference SettingTypes instead of interfaces to declare services. Configurations should define
 // said interfaces as constants separate from the Interface enumeration declared in code.
-impl From<&SettingType> for Interface {
-    fn from(item: &SettingType) -> Self {
+impl From<SettingType> for InterfaceSpec {
+    fn from(item: SettingType) -> Self {
         match item {
-            SettingType::Accessibility => Interface::Accessibility,
-            SettingType::Audio => Interface::Audio,
-            SettingType::Device => Interface::Device,
-            SettingType::Display => Interface::Display(display::InterfaceFlags::BASE),
-            SettingType::DoNotDisturb => Interface::DoNotDisturb,
-            SettingType::FactoryReset => Interface::FactoryReset,
-            SettingType::Input => Interface::Input,
-            SettingType::Intl => Interface::Intl,
-            SettingType::Light => Interface::Light,
-            SettingType::LightSensor => Interface::Display(display::InterfaceFlags::LIGHT_SENSOR),
-            SettingType::NightMode => Interface::NightMode,
-            SettingType::Privacy => Interface::Privacy,
-            SettingType::Setup => Interface::Setup,
+            SettingType::Accessibility => InterfaceSpec::Accessibility,
+            SettingType::Audio => InterfaceSpec::Audio,
+            SettingType::Device => InterfaceSpec::Device,
+            SettingType::Display => InterfaceSpec::Display(vec![display::InterfaceSpec::Base]),
+            SettingType::DoNotDisturb => InterfaceSpec::DoNotDisturb,
+            SettingType::FactoryReset => InterfaceSpec::FactoryReset,
+            SettingType::Input => InterfaceSpec::Input,
+            SettingType::Intl => InterfaceSpec::Intl,
+            SettingType::Light => InterfaceSpec::Light,
+            SettingType::LightSensor => {
+                InterfaceSpec::Display(vec![display::InterfaceSpec::LightSensor])
+            }
+            SettingType::NightMode => InterfaceSpec::NightMode,
+            SettingType::Privacy => InterfaceSpec::Privacy,
+            SettingType::Setup => InterfaceSpec::Setup,
             // Support future expansion of FIDL.
             #[allow(unreachable_patterns)]
             _ => {
@@ -50,6 +55,42 @@ impl From<&SettingType> for Interface {
             }
         }
     }
+}
+
+pub fn into_interface_specs(setting_types: HashSet<SettingType>) -> HashSet<InterfaceSpec> {
+    let set = setting_types.into_iter().fold(HashMap::new(), |mut set, setting_type| {
+        let spec = InterfaceSpec::from(setting_type);
+        let key = if let SettingType::LightSensor = setting_type {
+            SettingType::Display
+        } else {
+            setting_type
+        };
+
+        // The entries for Display need to be merged so that multiple Display interfaces are
+        // not brought up by the environment.
+        match set.entry(key) {
+            Entry::Occupied(mut o) => {
+                if let (InterfaceSpec::Display(ref mut data), InterfaceSpec::Display(other_data)) =
+                    (o.get_mut(), spec)
+                {
+                    for flag in other_data {
+                        if !data.contains(&flag) {
+                            data.push(flag);
+                        }
+                    }
+                } else {
+                    // Should not be possible to reach because all other
+                    // SettingType -> InterfaceSpec mappings are 1-to-1.
+                    unreachable!();
+                }
+            }
+            Entry::Vacant(v) => {
+                v.insert(spec);
+            }
+        }
+        set
+    });
+    set.into_values().collect()
 }
 
 /// [Interface] defines the FIDL interfaces supported by the settings service.
@@ -69,8 +110,46 @@ pub enum Interface {
     Setup,
 }
 
+/// [Interface] defines the FIDL interfaces supported by the settings service.
+#[derive(Clone, Deserialize, PartialEq, Eq, Hash, Debug)]
+pub enum InterfaceSpec {
+    Audio,
+    Accessibility,
+    Device,
+    // Should ideally be a HashSet, but HashSet does not impl Hash.
+    Display(Vec<display::InterfaceSpec>),
+    DoNotDisturb,
+    FactoryReset,
+    Input,
+    Intl,
+    Light,
+    NightMode,
+    Privacy,
+    Setup,
+}
+
+impl From<InterfaceSpec> for Interface {
+    fn from(spec: InterfaceSpec) -> Self {
+        match spec {
+            InterfaceSpec::Audio => Interface::Audio,
+            InterfaceSpec::Accessibility => Interface::Accessibility,
+            InterfaceSpec::Device => Interface::Device,
+            InterfaceSpec::Display(variants) => Interface::Display(variants.into()),
+            InterfaceSpec::DoNotDisturb => Interface::DoNotDisturb,
+            InterfaceSpec::FactoryReset => Interface::FactoryReset,
+            InterfaceSpec::Input => Interface::Input,
+            InterfaceSpec::Intl => Interface::Intl,
+            InterfaceSpec::Light => Interface::Light,
+            InterfaceSpec::NightMode => Interface::NightMode,
+            InterfaceSpec::Privacy => Interface::Privacy,
+            InterfaceSpec::Setup => Interface::Setup,
+        }
+    }
+}
+
 pub mod display {
     use bitflags::bitflags;
+    use serde::Deserialize;
 
     bitflags! {
         /// The Display interface covers a number of feature spaces, each handled by a different
@@ -79,6 +158,24 @@ pub mod display {
         pub struct InterfaceFlags: u64 {
             const BASE = 1 << 0;
             const LIGHT_SENSOR = 1 << 1;
+        }
+    }
+
+    #[derive(Copy, Clone, Deserialize, PartialEq, Eq, Hash, Debug)]
+    pub enum InterfaceSpec {
+        Base,
+        LightSensor,
+    }
+
+    impl From<Vec<InterfaceSpec>> for InterfaceFlags {
+        fn from(variants: Vec<InterfaceSpec>) -> Self {
+            variants.into_iter().fold(InterfaceFlags::empty(), |flags, variant| {
+                flags
+                    | match variant {
+                        InterfaceSpec::Base => InterfaceFlags::BASE,
+                        InterfaceSpec::LightSensor => InterfaceFlags::LIGHT_SENSOR,
+                    }
+            })
         }
     }
 }
@@ -239,7 +336,7 @@ impl Interface {
 
 #[cfg(test)]
 mod tests {
-    use super::Interface;
+    use super::{display, into_interface_specs, Interface, InterfaceSpec};
     use crate::base::{Dependency, Entity, SettingType};
     use crate::handler::base::{Payload, Request};
     use crate::ingress::registration::Registrant;
@@ -252,6 +349,7 @@ mod tests {
     use fuchsia_component::server::ServiceFs;
     use futures::StreamExt;
     use matches::assert_matches;
+    use std::collections::HashSet;
 
     const ENV_NAME: &str = "settings_service_fidl_environment";
 
@@ -302,5 +400,48 @@ mod tests {
 
         // Ensure handler receives request.
         assert_matches!(rx.next_of::<Payload>().await, Ok((Payload::Request(Request::Listen), _)));
+    }
+
+    #[test]
+    fn into_interface_specs_merges_display() {
+        let setting_types = std::array::IntoIter::new([
+            SettingType::Accessibility,
+            SettingType::Audio,
+            SettingType::Device,
+            SettingType::Display,
+            SettingType::DoNotDisturb,
+            SettingType::FactoryReset,
+            SettingType::Input,
+            SettingType::Intl,
+            SettingType::Light,
+            SettingType::LightSensor,
+            SettingType::NightMode,
+            SettingType::Privacy,
+            SettingType::Setup,
+        ])
+        .collect::<HashSet<_>>();
+
+        let interface_specs = into_interface_specs(setting_types);
+        assert_eq!(
+            interface_specs,
+            std::array::IntoIter::new([
+                InterfaceSpec::Audio,
+                InterfaceSpec::Accessibility,
+                InterfaceSpec::Device,
+                InterfaceSpec::Display(vec![
+                    display::InterfaceSpec::Base,
+                    display::InterfaceSpec::LightSensor
+                ]),
+                InterfaceSpec::DoNotDisturb,
+                InterfaceSpec::FactoryReset,
+                InterfaceSpec::Input,
+                InterfaceSpec::Intl,
+                InterfaceSpec::Light,
+                InterfaceSpec::NightMode,
+                InterfaceSpec::Privacy,
+                InterfaceSpec::Setup,
+            ])
+            .collect::<HashSet<_>>()
+        );
     }
 }

@@ -5,16 +5,18 @@
 use crate::base::SettingType;
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::InterfaceSpec;
 use crate::policy::PolicyType;
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::AgentConfiguration;
+use crate::EnabledInterfacesConfiguration;
 use crate::EnabledPoliciesConfiguration;
 use crate::EnabledServicesConfiguration;
 use crate::EnvironmentBuilder;
 use crate::ServiceConfiguration;
 use crate::ServiceFlags;
-use fidl_fuchsia_settings::{AccessibilityMarker, PrivacyMarker};
+use fidl_fuchsia_settings::{AccessibilityMarker, DisplayMarker, PrivacyMarker};
 use fidl_fuchsia_settings_policy::VolumePolicyControllerMarker;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -33,8 +35,13 @@ fn get_test_policy_types() -> HashSet<PolicyType> {
 async fn test_no_configuration_provided() {
     let factory = InMemoryStorageFactory::new();
 
-    let default_configuration =
-        EnabledServicesConfiguration::with_services(get_test_settings_types());
+    let default_configuration = EnabledInterfacesConfiguration::with_interfaces(
+        EnabledServicesConfiguration::with_services(get_test_settings_types())
+            .services
+            .into_iter()
+            .map(|setting_type| InterfaceSpec::from(setting_type))
+            .collect(),
+    );
 
     let default_policy_configuration =
         EnabledPoliciesConfiguration::with_policies(get_test_policy_types());
@@ -65,14 +72,52 @@ async fn test_no_configuration_provided() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_default_configuration_provided() {
+async fn test_default_services_configuration_provided() {
     let factory = InMemoryStorageFactory::new();
 
     // Load test configuration, which only has Accessibility, default will not be used.
-    let configuration = DefaultSetting::new(None, "/config/data/service_configuration.json")
+    let configuration: EnabledServicesConfiguration =
+        DefaultSetting::new(None, "/config/data/service_configuration.json")
+            .load_default_value()
+            .expect("invalid service configuration")
+            .expect("no enabled service configuration provided");
+
+    let flags = ServiceFlags::default();
+    let configuration = ServiceConfiguration::from(
+        AgentConfiguration::default(),
+        EnabledInterfacesConfiguration::with_interfaces(
+            configuration
+                .services
+                .into_iter()
+                .map(|setting_type| InterfaceSpec::from(setting_type))
+                .collect(),
+        ),
+        EnabledPoliciesConfiguration::with_policies(get_test_policy_types()),
+        flags,
+    );
+
+    let env = EnvironmentBuilder::new(Arc::new(factory))
+        .configuration(configuration)
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
+
+    env.connect_to_protocol::<AccessibilityMarker>().expect("Connected to service");
+
+    // Any calls to the privacy service should fail since the service isn't included in the configuration.
+    let privacy_service = env.connect_to_protocol::<PrivacyMarker>().unwrap();
+    privacy_service.watch().await.expect_err("watch completed");
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_default_interfaces_configuration_provided() {
+    let factory = InMemoryStorageFactory::new();
+
+    // Load test configuration, which only has Display, default will not be used.
+    let configuration = DefaultSetting::new(None, "/config/data/interface_configuration.json")
         .load_default_value()
-        .expect("invalid service configuration")
-        .expect("no enabled service configuration provided");
+        .expect("invalid interface configuration")
+        .expect("no enabled interface configuration provided");
 
     let flags = ServiceFlags::default();
     let configuration = ServiceConfiguration::from(
@@ -88,7 +133,7 @@ async fn test_default_configuration_provided() {
         .await
         .unwrap();
 
-    env.connect_to_protocol::<AccessibilityMarker>().expect("Connected to service");
+    env.connect_to_protocol::<DisplayMarker>().expect("Connected to service");
 
     // Any calls to the privacy service should fail since the service isn't included in the configuration.
     let privacy_service = env.connect_to_protocol::<PrivacyMarker>().unwrap();
@@ -109,7 +154,9 @@ async fn test_default_policy_configuration_provided() {
     let configuration = ServiceConfiguration::from(
         AgentConfiguration::default(),
         // Include audio setting so audio policy works.
-        EnabledServicesConfiguration::with_services([SettingType::Audio].iter().copied().collect()),
+        EnabledInterfacesConfiguration::with_interfaces(
+            std::array::IntoIter::new([InterfaceSpec::Audio]).collect(),
+        ),
         policy_configuration,
         flags,
     );
