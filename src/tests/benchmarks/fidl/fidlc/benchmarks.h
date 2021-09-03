@@ -17,71 +17,71 @@ constexpr Benchmark benchmarks[] = {
 
 library example;
 
-struct TestStruct {
-int8 f1;
-int8 f2;
-int8 f3;
-int8 f4;
-int8 f5;
-int8 f6;
-int8 f7;
-int8 f8;
-int8 f9;
-int8 f10;
-int8 f11;
-int8 f12;
-int8 f13;
-int8 f14;
-int8 f15;
-int8 f16;
-int8 f17;
-int8 f18;
-int8 f19;
-int8 f20;
-int8 f21;
-int8 f22;
-int8 f23;
-int8 f24;
-int8 f25;
-int8 f26;
-int8 f27;
-int8 f28;
-int8 f29;
-int8 f30;
-int8 f31;
-int8 f32;
-int8 f33;
-int8 f34;
-int8 f35;
-int8 f36;
-int8 f37;
-int8 f38;
-int8 f39;
-int8 f40;
-int8 f41;
-int8 f42;
-int8 f43;
-int8 f44;
-int8 f45;
-int8 f46;
-int8 f47;
-int8 f48;
-int8 f49;
-int8 f50;
-int8 f51;
-int8 f52;
-int8 f53;
-int8 f54;
-int8 f55;
-int8 f56;
-int8 f57;
-int8 f58;
-int8 f59;
-int8 f60;
-int8 f61;
-int8 f62;
-int8 f63;
-int8 f64;
+type TestStruct = struct {
+f1 int8;
+f2 int8;
+f3 int8;
+f4 int8;
+f5 int8;
+f6 int8;
+f7 int8;
+f8 int8;
+f9 int8;
+f10 int8;
+f11 int8;
+f12 int8;
+f13 int8;
+f14 int8;
+f15 int8;
+f16 int8;
+f17 int8;
+f18 int8;
+f19 int8;
+f20 int8;
+f21 int8;
+f22 int8;
+f23 int8;
+f24 int8;
+f25 int8;
+f26 int8;
+f27 int8;
+f28 int8;
+f29 int8;
+f30 int8;
+f31 int8;
+f32 int8;
+f33 int8;
+f34 int8;
+f35 int8;
+f36 int8;
+f37 int8;
+f38 int8;
+f39 int8;
+f40 int8;
+f41 int8;
+f42 int8;
+f43 int8;
+f44 int8;
+f45 int8;
+f46 int8;
+f47 int8;
+f48 int8;
+f49 int8;
+f50 int8;
+f51 int8;
+f52 int8;
+f53 int8;
+f54 int8;
+f55 int8;
+f56 int8;
+f57 int8;
+f58 int8;
+f59 int8;
+f60 int8;
+f61 int8;
+f62 int8;
+f63 int8;
+f64 int8;
 };
 )FIDL",
     },
@@ -91,40 +91,40 @@ int8 f64;
 
 library example;
 
-struct TestStruct0 {
-	int8 val;
+type TestStruct0 = struct {
+	val int8;
 };
 
-struct TestStruct1 {
-	TestStruct0 val;
+type TestStruct1 = struct {
+	val TestStruct0;
 };
 
-struct TestStruct2 {
-	TestStruct1 val;
+type TestStruct2 = struct {
+	val TestStruct1;
 };
 
-struct TestStruct3 {
-	TestStruct2 val;
+type TestStruct3 = struct {
+	val TestStruct2;
 };
 
-struct TestStruct4 {
-	TestStruct3 val;
+type TestStruct4 = struct {
+	val TestStruct3;
 };
 
-struct TestStruct5 {
-	TestStruct4 val;
+type TestStruct5 = struct {
+	val TestStruct4;
 };
 
-struct TestStruct6 {
-	TestStruct5 val;
+type TestStruct6 = struct {
+	val TestStruct5;
 };
 
-struct TestStruct7 {
-	TestStruct6 val;
+type TestStruct7 = struct {
+	val TestStruct6;
 };
 
-struct TestStruct8 {
-	TestStruct7 val;
+type TestStruct8 = struct {
+	val TestStruct7;
 };
 
 )FIDL",
@@ -135,71 +135,71 @@ struct TestStruct8 {
 
 library example;
 
-table TestTable {
-1: int8 f1;
-2: int8 f2;
-3: int8 f3;
-4: int8 f4;
-5: int8 f5;
-6: int8 f6;
-7: int8 f7;
-8: int8 f8;
-9: int8 f9;
-10: int8 f10;
-11: int8 f11;
-12: int8 f12;
-13: int8 f13;
-14: int8 f14;
-15: int8 f15;
-16: int8 f16;
-17: int8 f17;
-18: int8 f18;
-19: int8 f19;
-20: int8 f20;
-21: int8 f21;
-22: int8 f22;
-23: int8 f23;
-24: int8 f24;
-25: int8 f25;
-26: int8 f26;
-27: int8 f27;
-28: int8 f28;
-29: int8 f29;
-30: int8 f30;
-31: int8 f31;
-32: int8 f32;
-33: int8 f33;
-34: int8 f34;
-35: int8 f35;
-36: int8 f36;
-37: int8 f37;
-38: int8 f38;
-39: int8 f39;
-40: int8 f40;
-41: int8 f41;
-42: int8 f42;
-43: int8 f43;
-44: int8 f44;
-45: int8 f45;
-46: int8 f46;
-47: int8 f47;
-48: int8 f48;
-49: int8 f49;
-50: int8 f50;
-51: int8 f51;
-52: int8 f52;
-53: int8 f53;
-54: int8 f54;
-55: int8 f55;
-56: int8 f56;
-57: int8 f57;
-58: int8 f58;
-59: int8 f59;
-60: int8 f60;
-61: int8 f61;
-62: int8 f62;
-63: int8 f63;
-64: int8 f64;
+type TestTable = table {
+1: f1 int8;
+2: f2 int8;
+3: f3 int8;
+4: f4 int8;
+5: f5 int8;
+6: f6 int8;
+7: f7 int8;
+8: f8 int8;
+9: f9 int8;
+10: f10 int8;
+11: f11 int8;
+12: f12 int8;
+13: f13 int8;
+14: f14 int8;
+15: f15 int8;
+16: f16 int8;
+17: f17 int8;
+18: f18 int8;
+19: f19 int8;
+20: f20 int8;
+21: f21 int8;
+22: f22 int8;
+23: f23 int8;
+24: f24 int8;
+25: f25 int8;
+26: f26 int8;
+27: f27 int8;
+28: f28 int8;
+29: f29 int8;
+30: f30 int8;
+31: f31 int8;
+32: f32 int8;
+33: f33 int8;
+34: f34 int8;
+35: f35 int8;
+36: f36 int8;
+37: f37 int8;
+38: f38 int8;
+39: f39 int8;
+40: f40 int8;
+41: f41 int8;
+42: f42 int8;
+43: f43 int8;
+44: f44 int8;
+45: f45 int8;
+46: f46 int8;
+47: f47 int8;
+48: f48 int8;
+49: f49 int8;
+50: f50 int8;
+51: f51 int8;
+52: f52 int8;
+53: f53 int8;
+54: f54 int8;
+55: f55 int8;
+56: f56 int8;
+57: f57 int8;
+58: f58 int8;
+59: f59 int8;
+60: f60 int8;
+61: f61 int8;
+62: f62 int8;
+63: f63 int8;
+64: f64 int8;
 };
 )FIDL",
     },
@@ -209,264 +209,264 @@ table TestTable {
 
 library example;
 
-table TestTable0 {
-	1: int8 val;
+type TestTable0 = table {
+	1: val int8;
 };
 
-table TestTable1 {
-	1: TestTable0 val;
+type TestTable1 = table {
+	1: val TestTable0;
 };
 
-table TestTable2 {
-	1: TestTable1 val;
+type TestTable2 = table {
+	1: val TestTable1;
 };
 
-table TestTable3 {
-	1: TestTable2 val;
+type TestTable3 = table {
+	1: val TestTable2;
 };
 
-table TestTable4 {
-	1: TestTable3 val;
+type TestTable4 = table {
+	1: val TestTable3;
 };
 
-table TestTable5 {
-	1: TestTable4 val;
+type TestTable5 = table {
+	1: val TestTable4;
 };
 
-table TestTable6 {
-	1: TestTable5 val;
+type TestTable6 = table {
+	1: val TestTable5;
 };
 
-table TestTable7 {
-	1: TestTable6 val;
+type TestTable7 = table {
+	1: val TestTable6;
 };
 
-table TestTable8 {
-	1: TestTable7 val;
+type TestTable8 = table {
+	1: val TestTable7;
 };
 
-table TestTable9 {
-	1: TestTable8 val;
+type TestTable9 = table {
+	1: val TestTable8;
 };
 
-table TestTable10 {
-	1: TestTable9 val;
+type TestTable10 = table {
+	1: val TestTable9;
 };
 
-table TestTable11 {
-	1: TestTable10 val;
+type TestTable11 = table {
+	1: val TestTable10;
 };
 
-table TestTable12 {
-	1: TestTable11 val;
+type TestTable12 = table {
+	1: val TestTable11;
 };
 
-table TestTable13 {
-	1: TestTable12 val;
+type TestTable13 = table {
+	1: val TestTable12;
 };
 
-table TestTable14 {
-	1: TestTable13 val;
+type TestTable14 = table {
+	1: val TestTable13;
 };
 
-table TestTable15 {
-	1: TestTable14 val;
+type TestTable15 = table {
+	1: val TestTable14;
 };
 
-table TestTable16 {
-	1: TestTable15 val;
+type TestTable16 = table {
+	1: val TestTable15;
 };
 
-table TestTable17 {
-	1: TestTable16 val;
+type TestTable17 = table {
+	1: val TestTable16;
 };
 
-table TestTable18 {
-	1: TestTable17 val;
+type TestTable18 = table {
+	1: val TestTable17;
 };
 
-table TestTable19 {
-	1: TestTable18 val;
+type TestTable19 = table {
+	1: val TestTable18;
 };
 
-table TestTable20 {
-	1: TestTable19 val;
+type TestTable20 = table {
+	1: val TestTable19;
 };
 
-table TestTable21 {
-	1: TestTable20 val;
+type TestTable21 = table {
+	1: val TestTable20;
 };
 
-table TestTable22 {
-	1: TestTable21 val;
+type TestTable22 = table {
+	1: val TestTable21;
 };
 
-table TestTable23 {
-	1: TestTable22 val;
+type TestTable23 = table {
+	1: val TestTable22;
 };
 
-table TestTable24 {
-	1: TestTable23 val;
+type TestTable24 = table {
+	1: val TestTable23;
 };
 
-table TestTable25 {
-	1: TestTable24 val;
+type TestTable25 = table {
+	1: val TestTable24;
 };
 
-table TestTable26 {
-	1: TestTable25 val;
+type TestTable26 = table {
+	1: val TestTable25;
 };
 
-table TestTable27 {
-	1: TestTable26 val;
+type TestTable27 = table {
+	1: val TestTable26;
 };
 
-table TestTable28 {
-	1: TestTable27 val;
+type TestTable28 = table {
+	1: val TestTable27;
 };
 
-table TestTable29 {
-	1: TestTable28 val;
+type TestTable29 = table {
+	1: val TestTable28;
 };
 
-table TestTable30 {
-	1: TestTable29 val;
+type TestTable30 = table {
+	1: val TestTable29;
 };
 
-table TestTable31 {
-	1: TestTable30 val;
+type TestTable31 = table {
+	1: val TestTable30;
 };
 
-table TestTable32 {
-	1: TestTable31 val;
+type TestTable32 = table {
+	1: val TestTable31;
 };
 
-table TestTable33 {
-	1: TestTable32 val;
+type TestTable33 = table {
+	1: val TestTable32;
 };
 
-table TestTable34 {
-	1: TestTable33 val;
+type TestTable34 = table {
+	1: val TestTable33;
 };
 
-table TestTable35 {
-	1: TestTable34 val;
+type TestTable35 = table {
+	1: val TestTable34;
 };
 
-table TestTable36 {
-	1: TestTable35 val;
+type TestTable36 = table {
+	1: val TestTable35;
 };
 
-table TestTable37 {
-	1: TestTable36 val;
+type TestTable37 = table {
+	1: val TestTable36;
 };
 
-table TestTable38 {
-	1: TestTable37 val;
+type TestTable38 = table {
+	1: val TestTable37;
 };
 
-table TestTable39 {
-	1: TestTable38 val;
+type TestTable39 = table {
+	1: val TestTable38;
 };
 
-table TestTable40 {
-	1: TestTable39 val;
+type TestTable40 = table {
+	1: val TestTable39;
 };
 
-table TestTable41 {
-	1: TestTable40 val;
+type TestTable41 = table {
+	1: val TestTable40;
 };
 
-table TestTable42 {
-	1: TestTable41 val;
+type TestTable42 = table {
+	1: val TestTable41;
 };
 
-table TestTable43 {
-	1: TestTable42 val;
+type TestTable43 = table {
+	1: val TestTable42;
 };
 
-table TestTable44 {
-	1: TestTable43 val;
+type TestTable44 = table {
+	1: val TestTable43;
 };
 
-table TestTable45 {
-	1: TestTable44 val;
+type TestTable45 = table {
+	1: val TestTable44;
 };
 
-table TestTable46 {
-	1: TestTable45 val;
+type TestTable46 = table {
+	1: val TestTable45;
 };
 
-table TestTable47 {
-	1: TestTable46 val;
+type TestTable47 = table {
+	1: val TestTable46;
 };
 
-table TestTable48 {
-	1: TestTable47 val;
+type TestTable48 = table {
+	1: val TestTable47;
 };
 
-table TestTable49 {
-	1: TestTable48 val;
+type TestTable49 = table {
+	1: val TestTable48;
 };
 
-table TestTable50 {
-	1: TestTable49 val;
+type TestTable50 = table {
+	1: val TestTable49;
 };
 
-table TestTable51 {
-	1: TestTable50 val;
+type TestTable51 = table {
+	1: val TestTable50;
 };
 
-table TestTable52 {
-	1: TestTable51 val;
+type TestTable52 = table {
+	1: val TestTable51;
 };
 
-table TestTable53 {
-	1: TestTable52 val;
+type TestTable53 = table {
+	1: val TestTable52;
 };
 
-table TestTable54 {
-	1: TestTable53 val;
+type TestTable54 = table {
+	1: val TestTable53;
 };
 
-table TestTable55 {
-	1: TestTable54 val;
+type TestTable55 = table {
+	1: val TestTable54;
 };
 
-table TestTable56 {
-	1: TestTable55 val;
+type TestTable56 = table {
+	1: val TestTable55;
 };
 
-table TestTable57 {
-	1: TestTable56 val;
+type TestTable57 = table {
+	1: val TestTable56;
 };
 
-table TestTable58 {
-	1: TestTable57 val;
+type TestTable58 = table {
+	1: val TestTable57;
 };
 
-table TestTable59 {
-	1: TestTable58 val;
+type TestTable59 = table {
+	1: val TestTable58;
 };
 
-table TestTable60 {
-	1: TestTable59 val;
+type TestTable60 = table {
+	1: val TestTable59;
 };
 
-table TestTable61 {
-	1: TestTable60 val;
+type TestTable61 = table {
+	1: val TestTable60;
 };
 
-table TestTable62 {
-	1: TestTable61 val;
+type TestTable62 = table {
+	1: val TestTable61;
 };
 
-table TestTable63 {
-	1: TestTable62 val;
+type TestTable63 = table {
+	1: val TestTable62;
 };
 
-table TestTable64 {
-	1: TestTable63 val;
+type TestTable64 = table {
+	1: val TestTable63;
 };
 
 )FIDL",
@@ -477,71 +477,71 @@ table TestTable64 {
 
 library example;
 
-union TestUnion {
-1: int8 f1;
-2: int8 f2;
-3: int8 f3;
-4: int8 f4;
-5: int8 f5;
-6: int8 f6;
-7: int8 f7;
-8: int8 f8;
-9: int8 f9;
-10: int8 f10;
-11: int8 f11;
-12: int8 f12;
-13: int8 f13;
-14: int8 f14;
-15: int8 f15;
-16: int8 f16;
-17: int8 f17;
-18: int8 f18;
-19: int8 f19;
-20: int8 f20;
-21: int8 f21;
-22: int8 f22;
-23: int8 f23;
-24: int8 f24;
-25: int8 f25;
-26: int8 f26;
-27: int8 f27;
-28: int8 f28;
-29: int8 f29;
-30: int8 f30;
-31: int8 f31;
-32: int8 f32;
-33: int8 f33;
-34: int8 f34;
-35: int8 f35;
-36: int8 f36;
-37: int8 f37;
-38: int8 f38;
-39: int8 f39;
-40: int8 f40;
-41: int8 f41;
-42: int8 f42;
-43: int8 f43;
-44: int8 f44;
-45: int8 f45;
-46: int8 f46;
-47: int8 f47;
-48: int8 f48;
-49: int8 f49;
-50: int8 f50;
-51: int8 f51;
-52: int8 f52;
-53: int8 f53;
-54: int8 f54;
-55: int8 f55;
-56: int8 f56;
-57: int8 f57;
-58: int8 f58;
-59: int8 f59;
-60: int8 f60;
-61: int8 f61;
-62: int8 f62;
-63: int8 f63;
-64: int8 f64;
+type TestUnion = union {
+1: f1 int8;
+2: f2 int8;
+3: f3 int8;
+4: f4 int8;
+5: f5 int8;
+6: f6 int8;
+7: f7 int8;
+8: f8 int8;
+9: f9 int8;
+10: f10 int8;
+11: f11 int8;
+12: f12 int8;
+13: f13 int8;
+14: f14 int8;
+15: f15 int8;
+16: f16 int8;
+17: f17 int8;
+18: f18 int8;
+19: f19 int8;
+20: f20 int8;
+21: f21 int8;
+22: f22 int8;
+23: f23 int8;
+24: f24 int8;
+25: f25 int8;
+26: f26 int8;
+27: f27 int8;
+28: f28 int8;
+29: f29 int8;
+30: f30 int8;
+31: f31 int8;
+32: f32 int8;
+33: f33 int8;
+34: f34 int8;
+35: f35 int8;
+36: f36 int8;
+37: f37 int8;
+38: f38 int8;
+39: f39 int8;
+40: f40 int8;
+41: f41 int8;
+42: f42 int8;
+43: f43 int8;
+44: f44 int8;
+45: f45 int8;
+46: f46 int8;
+47: f47 int8;
+48: f48 int8;
+49: f49 int8;
+50: f50 int8;
+51: f51 int8;
+52: f52 int8;
+53: f53 int8;
+54: f54 int8;
+55: f55 int8;
+56: f56 int8;
+57: f57 int8;
+58: f58 int8;
+59: f59 int8;
+60: f60 int8;
+61: f61 int8;
+62: f62 int8;
+63: f63 int8;
+64: f64 int8;
 };
 )FIDL",
     },
@@ -551,264 +551,264 @@ union TestUnion {
 
 library example;
 
-union TestUnion0 {
-	1: int8 val;
+type TestUnion0 = union {
+	1: val int8;
 };
 
-union TestUnion1 {
-	1: TestUnion0 val;
+type TestUnion1 = union {
+	1: val TestUnion0;
 };
 
-union TestUnion2 {
-	1: TestUnion1 val;
+type TestUnion2 = union {
+	1: val TestUnion1;
 };
 
-union TestUnion3 {
-	1: TestUnion2 val;
+type TestUnion3 = union {
+	1: val TestUnion2;
 };
 
-union TestUnion4 {
-	1: TestUnion3 val;
+type TestUnion4 = union {
+	1: val TestUnion3;
 };
 
-union TestUnion5 {
-	1: TestUnion4 val;
+type TestUnion5 = union {
+	1: val TestUnion4;
 };
 
-union TestUnion6 {
-	1: TestUnion5 val;
+type TestUnion6 = union {
+	1: val TestUnion5;
 };
 
-union TestUnion7 {
-	1: TestUnion6 val;
+type TestUnion7 = union {
+	1: val TestUnion6;
 };
 
-union TestUnion8 {
-	1: TestUnion7 val;
+type TestUnion8 = union {
+	1: val TestUnion7;
 };
 
-union TestUnion9 {
-	1: TestUnion8 val;
+type TestUnion9 = union {
+	1: val TestUnion8;
 };
 
-union TestUnion10 {
-	1: TestUnion9 val;
+type TestUnion10 = union {
+	1: val TestUnion9;
 };
 
-union TestUnion11 {
-	1: TestUnion10 val;
+type TestUnion11 = union {
+	1: val TestUnion10;
 };
 
-union TestUnion12 {
-	1: TestUnion11 val;
+type TestUnion12 = union {
+	1: val TestUnion11;
 };
 
-union TestUnion13 {
-	1: TestUnion12 val;
+type TestUnion13 = union {
+	1: val TestUnion12;
 };
 
-union TestUnion14 {
-	1: TestUnion13 val;
+type TestUnion14 = union {
+	1: val TestUnion13;
 };
 
-union TestUnion15 {
-	1: TestUnion14 val;
+type TestUnion15 = union {
+	1: val TestUnion14;
 };
 
-union TestUnion16 {
-	1: TestUnion15 val;
+type TestUnion16 = union {
+	1: val TestUnion15;
 };
 
-union TestUnion17 {
-	1: TestUnion16 val;
+type TestUnion17 = union {
+	1: val TestUnion16;
 };
 
-union TestUnion18 {
-	1: TestUnion17 val;
+type TestUnion18 = union {
+	1: val TestUnion17;
 };
 
-union TestUnion19 {
-	1: TestUnion18 val;
+type TestUnion19 = union {
+	1: val TestUnion18;
 };
 
-union TestUnion20 {
-	1: TestUnion19 val;
+type TestUnion20 = union {
+	1: val TestUnion19;
 };
 
-union TestUnion21 {
-	1: TestUnion20 val;
+type TestUnion21 = union {
+	1: val TestUnion20;
 };
 
-union TestUnion22 {
-	1: TestUnion21 val;
+type TestUnion22 = union {
+	1: val TestUnion21;
 };
 
-union TestUnion23 {
-	1: TestUnion22 val;
+type TestUnion23 = union {
+	1: val TestUnion22;
 };
 
-union TestUnion24 {
-	1: TestUnion23 val;
+type TestUnion24 = union {
+	1: val TestUnion23;
 };
 
-union TestUnion25 {
-	1: TestUnion24 val;
+type TestUnion25 = union {
+	1: val TestUnion24;
 };
 
-union TestUnion26 {
-	1: TestUnion25 val;
+type TestUnion26 = union {
+	1: val TestUnion25;
 };
 
-union TestUnion27 {
-	1: TestUnion26 val;
+type TestUnion27 = union {
+	1: val TestUnion26;
 };
 
-union TestUnion28 {
-	1: TestUnion27 val;
+type TestUnion28 = union {
+	1: val TestUnion27;
 };
 
-union TestUnion29 {
-	1: TestUnion28 val;
+type TestUnion29 = union {
+	1: val TestUnion28;
 };
 
-union TestUnion30 {
-	1: TestUnion29 val;
+type TestUnion30 = union {
+	1: val TestUnion29;
 };
 
-union TestUnion31 {
-	1: TestUnion30 val;
+type TestUnion31 = union {
+	1: val TestUnion30;
 };
 
-union TestUnion32 {
-	1: TestUnion31 val;
+type TestUnion32 = union {
+	1: val TestUnion31;
 };
 
-union TestUnion33 {
-	1: TestUnion32 val;
+type TestUnion33 = union {
+	1: val TestUnion32;
 };
 
-union TestUnion34 {
-	1: TestUnion33 val;
+type TestUnion34 = union {
+	1: val TestUnion33;
 };
 
-union TestUnion35 {
-	1: TestUnion34 val;
+type TestUnion35 = union {
+	1: val TestUnion34;
 };
 
-union TestUnion36 {
-	1: TestUnion35 val;
+type TestUnion36 = union {
+	1: val TestUnion35;
 };
 
-union TestUnion37 {
-	1: TestUnion36 val;
+type TestUnion37 = union {
+	1: val TestUnion36;
 };
 
-union TestUnion38 {
-	1: TestUnion37 val;
+type TestUnion38 = union {
+	1: val TestUnion37;
 };
 
-union TestUnion39 {
-	1: TestUnion38 val;
+type TestUnion39 = union {
+	1: val TestUnion38;
 };
 
-union TestUnion40 {
-	1: TestUnion39 val;
+type TestUnion40 = union {
+	1: val TestUnion39;
 };
 
-union TestUnion41 {
-	1: TestUnion40 val;
+type TestUnion41 = union {
+	1: val TestUnion40;
 };
 
-union TestUnion42 {
-	1: TestUnion41 val;
+type TestUnion42 = union {
+	1: val TestUnion41;
 };
 
-union TestUnion43 {
-	1: TestUnion42 val;
+type TestUnion43 = union {
+	1: val TestUnion42;
 };
 
-union TestUnion44 {
-	1: TestUnion43 val;
+type TestUnion44 = union {
+	1: val TestUnion43;
 };
 
-union TestUnion45 {
-	1: TestUnion44 val;
+type TestUnion45 = union {
+	1: val TestUnion44;
 };
 
-union TestUnion46 {
-	1: TestUnion45 val;
+type TestUnion46 = union {
+	1: val TestUnion45;
 };
 
-union TestUnion47 {
-	1: TestUnion46 val;
+type TestUnion47 = union {
+	1: val TestUnion46;
 };
 
-union TestUnion48 {
-	1: TestUnion47 val;
+type TestUnion48 = union {
+	1: val TestUnion47;
 };
 
-union TestUnion49 {
-	1: TestUnion48 val;
+type TestUnion49 = union {
+	1: val TestUnion48;
 };
 
-union TestUnion50 {
-	1: TestUnion49 val;
+type TestUnion50 = union {
+	1: val TestUnion49;
 };
 
-union TestUnion51 {
-	1: TestUnion50 val;
+type TestUnion51 = union {
+	1: val TestUnion50;
 };
 
-union TestUnion52 {
-	1: TestUnion51 val;
+type TestUnion52 = union {
+	1: val TestUnion51;
 };
 
-union TestUnion53 {
-	1: TestUnion52 val;
+type TestUnion53 = union {
+	1: val TestUnion52;
 };
 
-union TestUnion54 {
-	1: TestUnion53 val;
+type TestUnion54 = union {
+	1: val TestUnion53;
 };
 
-union TestUnion55 {
-	1: TestUnion54 val;
+type TestUnion55 = union {
+	1: val TestUnion54;
 };
 
-union TestUnion56 {
-	1: TestUnion55 val;
+type TestUnion56 = union {
+	1: val TestUnion55;
 };
 
-union TestUnion57 {
-	1: TestUnion56 val;
+type TestUnion57 = union {
+	1: val TestUnion56;
 };
 
-union TestUnion58 {
-	1: TestUnion57 val;
+type TestUnion58 = union {
+	1: val TestUnion57;
 };
 
-union TestUnion59 {
-	1: TestUnion58 val;
+type TestUnion59 = union {
+	1: val TestUnion58;
 };
 
-union TestUnion60 {
-	1: TestUnion59 val;
+type TestUnion60 = union {
+	1: val TestUnion59;
 };
 
-union TestUnion61 {
-	1: TestUnion60 val;
+type TestUnion61 = union {
+	1: val TestUnion60;
 };
 
-union TestUnion62 {
-	1: TestUnion61 val;
+type TestUnion62 = union {
+	1: val TestUnion61;
 };
 
-union TestUnion63 {
-	1: TestUnion62 val;
+type TestUnion63 = union {
+	1: val TestUnion62;
 };
 
-union TestUnion64 {
-	1: TestUnion63 val;
+type TestUnion64 = union {
+	1: val TestUnion63;
 };
 
 )FIDL",

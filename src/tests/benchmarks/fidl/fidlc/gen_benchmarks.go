@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package main
@@ -72,9 +73,9 @@ var structFieldBenchmarkTemplate = benchmarkTemplate{
 	FIDLTemplate: template.Must(template.New("structFieldTmpl").Parse(`
 library example;
 
-struct TestStruct {
+type TestStruct = struct {
 {{ range . -}}
-    int8 f{{ .IPlusOne }};
+    f{{ .IPlusOne }} int8;
 {{ end -}}
 };`)),
 }
@@ -84,12 +85,12 @@ var structDeepBenchmarkTemplate = benchmarkTemplate{
 	FIDLTemplate: template.Must(template.New("structDeepTmpl").Parse(`
 library example;
 
-struct TestStruct0 {
-	int8 val;
+type TestStruct0 = struct {
+	val int8;
 };
 {{ range . }}
-struct TestStruct{{ .IPlusOne }} {
-	TestStruct{{ .I }} val;
+type TestStruct{{ .IPlusOne }} = struct {
+	val TestStruct{{ .I }};
 };
 {{ end -}}
 `)),
@@ -100,9 +101,9 @@ var tableFieldBenchmarkTemplate = benchmarkTemplate{
 	FIDLTemplate: template.Must(template.New("tableFieldTmpl").Parse(`
 library example;
 
-table TestTable {
+type TestTable = table {
 {{ range . -}}
-    {{ .IPlusOne }}: int8 f{{ .IPlusOne }};
+    {{ .IPlusOne }}: f{{ .IPlusOne }} int8;
 {{ end -}}
 };`)),
 }
@@ -112,12 +113,12 @@ var tableDeepBenchmarkTemplate = benchmarkTemplate{
 	FIDLTemplate: template.Must(template.New("tableDeepTmpl").Parse(`
 library example;
 
-table TestTable0 {
-	1: int8 val;
+type TestTable0 = table {
+	1: val int8;
 };
 {{ range . }}
-table TestTable{{ .IPlusOne }} {
-	1: TestTable{{ .I }} val;
+type TestTable{{ .IPlusOne }} = table {
+	1: val TestTable{{ .I }};
 };
 {{ end -}}
 `)),
@@ -128,9 +129,9 @@ var unionFieldBenchmarkTemplate = benchmarkTemplate{
 	FIDLTemplate: template.Must(template.New("unionFieldTmpl").Parse(`
 library example;
 
-union TestUnion {
+type TestUnion = union {
 {{ range . -}}
-    {{ .IPlusOne }}: int8 f{{ .IPlusOne }};
+    {{ .IPlusOne }}: f{{ .IPlusOne }} int8;
 {{ end -}}
 };`)),
 }
@@ -140,12 +141,12 @@ var unionDeepBenchmarkTemplate = benchmarkTemplate{
 	FIDLTemplate: template.Must(template.New("unionDeepTmpl").Parse(`
 library example;
 
-union TestUnion0 {
-	1: int8 val;
+type TestUnion0 = union {
+	1: val int8;
 };
 {{ range . }}
-union TestUnion{{ .IPlusOne }} {
-	1: TestUnion{{ .I }} val;
+type TestUnion{{ .IPlusOne }} = union {
+	1: val TestUnion{{ .I }};
 };
 {{ end -}}
 `)),

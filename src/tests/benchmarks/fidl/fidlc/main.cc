@@ -9,6 +9,7 @@
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <fidl/tables_generator.h>
+
 #include <perftest/perftest.h>
 
 #include "benchmarks.h"
@@ -26,6 +27,7 @@ bool RunBenchmark(perftest::RepeatState* state, const char* fidl) {
     fidl::SourceFile source_file("example.test.fidl", fidl);
     fidl::Reporter reporter;
     fidl::ExperimentalFlags experimental_flags;
+    experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
     fidl::Lexer lexer(source_file, &reporter);
     fidl::Parser parser(&lexer, &reporter, experimental_flags);
     fidl::flat::Typespace typespace(fidl::flat::Typespace::RootTypes(&reporter));
