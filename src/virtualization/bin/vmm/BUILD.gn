@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/fuzzing/fuzzer.gni")
 import("//build/testing/environments.gni")
 
 group("tests") {
@@ -22,6 +23,9 @@ group("vmm_tests") {
     # Needed by tests that invoke scenic
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
   ]
+  if (current_cpu == "x64") {
+    deps += [ ":decode-fuzzer" ]
+  }
 }
 
 source_set("lib") {
@@ -237,5 +241,15 @@ fuchsia_unittest_package("device_tests_package") {
   deps = [ "device:device_tests" ]
   test_specs = {
     environments = [ nuc_env ]
+  }
+}
+
+if (current_cpu == "x64") {
+  fuzzer("decode_fuzztest") {
+    sources = [ "arch/x64/decode_fuzztest.cc" ]
+    deps = [ ":lib" ]
+  }
+  fuzzers_package("decode-fuzzer") {
+    cpp_fuzzers = [ ":decode_fuzztest" ]
   }
 }
