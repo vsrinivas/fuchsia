@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <getopt.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -10,6 +11,9 @@
 
 #include <string>
 #include <vector>
+
+#include <fbl/algorithm.h>
+#include <fbl/span.h>
 
 #include "src/storage/volume_image/ftl/ftl_test_helper.h"
 #include "zircon/system/ulib/ftl/include/lib/ftl/volume.h"
@@ -23,49 +27,76 @@ class FakeFtl : public ftl::FtlInstance {
   bool OnVolumeAdded(uint32_t page_size, uint32_t num_pages) override { return true; }
 };
 
-// Loads data from the data and spare files into the nand data members. Reads
-// complete pages spare chunks sized based on the nand options provided. If an
-// incomplete page or spare chunk is read this will return false, or if the
-// number of data pages is mismatched with the spare chunk count. Returns true
-// on success.
-bool LoadData(InMemoryRawNand* nand, FILE* data, FILE* spare) {
+enum BlockStatus { kOk, kBadBlock, kReadFailure };
+
+BlockStatus block_status(fbl::Span<uint8_t> data) {
+  if (!memcmp(data.data(), "BADBLOCK", 8)) {
+    return BlockStatus::kBadBlock;
+  }
+  if (!memcmp(data.data(), "READFAIL", 8)) {
+    return BlockStatus::kReadFailure;
+  }
+  return BlockStatus::kOk;
+}
+
+// Loads from the data file into the nand data members.  Data is expected to be formatted as 4096
+// bytes of data followed by 8 bytes of OOB, with the first 8 bytes of the data saying "BADBLOCK" or
+// "READFAIL" if either of those conditions hold for the page.
+// If an incomplete page or spare chunk is read this will return false, or if the number of data
+// pages is mismatched with the spare chunk count. Returns true on success.
+bool LoadData(InMemoryRawNand* nand, FILE* data) {
   uint32_t page_count = 0;
   std::vector<uint8_t> data_buf;
+  std::vector<uint8_t> spare_buf;
   while (!feof(data)) {
     data_buf.resize(nand->options.page_size);
-    size_t actual_read = fread(&data_buf[0], 1, nand->options.page_size, data);
-    if (actual_read == 0 && feof(data)) {
-      break;
-    } else if (actual_read != nand->options.page_size) {
-      fprintf(stderr, "Failed to read, or read partial page for page number: %u\n", page_count);
-      return false;
-    }
-    nand->page_data[page_count++] = std::move(data_buf);
-  }
-
-  uint32_t spare_count = 0;
-  std::vector<uint8_t> spare_buf;
-  while (!feof(spare)) {
     spare_buf.resize(nand->options.oob_bytes_size);
-    size_t actual_read = fread(&spare_buf[0], 1, nand->options.oob_bytes_size, spare);
-    if (actual_read == 0 && feof(spare)) {
-      break;
-    } else if (actual_read != nand->options.oob_bytes_size) {
-      fprintf(stderr, "Failed to read, or read partial spare for page number: %u\n", spare_count);
-      return false;
+
+    // The input format does 4k chunks, we need 8k
+    uint32_t data_offset = 0;
+    uint32_t spare_offset = 0;
+    for (int i = 0; i < 2; ++i) {
+      size_t actual_read = fread(&data_buf[data_offset], 1, nand->options.page_size / 2, data);
+      if (actual_read == 0 && feof(data)) {
+        goto done;
+      } else if (actual_read != nand->options.page_size / 2) {
+        fprintf(stderr, "ERROR: Failed to read, or read partial page for page number: %u\n", page_count);
+        return false;
+      }
+      data_offset += nand->options.page_size / 2;
+
+      actual_read = fread(&spare_buf[spare_offset], 1, nand->options.oob_bytes_size / 2, data);
+      if (actual_read != nand->options.oob_bytes_size / 2) {
+        fprintf(stderr, "ERROR: Failed to read oob for page number: %u\n", page_count);
+        return false;
+      }
+      spare_offset += nand->options.oob_bytes_size / 2;
     }
-    nand->page_oob[spare_count++] = std::move(spare_buf);
+
+    auto status = block_status(fbl::Span(&data_buf[0], 8));
+    switch (status) {
+      case BlockStatus::kOk: {
+        nand->page_data[page_count] = std::move(data_buf);
+        nand->page_oob[page_count] = std::move(spare_buf);
+        break;
+      }
+      case BlockStatus::kBadBlock: {
+        fprintf(stderr, "WARN: Page %u bad\n", page_count);
+        break;
+      }
+      case BlockStatus::kReadFailure: {
+        fprintf(stderr, "WARN: Page %u read fail\n", page_count);
+        break;
+      }
+    }
+    page_count++;
   }
 
-  if (page_count != spare_count) {
-    fprintf(stderr, "Found a mismatch of data pages (%u) vs spare blocks (%u)\n", page_count,
-            spare_count);
-    return false;
-  }
+done:
+  printf("%u pages, %u blocks\n", page_count, page_count / 32);
   nand->options.page_count = page_count;
   return true;
 }
-
 // Loads the nand up with the bad_blocks information and attempts to read out
 // pages from the start until one fails, possibly due to hitting the end of the
 // volume. Returns false on failing to init the volume or failing to write out
@@ -98,7 +129,6 @@ void PrintUsage(char* arg) {
   fprintf(stderr, "Usage: %s <options>*\n", arg);
   fprintf(stderr,
           "options: --data_input     Input file for volume data (required) \n"
-          "         --spare_input    Input file for spare data (required) \n"
           "         --page_size      Page size for volume data (required) \n"
           "         --spare_size     Size of spare data per page (required) \n"
           "         --block_pages    Number of pages per block (required) \n"
@@ -125,7 +155,6 @@ std::optional<uint32_t> ParseUint32(const char* str) {
 
 int main(int argc, char** argv) {
   char* arg_data_input = nullptr;
-  char* arg_spare_input = nullptr;
   char* arg_output_file = nullptr;
   char* arg_page_size = nullptr;
   char* arg_spare_size = nullptr;
@@ -134,7 +163,6 @@ int main(int argc, char** argv) {
   while (1) {
     static struct option opts[] = {
         {"data_input", required_argument, nullptr, 'd'},
-        {"spare_input", required_argument, nullptr, 's'},
         {"page_size", required_argument, nullptr, 'p'},
         {"spare_size", required_argument, nullptr, 'q'},
         {"block_pages", required_argument, nullptr, 'b'},
@@ -142,16 +170,13 @@ int main(int argc, char** argv) {
         {"output_file", required_argument, nullptr, 'o'},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "b:d:m:o:p:q:s:", opts, &opt_index);
+    int c = getopt_long(argc, argv, "b:d:m:o:p:q:", opts, &opt_index);
     if (c < 0) {
       break;
     }
     switch (c) {
       case 'd':
         arg_data_input = optarg;
-        break;
-      case 's':
-        arg_spare_input = optarg;
         break;
       case 'p':
         arg_page_size = optarg;
@@ -174,9 +199,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  if (arg_data_input == nullptr || arg_spare_input == nullptr || arg_page_size == nullptr ||
-      arg_spare_size == nullptr || arg_block_pages == nullptr || arg_bad_blocks == nullptr ||
-      arg_output_file == nullptr) {
+  if (arg_data_input == nullptr || arg_page_size == nullptr || arg_spare_size == nullptr ||
+      arg_block_pages == nullptr || arg_bad_blocks == nullptr || arg_output_file == nullptr) {
     fprintf(stderr, "Missing required argument.\n");
     PrintUsage(argv[0]);
     return 1;
@@ -216,12 +240,6 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  FILE* spare_input = fopen(arg_spare_input, "r");
-  if (!spare_input) {
-    fprintf(stderr, "Failed to open volume spare file: %s\n", arg_spare_input);
-    return 2;
-  }
-
   FILE* output_file = fopen(arg_output_file, "w");
   if (!data_input) {
     fprintf(stderr, "Failed to open output file: %s\n", arg_output_file);
@@ -232,15 +250,15 @@ int main(int argc, char** argv) {
   nand.options.page_size = page_size;
   nand.options.oob_bytes_size = static_cast<uint8_t>(spare_size);
   nand.options.pages_per_block = block_pages;
+  printf("page_size: %u oob_bytes_size: %u pages_per_block: %u\n", page_size, spare_size,
+         block_pages);
 
-  if (!LoadData(&nand, data_input, spare_input)) {
+  if (!LoadData(&nand, data_input)) {
     fprintf(stderr, "Failed to load nand data from input files based on given options.\n");
     return 3;
   }
   fclose(data_input);
   data_input = nullptr;
-  fclose(spare_input);
-  spare_input = nullptr;
 
   if (!WriteVolume(&nand, bad_blocks, output_file)) {
     fprintf(stderr, "Failed to parse and write out image.\n");
