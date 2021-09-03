@@ -168,7 +168,15 @@ impl FileOps for TimerFile {
         Ok(bytes.len())
     }
 
-    fn wait_async(&self, _file: &FileObject, waiter: &Arc<Waiter>, events: FdEvents) {
-        waiter.wait_async(&self.timer, TimerFile::get_signals_from_events(events)).unwrap();
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: Option<WaitHandler>,
+    ) {
+        waiter
+            .wake_and_call_on(&self.timer, TimerFile::get_signals_from_events(events), handler)
+            .unwrap();
     }
 }

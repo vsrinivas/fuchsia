@@ -10,6 +10,7 @@ use crate::errno;
 use crate::fd_impl_nonseekable;
 use crate::from_status_like_fdio;
 use crate::fs::*;
+use crate::task::WaitHandler;
 use crate::task::*;
 use crate::types::*;
 
@@ -69,8 +70,14 @@ impl FileOps for FuchsiaPipe {
         Ok(size)
     }
 
-    fn wait_async(&self, _file: &FileObject, waiter: &Arc<Waiter>, events: FdEvents) {
-        waiter.wait_async(&self.socket, get_signals_from_events(events)).unwrap();
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: Option<WaitHandler>,
+    ) {
+        waiter.wake_and_call_on(&self.socket, get_signals_from_events(events), handler).unwrap();
     }
 }
 

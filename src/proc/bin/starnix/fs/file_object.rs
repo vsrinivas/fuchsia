@@ -96,7 +96,13 @@ pub trait FileOps: Send + Sync + AsAny {
     }
 
     /// Establish a one-shot, asynchronous wait for the given FdEvents for the given file and task.
-    fn wait_async(&self, file: &FileObject, waiter: &Arc<Waiter>, events: FdEvents) {
+    fn wait_async(
+        &self,
+        file: &FileObject,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        _handler: Option<WaitHandler>,
+    ) {
         file.node().observers.wait_async(waiter, events)
     }
 
@@ -441,7 +447,7 @@ impl FileObject {
         loop {
             match op() {
                 Err(errno) if errno == EAGAIN && !self.flags().contains(OpenFlags::NONBLOCK) => {
-                    self.ops().wait_async(self, &task.waiter, events);
+                    self.ops().wait_async(self, &task.waiter, events, None);
                     task.waiter.wait()?;
                 }
                 result => return result,
@@ -569,6 +575,11 @@ impl FileObject {
     /// See fcntl(F_SETOWN)
     pub fn set_async_owner(&self, owner: pid_t) {
         *self.async_owner.lock() = owner;
+    }
+
+    #[allow(dead_code)]
+    pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: Option<WaitHandler>) {
+        self.ops().wait_async(self, waiter, events, handler)
     }
 
     /// Updates the file's seek offset without an upper bound on the resulting offset.
