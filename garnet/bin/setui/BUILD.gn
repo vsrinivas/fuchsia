@@ -88,8 +88,6 @@ rustc_library("lib") {
     "src/accessibility/accessibility_controller.rs",
     "src/accessibility/accessibility_fidl_handler.rs",
     "src/accessibility/types.rs",
-    "src/account.rs",
-    "src/account/account_controller.rs",
     "src/agent.rs",
     "src/agent/authority.rs",
     "src/agent/camera_watcher.rs",

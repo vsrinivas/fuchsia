@@ -43,6 +43,8 @@ impl From<&SettingType> for Interface {
             SettingType::NightMode => Interface::NightMode,
             SettingType::Privacy => Interface::Privacy,
             SettingType::Setup => Interface::Setup,
+            // Support future expansion of FIDL.
+            #[allow(unreachable_patterns)]
             _ => {
                 panic!("unsupported SettingType for Interface conversion: {:?}", item);
             }

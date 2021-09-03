@@ -248,7 +248,6 @@ where
                     SettingType::Accessibility => {
                         self.read::<AccessibilityInfo>(nonce, responder).await
                     }
-                    SettingType::Account => panic!("SettingType::Account does not support storage"),
                     SettingType::Audio => {
                         trace!(nonce, "audio storage read");
                         self.read::<AudioInfo>(nonce, responder).await
@@ -333,9 +332,6 @@ mod tests {
     }
 
     async_property_test!(unsupported_types_panic_on_read_and_write => [
-        #[should_panic(expected = "SettingType::Account does not support storage")]
-        account_read(Setting::Type(SettingType::Account)),
-
         #[should_panic(expected = "SettingType::Device does not support storage")]
         device_read(Setting::Type(SettingType::Device)),
 

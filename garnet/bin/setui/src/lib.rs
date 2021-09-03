@@ -6,7 +6,6 @@
 #![recursion_limit = "256"]
 
 use crate::accessibility::accessibility_controller::AccessibilityController;
-use crate::account::account_controller::AccountController;
 use crate::agent::authority::Authority;
 use crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan};
 use crate::audio::audio_controller::AudioController;
@@ -57,7 +56,6 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 mod accessibility;
-mod account;
 mod audio;
 mod clock;
 mod device;
@@ -557,15 +555,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             SettingType::Accessibility,
             AccessibilityController,
             DataHandler::<AccessibilityController>::spawn
-        );
-        // Account
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Account,
-            AccountController,
-            Handler::<AccountController>::spawn
         );
         // Audio
         register_handler!(
