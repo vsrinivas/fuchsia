@@ -4,9 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::endpoints::{
-        create_endpoints, create_proxy, ClientEnd, ProtocolMarker, Proxy, ServerEnd,
-    },
+    fidl::endpoints::{create_endpoints, create_proxy, ProtocolMarker, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fidl_fuchsia_realm_builder as ftrb, fidl_fuchsia_sys as fsysv1, files_async,
     fuchsia_async as fasync,
@@ -145,14 +143,42 @@ impl Runner {
     ) -> Result<(), Error> {
         let execution_scope = ExecutionScope::new();
 
-        // We are going to create a new v1 nested environment that holds nothing except
-        // fuchsia.sys.Loader. This is because fuchsia.sys.Loader must be in the environment for us
-        // to be able to launch components within it, and we're going to provide the rest of the
-        // component's services to it later when launching it.
+        // We are going to create a new v1 nested environment that holds the component's incoming
+        // svc contents along with fuchsia.sys.Loader. This is because fuchsia.sys.Loader must be
+        // in the environment for us to be able to launch components within it.
         //
-        // In order to put this service in the realm, we need to host an svc directory that holds
-        // this protocol. When the service node in the directory is connected to, we forward the
-        // connection to our own namespace.
+        // In order to accomplish this, we need to host an svc directory that holds this protocol
+        // along with everything else in the component's incoming svc directory. When the
+        // fuchsia.sys.Loader node in the directory is connected to, we forward the connection to
+        // our own namespace, and for any other connection we forward to the component's incoming
+        // svc.
+        let namespace = start_info.ns.unwrap();
+        if namespace.len() > 2 {
+            return Err(format_err!("v1 component namespace contains unexpected directories"));
+        }
+        let mut svc_names = vec![];
+        let mut svc_dir_proxy = None;
+        for namespace_entry in namespace {
+            match namespace_entry.path.as_ref().map(|s| s.as_str()) {
+                Some("/pkg") => (),
+                Some("/svc") => {
+                    let dir_proxy = namespace_entry
+                        .directory
+                        .expect("missing directory handle")
+                        .into_proxy()?;
+                    svc_names = files_async::readdir(&dir_proxy)
+                        .await?
+                        .into_iter()
+                        .map(|direntry| direntry.name)
+                        .collect();
+                    svc_dir_proxy = Some(dir_proxy);
+                    break;
+                }
+                Some(p) => return Err(format_err!("unexpected item in namespace: {:?}", p)),
+                _ => return Err(format_err!("malformed namespace")),
+            }
+        }
+
         let runner_svc_dir_proxy = io_util::open_directory_in_namespace(
             "/svc",
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
@@ -172,11 +198,34 @@ impl Runner {
                         fsysv1::LoaderMarker::NAME,
                         server_end,
                     ) {
-                        error!("failed to forward service open to v2 namespace: {:?}", e);
+                        error!("failed to forward service open to realm builder server namespace: {:?}", e);
                     }
                 },
             )),
         )?;
+
+        if let Some(svc_dir_proxy) = svc_dir_proxy {
+            for svc_name in &svc_names {
+                let svc_dir_proxy = Clone::clone(&svc_dir_proxy);
+                let svc_name = svc_name.clone();
+                host_pseudo_dir.clone().add_entry(
+                    svc_name.clone().as_str(),
+                    vfs::remote::remote_boxed(Box::new(
+                        move |_scope: ExecutionScope,
+                              flags: u32,
+                              mode: u32,
+                              _relative_path: VfsPath,
+                              server_end: ServerEnd<fio::NodeMarker>| {
+                            if let Err(e) =
+                                svc_dir_proxy.open(flags, mode, svc_name.as_str(), server_end)
+                            {
+                                error!("failed to forward service open to v2 namespace: {:?}", e);
+                            }
+                        },
+                    )),
+                )?;
+            }
+        }
 
         let (host_dir_client_end, host_dir_server_end) =
             create_endpoints::<fio::NodeMarker>().expect("could not create node proxy endpoints");
@@ -188,8 +237,9 @@ impl Runner {
             host_dir_server_end.into_channel().into(),
         );
 
+        svc_names.push(fsysv1::LoaderMarker::NAME.into());
         let mut additional_services = fsysv1::ServiceList {
-            names: vec![fsysv1::LoaderMarker::NAME.into()],
+            names: svc_names,
             provider: None,
             host_directory: Some(host_dir_client_end.into_channel()),
         };
@@ -197,11 +247,9 @@ impl Runner {
         // Our service list for the new nested environment is all set up, so we can proceed with
         // creating the v1 nested environment.
 
-        let namespace = start_info.ns.unwrap();
-
         let mut options = fsysv1::EnvironmentOptions {
             inherit_parent_services: false,
-            use_parent_runners: true,
+            use_parent_runners: false,
             kill_on_oom: true,
             delete_storage_on_death: true,
         };
@@ -226,49 +274,10 @@ impl Runner {
         //
         // Now we can create the component.
 
-        // First: look through the incoming namespace that component manager gave us when it asked
-        // us to launch this component. If it exists, we can use it to give the launched v1
-        // component access to protocol capabilities from the v2 world.
-        //
-        // If there's anything else in the namespace (besides `/pkg`), then this namespace is
-        // invalid. We do not currently support anything other than protocol capabilities.
-
-        let mut svc_dir = None;
-        if namespace.len() > 2 {
-            return Err(format_err!("v1 component namespace contains unexpected directories"));
-        }
-        for namespace_entry in namespace {
-            match namespace_entry.path.as_ref().map(|s| s.as_str()) {
-                Some("/pkg") => (),
-                Some("/svc") => svc_dir = namespace_entry.directory,
-                Some(p) => return Err(format_err!("unexpected item in namespace: {:?}", p)),
-                _ => return Err(format_err!("malformed namespace")),
-            }
-        }
-        let mut names = vec![];
-        if let Some(svc_dir_client_end) = svc_dir.take() {
-            // We need to know what's actually in this svc directory, so that we can inform appmgr
-            // what additional services we're making available to the v1 component.
-            let svc_dir_proxy = svc_dir_client_end.into_proxy()?;
-            names = files_async::readdir(&svc_dir_proxy)
-                .await?
-                .into_iter()
-                .map(|direntry| direntry.name)
-                .collect();
-            svc_dir =
-                Some(ClientEnd::from(svc_dir_proxy.into_channel().unwrap().into_zx_channel()));
-        }
-
-        let additional_services = fsysv1::ServiceList {
-            names,
-            provider: None,
-            host_directory: svc_dir.map(|client_end| client_end.into_channel()),
-        };
-
-        // Next: the directory request given to the v1 component launcher connects the given
-        // directory handle to the v1 component's `svc` subdir of its outgoing directory, whereas
-        // the directory request we got from component manager should connect to the top-level of
-        // the outgoing directory.
+        // The directory request given to the v1 component launcher connects the given directory
+        // handle to the v1 component's `svc` subdir of its outgoing directory, whereas the
+        // directory request we got from component manager should connect to the top-level of the
+        // outgoing directory.
         //
         // We can make the two work together by hosting our own vfs on `start_info.outgoing_dir`,
         // which forwards connections to `svc` into the v1 component's `directory_request`.
@@ -299,7 +308,7 @@ impl Runner {
             err: None,
             directory_request: Some(outgoing_svc_dir_server_end.into_channel()),
             flat_namespace: None,
-            additional_services: Some(Box::new(additional_services)),
+            additional_services: None,
         };
         sub_env_launcher_proxy.create_component(&mut launch_info, None)?;
 
