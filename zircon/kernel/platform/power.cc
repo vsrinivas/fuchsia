@@ -42,21 +42,14 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
     hw_watchdog_pet();
   }
 
-  // Was this an OOM, panic, or software watchdog condition?  If so, and we have
-  // space to render a crashlog into, render the payload of our crashlog before
-  // stowing our reason.  Then, whether we have a payload or not, stow our final
-  // crashlog.
+  // Render and stash our crashlog.  crashlog_to_string will decide what should
+  // be in the crashlog payload based on the provided crash reason.
   {
     size_t rendered_crashlog_len = 0;
     auto& crashlog = PlatformCrashlog::Get();
-
-    if ((reason == ZirconCrashReason::Oom) || (reason == ZirconCrashReason::Panic) ||
-        (reason == ZirconCrashReason::SoftwareWatchdog)) {
-      if (ktl::span<char> target = crashlog.GetRenderTarget(); target.size() > 0) {
-        rendered_crashlog_len = crashlog_to_string(target, reason);
-      }
+    if (ktl::span<char> target = crashlog.GetRenderTarget(); target.size() > 0) {
+      rendered_crashlog_len = crashlog_to_string(target, reason);
     }
-
     crashlog.Finalize(reason, rendered_crashlog_len);
   }
 

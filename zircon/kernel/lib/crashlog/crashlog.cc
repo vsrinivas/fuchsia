@@ -21,6 +21,7 @@
 #include <zircon/boot/crash-reason.h>
 
 #include <arch/regs.h>
+#include <fbl/enum_bits.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
@@ -48,62 +49,90 @@ namespace {
 DECLARE_SINGLETON_MUTEX(RecoveredCrashlogLock);
 fbl::RefPtr<VmObject> recovered_crashlog TA_GUARDED(RecoveredCrashlogLock::Get());
 
+enum class RenderRegion : uint32_t {
+  // clang-format off
+  None             = 0x00,
+  Banner           = 0x01,
+  DebugInfo        = 0x02,
+  CriticalCounters = 0x04,
+  PanicBuffer      = 0x08,
+  Dlog             = 0x10,
+  All              = 0xffffffff,
+  // clang-format on
+};
+FBL_ENABLE_ENUM_BITS(RenderRegion)
+
+RenderRegion MapReasonToRegions(zircon_crash_reason_t reason) {
+  switch (reason) {
+    case ZirconCrashReason::NoCrash:
+      return RenderRegion::None;
+
+    case ZirconCrashReason::Oom:
+    case ZirconCrashReason::UserspaceRootJobTermination:
+      return RenderRegion::Banner | RenderRegion::CriticalCounters | RenderRegion::Dlog;
+
+    case ZirconCrashReason::Panic:
+    case ZirconCrashReason::SoftwareWatchdog:
+      return RenderRegion::Banner | RenderRegion::DebugInfo | RenderRegion::CriticalCounters |
+             RenderRegion::PanicBuffer | RenderRegion::Dlog;
+
+    default:
+      return RenderRegion::Banner;
+  }
+}
+
 }  // namespace
 
 size_t crashlog_to_string(ktl::span<char> target, zircon_crash_reason_t reason) {
   StringFile outfile{target};
+  const RenderRegion regions = MapReasonToRegions(reason);
 
-  uintptr_t crashlog_base_address = 0;
-  const char* reason_str;
-  switch (reason) {
-    case ZirconCrashReason::NoCrash:
-      reason_str = "NO CRASH";
-      break;
+  if (static_cast<bool>(regions & RenderRegion::Banner)) {
+    uintptr_t crashlog_base_address = 0;
+    const char* reason_str;
+    switch (reason) {
+      case ZirconCrashReason::NoCrash:
+        reason_str = "NO CRASH";
+        break;
 
-    case ZirconCrashReason::Oom:
-      reason_str = "OOM";
-      break;
+      case ZirconCrashReason::Oom:
+        reason_str = "OOM";
+        break;
 
-    case ZirconCrashReason::Panic:
-      reason_str = "KERNEL PANIC";
-      crashlog_base_address = g_crashlog.base_address;
-      break;
+      case ZirconCrashReason::Panic:
+        reason_str = "KERNEL PANIC";
+        crashlog_base_address = g_crashlog.base_address;
+        break;
 
-    case ZirconCrashReason::SoftwareWatchdog:
-      reason_str = "SW WATCHDOG";
-      break;
+      case ZirconCrashReason::SoftwareWatchdog:
+        reason_str = "SW WATCHDOG";
+        break;
 
-    case ZirconCrashReason::UserspaceRootJobTermination:
-      reason_str = "USERSPACE ROOT JOB TERMINATION";
-      break;
+      case ZirconCrashReason::UserspaceRootJobTermination:
+        reason_str = "USERSPACE ROOT JOB TERMINATION";
+        break;
 
-    default:
-      reason_str = "UNKNOWN";
-      break;
-  }
-  fprintf(&outfile, "ZIRCON REBOOT REASON (%s)\n\n", reason_str);
-  fprintf(&outfile, "UPTIME (ms)\n%" PRIi64 "\n\n", current_time() / ZX_MSEC(1));
+      default:
+        reason_str = "UNKNOWN";
+        break;
+    }
+    fprintf(&outfile, "ZIRCON REBOOT REASON (%s)\n\n", reason_str);
+    fprintf(&outfile, "UPTIME (ms)\n%" PRIi64 "\n\n", current_time() / ZX_MSEC(1));
 
-  // Keep the format and values in sync with the symbolizer.
-  // Print before the registers (KASLR offset).
+    // Keep the format and values in sync with the symbolizer.
+    // Print before the registers (KASLR offset).
 #if defined(__x86_64__)
-  const char* arch = "x86_64";
+    const char* arch = "x86_64";
 #elif defined(__aarch64__)
-  const char* arch = "aarch64";
+    const char* arch = "aarch64";
 #endif
-  fprintf(&outfile,
-          "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
-          "name=zircon.elf\n\n",
-          arch, version_string(), elf_build_id_string(), crashlog_base_address);
-
-  // If this is an OOM, then including a backtrace doesn't make sense, return early.
-  if (reason == ZirconCrashReason::Oom) {
-    return outfile.used_region().size();
+    fprintf(&outfile,
+            "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
+            "name=zircon.elf\n\n",
+            arch, version_string(), elf_build_id_string(), crashlog_base_address);
   }
 
-  // If this is not a SW Watchdog firing, then attempt to log stuff like the CPU
-  // registers, a backtrace, some of the stack, and so on.
-  if (reason != ZirconCrashReason::SoftwareWatchdog) {
+  if (static_cast<bool>(regions & RenderRegion::DebugInfo)) {
     PrintSymbolizerContext(&outfile);
 
     if (g_crashlog.iframe) {
@@ -187,58 +216,74 @@ size_t crashlog_to_string(ktl::span<char> target, zircon_crash_reason_t reason) 
               " R15: %#18" PRIx64 "\n"
               "errc: %#18" PRIx64 "\n"
               "\n",
-              g_crashlog.iframe->cs, g_crashlog.iframe->ip, g_crashlog.iframe->flags,
-              x86_get_cr2(), g_crashlog.iframe->rax, g_crashlog.iframe->rbx,
-              g_crashlog.iframe->rcx, g_crashlog.iframe->rdx, g_crashlog.iframe->rsi,
-              g_crashlog.iframe->rdi, g_crashlog.iframe->rbp,
-              g_crashlog.iframe->user_sp, g_crashlog.iframe->r8,
+              // clang-format on
+              g_crashlog.iframe->cs, g_crashlog.iframe->ip, g_crashlog.iframe->flags, x86_get_cr2(),
+              g_crashlog.iframe->rax, g_crashlog.iframe->rbx, g_crashlog.iframe->rcx,
+              g_crashlog.iframe->rdx, g_crashlog.iframe->rsi, g_crashlog.iframe->rdi,
+              g_crashlog.iframe->rbp, g_crashlog.iframe->user_sp, g_crashlog.iframe->r8,
               g_crashlog.iframe->r9, g_crashlog.iframe->r10, g_crashlog.iframe->r11,
               g_crashlog.iframe->r12, g_crashlog.iframe->r13, g_crashlog.iframe->r14,
               g_crashlog.iframe->r15, g_crashlog.iframe->err_code);
-      // clang-format on
 #endif
+    } else {
+      fprintf(&outfile, "REGISTERS: missing\n");
     }
 
     fprintf(&outfile, "BACKTRACE (up to 16 calls)\n");
 
-    {
-      ktl::span<char> backtrace_target = outfile.available_region();
-      size_t len =
-          Thread::Current::AppendBacktrace(backtrace_target.data(), backtrace_target.size());
-      outfile.Skip(len);
-    }
+    ktl::span<char> backtrace_target = outfile.available_region();
+    size_t len = Thread::Current::AppendBacktrace(backtrace_target.data(), backtrace_target.size());
+    outfile.Skip(len);
+
     fprintf(&outfile, "\n");
   }
 
-  // Include counters for critical events.
-  fprintf(&outfile,
-          "counters: haf=%" PRId64 " paf=%" PRId64 " pvf=%" PRId64 " lcs=%" PRId64 " lhb=%" PRId64
-          " cf=%" PRId64 " \n",
-          HandleTableArena::get_alloc_failed_count(), pmm_get_alloc_failed_count(),
-          PmmChecker::get_validation_failed_count(), lockup_get_critical_section_oops_count(),
-          ChannelDispatcher::get_channel_full_count(), lockup_get_no_heartbeat_oops_count());
-
-  // Include as much of the contents of the panic buffer as we can, if it is not
-  // empty.
-  //
-  // The panic buffer is one of the last thing we print.  Space is limited so if
-  // the panic/assert message was long we may not be able to include the whole
-  // thing.  That's OK.  The panic buffer is a "nice to have" and we've already
-  // printed the primary diagnostics (register dump and backtrace).
-  if (panic_buffer.size()) {
-    fprintf(&outfile, "panic buffer: %s\n", panic_buffer.c_str());
+  if (static_cast<bool>(regions & RenderRegion::CriticalCounters)) {
+    // Include counters for critical events.
+    fprintf(&outfile,
+            "counters: haf=%" PRId64 " paf=%" PRId64 " pvf=%" PRId64 " lcs=%" PRId64 " lhb=%" PRId64
+            " cf=%" PRId64 " \n",
+            HandleTableArena::get_alloc_failed_count(), pmm_get_alloc_failed_count(),
+            PmmChecker::get_validation_failed_count(), lockup_get_critical_section_oops_count(),
+            ChannelDispatcher::get_channel_full_count(), lockup_get_no_heartbeat_oops_count());
   }
 
-  // Finally, if we have been configured to do so, render as much of the recent debug log as we can
-  // fit into the crashlog memory.
-  if (gBootOptions->render_dlog_to_crashlog) {
+  if (static_cast<bool>(regions & RenderRegion::PanicBuffer)) {
+    // Include as much of the contents of the panic buffer as we can, if it is
+    // not empty.
+    //
+    // The panic buffer is one of the last thing we print.  Space is limited so
+    // if the panic/assert message was long we may not be able to include the
+    // whole thing.  That's OK.  The panic buffer is a "nice to have" and we've
+    // already printed the primary diagnostics (register dump and backtrace).
+    if (panic_buffer.size()) {
+      fprintf(&outfile, "panic buffer: %s\n", panic_buffer.c_str());
+    } else {
+      fprintf(&outfile, "panic buffer: empty\n");
+    }
+  }
+
+  if (static_cast<bool>(regions & RenderRegion::Dlog)) {
     constexpr ktl::string_view kHeader{"\n--- BEGIN DLOG DUMP ---\n"};
     constexpr ktl::string_view kFooter{"\n--- END DLOG DUMP ---\n"};
-    if (outfile.available_region().size() > (kHeader.size() + kFooter.size())) {
-      outfile.Write(kHeader);
-      outfile.Skip(dlog_render_to_crashlog(outfile.available_region()));
-      outfile.Write(kFooter);
+
+    // Finally, if we have been configured to do so, render as much of the
+    // recent debug log as we can fit into the crashlog memory.
+    outfile.Write(kHeader);
+
+    const ktl::span<char> available_region = outfile.available_region();
+    const ktl::span<char> payload_region =
+        available_region.size() > kFooter.size()
+            ? available_region.subspan(0, available_region.size() - kFooter.size())
+            : ktl::span<char>{};
+
+    if (gBootOptions->render_dlog_to_crashlog) {
+      outfile.Skip(dlog_render_to_crashlog(payload_region));
+    } else {
+      StringFile{payload_region}.Write("DLOG -> Crashlog disabled");
     }
+
+    outfile.Write(kFooter);
   }
 
   return outfile.used_region().size();

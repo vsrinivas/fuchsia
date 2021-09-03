@@ -84,6 +84,16 @@ func testCommon(t *testing.T,
 // See that the kernel stows a crashlog upon panicking.
 func TestKernelCrashlog(t *testing.T) {
 	i := testCommon(t, "k crash", "ZIRCON KERNEL PANIC", "KERNEL PANIC")
+
+	// There should be a banner present, with a "VERSION" line.
+	i.WaitForLogMessage("VERSION")
+
+	// Next up should be the symbolizer context, which starts with a reset tag.
+	i.WaitForLogMessage("{{{reset}}}")
+
+	// Register dump should be next.
+	i.WaitForLogMessage("REGISTERS")
+
 	// See that the crash report contains ESR and FAR.
 	//
 	// This is a regression test for fxbug.dev/52182. 'k crash' is going to
@@ -99,10 +109,14 @@ func TestKernelCrashlog(t *testing.T) {
 	i.WaitForLogMessage("esr:         0x96")
 	i.WaitForLogMessage("far:                0x1")
 
-	// And a backtrace and counters.
+	// Next, the backtrace.
 	i.WaitForLogMessage("BACKTRACE")
 	i.WaitForLogMessage("{{{bt:0")
+
+	// Followed by critical counters.
 	i.WaitForLogMessage("counters: ")
+
+	// And, finally, the debug log.
 	i.WaitForLogMessage("--- BEGIN DLOG DUMP ---")
 	i.WaitForLogMessage("stopping other cpus")
 	i.WaitForLogMessage("--- END DLOG DUMP ---")
@@ -112,8 +126,10 @@ func TestKernelCrashlog(t *testing.T) {
 // message.
 func TestKernelCrashlogAssert(t *testing.T) {
 	i := testCommon(t, "k crash_assert", "ZIRCON KERNEL PANIC", "KERNEL PANIC")
-	// See that there's a backtrace, followed by some counters, and finally the assert
-	// message.
+	// Similar checks to a non-assert crash, except that we expect a panic buffer
+	// with the details of the assert now, and no registers.
+	i.WaitForLogMessage("VERSION")
+	i.WaitForLogMessage("{{{reset}}}")
 	i.WaitForLogMessage("BACKTRACE")
 	i.WaitForLogMessage("{{{bt:0")
 	i.WaitForLogMessage("counters: ")
@@ -127,15 +143,31 @@ func TestKernelCrashlogAssert(t *testing.T) {
 }
 
 func TestKernelCrashlogOom(t *testing.T) {
-	testCommon(t, "k pmm oom", "memory-pressure: rebooting due to OOM", "OOM")
+	i := testCommon(t, "k pmm oom", "memory-pressure: rebooting due to OOM", "OOM")
+
+	// OOMs should have smaller crashlogs.  They will be missing the
+	// registers/backtrace and the panic buffer.
+	i.WaitForLogMessage("VERSION")
+	i.WaitForLogMessage("counters: ")
+	i.WaitForLogMessage("--- BEGIN DLOG DUMP ---")
+	i.WaitForLogMessage("memory-pressure: rebooting due to OOM")
+	i.WaitForLogMessage("--- END DLOG DUMP ---")
 }
 
 func TestKernelCrashlogRootJobTermination(t *testing.T) {
-	testCommon(t, "killall bootsvc", "root-job: taking reboot action", "USERSPACE ROOT JOB TERMINATION")
+	i := testCommon(t, "killall bootsvc", "root-job: taking reboot action", "USERSPACE ROOT JOB TERMINATION")
+
+	// Root job termination should have the same contents as an OOM.
+	i.WaitForLogMessage("VERSION")
+	i.WaitForLogMessage("counters: ")
+	i.WaitForLogMessage("--- BEGIN DLOG DUMP ---")
+	i.WaitForLogMessage("root-job: taking reboot action")
+	i.WaitForLogMessage("--- END DLOG DUMP ---")
 }
 
 func TestKernelCrashlogNoCrash(t *testing.T) {
 	testCommon(t, "dm reboot", "[shutdown-shim]: started", "NO CRASH")
+	// We don't (currently) expect any payload from an graceful reboot.
 }
 
 func execDir(t *testing.T) string {
