@@ -1,9 +1,5 @@
-include /src/session/OWNERS
-
 neelsa@google.com
-
-# graphics/input
 jaeheon@google.com
-mikaelpessa@google.com
+quiche@google.com
 
-# COMPONENT: ComponentFramework>Sessions
+# COMPONENT: Scenic
