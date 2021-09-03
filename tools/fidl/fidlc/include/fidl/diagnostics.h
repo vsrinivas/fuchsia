@@ -197,8 +197,6 @@ constexpr ErrorDef<SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
 constexpr ErrorDef<flat::Name> ErrEmptyPayloadStructs(
     "method '{}' cannot have an empty struct as a payload, prefer omitting the payload altogether");
-constexpr ErrorDef<flat::Name> ErrNotYetSupportedAttributesOnPayloadStructs(
-    "method '{}' cannot yet have attributes on its payload type (http://fxbug.dev/74955)");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateMethodName(
     "multiple protocol methods named '{}'; previous was at {}");
 constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
