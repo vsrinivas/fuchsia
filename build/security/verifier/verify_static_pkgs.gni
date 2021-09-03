@@ -50,7 +50,7 @@ template("verify_static_pkgs") {
                              "visibility",
                            ])
 
-    tool = "//src/security/scrutiny/bin/verify_static_pkgs:bin"
+    tool = "//src/security/verifiers/verify_static_pkgs:bin"
     tool_output_name = "scrutiny_verify_static_pkgs"
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "$target_gen_dir/$target_name.d"

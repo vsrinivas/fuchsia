@@ -1,0 +1,16 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+
+# All verifiers are run as part of the build and so only require host side
+# compilation.
+group("verifiers") {
+  deps = [
+    "//src/security/verifiers/verify_bootfs($host_toolchain)",
+    "//src/security/verifiers/verify_kernel_cmdline($host_toolchain)",
+    "//src/security/verifiers/verify_routes($host_toolchain)",
+    "//src/security/verifiers/verify_static_pkgs($host_toolchain)",
+  ]
+}

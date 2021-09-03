@@ -38,7 +38,7 @@ template("verify_kernel_cmdline") {
                              "visibility",
                            ])
 
-    tool = "//src/security/scrutiny/bin/verify_kernel_cmdline:bin"
+    tool = "//src/security/verifiers/verify_kernel_cmdline:bin"
     tool_output_name = "scrutiny_verify_kernel_cmdline"
     stamp_file = "$target_gen_dir/$target_name.verified"
 

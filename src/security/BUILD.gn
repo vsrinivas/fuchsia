@@ -8,6 +8,7 @@ group("security") {
     ":tests",
     "kms",
     "tee_manager",
+    "verifiers",
   ]
 }
 

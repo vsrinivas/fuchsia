@@ -25,7 +25,7 @@ template("verify_routes") {
                            ])
 
     depfile = "$target_out_dir/$target_name.d"
-    tool = "//src/security/scrutiny/bin/verify_routes:bin"
+    tool = "//src/security/verifiers/verify_routes:bin"
     tool_output_name = "scrutiny_verify_routes"
     stamp_file = "$target_gen_dir/$target_name.verified"
     published_packages = "//build/images:publish"

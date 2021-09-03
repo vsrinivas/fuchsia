@@ -5,11 +5,5 @@
 import("//build/host.gni")
 
 group("bin") {
-  deps = [
-    "//src/security/scrutiny/bin/standalone",
-    "//src/security/scrutiny/bin/verify_bootfs",
-    "//src/security/scrutiny/bin/verify_kernel_cmdline",
-    "//src/security/scrutiny/bin/verify_routes",
-    "//src/security/scrutiny/bin/verify_static_pkgs",
-  ]
+  deps = [ "//src/security/scrutiny/bin/standalone" ]
 }

@@ -40,7 +40,7 @@ template("verify_bootfs_filelist") {
                              "visibility",
                            ])
 
-    tool = "//src/security/scrutiny/bin/verify_bootfs:bin"
+    tool = "//src/security/verifiers/verify_bootfs:bin"
     tool_output_name = "scrutiny_verify_bootfs"
     stamp_file = "$target_gen_dir/$target_name.verified"
 
