@@ -11,7 +11,9 @@ void main() {
 
   test('fuchsia.kernel.boot', () async {
     final helper = await PerfTestHelper.make();
-    await helper
-        .runTestCommand((resultsFile) => '/bin/kernel-boot-stats $resultsFile');
+    await helper.runTestComponent(
+        packageName: 'kernel-boot-benchmarks',
+        componentName: 'kernel-boot-benchmarks.cmx',
+        commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
 }
