@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <locale.h>
-
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/raw_ast.h>
 #include <fidl/source_file.h>
+#include <locale.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -515,7 +515,9 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
   ASSERT_TRUE(attribute->args.size() == 1);
 
   std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);
-  ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(arg->value.get())->MakeContents(), "Bar");
+  auto arg_value = static_cast<fidl::raw::LiteralConstant*>(arg->value.get());
+  ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(arg_value->literal.get())->MakeContents(),
+                "Bar");
 }
 
 TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
@@ -537,8 +539,10 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
   ASSERT_TRUE(attribute->args.size() == 1);
 
   std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);
-  ASSERT_STR_EQ(static_cast<fidl::raw::DocCommentLiteral*>(arg->value.get())->MakeContents(),
-                " A\n multiline\n comment!\n");
+  auto arg_value = static_cast<fidl::raw::LiteralConstant*>(arg->value.get());
+  ASSERT_STR_EQ(
+      static_cast<fidl::raw::DocCommentLiteral*>(arg_value->literal.get())->MakeContents(),
+      " A\n multiline\n comment!\n");
 }
 
 TEST(ParsingTests, WarnDocCommentBlankLineTest) {

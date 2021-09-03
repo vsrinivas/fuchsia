@@ -764,10 +764,10 @@ Linter::Linter()
       //
       (const raw::AttributeNew& element) {
         if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
-          if (element.args.empty())
+          if (element.args.empty() || element.provenance != raw::AttributeNew::kDocComment)
             return;
-          auto doc_comment =
-              static_cast<raw::DocCommentLiteral*>(element.args.front()->value.get());
+          auto constant = static_cast<raw::LiteralConstant*>(element.args.front()->value.get());
+          auto doc_comment = static_cast<raw::DocCommentLiteral*>(constant->literal.get());
           if (std::regex_search(doc_comment->MakeContents(), copyright_regex)) {
             linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
           }

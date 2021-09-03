@@ -64,42 +64,37 @@ type NonDenseTable = table {
   ASSERT_ERR(errors[3], fidl::ErrUnknownType);
 }
 
-TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributes) {
+TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributePlacement) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
-@for_deprecated_c_bindings("True")  // Error: invalid value
-type Union = union {
-    1: foo string;
-};
-
-@transitional                       // Error: invalid placement
+@transitional            // Error: invalid placement
 type Table = table {
     1: foo string;
 };
 
-@max_bytes("1")                     // Error: too large
+@max_bytes("1")          // Error: too large
 type Struct = struct {
     foo uint16;
 };
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 4);
+  ASSERT_EQ(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_ERR(errors[1], fidl::ErrAttributeDisallowsArgs);
-  ASSERT_ERR(errors[2], fidl::ErrInvalidAttributePlacement);
-  ASSERT_ERR(errors[3], fidl::ErrTooManyBytes);
+  ASSERT_ERR(errors[1], fidl::ErrTooManyBytes);
 }
 
-TEST(RecoverableCompilationTests, BadRecoverInAttributeArg) {
+TEST(RecoverableCompilationTests, BadRecoverInAttributeCompile) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
-@foo("a", "b")                      // Error: unnamed when multiple args
-@bar(true)                          // Error: must be string literal
+@foo(first="a", first="b")   // Error: duplicate args
+@bar(first=3, second=4)      // Error: x2 cannot use numeric args on custom attributes
 type Enum = enum {
     FOO = 1;
 };
@@ -107,9 +102,10 @@ type Enum = enum {
                       experimental_flags);
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 2);
-  ASSERT_ERR(errors[0], fidl::ErrAttributeArgsMustAllBeNamed);
-  ASSERT_ERR(errors[1], fidl::ErrAttributeArgMustBeStringLiteral);
+  ASSERT_EQ(errors.size(), 3);
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateAttributeArg);
+  ASSERT_ERR(errors[1], fidl::ErrCannotUseNumericArgsOnCustomAttributes);
+  ASSERT_ERR(errors[2], fidl::ErrCannotUseNumericArgsOnCustomAttributes);
 }
 
 }  // namespace

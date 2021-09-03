@@ -45,8 +45,6 @@ constexpr ErrorDef ErrAttributeWithEmptyParens(
     "attributes without arguments must omit the trailing empty parentheses");
 constexpr ErrorDef ErrAttributeArgsMustAllBeNamed(
     "attributes that take multiple arguments must name all of them explicitly");
-constexpr ErrorDef ErrAttributeArgMustBeStringLiteral(
-    "attribute argument must be a string literal");
 // end new_syntax
 
 // TODO(fxbug.dev/65978): This is a misnomer in the new syntax: the ordinal comes
@@ -290,6 +288,10 @@ constexpr ErrorDef<> ErrMustBeTransportSide(
 constexpr ErrorDef<flat::Attribute *> ErrInvalidAttributePlacement(
     "placement of attribute '{}' disallowed here");
 constexpr ErrorDef<flat::Attribute *> ErrDeprecatedAttribute("attribute '{}' is deprecated");
+constexpr ErrorDef<flat::AttributeArg *, flat::Attribute *>
+    ErrCannotUseNumericArgsOnCustomAttributes(
+        "argument '{}' on user-defined attribute '{}' cannot be a numeric value; use a 'bool' or "
+        "'string' instead");
 constexpr ErrorDef ErrAttributeArgMustNotBeNamed(
     "attributes that take a single argument must not name that argument");
 constexpr ErrorDef<const flat::AttributeArg *> ErrAttributeArgNotNamed(

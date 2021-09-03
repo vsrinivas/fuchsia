@@ -95,21 +95,21 @@ type ExampleUnion = union {
 
   auto example_bits = library.LookupBits("ExampleBits");
   ASSERT_NOT_NULL(example_bits);
-  EXPECT_TRUE(example_bits->attributes->HasAttribute("on_bits"));
+  EXPECT_TRUE(example_bits->HasAttribute("on_bits"));
   EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("on_bits_member"));
 
   auto example_const = library.LookupConstant("EXAMPLE_CONST");
   ASSERT_NOT_NULL(example_const);
-  EXPECT_TRUE(example_const->attributes->HasAttribute("on_const"));
+  EXPECT_TRUE(example_const->HasAttribute("on_const"));
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
-  EXPECT_TRUE(example_enum->attributes->HasAttribute("on_enum"));
+  EXPECT_TRUE(example_enum->HasAttribute("on_enum"));
   EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("on_enum_member"));
 
   auto example_child_protocol = library.LookupProtocol("ExampleChildProtocol");
   ASSERT_NOT_NULL(example_child_protocol);
-  EXPECT_TRUE(example_child_protocol->attributes->HasAttribute("on_protocol"));
+  EXPECT_TRUE(example_child_protocol->HasAttribute("on_protocol"));
   EXPECT_TRUE(example_child_protocol->methods.front().attributes->HasAttribute("on_method"));
   ASSERT_NOT_NULL(example_child_protocol->methods.front().maybe_request_payload);
   EXPECT_TRUE(example_child_protocol->methods.front()
@@ -118,33 +118,33 @@ type ExampleUnion = union {
 
   auto example_parent_protocol = library.LookupProtocol("ExampleParentProtocol");
   ASSERT_NOT_NULL(example_parent_protocol);
-  EXPECT_TRUE(example_parent_protocol->attributes->HasAttribute("on_protocol"));
+  EXPECT_TRUE(example_parent_protocol->HasAttribute("on_protocol"));
   EXPECT_TRUE(
       example_parent_protocol->composed_protocols.front().attributes->HasAttribute("on_compose"));
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);
-  EXPECT_TRUE(example_service->attributes->HasAttribute("on_service"));
+  EXPECT_TRUE(example_service->HasAttribute("on_service"));
   EXPECT_TRUE(example_service->members.front().attributes->HasAttribute("on_service_member"));
 
   auto example_struct = library.LookupStruct("ExampleStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->attributes->HasAttribute("on_struct"));
+  EXPECT_TRUE(example_struct->HasAttribute("on_struct"));
   EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("on_struct_member"));
 
   auto example_table = library.LookupTable("ExampleTable");
   ASSERT_NOT_NULL(example_table);
-  EXPECT_TRUE(example_table->attributes->HasAttribute("on_table"));
+  EXPECT_TRUE(example_table->HasAttribute("on_table"));
   EXPECT_TRUE(
       example_table->members.front().maybe_used->attributes->HasAttribute("on_table_member"));
 
   auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
   ASSERT_NOT_NULL(example_type_alias);
-  EXPECT_TRUE(example_type_alias->attributes->HasAttribute("on_type_alias"));
+  EXPECT_TRUE(example_type_alias->HasAttribute("on_type_alias"));
 
   auto example_union = library.LookupUnion("ExampleUnion");
   ASSERT_NOT_NULL(example_union);
-  EXPECT_TRUE(example_union->attributes->HasAttribute("on_union"));
+  EXPECT_TRUE(example_union->HasAttribute("on_union"));
   EXPECT_TRUE(
       example_union->members.front().maybe_used->attributes->HasAttribute("on_union_member"));
 }
@@ -205,7 +205,7 @@ service ExampleService {
 
   auto example_const = library.LookupConstant("EXAMPLE_CONSTANT");
   ASSERT_NOT_NULL(example_const);
-  EXPECT_TRUE(example_const->attributes->HasAttribute("no_doc"));
+  EXPECT_TRUE(example_const->HasAttribute("no_doc"));
   EXPECT_TRUE(example_const->HasAttributeArg("doc", "value"));
   auto const_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_const->GetAttributeArg("doc", "value").value().get().value->Value());
@@ -217,7 +217,7 @@ service ExampleService {
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
-  EXPECT_TRUE(example_enum->attributes->HasAttribute("transitional"));
+  EXPECT_TRUE(example_enum->HasAttribute("transitional"));
   EXPECT_TRUE(example_enum->HasAttributeArg("doc", "value"));
   auto enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_enum->GetAttributeArg("doc", "value").value().get().value->Value());
@@ -253,8 +253,8 @@ service ExampleService {
 
   auto example_protocol = library.LookupProtocol("ExampleProtocol");
   ASSERT_NOT_NULL(example_protocol);
-  EXPECT_TRUE(example_protocol->attributes->HasAttribute("discoverable"));
-  EXPECT_TRUE(example_protocol->attributes->HasAttribute("for_deprecated_c_bindings"));
+  EXPECT_TRUE(example_protocol->HasAttribute("discoverable"));
+  EXPECT_TRUE(example_protocol->HasAttribute("for_deprecated_c_bindings"));
   EXPECT_TRUE(example_protocol->HasAttributeArg("doc", "value"));
   auto protocol_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_protocol->GetAttributeArg("doc", "value").value().get().value->Value());
@@ -278,7 +278,7 @@ service ExampleService {
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);
-  EXPECT_TRUE(example_service->attributes->HasAttribute("no_doc"));
+  EXPECT_TRUE(example_service->HasAttribute("no_doc"));
   EXPECT_TRUE(example_service->HasAttributeArg("doc", "value"));
   auto service_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_service->GetAttributeArg("doc", "value").value().get().value->Value());
@@ -631,7 +631,6 @@ type MyTable = table {
     1: MyMember int32;
 };
 
-@for_deprecated_c_bindings
 protocol MyProtocol {
     @for_deprecated_c_bindings
     MyMethod();
@@ -640,7 +639,7 @@ protocol MyProtocol {
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 10);
+  ASSERT_EQ(errors.size(), 9);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "for_deprecated_c_bindings");
 }
@@ -900,19 +899,19 @@ protocol MyProtocol {
 
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
-  EXPECT_TRUE(foo->attributes->HasAttribute("foo"));
+  EXPECT_TRUE(foo->HasAttribute("foo"));
 
   auto bar = library.LookupStruct("Bar");
   ASSERT_NOT_NULL(bar);
-  EXPECT_TRUE(bar->attributes->HasAttribute("bar"));
+  EXPECT_TRUE(bar->HasAttribute("bar"));
 
   auto req = library.LookupStruct("MyProtocolMyMethodRequest");
   ASSERT_NOT_NULL(req);
-  EXPECT_TRUE(req->attributes->HasAttribute("baz"));
+  EXPECT_TRUE(req->HasAttribute("baz"));
 
   auto inner = library.LookupStruct("InnerLayout");
   ASSERT_NOT_NULL(inner);
-  EXPECT_TRUE(inner->attributes->HasAttribute("qux"));
+  EXPECT_TRUE(inner->HasAttribute("qux"));
 }
 
 TEST(AttributesTests, BadOverrideAttributePlacements) {
@@ -1020,25 +1019,6 @@ type MyStruct = struct {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeWithEmptyParens);
 }
 
-// TODO(fxbug.dev/81390): Remove this test.
-TEST(AttributesTests, BadArgumentIsNotStringLiteral) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-  TestLibrary library(R"FIDL(
-library example;
-
-const bar string = "bar";
-
-@foo(bar)
-@baz(123)
-type MyStruct = struct {};
-
-)FIDL",
-                      experimental_flags);
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrAttributeArgMustBeStringLiteral,
-                                      fidl::ErrAttributeArgMustBeStringLiteral);
-}
-
 TEST(AttributesTests, GoodMultipleArguments) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
@@ -1054,15 +1034,13 @@ type MyStruct = struct {};
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->attributes->HasAttribute("foo"));
-  EXPECT_TRUE(example_struct->attributes->HasAttributeArg("foo", "bar"));
-  EXPECT_TRUE(
-      example_struct->attributes->GetAttributeArg("foo", "bar").value().get().value->span.data() ==
-      "\"abc\"");
-  EXPECT_TRUE(example_struct->attributes->HasAttributeArg("foo", "baz"));
-  EXPECT_TRUE(
-      example_struct->attributes->GetAttributeArg("foo", "baz").value().get().value->span.data() ==
-      "\"def\"");
+  EXPECT_TRUE(example_struct->HasAttribute("foo"));
+  EXPECT_TRUE(example_struct->HasAttributeArg("foo", "bar"));
+  EXPECT_STR_EQ(example_struct->GetAttributeArg("foo", "bar").value().get().value->span.data(),
+                "\"abc\"");
+  EXPECT_TRUE(example_struct->HasAttributeArg("foo", "baz"));
+  EXPECT_STR_EQ(example_struct->GetAttributeArg("foo", "baz").value().get().value->span.data(),
+                "\"def\"");
 }
 
 TEST(AttributesTests, BadMultipleArgumentsWithNoNames) {
@@ -1153,6 +1131,7 @@ type MyStruct = struct {};
                  },
                  {
                      {"value", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::ConstantValue::Kind::kString,
                                    fidl::flat::AttributeArgSchema::Optionality::kRequired)},
                  }));
   ASSERT_TRUE(library.Compile());
@@ -1176,14 +1155,15 @@ type MyStruct = struct {};
                  },
                  {
                      {"inferrable", fidl::flat::AttributeArgSchema(
+                                        fidl::flat::ConstantValue::Kind::kString,
                                         fidl::flat::AttributeArgSchema::Optionality::kRequired)},
                  }));
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->attributes->HasAttribute("foo"));
-  EXPECT_TRUE(example_struct->attributes->HasAttributeArg("foo", "inferrable"));
+  EXPECT_TRUE(example_struct->HasAttribute("foo"));
+  EXPECT_TRUE(example_struct->HasAttributeArg("foo", "inferrable"));
 }
 
 // If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that only
@@ -1209,6 +1189,7 @@ type MyOtherStruct = struct {};
                  },
                  {
                      {"value", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::ConstantValue::Kind::kString,
                                    fidl::flat::AttributeArgSchema::Optionality::kOptional)},
                  }));
   ASSERT_TRUE(library.Compile());
@@ -1234,6 +1215,7 @@ type MyStruct = struct {};
                  },
                  {
                      {"value", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::ConstantValue::Kind::kString,
                                    fidl::flat::AttributeArgSchema::Optionality::kRequired)},
                  }));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgMustNotBeNamed);
@@ -1259,8 +1241,10 @@ type MyStruct = struct {};
                  },
                  {
                      {"value", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::ConstantValue::Kind::kString,
                                    fidl::flat::AttributeArgSchema::Optionality::kRequired)},
                      {"other", fidl::flat::AttributeArgSchema(
+                                   fidl::flat::ConstantValue::Kind::kString,
                                    fidl::flat::AttributeArgSchema::Optionality::kOptional)},
                  }));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgNotNamed);
@@ -1289,8 +1273,10 @@ type MyOtherStruct = struct {};
           },
           {
               {"first", fidl::flat::AttributeArgSchema(
+                            fidl::flat::ConstantValue::Kind::kString,
                             fidl::flat::AttributeArgSchema::Optionality::kRequired)},
               {"second", fidl::flat::AttributeArgSchema(
+                             fidl::flat::ConstantValue::Kind::kString,
                              fidl::flat::AttributeArgSchema::Optionality::kRequired)},
           }));
   ASSERT_TRUE(library.Compile());
@@ -1329,8 +1315,10 @@ type MyStruct5 = struct {};
           },
           {
               {"first", fidl::flat::AttributeArgSchema(
+                            fidl::flat::ConstantValue::Kind::kString,
                             fidl::flat::AttributeArgSchema::Optionality::kOptional)},
               {"second", fidl::flat::AttributeArgSchema(
+                             fidl::flat::ConstantValue::Kind::kString,
                              fidl::flat::AttributeArgSchema::Optionality::kOptional)},
           }));
   ASSERT_TRUE(library.Compile());
@@ -1363,8 +1351,10 @@ type MyStruct3 = struct {};
           },
           {
               {"first", fidl::flat::AttributeArgSchema(
+                            fidl::flat::ConstantValue::Kind::kString,
                             fidl::flat::AttributeArgSchema::Optionality::kRequired)},
               {"second", fidl::flat::AttributeArgSchema(
+                             fidl::flat::ConstantValue::Kind::kString,
                              fidl::flat::AttributeArgSchema::Optionality::kOptional)},
           }));
   ASSERT_TRUE(library.Compile());
@@ -1389,12 +1379,681 @@ type MyStruct = struct {};
           },
           {
               {"required", fidl::flat::AttributeArgSchema(
+                               fidl::flat::ConstantValue::Kind::kString,
                                fidl::flat::AttributeArgSchema::Optionality::kRequired)},
               {"optional", fidl::flat::AttributeArgSchema(
+                               fidl::flat::ConstantValue::Kind::kString,
                                fidl::flat::AttributeArgSchema::Optionality::kOptional)},
           }));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAttributeArg);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "multiple_args");
+}
+
+TEST(AttributesTests, GoodLiteralTypesWithoutSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr(foo="abc", bar=true, baz=false)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_TRUE(library.Compile());
+
+  auto example_struct = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(example_struct);
+  EXPECT_TRUE(example_struct->HasAttribute("attr"));
+
+  // Check `foo` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "foo"));
+  const auto& foo = example_struct->GetAttributeArg("attr", "foo").value().get().value;
+  EXPECT_STR_EQ(foo->span.data(), "\"abc\"");
+  ASSERT_EQ(foo->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_foo;
+  EXPECT_TRUE(foo->Value().Convert(fidl::flat::ConstantValue::Kind::kString, &resolved_foo));
+
+  // Check `baz` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "baz"));
+  const auto& baz = example_struct->GetAttributeArg("attr", "baz").value().get().value;
+  EXPECT_STR_EQ(baz->span.data(), "false");
+  ASSERT_EQ(baz->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_baz;
+  EXPECT_TRUE(baz->Value().Convert(fidl::flat::ConstantValue::Kind::kBool, &resolved_baz));
+}
+
+TEST(AttributesTests, BadLiteralNumericTypesWithoutSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr(foo=1, bar=2.3)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotUseNumericArgsOnCustomAttributes,
+                                      fidl::ErrCannotUseNumericArgsOnCustomAttributes);
+}
+
+TEST(AttributesTests, GoodReferencedTypesWithoutSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+const foo string:3 = "abc";
+const bar bool = true;
+const baz bool = false;
+
+@attr(foo=foo, bar=bar, baz=baz)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_TRUE(library.Compile());
+
+  auto example_struct = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(example_struct);
+  EXPECT_TRUE(example_struct->HasAttribute("attr"));
+
+  // Check `foo` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "foo"));
+  const auto& foo = example_struct->GetAttributeArg("attr", "foo").value().get().value;
+  EXPECT_STR_EQ(foo->span.data(), "foo");
+  ASSERT_EQ(foo->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_foo;
+  EXPECT_TRUE(foo->Value().Convert(fidl::flat::ConstantValue::Kind::kString, &resolved_foo));
+  EXPECT_STR_EQ(static_cast<fidl::flat::StringConstantValue*>(resolved_foo.get())->MakeContents(),
+                "abc");
+
+  // Check `bar` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "bar"));
+  const auto& bar = example_struct->GetAttributeArg("attr", "bar").value().get().value;
+  EXPECT_STR_EQ(bar->span.data(), "bar");
+  ASSERT_EQ(bar->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_bar;
+  EXPECT_TRUE(bar->Value().Convert(fidl::flat::ConstantValue::Kind::kBool, &resolved_bar));
+  EXPECT_TRUE(static_cast<fidl::flat::BoolConstantValue*>(resolved_bar.get())->value);
+
+  // Check `baz` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "baz"));
+  const auto& baz = example_struct->GetAttributeArg("attr", "baz").value().get().value;
+  EXPECT_STR_EQ(baz->span.data(), "baz");
+  ASSERT_EQ(baz->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_baz;
+  EXPECT_TRUE(baz->Value().Convert(fidl::flat::ConstantValue::Kind::kBool, &resolved_baz));
+  EXPECT_TRUE(!static_cast<fidl::flat::BoolConstantValue*>(resolved_baz.get())->value);
+}
+
+TEST(AttributesTests, BadReferencedNumericTypesWithoutSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+const foo int8 = -1;
+const bar float32 = -2.3;
+
+@attr(foo=foo, bar=bar)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotUseNumericArgsOnCustomAttributes,
+                                      fidl::ErrCannotUseNumericArgsOnCustomAttributes);
+}
+
+TEST(AttributesTests, GoodLiteralTypesWithSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@attr(
+        string="foo",
+        bool=true,
+        int8=-1,
+        int16=-2,
+        int32=-3,
+        int64=-4,
+        uint8=1,
+        uint16=2,
+        uint32=3,
+        uint64=4,
+        float32=1.2,
+        float64=-3.4)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "attr",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString)},
+              {"bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool)},
+              {"int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8)},
+              {"int16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt16)},
+              {"int32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt32)},
+              {"int64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt64)},
+              {"uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8)},
+              {"uint16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint16)},
+              {"uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32)},
+              {"uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64)},
+              {"float32",
+               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32)},
+              {"float64",
+               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64)},
+          }));
+  ASSERT_TRUE(library.Compile());
+
+  auto example_struct = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(example_struct);
+  EXPECT_TRUE(example_struct->HasAttribute("attr"));
+
+  // Check `string` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "string"));
+  const auto& string_val = example_struct->GetAttributeArg("attr", "string").value().get().value;
+  EXPECT_STR_EQ(string_val->span.data(), "\"foo\"");
+  ASSERT_EQ(string_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_string;
+  EXPECT_TRUE(
+      string_val->Value().Convert(fidl::flat::ConstantValue::Kind::kString, &resolved_string));
+  EXPECT_STR_EQ(
+      static_cast<fidl::flat::StringConstantValue*>(resolved_string.get())->MakeContents(), "foo");
+
+  // Check `bool` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "bool"));
+  const auto& bool_val = example_struct->GetAttributeArg("attr", "bool").value().get().value;
+  EXPECT_STR_EQ(bool_val->span.data(), "true");
+  ASSERT_EQ(bool_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_bool;
+  EXPECT_TRUE(bool_val->Value().Convert(fidl::flat::ConstantValue::Kind::kBool, &resolved_bool));
+  EXPECT_EQ(static_cast<fidl::flat::BoolConstantValue*>(resolved_bool.get())->value, true);
+
+  // Check `int8` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int8"));
+  const auto& int8_val = example_struct->GetAttributeArg("attr", "int8").value().get().value;
+  EXPECT_STR_EQ(int8_val->span.data(), "-1");
+  ASSERT_EQ(int8_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_int8;
+  EXPECT_TRUE(int8_val->Value().Convert(fidl::flat::ConstantValue::Kind::kInt8, &resolved_int8));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int8_t>*>(resolved_int8.get())->value, -1);
+
+  // Check `int16` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int16"));
+  const auto& int16_val = example_struct->GetAttributeArg("attr", "int16").value().get().value;
+  EXPECT_STR_EQ(int16_val->span.data(), "-2");
+  ASSERT_EQ(int16_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_int16;
+  EXPECT_TRUE(int16_val->Value().Convert(fidl::flat::ConstantValue::Kind::kInt16, &resolved_int16));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int16_t>*>(resolved_int16.get())->value,
+            -2);
+
+  // Check `int32` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int32"));
+  const auto& int32_val = example_struct->GetAttributeArg("attr", "int32").value().get().value;
+  EXPECT_STR_EQ(int32_val->span.data(), "-3");
+  ASSERT_EQ(int32_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_int32;
+  EXPECT_TRUE(int32_val->Value().Convert(fidl::flat::ConstantValue::Kind::kInt32, &resolved_int32));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int32_t>*>(resolved_int32.get())->value,
+            -3);
+
+  // Check `int64` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int64"));
+  const auto& int64_val = example_struct->GetAttributeArg("attr", "int64").value().get().value;
+  EXPECT_STR_EQ(int64_val->span.data(), "-4");
+  ASSERT_EQ(int64_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_int64;
+  EXPECT_TRUE(int64_val->Value().Convert(fidl::flat::ConstantValue::Kind::kInt64, &resolved_int64));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int64_t>*>(resolved_int64.get())->value,
+            -4);
+
+  // Check `uint8` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint8"));
+  const auto& uint8_val = example_struct->GetAttributeArg("attr", "uint8").value().get().value;
+  EXPECT_STR_EQ(uint8_val->span.data(), "1");
+  ASSERT_EQ(uint8_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uint8;
+  EXPECT_TRUE(uint8_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint8, &resolved_uint8));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint8_t>*>(resolved_uint8.get())->value,
+            1);
+
+  // Check `uint16` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint16"));
+  const auto& uint16_val = example_struct->GetAttributeArg("attr", "uint16").value().get().value;
+  EXPECT_STR_EQ(uint16_val->span.data(), "2");
+  ASSERT_EQ(uint16_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uint16;
+  EXPECT_TRUE(
+      uint16_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint16, &resolved_uint16));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint16_t>*>(resolved_uint16.get())->value,
+            2);
+
+  // Check `uint32` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint32"));
+  const auto& uint32_val = example_struct->GetAttributeArg("attr", "uint32").value().get().value;
+  EXPECT_STR_EQ(uint32_val->span.data(), "3");
+  ASSERT_EQ(uint32_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uint32;
+  EXPECT_TRUE(
+      uint32_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint32, &resolved_uint32));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint32_t>*>(resolved_uint32.get())->value,
+            3);
+
+  // Check `uint64` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint64"));
+  const auto& uint64_val = example_struct->GetAttributeArg("attr", "uint64").value().get().value;
+  EXPECT_STR_EQ(uint64_val->span.data(), "4");
+  ASSERT_EQ(uint64_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uint64;
+  EXPECT_TRUE(
+      uint64_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint64, &resolved_uint64));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_uint64.get())->value,
+            4);
+
+  // Check `float32` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "float32"));
+  const auto& float32_val = example_struct->GetAttributeArg("attr", "float32").value().get().value;
+  EXPECT_STR_EQ(float32_val->span.data(), "1.2");
+  ASSERT_EQ(float32_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_float32;
+  EXPECT_TRUE(
+      float32_val->Value().Convert(fidl::flat::ConstantValue::Kind::kFloat32, &resolved_float32));
+  EXPECT_TRUE(static_cast<fidl::flat::NumericConstantValue<float>*>(resolved_float32.get())->value >
+              1.1);
+  EXPECT_TRUE(static_cast<fidl::flat::NumericConstantValue<float>*>(resolved_float32.get())->value <
+              1.3);
+
+  // Check `float64` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "float64"));
+  const auto& float64_val = example_struct->GetAttributeArg("attr", "float64").value().get().value;
+  EXPECT_STR_EQ(float64_val->span.data(), "-3.4");
+  ASSERT_EQ(float64_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_float64;
+  EXPECT_TRUE(
+      float64_val->Value().Convert(fidl::flat::ConstantValue::Kind::kFloat64, &resolved_float64));
+  EXPECT_TRUE(
+      static_cast<fidl::flat::NumericConstantValue<double>*>(resolved_float64.get())->value > -3.5);
+  EXPECT_TRUE(
+      static_cast<fidl::flat::NumericConstantValue<double>*>(resolved_float64.get())->value < -3.3);
+}
+
+TEST(AttributesTests, BadInvalidLiteralStringTypeWithSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr(true)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "attr",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString)},
+          }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
+}
+
+TEST(AttributesTests, BadInvalidLiteralBoolTypeWithSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr("foo")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "attr",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool)},
+          }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
+}
+
+TEST(AttributesTests, BadInvalidLiteralNumericTypeWithSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr(-1)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "attr",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8)},
+          }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
+}
+
+TEST(AttributesTests, GoodReferencedTypesWithSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+const string string = "foo";
+const bool bool = true;
+const int8 int8 = -1;
+const int16 int16 = -2;
+const int32 int32 = -3;
+type int64 = enum : int64 {
+    MEMBER = -4;
+};
+const uint8 uint8 = 1;
+const uint16 uint16 = 2;
+const uint32 uint32 = 3;
+type uint64 = bits : uint64 {
+    MEMBER = 4;
+};
+const float32 float32 = 1.2;
+const float64 float64 = -3.4;
+
+@attr(
+        string=string,
+        bool=bool,
+        int8=int8,
+        int16=int16,
+        int32=int32,
+        int64=int64.MEMBER,
+        uint8=uint8,
+        uint16=uint16,
+        uint32=uint32,
+        uint64=uint64.MEMBER,
+        float32=float32,
+        float64=float64)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "attr",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString)},
+              {"bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool)},
+              {"int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8)},
+              {"int16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt16)},
+              {"int32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt32)},
+              {"int64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt64)},
+              {"uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8)},
+              {"uint16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint16)},
+              {"uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32)},
+              {"uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64)},
+              {"float32",
+               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32)},
+              {"float64",
+               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64)},
+          }));
+  ASSERT_TRUE(library.Compile());
+
+  auto example_struct = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(example_struct);
+  EXPECT_TRUE(example_struct->HasAttribute("attr"));
+
+  // Check `string` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "string"));
+  const auto& string_val = example_struct->GetAttributeArg("attr", "string").value().get().value;
+  EXPECT_STR_EQ(string_val->span.data(), "string");
+  ASSERT_EQ(string_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_string;
+  EXPECT_TRUE(
+      string_val->Value().Convert(fidl::flat::ConstantValue::Kind::kString, &resolved_string));
+  EXPECT_STR_EQ(
+      static_cast<fidl::flat::StringConstantValue*>(resolved_string.get())->MakeContents(), "foo");
+
+  // Check `bool` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "bool"));
+  const auto& bool_val = example_struct->GetAttributeArg("attr", "bool").value().get().value;
+  EXPECT_STR_EQ(bool_val->span.data(), "bool");
+  ASSERT_EQ(bool_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_bool;
+  EXPECT_TRUE(bool_val->Value().Convert(fidl::flat::ConstantValue::Kind::kBool, &resolved_bool));
+  EXPECT_EQ(static_cast<fidl::flat::BoolConstantValue*>(resolved_bool.get())->value, true);
+
+  // Check `int8` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int8"));
+  const auto& int8_val = example_struct->GetAttributeArg("attr", "int8").value().get().value;
+  EXPECT_STR_EQ(int8_val->span.data(), "int8");
+  ASSERT_EQ(int8_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_int8;
+  EXPECT_TRUE(int8_val->Value().Convert(fidl::flat::ConstantValue::Kind::kInt8, &resolved_int8));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int8_t>*>(resolved_int8.get())->value, -1);
+
+  // Check `int16` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int16"));
+  const auto& int16_val = example_struct->GetAttributeArg("attr", "int16").value().get().value;
+  EXPECT_STR_EQ(int16_val->span.data(), "int16");
+  ASSERT_EQ(int16_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_int16;
+  EXPECT_TRUE(int16_val->Value().Convert(fidl::flat::ConstantValue::Kind::kInt16, &resolved_int16));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int16_t>*>(resolved_int16.get())->value,
+            -2);
+
+  // Check `int32` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int32"));
+  const auto& int32_val = example_struct->GetAttributeArg("attr", "int32").value().get().value;
+  EXPECT_STR_EQ(int32_val->span.data(), "int32");
+  ASSERT_EQ(int32_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_int32;
+  EXPECT_TRUE(int32_val->Value().Convert(fidl::flat::ConstantValue::Kind::kInt32, &resolved_int32));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int32_t>*>(resolved_int32.get())->value,
+            -3);
+
+  // Check `int64` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int64"));
+  const auto& int64_val = example_struct->GetAttributeArg("attr", "int64").value().get().value;
+  EXPECT_STR_EQ(int64_val->span.data(), "int64.MEMBER");
+  ASSERT_EQ(int64_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_int64;
+  EXPECT_TRUE(int64_val->Value().Convert(fidl::flat::ConstantValue::Kind::kInt64, &resolved_int64));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int64_t>*>(resolved_int64.get())->value,
+            -4);
+
+  // Check `uint8` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint8"));
+  const auto& uint8_val = example_struct->GetAttributeArg("attr", "uint8").value().get().value;
+  EXPECT_STR_EQ(uint8_val->span.data(), "uint8");
+  ASSERT_EQ(uint8_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uint8;
+  EXPECT_TRUE(uint8_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint8, &resolved_uint8));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint8_t>*>(resolved_uint8.get())->value,
+            1);
+
+  // Check `uint16` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint16"));
+  const auto& uint16_val = example_struct->GetAttributeArg("attr", "uint16").value().get().value;
+  EXPECT_STR_EQ(uint16_val->span.data(), "uint16");
+  ASSERT_EQ(uint16_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uint16;
+  EXPECT_TRUE(
+      uint16_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint16, &resolved_uint16));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint16_t>*>(resolved_uint16.get())->value,
+            2);
+
+  // Check `uint32` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint32"));
+  const auto& uint32_val = example_struct->GetAttributeArg("attr", "uint32").value().get().value;
+  EXPECT_STR_EQ(uint32_val->span.data(), "uint32");
+  ASSERT_EQ(uint32_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uint32;
+  EXPECT_TRUE(
+      uint32_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint32, &resolved_uint32));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint32_t>*>(resolved_uint32.get())->value,
+            3);
+
+  // Check `uint64` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint64"));
+  const auto& uint64_val = example_struct->GetAttributeArg("attr", "uint64").value().get().value;
+  EXPECT_STR_EQ(uint64_val->span.data(), "uint64.MEMBER");
+  ASSERT_EQ(uint64_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uint64;
+  EXPECT_TRUE(
+      uint64_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint64, &resolved_uint64));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_uint64.get())->value,
+            4);
+
+  // Check `float32` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "float32"));
+  const auto& float32_val = example_struct->GetAttributeArg("attr", "float32").value().get().value;
+  EXPECT_STR_EQ(float32_val->span.data(), "float32");
+  ASSERT_EQ(float32_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_float32;
+  EXPECT_TRUE(
+      float32_val->Value().Convert(fidl::flat::ConstantValue::Kind::kFloat32, &resolved_float32));
+  EXPECT_TRUE(static_cast<fidl::flat::NumericConstantValue<float>*>(resolved_float32.get())->value >
+              1.1);
+  EXPECT_TRUE(static_cast<fidl::flat::NumericConstantValue<float>*>(resolved_float32.get())->value <
+              1.3);
+
+  // Check `float64` arg.
+  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "float64"));
+  const auto& float64_val = example_struct->GetAttributeArg("attr", "float64").value().get().value;
+  EXPECT_STR_EQ(float64_val->span.data(), "float64");
+  ASSERT_EQ(float64_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_float64;
+  EXPECT_TRUE(
+      float64_val->Value().Convert(fidl::flat::ConstantValue::Kind::kFloat64, &resolved_float64));
+  EXPECT_TRUE(
+      static_cast<fidl::flat::NumericConstantValue<double>*>(resolved_float64.get())->value > -3.5);
+  EXPECT_TRUE(
+      static_cast<fidl::flat::NumericConstantValue<double>*>(resolved_float64.get())->value < -3.3);
+}
+
+TEST(AttributesTests, BadInvalidReferencedStringTypeWithSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+const foo bool = true;
+
+@attr(foo)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "attr",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString)},
+          }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
+}
+
+TEST(AttributesTests, BadInvalidReferencedBoolTypeWithSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+const foo string:3 = "foo";
+
+@attr(foo)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "attr",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool)},
+          }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
+}
+
+TEST(AttributesTests, BadInvalidReferencedNumericTypeWithSchema) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+const foo uint16 = 259;
+
+@attr(foo)
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  library.AddAttributeSchema(
+      "attr",
+      fidl::flat::AttributeSchema(
+          {
+              fidl::flat::AttributePlacement::kStructDecl,
+          },
+          {
+              {"int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8)},
+          }));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
 }
 
 }  // namespace

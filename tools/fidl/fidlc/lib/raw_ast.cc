@@ -103,7 +103,7 @@ void Ordinal64::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visit
 void AttributeArg::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (value) {
-    visitor->OnLiteral(value);
+    visitor->OnConstant(value);
   }
 }
 

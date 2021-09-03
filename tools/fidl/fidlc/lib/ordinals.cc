@@ -17,7 +17,7 @@ namespace ordinals {
 std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name) {
   flat::MaybeAttribute maybe_selector_attr = attributes->GetAttribute("selector");
   if (maybe_selector_attr.has_value()) {
-    auto selector_constant = maybe_selector_attr.value().get().GetStandaloneAnonymousArg();
+    auto selector_constant = maybe_selector_attr.value().get().GetArg("value");
     if (selector_constant.has_value() &&
         selector_constant.value().get().value->Value().kind == flat::ConstantValue::Kind::kString) {
       auto selector_string_constant = static_cast<const flat::StringConstantValue&>(

@@ -294,17 +294,17 @@ class AttributeListOld final : public SourceElement {
 class AttributeArg final : public SourceElement {
  public:
   // Constructor for cases where the arg name has been explicitly defined in the text.
-  AttributeArg(SourceElement const& element, std::string name, std::unique_ptr<Literal> value)
+  AttributeArg(SourceElement const& element, std::string name, std::unique_ptr<Constant> value)
       : SourceElement(element), name(std::move(name)), value(std::move(value)) {}
 
   // Constructor for cases where the arg name is inferred.
-  AttributeArg(SourceElement const& element, std::unique_ptr<Literal> value)
+  AttributeArg(SourceElement const& element, std::unique_ptr<Constant> value)
       : SourceElement(element), name(std::nullopt), value(std::move(value)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   const std::optional<std::string> name;
-  std::unique_ptr<Literal> value;
+  std::unique_ptr<Constant> value;
 };
 
 class AttributeNew final : public SourceElement {

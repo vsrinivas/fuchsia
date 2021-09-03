@@ -374,6 +374,11 @@ const std::vector<TestCase> test_cases = {
      {
          R"FIDL(library x; @attr(«"foo"») const MY_BOOL bool = false;)FIDL",
          R"FIDL(library x; @attr(«a="foo"»,«b="bar"») const MY_BOOL bool = false;)FIDL",
+         R"FIDL(library x;
+          const MY_BOOL bool = false;
+          @attr(«a=true»,«b=MY_BOOL»,«c="foo"»)
+          const MY_OTHER_BOOL bool = false;
+         )FIDL",
      }},
     {ElementType::AttributeNew,
      {
@@ -717,14 +722,17 @@ const std::vector<TestCase> test_cases = {
     {ElementType::NumericLiteral,
      {
          R"FIDL(library x; const x uint8 = «42»;)FIDL",
+         R"FIDL(library x; @attr(«42») const x uint8 = «42»;)FIDL",
      }},
     {ElementType::TrueLiteral,
      {
          R"FIDL(library x; const x bool = «true»;)FIDL",
+         R"FIDL(library x; @attr(«true») const x bool = «true»;)FIDL",
      }},
     {ElementType::FalseLiteral,
      {
          R"FIDL(library x; const x bool = «false»;)FIDL",
+         R"FIDL(library x; @attr(«false») const x bool = «false»;)FIDL",
      }},
     {ElementType::Ordinal64,
      {

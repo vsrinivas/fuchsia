@@ -403,7 +403,7 @@ void SpanSequenceTreeVisitor::OnAttributeArg(const std::unique_ptr<raw::Attribut
 
   // Since the name member of the Attribute is not passed in as a raw AST node, but rather as a
   // string, it will be processed as the prelude to the value member's TokenSpanSequence.
-  TreeVisitor::OnLiteral(element->value);
+  TreeVisitor::OnConstant(element->value);
 }
 
 void SpanSequenceTreeVisitor::OnAttributeNew(const std::unique_ptr<raw::AttributeNew>& element) {

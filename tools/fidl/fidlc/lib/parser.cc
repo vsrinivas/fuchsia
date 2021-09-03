@@ -303,12 +303,12 @@ std::unique_ptr<raw::AttributeArg> Parser::ParseSubsequentAttributeArg() {
   if (!Ok())
     return Fail();
 
-  auto literal = ParseLiteral();
+  auto value = ParseConstant();
   if (!Ok())
     return Fail();
 
   return std::make_unique<raw::AttributeArg>(scope.GetSourceElement(),
-                                             std::string(name->span().data()), std::move(literal));
+                                             std::string(name->span().data()), std::move(value));
 }
 
 std::unique_ptr<raw::AttributeOld> Parser::ParseAttributeOld() {
@@ -371,19 +371,8 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseAttributeNew() {
     switch (Peek().kind()) {
       case Token::Kind::kRightParen: {
         // This attribute has a single, unnamed argument.
-        // TODO(fxbug.dev/81390): Remove this check and the one below it once non-string literal
-        //  attribute args are supported.
-        if (maybe_constant->kind != raw::Constant::Kind::kLiteral) {
-          return Fail(ErrAttributeArgMustBeStringLiteral);
-        }
-
-        auto constant = static_cast<raw::LiteralConstant*>(maybe_constant.get());
-        if (constant->literal->kind != raw::Literal::Kind::kString) {
-          return Fail(ErrAttributeArgMustBeStringLiteral);
-        }
-
         args.emplace_back(std::make_unique<raw::AttributeArg>(arg_scope.GetSourceElement(),
-                                                              std::move(constant->literal)));
+                                                              std::move(maybe_constant)));
         ConsumeToken(OfKind(Token::Kind::kRightParen));
         if (!Ok())
           return Fail();
@@ -408,13 +397,12 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseAttributeNew() {
           return Fail();
 
         auto arg_name = std::move(constant->identifier);
-        auto literal = ParseLiteral();
+        auto value = ParseConstant();
         if (!Ok())
           return Fail();
 
-        args.emplace_back(std::make_unique<raw::AttributeArg>(arg_scope.GetSourceElement(),
-                                                              std::string(arg_name->span().data()),
-                                                              std::move(literal)));
+        args.emplace_back(std::make_unique<raw::AttributeArg>(
+            arg_scope.GetSourceElement(), std::string(arg_name->span().data()), std::move(value)));
         while (Peek().kind() == Token::Kind::kComma) {
           ConsumeToken(OfKind(Token::Kind::kComma));
           if (!Ok())
@@ -552,12 +540,13 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseDocCommentNew() {
   }
 
   auto literal = std::make_unique<raw::DocCommentLiteral>(scope.GetSourceElement());
+  auto constant = std::make_unique<raw::LiteralConstant>(std::move(literal));
   if (Peek().kind() == Token::Kind::kEndOfFile)
     reporter_->Report(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
 
   std::vector<std::unique_ptr<raw::AttributeArg>> args;
   args.emplace_back(
-      std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), std::move(literal)));
+      std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), std::move(constant)));
 
   auto doc_comment_attr =
       raw::AttributeNew::CreateDocComment(scope.GetSourceElement(), std::move(args));
@@ -1101,11 +1090,14 @@ std::unique_ptr<raw::ParameterListNew> Parser::ParseParameterListNew() {
         auto& attrs = layout->attributes->attributes;
         if (!attrs.empty() && attrs[0]->name == "doc") {
           auto& args = attrs[0]->args;
-          if (!args.empty() && args[0]->value->kind == raw::Literal::Kind::kDocComment) {
-            Fail(ErrDocCommentOnParameters, attrs[0]->span());
-            const auto result = RecoverToEndOfParamList();
-            if (result == RecoverResult::Failure) {
-              return Fail();
+          if (!args.empty() && args[0]->value->kind == raw::Constant::Kind::kLiteral) {
+            auto literal_constant = static_cast<raw::LiteralConstant*>(args[0]->value.get());
+            if (literal_constant->literal->kind == raw::Literal::Kind::kDocComment) {
+              Fail(ErrDocCommentOnParameters, attrs[0]->span());
+              const auto result = RecoverToEndOfParamList();
+              if (result == RecoverResult::Failure) {
+                return Fail();
+              }
             }
           }
         }

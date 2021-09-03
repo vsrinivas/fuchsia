@@ -1133,12 +1133,19 @@ class AttributeArgSchema {
       fit::function<bool(Reporter* reporter, const std::unique_ptr<AttributeArg>& attribute_arg,
                          const Attributable* attributable)>;
 
-  explicit AttributeArgSchema(std::string name, Optionality optionality = Optionality::kRequired);
+  explicit AttributeArgSchema(std::string name, ConstantValue::Kind type,
+                              Optionality optionality = Optionality::kRequired)
+      : name_(std::move(name)), type_(type), optionality_(optionality) {
+    assert(type != ConstantValue::Kind::kDocComment);
+  };
 
-  explicit AttributeArgSchema(Optionality optionality = Optionality::kRequired)
-      : AttributeArgSchema("value", optionality) {}
+  explicit AttributeArgSchema(ConstantValue::Kind type,
+                              Optionality optionality = Optionality::kRequired)
+      : AttributeArgSchema("value", type, optionality) {}
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
+
+  ConstantValue::Kind Type() const { return type_; }
 
   void ValidateValue(Reporter* reporter, MaybeAttributeArg maybe_arg,
                      const std::unique_ptr<Attribute>& attribute) const;
@@ -1149,8 +1156,9 @@ class AttributeArgSchema {
     return true;
   }
 
-  std::string name_;
-  Optionality optionality_ = Optionality::kRequired;
+  const std::string name_;
+  const ConstantValue::Kind type_;
+  const Optionality optionality_ = Optionality::kRequired;
 };
 
 // AttributeSchema defines a schema for attributes. This includes:
@@ -1211,7 +1219,7 @@ class AttributeSchema {
   //
   // This method should only be run after AttributeSchema::ValidateArgs() has been successfully
   // completed.
-  void ResolveArgs(Reporter* reporter, std::unique_ptr<Attribute>& attribute) const;
+  bool ResolveArgs(Library* target_library, std::unique_ptr<Attribute>& attribute) const;
 
  private:
   static bool NoOpConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
@@ -1313,6 +1321,7 @@ using MethodHasher = fit::function<raw::Ordinal64(
 struct LibraryComparator;
 
 class Library : Attributable {
+  friend AttributeSchema;
   friend StepBase;
   friend ConsumeStep;
   friend CompileStep;
@@ -1352,13 +1361,14 @@ class Library : Attributable {
     return Fail(err, decl.name, args...);
   }
 
-  bool ValidateAttributesPlacement(const Attributable* attributable,
-                                   const AttributeList* attributes);
+  bool ValidateAttributesPlacement(const Attributable* attributable);
+  bool ValidateAttributesConstraints(const Attributable* attributable);
+
+  // Allow validation of an attribute list against an attributable element that is not the one which
+  // it is attached to.  Useful for validating that all of a protocols attributes are valid for each
+  // of its constituent methods.
   bool ValidateAttributesConstraints(const Attributable* attributable,
                                      const AttributeList* attributes);
-
-  // Must only run after ValidateAttributesPlacement has succeeded.
-  void ResolveAttributeArgs(AttributeList* attributes);
 
   // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that
@@ -1489,7 +1499,6 @@ class Library : Attributable {
                           AllowedCategories category);
 
   bool CompileAttributeList(AttributeList* attributes);
-  bool CompileAttribute(Attribute* attribute);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
   bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
@@ -1503,6 +1512,10 @@ class Library : Attributable {
   bool ResolveConstant(Constant* constant, const Type* type);
   bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
   bool ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type);
+
+  // Identical to "ResolveConstant" except that it disables error reporting, allowing us to attempt
+  // to resolve a constant as a type without failing compilation.
+  bool TryResolveConstant(Constant* constant, const Type* type);
 
   // Validates a single member of a bits or enum. On success, returns nullptr,
   // and on failure returns an error.

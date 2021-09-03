@@ -231,6 +231,8 @@ bool Attribute::HasStandaloneAnonymousArg() const {
 }
 
 MaybeAttributeArg Attribute::GetStandaloneAnonymousArg() const {
+  assert(!resolved &&
+         "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
   MaybeAttributeArg anon_arg;
   [[maybe_unused]] size_t named_args = 0;
   for (const auto& arg : args) {
@@ -1786,10 +1788,6 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   return root_typespace;
 }
 
-AttributeArgSchema::AttributeArgSchema(std::string name,
-                                       AttributeArgSchema::Optionality optionality)
-    : name_(name), optionality_(optionality) {}
-
 void AttributeArgSchema::ValidateValue(Reporter* reporter, const MaybeAttributeArg maybe_arg,
                                        const std::unique_ptr<Attribute>& attribute) const {
   // This argument was not specified - is that allowed?
@@ -1934,11 +1932,13 @@ bool AttributeSchema::ValidateConstraint(Reporter* reporter,
   return false;
 }
 
-void AttributeSchema::ResolveArgs(Reporter* reporter, std::unique_ptr<Attribute>& attribute) const {
+bool AttributeSchema::ResolveArgs(Library* library, std::unique_ptr<Attribute>& attribute) const {
   if (attribute->resolved) {
-    return;
+    return true;
   }
 
+  // For attributes with a single, anonymous argument like `@foo("bar")`, use the schema to assign
+  // that argument a name.
   if (attribute->HasStandaloneAnonymousArg()) {
     assert(arg_schemas_.size() == 1 && "expected a schema with only one value");
     for (const auto& arg_schema : arg_schemas_) {
@@ -1946,13 +1946,53 @@ void AttributeSchema::ResolveArgs(Reporter* reporter, std::unique_ptr<Attribute>
     }
   }
 
-  // TODO(fxbug.dev/81390): apply inferred types to inline constants here.
+  // Resolve each constant as its schema-specified type.
+  bool ok = true;
+  for (auto& arg : attribute->args) {
+    auto found = arg_schemas_.find(arg->name.value());
+    assert(found != arg_schemas_.end() && "did we call ValidateArgs before ResolveArgs?");
 
-  attribute->resolved = true;
-}
+    const auto arg_schema = found->second;
+    const auto want_type = arg_schema.Type();
+    switch (want_type) {
+      case ConstantValue::Kind::kDocComment:
+      case ConstantValue::Kind::kString: {
+        static const auto max_size = Size::Max();
+        static const StringType kUnboundedStringType = StringType(
+            Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
+        if (!library->ResolveConstant(arg->value.get(), &kUnboundedStringType)) {
+          ok = false;
+        }
+        break;
+      }
+      case ConstantValue::Kind::kBool:
+      case ConstantValue::Kind::kInt8:
+      case ConstantValue::Kind::kInt16:
+      case ConstantValue::Kind::kInt32:
+      case ConstantValue::Kind::kInt64:
+      case ConstantValue::Kind::kUint8:
+      case ConstantValue::Kind::kUint16:
+      case ConstantValue::Kind::kUint32:
+      case ConstantValue::Kind::kUint64:
+      case ConstantValue::Kind::kFloat32:
+      case ConstantValue::Kind::kFloat64: {
+        const std::string primitive_name = ConstantValue::KindToIntrinsicName(want_type);
+        const std::optional<types::PrimitiveSubtype> primitive_subtype =
+            ConstantValue::KindToPrimitiveSubtype(want_type);
+        assert(primitive_subtype.has_value());
 
-bool AttributeSchema::HasAttributeArgSchema(std::string const& name) const {
-  return arg_schemas_.find(name) != arg_schemas_.end();
+        const auto primitive_type =
+            PrimitiveType(Name::CreateIntrinsic(primitive_name), primitive_subtype.value());
+        if (!library->ResolveConstant(arg->value.get(), &primitive_type)) {
+          ok = false;
+        }
+        break;
+      }
+    }
+  }
+
+  attribute->resolved = ok;
+  return ok;
 }
 
 bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attr,
@@ -2216,7 +2256,7 @@ Libraries::Libraries() {
   }));
   AddAttributeSchema("doc", AttributeSchema({
     /* any placement */
-  }, AttributeArgSchema("text")));
+  }, AttributeArgSchema("text", ConstantValue::Kind::kString)));
   AddAttributeSchema("layout", AttributeSchema::Deprecated()),
   AddAttributeSchema("for_deprecated_c_bindings", AttributeSchema({
     AttributePlacement::kProtocolDecl,
@@ -2224,36 +2264,39 @@ Libraries::Libraries() {
   }, SimpleLayoutConstraint));
   AddAttributeSchema("generated_name", AttributeSchema({
     AttributePlacement::kAnonymousLayout,
-  }, AttributeArgSchema(), OverrideNameConstraint)),
+  }, AttributeArgSchema(ConstantValue::Kind::kString),
+  OverrideNameConstraint)),
   AddAttributeSchema("max_bytes", AttributeSchema({
     AttributePlacement::kProtocolDecl,
     AttributePlacement::kMethod,
     AttributePlacement::kStructDecl,
     AttributePlacement::kTableDecl,
     AttributePlacement::kUnionDecl,
-  }, AttributeArgSchema(), MaxBytesConstraint));
+  }, AttributeArgSchema(ConstantValue::Kind::kString),
+  MaxBytesConstraint));
   AddAttributeSchema("max_handles", AttributeSchema({
     AttributePlacement::kProtocolDecl,
     AttributePlacement::kMethod,
     AttributePlacement::kStructDecl,
     AttributePlacement::kTableDecl,
     AttributePlacement::kUnionDecl,
-  }, AttributeArgSchema(), MaxHandlesConstraint));
+  }, AttributeArgSchema(ConstantValue::Kind::kString),
+  MaxHandlesConstraint));
   AddAttributeSchema("result", AttributeSchema({
     AttributePlacement::kUnionDecl,
   }, ResultShapeConstraint));
   AddAttributeSchema("selector", AttributeSchema({
     AttributePlacement::kMethod,
-  }, AttributeArgSchema()));
+  }, AttributeArgSchema(ConstantValue::Kind::kString)));
   AddAttributeSchema("transitional", AttributeSchema({
     AttributePlacement::kMethod,
     AttributePlacement::kBitsDecl,
     AttributePlacement::kEnumDecl,
     AttributePlacement::kUnionDecl,
-  }, AttributeArgSchema("reason", AttributeArgSchema::Optionality::kOptional)));
+  }, AttributeArgSchema("reason", ConstantValue::Kind::kString, AttributeArgSchema::Optionality::kOptional)));
   AddAttributeSchema("transport", AttributeSchema({
     AttributePlacement::kProtocolDecl,
-  }, AttributeArgSchema("types"), TransportConstraint));
+  }, AttributeArgSchema("types", ConstantValue::Kind::kString), TransportConstraint));
   AddAttributeSchema("unknown", AttributeSchema({
     AttributePlacement::kEnumMember,
     AttributePlacement::kUnionMember,
@@ -2476,60 +2519,37 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
   return false;
 }
 
-void Library::ResolveAttributeArgs(AttributeList* attributes) {
-  if (attributes == nullptr)
-    return;
-  for (auto& attribute : attributes->attributes) {
+bool Library::ValidateAttributesPlacement(const Attributable* attributable) {
+  bool ok = true;
+  if (attributable == nullptr || attributable->attributes == nullptr)
+    return ok;
+  for (const auto& attribute : attributable->attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax);
-    if (schema != nullptr) {
-      schema->ResolveArgs(reporter_, attribute);
-    } else if (attribute->args.size() == 1) {
-      attribute->args[0]->name = "value";
+    if (schema != nullptr && !schema->ValidatePlacement(reporter_, attribute, attributable)) {
+      ok = false;
     }
-    attribute->resolved = true;
   }
+  return ok;
 }
 
-bool Library::ValidateAttributesPlacement(const Attributable* attributable,
-                                          const AttributeList* attributes) {
-  if (attributes == nullptr)
+bool Library::ValidateAttributesConstraints(const Attributable* attributable) {
+  if (attributable == nullptr || attributable->attributes == nullptr)
     return true;
-  for (const auto& attribute : attributes->attributes) {
-    auto schema =
-        all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax, true);
-
-    // Check for duplicate args, and return early if we find them.
-    std::set<std::string> seen;
-    for (const auto& arg : attribute->args) {
-      if (arg->name.has_value() && !seen.insert(utils::canonicalize(arg->name.value())).second) {
-        Fail(ErrDuplicateAttributeArg, attribute->span(), attribute.get(), arg->name.value());
-        return false;
-      }
-    }
-
-    if (schema != nullptr) {
-      // Ensure that both validation functions run, even if the first fails, to report as many
-      // recoverable errors as possible.
-      bool errored = !schema->ValidatePlacement(reporter_, attribute, attributable);
-      if (!schema->ValidateArgs(reporter_, attribute) || errored) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return ValidateAttributesConstraints(attributable, attributable->attributes.get());
 }
 
 bool Library::ValidateAttributesConstraints(const Attributable* attributable,
                                             const AttributeList* attributes) {
-  if (attributes == nullptr)
-    return true;
+  bool ok = true;
+  if (attributable == nullptr || attributes == nullptr)
+    return ok;
   for (const auto& attribute : attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute, attribute->syntax);
     if (schema != nullptr && !schema->ValidateConstraint(reporter_, attribute, attributable)) {
-      return false;
+      ok = false;
     }
   }
-  return true;
+  return ok;
 }
 
 bool Library::LookupDependency(std::string_view filename, const std::vector<std::string_view>& name,
@@ -2743,8 +2763,11 @@ bool Library::ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw
     for (auto& raw_attribute : raw_attribute_list->attributes) {
       std::vector<std::unique_ptr<AttributeArg>> args;
       for (auto& raw_arg : raw_attribute->args) {
-        std::unique_ptr<LiteralConstant> constant;
-        constant = std::make_unique<LiteralConstant>(std::move(raw_arg->value));
+        std::unique_ptr<Constant> constant;
+        if (!ConsumeConstant(std::move(raw_arg->value), &constant)) {
+          return false;
+        }
+
         args.emplace_back(
             std::make_unique<AttributeArg>(raw_arg->name, std::move(constant), raw_arg->span()));
       }
@@ -3806,10 +3829,8 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &consumed_attributes)) {
       return false;
     }
-    if (ValidateAttributesPlacement(this, consumed_attributes.get())) {
-      ResolveAttributeArgs(attributes.get());
-    }
 
+    ValidateAttributesPlacement(this);
     if (!attributes) {
       attributes = std::move(consumed_attributes);
     } else {
@@ -3928,22 +3949,33 @@ bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
   return true;
 }
 
+bool Library::TryResolveConstant(Constant* constant, const Type* type) {
+  reporter::Reporter::ScopedReportingMode silenced =
+      reporter_->OverrideMode(reporter::Reporter::ReportingMode::kDoNotReport);
+  return ResolveConstant(constant, type);
+}
+
 bool Library::ResolveConstant(Constant* constant, const Type* type) {
   assert(constant != nullptr);
 
   // Prevent re-entry.
   if (constant->compiled)
     return constant->IsResolved();
-  constant->compiled = true;
 
   switch (constant->kind) {
     case Constant::Kind::kIdentifier: {
       auto identifier_constant = static_cast<IdentifierConstant*>(constant);
-      return ResolveIdentifierConstant(identifier_constant, type);
+      if (!ResolveIdentifierConstant(identifier_constant, type)) {
+        return false;
+      }
+      break;
     }
     case Constant::Kind::kLiteral: {
       auto literal_constant = static_cast<LiteralConstant*>(constant);
-      return ResolveLiteralConstant(literal_constant, type);
+      if (!ResolveLiteralConstant(literal_constant, type)) {
+        return false;
+      }
+      break;
     }
     case Constant::Kind::kBinaryOperator: {
       auto binary_operator_constant = static_cast<BinaryOperatorConstant*>(constant);
@@ -3955,17 +3987,22 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
       }
       switch (binary_operator_constant->op) {
         case BinaryOperatorConstant::Operator::kOr: {
-          return ResolveOrOperatorConstant(constant, type,
-                                           binary_operator_constant->left_operand->Value(),
-                                           binary_operator_constant->right_operand->Value());
+          if (!ResolveOrOperatorConstant(constant, type,
+                                         binary_operator_constant->left_operand->Value(),
+                                         binary_operator_constant->right_operand->Value())) {
+            return false;
+          }
+          break;
         }
+        default:
+          assert(false && "Compiler bug: unhandled binary operator");
       }
-      assert(false && "Compiler bug: unhandled binary operator");
       break;
     }
   }
 
-  __builtin_unreachable();
+  constant->compiled = true;
+  return true;
 }
 
 ConstantValue::Kind Library::ConstantValuePrimitiveKind(
@@ -4301,35 +4338,64 @@ bool Library::ResolveAsOptional(Constant* constant) const {
   return identifier_constant->name.decl_name() == "optional";
 }
 
-bool Library::CompileAttribute(Attribute* attribute) {
-  if (!attribute->args.empty()) {
-    for (auto& arg : attribute->args) {
-      // TODO(fxbug.dev/81390): this is a hack to hold us over until we can do
-      //  proper type resolution on attribute args.  For now, we assume that the
-      //  values are always strings, and resolve them as such.  When we fix
-      //  this, we should make sure not create the type inline like we do now.
-      // function-local static pointer to non-trivially-destructible type
-      // is allowed by styleguide
-      static const auto max_size = Size::Max();
-      static const StringType kUnboundedStringType =
-          StringType(Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
-      if (arg->value && !ResolveConstant(arg->value.get(), &kUnboundedStringType)) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 bool Library::CompileAttributeList(AttributeList* attributes) {
+  bool ok = true;
   if (attributes && !attributes->attributes.empty()) {
     for (auto& attribute : attributes->attributes) {
-      if (!CompileAttribute(attribute.get())) {
-        return false;
+      auto schema =
+          all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax, true);
+
+      // Check for duplicate args, and return early if we find them.
+      std::set<std::string> seen;
+      for (const auto& arg : attribute->args) {
+        if (arg->name.has_value() && !seen.insert(utils::canonicalize(arg->name.value())).second) {
+          ok =
+              Fail(ErrDuplicateAttributeArg, attribute->span(), attribute.get(), arg->name.value());
+          continue;
+        }
       }
+
+      // If we have a schema, resolve each argument based on its expected schema-derived type.
+      if (schema != nullptr && !schema->IsDeprecated()) {
+        ok = schema->ValidateArgs(reporter_, attribute) ? schema->ResolveArgs(this, attribute)
+                                                        : false;
+        continue;
+      }
+
+      // Schemaless (ie, user defined) attributes must not have numeric arguments.  Resolve all of
+      // their arguments, making sure to error on numerics (since those cannot be resolved to the
+      // appropriate fidelity).
+      for (const auto& arg : attribute->args) {
+        static const auto max_size = Size::Max();
+        static const StringType kUnboundedStringType = StringType(
+            Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
+        static const auto kBoolType =
+            PrimitiveType(Name::CreateIntrinsic("bool"), types::PrimitiveSubtype::kBool);
+        assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
+               "attribute arg starting with a binary operator is a parse error");
+
+        // Try first as a string...
+        if (!TryResolveConstant(arg->value.get(), &kUnboundedStringType)) {
+          // ...then as a bool if that doesn't work.
+          if (!TryResolveConstant(arg->value.get(), &kBoolType)) {
+            // Since we cannot have an IdentifierConstant resolving to a kDocComment-kinded value,
+            // we know that it must resolve to a numeric instead.
+            ok = Fail(ErrCannotUseNumericArgsOnCustomAttributes, attribute->span(), arg.get(),
+                      attribute.get());
+          }
+        }
+      }
+      if (!ok) {
+        continue;
+      }
+
+      if (attribute->args.size() == 1) {
+        attribute->args[0]->name = "value";
+      }
+      attribute->resolved = true;
     }
   }
-  return true;
+  return ok;
 }
 
 const Type* Library::TypeResolve(const Type* type) {
@@ -4792,62 +4858,48 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kBits: {
       auto bits_declaration = static_cast<const Bits*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(bits_declaration, bits_declaration->attributes.get())) {
-        ResolveAttributeArgs(bits_declaration->attributes.get());
-      }
+      ValidateAttributesPlacement(bits_declaration);
       for (const auto& member : bits_declaration->members) {
-        if (ValidateAttributesPlacement(&member, member.attributes.get())) {
-          ResolveAttributeArgs(member.attributes.get());
-        }
+        ValidateAttributesPlacement(&member);
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
-        ValidateAttributesConstraints(bits_declaration, bits_declaration->attributes.get());
+        ValidateAttributesConstraints(bits_declaration);
       }
       break;
     }
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<const Const*>(decl);
       // Attributes: for const declarations, we only check placement.
-      if (ValidateAttributesPlacement(const_decl, const_decl->attributes.get())) {
-        ResolveAttributeArgs(const_decl->attributes.get());
+      ValidateAttributesPlacement(const_decl);
+      if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraints.
+        ValidateAttributesConstraints(const_decl);
       }
       break;
     }
     case Decl::Kind::kEnum: {
       auto enum_declaration = static_cast<const Enum*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(enum_declaration, enum_declaration->attributes.get())) {
-        ResolveAttributeArgs(enum_declaration->attributes.get());
-      }
+      ValidateAttributesPlacement(enum_declaration);
       for (const auto& member : enum_declaration->members) {
-        if (ValidateAttributesPlacement(&member, member.attributes.get())) {
-          ResolveAttributeArgs(member.attributes.get());
-        }
+        ValidateAttributesPlacement(&member);
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
-        ValidateAttributesConstraints(enum_declaration, enum_declaration->attributes.get());
+        ValidateAttributesConstraints(enum_declaration);
       }
       break;
     }
     case Decl::Kind::kProtocol: {
       auto protocol_declaration = static_cast<const Protocol*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(protocol_declaration,
-                                      protocol_declaration->attributes.get())) {
-        ResolveAttributeArgs(protocol_declaration->attributes.get());
-      }
+      ValidateAttributesPlacement(protocol_declaration);
       for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
-        if (ValidateAttributesPlacement(&composed_protocol, composed_protocol.attributes.get())) {
-          ResolveAttributeArgs(composed_protocol.attributes.get());
-        }
+        ValidateAttributesPlacement(&composed_protocol);
       }
       for (const auto& method_with_info : protocol_declaration->all_methods) {
-        if (ValidateAttributesPlacement(method_with_info.method,
-                                        method_with_info.method->attributes.get())) {
-          ResolveAttributeArgs(method_with_info.method->attributes.get());
-        }
+        ValidateAttributesPlacement(method_with_info.method);
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4856,7 +4908,7 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
           // All of the attributes on the protocol get checked against each of
           // its methods as well.
           ValidateAttributesConstraints(&method, protocol_declaration->attributes.get());
-          ValidateAttributesConstraints(&method, method.attributes.get());
+          ValidateAttributesConstraints(&method);
         }
       }
       break;
@@ -4864,115 +4916,92 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kResource: {
       auto resource_declaration = static_cast<const Resource*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(resource_declaration,
-                                      resource_declaration->attributes.get())) {
-        ResolveAttributeArgs(resource_declaration->attributes.get());
-      }
+      ValidateAttributesPlacement(resource_declaration);
       for (const auto& property : resource_declaration->properties) {
-        if (ValidateAttributesPlacement(&property, property.attributes.get())) {
-          ResolveAttributeArgs(property.attributes.get());
-        }
+        ValidateAttributesPlacement(&property);
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
-        ValidateAttributesConstraints(resource_declaration, resource_declaration->attributes.get());
+        ValidateAttributesConstraints(resource_declaration);
       }
       break;
     }
     case Decl::Kind::kService: {
       auto service_decl = static_cast<const Service*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(service_decl, service_decl->attributes.get())) {
-        ResolveAttributeArgs(service_decl->attributes.get());
-      }
+      ValidateAttributesPlacement(service_decl);
       for (const auto& member : service_decl->members) {
-        if (ValidateAttributesPlacement(&member, member.attributes.get())) {
-          ResolveAttributeArgs(member.attributes.get());
-        }
+        ValidateAttributesPlacement(&member);
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
-        ValidateAttributesConstraints(service_decl, service_decl->attributes.get());
+        ValidateAttributesConstraints(service_decl);
       }
       break;
     }
     case Decl::Kind::kStruct: {
       auto struct_declaration = static_cast<const Struct*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(struct_declaration, struct_declaration->attributes.get())) {
-        ResolveAttributeArgs(struct_declaration->attributes.get());
-      }
+      ValidateAttributesPlacement(struct_declaration);
       for (const auto& member : struct_declaration->members) {
-        if (ValidateAttributesPlacement(&member, member.attributes.get())) {
-          ResolveAttributeArgs(member.attributes.get());
-        }
+        ValidateAttributesPlacement(&member);
       }
       if (placement_ok.NoNewErrors()) {
         for (const auto& member : struct_declaration->members) {
-          ValidateAttributesConstraints(&member, member.attributes.get());
+          ValidateAttributesConstraints(&member);
         }
         // Attributes: check constraint.
-        ValidateAttributesConstraints(struct_declaration, struct_declaration->attributes.get());
+        ValidateAttributesConstraints(struct_declaration);
       }
       break;
     }
     case Decl::Kind::kTable: {
       auto table_declaration = static_cast<const Table*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(table_declaration, table_declaration->attributes.get())) {
-        ResolveAttributeArgs(table_declaration->attributes.get());
-      }
+      ValidateAttributesPlacement(table_declaration);
       for (const auto& member : table_declaration->members) {
         if (!member.maybe_used)
           continue;
-        if (ValidateAttributesPlacement(member.maybe_used.get(),
-                                        member.maybe_used->attributes.get())) {
-          ResolveAttributeArgs(member.maybe_used->attributes.get());
-        }
+        ValidateAttributesPlacement(member.maybe_used.get());
       }
       if (placement_ok.NoNewErrors()) {
+        for (const auto& member : table_declaration->members) {
+          if (!member.maybe_used)
+            continue;
+          ValidateAttributesConstraints(member.maybe_used.get());
+        }
         // Attributes: check constraint.
-        ValidateAttributesConstraints(table_declaration, table_declaration->attributes.get());
+        ValidateAttributesConstraints(table_declaration);
       }
       break;
     }
     case Decl::Kind::kUnion: {
       auto union_declaration = static_cast<const Union*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(union_declaration, union_declaration->attributes.get())) {
-        ResolveAttributeArgs(union_declaration->attributes.get());
-      }
+      ValidateAttributesPlacement(union_declaration);
       for (const auto& member : union_declaration->members) {
         if (!member.maybe_used)
           continue;
-        if (ValidateAttributesPlacement(member.maybe_used.get(),
-                                        member.maybe_used->attributes.get())) {
-          ResolveAttributeArgs(member.maybe_used->attributes.get());
-        }
+        ValidateAttributesPlacement(member.maybe_used.get());
       }
       if (placement_ok.NoNewErrors()) {
         for (const auto& member : union_declaration->members) {
           if (!member.maybe_used)
             continue;
-          ValidateAttributesConstraints(member.maybe_used.get(),
-                                        member.maybe_used->attributes.get());
+          ValidateAttributesConstraints(member.maybe_used.get());
         }
         // Attributes: check constraint.
-        ValidateAttributesConstraints(union_declaration, union_declaration->attributes.get());
+        ValidateAttributesConstraints(union_declaration);
       }
       break;
     }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_declaration = static_cast<const TypeAlias*>(decl);
       // Attributes: check placement.
-      if (ValidateAttributesPlacement(type_alias_declaration,
-                                      type_alias_declaration->attributes.get())) {
-        ResolveAttributeArgs(type_alias_declaration->attributes.get());
-      }
+      ValidateAttributesPlacement(type_alias_declaration);
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
-        ValidateAttributesConstraints(type_alias_declaration,
-                                      type_alias_declaration->attributes.get());
+        ValidateAttributesConstraints(type_alias_declaration);
       }
       break;
     }
@@ -5753,7 +5782,6 @@ bool Library::Compile() {
     return false;
 
   auto verify_attributes_step = StartVerifyAttributesStep();
-  ResolveAttributeArgs(attributes.get());
   for (const Decl* decl : declaration_order_) {
     verify_attributes_step.ForDecl(decl);
   }
