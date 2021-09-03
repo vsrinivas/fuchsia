@@ -35,7 +35,6 @@ class FvmVolumeManagerApiTest : public zxtest::Test {
     IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
     args.load_drivers.push_back("/boot/driver/platform-bus.so");
-    args.driver_search_paths.push_back("/boot/driver");
 
     devmgr_ = std::make_unique<IsolatedDevmgr>();
     ASSERT_OK(IsolatedDevmgr::Create(&args, devmgr_.get()));

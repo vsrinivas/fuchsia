@@ -18,7 +18,6 @@ TEST(MetadataTest, RunTests) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-  args.driver_search_paths.push_back("/boot/driver");
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));

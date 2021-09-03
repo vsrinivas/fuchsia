@@ -40,7 +40,6 @@ const board_test::DeviceEntry kDeviceEntry = []() {
 void HidDriverTest::SetUp() {
   // Create the isolated dev manager
   IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.device_list.push_back(kDeviceEntry);
 
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr_);

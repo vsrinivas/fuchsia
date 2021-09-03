@@ -356,7 +356,6 @@ class GptDevicePartitionerTests : public zxtest::Test {
       : block_size_(block_size) {
     paver::g_wipe_timeout = 0;
     IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
 
     args.board_name = board_name;
@@ -1248,7 +1247,6 @@ class FixedDevicePartitionerTests : public zxtest::Test {
  protected:
   FixedDevicePartitionerTests() {
     IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
 
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
@@ -2499,7 +2497,6 @@ class As370PartitionerTests : public zxtest::Test {
  protected:
   As370PartitionerTests() {
     IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
     args.board_name = "visalia";
 

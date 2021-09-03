@@ -444,7 +444,6 @@ class FakeDev {
  public:
   FakeDev() {
     driver_integration_test::IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
 
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
     // TODO(https://fxbug.dev/80815): Stop requiring this recursive wait.

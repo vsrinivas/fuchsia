@@ -93,7 +93,6 @@ class FvmResizeTest : public zxtest::Test {
   void SetUp() override {
     IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
-    args.driver_search_paths.push_back("/boot/driver");
 
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
   }

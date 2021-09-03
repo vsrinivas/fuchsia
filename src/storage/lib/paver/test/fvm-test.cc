@@ -39,7 +39,6 @@ class FvmTest : public zxtest::Test {
  public:
   FvmTest() {
     IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = true;
 
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));

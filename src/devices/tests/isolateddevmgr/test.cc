@@ -53,7 +53,6 @@ TEST_F(IsolatedDevMgrTest, MetadataOneDriverTest) {
 
   // Set the driver arguments.
   IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.device_list.push_back(kDeviceEntry1);
 
   // Create the isolated Devmgr.
@@ -91,7 +90,6 @@ TEST_F(IsolatedDevMgrTest, MetadataTwoDriverTest) {
 
   // Set the driver arguments.
   IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.device_list.push_back(kDeviceEntry1);
   args.device_list.push_back(kDeviceEntry2);
 

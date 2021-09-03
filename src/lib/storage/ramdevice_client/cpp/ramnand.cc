@@ -59,7 +59,6 @@ namespace ramdevice_client {
 __EXPORT
 zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
   driver_integration_test::IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.disable_block_watcher = true;
   // TODO(surajmalhotra): Remove creation of isolated devmgr from this lib so that caller can choose
   // their creation parameters.

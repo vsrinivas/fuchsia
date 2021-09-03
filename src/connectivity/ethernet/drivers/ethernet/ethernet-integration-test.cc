@@ -934,7 +934,6 @@ TEST(EthernetDataTests, EthernetDataTest_Recv) {
 int main(int argc, char** argv) {
   auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-  args.driver_search_paths.push_back("/boot/driver");
   args.load_drivers.push_back("/boot/driver/ethertap.so");
 
   devmgr_integration_test::IsolatedDevmgr devmgr;

@@ -44,7 +44,6 @@ using paver::BlockWatcherPauser;
 TEST(AstroAbrTests, CreateFails) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.disable_block_watcher = false;
   args.board_name = "sherlock";
 
@@ -60,7 +59,6 @@ TEST(AstroAbrTests, CreateFails) {
 TEST(SherlockAbrTests, CreateFails) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.disable_block_watcher = false;
   args.board_name = "astro";
 
@@ -78,7 +76,6 @@ TEST(SherlockAbrTests, CreateFails) {
 TEST(LuisAbrTests, CreateFails) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.disable_block_watcher = false;
   args.board_name = "astro";
 
@@ -96,7 +93,6 @@ TEST(LuisAbrTests, CreateFails) {
 TEST(X64AbrTests, CreateFails) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.disable_block_watcher = false;
   args.board_name = "x64";
 
@@ -130,7 +126,6 @@ class ChromebookX64AbrTests : public zxtest::Test {
         dispatcher2_(&kAsyncLoopConfigAttachToCurrentThread),
         fake_svc_(dispatcher_.dispatcher(), mock_boot_arguments::Server()) {
     IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
     args.board_name = "chromebook-x64";
 
@@ -264,7 +259,6 @@ class CurrentSlotUuidTest : public zxtest::Test {
                                                       0xcc, 0xdd, 0xee, 0xff};
   CurrentSlotUuidTest() {
     IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = true;
 
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));

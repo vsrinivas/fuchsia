@@ -57,7 +57,6 @@ class BlockVerityTest : public zxtest::Test {
   BlockVerityTest() {}
   void SetUp() override {
     IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
 
     args.disable_block_watcher = true;
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));

@@ -27,7 +27,6 @@ class StringBindTest : public testing::Test {
     auto args = IsolatedDevmgr::DefaultArgs();
 
     args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-    args.driver_search_paths.push_back("/boot/driver");
 
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
     ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);

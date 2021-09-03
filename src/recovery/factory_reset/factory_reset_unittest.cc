@@ -73,7 +73,6 @@ class FactoryResetTest : public Test {
     args.disable_block_watcher = true;
 
     args.load_drivers.push_back("/boot/driver/platform-bus.so");
-    args.driver_search_paths.push_back("/boot/driver");
     ASSERT_EQ(IsolatedDevmgr::Create(&args, devmgr_.get()), ZX_OK);
 
     CreateRamdisk();

@@ -1837,7 +1837,6 @@ class PaverServiceBlockTest : public PaverServiceTest {
   void SpawnIsolatedDevmgr() {
     devmgr_launcher::Args args;
     args.sys_device_driver = "/boot/driver/platform-bus.so";
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
 
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
@@ -1948,7 +1947,6 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
  protected:
   void SpawnIsolatedDevmgr(const char* board_name) {
     driver_integration_test::IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
 
     args.board_name = board_name;

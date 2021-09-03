@@ -95,7 +95,6 @@ class FvmTest : public zxtest::Test {
   void SetUp() override {
     IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
-    args.driver_search_paths.push_back("/boot/driver");
 
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
     ASSERT_OK(wait_for_device_at(devfs_root().get(), "sys/platform/00:00:2d/ramctl",

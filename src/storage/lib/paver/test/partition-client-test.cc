@@ -376,7 +376,6 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
  public:
   void SetUp() override {
     IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
 
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));

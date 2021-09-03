@@ -60,7 +60,6 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     args.sys_device_driver = kPlatformDriver;
 
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
-    args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = true;
     args.boot_args = {{"driver-manager.driver-host-crash-policy", crash_policy}};
     device_list_ptr->push_back(kRtcDeviceEntry);

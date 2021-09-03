@@ -35,7 +35,6 @@ const board_test::DeviceEntry kDeviceEntry = []() {
 
 TEST(DriverIntegrationTest, EnumerationTest) {
   IsolatedDevmgr::Args args;
-  args.driver_search_paths.push_back("/boot/driver");
   args.device_list.push_back(kDeviceEntry);
 
   IsolatedDevmgr devmgr;
