@@ -19,7 +19,6 @@ use crate::device::types::DeviceInfo;
 use crate::display::types::{DisplayInfo, LightData};
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::factory_reset::types::FactoryResetInfo;
-use crate::ingress::fidl;
 use crate::input::types::InputInfo;
 use crate::intl::types::IntlInfo;
 use crate::light::types::LightInfo;
@@ -217,18 +216,6 @@ pub(crate) trait Merge<Other = Self> {
     /// Returns a copy of the original struct where the values of all fields set in `other`
     /// replace the matching fields in the copy of `self`.
     fn merge(&self, other: Other) -> Self;
-}
-
-/// Returns the default interfaces supported by any product if none are supplied.
-pub fn get_default_interfaces() -> HashSet<fidl::InterfaceSpec> {
-    array::IntoIter::new([
-        fidl::InterfaceSpec::Accessibility,
-        fidl::InterfaceSpec::Device,
-        fidl::InterfaceSpec::Intl,
-        fidl::InterfaceSpec::Privacy,
-        fidl::InterfaceSpec::Setup,
-    ])
-    .collect()
 }
 
 /// Returns default setting types. These types should be product-agnostic,

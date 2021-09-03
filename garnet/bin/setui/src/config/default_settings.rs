@@ -99,7 +99,7 @@ where
                     }
                 }
             }
-            Err(_) => {
+            Err(..) => {
                 // No file found.
                 config_load_info = messenger.map(|_| ConfigLoadInfo {
                     path: path.unwrap(),

@@ -19,8 +19,6 @@
             "/pkg/data/service_flags.json",
             "-i",
             "/pkg/data/input_device_configuration.json",
-            "-x",
-            "/pkg/data/interface_configuration.json",
             "-l",
             "/pkg/data/light_sensor_configuration.json",
             "-h",
