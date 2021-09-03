@@ -65,12 +65,12 @@ if [ -n "${LINUX_BRANCH}" ]; then
 
   # Update the repository.
   pushd "${LINUX_DIR}"
-  if [[ `git branch --list ${LINUX_BRANCH} ` ]]; then
-    git checkout ${LINUX_BRANCH}
-    git pull --depth 1 origin ${LINUX_BRANCH}
+  if [[ $(git branch --list "${LINUX_BRANCH}") ]]; then
+    git checkout "${LINUX_BRANCH}"
+    git pull --depth 1 origin "${LINUX_BRANCH}"
   else
-    git fetch --depth 1 origin ${LINUX_BRANCH}:${LINUX_BRANCH}
-    git checkout ${LINUX_BRANCH}
+    git fetch --depth 1 origin "${LINUX_BRANCH}:${LINUX_BRANCH}"
+    git checkout "${LINUX_BRANCH}"
   fi
   popd
 fi
@@ -79,10 +79,10 @@ fi
 pushd "${LINUX_DIR}"
 # CC must be specified on the command line to override the setting in Makefile
 make CC=${CC} "${LINUX_DEFCONFIG}"
-make CC=${CC} -j $(getconf _NPROCESSORS_ONLN)
+make CC=${CC} -j "$(getconf _NPROCESSORS_ONLN)"
 popd
 
 if [ -n "${LINUX_OUT}" ]; then
-  mkdir -p $(dirname "${LINUX_OUT}")
+  mkdir -p "$(dirname "${LINUX_OUT}")"
   mv "${LINUX_IMAGE}" "${LINUX_OUT}"
 fi
