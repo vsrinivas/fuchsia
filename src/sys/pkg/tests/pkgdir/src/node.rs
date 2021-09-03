@@ -7,8 +7,8 @@ use {
     anyhow::{anyhow, Context as _, Error},
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
-        DirectoryProxy, FileObject, NodeInfo, NodeProxy, Service, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_FILE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
+        DirectoryProxy, FileObject, NodeAttributes, NodeInfo, NodeProxy, Service,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
     },
     fuchsia_zircon as zx,
 };
@@ -286,5 +286,126 @@ async fn verify_describe_meta_file_success(node: NodeProxy) -> Result<(), Error>
         Ok(NodeInfo::File(_)) => return Ok(()),
         Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
         Err(e) => return Err(e).context("failed to call describe"),
+    }
+}
+
+#[fuchsia::test]
+async fn node_set_flags() {
+    for source in dirs_to_test().await {
+        node_set_flags_per_package_source(source).await
+    }
+}
+
+async fn node_set_flags_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
+    assert_node_set_flags(&root_dir, ".", MODE_TYPE_DIRECTORY).await;
+    assert_node_set_flags(&root_dir, "meta", MODE_TYPE_DIRECTORY).await;
+    assert_node_set_flags(&root_dir, "meta/dir", MODE_TYPE_DIRECTORY).await;
+    assert_node_set_flags(&root_dir, "dir", MODE_TYPE_DIRECTORY).await;
+    assert_node_set_flags(&root_dir, "meta", MODE_TYPE_FILE).await;
+    assert_node_set_flags(&root_dir, "meta/file", MODE_TYPE_FILE).await;
+}
+
+async fn assert_node_set_flags(package_root: &DirectoryProxy, path: &str, mode: u32) {
+    let node =
+        io_util::directory::open_node(package_root, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
+
+    if let Err(e) = verify_node_set_flag_success(node).await {
+        panic!("node_set_flags failed. path: {:?}, error: {:#}", path, e);
+    }
+}
+
+async fn verify_node_set_flag_success(node: NodeProxy) -> Result<(), Error> {
+    match node.node_set_flags(0).await {
+        Ok(status) => {
+            if zx::Status::from_raw(status) == zx::Status::NOT_SUPPORTED {
+                return Ok(());
+            }
+            return Err(anyhow!("wrong status returned: {:?}", zx::Status::from_raw(status)));
+        }
+        Err(e) => return Err(e).context("failed to call node_set_flags"),
+    }
+}
+
+#[fuchsia::test]
+async fn set_attr() {
+    for source in dirs_to_test().await {
+        set_attr_per_package_source(source).await
+    }
+}
+
+async fn set_attr_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
+    assert_set_attr(&root_dir, ".", MODE_TYPE_DIRECTORY).await;
+    assert_set_attr(&root_dir, "meta", MODE_TYPE_DIRECTORY).await;
+    assert_set_attr(&root_dir, "meta/dir", MODE_TYPE_DIRECTORY).await;
+    assert_set_attr(&root_dir, "dir", MODE_TYPE_DIRECTORY).await;
+    assert_set_attr(&root_dir, "meta", MODE_TYPE_FILE).await;
+    assert_set_attr(&root_dir, "meta/file", MODE_TYPE_FILE).await;
+}
+
+async fn assert_set_attr(package_root: &DirectoryProxy, path: &str, mode: u32) {
+    let node = io_util::directory::open_node(package_root, path, 0, mode).await.unwrap();
+
+    if let Err(e) = verify_set_attr(node).await {
+        panic!("set_attr failed. path: {:?}, error: {:#}", path, e);
+    }
+}
+
+async fn verify_set_attr(node: NodeProxy) -> Result<(), Error> {
+    let mut node_attr = NodeAttributes {
+        mode: 0,
+        id: 0,
+        content_size: 0,
+        storage_size: 0,
+        link_count: 0,
+        creation_time: 0,
+        modification_time: 0,
+    };
+    match node.set_attr(0, &mut node_attr).await {
+        Ok(status) => {
+            if zx::Status::from_raw(status) == zx::Status::NOT_SUPPORTED {
+                return Ok(());
+            }
+            return Err(anyhow!("wrong status returned: {:?}", zx::Status::from_raw(status)));
+        }
+        Err(e) => return Err(e).context("failed to call set_attr"),
+    }
+}
+
+#[fuchsia::test]
+async fn sync() {
+    for source in dirs_to_test().await {
+        sync_per_package_source(source).await
+    }
+}
+
+async fn sync_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
+    assert_sync(&root_dir, ".", MODE_TYPE_DIRECTORY).await;
+    assert_sync(&root_dir, "meta", MODE_TYPE_DIRECTORY).await;
+    assert_sync(&root_dir, "meta/dir", MODE_TYPE_DIRECTORY).await;
+    assert_sync(&root_dir, "dir", MODE_TYPE_DIRECTORY).await;
+    assert_sync(&root_dir, "meta", MODE_TYPE_FILE).await;
+    assert_sync(&root_dir, "meta/file", MODE_TYPE_FILE).await;
+}
+
+async fn assert_sync(package_root: &DirectoryProxy, path: &str, mode: u32) {
+    let node = io_util::directory::open_node(package_root, path, 0, mode).await.unwrap();
+
+    if let Err(e) = verify_sync(node).await {
+        panic!("sync failed. path: {:?}, error: {:#}", path, e);
+    }
+}
+
+async fn verify_sync(node: NodeProxy) -> Result<(), Error> {
+    match node.sync().await {
+        Ok(status) => {
+            if zx::Status::from_raw(status) == zx::Status::NOT_SUPPORTED {
+                return Ok(());
+            }
+            return Err(anyhow!("wrong status returned: {:?}", zx::Status::from_raw(status)));
+        }
+        Err(e) => return Err(e).context("failed to call sync"),
     }
 }
