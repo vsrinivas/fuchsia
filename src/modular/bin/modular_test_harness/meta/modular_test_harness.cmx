@@ -7,6 +7,9 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.accessibility.ColorTransform",
+            "fuchsia.accessibility.gesture.ListenerRegistry",
+            "fuchsia.accessibility.Magnifier",
             "fuchsia.accessibility.semantics.SemanticsManager",
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.device.NameProvider",
