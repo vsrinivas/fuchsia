@@ -183,7 +183,7 @@ protocol Central {
     StartScan(struct {
         filter box<ScanFilter>;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 
     /// Terminate a previously started scan session.
@@ -202,7 +202,7 @@ protocol Central {
         options ConnectionOptions;
         gatt_client server_end:fuchsia.bluetooth.gatt.Client;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 
     /// Disconnects this Central's connection to the peripheral with the given identifier.
@@ -210,7 +210,7 @@ protocol Central {
     DisconnectPeripheral(struct {
         identifier bt.PeerIdString;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 
     /// Called when the scan state changes, e.g. when a scan session terminates due to a call to

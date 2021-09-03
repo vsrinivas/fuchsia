@@ -18,7 +18,7 @@ protocol RemoteService {
     /// Returns the characteristics and characteristic descriptors that belong to
     /// this service.
     DiscoverCharacteristics() -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
         characteristics vector<Characteristic>:MAX_CHARACTERISTIC_COUNT;
     });
 
@@ -32,7 +32,7 @@ protocol RemoteService {
     ReadCharacteristic(struct {
         id uint64;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
         value bytes;
     });
 
@@ -53,7 +53,7 @@ protocol RemoteService {
         offset uint16;
         max_bytes uint16;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
         value bytes:MAX_VALUE_LENGTH;
     });
 
@@ -66,7 +66,7 @@ protocol RemoteService {
         id uint64;
         value bytes;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 
     /// Writes `value` to the characteristic with `id`, beginning at `offset` using
@@ -89,7 +89,7 @@ protocol RemoteService {
         value bytes:MAX_VALUE_LENGTH;
         write_options WriteOptions;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 
     /// Writes `value` to the characteristic with `id` without soliciting an
@@ -110,7 +110,7 @@ protocol RemoteService {
     ReadDescriptor(struct {
         id uint64;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
         value bytes;
     });
 
@@ -130,7 +130,7 @@ protocol RemoteService {
         offset uint16;
         max_bytes uint16;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
         value bytes;
     });
 
@@ -143,7 +143,7 @@ protocol RemoteService {
         id uint64;
         value bytes;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 
     /// Writes `value` to the characteristic descriptor with `id`, beginning at
@@ -165,7 +165,7 @@ protocol RemoteService {
         offset uint16;
         value bytes:MAX_VALUE_LENGTH;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 
     /// Reads characteristics and descriptors with the given `uuid`. If no values are
@@ -179,7 +179,7 @@ protocol RemoteService {
     /// This method is useful for reading values before discovery has completed, thereby
     /// reducing latency.
     ReadByType(struct {
-        uuid fuchsia.bluetooth.Uuid;
+        uuid bt.Uuid;
     }) -> (struct {
         results vector<ReadByTypeResult>:MAX_READ_BY_TYPE_RESULTS;
     }) error Error;
@@ -207,7 +207,7 @@ protocol RemoteService {
         id uint64;
         enable bool;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 
     /// Events:
@@ -229,7 +229,7 @@ protocol Client {
     ListServices(struct {
         uuids vector<bt.UuidString>:<MAX, optional>;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
         services vector<ServiceInfo>:MAX_SERVICE_COUNT;
     });
 

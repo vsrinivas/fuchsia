@@ -24,10 +24,10 @@ type AdvertisingDataDeprecated = struct {
     name bt.DeviceName:optional;
 
     /// The radio transmission power level reported in the advertisement.
-    tx_power_level box<fuchsia.bluetooth.Int8>;
+    tx_power_level box<bt.Int8>;
 
     /// The appearance reported in the advertisemet.
-    appearance box<fuchsia.bluetooth.UInt16>;
+    appearance box<bt.UInt16>;
 
     /// List of service UUIDs reported in the advertisement.
     service_uuids vector<bt.UuidString>:<MAX, optional>;
@@ -59,7 +59,7 @@ type RemoteDevice = struct {
     connectable bool;
 
     /// The last known RSSI of this device, if known.
-    rssi box<fuchsia.bluetooth.Int8>;
+    rssi box<bt.Int8>;
 
     /// Advertising data broadcast by this device if this device is a broadcaster or peripheral.
     advertising_data box<AdvertisingDataDeprecated>;
@@ -80,12 +80,12 @@ type ScanFilter = struct {
     /// Filter based on a company identifier present in the manufacturer data. If this filter parameter
     /// is set, then the advertising payload must contain manufacturer specific data with the provided
     /// company identifier to satisfy this filter.
-    manufacturer_identifier box<fuchsia.bluetooth.UInt16>;
+    manufacturer_identifier box<bt.UInt16>;
 
     /// Filter based on whether or not a device is connectable. For example, a client that is only
     /// interested in peripherals that it can connect to can set this to true. Similarly a client can
     /// scan only for braodcasters by setting this to false.
-    connectable box<fuchsia.bluetooth.Bool>;
+    connectable box<bt.Bool>;
 
     /// Filter results based on a portion of the advertised device name.
     name_substring bt.DeviceName:optional;
@@ -95,5 +95,5 @@ type ScanFilter = struct {
     ///   1. Radio transmission power level and received signal strength must be available for the path
     ///      loss calculation;
     ///   2. The calculated path loss value must be less than, or equal to, `max_path_loss`.
-    max_path_loss box<fuchsia.bluetooth.Int8>;
+    max_path_loss box<bt.Int8>;
 };

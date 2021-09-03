@@ -225,7 +225,7 @@ protocol Host {
 
     /// Notifies when bonding data for a peer has been updated.
     -> OnNewBondingData(struct {
-        data fuchsia.bluetooth.sys.BondingData;
+        data sys.BondingData;
     });
 
 // TODO(fxbug.dev/787): Introduce a "OnBondRemoved()" event to notify when existing

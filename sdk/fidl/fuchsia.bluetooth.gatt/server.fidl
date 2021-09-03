@@ -93,6 +93,6 @@ protocol Server {
         delegate client_end:LocalServiceDelegate;
         service server_end:LocalService;
     }) -> (struct {
-        status fuchsia.bluetooth.Status;
+        status bt.Status;
     });
 };
