@@ -157,24 +157,6 @@ cts_fuchsia_test_package("fidl_hlcpp_conformance_test_package") {
   test_components = [ ":fidl_hlcpp_conformance_tests" ]
 }
 
-fuchsia_package_archive("fidl_hlcpp_unit_test_archive") {
-  testonly = true
-  package = ":fidl_hlcpp_unit_test_package"
-}
-
-fuchsia_package_archive("fidl_hlcpp_conformance_test_archive") {
-  testonly = true
-  package = ":fidl_hlcpp_conformance_test_package"
-}
-
-cts_artifacts("prebuilts") {
-  testonly = true
-  targets = [
-    ":fidl_hlcpp_unit_test_archive",
-    ":fidl_hlcpp_conformance_test_archive",
-  ]
-}
-
 if (is_host) {
   # TODO(johnshamoon): Add cts_test() and do this in the template.
   current_dir = get_label_info(":fidl_hlcpp_unit_tests_host", "dir")
@@ -256,13 +238,14 @@ sdk_molecule("test_sdks") {
   testonly = true
   deps = [
     ":build_sdk",
+    ":fidl_hlcpp_conformance_test_package_sdk",
     ":fidl_hlcpp_conformance_tests_bin_sdk",
     ":fidl_hlcpp_conformance_tests_sdk",
+    ":fidl_hlcpp_unit_test_package_sdk",
     ":fidl_hlcpp_unit_tests_bin_sdk",
     ":fidl_hlcpp_unit_tests_sdk",
     ":handle_util_sdk",
     ":host_test_sources_sdk",
-    ":prebuilts",
     ":test_sources_sdk",
     ":test_util_sdk",
   ]

@@ -13,8 +13,6 @@ _targets_to_remove = [
     "cts_copy_to_sdk",
     "cts_source_library",
     "sdk_molecule",
-    "cts_artifacts",
-    "group(\"prebuilts\")",
     "action(\"update_test_manifest\")",
 ]
 
@@ -80,8 +78,10 @@ def main():
     if args.cts_version:
         version = args.cts_version
     in_tree_mappings = {
-        "//zircon/system/ulib/fbl": f"//prebuilt/cts/{version}/cts/pkg/fbl",
-        "//zircon/system/ulib/zxtest": f"//prebuilt/cts/{version}/cts/pkg/zxtest",
+        "//zircon/system/ulib/fbl":
+            f"//prebuilt/cts/{version}/cts/pkg/fbl",
+        "//zircon/system/ulib/zxtest":
+            f"//prebuilt/cts/{version}/cts/pkg/zxtest",
     }
 
     ext = os.path.splitext(args.source)[1]

@@ -35,16 +35,6 @@ cts_fuchsia_test_package("my-cts-test-package") {
   test_components = [ ":my-cts-component" ]
 }
 
-fuchsia_package_archive("my-cts-test-package_archive") {
-  testonly = true
-  package = ":my-cts-test-package"
-}
-
-cts_artifacts("prebuilts") {
-  testonly = true
-  targets = [ ":my-cts-test-package_archive" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":my-cts-test-package" ]
@@ -61,7 +51,7 @@ sdk_molecule("test_sdks") {
     ":build_sdk",
     ":my-cts-component_sdk",
     ":my-cts-source-set_sdk",
+    ":my-cts-test-package_sdk",
     ":my-cts-test_sdk",
-    ":prebuilts",
   ]
 }

@@ -65,16 +65,6 @@ cts_fuchsia_test_package("fuchsia-diagnostics-tests") {
   deps = [ ":inspect-publisher" ]
 }
 
-fuchsia_package_archive("fuchsia-diagnostics-tests_archive") {
-  testonly = true
-  package = ":fuchsia-diagnostics-tests"
-}
-
-cts_artifacts("prebuilts") {
-  testonly = true
-  targets = [ ":fuchsia-diagnostics-tests_archive" ]
-}
-
 cts_copy_to_sdk("build") {
   testonly = true
   sources = [ "BUILD.gn" ]
@@ -91,8 +81,8 @@ sdk_molecule("test_sdks") {
     ":build_sdk",
     ":diagnostics-test-bin_sdk",
     ":diagnostics-test_sdk",
+    ":fuchsia-diagnostics-tests_sdk",
     ":inspect-publisher-bin_sdk",
     ":inspect-publisher_sdk",
-    ":prebuilts",
   ]
 }

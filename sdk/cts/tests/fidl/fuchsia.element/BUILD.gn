@@ -46,16 +46,6 @@ cts_fuchsia_test_package("fuchsia-element-tests") {
   ]
 }
 
-fuchsia_package_archive("fuchsia-element-tests_archive") {
-  testonly = true
-  package = ":fuchsia-element-tests"
-}
-
-cts_artifacts("prebuilts") {
-  testonly = true
-  targets = [ ":fuchsia-element-tests_archive" ]
-}
-
 cts_executable("reference-element-bin") {
   output_name = "reference-element"
   testonly = true
@@ -136,7 +126,7 @@ sdk_molecule("test_sdks") {
     ":build_sdk",
     ":element-manager-test-bin_sdk",
     ":element-manager-test_sdk",
-    ":prebuilts",
+    ":fuchsia-element-tests_sdk",
     ":reference-element-bin_sdk",
     ":reference-element_sdk",
     ":reference-graphical-presenter-bin_sdk",

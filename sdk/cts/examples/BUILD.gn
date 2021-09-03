@@ -3,14 +3,6 @@
 # found in the LICENSE file.
 import("//sdk/cts/build/cts.gni")
 
-group("prebuilts") {
-  deps = [
-    "hello_world:prebuilts",
-    "rust:prebuilts",
-  ]
-  testonly = true
-}
-
 group("tests") {
   deps = [
     "hello_world:tests",

@@ -25,16 +25,6 @@ cts_fuchsia_test_package("cts-hello-world-rust-tests") {
   test_components = [ ":cts-hello-world-rust-component" ]
 }
 
-fuchsia_package_archive("cts-hello-world-rust-tests_archive") {
-  testonly = true
-  package = ":cts-hello-world-rust-tests"
-}
-
-cts_artifacts("prebuilts") {
-  testonly = true
-  targets = [ ":cts-hello-world-rust-tests_archive" ]
-}
-
 # No additional test dependencies should go into this group. All test
 # dependencies should be added directly to the the binary, component, or test
 # package. If they are added to this group, they will not be available when the
@@ -46,5 +36,5 @@ group("tests") {
 
 sdk_molecule("test_sdks") {
   testonly = true
-  deps = [ ":prebuilts" ]
+  deps = [ ":cts-hello-world-rust-tests_sdk" ]
 }

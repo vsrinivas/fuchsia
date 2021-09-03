@@ -39,9 +39,16 @@ action("update_test_manifest") {
   }
 }
 
-cts_artifacts("test_manifest") {
+cts_copy_to_sdk("test_manifest") {
   testonly = true
-  targets = [ ":update_test_manifest" ]
+  dest = ""
+  sources = get_target_outputs(":update_test_manifest")
+  non_sdk_deps = [ ":update_test_manifest" ]
+}
+
+sdk_molecule("test_manifest") {
+  testonly = true
+  deps = [ ":test_manifest_sdk" ]
 }
 
 group("cts_no_e2e") {

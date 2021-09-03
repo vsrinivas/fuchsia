@@ -3,11 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_package_archive.gni")
+import("//sdk/cts/build/cts_copy_to_sdk.gni")
 import("//sdk/cts/build/cts_element.gni")
 import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
-# Defines a Compatibility Test Suite package.
+# Defines a Fuchsia package containing a test.
 #
 # An equivalent to fuchsia_test_package, but ensures dependencies and
 # test_components are allowed in CTS.
@@ -37,7 +39,6 @@ template("cts_fuchsia_test_package") {
   if (invoker_deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
-  write_file_target = target_name + "_cts_file"
 
   if (defined(verify_target)) {
     cts_element(verify_target) {
@@ -46,6 +47,7 @@ template("cts_fuchsia_test_package") {
     }
   }
 
+  write_file_target = target_name + "_cts_file"
   write_cts_file(write_file_target) {
   }
 
@@ -59,5 +61,18 @@ template("cts_fuchsia_test_package") {
       deps += [ ":$verify_target" ]
     }
     deps += [ ":$write_file_target" ]
+  }
+
+  archive_target_name = "${target_name}_archive"
+  fuchsia_package_archive(archive_target_name) {
+    testonly = true
+    package = ":${invoker.target_name}"
+  }
+
+  cts_copy_to_sdk(target_name) {
+    testonly = true
+    dest = ""  # the root directory
+    sources = get_target_outputs(":$archive_target_name")
+    non_sdk_deps = [ ":$archive_target_name" ]
   }
 }

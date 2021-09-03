@@ -266,16 +266,6 @@ cts_fuchsia_test_package("fdio-spawn-tests") {
   ]
 }
 
-fuchsia_package_archive("fdio-spawn-tests_archive") {
-  testonly = true
-  package = ":fdio-spawn-tests"
-}
-
-cts_artifacts("prebuilts") {
-  testonly = true
-  targets = [ ":fdio-spawn-tests_archive" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":fdio-spawn-tests" ]
@@ -298,7 +288,7 @@ sdk_molecule("test_sdks") {
     ":fake-launcher-util-component_sdk",
     ":fdio-spawn-tests-bin_sdk",
     ":fdio-spawn-tests-component_sdk",
-    ":prebuilts",
+    ":fdio-spawn-tests_sdk",
     ":resolve-infinite-loop-bin_sdk",
     ":resolve-infinite-loop-component_sdk",
     ":resolve-once-bin_sdk",
