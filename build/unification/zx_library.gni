@@ -87,22 +87,12 @@ import("//build/toolchain/toolchain_environment.gni")
 #
 #   See source_set() for other parameters.
 #
-# The following parameters are ignored by this implementation. They are here
-# to support zx_library() calls that are shared by BUILD.zircon.gn and BUILD.gn
-# file. Support for these may be removed after build unification completes.
-#
-#   shared
-#     Optional: True if this library can be made a shared library for user code.
-#     Type: bool
-#     Default: false
-#
 template("zx_library") {
   template_params = [
     "kernel",
     "sdk",
     "sdk_headers",
     "sdk_publishable",
-    "shared",
   ]
 
   not_needed(invoker, [ "sdk_name" ])
@@ -115,9 +105,7 @@ template("zx_library") {
         "This zx_library() cannot be built with a Zircon-specific toolchain! " +
             "Consider adding `kernel = true` to its declaration.")
 
-    if (defined(invoker.shared) && invoker.shared) {
-      kernel_library_target_type = "shared_library"
-    } else if (toolchain_environment == "kernel") {
+    if (toolchain_environment == "kernel") {
       # In the kernel proper, zx_library() is always a source_set().
       # Everything goes into the kernel and anything unused gets linker GC.
       kernel_library_target_type = "source_set"
@@ -170,11 +158,7 @@ template("zx_library") {
   } else {
     # The following parameters are just ignored, as in the GN build the shape of
     # a library is driven by the value of the "sdk" parameter.
-    not_needed(invoker,
-               [
-                 "kernel",
-                 "shared",
-               ])
+    not_needed(invoker, [ "kernel" ])
 
     assert(
         defined(invoker.sdk),

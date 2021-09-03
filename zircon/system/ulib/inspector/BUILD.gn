@@ -7,7 +7,6 @@ import("//build/unification/zx_library.gni")
 zx_library("inspector") {
   # This should only ever be used as a shared library because it hides
   # the otherwise problematic ngunwind symbols.
-  shared = true
 
   sdk = "shared"
   sdk_headers = [ "inspector/inspector.h" ]

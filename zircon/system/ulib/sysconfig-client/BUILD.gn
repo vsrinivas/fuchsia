@@ -51,7 +51,6 @@ zx_library("sysconfig-sync-client") {
 }
 
 zx_library("sysconfig-sync-client-c") {
-  shared = true
   sdk = "shared"
   sdk_headers = [ "lib/sysconfig/sync-client-c.h" ]
 

@@ -9,7 +9,7 @@ zx_library("devmgr-integration-test") {
   sdk_headers = [ "lib/devmgr-integration-test/fixture.h" ]
 
   # TODO: testonly = true
-  shared = true
+
   sources = [
     "dir-watcher.cc",
     "file-wait.cc",

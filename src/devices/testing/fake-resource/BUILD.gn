@@ -13,7 +13,7 @@ zx_library("fake-resource") {
   sdk = "static"
   sdk_headers = [ "lib/fake-resource/resource.h" ]
   testonly = true
-  shared = true
+
   sources = [ "fake-resource.cc" ]
   deps = [
     "//sdk/lib/fdio",

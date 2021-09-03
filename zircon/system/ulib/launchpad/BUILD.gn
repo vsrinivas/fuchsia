@@ -10,7 +10,7 @@ zx_library("launchpad") {
     "launchpad/vmo.h",
     "launchpad/launchpad.h",
   ]
-  shared = true
+
   sources = [
     "elf.c",
     "fdio.c",

@@ -12,7 +12,7 @@ group("tests") {
 zx_library("synchronous-executor") {
   sdk = "source"
   sdk_headers = [ "lib/synchronous-executor/executor.h" ]
-  shared = false
+
   sources = [ "executor.cc" ]
   deps = [
     "//sdk/lib/fit-promise",

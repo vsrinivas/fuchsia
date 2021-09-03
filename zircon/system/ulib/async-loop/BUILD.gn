@@ -38,7 +38,7 @@ zx_library("async-loop-default") {
   sdk = "static"
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/default.h" ]
-  shared = false
+
   sources = [ "default.c" ]
   deps = [ "//zircon/system/ulib/async-default" ]
   public_deps = [

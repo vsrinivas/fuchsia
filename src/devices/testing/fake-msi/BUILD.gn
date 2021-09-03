@@ -13,7 +13,7 @@ zx_library("fake-msi") {
   sdk = "static"
   sdk_headers = [ "lib/fake-msi/msi.h" ]
   testonly = true
-  shared = true
+
   sources = [ "fake-msi.cc" ]
   public_deps = [
     # Note: technically this dependency isn't necessary in the ZN build,

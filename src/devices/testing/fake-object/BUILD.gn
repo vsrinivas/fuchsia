@@ -13,7 +13,7 @@ zx_library("fake-object") {
   sdk = "static"
   sdk_headers = [ "lib/fake-object/object.h" ]
   testonly = true
-  shared = true
+
   sources = [
     "fake-handle.cc",
     "fake-object.cc",

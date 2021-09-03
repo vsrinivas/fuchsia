@@ -10,7 +10,6 @@ zx_library("async-default") {
   sdk = "shared"
   sdk_publishable = true
   sdk_headers = [ "lib/async/default.h" ]
-  shared = true
   sources = [ "default.c" ]
   public_deps = [
     # <lib/async/default.h> has #include <lib/async/dispatcher.h>.

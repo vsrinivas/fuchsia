@@ -12,7 +12,7 @@ group("tests") {
 zx_library("dma-buffer") {
   sdk = "source"
   sdk_headers = [ "lib/dma-buffer/buffer.h" ]
-  shared = false
+
   sources = [ "dma-buffer.cc" ]
   deps = [
     "//zircon/public/lib/fbl",

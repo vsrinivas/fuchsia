@@ -11,7 +11,7 @@ zx_library("test-exceptions") {
     "lib/test-exceptions/exception-handling.h",
   ]
   testonly = true
-  shared = true
+
   sources = [
     "exception-catcher.cc",
     "exception-handling.cc",

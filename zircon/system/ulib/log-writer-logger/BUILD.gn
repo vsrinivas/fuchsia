@@ -10,7 +10,7 @@ zx_library("log-writer-logger") {
     "lib/log-writer-logger/log-writer-logger.h",
     "lib/log-writer-logger/wire_format.h",
   ]
-  shared = true
+
   sources = [ "log-writer-logger.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",

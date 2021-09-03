@@ -14,7 +14,7 @@ zx_library("syslog") {
   sdk = "shared"
   sdk_publishable = true
   sdk_headers = syslog_headers
-  shared = true
+
   sources = [
     "fdio_connect.cc",
     "fx_logger.cc",
@@ -47,7 +47,7 @@ zx_library("syslog-compat") {
   sdk = "shared"
   sdk_publishable = true
   sdk_headers = syslog_headers
-  shared = true
+
   sources = [
     "compat.cc",
     "fdio_connect.cc",

@@ -10,7 +10,7 @@ zx_library("devmgr-launcher") {
     "lib/devmgr-launcher/launch.h",
     "lib/devmgr-launcher/processargs.h",
   ]
-  shared = true
+
   sources = [ "launcher.cc" ]
   public_deps = [ "//sdk/lib/fit" ]
   deps = [

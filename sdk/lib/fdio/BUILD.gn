@@ -20,7 +20,7 @@ if (is_fuchsia) {
     sdk = "source"
     sdk_publishable = true
     sdk_headers = [ "lib/fdio/spawn-actions.h" ]
-    shared = true
+
     deps = [
       ":fdio",
       "//zircon/public/lib/zx",
@@ -66,7 +66,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "lib/fdio/vfs.h",
       "lib/fdio/watcher.h",
     ]
-    shared = true
+
     sources = [
       "bsdsocket.cc",
       "directory.cc",

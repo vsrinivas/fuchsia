@@ -8,7 +8,6 @@ zx_library("driver-integration-test") {
   sdk = "shared"
   sdk_headers = [ "lib/driver-integration-test/fixture.h" ]
 
-  shared = true
   sources = [ "launcher.cc" ]
   deps = [
     "//sdk/lib/fdio",

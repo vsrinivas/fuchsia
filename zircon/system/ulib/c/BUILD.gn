@@ -129,11 +129,27 @@ if (zircon_toolchain == false) {
     public_deps = [ ":c($_libc_toolchain)" ]
   }
 } else {
-  zx_library("c") {
-    shared = true
+  config("headers.config") {
+    include_dirs = [ "include" ]
+  }
 
-    sdk = "shared"
-    sdk_headers = []
+  group("headers") {
+    public_configs = [
+      "//zircon/third_party/ulib/musl:headers",
+
+      # Order of configs matters. This comment prevents re-ordering from 'gn format'.
+      ":headers.config",
+    ]
+  }
+
+  shared_library("c") {
+    # As a special case, the C library must not be compiled with the default
+    # configs for shared_library() targets, but those or regular source_set()
+    # or static_library() targets. In practice, for the base toolchain, this
+    # means it will be compiled without -fno-rtti, but things get more complicated
+    # for variant toolchains.
+    configs -= default_shared_library_configs
+    configs += default_common_binary_configs
 
     # At link time and in DT_SONAME, musl is known as libc.so.  But the
     # (only) place it needs to be installed at runtime is where the
@@ -155,7 +171,7 @@ if (zircon_toolchain == false) {
       ]
     }
 
-    public_configs = [ "//zircon/third_party/ulib/musl:headers" ]
+    public_deps = [ ":headers" ]
 
     # The code comes from musl, where a source_set is defined.
     sources = []

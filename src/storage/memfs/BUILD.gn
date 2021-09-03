@@ -51,7 +51,7 @@ zx_library("memfs") {
   sdk = "shared"
   sdk_publishable = true
   sdk_headers = [ "lib/memfs/memfs.h" ]
-  shared = true
+
   sources = [ "memfs-local.cc" ]
   public_deps = [
     # <lib/memfs/memfs.h> has #include <lib/async/dispatcher.h>.

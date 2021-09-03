@@ -58,7 +58,6 @@ template("trace_engine_library") {
 trace_engine_library("trace-engine") {
   sdk = "shared"
   sdk_publishable = true
-  shared = true
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   extra_configs = [ "//build/config:Wno-conversion" ]
