@@ -335,11 +335,11 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       const auto* array_type = static_cast<const flat::ArrayType*>(type);
       buf << "<";
       NameFlatTypeHelper(buf, array_type->element_type);
-      buf << ">";
       if (*array_type->element_count != flat::Size::Max()) {
-        buf << ":";
+        buf << ", ";
         buf << array_type->element_count->value;
       }
+      buf << ">";
       break;
     }
     case flat::Type::Kind::kVector: {
@@ -364,9 +364,8 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     case flat::Type::Kind::kHandle: {
       const auto* handle_type = static_cast<const flat::HandleType*>(type);
       if (handle_type->subtype != types::HandleSubtype::kHandle) {
-        buf << "<";
+        buf << ":";
         buf << NameHandleSubtype(handle_type->subtype);
-        buf << ">";
       }
       break;
     }

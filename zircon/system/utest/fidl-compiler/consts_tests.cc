@@ -319,7 +319,7 @@ const c array<int32,2> = -1;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   // TODO(fxdev.bug/73879): Update string matched when error output respects new
   //  syntax.
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "array<int32>:2");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "array<int32, 2>");
 }
 
 TEST(ConstsTests, BadConstTestVector) {
@@ -352,7 +352,7 @@ const c handle:THREAD = -1;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   // TODO(fxdev.bug/73879): Update string matched when error output respects new
   //  syntax.
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle<thread>");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle:thread");
 }
 
 TEST(ConstsTests, GoodConstEnumMemberReference) {
