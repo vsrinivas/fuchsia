@@ -716,12 +716,6 @@ pub struct ChildDecl {
     pub environment: Option<String>,
 }
 
-#[derive(FidlDecl, Debug, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::CreateChildArgs")]
-pub struct CreateChildArgs {
-    pub numbered_handles: Option<Vec<fprocess::HandleInfo>>,
-}
-
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::CollectionDecl")]
 pub struct CollectionDecl {

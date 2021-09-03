@@ -219,8 +219,7 @@ async fn make_execution_runtime(
         runtime_dir_client,
         Some(controller),
     )?;
-    let numbered_handles =
-        component.args.lock().await.take().and_then(|args| args.numbered_handles);
+    let numbered_handles = component.numbered_handles.lock().await.take();
     let start_info = fcrunner::ComponentStartInfo {
         resolved_url: Some(url),
         program: decl.program.as_ref().map(|p| p.info.clone()),

@@ -496,7 +496,7 @@ mod tests {
             let parent = model.bind(&vec!["a:0"].into(), &BindReason::Eager).await?;
             let child_decl = ChildDeclBuilder::new_lazy_child("b").build();
             parent
-                .add_dynamic_child("coll".into(), &child_decl, None)
+                .add_dynamic_child("coll".into(), &child_decl, fsys::CreateChildArgs::EMPTY)
                 .await
                 .expect("failed to add child");
         }

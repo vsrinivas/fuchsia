@@ -32,6 +32,8 @@ pub enum ModelError {
     InstanceShutDown { moniker: AbsoluteMoniker },
     #[error("component collection not found with name {}", name)]
     CollectionNotFound { name: String },
+    #[error("collection {} does not allow dynamic offers", collection_name)]
+    DynamicOffersNotAllowed { collection_name: String },
     #[error("context not found")]
     ContextNotFound,
     #[error("{} is not supported", feature)]
@@ -171,6 +173,10 @@ impl ModelError {
 
     pub fn collection_not_found(name: impl Into<String>) -> ModelError {
         ModelError::CollectionNotFound { name: name.into() }
+    }
+
+    pub fn dynamic_offers_not_allowed(collection_name: impl Into<String>) -> ModelError {
+        ModelError::DynamicOffersNotAllowed { collection_name: collection_name.into() }
     }
 
     pub fn context_not_found() -> ModelError {

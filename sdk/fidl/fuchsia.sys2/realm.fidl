@@ -10,6 +10,9 @@ using fuchsia.process;
 /// The maximum number of handles that can be passed to a created component.
 const MAX_HANDLE_COUNT uint32 = 128;
 
+/// The maximum number of dynamic offers that can target a created component.
+const MAX_DYNAMIC_OFFER_COUNT uint32 = 128;
+
 /// A protocol used by a component instance to manage its own realm, such as for
 /// binding to its children.
 ///
@@ -132,6 +135,33 @@ type CreateChildArgs = resource table {
     /// If the runner for the component does not support the numbered handles it is
     /// expected to close the handles.
     1: numbered_handles vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT;
+
+    /// Dynamic offers that will target the component instance.
+    ///
+    /// Including `OfferDecl`s in this vector will cause additional capabilities
+    /// to be offered to the newly created child, beyond the `OfferDecl`s in the
+    /// parent's `ComponentDecl` that target the collection.
+    ///
+    /// Any kind of offer (e.g., protocol, directory) can be used as a dynamic
+    /// offer. Any source that would be valid for a static offer is also valid
+    /// for a dynamic offer. Additionally, unlike static offers, dynamic offers
+    /// can use a "sibling" dynamic child component as a source by setting the
+    /// source to a `ChildRef` that sets the `collection` field.
+    ///
+    /// Dynamic offers always target the newly created child component. As a
+    /// result, `OfferDecl`s in `dynamic_offers` must not set the `target`
+    /// field, as its value is implied.
+    ///
+    /// If either the source (that is, the component named in the `source` field
+    /// of the `OfferDecl`) or the target of a dynamic offer is destroyed, the
+    /// offer itself is destroyed simultaneously.
+    ///
+    /// In order to set this field to a non-empty value, the collection in which
+    /// the child component is being created must specify
+    /// `ComponentDecl.allowed_offers = STATIC_AND_DYNAMIC`.
+    ///
+    /// TODO(fxbug.dev/81109): Implementation is in progress.
+    2: dynamic_offers vector<OfferDecl>:MAX_DYNAMIC_OFFER_COUNT;
 };
 
 /// A protocol to iterate over the list of children in a realm.

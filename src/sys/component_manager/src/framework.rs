@@ -168,10 +168,7 @@ impl RealmCapabilityHost {
             return Err(fcomponent::Error::InvalidArguments);
         }
         let child_decl = child_decl.fidl_into_native();
-        match component
-            .add_dynamic_child(collection.name.clone(), &child_decl, Some(child_args))
-            .await
-        {
+        match component.add_dynamic_child(collection.name.clone(), &child_decl, child_args).await {
             Ok(fsys::Durability::SingleRun) => {
                 // Creating a child in a `SingleRun` collection automatically starts it, so
                 // start the component.
@@ -188,6 +185,9 @@ impl RealmCapabilityHost {
                     Err(fcomponent::Error::InstanceAlreadyExists)
                 }
                 ModelError::CollectionNotFound { .. } => Err(fcomponent::Error::CollectionNotFound),
+                ModelError::DynamicOffersNotAllowed { .. } => {
+                    Err(fcomponent::Error::InvalidArguments)
+                }
                 ModelError::Unsupported { .. } => Err(fcomponent::Error::Unsupported),
                 _ => Err(fcomponent::Error::Internal),
             },
@@ -706,6 +706,39 @@ mod tests {
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fcomponent::Error::Unsupported);
+        }
+
+        // Disallowed dynamic offers specified.
+        {
+            let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+            let child_decl = fsys::ChildDecl {
+                name: Some("b".to_string()),
+                url: Some("test:///b".to_string()),
+                startup: Some(fsys::StartupMode::Lazy),
+                environment: None,
+                ..fsys::ChildDecl::EMPTY
+            };
+            let err = test
+                .realm_proxy
+                .create_child(
+                    &mut collection_ref,
+                    child_decl,
+                    fsys::CreateChildArgs {
+                        dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(
+                            fsys::OfferProtocolDecl {
+                                source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                                source_name: Some("foo".to_string()),
+                                target_name: Some("foo".to_string()),
+                                ..fsys::OfferProtocolDecl::EMPTY
+                            },
+                        )]),
+                        ..fsys::CreateChildArgs::EMPTY
+                    },
+                )
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
         }
 
         // Instance died.

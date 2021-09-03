@@ -42,17 +42,14 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     clonable_error::ClonableError,
-    cm_rust::{
-        self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, CreateChildArgs,
-        FidlIntoNative, UseDecl,
-    },
+    cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol,
     fidl_fuchsia_io::{
         self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
     futures::{
@@ -342,10 +339,11 @@ pub struct ComponentInstance {
     pub abs_moniker: AbsoluteMoniker,
     /// The hooks scoped to this instance.
     pub hooks: Arc<Hooks>,
-    /// The arguments to pass to the component on startup. `CreateChildArgs` may
-    /// contain `numbered_handles`. These handles should only be present for
-    /// components that run in collections with a `SingleRun` durability.
-    pub args: Mutex<Option<CreateChildArgs>>,
+    /// Numbered handles to pass to the component on startup. These handles
+    /// should only be present for components that run in collections with a
+    /// `SingleRun` durability.
+    pub numbered_handles: Mutex<Option<Vec<fprocess::HandleInfo>>>,
+
     /// The context this instance is under.
     context: WeakModelContext,
 
@@ -391,7 +389,7 @@ impl ComponentInstance {
         context: WeakModelContext,
         parent: WeakExtendedInstance,
         hooks: Arc<Hooks>,
-        args: Option<CreateChildArgs>,
+        numbered_handles: Option<Vec<fprocess::HandleInfo>>,
     ) -> Arc<Self> {
         Arc::new(Self {
             environment,
@@ -406,7 +404,7 @@ impl ComponentInstance {
             actions: Mutex::new(ActionSet::new()),
             hooks,
             tasks: Mutex::new(vec![]),
-            args: Mutex::new(args),
+            numbered_handles: Mutex::new(numbered_handles),
         })
     }
 
@@ -545,7 +543,7 @@ impl ComponentInstance {
         self: &Arc<Self>,
         collection_name: String,
         child_decl: &ChildDecl,
-        child_args: Option<fsys::CreateChildArgs>,
+        child_args: fsys::CreateChildArgs,
     ) -> Result<fsys::Durability, ModelError> {
         let res = {
             match child_decl.startup {
@@ -560,18 +558,21 @@ impl ComponentInstance {
                 .find_collection(&collection_name)
                 .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?
                 .clone();
-            if let Some(child_args) = child_args.as_ref() {
-                match &child_args.numbered_handles {
-                    Some(handles) => {
-                        if !handles.is_empty()
-                            && collection_decl.durability != fsys::Durability::SingleRun
-                        {
-                            return Err(ModelError::unsupported(
-                                "Numbered handles to child in a collection that is not SingleRun",
-                            ));
-                        }
-                    }
-                    _ => {}
+
+            if let Some(handles) = &child_args.numbered_handles {
+                if !handles.is_empty() && collection_decl.durability != fsys::Durability::SingleRun
+                {
+                    return Err(ModelError::unsupported(
+                        "Numbered handles to child in a collection that is not SingleRun",
+                    ));
+                }
+            }
+
+            if let Some(dynamic_offers) = &child_args.dynamic_offers {
+                if !dynamic_offers.is_empty()
+                    && collection_decl.allowed_offers != cm_types::AllowedOffers::StaticAndDynamic
+                {
+                    return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
                 }
             }
             match collection_decl.durability {
@@ -582,14 +583,7 @@ impl ComponentInstance {
                 }
             };
             (
-                state
-                    .add_child(
-                        self,
-                        child_decl,
-                        Some(&collection_decl),
-                        child_args.map(|args| args.fidl_into_native()),
-                    )
-                    .await,
+                state.add_child(self, child_decl, Some(&collection_decl), child_args).await,
                 collection_decl.durability,
             )
         };
@@ -1320,7 +1314,7 @@ impl ResolvedInstanceState {
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-        child_args: Option<CreateChildArgs>,
+        child_args: fsys::CreateChildArgs,
     ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
         self.add_child_internal(component, child, collection, child_args, true).await
     }
@@ -1334,7 +1328,14 @@ impl ResolvedInstanceState {
         collection: Option<&CollectionDecl>,
         register_discover: bool,
     ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
-        self.add_child_internal(component, child, collection, None, register_discover).await
+        self.add_child_internal(
+            component,
+            child,
+            collection,
+            fsys::CreateChildArgs::EMPTY,
+            register_discover,
+        )
+        .await
     }
 
     #[must_use]
@@ -1343,7 +1344,7 @@ impl ResolvedInstanceState {
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-        child_args: Option<CreateChildArgs>,
+        child_args: fsys::CreateChildArgs,
         register_discover: bool,
     ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
         let instance_id = match collection {
@@ -1367,7 +1368,7 @@ impl ResolvedInstanceState {
                 component.context.clone(),
                 WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
                 Arc::new(Hooks::new(Some(component.hooks.clone()))),
-                child_args,
+                child_args.numbered_handles,
             );
             self.children.insert(child_moniker, child.clone());
             self.live_children.insert(partial_moniker, (instance_id, child.clone()));
@@ -1391,7 +1392,7 @@ impl ResolvedInstanceState {
         decl: &ComponentDecl,
     ) {
         for child in decl.children.iter() {
-            let _ = self.add_child(component, child, None, None).await;
+            let _ = self.add_child(component, child, None, fsys::CreateChildArgs::EMPTY).await;
         }
     }
 }
