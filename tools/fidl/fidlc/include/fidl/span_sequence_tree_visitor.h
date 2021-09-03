@@ -124,6 +124,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     kFile,
     kIdentifier,
     kIdentifierConstant,
+    kInlineLayoutReference,
     kLayout,
     kLayoutMember,
     kLibraryDecl,
@@ -158,6 +159,9 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // inside of a raw::CompoundIdentifier.  Running `IsInsideOf(VisitorKind::kCompoundIndentifier)`
   // allows us to deduce if this special handling is necessary for any raw::Identifier we visit.
   bool IsInsideOf(VisitorKind visitor_kind);
+
+  // This function is like `IsInsideOf`, except it only checks the immediate parent node.
+  bool IsDirectlyInsideOf(VisitorKind visitor_kind);
 
   // An RAII-ed tracking class, invoked at the start of each On*-like visitor.  It appends the
   // VisitorKind of the visitor to the ast_path_ for the life time of the On* visitor's execution,

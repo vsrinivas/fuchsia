@@ -223,7 +223,8 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
     const auto& child = children[i];
     const bool next_token_is_indented = is_next_sibling_indented && i == children.size() - 1;
     switch (child->GetKind()) {
-      case SpanSequence::Kind::kAtomic: {
+      case SpanSequence::Kind::kAtomic:
+      case SpanSequence::Kind::kDivisible: {
         MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
         last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
                                          next_token_is_indented, out);
@@ -289,8 +290,6 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
         }
         break;
       }
-      default:
-        assert(false && "other comment types must not be children of AtomicSpanSequence");
     }
 
     // If the last printed SpanSequence was a token, and that token has declared itself to have a

@@ -12,12 +12,10 @@ using zx;
 /// Refer to [`Node.Describe`] and [`Node.OnOpen`] for usage.
 type NodeInfo = strict resource union {
     /// No protocol information was supplied by the connection.
-    1: service
-    @generated_name("Service") struct {};
+    1: service @generated_name("Service") struct {};
 
     /// The connection composes [`File`].
-    2: file
-    @generated_name("FileObject") resource struct {
+    2: file @generated_name("FileObject") resource struct {
         /// An optional event which transmits information about an object's readability
         /// or writability. This event relays information about the underlying object, not
         /// the capability granted to client: this event may be signalled "readable" on a
@@ -33,16 +31,13 @@ type NodeInfo = strict resource union {
     };
 
     /// The connection composes [`Directory`].
-    3: directory
-    @generated_name("DirectoryObject") struct {};
-    4: pipe
-    @generated_name("Pipe") resource struct {
+    3: directory @generated_name("DirectoryObject") struct {};
+    4: pipe @generated_name("Pipe") resource struct {
         socket zx.handle:SOCKET;
     };
 
     /// The connection composes [`File`]. Its implementation is backed by a VMO.
-    5: vmofile
-    @generated_name("Vmofile") resource struct {
+    5: vmofile @generated_name("Vmofile") resource struct {
         /// The VMO which backs this file.
         vmo zx.handle:VMO;
         /// The index into `vmo` which represents the first byte of the file.
@@ -50,36 +45,31 @@ type NodeInfo = strict resource union {
         /// The number of bytes, starting at `offset`, which may be used to represent this file.
         length uint64;
     };
-    6: device
-    @generated_name("Device") resource struct {
+    6: device @generated_name("Device") resource struct {
         /// An optional event which transmits information about a device's state.
         ///
         /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
         event zx.handle:<EVENTPAIR, optional>;
     };
-    7: tty
-    @generated_name("Tty") resource struct {
+    7: tty @generated_name("Tty") resource struct {
         event zx.handle:<EVENTPAIR, optional>;
     };
 
     8: reserved;
 
     /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
-    9: datagram_socket
-    @generated_name("DatagramSocket") resource struct {
+    9: datagram_socket @generated_name("DatagramSocket") resource struct {
         /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
         event zx.handle:EVENTPAIR;
     };
 
     /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
-   10: stream_socket
-    @generated_name("StreamSocket") resource struct {
+   10: stream_socket @generated_name("StreamSocket") resource struct {
         socket zx.handle:SOCKET;
     };
 
     /// The connection composes [`fuchsia.posix.socket.raw/Socket`].
-   11: raw_socket
-    @generated_name("RawSocket") resource struct {
+   11: raw_socket @generated_name("RawSocket") resource struct {
         /// See [`fuchsia.posix.socket.raw.Socket`] for details.
         event zx.handle:EVENTPAIR;
     };

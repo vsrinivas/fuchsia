@@ -11,6 +11,7 @@ namespace {
 std::string Format(const std::string& source, bool reformat_and_compare = true) {
   fidl::ExperimentalFlags flags;
   flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowAnonymousLayouts);
   auto lib = TestLibrary(source, flags);
 
   // We use a column width of 40, rather than the "real world" 100, to make tests easier to read
@@ -172,6 +173,7 @@ TEST(NewFormatterTests, AttributesFormatted) {
   std::string unformatted = R"FIDL(
 @attr_without_args
 @attr_with_one_arg("abcdefghijklmnopqr")
+@attr_with_two_args(a = true, b = "abc")
 library foo.bar;
 )FIDL";
 
@@ -179,6 +181,7 @@ library foo.bar;
   std::string formatted = R"FIDL(
 @attr_without_args
 @attr_with_one_arg("abcdefghijklmnopqr")
+@attr_with_two_args(a = true, b = "abc")
 library foo.bar;
 )FIDL";
 
@@ -209,6 +212,7 @@ TEST(NewFormatterTests, AttributesOverflow) {
   std::string unformatted = R"FIDL(
 @attr_without_args_abcdefghijklmnopqrstuv
 @attr_with_one_arg("abcdefghijklmnopqrs")
+@attr_with_two_args(a = true, b = "abcd")
 library foo.bar;
 )FIDL";
 
@@ -217,6 +221,9 @@ library foo.bar;
 @attr_without_args_abcdefghijklmnopqrstuv
 @attr_with_one_arg(
         "abcdefghijklmnopqrs")
+@attr_with_two_args(
+        a = true,
+        b = "abcd")
 library foo.bar;
 )FIDL";
 
@@ -336,6 +343,60 @@ protocol MyProtocol {
     /// Foo
     @transitional // Bar
     MyMethod();
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
+}
+
+TEST(NewFormatterTests, AttributesInlineFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyStruct = struct {
+    field1 @no_arg_attr_abcde struct {};
+    field2 @one_arg_attr("1") struct {};
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyStruct = struct {
+    field1 @no_arg_attr_abcde struct {};
+    field2 @one_arg_attr("1") struct {};
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
+}
+
+TEST(NewFormatterTests, AttributesInlineOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyStruct = struct {
+    field1 @no_arg_attr_abcdef struct {};
+    field2 @one_arg_attr("12") struct {};
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyStruct = struct {
+    field1
+            @no_arg_attr_abcdef
+            struct {};
+    field2
+            @one_arg_attr("12")
+            struct {};
 };
 )FIDL";
 
@@ -5212,14 +5273,14 @@ type MyEnum = strict enum : uint16 {
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
-TEST(NewFormatter, ParameterListAttributes) {
+TEST(NewFormatterTests, ParameterListAttributes) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
 
 protocol Foo {
   Bar(@foo struct {});
-  Baz(@foo struct { data uint8; }) -> (@foo @bar struct { data uint8; });
+  Baz(@bar struct { data uint8; }) -> (@baz @qux struct { data uint8; });
 };
 )FIDL";
 
@@ -5228,14 +5289,10 @@ protocol Foo {
 library foo.bar;
 
 protocol Foo {
-    Bar(
-    @foo struct {});
-    Baz(
-    @foo struct {
+    Bar(@foo struct {});
+    Baz(@bar struct {
         data uint8;
-    }) -> (
-    @foo
-    @bar struct {
+    }) -> (@baz @qux struct {
         data uint8;
     });
 };

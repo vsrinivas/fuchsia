@@ -297,6 +297,10 @@ bool SpanSequenceTreeVisitor::IsInsideOf(VisitorKind visitor_kind) {
   return std::find(ast_path_.begin(), ast_path_.end(), visitor_kind) != ast_path_.end();
 }
 
+bool SpanSequenceTreeVisitor::IsDirectlyInsideOf(VisitorKind visitor_kind) {
+  return !ast_path_.empty() && ast_path_[ast_path_.size() - 1] == visitor_kind;
+}
+
 SpanSequenceTreeVisitor::Visiting::Visiting(SpanSequenceTreeVisitor* ftv, VisitorKind visitor_kind)
     : ftv_(ftv) {
   this->ftv_->ast_path_.push_back(visitor_kind);
@@ -479,6 +483,16 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const std::unique_ptr<raw::Attribut
 void SpanSequenceTreeVisitor::OnAttributeListNew(
     const std::unique_ptr<raw::AttributeListNew>& element) {
   if (already_seen_.insert(element.get()).second) {
+    // Special case: attributes on anonymous layouts do not go on newlines.  Instead, they are put
+    // into a DivisibleSpanSequence and kept on the same line if possible.
+    if (IsDirectlyInsideOf(VisitorKind::kInlineLayoutReference)) {
+      const auto visiting = Visiting(this, VisitorKind::kAttributeList);
+      const auto builder = SpanBuilder<DivisibleSpanSequence>(this, *element);
+      TreeVisitor::OnAttributeListNew(element);
+      SetSpacesBetweenChildren(building_.top(), true);
+      return;
+    }
+
     const auto visiting = Visiting(this, VisitorKind::kAttributeList);
     const auto indent = IsInsideOf(VisitorKind::kLayoutMember) ||
                                 IsInsideOf(VisitorKind::kProtocolMethod) ||
@@ -611,6 +625,7 @@ void SpanSequenceTreeVisitor::OnIdentifierConstant(
 
 void SpanSequenceTreeVisitor::OnInlineLayoutReference(
     const std::unique_ptr<raw::InlineLayoutReference>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kInlineLayoutReference);
   if (element->attributes != nullptr) {
     OnAttributeListNew(element->attributes);
   }
