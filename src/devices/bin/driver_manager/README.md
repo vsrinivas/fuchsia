@@ -18,15 +18,10 @@ When running Driver Manager there are some commandline options that can change D
 behavior. Normally these are set in the CML file when Driver Manager is run as a component, or
 through isolated Driver Manager for testing.
 
-### --driver_search_path=\<string\>
-
-Load drivers from this directory. Can be specified multiple times to search multiple directories.
-If this is not defined, the default will be used.
-
 ### --load_driver=\<string\>
 
-Load a driver with this path. The specified driver does not need to be in a `driver_search_path`
-directory.
+Load a driver with this path. If this is set then DriverManager will not search
+/boot/drivers/ for drivers.
 
 ### --log_to_debuglog=\<bool\>
 

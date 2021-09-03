@@ -19,13 +19,9 @@ using SuspendCallback = fit::function<void(zx_status_t status)>;
 class IsolatedDevmgr {
  public:
   struct Args {
-    // A list of absolute paths (in devmgr's view of the filesystem) to search
-    // for drivers in.  The search is non-recursive.  If empty, this uses
-    // devmgr's default.
-    fbl::Vector<const char*> driver_search_paths;
     // A list of absolute paths (in devmgr's view of the filesystem) to load
-    // drivers from.  This differs from |driver_search_paths| in that it
-    // specifies specific drivers rather than entire directories.
+    // drivers from. If any of these are specified then DriverManager will not
+    // search /boot/drivers.
     fbl::Vector<const char*> load_drivers;
     // A list of path prefixes and channels to add to the isolated devmgr's namespace. Note that
     // /boot is always forwarded from the parent namespace, and a /svc is always provided that

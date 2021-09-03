@@ -3,8 +3,6 @@
         "args": [
             "--sys_device=/boot/driver/test-parent-sys.so",
             "--svc_name=fuchsia.netemul.devmgr.IsolatedDevmgr",
-            "--load_driver=/boot/driver/ethertap.so",
-            "--load_driver=/boot/driver/ethernet.so",
             "--wait_for=sys/test/tapctl"
         ],
         "binary": "bin/isolated_devmgr"

@@ -167,10 +167,6 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
 
   std::vector<const char*> argv;
   argv.push_back(kDevmgrPath);
-  for (const char* path : args.driver_search_paths) {
-    argv.push_back("--driver-search-path");
-    argv.push_back(path);
-  }
   for (const char* path : args.load_drivers) {
     argv.push_back("--load-driver");
     argv.push_back(path);

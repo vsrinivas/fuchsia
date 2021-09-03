@@ -20,7 +20,6 @@ class EnvironmentTest : public zxtest::Test {
   ~EnvironmentTest() override = default;
   void SetUp() override {
     IsolatedDevmgr::Args args;
-    args.load_drivers.push_back("/boot/driver/ddk-environment-test.so");
 
     board_test::DeviceEntry dev = {};
     dev.vid = PDEV_VID_TEST;

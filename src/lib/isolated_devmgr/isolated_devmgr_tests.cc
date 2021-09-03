@@ -47,8 +47,6 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     args.sys_device_driver = "/boot/driver/test-parent-sys.so";
 
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
-    args.load_drivers.push_back("/boot/driver/ethernet.so");
-    args.load_drivers.push_back("/boot/driver/ethertap.so");
     args.disable_block_watcher = true;
     return IsolatedDevmgr::Create(std::move(args));
   }

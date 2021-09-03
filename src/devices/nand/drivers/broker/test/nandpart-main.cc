@@ -47,8 +47,6 @@ ParentDevice* g_parent_device_;
 
 int main(int argc, char** argv) {
   driver_integration_test::IsolatedDevmgr::Args args;
-  args.load_drivers.push_back("/boot/driver/ram-nand.so");
-
   args.disable_block_watcher = true;
 
   driver_integration_test::IsolatedDevmgr devmgr;

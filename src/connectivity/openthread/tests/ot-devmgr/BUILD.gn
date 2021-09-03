@@ -8,8 +8,6 @@ isolated_devmgr_component("ot-devmgr-component-integration") {
   args = [
     "--svc_name=fuchsia.openthread.devmgr.IsolatedDevmgr",
     "--sys_device=/boot/driver/platform-bus.so",
-    "--search_driver=/boot/driver",
-    "--load_driver=/boot/driver/fake-ot-radio.so",
     "--device_vid_pid_did=11:11:18",
     "--wait_for=class/ot-radio/000",
   ]

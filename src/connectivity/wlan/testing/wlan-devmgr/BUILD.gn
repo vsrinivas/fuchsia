@@ -20,10 +20,6 @@ isolated_devmgr_component("wlan-devmgr") {
   args = [
     "--sys_device=/boot/driver/test-parent-sys.so",
     "--svc_name=fuchsia.wlan.devmgr.IsolatedDevmgr",
-    "--load_driver=/boot/driver/wlantap.so",
-    "--load_driver=/boot/driver/wlanphy.so",
-    "--load_driver=/boot/driver/wlan.so",
-    "--load_driver=/boot/driver/ethernet.so",
     "--wait_for=sys/test/wlantapctl",
   ]
   deps = [

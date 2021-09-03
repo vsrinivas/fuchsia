@@ -37,9 +37,6 @@ class PowerTestCase : public zxtest::Test {
   ~PowerTestCase() override = default;
   void SetUp() override {
     IsolatedDevmgr::Args args;
-    args.load_drivers.push_back("/boot/driver/ddk-power-test.so");
-    args.load_drivers.push_back("/boot/driver/ddk-power-test-child.so");
-
     args.no_exit_after_suspend = true;
 
     board_test::DeviceEntry dev = {};

@@ -25,8 +25,6 @@ using fuchsia_device::Controller;
 TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
-  args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test.so");
-  args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test-child.so");
 
   board_test::DeviceEntry dev = {};
   struct compatibility_test_metadata test_metadata = {
@@ -72,9 +70,6 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
 
-  args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test.so");
-  args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test-child.so");
-
   board_test::DeviceEntry dev = {};
   struct compatibility_test_metadata test_metadata = {
       .add_in_bind = false,
@@ -114,9 +109,6 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
 TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
-
-  args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test.so");
-  args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test-child.so");
 
   board_test::DeviceEntry dev = {};
   struct compatibility_test_metadata test_metadata = {

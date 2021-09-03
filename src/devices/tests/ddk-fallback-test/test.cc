@@ -23,8 +23,6 @@ class FallbackTest : public zxtest::Test {
     dev.pid = PDEV_PID_FALLBACK_TEST;
     dev.did = 0;
     args.device_list.push_back(dev);
-    // We disable searching for drivers so that "TestFallbackBoundWhenAlone" works as expected.
-    args.driver_search_paths.push_back("/do-not-search");
     // Explicitly whitelist drivers that are necessary for the integration test to come up.
     args.load_drivers.push_back("/boot/driver/platform-bus.so");
     args.load_drivers.push_back("/boot/driver/platform-bus.proxy.so");

@@ -135,10 +135,12 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
 // Values parsed out of argv.  All paths described below are absolute paths.
 struct DriverManagerArgs {
   // Load drivers from these directories.  If this is empty, the default will
-  // be used.
+  // be used (unless load_drivers is set).
   fbl::Vector<std::string> driver_search_paths;
-  // Load the drivers with these paths.  The specified drivers do not need to
+  // Load the drivers with these paths. The specified drivers do not need to
   // be in directories in |driver_search_paths|.
+  // If any of these drivers are set, then driver_search_paths default will not
+  // be used.
   fbl::Vector<const char*> load_drivers;
   // Connect the stdout and stderr file descriptors for this program to a
   // debuglog handle acquired with fuchsia.boot.WriteOnlyLog.
@@ -160,7 +162,6 @@ struct DriverManagerArgs {
 
 DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
   enum {
-    kDriverSearchPath,
     kLoadDriver,
     kLogToDebuglog,
     kNoExitAfterSuspend,
@@ -169,7 +170,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     kUseDriverIndex,
   };
   option options[] = {
-      {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
       {"load-driver", required_argument, nullptr, kLoadDriver},
       {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
       {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend},
@@ -197,9 +197,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
   DriverManagerArgs args{};
   for (int opt; (opt = getopt_long(argc, argv, "", options, nullptr)) != -1;) {
     switch (opt) {
-      case kDriverSearchPath:
-        args.driver_search_paths.push_back(optarg);
-        break;
       case kLoadDriver:
         args.load_drivers.push_back(optarg);
         break;
@@ -256,7 +253,7 @@ int main(int argc, char** argv) {
   }
   // Set up the default values for our arguments if they weren't given.
   if (driver_manager_args.driver_search_paths.size() == 0 &&
-      !driver_manager_args.use_driver_index) {
+      driver_manager_args.load_drivers.size() == 0 && !driver_manager_args.use_driver_index) {
     driver_manager_args.driver_search_paths.push_back(driver_manager_args.path_prefix + "driver");
   }
   if (driver_manager_args.sys_device_driver.empty()) {

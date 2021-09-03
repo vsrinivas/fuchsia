@@ -40,8 +40,6 @@ Options:
    --svc_name=[svc_name]: service name to expose, defaults to fuchsia.io.Directory
    --load_driver=[driver_path]: loads a driver into isolated manager. May be informed multiple
                                 times.
-   --search_driver=[search_path]: loads all drivers in provided search path. May be informed
-                                  multiple times.
    --sys_device=[sys_device_driver]: path to sys device driver, defaults to
                                      /boot/driver/sysdev.so
    --wait_for=[device]: wait for isolated manager to have |device| exposed before serving any
@@ -117,8 +115,6 @@ int main(int argc, const char** argv) {
       svc_name = opt.value;
     } else if (opt.name == "load_driver") {
       args.load_drivers.push_back(opt.value.c_str());
-    } else if (opt.name == "search_driver") {
-      args.driver_search_paths.push_back(opt.value.c_str());
     } else if (opt.name == "sys_device") {
       args.sys_device_driver = opt.value.c_str();
     } else if (opt.name == "wait_for") {
@@ -145,7 +141,10 @@ int main(int argc, const char** argv) {
   // Fallback if sys_device is not specified.
   if (args.sys_device_driver == nullptr) {
     args.sys_device_driver = "/boot/driver/sysdev.so";
-    args.load_drivers.push_back("/boot/driver/sysdev.so");
+    // If the test only loads specific drivers then add sys_device.
+    if (!args.load_drivers.is_empty()) {
+      args.load_drivers.push_back("/boot/driver/sysdev.so");
+    }
   }
 
   // Pass-through any additional namespaces that we want to provide to the devmgr. These are

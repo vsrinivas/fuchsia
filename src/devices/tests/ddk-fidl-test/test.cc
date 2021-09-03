@@ -25,16 +25,13 @@ using driver_integration_test::IsolatedDevmgr;
 
 namespace {
 
-void CheckTransaction(const board_test::DeviceEntry& entry, const char* driver_path,
-                      const char* device_fs) {
+void CheckTransaction(const board_test::DeviceEntry& entry, const char* device_fs) {
   IsolatedDevmgr devmgr;
   zx_handle_t driver_channel;
 
   // Set the driver arguments.
   IsolatedDevmgr::Args args;
   args.device_list.push_back(entry);
-
-  args.load_drivers.push_back(driver_path);
 
   // Create the isolated Devmgr.
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
@@ -105,7 +102,7 @@ TEST(FidlDDKDispatcherTest, SyncTransactionHandleTest) {
   entry.vid = PDEV_VID_TEST;
   entry.pid = PDEV_PID_DDKFIDL_TEST;
   entry.did = PDEV_DID_TEST_DDKFIDL;
-  CheckTransaction(entry, "/boot/driver/fidl-llcpp-driver.so", "sys/platform/11:09:d/ddk-fidl");
+  CheckTransaction(entry, "sys/platform/11:09:d/ddk-fidl");
 }
 
 TEST(FidlDDKDispatcherTest, AsyncTransactionHandleTest) {
@@ -114,8 +111,7 @@ TEST(FidlDDKDispatcherTest, AsyncTransactionHandleTest) {
   entry.vid = PDEV_VID_TEST;
   entry.pid = PDEV_PID_DDKFIDL_TEST;
   entry.did = PDEV_DID_TEST_DDKASYNCFIDL;
-  CheckTransaction(entry, "/boot/driver/fidl-async-llcpp-driver.so",
-                   "sys/platform/11:09:15/ddk-async-fidl");
+  CheckTransaction(entry, "sys/platform/11:09:15/ddk-async-fidl");
 }
 
 }  // namespace

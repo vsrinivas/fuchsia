@@ -145,8 +145,6 @@ isolated_devmgr_component("ethertap-devmgr") {
   args = [
     "--sys_device=/boot/driver/test-parent-sys.so",
     "--svc_name=fuchsia.example.IsolatedDevmgr",
-    "--load_driver=/boot/driver/ethertap.so",
-    "--load_driver=/boot/driver/ethernet.so",
     "--wait_for=sys/test/tapctl",
   ]
 
@@ -161,7 +159,6 @@ isolated_devmgr_component("virtual-audio-devmgr") {
   args = [
     "--sys_device=/boot/driver/platform-bus.so",
     "--svc_name=fuchsia.example.IsolatedDevmgr",
-    "--load_driver=/boot/driver/virtual_audio_driver.so",
     "--wait_for=sys/platform/00:00:2f/virtual_audio",
   ]
 
