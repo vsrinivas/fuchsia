@@ -680,6 +680,32 @@ pub struct EventDecl {
     pub name: CapabilityName,
 }
 
+impl CapabilityDecl {
+    pub fn name(&self) -> &CapabilityName {
+        match self {
+            CapabilityDecl::Directory(decl) => decl.name(),
+            CapabilityDecl::Protocol(decl) => decl.name(),
+            CapabilityDecl::Resolver(decl) => decl.name(),
+            CapabilityDecl::Runner(decl) => decl.name(),
+            CapabilityDecl::Service(decl) => decl.name(),
+            CapabilityDecl::Storage(decl) => decl.name(),
+            CapabilityDecl::Event(decl) => decl.name(),
+        }
+    }
+
+    pub fn path(&self) -> Option<&CapabilityPath> {
+        match self {
+            CapabilityDecl::Directory(decl) => decl.source_path.as_ref(),
+            CapabilityDecl::Protocol(decl) => decl.source_path.as_ref(),
+            CapabilityDecl::Resolver(decl) => decl.source_path.as_ref(),
+            CapabilityDecl::Runner(decl) => decl.source_path.as_ref(),
+            CapabilityDecl::Service(decl) => decl.source_path.as_ref(),
+            CapabilityDecl::Storage(_) => None,
+            CapabilityDecl::Event(_) => None,
+        }
+    }
+}
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ChildDecl")]
 pub struct ChildDecl {
@@ -1015,6 +1041,19 @@ impl fmt::Display for CapabilityTypeName {
             CapabilityTypeName::Storage => "storage",
         };
         write!(f, "{}", display_name)
+    }
+}
+
+impl From<&UseDecl> for CapabilityTypeName {
+    fn from(use_decl: &UseDecl) -> Self {
+        match use_decl {
+            UseDecl::Service(_) => Self::Service,
+            UseDecl::Protocol(_) => Self::Protocol,
+            UseDecl::Directory(_) => Self::Directory,
+            UseDecl::Storage(_) => Self::Storage,
+            UseDecl::Event(_) => Self::Event,
+            UseDecl::EventStream(_) => Self::EventStream,
+        }
     }
 }
 

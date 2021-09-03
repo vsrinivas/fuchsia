@@ -12,6 +12,7 @@ use {
         controller::{
             build::VerifyBuildController,
             capability_routing::{CapabilityRouteController, TreeMappingController},
+            route_sources::RouteSourcesController,
         },
     },
     cm_fidl_analyzer::{
@@ -35,6 +36,7 @@ plugin!(
             "/verify/build" => VerifyBuildController::default(),
             "/verify/map_tree" => TreeMappingController::default(),
             "/verify/capability_routes" => CapabilityRouteController::default(),
+            "/verify/component_routes" => RouteSourcesController::default(),
         }
     ),
     vec![PluginDescriptor::new("CorePlugin")]

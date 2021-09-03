@@ -185,6 +185,13 @@ impl From<AbsoluteMoniker> for NodePath {
     }
 }
 
+impl From<Vec<&str>> for NodePath {
+    fn from(components: Vec<&str>) -> Self {
+        let moniker: AbsoluteMoniker = components.into();
+        moniker.into()
+    }
+}
+
 impl NodeEnvironment {
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
