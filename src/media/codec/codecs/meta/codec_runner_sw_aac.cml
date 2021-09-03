@@ -1,0 +1,31 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/codec_runner_sw_aac",
+    },
+    capabilities: [
+        { protocol: "fuchsia.mediacodec.CodecFactory" },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            from: "self",
+        },
+    ],
+}

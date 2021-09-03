@@ -97,6 +97,13 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-mediacodec",
+            to: "#test_manager",
+            subdir: "class/media-codec",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-goldfish-address-space",
             to: "#test_manager",
             subdir: "class/goldfish-address-space",
@@ -136,8 +143,26 @@
             to: "#test_manager",
             subdir: "class/input-report",
         },
+
+        // Tests of the media system want to test against the real hardware
+        // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-mediacodec",
+            to: "#test_manager",
+            subdir: "class/media-codec",
+        },
         {
             directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#test_manager",
+        },
+
+        // Tests of the media system change their behavior based on board
+        // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.
+        {
+            protocol: "fuchsia.sysinfo.SysInfo",
             from: "parent",
             to: "#test_manager",
         },

@@ -316,6 +316,23 @@
             to: "#tests",
             rights: [ "rw*" ],
         },
+
+        // Tests of the media system want to test against the real hardware
+        // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.
+        {
+            directory: "dev-mediacodec",
+            from: "parent",
+            to: "#tests",
+            rights: [ "rw*" ],
+        },
+
+        // Tests of the media system change their behavior based on board
+        // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.
+        {
+            protocol: "fuchsia.sysinfo.SysInfo",
+            from: "parent",
+            to: "#tests",
+        },
     ],
     expose: [
         {

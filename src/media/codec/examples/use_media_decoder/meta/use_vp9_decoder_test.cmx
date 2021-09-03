@@ -18,8 +18,7 @@
     },
     "sandbox": {
         "dev": [
-            "class/media-codec",
-            "class/sysmem"
+            "class/media-codec"
         ],
         "services": [
             "fuchsia.mediacodec.CodecFactory",

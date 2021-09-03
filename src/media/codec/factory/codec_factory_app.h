@@ -56,6 +56,7 @@ class CodecFactoryApp {
   void PublishService();
   void PostDiscoveryQueueProcessing();
   void ProcessDiscoveryQueue();
+  bool IsV2();
 
   [[nodiscard]] std::string GetBoardName();
 

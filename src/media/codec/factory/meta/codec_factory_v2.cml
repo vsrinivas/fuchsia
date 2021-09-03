@@ -1,0 +1,57 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/codec_factory",
+    },
+    collections: [
+        {
+            name: "sw-codecs",
+
+            // every component started in this collection will self-destruct when
+            // it exits
+            durability: "single_run",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.mediacodec.CodecFactory" },
+    ],
+    use: [
+        {
+            directory: "dev-mediacodec",
+            rights: [ "rw*" ],
+            path: "/dev/class/media-codec",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#sw-codecs",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            from: "self",
+        },
+    ],
+}

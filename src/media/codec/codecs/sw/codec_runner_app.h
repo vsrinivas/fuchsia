@@ -26,7 +26,7 @@ class CodecRunnerApp {
  public:
   CodecRunnerApp()
       : loop_(&kAsyncLoopConfigAttachToCurrentThread),
-        component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+        component_context_(sys::ComponentContext::Create()),
         codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Run() {
@@ -92,6 +92,7 @@ class CodecRunnerApp {
                   ->RemovePublicService<fuchsia::mediacodec::CodecFactory>();
             }));
 
+    component_context_->outgoing()->ServeFromStartupInfo();
     loop_.Run();
 
     // Run the loop_.Shutdown() here (before ~CodecRunnerApp), so that any

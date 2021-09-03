@@ -22,6 +22,7 @@ source_set("factory_source") {
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.hardware.mediacodec",
     "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.sys2",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
@@ -30,10 +31,23 @@ source_set("factory_source") {
     # For FX_LOGF
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
+    "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+}
+
+fuchsia_component("component") {
+  manifest = "meta/codec_factory.cmx"
+  deps = [ ":factory" ]
+  component_name = "codec_factory"
+}
+
+fuchsia_component("component_v2") {
+  manifest = "meta/codec_factory_v2.cml"
+  deps = [ ":factory" ]
+  component_name = "codec_factory"
 }
 
 executable("factory") {
@@ -91,8 +105,6 @@ fuchsia_unittest_package("codec_detect_hw_decode_test") {
     environments = [
       sherlock_env,
       astro_env,
-
-      # Fails on Vim3 due to fxb/70799
       vim3_env,
     ]
   }

@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <random>
+#include <dirent.h> 
 
 #include "codec_factory_impl.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -25,6 +26,7 @@ namespace {
 
 constexpr char kDeviceClass[] = "/dev/class/media-codec";
 const char* kLogTag = "CodecFactoryApp";
+const char kRealmSvc[] = "fuchsia.sys2.Realm";
 
 const std::string kAllSwDecoderMimeTypes[] = {
     "video/h264",  // VIDEO_ENCODING_H264
@@ -61,17 +63,34 @@ CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher)
   DiscoverMediaCodecDriversAndListenForMoreAsync();
 }
 
+bool CodecFactoryApp::IsV2() {
+  DIR* dir = opendir("/svc");
+  if (!dir) {
+    return false;
+  }
+
+  struct dirent* ent;
+  std::string svc_name = std::string(kRealmSvc);
+  while ((ent = readdir(dir)) != nullptr) {
+    if (svc_name == ent->d_name) {
+      closedir(dir);
+      return true;
+    }
+  }
+  closedir(dir);
+  return false;
+}
+
 void CodecFactoryApp::PublishService() {
   // We delay doing this until we're completely ready to add services.
   // We _rely_ on the driver to either fail the channel or send OnCodecList().
   ZX_DEBUG_ASSERT(existing_devices_discovered_);
-
   zx_status_t status =
       startup_context_->outgoing()->AddPublicService<fuchsia::mediacodec::CodecFactory>(
           [this](fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
             // The CodecFactoryImpl is self-owned and will self-delete when the
             // channel closes or an error occurs.
-            CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request));
+            CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request), this->IsV2());
           });
   // else this codec_factory is useless
   ZX_ASSERT(status == ZX_OK);

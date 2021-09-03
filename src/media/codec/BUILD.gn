@@ -53,9 +53,8 @@ group("services") {
   public_deps = [ "//src/media/codec/factory" ]
 }
 
-fuchsia_package_with_single_component("codec_factory") {
-  manifest = "factory/meta/codec_factory.cmx"
-  deps = [ "//src/media/codec/factory" ]
+fuchsia_package("codec_factory") {
+  deps = [ ":factory_with_sw_codecs" ]
 }
 
 # This package is only really expected to be used by the codec_factory package.
@@ -74,4 +73,38 @@ fuchsia_package_with_single_component("codec_runner_sw_ffmpeg") {
 fuchsia_package_with_single_component("codec_runner_sw_sbc") {
   manifest = "codecs/meta/codec_runner_sw_sbc.cmx"
   deps = [ "//src/media/codec/codecs/sw/sbc:codec_runner_sw_sbc" ]
+}
+
+group("factory_with_sw_codecs") {
+  deps = [
+    ":sw_codecs",
+    "//src/media/codec/factory:component",
+    "//src/media/codec/factory:component_v2",
+  ]
+}
+
+group("sw_codecs") {
+  deps = [
+    ":codec_runner_sw_aac_v2",
+    ":codec_runner_sw_ffmpeg_v2",
+    ":codec_runner_sw_sbc_v2",
+  ]
+}
+
+fuchsia_component("codec_runner_sw_sbc_v2") {
+  manifest = "codecs/meta/codec_runner_sw_sbc.cml"
+  deps = [ "//src/media/codec/codecs/sw/sbc:codec_runner_sw_sbc" ]
+  component_name = "codec_runner_sw_sbc"
+}
+
+fuchsia_component("codec_runner_sw_aac_v2") {
+  manifest = "codecs/meta/codec_runner_sw_aac.cml"
+  deps = [ "//src/media/codec/codecs/sw/aac:codec_runner_sw_aac" ]
+  component_name = "codec_runner_sw_aac"
+}
+
+fuchsia_component("codec_runner_sw_ffmpeg_v2") {
+  manifest = "codecs/meta/codec_runner_sw_ffmpeg.cml"
+  deps = [ "//src/media/codec/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg" ]
+  component_name = "codec_runner_sw_ffmpeg"
 }
