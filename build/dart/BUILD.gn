@@ -104,14 +104,27 @@ if (current_toolchain == default_toolchain) {
 
 python_host_test("gen_reference_docs_test") {
   main_source = "gen_reference_docs_test.py"
-  sources = [ "gen_reference_docs.py" ]
+  sources = [
+    "gen_reference_docs.py",
+    "generate_dart_toc.py",
+  ]
   libraries = [ "//third_party/pyyaml:yaml" ]
+}
+
+python_host_test("generate_dart_toc_test") {
+  main_source = "generate_dart_toc_test.py"
+  sources = [ "generate_dart_toc.py" ]
+  libraries = [
+    "//third_party/pyyaml:yaml",
+    "//third_party/python/parameterized/parameterized",
+  ]
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":gen_reference_docs_test($host_toolchain)",
+    ":generate_dart_toc_test($host_toolchain)",
     "tests",
   ]
 }
