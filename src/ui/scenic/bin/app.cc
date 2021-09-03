@@ -96,7 +96,6 @@ scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
   }
 
   std::string config_string;
-  std::string flatland_buffer_collection_import_mode_str;
   if (files::ReadFileToString("/config/data/scenic_config", &config_string)) {
     FX_LOGS(INFO) << "Found config file at /config/data/scenic_config";
     rapidjson::Document document;
@@ -140,9 +139,8 @@ scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
   FX_LOGS(INFO) << "enable_allocator_for_flatland: " << values.enable_allocator_for_flatland;
   FX_LOGS(INFO) << "Scenic pointer auto focus: " << values.pointer_auto_focus_on;
   FX_LOGS(INFO) << "flatland_buffer_collection_import_mode: "
-                << (flatland_buffer_collection_import_mode_str.empty()
-                        ? "attempt_display_constraints"
-                        : flatland_buffer_collection_import_mode_str);
+                << StringFromBufferCollectionImportMode(
+                       values.flatland_buffer_collection_import_mode);
   FX_LOGS(INFO) << "Scenic i_can_haz_display_id: " << values.i_can_haz_display_id.value_or(0);
 
   return values;

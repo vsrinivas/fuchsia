@@ -41,4 +41,15 @@ BufferCollectionImportMode StringToBufferCollectionImportMode(const std::string&
   return BufferCollectionImportMode::AttemptDisplayConstraints;
 }
 
+const char* StringFromBufferCollectionImportMode(BufferCollectionImportMode mode) {
+  switch (mode) {
+    case BufferCollectionImportMode::EnforceDisplayConstraints:
+      return "enforce_display_constraints";
+    case BufferCollectionImportMode::AttemptDisplayConstraints:
+      return "attempt_display_constraints";
+    case BufferCollectionImportMode::RendererOnly:
+      return "renderer_only";
+  }
+}
+
 }  // namespace flatland

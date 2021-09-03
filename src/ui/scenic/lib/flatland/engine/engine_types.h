@@ -74,6 +74,8 @@ enum class BufferCollectionImportMode {
 
 BufferCollectionImportMode StringToBufferCollectionImportMode(const std::string& str);
 
+const char* StringFromBufferCollectionImportMode(BufferCollectionImportMode mode);
+
 }  // namespace flatland
 
 #endif  // SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_TYPES_H_
