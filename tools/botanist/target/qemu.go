@@ -310,12 +310,9 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	qemuCmd.AddKernelArg("kernel.halt-on-panic=true")
 	// Print a message if `dm poweroff` times out.
 	qemuCmd.AddKernelArg("devmgr.suspend-timeout-debug=true")
-	// Disable kernel lockup detector in emulated environments to prevent false alarms from
-	// potentially oversubscribed hosts.
-	qemuCmd.AddKernelArg("kernel.lockup-detector.critical-section-threshold-ms=0")
+	// Disable kernel lockup detector fatal thresholds in emulated environments to
+	// prevent false alarms from potentially oversubscribed hosts.
 	qemuCmd.AddKernelArg("kernel.lockup-detector.critical-section-fatal-threshold-ms=0")
-	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-period-ms=0")
-	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-age-threshold-ms=0")
 	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=0")
 	// Do not print colors.
 	qemuCmd.AddKernelArg("TERM=dumb")
