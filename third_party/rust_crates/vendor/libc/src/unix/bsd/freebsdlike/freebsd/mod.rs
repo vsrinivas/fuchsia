@@ -10,13 +10,19 @@ pub type fsblkcnt_t = u64;
 pub type fsfilcnt_t = u64;
 pub type idtype_t = ::c_uint;
 
-pub type key_t = ::c_long;
 pub type msglen_t = ::c_ulong;
 pub type msgqnum_t = ::c_ulong;
+
+pub type cpulevel_t = ::c_int;
+pub type cpuwhich_t = ::c_int;
 
 pub type mqd_t = *mut ::c_void;
 pub type posix_spawnattr_t = *mut ::c_void;
 pub type posix_spawn_file_actions_t = *mut ::c_void;
+
+pub type pthread_spinlock_t = *mut __c_anonymous_pthread_spinlock;
+pub type pthread_barrierattr_t = *mut __c_anonymous_pthread_barrierattr;
+pub type pthread_barrier_t = *mut __c_anonymous_pthread_barrier;
 
 s! {
     pub struct aiocb {
@@ -65,16 +71,6 @@ s! {
         data: [u32; 4],
     }
 
-    pub struct ipc_perm {
-        pub cuid: ::uid_t,
-        pub cgid: ::gid_t,
-        pub uid: ::uid_t,
-        pub gid: ::gid_t,
-        pub mode: ::mode_t,
-        pub seq: ::c_ushort,
-        pub key: ::key_t,
-    }
-
     pub struct msqid_ds {
         pub msg_perm: ::ipc_perm,
         __unused1: *mut ::c_void,
@@ -109,6 +105,11 @@ s! {
         pub sc_groups: [::gid_t; 1],
     }
 
+    pub struct accept_filter_arg {
+        pub af_name: [::c_char; 16],
+        af_arg: [[::c_char; 10]; 24],
+    }
+
     pub struct ptrace_vm_entry {
         pub pve_entry: ::c_int,
         pub pve_timestamp: ::c_int,
@@ -120,6 +121,122 @@ s! {
         pub pve_fileid: ::c_long,
         pub pve_fsid: u32,
         pub pve_path: *mut ::c_char,
+    }
+
+    pub struct cpuset_t {
+        #[cfg(target_pointer_width = "64")]
+        __bits: [::c_long; 4],
+        #[cfg(target_pointer_width = "32")]
+        __bits: [::c_long; 8],
+    }
+
+    pub struct cap_rights_t {
+        cr_rights: [u64; 2],
+    }
+
+    pub struct umutex {
+        m_owner: ::lwpid_t,
+        m_flags: u32,
+        m_ceilings: [u32; 2],
+        m_rb_link: ::uintptr_t,
+        #[cfg(target_pointer_width = "32")]
+        m_pad: u32,
+        m_spare: [u32; 2],
+
+    }
+
+    pub struct ucond {
+        c_has_waiters: u32,
+        c_flags: u32,
+        c_clockid: u32,
+        c_spare: [u32; 1],
+    }
+
+    pub struct __c_anonymous_pthread_spinlock {
+        s_clock: umutex,
+    }
+
+    pub struct __c_anonymous_pthread_barrierattr {
+        pshared: ::c_int,
+    }
+
+    pub struct __c_anonymous_pthread_barrier {
+        b_lock: umutex,
+        b_cv: ucond,
+        b_cycle: i64,
+        b_count: ::c_int,
+        b_waiters: ::c_int,
+        b_refcount: ::c_int,
+        b_destroying: ::c_int,
+    }
+
+    pub struct kinfo_vmentry {
+        pub kve_structsize: ::c_int,
+        pub kve_type: ::c_int,
+        pub kve_start: u64,
+        pub kve_end: u64,
+        pub kve_offset: u64,
+        pub kve_vn_fileid: u64,
+        #[cfg(not(freebsd11))]
+        pub kve_vn_fsid_freebsd11: u32,
+        #[cfg(freebsd11)]
+        pub kve_vn_fsid: u32,
+        pub kve_flags: ::c_int,
+        pub kve_resident: ::c_int,
+        pub kve_private_resident: ::c_int,
+        pub kve_protection: ::c_int,
+        pub kve_ref_count: ::c_int,
+        pub kve_shadow_count: ::c_int,
+        pub kve_vn_type: ::c_int,
+        pub kve_vn_size: u64,
+        #[cfg(not(freebsd11))]
+        pub kve_vn_rdev_freebsd11: u32,
+        #[cfg(freebsd11)]
+        pub kve_vn_rdev: u32,
+        pub kve_vn_mode: u16,
+        pub kve_status: u16,
+        #[cfg(not(freebsd11))]
+        pub kve_vn_fsid: u64,
+        #[cfg(not(freebsd11))]
+        pub kve_vn_rdev: u64,
+        #[cfg(not(freebsd11))]
+        _kve_is_spare: [::c_int; 8],
+        #[cfg(freebsd11)]
+        _kve_is_spare: [::c_int; 12],
+        pub kve_path: [[::c_char; 32]; 32],
+    }
+
+    pub struct kinfo_proc {
+        __pad0: [[::uintptr_t; 17]; 8],
+    }
+
+    pub struct filestat {
+        fs_type: ::c_int,
+        fs_flags: ::c_int,
+        fs_fflags: ::c_int,
+        fs_uflags: ::c_int,
+        fs_fd: ::c_int,
+        fs_ref_count: ::c_int,
+        fs_offset: ::off_t,
+        fs_typedep: *mut ::c_void,
+        fs_path: *mut ::c_char,
+        next: *mut filestat,
+        fs_cap_rights: cap_rights_t,
+    }
+
+    pub struct filestat_list {
+        stqh_first: *mut filestat,
+        stqh_last: *mut *mut filestat,
+    }
+
+    pub struct procstat {
+        tpe: ::c_int,
+        kd: ::uintptr_t,
+        vmentries: *mut ::c_void,
+        files: *mut ::c_void,
+        argv: *mut ::c_void,
+        envv: *mut ::c_void,
+        core: ::uintptr_t,
     }
 }
 
@@ -181,6 +298,17 @@ s_no_extra_traits! {
         #[cfg(target_pointer_width = "64")]
         __unused1: ::c_int,
         __unused2: [::c_long; 7]
+    }
+
+    #[cfg(libc_union)]
+    pub union __c_anonymous_elf32_auxv_union {
+        pub a_val: ::c_int,
+    }
+
+    pub struct Elf32_Auxinfo {
+        pub a_type: ::c_int,
+        #[cfg(libc_union)]
+        pub a_un: __c_anonymous_elf32_auxv_union,
     }
 }
 
@@ -402,6 +530,53 @@ cfg_if! {
                 self.sigev_notify_thread_id.hash(state);
             }
         }
+        #[cfg(libc_union)]
+        impl PartialEq for __c_anonymous_elf32_auxv_union {
+            fn eq(&self, other: &__c_anonymous_elf32_auxv_union) -> bool {
+                unsafe { self.a_val == other.a_val}
+            }
+        }
+        #[cfg(libc_union)]
+        impl Eq for __c_anonymous_elf32_auxv_union {}
+        #[cfg(libc_union)]
+        impl ::fmt::Debug for __c_anonymous_elf32_auxv_union {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("a_val")
+                    .field("a_val", unsafe { &self.a_val })
+                    .finish()
+            }
+        }
+        #[cfg(not(libc_union))]
+        impl PartialEq for Elf32_Auxinfo {
+            fn eq(&self, other: &Elf32_Auxinfo) -> bool {
+                self.a_type == other.a_type
+            }
+        }
+        #[cfg(libc_union)]
+        impl PartialEq for Elf32_Auxinfo {
+            fn eq(&self, other: &Elf32_Auxinfo) -> bool {
+                self.a_type == other.a_type
+                    && self.a_un == other.a_un
+            }
+        }
+        impl Eq for Elf32_Auxinfo {}
+        #[cfg(not(libc_union))]
+        impl ::fmt::Debug for Elf32_Auxinfo {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("Elf32_Auxinfo")
+                    .field("a_type", &self.a_type)
+                    .finish()
+            }
+        }
+        #[cfg(libc_union)]
+        impl ::fmt::Debug for Elf32_Auxinfo {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("Elf32_Auxinfo")
+                    .field("a_type", &self.a_type)
+                    .field("a_un", &self.a_un)
+                    .finish()
+            }
+        }
     }
 }
 
@@ -448,6 +623,8 @@ pub const Q_GETQUOTA: ::c_int = 0x700;
 pub const Q_SETQUOTA: ::c_int = 0x800;
 
 pub const MAP_GUARD: ::c_int = 0x00002000;
+pub const MAP_EXCL: ::c_int = 0x00004000;
+pub const MAP_ALIGNED_SUPER: ::c_int = 1 << 24;
 
 pub const POSIX_FADV_NORMAL: ::c_int = 0;
 pub const POSIX_FADV_RANDOM: ::c_int = 1;
@@ -692,6 +869,16 @@ pub const JAIL_SYS_DISABLE: ::c_int = 0;
 pub const JAIL_SYS_NEW: ::c_int = 1;
 pub const JAIL_SYS_INHERIT: ::c_int = 2;
 
+pub const MNT_ACLS: ::c_int = 0x08000000;
+pub const MNT_BYFSID: ::c_int = 0x08000000;
+pub const MNT_GJOURNAL: ::c_int = 0x02000000;
+pub const MNT_MULTILABEL: ::c_int = 0x04000000;
+pub const MNT_NFS4ACLS: ::c_int = 0x00000010;
+pub const MNT_SNAPSHOT: ::c_int = 0x01000000;
+pub const MNT_UNION: ::c_int = 0x00000020;
+pub const MNT_EXPUBLIC: ::c_int = 0x20000000;
+pub const MNT_NONBUSY: ::c_int = 0x04000000;
+
 pub const SO_BINTIME: ::c_int = 0x2000;
 pub const SO_NO_OFFLOAD: ::c_int = 0x4000;
 pub const SO_NO_DDP: ::c_int = 0x8000;
@@ -743,6 +930,21 @@ pub const PTRACE_FORK: ::c_int = 0x0008;
 pub const PTRACE_LWP: ::c_int = 0x0010;
 pub const PTRACE_VFORK: ::c_int = 0x0020;
 pub const PTRACE_DEFAULT: ::c_int = PTRACE_EXEC;
+
+pub const PROC_SPROTECT: ::c_int = 1;
+pub const PROC_REAP_ACQUIRE: ::c_int = 2;
+pub const PROC_REAP_RELEASE: ::c_int = 3;
+pub const PROC_REAP_STATUS: ::c_int = 4;
+pub const PROC_REAP_GETPIDS: ::c_int = 5;
+pub const PROC_REAP_KILL: ::c_int = 6;
+pub const PROC_TRACE_CTL: ::c_int = 7;
+pub const PROC_TRACE_STATUS: ::c_int = 8;
+pub const PROC_TRAPCAP_CTL: ::c_int = 9;
+pub const PROC_TRAPCAP_STATUS: ::c_int = 10;
+pub const PROC_PDEATHSIG_CTL: ::c_int = 11;
+pub const PROC_PDEATHSIG_STATUS: ::c_int = 12;
+pub const PROC_STACKGAP_CTL: ::c_int = 17;
+pub const PROC_STACKGAP_STATUS: ::c_int = 18;
 
 pub const AF_SLOW: ::c_int = 33;
 pub const AF_SCLUSTER: ::c_int = 34;
@@ -1069,22 +1271,8 @@ pub const NET_RT_IFMALIST: ::c_int = 4;
 pub const NET_RT_IFLISTL: ::c_int = 5;
 
 // System V IPC
-pub const IPC_PRIVATE: ::key_t = 0;
-pub const IPC_CREAT: ::c_int = 0o1000;
-pub const IPC_EXCL: ::c_int = 0o2000;
-pub const IPC_NOWAIT: ::c_int = 0o4000;
-pub const IPC_RMID: ::c_int = 0;
-pub const IPC_SET: ::c_int = 1;
-pub const IPC_STAT: ::c_int = 2;
 pub const IPC_INFO: ::c_int = 3;
-pub const IPC_R: ::c_int = 0o400;
-pub const IPC_W: ::c_int = 0o200;
-pub const IPC_M: ::c_int = 0o10000;
 pub const MSG_NOERROR: ::c_int = 0o10000;
-pub const SHM_RDONLY: ::c_int = 0o10000;
-pub const SHM_RND: ::c_int = 0o20000;
-pub const SHM_R: ::c_int = 0o400;
-pub const SHM_W: ::c_int = 0o200;
 pub const SHM_LOCK: ::c_int = 11;
 pub const SHM_UNLOCK: ::c_int = 12;
 pub const SHM_STAT: ::c_int = 13;
@@ -1169,6 +1357,23 @@ pub const AT_SYMLINK_NOFOLLOW: ::c_int = 0x200;
 pub const AT_SYMLINK_FOLLOW: ::c_int = 0x400;
 pub const AT_REMOVEDIR: ::c_int = 0x800;
 
+pub const AT_NULL: ::c_int = 0;
+pub const AT_IGNORE: ::c_int = 1;
+pub const AT_EXECFD: ::c_int = 2;
+pub const AT_PHDR: ::c_int = 3;
+pub const AT_PHENT: ::c_int = 4;
+pub const AT_PHNUM: ::c_int = 5;
+pub const AT_PAGESZ: ::c_int = 6;
+pub const AT_BASE: ::c_int = 7;
+pub const AT_FLAGS: ::c_int = 8;
+pub const AT_ENTRY: ::c_int = 9;
+pub const AT_NOTELF: ::c_int = 10;
+pub const AT_UID: ::c_int = 11;
+pub const AT_EUID: ::c_int = 12;
+pub const AT_GID: ::c_int = 13;
+pub const AT_EGID: ::c_int = 14;
+pub const AT_EXECPATH: ::c_int = 15;
+
 pub const TABDLY: ::tcflag_t = 0x00000004;
 pub const TAB0: ::tcflag_t = 0x00000000;
 pub const TAB3: ::tcflag_t = 0x00000004;
@@ -1213,6 +1418,25 @@ pub const F_READAHEAD: ::c_int = 15;
 pub const F_RDAHEAD: ::c_int = 16;
 pub const F_DUP2FD_CLOEXEC: ::c_int = 18;
 
+// For realhostname* api
+pub const HOSTNAME_FOUND: ::c_int = 0;
+pub const HOSTNAME_INCORRECTNAME: ::c_int = 1;
+pub const HOSTNAME_INVALIDADDR: ::c_int = 2;
+pub const HOSTNAME_INVALIDNAME: ::c_int = 3;
+
+// For rfork
+pub const RFFDG: ::c_int = 4;
+pub const RFPROC: ::c_int = 16;
+pub const RFMEM: ::c_int = 32;
+pub const RFNOWAIT: ::c_int = 64;
+pub const RFCFDG: ::c_int = 4096;
+pub const RFTHREAD: ::c_int = 8192;
+pub const RFLINUXTHPN: ::c_int = 65536;
+pub const RFTSIGZMB: ::c_int = 524288;
+pub const RFSPAWN: ::c_int = 2147483648;
+
+pub const MALLOCX_ZERO: ::c_int = 0x40;
+
 const_fn! {
     {const} fn _ALIGN(p: usize) -> usize {
         (p + _ALIGNBYTES) & !_ALIGNBYTES
@@ -1252,6 +1476,18 @@ f! {
             as ::c_uint
     }
 
+    pub fn MALLOCX_ALIGN(lg: ::c_uint) -> ::c_int {
+        ffsl(lg as ::c_long - 1)
+    }
+
+    pub {const} fn MALLOCX_TCACHE(tc: ::c_int) -> ::c_int {
+        (tc + 2) << 8 as ::c_int
+    }
+
+    pub {const} fn MALLOCX_ARENA(a: ::c_int) -> ::c_int {
+        (a + 1) << 20 as ::c_int
+    }
+
     pub fn SOCKCREDSIZE(ngrps: usize) -> usize {
         let ngrps = if ngrps > 0 {
             ngrps - 1
@@ -1263,6 +1499,38 @@ f! {
 
     pub fn uname(buf: *mut ::utsname) -> ::c_int {
         __xuname(256, buf as *mut ::c_void)
+    }
+
+    pub fn CPU_ZERO(cpuset: &mut cpuset_t) -> () {
+        for slot in cpuset.__bits.iter_mut() {
+            *slot = 0;
+        }
+    }
+
+    pub fn CPU_FILL(cpuset: &mut cpuset_t) -> () {
+        for slot in cpuset.__bits.iter_mut() {
+            *slot = !0;
+        }
+    }
+
+    pub fn CPU_SET(cpu: usize, cpuset: &mut cpuset_t) -> () {
+        let bitset_bits = ::mem::size_of::<::c_long>();
+        let (idx, offset) = (cpu / bitset_bits, cpu % bitset_bits);
+        cpuset.__bits[idx] |= 1 << offset;
+        ()
+    }
+
+    pub fn CPU_CLR(cpu: usize, cpuset: &mut cpuset_t) -> () {
+        let bitset_bits = ::mem::size_of::<::c_long>();
+        let (idx, offset) = (cpu / bitset_bits, cpu % bitset_bits);
+        cpuset.__bits[idx] &= !(1 << offset);
+        ()
+    }
+
+    pub fn CPU_ISSET(cpu: usize, cpuset: &mut cpuset_t) -> bool {
+        let bitset_bits = ::mem::size_of::<::c_long>();
+        let (idx, offset) = (cpu / bitset_bits, cpu % bitset_bits);
+        0 != cpuset.__bits[idx] & (1 << offset)
     }
 }
 
@@ -1497,6 +1765,24 @@ extern "C" {
         newfd: ::c_int,
     ) -> ::c_int;
 
+    pub fn pthread_getthreadid_np() -> ::c_int;
+    pub fn pthread_getaffinity_np(
+        td: ::pthread_t,
+        cpusetsize: ::size_t,
+        cpusetp: *mut cpuset_t,
+    ) -> ::c_int;
+    pub fn pthread_setaffinity_np(
+        td: ::pthread_t,
+        cpusetsize: ::size_t,
+        cpusetp: *const cpuset_t,
+    ) -> ::c_int;
+
+    pub fn pthread_spin_init(lock: *mut pthread_spinlock_t, pshared: ::c_int) -> ::c_int;
+    pub fn pthread_spin_destroy(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_lock(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_trylock(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_unlock(lock: *mut pthread_spinlock_t) -> ::c_int;
+
     #[cfg_attr(all(target_os = "freebsd", freebsd11), link_name = "statfs@FBSD_1.0")]
     pub fn statfs(path: *const ::c_char, buf: *mut statfs) -> ::c_int;
     #[cfg_attr(all(target_os = "freebsd", freebsd11), link_name = "fstatfs@FBSD_1.0")]
@@ -1526,6 +1812,80 @@ extern "C" {
     ) -> *mut ::c_void;
 
     pub fn nmount(iov: *mut ::iovec, niov: ::c_uint, flags: ::c_int) -> ::c_int;
+    pub fn setproctitle(fmt: *const ::c_char, ...);
+    pub fn rfork(flags: ::c_int) -> ::c_int;
+    pub fn cpuset_getaffinity(
+        level: cpulevel_t,
+        which: cpuwhich_t,
+        id: ::id_t,
+        setsize: ::size_t,
+        mask: *mut cpuset_t,
+    ) -> ::c_int;
+    pub fn cpuset_setaffinity(
+        level: cpulevel_t,
+        which: cpuwhich_t,
+        id: ::id_t,
+        setsize: ::size_t,
+        mask: *const cpuset_t,
+    ) -> ::c_int;
+    pub fn cap_enter() -> ::c_int;
+    pub fn cap_getmode(modep: *mut ::c_uint) -> ::c_int;
+    pub fn __cap_rights_init(version: ::c_int, rights: *mut cap_rights_t, ...)
+        -> *mut cap_rights_t;
+    pub fn __cap_rights_set(rights: *mut cap_rights_t, ...) -> *mut cap_rights_t;
+    pub fn __cap_rights_clear(rights: *mut cap_rights_t, ...) -> *mut cap_rights_t;
+    pub fn __cap_rights_is_set(rights: *const cap_rights_t, ...) -> bool;
+    pub fn cap_rights_is_valid(rights: *const cap_rights_t) -> bool;
+    pub fn cap_rights_limit(fd: ::c_int, rights: *const cap_rights_t) -> ::c_int;
+    pub fn cap_rights_merge(dst: *mut cap_rights_t, src: *const cap_rights_t) -> *mut cap_rights_t;
+    pub fn cap_rights_remove(dst: *mut cap_rights_t, src: *const cap_rights_t)
+        -> *mut cap_rights_t;
+    pub fn cap_rights_contains(big: *const cap_rights_t, little: *const cap_rights_t) -> bool;
+
+    pub fn reallocarray(ptr: *mut ::c_void, nmemb: ::size_t, size: ::size_t) -> *mut ::c_void;
+
+    pub fn ffs(value: ::c_int) -> ::c_int;
+    pub fn ffsl(value: ::c_long) -> ::c_int;
+    pub fn ffsll(value: ::c_longlong) -> ::c_int;
+    pub fn fls(value: ::c_int) -> ::c_int;
+    pub fn flsl(value: ::c_long) -> ::c_int;
+    pub fn flsll(value: ::c_longlong) -> ::c_int;
+    pub fn malloc_usable_size(ptr: *const ::c_void) -> ::size_t;
+    pub fn malloc_stats_print(
+        write_cb: unsafe extern "C" fn(*mut ::c_void, *const ::c_char),
+        cbopaque: *mut ::c_void,
+        opt: *const ::c_char,
+    );
+    pub fn mallctl(
+        name: *const ::c_char,
+        oldp: *mut ::c_void,
+        oldlenp: *mut ::size_t,
+        newp: *mut ::c_void,
+        newlen: ::size_t,
+    ) -> ::c_int;
+    pub fn mallctlnametomib(
+        name: *const ::c_char,
+        mibp: *mut ::size_t,
+        miplen: *mut ::size_t,
+    ) -> ::c_int;
+    pub fn mallctlbymib(
+        mib: *const ::size_t,
+        mible: ::size_t,
+        oldp: *mut ::c_void,
+        oldlenp: *mut ::size_t,
+        newp: *mut ::c_void,
+        newlen: ::size_t,
+    ) -> ::c_int;
+    pub fn mallocx(size: ::size_t, flags: ::c_int) -> *mut ::c_void;
+    pub fn rallocx(ptr: *mut ::c_void, size: ::size_t, flags: ::c_int) -> *mut ::c_void;
+    pub fn xallocx(ptr: *mut ::c_void, size: ::size_t, extra: ::size_t, flags: ::c_int)
+        -> ::size_t;
+    pub fn sallocx(ptr: *const ::c_void, flags: ::c_int) -> ::size_t;
+    pub fn dallocx(ptr: *mut ::c_void, flags: ::c_int);
+    pub fn sdallocx(ptr: *mut ::c_void, size: ::size_t, flags: ::c_int);
+    pub fn nallocx(size: ::size_t, flags: ::c_int) -> ::size_t;
+
+    pub fn procctl(idtype: ::idtype_t, id: ::id_t, cmd: ::c_int, data: *mut ::c_void) -> ::c_int;
 }
 
 #[link(name = "util")]
@@ -1538,6 +1898,43 @@ extern "C" {
         string: *const ::c_char,
         attrnamespace: *mut ::c_int,
     ) -> ::c_int;
+    pub fn realhostname(host: *mut ::c_char, hsize: ::size_t, ip: *const ::in_addr) -> ::c_int;
+    pub fn realhostname_sa(
+        host: *mut ::c_char,
+        hsize: ::size_t,
+        addr: *mut ::sockaddr,
+        addrlen: ::c_int,
+    ) -> ::c_int;
+
+    pub fn kld_isloaded(name: *const ::c_char) -> ::c_int;
+    pub fn kld_load(name: *const ::c_char) -> ::c_int;
+
+    pub fn kinfo_getvmmap(pid: ::pid_t, cntp: *mut ::c_int) -> *mut kinfo_vmentry;
+}
+
+#[link(name = "procstat")]
+extern "C" {
+    pub fn procstat_open_sysctl() -> *mut procstat;
+    pub fn procstat_getfiles(
+        procstat: *mut procstat,
+        kp: *mut kinfo_proc,
+        mmapped: ::c_int,
+    ) -> *mut filestat_list;
+    pub fn procstat_freefiles(procstat: *mut procstat, head: *mut filestat_list);
+    pub fn procstat_getprocs(
+        procstat: *mut procstat,
+        what: ::c_int,
+        arg: ::c_int,
+        count: *mut ::c_uint,
+    ) -> *mut kinfo_proc;
+    pub fn procstat_freeprocs(procstat: *mut procstat, p: *mut kinfo_proc);
+    pub fn procstat_getvmmap(
+        procstat: *mut procstat,
+        kp: *mut kinfo_proc,
+        count: *mut ::c_uint,
+    ) -> *mut kinfo_vmentry;
+    pub fn procstat_freevmmap(procstat: *mut procstat, vmmap: *mut kinfo_vmentry);
+    pub fn procstat_close(procstat: *mut procstat);
 }
 
 cfg_if! {
@@ -1571,6 +1968,9 @@ cfg_if! {
     } else if #[cfg(target_arch = "powerpc64")] {
         mod powerpc64;
         pub use self::powerpc64::*;
+    } else if #[cfg(target_arch = "powerpc")] {
+        mod powerpc;
+        pub use self::powerpc::*;
     } else {
         // Unknown target_arch
     }

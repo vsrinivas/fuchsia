@@ -2,6 +2,7 @@ pub type sa_family_t = u16;
 pub type speed_t = ::c_uint;
 pub type tcflag_t = ::c_uint;
 pub type clockid_t = ::c_int;
+pub type timer_t = *mut ::c_void;
 pub type key_t = ::c_int;
 pub type id_t = ::c_uint;
 
@@ -546,6 +547,9 @@ pub const PROT_READ: ::c_int = 1;
 pub const PROT_WRITE: ::c_int = 2;
 pub const PROT_EXEC: ::c_int = 4;
 
+pub const XATTR_CREATE: ::c_int = 0x1;
+pub const XATTR_REPLACE: ::c_int = 0x2;
+
 cfg_if! {
     if #[cfg(not(target_env = "uclibc"))] {
         pub const LC_CTYPE: ::c_int = 0;
@@ -602,6 +606,7 @@ pub const MS_RELATIME: ::c_ulong = 0x200000;
 pub const MS_KERNMOUNT: ::c_ulong = 0x400000;
 pub const MS_I_VERSION: ::c_ulong = 0x800000;
 pub const MS_STRICTATIME: ::c_ulong = 0x1000000;
+pub const MS_LAZYTIME: ::c_ulong = 0x2000000;
 pub const MS_ACTIVE: ::c_ulong = 0x40000000;
 pub const MS_MGC_VAL: ::c_ulong = 0xc0ed0000;
 pub const MS_MGC_MSK: ::c_ulong = 0xffff0000;
@@ -957,6 +962,43 @@ pub const TCP_WINDOW_CLAMP: ::c_int = 10;
 pub const TCP_INFO: ::c_int = 11;
 pub const TCP_QUICKACK: ::c_int = 12;
 pub const TCP_CONGESTION: ::c_int = 13;
+pub const TCP_MD5SIG: ::c_int = 14;
+cfg_if! {
+    if #[cfg(all(target_os = "linux", any(target_env = "gnu", target_env = "musl")))] {
+        // WARN: deprecated
+        pub const TCP_COOKIE_TRANSACTIONS: ::c_int = 15;
+    }
+}
+pub const TCP_THIN_LINEAR_TIMEOUTS: ::c_int = 16;
+pub const TCP_THIN_DUPACK: ::c_int = 17;
+pub const TCP_USER_TIMEOUT: ::c_int = 18;
+pub const TCP_REPAIR: ::c_int = 19;
+pub const TCP_REPAIR_QUEUE: ::c_int = 20;
+pub const TCP_QUEUE_SEQ: ::c_int = 21;
+pub const TCP_REPAIR_OPTIONS: ::c_int = 22;
+pub const TCP_FASTOPEN: ::c_int = 23;
+pub const TCP_TIMESTAMP: ::c_int = 24;
+pub const TCP_NOTSENT_LOWAT: ::c_int = 25;
+pub const TCP_CC_INFO: ::c_int = 26;
+pub const TCP_SAVE_SYN: ::c_int = 27;
+pub const TCP_SAVED_SYN: ::c_int = 28;
+cfg_if! {
+    if #[cfg(not(target_os = "emscripten"))] {
+        // NOTE: emscripten doesn't support these options yet.
+
+        pub const TCP_REPAIR_WINDOW: ::c_int = 29;
+        pub const TCP_FASTOPEN_CONNECT: ::c_int = 30;
+        pub const TCP_ULP: ::c_int = 31;
+        pub const TCP_MD5SIG_EXT: ::c_int = 32;
+        pub const TCP_FASTOPEN_KEY: ::c_int = 33;
+        pub const TCP_FASTOPEN_NO_COOKIE: ::c_int = 34;
+        pub const TCP_ZEROCOPY_RECEIVE: ::c_int = 35;
+        pub const TCP_INQ: ::c_int = 36;
+        pub const TCP_CM_INQ: ::c_int = TCP_INQ;
+        // NOTE: Some CI images doesn't have this option yet.
+        // pub const TCP_TX_DELAY: ::c_int = 37;
+    }
+}
 
 pub const SO_DEBUG: ::c_int = 1;
 
@@ -1265,6 +1307,7 @@ pub const ARPHRD_ADAPT: u16 = 264;
 pub const ARPHRD_ROSE: u16 = 270;
 pub const ARPHRD_X25: u16 = 271;
 pub const ARPHRD_HWX25: u16 = 272;
+pub const ARPHRD_CAN: u16 = 280;
 pub const ARPHRD_PPP: u16 = 512;
 pub const ARPHRD_CISCO: u16 = 513;
 pub const ARPHRD_HDLC: u16 = ARPHRD_CISCO;
@@ -1354,7 +1397,7 @@ f! {
         return
     }
 
-    pub fn FD_ISSET(fd: ::c_int, set: *mut fd_set) -> bool {
+    pub fn FD_ISSET(fd: ::c_int, set: *const fd_set) -> bool {
         let fd = fd as usize;
         let size = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         return ((*set).fds_bits[fd / size] & (1 << (fd % size))) != 0
@@ -1375,6 +1418,14 @@ f! {
 }
 
 safe_f! {
+    pub fn SIGRTMAX() -> ::c_int {
+        unsafe { __libc_current_sigrtmax() }
+    }
+
+    pub fn SIGRTMIN() -> ::c_int {
+        unsafe { __libc_current_sigrtmin() }
+    }
+
     pub {const} fn WIFSTOPPED(status: ::c_int) -> bool {
         (status & 0xff) == 0x7f
     }
@@ -1437,6 +1488,11 @@ safe_f! {
 }
 
 extern "C" {
+    #[doc(hidden)]
+    pub fn __libc_current_sigrtmax() -> ::c_int;
+    #[doc(hidden)]
+    pub fn __libc_current_sigrtmin() -> ::c_int;
+
     pub fn sem_destroy(sem: *mut sem_t) -> ::c_int;
     pub fn sem_init(sem: *mut sem_t, pshared: ::c_int, value: ::c_uint) -> ::c_int;
     pub fn fdatasync(fd: ::c_int) -> ::c_int;

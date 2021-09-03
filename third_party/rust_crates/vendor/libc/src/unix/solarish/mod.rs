@@ -25,6 +25,8 @@ pub type wchar_t = ::c_int;
 pub type nfds_t = ::c_ulong;
 pub type projid_t = ::c_int;
 pub type zoneid_t = ::c_int;
+pub type psetid_t = ::c_int;
+pub type processorid_t = ::c_int;
 
 pub type suseconds_t = ::c_long;
 pub type off_t = ::c_long;
@@ -988,6 +990,9 @@ pub const FILENAME_MAX: ::c_uint = 1024;
 pub const L_tmpnam: ::c_uint = 25;
 pub const TMP_MAX: ::c_uint = 17576;
 
+pub const GRND_NONBLOCK: ::c_int = 0x0001;
+pub const GRND_RANDOM: ::c_int = 0x0002;
+
 pub const O_RDONLY: ::c_int = 0;
 pub const O_WRONLY: ::c_int = 1;
 pub const O_RDWR: ::c_int = 2;
@@ -1111,6 +1116,15 @@ pub const P_ZONEID: idtype_t = 12;
 pub const P_CTID: idtype_t = 13;
 pub const P_CPUID: idtype_t = 14;
 pub const P_PSETID: idtype_t = 15;
+
+pub const PS_NONE: ::c_int = -1;
+pub const PS_QUERY: ::c_int = -2;
+pub const PS_MYID: ::c_int = -3;
+pub const PS_SOFT: ::c_int = -4;
+pub const PS_HARD: ::c_int = -5;
+pub const PS_QUERY_TIME: ::c_int = -6;
+pub const PS_SYSTEM: ::c_int = 1;
+pub const PS_PRIVATE: ::c_int = 2;
 
 pub const UTIME_OMIT: c_long = -2;
 pub const UTIME_NOW: c_long = -1;
@@ -2091,6 +2105,14 @@ pub const PRIO_PROCESS: ::c_int = 0;
 pub const PRIO_PGRP: ::c_int = 1;
 pub const PRIO_USER: ::c_int = 2;
 
+pub const SCHED_OTHER: ::c_int = 0;
+pub const SCHED_FIFO: ::c_int = 1;
+pub const SCHED_RR: ::c_int = 2;
+pub const SCHED_SYS: ::c_int = 3;
+pub const SCHED_IA: ::c_int = 4;
+pub const SCHED_FSS: ::c_int = 5;
+pub const SCHED_FX: ::c_int = 6;
+
 // As per sys/socket.h, header alignment must be 8 bytes on SPARC
 // and 4 bytes everywhere else:
 #[cfg(target_arch = "sparc64")]
@@ -2157,7 +2179,7 @@ f! {
         return
     }
 
-    pub fn FD_ISSET(fd: ::c_int, set: *mut fd_set) -> bool {
+    pub fn FD_ISSET(fd: ::c_int, set: *const fd_set) -> bool {
         let bits = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         let fd = fd as usize;
         return ((*set).fds_bits[fd / bits] & (1 << (fd % bits))) != 0
@@ -2227,6 +2249,8 @@ extern "C" {
     pub fn labs(i: ::c_long) -> ::c_long;
     pub fn rand() -> ::c_int;
     pub fn srand(seed: ::c_uint);
+    pub fn getentropy(buf: *mut ::c_void, buflen: ::size_t) -> ::c_int;
+    pub fn getrandom(bbuf: *mut ::c_void, buflen: ::size_t, flags: ::c_uint) -> ::ssize_t;
 
     pub fn gettimeofday(tp: *mut ::timeval, tz: *mut ::c_void) -> ::c_int;
     pub fn settimeofday(tp: *const ::timeval, tz: *const ::c_void) -> ::c_int;
@@ -2234,6 +2258,12 @@ extern "C" {
     pub fn freeifaddrs(ifa: *mut ::ifaddrs);
 
     pub fn stack_getbounds(sp: *mut ::stack_t) -> ::c_int;
+    pub fn getgrouplist(
+        name: *const ::c_char,
+        basegid: ::gid_t,
+        groups: *mut ::gid_t,
+        ngroups: *mut ::c_int,
+    ) -> ::c_int;
     pub fn initgroups(name: *const ::c_char, basegid: ::gid_t) -> ::c_int;
     pub fn setgroups(ngroups: ::c_int, ptr: *const ::gid_t) -> ::c_int;
     pub fn ioctl(fildes: ::c_int, request: ::c_int, ...) -> ::c_int;
@@ -2488,6 +2518,16 @@ extern "C" {
     pub fn sem_open(name: *const ::c_char, oflag: ::c_int, ...) -> *mut sem_t;
     pub fn getgrnam(name: *const ::c_char) -> *mut ::group;
     pub fn pthread_kill(thread: ::pthread_t, sig: ::c_int) -> ::c_int;
+    pub fn sched_get_priority_min(policy: ::c_int) -> ::c_int;
+    pub fn sched_get_priority_max(policy: ::c_int) -> ::c_int;
+    pub fn sched_getparam(pid: ::pid_t, param: *mut sched_param) -> ::c_int;
+    pub fn sched_setparam(pid: ::pid_t, param: *const sched_param) -> ::c_int;
+    pub fn sched_getscheduler(pid: ::pid_t) -> ::c_int;
+    pub fn sched_setscheduler(
+        pid: ::pid_t,
+        policy: ::c_int,
+        param: *const ::sched_param,
+    ) -> ::c_int;
     pub fn sem_unlink(name: *const ::c_char) -> ::c_int;
     pub fn daemon(nochdir: ::c_int, noclose: ::c_int) -> ::c_int;
     #[cfg_attr(
@@ -2607,6 +2647,37 @@ extern "C" {
     pub fn ucred_getpflags(ucred: *const ucred_t, flags: ::c_uint) -> ::c_uint;
 
     pub fn ucred_size() -> ::size_t;
+
+    pub fn pset_create(newpset: *mut ::psetid_t) -> ::c_int;
+    pub fn pset_destroy(pset: ::psetid_t) -> ::c_int;
+    pub fn pset_assign(pset: ::psetid_t, cpu: ::processorid_t, opset: *mut psetid_t) -> ::c_int;
+    pub fn pset_info(
+        pset: ::psetid_t,
+        tpe: *mut ::c_int,
+        numcpus: *mut ::c_uint,
+        cpulist: *mut processorid_t,
+    ) -> ::c_int;
+    pub fn pset_bind(
+        pset: ::psetid_t,
+        idtype: ::idtype_t,
+        id: ::id_t,
+        opset: *mut psetid_t,
+    ) -> ::c_int;
+    pub fn pset_list(pset: *mut psetid_t, numpsets: *mut ::c_uint) -> ::c_int;
+    pub fn pset_setattr(pset: psetid_t, attr: ::c_uint) -> ::c_int;
+    pub fn pset_getattr(pset: psetid_t, attr: *mut ::c_uint) -> ::c_int;
+    pub fn processor_bind(
+        idtype: ::idtype_t,
+        id: ::id_t,
+        new_binding: ::processorid_t,
+        old_binding: *mut processorid_t,
+    ) -> ::c_int;
+    pub fn p_online(processorid: ::processorid_t, flag: ::c_int) -> ::c_int;
+
+    pub fn getexecname() -> *const ::c_char;
+
+    pub fn gethostid() -> ::c_long;
+    pub fn sethostid(hostid: ::c_long) -> ::c_int;
 }
 
 mod compat;

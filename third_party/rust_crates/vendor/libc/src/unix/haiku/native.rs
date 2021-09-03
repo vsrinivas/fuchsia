@@ -61,6 +61,42 @@ e! {
         B_ADD_ON_IMAGE,
         B_SYSTEM_IMAGE
     }
+
+    // kernel/scheduler.h
+    pub enum schduler_mode {
+        SCHEDULER_MODE_LOW_LATENCY,
+        SCHEDULER_MODE_POWER_SAVING,
+    }
+
+    // FindDirectory.h
+    pub enum path_base_directory {
+        B_FIND_PATH_INSTALLATION_LOCATION_DIRECTORY,
+        B_FIND_PATH_ADD_ONS_DIRECTORY,
+        B_FIND_PATH_APPS_DIRECTORY,
+        B_FIND_PATH_BIN_DIRECTORY,
+        B_FIND_PATH_BOOT_DIRECTORY,
+        B_FIND_PATH_CACHE_DIRECTORY,
+        B_FIND_PATH_DATA_DIRECTORY,
+        B_FIND_PATH_DEVELOP_DIRECTORY,
+        B_FIND_PATH_DEVELOP_LIB_DIRECTORY,
+        B_FIND_PATH_DOCUMENTATION_DIRECTORY,
+        B_FIND_PATH_ETC_DIRECTORY,
+        B_FIND_PATH_FONTS_DIRECTORY,
+        B_FIND_PATH_HEADERS_DIRECTORY,
+        B_FIND_PATH_LIB_DIRECTORY,
+        B_FIND_PATH_LOG_DIRECTORY,
+        B_FIND_PATH_MEDIA_NODES_DIRECTORY,
+        B_FIND_PATH_PACKAGES_DIRECTORY,
+        B_FIND_PATH_PREFERENCES_DIRECTORY,
+        B_FIND_PATH_SERVERS_DIRECTORY,
+        B_FIND_PATH_SETTINGS_DIRECTORY,
+        B_FIND_PATH_SOUNDS_DIRECTORY,
+        B_FIND_PATH_SPOOL_DIRECTORY,
+        B_FIND_PATH_TRANSLATORS_DIRECTORY,
+        B_FIND_PATH_VAR_DIRECTORY,
+        B_FIND_PATH_IMAGE_PATH = 1000,
+        B_FIND_PATH_PACKAGE_PATH,
+    }
 }
 
 s! {
@@ -96,29 +132,29 @@ s! {
     }
 
     pub struct team_info {
-        team: team_id,
-        thread_count: i32,
-        image_count: i32,
-        area_count: i32,
-        debugger_nub_thread: thread_id,
-        debugger_nub_port: port_id,
-        argc: i32,
-        args: [::c_char; 64],
-        uid: ::uid_t,
-        gid: ::gid_t
+        pub team: team_id,
+        pub thread_count: i32,
+        pub image_count: i32,
+        pub area_count: i32,
+        pub debugger_nub_thread: thread_id,
+        pub debugger_nub_port: port_id,
+        pub argc: i32,
+        pub args: [::c_char; 64],
+        pub uid: ::uid_t,
+        pub gid: ::gid_t
     }
 
     pub struct sem_info {
-        sem: sem_id,
-        team: team_id,
-        name: [::c_char; B_OS_NAME_LENGTH],
-        count: i32,
-        latest_holder: thread_id
+        pub sem: sem_id,
+        pub team: team_id,
+        pub name: [::c_char; B_OS_NAME_LENGTH],
+        pub count: i32,
+        pub latest_holder: thread_id
     }
 
     pub struct team_usage_info {
-        user_time: bigtime_t,
-        kernel_time: bigtime_t
+        pub user_time: bigtime_t,
+        pub kernel_time: bigtime_t
     }
 
     pub struct thread_info {
@@ -175,34 +211,34 @@ s! {
 
     // kernel/fs_attr.h
     pub struct attr_info {
-        type_: u32,
-        size: ::off_t
+        pub type_: u32,
+        pub size: ::off_t
     }
 
     // kernel/fs_index.h
     pub struct index_info {
-        type_: u32,
-        size: ::off_t,
-        modification_time: ::time_t,
-        creation_time: ::time_t,
-        uid: ::uid_t,
-        gid: ::gid_t
+        pub type_: u32,
+        pub size: ::off_t,
+        pub modification_time: ::time_t,
+        pub creation_time: ::time_t,
+        pub uid: ::uid_t,
+        pub gid: ::gid_t
     }
 
     //kernel/fs_info.h
     pub struct fs_info {
-        dev: ::dev_t,
-        root: ::ino_t,
-        flags: u32,
-        block_size: ::off_t,
-        io_size: ::off_t,
-        total_blocks: ::off_t,
-        free_blocks: ::off_t,
-        total_nodes: ::off_t,
-        free_nodes: ::off_t,
-        device_name: [::c_char; 128],
-        volume_name: [::c_char; B_FILE_NAME_LENGTH],
-        fsh_name: [::c_char; B_OS_NAME_LENGTH]
+        pub dev: ::dev_t,
+        pub root: ::ino_t,
+        pub flags: u32,
+        pub block_size: ::off_t,
+        pub io_size: ::off_t,
+        pub total_blocks: ::off_t,
+        pub free_blocks: ::off_t,
+        pub total_nodes: ::off_t,
+        pub free_nodes: ::off_t,
+        pub device_name: [::c_char; 128],
+        pub volume_name: [::c_char; B_FILE_NAME_LENGTH],
+        pub fsh_name: [::c_char; B_OS_NAME_LENGTH]
     }
 
     // kernel/image.h
@@ -222,6 +258,93 @@ s! {
         pub data_size: i32,
         pub api_version: i32,
         pub abi: i32
+    }
+
+    pub struct __c_anonymous_eax_0 {
+        pub max_eax: u32,
+        pub vendor_id: [::c_char; 12],
+    }
+
+    pub struct __c_anonymous_eax_1 {
+        pub stepping: u32,
+        pub model: u32,
+        pub family: u32,
+        pub tpe: u32,
+        __reserved_0: u32,
+        pub extended_model: u32,
+        pub extended_family: u32,
+        __reserved_1: u32,
+        pub brand_index: u32,
+        pub clflush: u32,
+        pub logical_cpus: u32,
+        pub apic_id: u32,
+        pub features: u32,
+        pub extended_features: u32,
+    }
+
+    pub struct __c_anonymous_eax_2 {
+        pub call_num: u8,
+        pub cache_descriptors: [u8; 15],
+    }
+
+    pub struct __c_anonymous_eax_3 {
+        __reserved: [u32; 2],
+        pub serial_number_high: u32,
+        pub serial_number_low: u32,
+    }
+
+    pub struct __c_anonymous_regs {
+        pub eax: u32,
+        pub ebx: u32,
+        pub edx: u32,
+        pub ecx: u32,
+    }
+}
+
+s_no_extra_traits! {
+    #[cfg(libc_union)]
+    pub union cpuid_info {
+        pub eax_0: __c_anonymous_eax_0,
+        pub eax_1: __c_anonymous_eax_1,
+        pub eax_2: __c_anonymous_eax_2,
+        pub eax_3: __c_anonymous_eax_3,
+        pub as_chars: [::c_char; 16],
+        pub regs: __c_anonymous_regs,
+    }
+}
+
+cfg_if! {
+    if #[cfg(feature = "extra_traits")] {
+        #[cfg(libc_union)]
+        impl PartialEq for cpuid_info {
+            fn eq(&self, other: &cpuid_info) -> bool {
+                unsafe {
+                self.eax_0 == other.eax_0
+                    || self.eax_1 == other.eax_1
+                    || self.eax_2 == other.eax_2
+                    || self.eax_3 == other.eax_3
+                    || self.as_chars == other.as_chars
+                    || self.regs == other.regs
+                }
+            }
+        }
+        #[cfg(libc_union)]
+        impl Eq for cpuid_info {}
+        #[cfg(libc_union)]
+        impl ::fmt::Debug for cpuid_info {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                unsafe {
+                f.debug_struct("cpuid_info")
+                    .field("eax_0", &self.eax_0)
+                    .field("eax_1", &self.eax_1)
+                    .field("eax_2", &self.eax_2)
+                    .field("eax_3", &self.eax_3)
+                    .field("as_chars", &self.as_chars)
+                    .field("regs", &self.regs)
+                    .finish()
+                }
+            }
+        }
     }
 }
 
@@ -744,6 +867,9 @@ extern "C" {
 
     pub fn find_thread(name: *const ::c_char) -> thread_id;
 
+    pub fn get_scheduler_mode() -> i32;
+    pub fn set_scheduler_mode(mode: i32) -> status_t;
+
     pub fn send_data(
         thread: thread_id,
         code: i32,
@@ -786,7 +912,7 @@ extern "C" {
     pub fn debugger(message: *const ::c_char);
     pub fn disable_debugger(state: ::c_int) -> ::c_int;
 
-    // TODO: cpuid_info struct and the get_cpuid() function
+    pub fn get_cpuid(info: *mut cpuid_info, eaxRegister: u32, cpuNum: u32) -> status_t;
 
     pub fn get_system_info(info: *mut system_info) -> status_t;
     pub fn get_cpu_info(firstCPU: u32, cpuCount: u32, info: *mut cpu_info) -> status_t;
@@ -924,6 +1050,13 @@ extern "C" {
         cookie: *mut i32,
         info: *mut image_info,
         size: ::size_t,
+    ) -> status_t;
+    pub fn find_path(
+        codePointer: *const ::c_void,
+        baseDirectory: path_base_directory,
+        subPath: *const ::c_char,
+        pathBuffer: *mut ::c_char,
+        bufferSize: usize,
     ) -> status_t;
 }
 

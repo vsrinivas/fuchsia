@@ -18,9 +18,19 @@ pub type uuid_t = ::uuid;
 pub type fsblkcnt_t = u64;
 pub type fsfilcnt_t = u64;
 pub type idtype_t = ::c_uint;
+pub type shmatt_t = ::c_uint;
 
 pub type mqd_t = ::c_int;
 pub type sem_t = *mut sem;
+
+pub type cpuset_t = cpumask_t;
+pub type cpu_set_t = cpumask_t;
+
+pub type register_t = ::c_long;
+pub type umtx_t = ::c_int;
+pub type pthread_barrierattr_t = ::c_int;
+pub type pthread_barrier_t = ::uintptr_t;
+pub type pthread_spinlock_t = ::uintptr_t;
 
 #[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum sem {}
@@ -180,9 +190,25 @@ s! {
     }
 
     pub struct stack_t {
-        pub ss_sp: *mut ::c_char,
+        pub ss_sp: *mut ::c_void,
         pub ss_size: ::size_t,
         pub ss_flags: ::c_int,
+    }
+
+    pub struct cpumask_t {
+        ary: [u64; 4],
+    }
+
+    pub struct shmid_ds {
+        pub shm_perm: ::ipc_perm,
+        pub shm_segsz: ::size_t,
+        pub shm_lpid: ::pid_t,
+        pub shm_cpid: ::pid_t,
+        pub shm_nattch: ::shmatt_t,
+        pub shm_atime: ::time_t,
+        pub shm_dtime: ::time_t,
+        pub shm_ctime: ::time_t,
+        shm_internal: *mut ::c_void,
     }
 }
 
@@ -204,6 +230,13 @@ s_no_extra_traits! {
         pub ut_unused2: [u8; 16],
     }
 
+    pub struct lastlogx {
+        pub ll_tv: ::timeval,
+        pub ll_line: [::c_char; _UTX_LINESIZE],
+        pub ll_host: [::c_char; _UTX_HOSTSIZE],
+        pub ll_ss: ::sockaddr_storage,
+    }
+
     pub struct dirent {
         pub d_fileno: ::ino_t,
         pub d_namlen: u16,
@@ -214,6 +247,7 @@ s_no_extra_traits! {
     }
 
     pub struct statfs {
+        __spare2: ::c_long,
         pub f_bsize: ::c_long,
         pub f_iosize: ::c_long,
         pub f_blocks: ::c_long,
@@ -223,15 +257,18 @@ s_no_extra_traits! {
         pub f_ffree: ::c_long,
         pub f_fsid: ::fsid_t,
         pub f_owner: ::uid_t,
-        pub f_type: i32,
-        pub f_flags: i32,
+        pub f_type: ::c_int,
+        pub f_flags: ::c_int,
         pub f_syncwrites: ::c_long,
         pub f_asyncwrites: ::c_long,
         pub f_fstypename: [::c_char; 16],
-        pub f_mntonname: [::c_char; 90],
+        pub f_mntonname: [::c_char; 80],
         pub f_syncreads: ::c_long,
         pub f_asyncreads: ::c_long,
-        pub f_mntfromname: [::c_char; 90],
+        __spares1: ::c_short,
+        pub f_mntfromname: [::c_char; 80],
+        __spares2: ::c_short,
+        __spare: [::c_long; 2],
     }
 
     pub struct sigevent {
@@ -245,6 +282,51 @@ s_no_extra_traits! {
         __unused2: ::c_int,
         pub sigev_value: ::sigval,
         __unused3: *mut ::c_void        //actually a function pointer
+    }
+
+    pub struct mcontext_t {
+        pub mc_onstack: register_t,
+        pub mc_rdi: register_t,
+        pub mc_rsi: register_t,
+        pub mc_rdx: register_t,
+        pub mc_rcx: register_t,
+        pub mc_r8: register_t,
+        pub mc_r9: register_t,
+        pub mc_rax: register_t,
+        pub mc_rbx: register_t,
+        pub mc_rbp: register_t,
+        pub mc_r10: register_t,
+        pub mc_r11: register_t,
+        pub mc_r12: register_t,
+        pub mc_r13: register_t,
+        pub mc_r14: register_t,
+        pub mc_r15: register_t,
+        pub mc_xflags: register_t,
+        pub mc_trapno: register_t,
+        pub mc_addr: register_t,
+        pub mc_flags: register_t,
+        pub mc_err: register_t,
+        pub mc_rip: register_t,
+        pub mc_cs: register_t,
+        pub mc_rflags: register_t,
+        pub mc_rsp: register_t,
+        pub mc_ss: register_t,
+        pub mc_len: ::c_uint,
+        pub mc_fpformat: ::c_uint,
+        pub mc_ownedfp: ::c_uint,
+        __reserved: ::c_uint,
+        __unused: [::c_uint; 8],
+        pub mc_fpregs: [[::c_uint; 8]; 32],
+    }
+
+    pub struct ucontext_t {
+        pub uc_sigmask: ::sigset_t,
+        pub uc_mcontext: mcontext_t,
+        pub uc_link: *mut ucontext_t,
+        pub uc_stack: stack_t,
+        pub uc_cofunc: ::Option<unsafe extern "C" fn(uc: *mut ucontext_t, arg: *mut ::c_void)>,
+        pub uc_arg: *mut ::c_void,
+        __pad: [::c_int; 4],
     }
 }
 
@@ -303,6 +385,33 @@ cfg_if! {
                 self.ut_ss.hash(state);
                 self.ut_tv.hash(state);
                 self.ut_unused2.hash(state);
+            }
+        }
+        impl PartialEq for lastlogx {
+            fn eq(&self, other: &lastlogx) -> bool {
+                self.ll_tv == other.ll_tv
+                    && self.ll_line == other.ll_line
+                    && self.ll_host == other.ll_host
+                    && self.ll_ss == other.ll_ss
+            }
+        }
+        impl Eq for lastlogx {}
+        impl ::fmt::Debug for lastlogx {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("lastlogx")
+                    .field("ll_tv", &self.ll_tv)
+                    .field("ll_line", &self.ll_line)
+                    .field("ll_host", &self.ll_host)
+                    .field("ll_ss", &self.ll_ss)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for lastlogx {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.ll_tv.hash(state);
+                self.ll_line.hash(state);
+                self.ll_host.hash(state);
+                self.ll_ss.hash(state);
             }
         }
 
@@ -443,6 +552,100 @@ cfg_if! {
                 self.sigev_notify.hash(state);
                 self.sigev_signo.hash(state);
                 self.sigev_value.hash(state);
+            }
+        }
+        impl PartialEq for mcontext_t {
+            fn eq(&self, other: &mcontext_t) -> bool {
+                self.mc_onstack == other.mc_onstack &&
+                self.mc_rdi == other.mc_rdi &&
+                self.mc_rsi == other.mc_rsi &&
+                self.mc_rdx == other.mc_rdx &&
+                self.mc_rcx == other.mc_rcx &&
+                self.mc_r8 == other.mc_r8 &&
+                self.mc_r9 == other.mc_r9 &&
+                self.mc_rax == other.mc_rax &&
+                self.mc_rbx == other.mc_rbx &&
+                self.mc_rbp == other.mc_rbp &&
+                self.mc_r10 == other.mc_r10 &&
+                self.mc_r11 == other.mc_r11 &&
+                self.mc_r12 == other.mc_r12 &&
+                self.mc_r13 == other.mc_r13 &&
+                self.mc_r14 == other.mc_r14 &&
+                self.mc_r15 == other.mc_r15 &&
+                self.mc_xflags == other.mc_xflags &&
+                self.mc_trapno == other.mc_trapno &&
+                self.mc_addr == other.mc_addr &&
+                self.mc_flags == other.mc_flags &&
+                self.mc_err == other.mc_err &&
+                self.mc_rip == other.mc_rip &&
+                self.mc_cs == other.mc_cs &&
+                self.mc_rflags == other.mc_rflags &&
+                self.mc_rsp == other.mc_rsp &&
+                self.mc_ss == other.mc_ss &&
+                self.mc_len == other.mc_len &&
+                self.mc_fpformat == other.mc_fpformat &&
+                self.mc_ownedfp == other.mc_ownedfp
+                // FIXME: self.mc_fpregs == other.mc_fpregs
+            }
+        }
+        impl Eq for mcontext_t {}
+        impl ::fmt::Debug for mcontext_t {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("mcontext_t")
+                    .field("mc_onstack", &self.mc_onstack)
+                    .field("mc_rdi", &self.mc_rdi)
+                    .field("mc_rsi", &self.mc_rsi)
+                    .field("mc_rdx", &self.mc_rdx)
+                    .field("mc_rcx", &self.mc_rcx)
+                    .field("mc_r8", &self.mc_r8)
+                    .field("mc_r9", &self.mc_r9)
+                    .field("mc_rax", &self.mc_rax)
+                    .field("mc_rbx", &self.mc_rbx)
+                    .field("mc_rbp", &self.mc_rbp)
+                    .field("mc_r10", &self.mc_r10)
+                    .field("mc_r11", &self.mc_r11)
+                    .field("mc_r12", &self.mc_r12)
+                    .field("mc_r13", &self.mc_r13)
+                    .field("mc_r14", &self.mc_r14)
+                    .field("mc_r15", &self.mc_r15)
+                    .field("mc_xflags", &self.mc_xflags)
+                    .field("mc_trapno", &self.mc_trapno)
+                    .field("mc_addr", &self.mc_addr)
+                    .field("mc_flags", &self.mc_flags)
+                    .field("mc_err", &self.mc_err)
+                    .field("mc_rip", &self.mc_rip)
+                    .field("mc_cs", &self.mc_cs)
+                    .field("mc_rflags", &self.mc_rflags)
+                    .field("mc_rsp", &self.mc_rsp)
+                    .field("mc_ss", &self.mc_ss)
+                    .field("mc_len", &self.mc_len)
+                    .field("mc_fpformat", &self.mc_fpformat)
+                    .field("mc_ownedfp", &self.mc_ownedfp)
+                    // FIXME: .field("mc_fpregs", &self.mc_fpregs)
+                    .finish()
+            }
+        }
+        impl PartialEq for ucontext_t {
+            fn eq(&self, other: &ucontext_t) -> bool {
+                self.uc_sigmask == other.uc_sigmask
+                    && self.uc_mcontext == other.uc_mcontext
+                    && self.uc_link == other.uc_link
+                    && self.uc_stack == other.uc_stack
+                    && self.uc_cofunc == other.uc_cofunc
+                    && self.uc_arg == other.uc_arg
+            }
+        }
+        impl Eq for ucontext_t {}
+        impl ::fmt::Debug for ucontext_t {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("ucontext_t")
+                    .field("uc_sigmask", &self.uc_sigmask)
+                    .field("uc_mcontext", &self.uc_mcontext)
+                    .field("uc_link", &self.uc_link)
+                    .field("uc_stack", &self.uc_stack)
+                    .field("uc_cofunc", &self.uc_cofunc)
+                    .field("uc_arg", &self.uc_arg)
+                    .finish()
             }
         }
     }
@@ -654,6 +857,12 @@ pub const SO_SNDSPACE: ::c_int = 0x100a;
 pub const SO_CPUHINT: ::c_int = 0x1030;
 
 pub const PT_FIRSTMACH: ::c_int = 32;
+
+pub const PROC_REAP_ACQUIRE: ::c_int = 0x0001;
+pub const PROC_REAP_RELEASE: ::c_int = 0x0002;
+pub const PROC_REAP_STATUS: ::c_int = 0x0003;
+pub const PROC_PDEATHSIG_CTL: ::c_int = 0x0004;
+pub const PROC_PDEATHSIG_STATUS: ::c_int = 0x0005;
 
 // https://github.com/DragonFlyBSD/DragonFlyBSD/blob/master/sys/net/if.h#L101
 pub const IFF_UP: ::c_int = 0x1; // interface is up
@@ -949,6 +1158,10 @@ pub const DOWNTIME: ::c_short = 11;
 pub const UTX_DB_UTMPX: ::c_uint = 0;
 pub const UTX_DB_WTMPX: ::c_uint = 1;
 pub const UTX_DB_LASTLOG: ::c_uint = 2;
+pub const _UTX_LINESIZE: usize = 32;
+pub const _UTX_USERSIZE: usize = 32;
+pub const _UTX_IDSIZE: usize = 4;
+pub const _UTX_HOSTSIZE: usize = 256;
 
 pub const LC_COLLATE_MASK: ::c_int = 1 << 0;
 pub const LC_CTYPE_MASK: ::c_int = 1 << 1;
@@ -1056,6 +1269,29 @@ f! {
         (_CMSG_ALIGN(::mem::size_of::<::cmsghdr>()) +
             _CMSG_ALIGN(length as usize)) as ::c_uint
     }
+
+    pub fn CPU_ZERO(cpuset: &mut cpu_set_t) -> () {
+        for slot in cpuset.ary.iter_mut() {
+            *slot = 0;
+        }
+    }
+
+    pub fn CPU_SET(cpu: usize, cpuset: &mut cpu_set_t) -> () {
+        let (idx, offset) = ((cpu >> 6) & 3, cpu & 63);
+        cpuset.ary[idx] |= 1 << offset;
+        ()
+    }
+
+    pub fn CPU_CLR(cpu: usize, cpuset: &mut cpu_set_t) -> () {
+        let (idx, offset) = ((cpu >> 6) & 3, cpu & 63);
+        cpuset.ary[idx] &= !(1 << offset);
+        ()
+    }
+
+    pub fn CPU_ISSET(cpu: usize, cpuset: &mut cpu_set_t) -> bool {
+        let (idx, offset) = ((cpu >> 6) & 3, cpu & 63);
+        0 != cpuset.ary[idx] & (1 << offset)
+    }
 }
 
 safe_f! {
@@ -1098,6 +1334,28 @@ extern "C" {
         needle: *const ::c_void,
         needlelen: ::size_t,
     ) -> *mut ::c_void;
+    pub fn pthread_spin_init(lock: *mut pthread_spinlock_t, pshared: ::c_int) -> ::c_int;
+    pub fn pthread_spin_destroy(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_lock(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_trylock(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_unlock(lock: *mut pthread_spinlock_t) -> ::c_int;
+
+    pub fn sched_getaffinity(pid: ::pid_t, cpusetsize: ::size_t, mask: *mut cpu_set_t) -> ::c_int;
+    pub fn sched_setaffinity(pid: ::pid_t, cpusetsize: ::size_t, mask: *const cpu_set_t)
+        -> ::c_int;
+    pub fn setproctitle(fmt: *const ::c_char, ...);
+
+    pub fn shmget(key: ::key_t, size: ::size_t, shmflg: ::c_int) -> ::c_int;
+    pub fn shmat(shmid: ::c_int, shmaddr: *const ::c_void, shmflg: ::c_int) -> *mut ::c_void;
+    pub fn shmdt(shmaddr: *const ::c_void) -> ::c_int;
+    pub fn shmctl(shmid: ::c_int, cmd: ::c_int, buf: *mut ::shmid_ds) -> ::c_int;
+    pub fn procctl(idtype: ::idtype_t, id: ::id_t, cmd: ::c_int, data: *mut ::c_void) -> ::c_int;
+
+    pub fn updwtmpx(file: *const ::c_char, ut: *const utmpx) -> ::c_int;
+    pub fn getlastlogx(fname: *const ::c_char, uid: ::uid_t, ll: *mut lastlogx) -> *mut lastlogx;
+    pub fn updlastlogx(fname: *const ::c_char, uid: ::uid_t, ll: *mut lastlogx) -> ::c_int;
+    pub fn getutxuser(name: *const ::c_char) -> utmpx;
+    pub fn utmpxname(file: *const ::c_char) -> ::c_int;
 }
 
 #[link(name = "rt")]

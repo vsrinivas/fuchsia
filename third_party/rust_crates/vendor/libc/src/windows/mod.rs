@@ -117,16 +117,27 @@ pub const BUFSIZ: ::c_uint = 512;
 pub const FOPEN_MAX: ::c_uint = 20;
 pub const FILENAME_MAX: ::c_uint = 260;
 
-pub const O_RDONLY: ::c_int = 0;
-pub const O_WRONLY: ::c_int = 1;
-pub const O_RDWR: ::c_int = 2;
-pub const O_APPEND: ::c_int = 8;
-pub const O_CREAT: ::c_int = 256;
-pub const O_EXCL: ::c_int = 1024;
-pub const O_TEXT: ::c_int = 16384;
-pub const O_BINARY: ::c_int = 32768;
-pub const O_NOINHERIT: ::c_int = 128;
-pub const O_TRUNC: ::c_int = 512;
+// fcntl.h
+pub const O_RDONLY: ::c_int = 0x0000;
+pub const O_WRONLY: ::c_int = 0x0001;
+pub const O_RDWR: ::c_int = 0x0002;
+pub const O_APPEND: ::c_int = 0x0008;
+pub const O_CREAT: ::c_int = 0x0100;
+pub const O_TRUNC: ::c_int = 0x0200;
+pub const O_EXCL: ::c_int = 0x0400;
+pub const O_TEXT: ::c_int = 0x4000;
+pub const O_BINARY: ::c_int = 0x8000;
+pub const _O_WTEXT: ::c_int = 0x10000;
+pub const _O_U16TEXT: ::c_int = 0x20000;
+pub const _O_U8TEXT: ::c_int = 0x40000;
+pub const O_RAW: ::c_int = O_BINARY;
+pub const O_NOINHERIT: ::c_int = 0x0080;
+pub const O_TEMPORARY: ::c_int = 0x0040;
+pub const _O_SHORT_LIVED: ::c_int = 0x1000;
+pub const _O_OBTAIN_DIR: ::c_int = 0x2000;
+pub const O_SEQUENTIAL: ::c_int = 0x0020;
+pub const O_RANDOM: ::c_int = 0x0010;
+
 pub const S_IFCHR: ::c_int = 8192;
 pub const S_IFDIR: ::c_int = 16384;
 pub const S_IFREG: ::c_int = 32768;
@@ -233,7 +244,13 @@ pub const SIGSEGV: ::c_int = 11;
 pub const SIGTERM: ::c_int = 15;
 pub const SIGABRT: ::c_int = 22;
 pub const NSIG: ::c_int = 23;
+
 pub const SIG_ERR: ::c_int = -1;
+pub const SIG_DFL: ::sighandler_t = 0;
+pub const SIG_IGN: ::sighandler_t = 1;
+pub const SIG_GET: ::sighandler_t = 2;
+pub const SIG_SGE: ::sighandler_t = 3;
+pub const SIG_ACK: ::sighandler_t = 4;
 
 // inline comment below appeases style checker
 #[cfg(all(target_env = "msvc", feature = "rustc-dep-of-std"))] // " if "
@@ -302,6 +319,7 @@ extern "C" {
     pub fn perror(s: *const c_char);
     pub fn atoi(s: *const c_char) -> c_int;
     pub fn strtod(s: *const c_char, endp: *mut *mut c_char) -> c_double;
+    pub fn strtof(s: *const c_char, endp: *mut *mut c_char) -> c_float;
     pub fn strtol(s: *const c_char, endp: *mut *mut c_char, base: c_int) -> c_long;
     pub fn strtoul(s: *const c_char, endp: *mut *mut c_char, base: c_int) -> c_ulong;
     pub fn calloc(nobj: size_t, size: size_t) -> *mut c_void;
@@ -475,6 +493,8 @@ extern "C" {
     pub fn wsetlocale(category: ::c_int, locale: *const wchar_t) -> *mut wchar_t;
     #[link_name = "_aligned_malloc"]
     pub fn aligned_malloc(size: size_t, alignment: size_t) -> *mut c_void;
+    #[link_name = "_aligned_free"]
+    pub fn aligned_free(ptr: *mut ::c_void);
 }
 
 extern "system" {

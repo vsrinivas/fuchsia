@@ -41,6 +41,8 @@ pub const MCL_FUTURE: ::c_int = 0x0002;
 
 pub const SIGEV_THREAD_ID: ::c_int = 4;
 
+pub const AF_VSOCK: ::c_int = 40;
+
 pub const ADFS_SUPER_MAGIC: ::c_long = 0x0000adf5;
 pub const AFFS_SUPER_MAGIC: ::c_long = 0x0000adff;
 pub const AFS_SUPER_MAGIC: ::c_long = 0x5346414f;
@@ -285,6 +287,8 @@ extern "C" {
         iovcnt: ::c_int,
         offset: ::off64_t,
     ) -> ::ssize_t;
+
+    pub fn sethostid(hostid: ::c_long) -> ::c_int;
 }
 
 cfg_if! {
