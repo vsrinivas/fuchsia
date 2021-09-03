@@ -12,7 +12,6 @@ group("tests") {
     "fidl:tests",
     "python:tests",
     "sdk:tests",
-    "security:tests",
     "tools:tests",
     "tracer:tests",
   ]
