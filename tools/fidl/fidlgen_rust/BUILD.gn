@@ -50,7 +50,7 @@ if (is_host) {
 
   golden_test("fidlgen_rust_golden_tests") {
     goldens_dir = "goldens"
-    reformat_goldens_bin = "$fidl_rust_tools_dir/bin/rustfmt"
+    reformat_goldens_bin = "$fidl_rust_dir/bin/rustfmt"
     reformat_goldens_args = [
       "--config-path",
       rebase_path("//rustfmt.toml", root_build_dir),

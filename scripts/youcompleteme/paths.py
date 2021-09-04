@@ -93,7 +93,7 @@ def search_ninja_path(root):
   return os.path.join(ninja_dir, 'ninja')
 
 def get_rust_toolchain_path(root):
-  return '%s/third_party/rust_tools/%s' % (root, get_platform())
+  return '%s/third_party/rust/%s' % (root, get_platform())
 
 # We start seaching from the correct buildtools.
 CLANG_PATH = search_clang_path(PREBUILT_PATH)

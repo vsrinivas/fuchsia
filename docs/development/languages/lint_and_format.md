@@ -166,7 +166,7 @@ formatter has a root-level configuration file (`rustfmt.toml`).
 `rustfmt` runs on source files as follows:
 
 ```sh
-prebuilt/third_party/rust_tools/${HOST_PLATFORM}/bin/rustfmt \
+prebuilt/third_party/rust/${HOST_PLATFORM}/bin/rustfmt \
 --config-path=rustfmt.toml \
 --unstable-features \
 --skip-children \

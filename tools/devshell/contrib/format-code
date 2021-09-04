@@ -230,8 +230,8 @@ readonly JSON5_FMT_CMD="${HOST_OUT_DIR}/formatjson5 --replace"
 readonly MARKDOWN_FMT_TOOL="$(fx-command-run list-build-artifacts --expect-one --name doc-checker tools)"
 readonly MARKDOWN_FMT_TOOL_ABS="${FUCHSIA_BUILD_DIR}/${MARKDOWN_FMT_TOOL}"
 readonly PY_CMD="${PY_TOOL} ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place"
-readonly RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_TOOLS_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
-readonly RUST_FMT_CMD="${PREBUILT_RUST_TOOLS_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
+readonly RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
+readonly RUST_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
 
 readonly FIX_HEADER_GUARDS_CMD="${PY_TOOL} ${FUCHSIA_DIR}/scripts/style/check-header-guards.py --fix"
 

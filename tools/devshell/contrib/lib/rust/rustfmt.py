@@ -84,7 +84,7 @@ def main():
     )
     buildtools_dir = os.path.join(ROOT_PATH, "prebuilt", "third_party")
     rustfmt = os.path.join(
-        buildtools_dir, "rust_tools", host_platform, "bin", "rustfmt")
+        buildtools_dir, "rust", host_platform, "bin", "rustfmt")
 
     call_args = [rustfmt] + [main_file[1] for main_file in main_files]
 

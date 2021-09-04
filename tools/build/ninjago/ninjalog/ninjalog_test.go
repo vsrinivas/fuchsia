@@ -642,7 +642,7 @@ func TestCategory(t *testing.T) {
 		{
 			step: Step{
 				Command: &compdb.Command{
-					Command: "/usr/bin/env ../../build/gn_run_binary.sh ../../prebuilt/third_party/clang/linux-x64/bin host_x64/fidlgen_rust --json fidling/gen/sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration/fuchsia.wlan.product.deprecatedconfiguration.fidl.json --output-filename fidling/gen/sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration/fidl_fuchsia_wlan_product_deprecatedconfiguration.rs --rustfmt /home/jayzhuang/fuchsia/prebuilt/third_party/rust_tools/linux-x64/bin/rustfmt",
+					Command: "/usr/bin/env ../../build/gn_run_binary.sh ../../prebuilt/third_party/clang/linux-x64/bin host_x64/fidlgen_rust --json fidling/gen/sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration/fuchsia.wlan.product.deprecatedconfiguration.fidl.json --output-filename fidling/gen/sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration/fidl_fuchsia_wlan_product_deprecatedconfiguration.rs --rustfmt /home/jayzhuang/fuchsia/prebuilt/third_party/rust/linux-x64/bin/rustfmt",
 				},
 			},
 			want: "fidlgen_rust",

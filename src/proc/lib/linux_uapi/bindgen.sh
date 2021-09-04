@@ -18,7 +18,7 @@ use zerocopy::{AsBytes, FromBytes};
 
 pub use crate::x86_64_types::*;"
 
-PATH="$PWD/prebuilt/third_party/rust_tools/linux-x64/bin:$PATH" \
+PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
 ./prebuilt/third_party/rust_bindgen/linux-x64/bindgen \
   --no-layout-tests \
   --size_t-is-usize \

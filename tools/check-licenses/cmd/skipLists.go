@@ -110,7 +110,6 @@ var additionalSkipDirs = []string{
 	"prebuilt/third_party/ovmf",                          // fxb/59350 -
 	"prebuilt/third_party/qemu",                          // b/178682842 -
 	"prebuilt/third_party/rust",                          // b/178714477 -
-	"prebuilt/third_party/rust_tools",                    // b/178714477 -
 	"prebuilt/third_party/skia",                          // b/178714433 -
 	"prebuilt/virtualization/packages/termina_guest",     // b/178857849 -
 	"src/connectivity/wlan/drivers/third_party/mediatek", // b/173236643 -
@@ -156,7 +155,6 @@ var additionalSkipFiles = []string{
 	"third_party/rust_crates/README.md",
 	"third_party/dart-pkg/pub/README.md",
 	"prebuilt/third_party/rust/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
-	"prebuilt/third_party/rust_tools/linux-x64/share/doc/LICENSE-THIRD-PARTY",
 	"prebuilt/third_party/rust_tools/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
 	"third_party/crashpad/third_party/glibc/elf/elf.h",
 	"third_party/dart-pkg/pub/devtools/build/assets/NOTICES",

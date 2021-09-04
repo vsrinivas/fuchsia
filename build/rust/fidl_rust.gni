@@ -6,7 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/toolchain.gni")
 
-fidl_rust_tools_dir = "//prebuilt/third_party/rust_tools/$host_platform"
+fidl_rust_dir = "//prebuilt/third_party/rust/$host_platform"
 
 # Generates some Rust bindings for a FIDL library.
 #
@@ -48,7 +48,7 @@ template("fidl_rust") {
     inputs = [
       json_representation,
       "//rustfmt.toml",
-      "$fidl_rust_tools_dir/.versions/rust_tools.cipd_version",
+      "$fidl_rust_dir/.versions/rust.cipd_version",
     ]
 
     outputs = [ filename ]
@@ -59,7 +59,7 @@ template("fidl_rust") {
       "--output-filename",
       rebase_path(filename, root_build_dir),
       "--rustfmt",
-      rebase_path("$fidl_rust_tools_dir/bin/rustfmt", root_build_dir),
+      rebase_path("$fidl_rust_dir/bin/rustfmt", root_build_dir),
       "--rustfmt-config",
       rebase_path("//rustfmt.toml", root_build_dir),
     ]

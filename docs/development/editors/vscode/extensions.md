@@ -149,7 +149,7 @@ To configure `rustup` with your Fuchsia source code, run:
 Note: `HOST_OS` is `linux-x64` on Linux and `mac-x64` on macOS.
 
 ```posix-terminal
-rustup toolchain link fuchsia-tools {{ '<var>' }}FUCHSIA_DIR{{ '</var>' }}/prebuilt/third_party/rust_tools/{{ '<var>' }}HOST_OS{{ '</var>' }}
+rustup toolchain link fuchsia {{ '<var>' }}FUCHSIA_DIR{{ '</var>' }}/prebuilt/third_party/rust/{{ '<var>' }}HOST_OS{{ '</var>' }}
 ```
 
 After configuring `rustup`, the `rust-analyzer` extension supports additional configuration
@@ -160,9 +160,9 @@ from [Configuring workflow](#rust-configure-workflow):
 
 ```json
 
-    // use fuchsia-tools toolchain and fuchsia's rules for rustfmt:
+    // use fuchsia toolchain and fuchsia's rules for rustfmt:
     "rust-analyzer.rustfmt.extraArgs": [
-        "+fuchsia-tools",
+        "+fuchsia",
         "--config-path= {{ '<var>' }}FUCHSIA_DIR{{ '</var>' }}/rustfmt.toml"
     ],
 

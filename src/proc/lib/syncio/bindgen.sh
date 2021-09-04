@@ -17,7 +17,7 @@ readonly RAW_LINES="// Copyright 2021 The Fuchsia Authors. All rights reserved.
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]"
 
-PATH="$PWD/prebuilt/third_party/rust_tools/linux-x64/bin:$PATH" \
+PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
 ./prebuilt/third_party/rust_bindgen/linux-x64/bindgen \
   --no-layout-tests \
   --size_t-is-usize \

@@ -43,7 +43,7 @@ Install [`rust-lang/rust.vim`](https://github.com/rust-lang/rust.vim), which als
 *   Auto formatting: to run `rustfmt` on save (disabled by default), add the following to `~./vimrc`:
 
     ```
-    let g:rustfmt_command = '{{ "<var>" }}FUCHSIA_DIR{{ "</var>" }}/prebuilt/third_party/rust_tools/{{ "<var>" }}HOST_OS{{ "</var>" }}/bin/rustfmt'
+    let g:rustfmt_command = '{{ "<var>" }}FUCHSIA_DIR{{ "</var>" }}/prebuilt/third_party/rust/{{ "<var>" }}HOST_OS{{ "</var>" }}/bin/rustfmt'
     let g:rustfmt_autosave = 1
     ```
 
@@ -97,8 +97,9 @@ way.
 Now, you'll want to make sure that the default `cargo` and `rustc` that you are
 using are Fuchsia versions of those.  From your fuchsia root, type:
 
-```elisp
-rustup toolchain link fuchsia $PWD/prebuilt/third_party/rust/linux-x64 && rustup default fuchsia
+```posix-terminal
+rustup toolchain link fuchsia {{ '<var>' }}FUCHSIA_DIR{{ '</var>' }}/prebuilt/third_party/rust/{{ '<var>' }}HOST_OS{{ '</var>' }}
+rustup default fuchsia
 ```
 
 Finally, follow the steps to [generate a `Cargo.toml`][cargo-toml-gen] for the GN target that you

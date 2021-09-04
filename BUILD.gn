@@ -751,7 +751,7 @@ group("tool_paths.metadata") {
     "//prebuilt/third_party/go/$host_platform/bin/gofmt",
     "//prebuilt/third_party/goma/$host_platform/goma_ctl.py",
     "//prebuilt/third_party/ninja/$host_platform/ninja",
-    "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt",
+    "//prebuilt/third_party/rust/$host_platform/bin/rustfmt",
     "//prebuilt/third_party/yapf/yapf",
     "//third_party/catapult/tracing/bin/trace2html",
   ]

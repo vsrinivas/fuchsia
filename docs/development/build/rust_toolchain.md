@@ -20,9 +20,6 @@ every change to Rust's main branch.
    # then commit or revert as necessary.
    fx roll-compiler --package rust git_revision:{{ '<var>' }}COMMIT{{ '</var>' }}
 
-   # Optional: Update developer tools.
-   fx roll-compiler --package rust_tools git_revision:{{ '<var>' }}COMMIT{{ '</var>' }} --platforms linux-amd64 --platforms mac-amd64
-
    # Fetch the package versions you specified and install them in `prebuilt/`.
    jiri fetch-packages -local-manifest
    ```
