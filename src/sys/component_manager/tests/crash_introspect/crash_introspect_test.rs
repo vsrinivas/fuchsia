@@ -97,8 +97,9 @@ async fn crashed_component_generates_a_record() -> Result<(), Error> {
             source: RouteEndpoint::component("crash_receiver"),
             targets: vec![RouteEndpoint::component("report_then_panic_on_start")],
         })?;
-    let _realm_instance =
+    let realm_instance =
         builder.build().create_in_nested_component_manager("#meta/component_manager.cm").await?;
+    let _ = realm_instance.root.connect_to_binder().unwrap();
 
     assert!(success_receiver.next().await.is_some());
     Ok(())
