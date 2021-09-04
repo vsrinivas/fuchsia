@@ -203,4 +203,10 @@
     <string name="inverted_exclamation_point_symbol_name">inverted exclamation mark</string>
     <!-- Spoken description for the inverted question mark symbol "¿". -->
     <string name="inverted_question_mark_symbol_name">inverted question mark</string>
+    <!-- Spoken message that describes a text field. -->
+    <string name="role_text_field">Text field</string>
+    <!-- Spoken message that describes a search box. -->
+    <string name="role_search_box">Search box</string>
+    <!-- Spoken message that describes that the user is editing a text field. -->
+    <string name="is_editing">Is editing</string>
 </resources>
