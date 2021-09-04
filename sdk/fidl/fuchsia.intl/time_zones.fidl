@@ -88,6 +88,17 @@ protocol TimeZones {
     }) -> (struct {
         absolute_time zx.time;
     }) error TimeZonesError;
+
+    /// Retrieves details about a time zone at a specified one.
+    @transitional("Not yet implemented")
+    GetTimeZoneInfo(struct {
+        /// The time zone ID for which to retrieve information.
+        time_zone_id TimeZoneId;
+        /// The date and time at which to calculate values.
+        at_time zx.time;
+    }) -> (struct {
+        time_zone_info TimeZoneInfo;
+    }) error TimeZonesError;
 };
 
 /// Describes a time on a civil calendar (Gregorian), with nanosecond precision. This is roughly
@@ -116,4 +127,16 @@ type CivilTime = table {
     9: year_day uint16;
     /// The time zone corresponding to this time. If omitted, the default is UTC.
    10: time_zone_id TimeZoneId;
+};
+
+/// Describes a Time Zone's properties at a particular moment in time.
+///
+/// TODO(fxbug.dev/81902): Additional fields with a breakdown of offsets and DST status.
+type TimeZoneInfo = table {
+    /// The time zone's IANA ID.
+    1: id TimeZoneId;
+    /// The total offset (including Daylight Savings, if the time zone is in Daylight Savings Time)
+    /// from UTC at the queried time (`at_time`). If the time zone is ahead of UTC, this will be a
+    /// positive value; if behind UTC, a negative value.
+    2: total_offset_at_time zx.duration;
 };

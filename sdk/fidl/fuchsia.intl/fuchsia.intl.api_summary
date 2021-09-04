@@ -58,8 +58,12 @@ enum/member fuchsia.intl/TemperatureUnit.FAHRENHEIT 1
 strict enum fuchsia.intl/TemperatureUnit uint32
 struct/member fuchsia.intl/TimeZoneId.id string
 struct fuchsia.intl/TimeZoneId
+table/member fuchsia.intl/TimeZoneInfo.id fuchsia.intl/TimeZoneId
+table/member fuchsia.intl/TimeZoneInfo.total_offset_at_time int64
+table fuchsia.intl/TimeZoneInfo
 protocol/member fuchsia.intl/TimeZones.AbsoluteToCivilTime(fuchsia.intl/TimeZoneId time_zone_id,int64 absolute_time) -> (fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result result)
 protocol/member fuchsia.intl/TimeZones.CivilToAbsoluteTime(fuchsia.intl/CivilTime civil_time,fuchsia.intl/CivilToAbsoluteTimeOptions options) -> (fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result result)
+protocol/member fuchsia.intl/TimeZones.GetTimeZoneInfo(fuchsia.intl/TimeZoneId time_zone_id,int64 at_time) -> (fuchsia.intl/TimeZones_GetTimeZoneInfo_Result result)
 protocol fuchsia.intl/TimeZones
 enum/member fuchsia.intl/TimeZonesError.INTERNAL_ERROR 1
 enum/member fuchsia.intl/TimeZonesError.INVALID_DATE 3
@@ -75,4 +79,9 @@ struct fuchsia.intl/TimeZones_CivilToAbsoluteTime_Response
 union/member fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result.err fuchsia.intl/TimeZonesError
 union/member fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result.response fuchsia.intl/TimeZones_CivilToAbsoluteTime_Response
 strict union fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result
+struct/member fuchsia.intl/TimeZones_GetTimeZoneInfo_Response.time_zone_info fuchsia.intl/TimeZoneInfo
+struct fuchsia.intl/TimeZones_GetTimeZoneInfo_Response
+union/member fuchsia.intl/TimeZones_GetTimeZoneInfo_Result.err fuchsia.intl/TimeZonesError
+union/member fuchsia.intl/TimeZones_GetTimeZoneInfo_Result.response fuchsia.intl/TimeZones_GetTimeZoneInfo_Response
+strict union fuchsia.intl/TimeZones_GetTimeZoneInfo_Result
 library fuchsia.intl
