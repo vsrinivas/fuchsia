@@ -145,7 +145,8 @@ struct zx_proc_args {
 // the ELF runner by serving the |fuchsia.process.Lifecycle| protocol.
 #define PA_LIFECYCLE 0x3Au
 
-// Server endpoint for handling connection to appmgr services.
+// Server endpoint for a processes' outgoing directory.
+// https://fuchsia.dev/fuchsia-src/glossary?hl=en#outgoing-directory
 #define PA_DIRECTORY_REQUEST 0x3Bu
 
 // Used by devmgr and devhosts
