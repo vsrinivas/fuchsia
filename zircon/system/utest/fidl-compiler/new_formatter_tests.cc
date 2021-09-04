@@ -11,7 +11,6 @@ namespace {
 std::string Format(const std::string& source, bool reformat_and_compare = true) {
   fidl::ExperimentalFlags flags;
   flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowAnonymousLayouts);
   auto lib = TestLibrary(source, flags);
 
   // We use a column width of 40, rather than the "real world" 100, to make tests easier to read

@@ -73,9 +73,7 @@ class TestLibrary final {
         all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
         library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_,
                                                        GetGeneratedOrdinal64ForTesting,
-                                                       experimental_flags_)) {
-    experimental_flags_.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-  }
+                                                       experimental_flags_)) {}
 
   explicit TestLibrary(const std::string& raw_source_code,
                        fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
@@ -102,11 +100,11 @@ class TestLibrary final {
   }
 
   bool AddDependentLibrary(TestLibrary dependent_library) {
-    return all_libraries_->Insert(std::move(dependent_library.library_)).second;
+    return all_libraries_->Insert(std::move(dependent_library.library_));
   }
 
   bool AddDependentLibrary(TestLibrary* dependent_library) {
-    return all_libraries_->Insert(std::move(dependent_library->library_)).second;
+    return all_libraries_->Insert(std::move(dependent_library->library_));
   }
 
   void AddAttributeSchema(const std::string& name, fidl::flat::AttributeSchema schema) {

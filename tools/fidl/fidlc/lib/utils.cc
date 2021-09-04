@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <cassert>
-#include <iostream>
 #include <regex>
 
 #include <fidl/utils.h>
@@ -313,51 +312,6 @@ bool OnlyWhitespaceChanged(const std::string& unformatted_input,
   unformatted.erase(unformatted_end, unformatted.end());
 
   return formatted == unformatted;
-}
-
-namespace {
-
-bool IsLocationStart(std::string_view s) {
-  // the only place something like `"foo":` can show up in valid JSON is if
-  // "foo" is a key since strings that have quotes in them must escape the
-  // quotes and there's no other place where a string value can be followed by
-  // a colon.
-  // Since there's only one location field in the schema, it is safe to use this
-  // to check for it.
-  return s.find("\"location\": {") != std::string_view::npos;
-}
-
-bool IsLocationEnd(std::string_view s) { return s.find('}') != std::string_view::npos; }
-
-}  // namespace
-
-bool IsIrEquals(const std::string& from_old, const std::string& from_new) {
-  std::istringstream from_old_stream(from_old);
-  std::istringstream from_new_stream(from_new);
-
-  bool in_location = false;
-  std::string old_line, new_line;
-  while (true) {
-    auto old_remaining = bool(std::getline(from_old_stream, old_line));
-    auto new_remaining = bool(std::getline(from_new_stream, new_line));
-
-    if (!old_remaining && !new_remaining)
-      return true;
-    if (!old_remaining || !new_remaining)
-      return false;
-
-    if (!in_location && old_line != new_line) {
-      return false;
-    }
-
-    if (!in_location && IsLocationStart(old_line)) {
-      in_location = true;
-    } else if (in_location && IsLocationEnd(old_line)) {
-      if (!IsLocationEnd(new_line))
-        return false;
-      in_location = false;
-    }
-  }
 }
 
 }  // namespace utils

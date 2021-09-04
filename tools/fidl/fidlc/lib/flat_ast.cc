@@ -2304,10 +2304,10 @@ Libraries::Libraries() {
   // clang-format on
 }
 
-std::pair<const Library*, bool> Libraries::Insert(std::unique_ptr<Library> library) {
+bool Libraries::Insert(std::unique_ptr<Library> library) {
   std::vector<std::string_view> library_name = library->name();
   auto iter = all_libraries_.emplace(library_name, std::move(library));
-  return std::make_pair(iter.first->second.get(), iter.second);
+  return iter.second;
 }
 
 bool Libraries::Lookup(const std::vector<std::string_view>& library_name,

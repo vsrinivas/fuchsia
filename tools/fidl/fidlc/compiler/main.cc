@@ -26,8 +26,6 @@
 #include <fidl/json_schema.h>
 #include <fidl/lexer.h>
 #include <fidl/names.h>
-#include <fidl/new_formatter.h>
-#include <fidl/new_syntax_converter.h>
 #include <fidl/ordinals.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
@@ -39,7 +37,6 @@ void Usage() {
   std::cout
       << "usage: fidlc [--tables TABLES_PATH]\n"
          "             [--json JSON_PATH]\n"
-         "             [--convert-syntax CONVERTED_SYNTAX_PATH]\n"
          "             [--name LIBRARY_NAME]\n"
          "             [--experimental FLAG_NAME]\n"
          "             [--werror]\n"
@@ -254,7 +251,6 @@ enum struct Behavior {
   kCServer,
   kTables,
   kJSON,
-  kConvSyntax,
 };
 
 bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
@@ -269,14 +265,6 @@ bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
     return false;
   }
   return true;
-}
-
-std::unique_ptr<fidl::raw::File> ParseIntoRaw(const fidl::SourceFile& source_file,
-                                              fidl::Reporter* reporter,
-                                              const fidl::ExperimentalFlags& experimental_flags) {
-  fidl::Lexer lexer(source_file, reporter);
-  fidl::Parser parser(&lexer, reporter, experimental_flags);
-  return parser.Parse();
 }
 
 void Write(const std::ostringstream& output_stream, const std::string file_path) {
@@ -296,8 +284,7 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
             std::string dep_file_path, const std::vector<std::string>& source_list,
             std::vector<std::pair<Behavior, std::string>> outputs,
             const std::vector<fidl::SourceManager>& source_managers,
-            fidl::ExperimentalFlags experimental_flags,
-            std::vector<fidl::SourceManager>* converted_source_managers);
+            fidl::ExperimentalFlags experimental_flags);
 
 int main(int argc, char* argv[]) {
   auto args = std::make_unique<ArgvArguments>(argc, argv);
@@ -353,9 +340,6 @@ int main(int argc, char* argv[]) {
     } else if (behavior_argument == "--json") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kJSON, path));
-    } else if (behavior_argument == "--convert-syntax") {
-      std::string path = args->Claim();
-      outputs.emplace_back(std::make_pair(Behavior::kConvSyntax, path));
     } else if (behavior_argument == "--name") {
       library_name = args->Claim();
     } else if (behavior_argument == "--experimental") {
@@ -393,10 +377,8 @@ int main(int argc, char* argv[]) {
   bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
   fidl::Reporter reporter(warnings_as_errors, enable_color);
   auto typespace = fidl::flat::Typespace::RootTypes(&reporter);
-  std::vector<fidl::SourceManager> converted_source_managers;
-  auto status =
-      compile(&reporter, &typespace, library_name, dep_file_path, source_list, std::move(outputs),
-              source_managers, std::move(experimental_flags), &converted_source_managers);
+  auto status = compile(&reporter, &typespace, library_name, dep_file_path, source_list,
+                        std::move(outputs), source_managers, std::move(experimental_flags));
   if (format == "json") {
     reporter.PrintReportsJson();
   } else {
@@ -409,11 +391,9 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
             std::string dep_file_path, const std::vector<std::string>& source_list,
             std::vector<std::pair<Behavior, std::string>> outputs,
             const std::vector<fidl::SourceManager>& source_managers,
-            fidl::ExperimentalFlags experimental_flags,
-            std::vector<fidl::SourceManager>* converted_source_managers) {
+            fidl::ExperimentalFlags experimental_flags) {
   fidl::flat::Libraries all_libraries;
   const fidl::flat::Library* final_library = nullptr;
-  std::vector<const fidl::flat::Library*> compiled_libraries;
   for (const auto& source_manager : source_managers) {
     if (source_manager.sources().empty()) {
       continue;
@@ -431,11 +411,9 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
     }
     final_library = library.get();
     auto library_name = fidl::NameLibrary(library->name());
-    auto [lib, inserted] = all_libraries.Insert(std::move(library));
-    if (!inserted) {
+    if (!all_libraries.Insert(std::move(library))) {
       Fail("Multiple libraries with the same name: '%s'\n", library_name.c_str());
     }
-    compiled_libraries.push_back(lib);
   }
   if (!final_library) {
     Fail("No library was produced.\n");
@@ -492,198 +470,30 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
     auto& behavior = output.first;
     auto& file_path = output.second;
 
-    std::optional<std::ostringstream> cheader_stream;
-    std::optional<std::ostringstream> cclient_stream;
-    std::optional<std::ostringstream> cserver_stream;
-    std::optional<std::ostringstream> tables_stream;
-    std::optional<std::ostringstream> json_stream;
     switch (behavior) {
       case Behavior::kCHeader: {
-        if (!cheader_stream) {
-          fidl::CGenerator generator(final_library);
-          cheader_stream = generator.ProduceHeader();
-        }
-        Write(*cheader_stream, file_path);
+        fidl::CGenerator generator(final_library);
+        Write(generator.ProduceHeader(), file_path);
         break;
       }
       case Behavior::kCClient: {
-        if (!cclient_stream) {
-          fidl::CGenerator generator(final_library);
-          cclient_stream = generator.ProduceClient();
-        }
-        Write(*cclient_stream, file_path);
+        fidl::CGenerator generator(final_library);
+        Write(generator.ProduceClient(), file_path);
         break;
       }
       case Behavior::kCServer: {
-        if (!cserver_stream) {
-          fidl::CGenerator generator(final_library);
-          cserver_stream = generator.ProduceServer();
-        }
-        Write(*cserver_stream, file_path);
+        fidl::CGenerator generator(final_library);
+        Write(generator.ProduceServer(), file_path);
         break;
       }
       case Behavior::kTables: {
-        if (!tables_stream) {
-          fidl::TablesGenerator generator(final_library);
-          tables_stream = generator.Produce();
-        }
-        Write(*tables_stream, file_path);
+        fidl::TablesGenerator generator(final_library);
+        Write(generator.Produce(), file_path);
         break;
       }
       case Behavior::kJSON: {
-        if (!json_stream) {
-          fidl::JSONGenerator generator(final_library);
-          json_stream = generator.Produce();
-        }
-        Write(*json_stream, file_path);
-        break;
-      }
-      case Behavior::kConvSyntax: {
-        if (!reporter->errors().empty() || !reporter->warnings().empty())
-          return 1;
-
-        if (file_path[file_path.size() - 1] != '/')
-          file_path.append("/");
-
-        fidl::flat::Libraries all_converted_libraries;
-        const fidl::flat::Library* converted_final_library = nullptr;
-        auto typespace = fidl::flat::Typespace::RootTypes(reporter);
-        // we can use a new set of experimental flags, because currently the only
-        // experimental flags defined are ones related to the syntax migration (i.e.
-        // we don't need to carry over any separate flags)
-        fidl::ExperimentalFlags flags;
-        flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-
-        // this is mostly copy and pasted from above, to best replicate how it will be
-        // after conversion. we convert and recompile everything, but only write out
-        // the files for the last library.
-        size_t i = 0;
-        for (const auto& source_manager : source_managers) {
-          converted_source_managers->push_back(fidl::SourceManager());
-          if (source_manager.sources().empty()) {
-            continue;
-          }
-          auto library =
-              std::make_unique<fidl::flat::Library>(&all_converted_libraries, reporter, &typespace,
-                                                    fidl::ordinals::GetGeneratedOrdinal64, flags);
-          for (const auto& source_file : source_manager.sources()) {
-            auto ast = ParseIntoRaw(*source_file, reporter, experimental_flags);
-            auto out_path = std::string(source_file->filename()) + ".new";
-
-            fidl::conv::ConvertingTreeVisitor visitor =
-                fidl::conv::ConvertingTreeVisitor(fidl::utils::Syntax::kNew, compiled_libraries[i]);
-            visitor.OnFile(ast);
-            std::ostringstream converted_stream;
-            converted_stream << visitor.converted_output();
-            auto converted_sf = std::make_unique<fidl::SourceFile>(out_path, converted_stream.str());
-            auto formatter = fidl::fmt::NewFormatter(100, reporter);
-            std::optional<std::string> formatted = formatter.Format(*converted_sf, flags);
-            if (!formatted.has_value()) {
-              std::cout << converted_sf->data() << std::endl;
-              return 1;
-            }
-            auto formatted_converted_sf =
-                std::make_unique<fidl::SourceFile>(out_path, formatted.value());
-            converted_source_managers->back().AddSourceFile(std::move(formatted_converted_sf));
-
-            if (i == source_managers.size() - 1) {
-              size_t filename_start = source_file->filename().find_last_of('/');
-              if (filename_start == std::string::npos)
-                filename_start = 0;
-              auto filename = std::string(source_file->filename().substr(filename_start));
-              std::ostringstream formatted_stream(formatted.value());
-              Write(formatted_stream, file_path + filename + ".new");
-            }
-            if (!Parse(*converted_source_managers->back().sources().back(), reporter, library.get(),
-                       flags)) {
-              return 1;
-            }
-          }
-          if (!library->Compile()) {
-            return 1;
-          }
-          converted_final_library = library.get();
-          auto library_name = fidl::NameLibrary(library->name());
-          if (!all_converted_libraries.Insert(std::move(library)).second) {
-            Fail("Multiple libraries with the same name: '%s'\n", library_name.c_str());
-          }
-          ++i;
-        }
-        if (!converted_final_library) {
-          Fail("No library was produced.\n");
-        }
-        auto unused_libraries_names = all_converted_libraries.Unused(converted_final_library);
-        // Because the sources of library zx are unconditionally included, we filter
-        // out this library here. We can remove this logic when zx is used in source
-        // like other libraries.
-        unused_libraries_names.erase(std::vector<std::string_view>{"zx"});
-        if (unused_libraries_names.size() != 0) {
-          std::string message = "Unused libraries provided via --files: ";
-          bool first = true;
-          for (const auto& name : unused_libraries_names) {
-            if (first) {
-              first = false;
-            } else {
-              message.append(", ");
-            }
-            message.append(fidl::NameLibrary(name));
-          }
-          message.append("\n");
-          Fail(message.data());
-        }
-
-        // Verify that the produced library's name matches the expected name.
-        std::string final_name = fidl::NameLibrary(converted_final_library->name());
-        if (!library_name.empty() && final_name != library_name) {
-          Fail("Generated library '%s' did not match --name argument: %s\n", final_name.data(),
-               library_name.data());
-        }
-
-        if (cheader_stream.has_value()) {
-          auto from_new = fidl::CGenerator(converted_final_library).ProduceHeader();
-          if (cheader_stream->str() != from_new.str()) {
-            Write(*cheader_stream, file_path + "from_old.h");
-            Write(from_new, file_path + "from_new.h");
-            std::cout << "C header comparison failure" << std::endl;
-            return 1;
-          }
-        }
-        if (cclient_stream.has_value()) {
-          auto from_new = fidl::CGenerator(converted_final_library).ProduceClient();
-          if (cclient_stream->str() != from_new.str()) {
-            Write(*cclient_stream, file_path + "from_old_client.c");
-            Write(from_new, file_path + "from_new_client.c");
-            std::cout << "C client comparison failure" << std::endl;
-            return 1;
-          }
-        }
-        if (cserver_stream.has_value()) {
-          auto from_new = fidl::CGenerator(converted_final_library).ProduceServer();
-          if (cserver_stream->str() != from_new.str()) {
-            Write(*cserver_stream, file_path + "from_old_server.c");
-            Write(from_new, file_path + "from_new_server.c");
-            std::cout << "C server comparison failure" << std::endl;
-            return 1;
-          }
-        }
-        if (tables_stream.has_value()) {
-          auto from_new = fidl::TablesGenerator(converted_final_library).Produce();
-          if (tables_stream->str() != from_new.str()) {
-            Write(*tables_stream, file_path + "from_old_tables.c");
-            Write(from_new, file_path + "from_new_tables.c");
-            std::cout << "tables comparison failure" << std::endl;
-            return 1;
-          }
-        }
-        if (json_stream.has_value()) {
-          auto from_new = fidl::JSONGenerator(converted_final_library).Produce();
-          if (fidl::utils::IsIrEquals(json_stream->str(), from_new.str())) {
-            Write(*json_stream, file_path + "from_old.json");
-            Write(from_new, file_path + "from_new.json");
-            std::cout << "JSON comparison failure" << std::endl;
-            return 1;
-          }
-        }
+        fidl::JSONGenerator generator(final_library);
+        Write(generator.Produce(), file_path);
         break;
       }
     }

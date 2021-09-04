@@ -1820,37 +1820,6 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
 std::unique_ptr<raw::File> Parser::ParseFile() {
   ASTScope scope(this);
 
-  const bool old_only = experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kOldSyntaxOnly);
-  const bool either = experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax);
-  const bool new_only = experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kNewSyntaxOnly);
-  std::vector<const bool> token_flags = {old_only, either, new_only};
-  assert(std::count(token_flags.cbegin(), token_flags.cend(), true) <= 1 &&
-         "at most one of the token flags can be set");
-
-  const bool has_syntax_token =
-      MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kDeprecatedSyntax)).has_value();
-  if (has_syntax_token)
-    ConsumeTokenOrRecover(OfKind(Token::Kind::kSemicolon));
-
-  if (old_only) {
-    // accept token; always old syntax
-    syntax_ = utils::Syntax::kOld;
-  } else if (either) {
-    // determine syntax based on token
-    syntax_ = has_syntax_token ? utils::Syntax::kOld : utils::Syntax::kNew;
-  } else if (new_only) {
-    // no token allowed; always new syntax
-    if (has_syntax_token)
-      Fail(ErrRemoveSyntaxVersion);
-    syntax_ = utils::Syntax::kNew;
-  } else {
-    // no token allowed; always old syntax
-    if (has_syntax_token) {
-      Fail(ErrRemoveSyntaxVersion);
-    }
-    syntax_ = utils::Syntax::kOld;
-  }
-
   auto library_decl = ParseLibraryDecl();
   if (!Ok())
     return Fail();
@@ -1893,15 +1862,6 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_TOKEN(Token::Kind::kEndOfFile):
         return Done;
-
-      case CASE_IDENTIFIER(Token::Subkind::kDeprecatedSyntax): {
-        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
-          Fail(ErrMisplacedSyntaxVersion);
-        } else {
-          Fail(ErrRemoveSyntaxVersion);
-        }
-        return More;
-      }
 
       case CASE_IDENTIFIER(Token::Subkind::kAlias): {
         done_with_library_imports = true;
@@ -2620,11 +2580,6 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
 
       case CASE_TOKEN(Token::Kind::kEndOfFile):
         return Done;
-
-      case CASE_IDENTIFIER(Token::Subkind::kDeprecatedSyntax): {
-        Fail(ErrMisplacedSyntaxVersion);
-        return More;
-      }
 
       case CASE_IDENTIFIER(Token::Subkind::kAlias): {
         done_with_library_imports = true;

@@ -1237,7 +1237,7 @@ class Libraries {
   Libraries();
 
   // Insert |library|.
-  std::pair<const Library*, bool> Insert(std::unique_ptr<Library> library);
+  bool Insert(std::unique_ptr<Library> library);
 
   // Lookup a library by its |library_name|.
   bool Lookup(const std::vector<std::string_view>& library_name, Library** out_library) const;

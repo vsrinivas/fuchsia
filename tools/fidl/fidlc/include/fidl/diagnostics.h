@@ -30,12 +30,6 @@ constexpr ErrorDef<std::string> ErrInvalidLibraryNameComponent("Invalid library 
 constexpr ErrorDef<std::string> ErrDuplicateAttribute("duplicate attribute with name '{}'");
 
 // start new_syntax
-// TODO(fxbug.dev/70247): remove when new syntax fully implemented.
-constexpr ErrorDef ErrMisplacedSyntaxVersion(
-    "syntax declaration must be at the top of the file, preceding the library declaration");
-constexpr ErrorDef ErrRemoveSyntaxVersion(
-    "the deprecated_syntax token is only recognized when the experimental allow_new_syntax flag is "
-    "enabled");
 constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
 constexpr ErrorDef ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");

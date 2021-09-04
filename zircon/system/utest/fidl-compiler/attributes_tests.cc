@@ -978,8 +978,6 @@ type Foo = struct {
 }
 
 TEST(AttributesTests, BadOverrideValue) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
