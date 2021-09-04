@@ -75,13 +75,15 @@ async fn run<F: futures::Future<Output = ()>>(
     }
 }
 
-fn make_request(method: &str, url: String) -> http::Request {
+fn make_request(method: &str, url: String, deadline: Option<zx::Time>) -> http::Request {
+    // Unless specified by the caller, use an infinite timeout to avoid flakes.
+    let deadline = deadline.unwrap_or(zx::Time::INFINITE);
     http::Request {
         url: Some(url),
         method: Some(method.to_string()),
         headers: None,
         body: None,
-        deadline: None,
+        deadline: Some(deadline.into_nanos()),
         ..http::Request::EMPTY
     }
 }
@@ -138,7 +140,7 @@ async fn check_body(body: Option<zx::Socket>, mut expected: &[u8]) {
 async fn test_fetch_http() {
     run(|loader, addr| async move {
         let response = loader
-            .fetch(make_request("GET", format!("http://{}", addr)))
+            .fetch(make_request("GET", format!("http://{}", addr), None))
             .await
             .expect("failed to fetch");
         let () = check_response(&response);
@@ -151,14 +153,10 @@ async fn test_fetch_http() {
 #[fasync::run_singlethreaded(test)]
 async fn test_fetch_past_deadline() {
     run(|loader, addr| async move {
+        // Deadline expired 10 minutes ago!
+        let deadline = Some(zx::Time::after(zx::Duration::from_minutes(-10)));
         let http::Response { error, body, .. } = loader
-            .fetch({
-                let mut req = make_request("GET", format!("http://{}", addr));
-
-                // Deadline expired 10 minutes ago!
-                req.deadline = Some(zx::Time::after(zx::Duration::from_minutes(-10)).into_nanos());
-                req
-            })
+            .fetch(make_request("GET", format!("http://{}", addr), deadline))
             .await
             .expect("failed to fetch");
 
@@ -171,14 +169,10 @@ async fn test_fetch_past_deadline() {
 #[fasync::run_singlethreaded(test)]
 async fn test_fetch_response_too_slow() {
     run(|loader, addr| async move {
+        // Deadline expires 100ms from now.
+        let deadline = Some(zx::Time::after(zx::Duration::from_millis(100)));
         let http::Response { error, body, .. } = loader
-            .fetch({
-                let mut req =
-                    make_request("GET", format!("http://{}/responds_in_10_minutes", addr));
-                // Deadline expires 100ms from now.
-                req.deadline = Some(zx::Time::after(zx::Duration::from_millis(100)).into_nanos());
-                req
-            })
+            .fetch(make_request("GET", format!("http://{}/responds_in_10_minutes", addr), deadline))
             .await
             .expect("failed to fetch");
 
@@ -192,7 +186,7 @@ async fn test_fetch_response_too_slow() {
 async fn test_fetch_https() {
     run(|loader, addr| async move {
         let http::Response { error, body, .. } = loader
-            .fetch(make_request("GET", format!("https://{}", addr)))
+            .fetch(make_request("GET", format!("https://{}", addr), None))
             .await
             .expect("failed to fetch");
 
@@ -208,7 +202,7 @@ async fn test_start_http() {
         let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
         let () = loader
-            .start(make_request("GET", format!("http://{}", addr)), tx)
+            .start(make_request("GET", format!("http://{}", addr), None), tx)
             .expect("failed to start");
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
@@ -234,7 +228,7 @@ async fn test_start_http() {
 async fn test_fetch_redirect() {
     run(|loader, addr| async move {
         let response = loader
-            .fetch(make_request("GET", format!("http://{}/trigger_301", addr)))
+            .fetch(make_request("GET", format!("http://{}/trigger_301", addr), None))
             .await
             .expect("failed to fetch");
         let () = check_response(&response);
@@ -251,7 +245,7 @@ async fn test_start_redirect() {
         let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
         let () = loader
-            .start(make_request("GET", format!("http://{}/trigger_301", addr)), tx)
+            .start(make_request("GET", format!("http://{}/trigger_301", addr), None), tx)
             .expect("failed to start");
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
@@ -298,7 +292,7 @@ async fn test_start_redirect() {
 async fn test_fetch_see_other() {
     run(|loader, addr| async move {
         let response = loader
-            .fetch(make_request("POST", format!("http://{}/see_other", addr)))
+            .fetch(make_request("POST", format!("http://{}/see_other", addr), None))
             .await
             .expect("failed to fetch");
         let () = check_response(&response);
@@ -315,7 +309,7 @@ async fn test_start_see_other() {
         let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
         let () = loader
-            .start(make_request("POST", format!("http://{}/see_other", addr)), tx)
+            .start(make_request("POST", format!("http://{}/see_other", addr), None), tx)
             .expect("failed to start");
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
@@ -363,7 +357,7 @@ async fn test_start_see_other() {
 async fn test_fetch_max_redirect() {
     run(|loader, addr| async move {
         let http::Response { status_code, redirect, .. } = loader
-            .fetch(make_request("GET", format!("http://{}/loop1", addr)))
+            .fetch(make_request("GET", format!("http://{}/loop1", addr), None))
             .await
             .expect("failed to fetch");
         // The last request in the redirect loop will always return status code 301
@@ -387,7 +381,7 @@ async fn test_start_redirect_loop() {
         let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
         let () = loader
-            .start(make_request("GET", format!("http://{}/loop1", addr)), tx)
+            .start(make_request("GET", format!("http://{}/loop1", addr), None), tx)
             .expect("failed to start");
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
@@ -443,7 +437,7 @@ async fn test_start_redirect_loop() {
 async fn test_fetch_http_big_stream() {
     run(|loader, addr| async move {
         let response = loader
-            .fetch(make_request("GET", format!("http://{}/big_stream", addr)))
+            .fetch(make_request("GET", format!("http://{}/big_stream", addr), None))
             .await
             .expect("failed to fetch");
 
