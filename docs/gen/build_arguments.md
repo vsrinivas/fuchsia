@@ -3094,15 +3094,6 @@ A list of binary labels to include in the system_image package.
 
 From //build/product.gni:10
 
-### prototype_account_transfer
-Whether or not prototype account transfer is enabled.
-NOTE: This is not secure and should NOT be enabled for any products!  This
-is only for use during local development.
-
-**Current value (from the default):** `false`
-
-From //src/identity/bin/account_manager/BUILD.gn:12
-
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
 Default recovery image is zedboot. Overriding this value will keep zedboot
@@ -3289,7 +3280,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"lI21GVTfJHyGu0lXrlaRRqdAghE5TJO-Wwf0uo5OqakC"`
+**Current value (from the default):** `"fylKqWbt4h5tTZwWDee7b-FHAfhlWKuo8--PWFz2UQYC"`
 
 From //build/rust/config.gni:30
 
