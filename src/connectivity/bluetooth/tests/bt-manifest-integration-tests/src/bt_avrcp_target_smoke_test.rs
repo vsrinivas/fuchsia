@@ -171,7 +171,9 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
             ],
         )
         .expect("Failed adding LogSink route to test components");
-    let _test_topology = builder.build().create().await.unwrap();
+    let test_topology = builder.build().create().await.unwrap();
+
+    let _ = test_topology.root.connect_to_binder().unwrap();
 
     // If the routing is correctly configured, we expect three events: `bt-avrcp-target` connecting
     // to the PeerManager and Discovery services and the fake client connecting to the Lifecycle

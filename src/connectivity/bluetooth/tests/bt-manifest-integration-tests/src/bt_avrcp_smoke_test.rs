@@ -128,7 +128,9 @@ async fn avrcp_v2_component_topology() {
             ],
         )
         .expect("Failed adding LogSink route to test components");
-    let _test_topology = builder.build().create().await.unwrap();
+    let test_topology = builder.build().create().await.unwrap();
+
+    let _ = test_topology.root.connect_to_binder().unwrap();
 
     // If the routing is correctly configured, we expect four events:
     //   1: `bt-avrcp` connecting to the Profile service.

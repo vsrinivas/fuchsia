@@ -276,6 +276,7 @@ async fn bt_init_component_topology() {
         })
         .expect("Failed adding temp storage route to SecureStore component");
     let mut test_topology = builder.build().create().await.unwrap();
+    let _ = test_topology.root.connect_to_binder().unwrap();
     let realm_destroyed = test_topology.root.take_destroy_waiter();
     // If the routing is correctly configured, we expect one of each of the Event enum to be
     // sent (so, in total, 10 events)
