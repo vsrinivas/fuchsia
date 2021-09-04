@@ -144,6 +144,12 @@ impl TestEnv {
     fn local_mirror_proxy(&self) -> LocalMirrorProxy {
         self.instance.root.connect_to_protocol_at_exposed_dir::<LocalMirrorMarker>().unwrap()
     }
+
+    // Start root of the test realm.
+    fn start(&self) {
+        let _ =
+            self.instance.root.connect_to_binder().expect("failed to start Realm root instance");
+    }
 }
 
 fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {

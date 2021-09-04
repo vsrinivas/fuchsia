@@ -108,6 +108,8 @@ async fn error_opening_blob() {
         .build()
         .await;
 
+    env.start();
+
     // Wait for the channel connecting the pkg-local-mirror to the blobs dir to close.
     // This ensures that GetBlob calls will fail with the expected fidl error.
     let () = blobs_closed_recv.await.unwrap();

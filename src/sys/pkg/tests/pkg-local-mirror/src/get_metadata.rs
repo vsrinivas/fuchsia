@@ -145,6 +145,8 @@ async fn error_opening_metadata() {
         .build()
         .await;
 
+    env.start();
+
     // Wait for the channel connecting the pkg-local-mirror to the metadata dir to close.
     // This ensures that GetMetadata calls will fail with the expected fidl error.
     let () = metadata_closed_recv.await.unwrap();
