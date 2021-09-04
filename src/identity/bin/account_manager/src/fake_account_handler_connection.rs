@@ -94,15 +94,8 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
                     AccountHandlerControlRequest::Terminate { .. } => {
                         break;
                     }
-                    AccountHandlerControlRequest::PrepareForAccountTransfer { .. }
-                    | AccountHandlerControlRequest::PerformAccountTransfer { .. }
-                    | AccountHandlerControlRequest::FinalizeAccountTransfer { .. }
-                    | AccountHandlerControlRequest::EncryptAccountData { .. }
-                    | AccountHandlerControlRequest::RemoveAccount { .. }
+                    AccountHandlerControlRequest::RemoveAccount { .. }
                     | AccountHandlerControlRequest::GetAccount { .. }
-                    | AccountHandlerControlRequest::GetPublicKey { .. }
-                    | AccountHandlerControlRequest::GetGlobalIdHash { .. }
-
                     // TODO(dnordstrom): Support LockAccount and UnlockAccount
                     | AccountHandlerControlRequest::LockAccount { .. }
                     | AccountHandlerControlRequest::UnlockAccount{..}
@@ -241,6 +234,6 @@ mod tests {
             DEFAULT_ACCOUNT_ID.clone(),
         )
         .unwrap();
-        assert!(conn.proxy().prepare_for_account_transfer().await.unwrap_err().is_closed());
+        assert!(conn.proxy().remove_account(true).await.unwrap_err().is_closed());
     }
 }

@@ -15,7 +15,6 @@ use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
 use fidl_fuchsia_identity_authentication::{Enrollment, StorageUnlockMechanismProxy};
 use fidl_fuchsia_identity_internal::{
     AccountHandlerContextProxy, AccountHandlerControlRequest, AccountHandlerControlRequestStream,
-    HASH_SALT_SIZE, HASH_SIZE,
 };
 use fuchsia_async as fasync;
 use fuchsia_inspect::{Inspector, Property};
@@ -25,7 +24,6 @@ use futures::prelude::*;
 use identity_common::TaskGroupError;
 use lazy_static::lazy_static;
 use log::{error, info, warn};
-use mundane::hash::{Digest, Hasher, Sha256};
 use std::fmt;
 use std::sync::Arc;
 
@@ -45,12 +43,6 @@ enum Lifecycle {
     /// An account has not yet been created or loaded.
     Uninitialized,
 
-    /// The handler is awaiting an account transfer.
-    PendingTransfer,
-
-    /// The handler is holding a transferred account and is awaiting finalization.
-    Transferred,
-
     /// The account is locked.
     Locked,
 
@@ -65,8 +57,6 @@ impl fmt::Debug for Lifecycle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             &Lifecycle::Uninitialized => "Uninitialized",
-            &Lifecycle::PendingTransfer => "PendingTransfer",
-            &Lifecycle::Transferred => "Transferred",
             &Lifecycle::Locked { .. } => "Locked",
             &Lifecycle::Initialized { .. } => "Initialized",
             &Lifecycle::Finished => "Finished",
@@ -74,9 +64,6 @@ impl fmt::Debug for Lifecycle {
         write!(f, "{}", name)
     }
 }
-
-type GlobalIdHash = [u8; HASH_SIZE as usize];
-type GlobalIdHashSalt = [u8; HASH_SALT_SIZE as usize];
 
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
 /// the execution context and a TokenManager.
@@ -157,23 +144,6 @@ impl AccountHandler {
                 let mut response = self.lock_account().await;
                 responder.send(&mut response)?;
             }
-            AccountHandlerControlRequest::PrepareForAccountTransfer { responder } => {
-                let mut response = self.prepare_for_account_transfer().await;
-                responder.send(&mut response)?;
-            }
-            AccountHandlerControlRequest::PerformAccountTransfer {
-                encrypted_account_data,
-                responder,
-            } => {
-                let mut response = self.perform_account_transfer(encrypted_account_data).await;
-                responder.send(&mut response)?;
-            }
-            AccountHandlerControlRequest::FinalizeAccountTransfer { responder, .. } => {
-                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
-            }
-            AccountHandlerControlRequest::EncryptAccountData { responder, .. } => {
-                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
-            }
             AccountHandlerControlRequest::RemoveAccount { force, responder } => {
                 let mut response = self.remove_account(force).await;
                 responder.send(&mut response)?;
@@ -184,13 +154,6 @@ impl AccountHandler {
                 responder,
             } => {
                 let mut response = self.get_account(auth_context_provider, account).await;
-                responder.send(&mut response)?;
-            }
-            AccountHandlerControlRequest::GetPublicKey { responder } => {
-                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
-            }
-            AccountHandlerControlRequest::GetGlobalIdHash { salt, responder } => {
-                let mut response = self.get_global_id_hash(salt).await;
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::Terminate { control_handle } => {
@@ -370,44 +333,6 @@ impl AccountHandler {
         })
     }
 
-    /// Prepares the handler for an account transfer.  Moves the handler from the
-    /// `Uninitialized` state to the `PendingTransfer` state.
-    async fn prepare_for_account_transfer(&self) -> Result<(), ApiError> {
-        let mut state_lock = self.state.lock().await;
-        match *state_lock {
-            Lifecycle::Uninitialized => {
-                *state_lock = Lifecycle::PendingTransfer;
-                self.inspect.lifecycle.set("pendingTransfer");
-                Ok(())
-            }
-            ref invalid_state @ _ => {
-                warn!("PrepareForAccountTransfer was called in the {:?} state", invalid_state);
-                Err(ApiError::FailedPrecondition)
-            }
-        }
-    }
-
-    /// Loads an encrypted account into memory but does not make it available
-    /// for use yet.  Moves the handler from the `PendingTransfer` state to the
-    /// `Transferred` state.
-    async fn perform_account_transfer(
-        &self,
-        _encrypted_account_data: Vec<u8>,
-    ) -> Result<(), ApiError> {
-        let mut state_lock = self.state.lock().await;
-        match *state_lock {
-            Lifecycle::PendingTransfer => {
-                *state_lock = Lifecycle::Transferred;
-                self.inspect.lifecycle.set("transferred");
-                Ok(())
-            }
-            ref invalid_state @ _ => {
-                warn!("PerformAccountTransfer was called in the {:?} state", invalid_state);
-                Err(ApiError::FailedPrecondition)
-            }
-        }
-    }
-
     /// Remove the active account. This method should not be retried on failure.
     // TODO(fxbug.dev/555): Implement graceful account removal.
     async fn remove_account(&self, force: bool) -> Result<(), ApiError> {
@@ -494,24 +419,6 @@ impl AccountHandler {
                 // inconsistent state rather than a conflict
                 ApiError::Internal
             })
-    }
-
-    /// Computes a hash of the global account id of the account held by this
-    /// handler using the provided hash.
-    async fn get_global_id_hash(&self, salt: GlobalIdHashSalt) -> Result<GlobalIdHash, ApiError> {
-        let state_lock = self.state.lock().await;
-        let global_id = match &*state_lock {
-            Lifecycle::Initialized { account, .. } => account.global_id().as_ref(),
-            invalid_state @ _ => {
-                warn!("GetGlobalIdHash was called in the {:?} state", invalid_state);
-                return Err(ApiError::FailedPrecondition);
-            }
-        };
-
-        let mut salted_id = Vec::with_capacity(global_id.len() + HASH_SALT_SIZE as usize);
-        salted_id.extend_from_slice(&salt);
-        salted_id.extend_from_slice(global_id.as_slice());
-        Ok(Sha256::hash(&salted_id).bytes())
     }
 
     async fn terminate(&self) {
@@ -1187,229 +1094,6 @@ mod tests {
 
                 // Pre-auth state unaltered
                 assert_eq!(pre_auth_manager.get().await.unwrap().as_ref(), &*TEST_PRE_AUTH_SINGLE);
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
-    fn test_global_id_hashes_unique() {
-        let location = TempLocation::new();
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    proxy.create_account(None).await??;
-
-                    // Different given different salts
-                    let mut salt_1 = [0u8; 32];
-                    let hash_1 = proxy.get_global_id_hash(&mut salt_1).await??;
-
-                    let mut salt_2 = [37u8; 32];
-                    let hash_2 = proxy.get_global_id_hash(&mut salt_2).await??;
-
-                    assert_ne!(hash_1[..], hash_2[..]);
-                    Ok(())
-                }
-            },
-        );
-    }
-
-    #[test]
-    fn test_account_transfer_states() {
-        let location = TempLocation::new();
-        let inspector = Arc::new(Inspector::new());
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::clone(&inspector),
-            |proxy| {
-                async move {
-                    // TODO(satsukiu): add more meaningful tests once there's some functionality
-                    // to test
-                    assert_data_tree!(inspector, root: {
-                        account_handler: {
-                            local_account_id: TEST_ACCOUNT_ID_UINT,
-                            lifecycle: "uninitialized",
-                        }
-                    });
-                    proxy.prepare_for_account_transfer().await??;
-                    assert_data_tree!(inspector, root: {
-                        account_handler: {
-                            local_account_id: TEST_ACCOUNT_ID_UINT,
-                            lifecycle: "pendingTransfer",
-                        }
-                    });
-                    proxy.perform_account_transfer(&[]).await??;
-                    assert_data_tree!(inspector, root: {
-                        account_handler: {
-                            local_account_id: TEST_ACCOUNT_ID_UINT,
-                            lifecycle: "transferred",
-                        }
-                    });
-                    Ok(())
-                }
-            },
-        );
-    }
-
-    #[test]
-    fn test_prepare_for_account_transfer_invalid_states() {
-        // Handler in `PendingTransfer` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.prepare_for_account_transfer().await??;
-                assert_eq!(
-                    proxy.prepare_for_account_transfer().await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
-        );
-
-        // Handler in `Transferred` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.prepare_for_account_transfer().await??;
-                proxy.perform_account_transfer(&[]).await??;
-                assert_eq!(
-                    proxy.prepare_for_account_transfer().await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
-        );
-
-        // Handler in `Initialized` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.create_account(None).await??;
-                assert_eq!(
-                    proxy.prepare_for_account_transfer().await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
-        );
-
-        // Handler in `Locked` state
-        let location = TempLocation::new();
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.preload().await??;
-                proxy.lock_account().await??;
-                assert_eq!(
-                    proxy.prepare_for_account_transfer().await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
-    fn test_perform_account_transfer_invalid_states() {
-        // Handler in `Uninitialized` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                assert_eq!(
-                    proxy.perform_account_transfer(&[]).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
-        );
-
-        // Handler in `Transferred` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.prepare_for_account_transfer().await??;
-                proxy.perform_account_transfer(&[]).await??;
-                assert_eq!(
-                    proxy.perform_account_transfer(&[]).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
-        );
-
-        // Handler in `Initialized` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.create_account(None).await??;
-                assert_eq!(
-                    proxy.perform_account_transfer(&[]).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
-        );
-
-        // Handler in `Locked` state
-        let location = TempLocation::new();
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.preload().await??;
-                proxy.lock_account().await??;
-                assert_eq!(
-                    proxy.perform_account_transfer(&[]).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
-    fn test_finalize_account_transfer_unimplemented() {
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            create_clean_pre_auth_manager(),
-            None,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.prepare_for_account_transfer().await??;
-                proxy.perform_account_transfer(&[]).await??;
-                assert_eq!(
-                    proxy.finalize_account_transfer().await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
                 Ok(())
             },
         );

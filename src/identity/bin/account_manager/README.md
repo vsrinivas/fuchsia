@@ -31,8 +31,6 @@ fuchsia.identity.account.Persona or fuchsia.auth.TokenManager.
 * *Auth Providers* - Account Manager launches instances of components that
   implement the fuchsia.auth.AuthProvider FIDL protocol. A single component is
   launched for each configured AuthProvider, serving all Fuchsia accounts
-* *Overnet* If prototype account transfer is enabled, Overnet is used as the
-  mechanism by which the source and target devices communicate.
 
 
 ## Design
@@ -64,36 +62,6 @@ from all configured auth_provider_type strings to an associated
 
 `AccountEventEmitter` serves clients implementing the
 fuchsia.identity.account.AccountListener FIDL protocol.
-
-
-### Prototype Account Transfer
-
-Account Manager also contains a prototype mechanism for provisioning an account
-that exists on some Fuchsia device onto another Fuchsia device. Account
-transfer is disabled by default and can be enabled by passing
-`--args="prototype_account_transfer=true"` to `fx set`.
-
-When account transfer is enabled, the main function takes two additional
-actions:
-* Creates a single instance of `AccountManagerPeer` and uses it to serve
-connections from Account Managers on other Fuchsia devices through Overnet
-* Creates a single instance of `AccountTransferControl` and uses it to handle
-account transfer requests
-
-The entry point for triggering an account transfer is the
-fuchsia.identity.prototype.PrototypeAccountTransferControl FIDL protocol, which
-Account Manager publishes to its out/debug directory.  It is accessible by
-inspecting Account Manager's output directory via the Hub.
-
-`AccountManagerPeer` implements the
-fuchsia.identity.transfer.AccountManagerPeer FIDL protocol, and is responsible
-for instantiating and initializing an Account Handler for a transferred account
-on the target device.
-
-`AccountTransferControl` implements the
-fuchsia.identity.prototype.PrototypeAccountTransferControl FIDL protocol, and
-is responsible for connecting to an Account Manager on a remote device and
-orchestrating the account transfer to it.
 
 
 ## Future Work

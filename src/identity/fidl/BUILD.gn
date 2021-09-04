@@ -17,28 +17,5 @@ fidl("account") {
     "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.identity.authentication",
     "//sdk/fidl/fuchsia.identity.external",
-    "//sdk/fidl/fuchsia.kms",
-  ]
-}
-
-fidl("account-transfer") {
-  name = "fuchsia.identity.transfer"
-
-  sources = [ "account_transfer.fidl" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.identity.account",
-    "//sdk/fidl/fuchsia.kms",
-  ]
-}
-
-fidl("account-prototype") {
-  name = "fuchsia.identity.prototype"
-
-  sources = [ "account_transfer_prototype.fidl" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.identity.account",
-    "//sdk/fidl/fuchsia.overnet.protocol",
   ]
 }

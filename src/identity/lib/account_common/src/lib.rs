@@ -5,7 +5,6 @@
 //! Types that are shared across more than one Account Management crate.
 #![deny(missing_docs)]
 
-
 /// An error type for problems encountered in the account manager and account handler.
 mod error;
 /// More ergonomic wrapper types for FIDL account and persona identifiers.
@@ -13,6 +12,5 @@ mod identifiers;
 
 pub use crate::error::{AccountManagerError, ResultExt};
 pub use crate::identifiers::{
-    FidlGlobalAccountId, FidlLocalAccountId, FidlLocalPersonaId, GlobalAccountId, LocalAccountId,
-    LocalPersonaId,
+    FidlLocalAccountId, FidlLocalPersonaId, LocalAccountId, LocalPersonaId,
 };

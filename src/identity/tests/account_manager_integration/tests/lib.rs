@@ -9,4 +9,3 @@
 #![deny(missing_docs)]
 
 mod account;
-mod prototype;

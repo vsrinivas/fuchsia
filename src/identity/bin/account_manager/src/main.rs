@@ -20,7 +20,6 @@ mod account_map;
 mod authenticator_connection;
 mod fake_account_handler_connection;
 pub mod inspect;
-mod prototype;
 mod stored_account_list;
 
 use crate::account_handler_connection::AccountHandlerConnectionImpl;
@@ -42,10 +41,6 @@ const DEV_AUTH_PROVIDERS_FLAG: &str = "dev-auth-providers";
 
 /// This command line flag (prefixed with `--`) results in a set of hermetic auth mechanisms.
 const DEV_AUTH_MECHANISMS_FLAG: &str = "dev-auth-mechanisms";
-
-/// This command line flag (prefixed with `--`) starts account manager with the prototype
-/// account transfer interfaces enabled.
-const PROTOTYPE_TRANSFER_FLAG: &str = "prototype-account-transfer";
 
 /// Default data directory for the AccountManager.
 const DATA_DIR: &str = "/data";
@@ -98,7 +93,6 @@ fn main() -> Result<(), Error> {
         DEV_AUTH_MECHANISMS_FLAG,
         "use dev authenticators instead of the default set, for tests",
     );
-    opts.optflag("", PROTOTYPE_TRANSFER_FLAG, "Publish prototype account transfer interfaces.");
 
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
@@ -145,12 +139,6 @@ fn main() -> Result<(), Error> {
         })
         .detach();
     });
-
-    if options.opt_present(PROTOTYPE_TRANSFER_FLAG) {
-        prototype::publish_account_transfer_control(&mut fs);
-        prototype::publish_account_manager_peer_to_overnet()
-            .unwrap_or_else(|e| error!("Error publishing AccountManagerPeer: {:?}", e));
-    }
 
     fs.take_and_serve_directory_handle()?;
 

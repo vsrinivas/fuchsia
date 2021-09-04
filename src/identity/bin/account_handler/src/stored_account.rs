@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{AccountManagerError, GlobalAccountId, LocalPersonaId};
+use account_common::{AccountManagerError, LocalPersonaId};
 use fidl_fuchsia_identity_account::Error as ApiError;
 use log::warn;
 use serde::{Deserialize, Serialize};
@@ -22,29 +22,19 @@ const ACCOUNT_DOC_TMP: &str = "account.json.tmp";
 pub struct StoredAccount {
     /// Default persona id for this account
     default_persona_id: LocalPersonaId,
-    /// Global id for this account.
-    global_account_id: GlobalAccountId,
 }
 
 /// TODO(dnordstrom): Improve this API to better match the user intent rather than to expose paths
 /// as-is, making the user check for existence, removing the actual file, etc.
 impl StoredAccount {
     /// Create a new stored account. No side effects.
-    pub fn new(
-        default_persona_id: LocalPersonaId,
-        global_account_id: GlobalAccountId,
-    ) -> StoredAccount {
-        Self { default_persona_id, global_account_id }
+    pub fn new(default_persona_id: LocalPersonaId) -> StoredAccount {
+        Self { default_persona_id }
     }
 
     /// Get the default persona id.
     pub fn get_default_persona_id(&self) -> &LocalPersonaId {
         &self.default_persona_id
-    }
-
-    /// Get the global account id.
-    pub fn get_global_account_id(&self) -> &GlobalAccountId {
-        &self.global_account_id
     }
 
     /// Load StoredAccount from disk
@@ -124,12 +114,10 @@ mod tests {
     #[test]
     fn save_and_load() {
         let tmp_dir = TempDir::new().unwrap();
-        let stored =
-            StoredAccount::new(LocalPersonaId::new(6), GlobalAccountId::new(vec![1, 2, 3]));
+        let stored = StoredAccount::new(LocalPersonaId::new(6));
         assert!(stored.save(&tmp_dir.path()).is_ok());
         let stored = StoredAccount::load(&tmp_dir.path()).expect("failed loading stored account");
         assert_eq!(stored.get_default_persona_id(), &LocalPersonaId::new(6));
-        assert_eq!(stored.get_global_account_id(), &GlobalAccountId::new(vec![1, 2, 3]));
         assert!(stored.save(&tmp_dir.path()).is_ok()); // Checking that save works a second time
     }
 
@@ -137,7 +125,7 @@ mod tests {
     fn save_non_existing() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("santa");
-        let stored = StoredAccount::new(LocalPersonaId::new(4), GlobalAccountId::new(vec![0, 2]));
+        let stored = StoredAccount::new(LocalPersonaId::new(4));
         let err = stored.save(&path).err().expect("save unexpectedly succeeded");
         assert_eq!(err.api_error, ApiError::Resource);
     }

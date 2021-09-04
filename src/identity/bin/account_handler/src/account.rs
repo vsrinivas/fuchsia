@@ -9,15 +9,13 @@ use crate::lock_request;
 use crate::persona::{Persona, PersonaContext};
 use crate::stored_account::StoredAccount;
 use crate::TokenManager;
-use account_common::{
-    AccountManagerError, FidlLocalPersonaId, GlobalAccountId, LocalPersonaId, ResultExt,
-};
+use account_common::{AccountManagerError, FidlLocalPersonaId, LocalPersonaId, ResultExt};
 use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::AuthenticationContextProviderProxy;
 use fidl_fuchsia_identity_account::{
     AccountRequest, AccountRequestStream, AuthChangeGranularity, AuthListenerMarker, AuthState,
-    Error as ApiError, Lifetime, PersonaMarker, Scenario, MAX_ID_SIZE,
+    Error as ApiError, Lifetime, PersonaMarker, Scenario,
 };
 use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
 use fuchsia_inspect::{Node, NumericProperty};
@@ -25,7 +23,6 @@ use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use identity_key_manager::KeyManager;
 use log::{error, info, warn};
-use rand::Rng;
 use scopeguard;
 use std::fs;
 use std::sync::Arc;
@@ -33,8 +30,6 @@ use std::sync::Arc;
 /// The file name to use for a token manager database. The location is supplied
 /// by `AccountHandlerContext.GetAccountPath()`
 const TOKEN_DB: &str = "tokens.json";
-
-const GLOBAL_ACCOUNT_ID_SIZE: usize = MAX_ID_SIZE as usize;
 
 /// The context that a particular request to an Account should be executed in, capturing
 /// information that was supplied upon creation of the channel.
@@ -49,9 +44,6 @@ pub struct AccountContext {
 /// This state is only available once the Handler has been initialized to a particular account via
 /// the AccountHandlerControl channel.
 pub struct Account {
-    /// A global identifier for this account.
-    global_id: GlobalAccountId,
-
     /// Lifetime for this account.
     lifetime: Arc<AccountLifetime>,
 
@@ -76,7 +68,6 @@ impl Account {
     /// Manually construct an account object, shouldn't normally be called directly.
     async fn new(
         persona_id: LocalPersonaId,
-        global_account_id: GlobalAccountId,
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
         lock_request_sender: lock_request::Sender,
@@ -110,7 +101,6 @@ impl Account {
         let lifetime = Arc::new(lifetime);
         let account_inspect = inspect::Account::new(inspect_parent);
         Ok(Self {
-            global_id: global_account_id,
             lifetime: Arc::clone(&lifetime),
             default_persona: Arc::new(Persona::new(
                 persona_id,
@@ -133,26 +123,17 @@ impl Account {
         lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
-        let global_account_id = Self::generate_global_account_id()?;
         let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
         if let AccountLifetime::Persistent { ref account_dir } = lifetime {
             if StoredAccount::path(account_dir).exists() {
                 info!("Attempting to create account twice");
                 return Err(AccountManagerError::new(ApiError::Internal));
             }
-            let stored_account =
-                StoredAccount::new(local_persona_id.clone(), global_account_id.clone());
+            let stored_account = StoredAccount::new(local_persona_id.clone());
             stored_account.save(account_dir)?;
         }
-        Self::new(
-            local_persona_id,
-            global_account_id,
-            lifetime,
-            context_proxy,
-            lock_request_sender,
-            inspect_parent,
-        )
-        .await
+        Self::new(local_persona_id, lifetime, context_proxy, lock_request_sender, inspect_parent)
+            .await
     }
 
     /// Loads an existing Fuchsia account from disk.
@@ -174,16 +155,8 @@ impl Account {
         };
         let stored_account = StoredAccount::load(account_dir)?;
         let local_persona_id = stored_account.get_default_persona_id().clone();
-        let global_account_id = stored_account.get_global_account_id().clone();
-        Self::new(
-            local_persona_id,
-            global_account_id,
-            lifetime,
-            context_proxy,
-            lock_request_sender,
-            inspect_parent,
-        )
-        .await
+        Self::new(local_persona_id, lifetime, context_proxy, lock_request_sender, inspect_parent)
+            .await
     }
 
     /// Removes the account from disk or returns the account and the error.
@@ -215,11 +188,6 @@ impl Account {
     /// Returns a task group which can be used to spawn and cancel tasks that use this instance.
     pub fn task_group(&self) -> &TaskGroup {
         &self.task_group
-    }
-
-    /// A global identifier for this account
-    pub fn global_id(&self) -> &GlobalAccountId {
-        &self.global_id
     }
 
     /// Asynchronously handles the supplied stream of `AccountRequest` messages.
@@ -298,13 +266,6 @@ impl Account {
             }
         }
         Ok(())
-    }
-
-    fn generate_global_account_id() -> Result<GlobalAccountId, AccountManagerError> {
-        let mut rng = rand::thread_rng();
-        let mut bytes = vec![0u8; GLOBAL_ACCOUNT_ID_SIZE];
-        rng.try_fill(bytes.as_mut_slice()).account_manager_error(ApiError::Resource)?;
-        Ok(GlobalAccountId::new(bytes))
     }
 
     fn get_lifetime(&self) -> Lifetime {
@@ -519,7 +480,6 @@ mod tests {
         test.location = TempLocation::new();
         let account_2 = test.create_persistent_account().await.unwrap();
         assert_ne!(account_1.default_persona.id(), account_2.default_persona.id());
-        assert_ne!(account_1.global_id(), account_2.global_id());
     }
 
     #[fasync::run_until_stalled(test)]

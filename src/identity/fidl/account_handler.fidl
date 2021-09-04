@@ -7,12 +7,6 @@ using fuchsia.auth;
 using fuchsia.identity.account;
 using fuchsia.identity.authentication;
 using fuchsia.identity.external;
-using fuchsia.kms;
-
-const HASH_SIZE uint32 = 32;
-const HASH_SALT_SIZE uint32 = 32;
-alias GlobalIdHash = array<byte, HASH_SIZE>;
-alias HashSalt = array<byte, HASH_SALT_SIZE>;
 
 // TODO(fxbug.dev/42836): Supply UI for system authentication.
 /// The control channel for an AccountHandler component.
@@ -29,55 +23,46 @@ alias HashSalt = array<byte, HASH_SALT_SIZE>;
 ///
 /// A given Account Handler progresses through the following state machine:
 /// ```
-///                                        |
-///                                        V
-///                                +---------------+
-///                 +--------------| Uninitialized |------------+
-///                 |              +---------------+            |
-///                 |                      |                    |
-///                 | PrepareForTransfer   |                    | Preload
-///                 V                      |                    V
-///       +------------------+             |           +------------------+
-///       | PendingTransfer  |             |           |      Locked      |
-///       +------------------+             |           +------------------+
-///                 |                      |                    ^
-///                 | PerformTransfer      |                    |
-///                 V                      |                    |
-///       +------------------+             |                    | LockAccount /
-///       |   Transferred    |             | CreateAccount      | UnlockAccount
-///       +------------------+             |                    |
-///                 |                      |                    |
-///                 | FinalizeTransfer     |                    |
-///                 |                      V                    |
-///                 |              +---------------+            |
-///                 +------------->|  Initialized  |<-----------+
-///                                +---------------+
-///                                        |
-///                                        | Terminate
-///                                        V
-///                                +---------------+
-///                                |   Finished    |
-///                                +---------------+
+///               |
+///               V
+///       +---------------+
+///       | Uninitialized |------------+
+///       +---------------+            |
+///               |                    |
+///               |                    | Preload
+///               |                    V
+///               |           +------------------+
+///               |           |      Locked      |
+///               |           +------------------+
+///               |                    ^
+///               |                    |
+///               |                    |
+///               |                    | LockAccount /
+///               | CreateAccount      | UnlockAccount
+///               |                    |
+///               |                    |
+///               |                    |
+///               V                    |
+///       +---------------+            |
+///       |  Initialized  |<-----------+
+///       +---------------+
+///               |
+///               | Terminate
+///               V
+///       +---------------+
+///       |   Finished    |
+///       +---------------+
 /// ```
 ///
 /// * `Uninitialized` - the handler has just been instantiated and contains no
-/// account information.
-/// * `PendingTranfer` - the handler is awaiting an account transfer.  It has
-/// created a public key pair that will be associated with the account on this
-/// device, but contains no other account information.
-/// * `Transferred` - the handler has received transferred account information
-/// and is holding it in memory.  In this state, the account transfer is not
-/// yet known to be valid, and is pending further validation from account
-/// manager.  The account is not available for use, and regardless of the
-/// intended lifetime of the account on this device, the account is not
-/// saved to disk.
+///   account information.
 /// * `Locked` - the handler has loaded pre-authentication data, which lets it
-/// unlock the account subsequently.
+///   unlock the account subsequently.
 /// * `Initialized` - the handler has loaded account information and is ready
-/// to serve requests for the `Account` interface.  If the account is
-/// persistent on this device, then it is saved to disk.
+///   to serve requests for the `Account` interface.  If the account is
+///   persistent, then it is saved to disk.
 /// * `Finished` - the handler is in the process of shutting down and will soon
-/// terminate.
+///   terminate.
 @discoverable
 protocol AccountHandlerControl {
     /// Creates a completely new Fuchsia account, optionally protecting the
@@ -117,84 +102,6 @@ protocol AccountHandlerControl {
     /// `Locked` state.
     LockAccount() -> (struct {}) error fuchsia.identity.account.Error;
 
-    /// Prepares the AccountHandler to receive an account from another device through
-    /// direct transfer.  This moves the AccountHandler from the `Uninitialized`
-    /// state to the `PendingTransfer` state.
-    ///
-    /// `PrepareForAccountTransfer` should be used in conjunction with
-    /// `PerformAccountTransfer`, `FinalizeAccountTransfer`, and
-    /// `EncryptAccountData` to provision an existing account on another device
-    /// (source) to this device (target).
-    ///
-    /// The expected sequence of calls to setup an AccountHandler with a transferred
-    /// account is as follows:
-    /// 1. `PrepareForAccountTransfer` is called on the target device.
-    /// 2. The public key for the target device is retrieved using `GetPublicKey`
-    ///    and handed to the source device.
-    /// 3. Account data is encrypted on the source device using the public key
-    ///    with `EncryptAccountData`.
-    /// 4. The encrypted account data is passed in to AccountHandler on the target
-    ///    device with `PerformAccountTransfer`.
-    /// 5. After any validation, the transfer is finalized on the target device
-    ///    with a call to `FinalizeAccountTransfer`.
-    ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
-    /// state.
-    PrepareForAccountTransfer() -> (struct {}) error fuchsia.identity.account.Error;
-
-    // TODO(satsukiu): investigate using VMOs or pagination over Overnet for
-    // when account size exceeds what FIDL can handle.
-
-    /// Loads the encrypted account into memory, but does not make it available
-    /// for use yet.  The account data passed in is expected to be serialized as
-    /// an `AccountTransferContainer` and encrypted using the public key
-    /// retrieved from `GetPublicKey`.  This format of account data is provided
-    /// by `EncryptAccountData` on the source device.
-    ///
-    /// Moves the AccountHandler from the `PendingTransfer` state to the
-    /// `Transferred` state.
-    ///
-    /// `encrypted_account_data` Account data retrieved on the source device
-    ///                          using `EncryptAccountData`.
-    ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
-    /// `PendingTransfer` state.
-    PerformAccountTransfer(struct {
-        encrypted_account_data EncryptedAccountData;
-    }) -> (struct {}) error fuchsia.identity.account.Error;
-
-    /// Completes the account transfer started through
-    /// `PrepareForAccountTransfer` and `PerformAccountTransfer`.  This saves
-    /// the account to disk if the account is persistent and makes it available
-    /// for use.
-    ///
-    /// Moves the AccountHandler from the `Transferred` state to the
-    /// `Initialized` state.
-    ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Transferred`
-    /// state.
-    FinalizeAccountTransfer() -> (struct {}) error fuchsia.identity.account.Error;
-
-    // TODO(fxr/37227) - update encrypt/decrypt APIs to handle data given by KMS.
-
-    /// Serializes and encrypts the account contained in the AccountHandler for
-    /// transfer.  The account will be serialized as `AccountData` and
-    /// encrypted using `target_public_key`.  The resulting
-    /// `EncryptedAccountData` should be passed to AccountHandler on the target
-    /// device using `PerformAccountTransfer`.
-    ///
-    /// `target_public_key` The public key used to encrypt the account data.
-    ///
-    /// Returns: `encrypted_account_data` Bytes containing the encrypted account
-    ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Initialized`
-    /// state.
-    EncryptAccountData(struct {
-        target_public_key fuchsia.kms.PublicKey;
-    }) -> (struct {
-        encrypted_account_data EncryptedAccountData;
-    }) error fuchsia.identity.account.Error;
-
     /// Deletes all persistent information about the Fuchsia account handled by
     /// this handler, including all credentials and global identifiers.
     /// Credential revocation is attempted before deletion. After a
@@ -228,42 +135,6 @@ protocol AccountHandlerControl {
         auth_context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
         account server_end:fuchsia.identity.account.Account;
     }) -> (struct {}) error fuchsia.identity.account.Error;
-
-    /// Retrieves the public key associated with this account on this device.
-    /// The public key is exposed so that the target AccountHandler's key can
-    /// be distributed to the source AccountHandler during an account transfer.
-    /// This allows the source AccountHandler to encrypt account data such that
-    /// only the target AccountHandler can decrypt the data.
-    ///
-    /// Returns: `public_key` Public key in an asymmetric key pair associated
-    ///                       with this account on this device.
-    ///
-    /// Fails with FAILED_PRECONDITION is the AccountHandler is not in one of
-    /// `PendingTransfer`, `Transferred`, or `Initialized` states.
-    GetPublicKey() -> (struct {
-        public_key fuchsia.kms.PublicKey;
-    }) error fuchsia.identity.account.Error;
-
-    /// Generates a hash of the global account ID using the provided salt.
-    /// Returning a hash of the global ID lets the account system determine
-    /// whether two locally provisioned accounts represent the same account
-    /// without storing every account's global ID. A salt is added so that
-    /// accounts cannot be easily correlated across devices.
-    ///
-    /// The AccountHandler must be in either the `Transferred` or `Initialized`
-    /// states.
-    ///
-    /// `salt` Bytes used as a salt while hashing global ID.
-    ///
-    /// Returns: `id_hash` A hash of the global ID of the contained account
-    ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in one of
-    /// `Transferred` or `Initialized` states.
-    GetGlobalIdHash(struct {
-        salt HashSalt;
-    }) -> (struct {
-        id_hash GlobalIdHash;
-    }) error fuchsia.identity.account.Error;
 
     /// Signals that the AccountHandler should tear itself down. After the
     /// receiver responds by closing its handle, the caller may terminate the
@@ -324,12 +195,3 @@ protocol AccountHandlerContext {
         storage_unlock_mechanism server_end:fuchsia.identity.authentication.StorageUnlockMechanism;
     }) -> (struct {}) error fuchsia.identity.account.Error;
 };
-
-/// Contents of an account, used for serialization during account transfer.
-type AccountData = table {
-    /// A globally unique identifier for the account.
-    1: global_id fuchsia.identity.account.GlobalAccountId;
-};
-
-/// Encrypted form of AccountData.
-alias EncryptedAccountData = bytes:16000;

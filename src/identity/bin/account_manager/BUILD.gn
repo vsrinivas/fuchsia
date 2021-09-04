@@ -5,13 +5,6 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-declare_args() {
-  # Whether or not prototype account transfer is enabled.
-  # NOTE: This is not secure and should NOT be enabled for any products!  This
-  # is only for use during local development.
-  prototype_account_transfer = false
-}
-
 rustc_binary("bin") {
   name = "account_manager"
   edition = "2018"
@@ -21,13 +14,9 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication-rustc",
-    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/identity/fidl:account-prototype-rustc",
     "//src/identity/fidl:account-rustc",
-    "//src/identity/fidl:account-transfer-rustc",
     "//src/identity/lib/account_common",
     "//src/identity/lib/token_manager",
     "//src/lib/diagnostics/inspect/runtime/rust",
@@ -61,22 +50,16 @@ rustc_binary("bin") {
     "src/fake_account_handler_connection.rs",
     "src/inspect.rs",
     "src/main.rs",
-    "src/prototype/account_manager_peer.rs",
-    "src/prototype/account_transfer_control.rs",
-    "src/prototype/mod.rs",
     "src/stored_account_list.rs",
   ]
 }
 
 fuchsia_package_with_single_component("account_manager") {
   deps = [ ":bin" ]
-  if (prototype_account_transfer) {
-    manifest = "meta/account_manager_prototype.cmx"
-  } else {
-    # fxbug.dev/83213 retain the v1 component while out of tree components still
-    # need it
-    manifest = "meta/account_manager.cmx"
-  }
+
+  # fxbug.dev/83213 retain the v1 component while out of tree components still
+  # need it
+  manifest = "meta/account_manager.cmx"
 }
 
 group("account_manager_auth_providers") {

@@ -10,7 +10,6 @@ group("account_manager_integration") {
   testonly = true
   deps = [
     ":account_manager_integration_test",
-    ":account_manager_prototype",
     "//src/identity/bin/dev_auth_provider",
     "//src/identity/bin/dev_authenticator",
   ]
@@ -25,9 +24,7 @@ rustc_test("test") {
   deps = [
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//src/identity/fidl:account-prototype-rustc",
     "//src/identity/lib/account_common",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -45,21 +42,10 @@ rustc_test("test") {
   sources = [
     "tests/account.rs",
     "tests/lib.rs",
-    "tests/prototype.rs",
   ]
 }
 
 fuchsia_unittest_package("account_manager_integration_test") {
   deps = [ ":test" ]
   manifest = "meta/account_manager_integration_test.cmx"
-}
-
-fuchsia_package_with_single_component("account_manager_prototype") {
-  # This package makes the account manager prototype functionality available
-  # to integration tests.  This package is only available in tests and does not
-  # change whether or not the account manager run as a system service has the
-  # prototype enabled.
-  deps = [ "//src/identity/bin/account_manager:bin" ]
-
-  manifest = "../../bin/account_manager/meta/account_manager_prototype.cmx"
 }
