@@ -597,6 +597,7 @@ impl RealmNode {
                     &capability,
                     source.clone().try_into()?,
                     force_route,
+                    cm_rust::ExposeSource::Self_,
                 )?;
             } else if let frealmbuilder::RouteEndpoint::AboveRoot(_) = &source {
                 // We're routing a capability from above our constructed realm to a component
@@ -644,6 +645,7 @@ impl RealmNode {
         capability: &frealmbuilder::Capability,
         source_moniker: Moniker,
         force_route: bool,
+        from: cm_rust::ExposeSource,
     ) -> Result<(), Error> {
         let mut current_ancestor = self.get_node_mut(&Moniker::root(), GetBehavior::ErrorIfMissing);
         let mut current_moniker = Moniker::root();
@@ -660,11 +662,7 @@ impl RealmNode {
         }
 
         if let Ok(source_node) = self.get_node_mut(&source_moniker, GetBehavior::ErrorIfMissing) {
-            source_node.add_expose_for_capability(
-                &capability,
-                cm_rust::ExposeSource::Self_,
-                force_route,
-            )?;
+            source_node.add_expose_for_capability(&capability, from, force_route)?;
             source_node.add_capability_decl(&capability, force_route)?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //source_node.validate(&source_moniker)?;
@@ -932,6 +930,7 @@ impl RealmNode {
                     &*BINDER_PROTOCOL_CAPABILITY,
                     Moniker::root(),
                     true,
+                    cm_rust::ExposeSource::Framework,
                 )?;
             }
 
