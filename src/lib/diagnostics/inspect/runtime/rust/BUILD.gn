@@ -32,6 +32,9 @@ rustc_library("lib") {
   test_deps = [
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-component-test",
+
+    # TODO(https://fxbug.dev/81400): Remove this dep during post-migration cleanup.
+    "//src/sys/lib/component-events",
   ]
 
   sources = [

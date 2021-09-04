@@ -57,6 +57,10 @@ pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use component_events::{
+        events::{Event, EventMode, EventSource, EventSubscription, Started},
+        matcher::EventMatcher,
+    };
     use fdio;
     use fuchsia_component::server::ServiceObj;
     use fuchsia_component_test::ScopedInstance;
@@ -78,9 +82,25 @@ mod tests {
 
     #[fuchsia::test]
     async fn connect_to_service() -> Result<(), anyhow::Error> {
+        // TODO(https://fxbug.dev/81400): Change code below to
+        // app.start_with_binder_sync during post-migration cleanup.
+        let event_source = EventSource::new().expect("failed to create EventSource");
+        let mut event_stream = event_source
+            .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+            .await
+            .expect("failed to subscribe to EventSource");
+
         let app = ScopedInstance::new("coll".to_string(), TEST_COMPONENT_URL.to_string())
             .await
             .expect("failed to create test component");
+
+        app.connect_to_binder().expect("failed to connect to Binder protocol");
+
+        let _ = EventMatcher::ok()
+            .moniker(app.child_name().to_owned())
+            .wait::<Started>(&mut event_stream)
+            .await
+            .expect("failed to observe Started event");
 
         let path = format!(
             "/hub/children/coll:{}/exec/out/diagnostics/{}",

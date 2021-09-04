@@ -7,4 +7,10 @@
         runner: "elf",
         binary: "bin/inspect_test_component_bin",
     },
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }
