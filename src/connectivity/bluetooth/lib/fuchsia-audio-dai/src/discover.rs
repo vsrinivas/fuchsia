@@ -104,7 +104,9 @@ mod tests {
             })
             .expect("Failed adding route for dai device directory");
 
-        let _test_topology = builder.build().create().await.unwrap();
+        let test_topology = builder.build().create().await.unwrap();
+
+        let _ = test_topology.root.connect_to_binder().unwrap();
 
         let _ = device_receiver.next().await.expect("should receive devices");
     }
